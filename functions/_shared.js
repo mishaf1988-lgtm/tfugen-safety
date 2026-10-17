@@ -2,8 +2,11 @@
 // (Vercel constants were removed in 2026-05-04 after the migration to
 // Cloudflare Pages was finalised and the Vercel project was deleted.)
 
-export const CF_PROD = 'https://tapugan-safety.pages.dev';
-export const CF_PREVIEW_RE = /^https:\/\/[a-z0-9-]+\.tapugan-safety\.pages\.dev$/;
+import { SITE } from './_site.js';
+export { SITE };
+
+export const CF_PROD = SITE.appUrl;
+export const CF_PREVIEW_RE = SITE.previewRe;
 
 export function defaultAllowedOrigins(env) {
   const list = [CF_PROD];
@@ -45,7 +48,7 @@ export const tmo = (ms) => AbortSignal.timeout(ms);
 // middleware puts the test project in env.SUPABASE_URL; a file that kept the live address
 // as a constant skipped it. Files with such a constant set it from here at the top of
 // onRequest (one deployment = one env, so the module value is the same for every request).
-export const SB_LIVE = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+export const SB_LIVE = SITE.supabaseUrl;
 export const sbFrom = (env) => (env && env.SUPABASE_URL) || SB_LIVE;
 
 export function jsonResp(payload, status, cors) {
@@ -85,7 +88,7 @@ export async function requireUser(request, env, opts) {
   if (!serviceKey) return { ok: false, status: 500, error: 'server misconfigured: missing SUPABASE_SERVICE_ROLE_KEY' };
   const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   if (!token) return { ok: false, status: 401, error: 'missing bearer token' };
-  const SUPABASE_URL = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+  const SUPABASE_URL = env.SUPABASE_URL || SB_LIVE;
   let resp, user;
   try {
     resp = await fetch(SUPABASE_URL + '/auth/v1/user', {
@@ -119,7 +122,7 @@ export async function requireUser(request, env, opts) {
 // a test message to any recipient. The role is read exactly the way
 // private.is_admin_manager() reads it in the database: app_users.id is the local
 // part of the login email, and a row with active=false counts as no role.
-export const ADMIN_EMAIL = 'admin@tfugen.local';
+export const ADMIN_EMAIL = SITE.adminEmail;
 const ROLE_MAP = {
   'אדמין': 'admin',    // admin
   'מנהל': 'manager',        // manager
@@ -144,11 +147,11 @@ async function roleRead(env, user) {
   // that staff member (matches the DB fix in is_admin_manager). Every real
   // login is <username>@tfugen.local (create-user.js, index.html _resolveEmail).
   const at = email.split('@');
-  if (at.length !== 2 || at[1] !== 'tfugen.local') return null;
+  if (at.length !== 2 || at[1] !== SITE.loginDomain) return null;
   const id = at[0];
   if (!/^[a-z0-9._-]{1,60}$/.test(id)) return null;
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
-  const SUPABASE_URL = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+  const SUPABASE_URL = env.SUPABASE_URL || SB_LIVE;
   if (!key) return null;
   try {
     const r = await fetch(SUPABASE_URL + '/rest/v1/app_users?id=eq.' + encodeURIComponent(id) + '&select=role,active',

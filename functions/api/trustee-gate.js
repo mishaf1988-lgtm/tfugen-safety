@@ -19,7 +19,7 @@
 // Unset TRUSTEE_CODE means closed, not open. Nobody is using the trustee
 // screen yet, and a lock that defaults to open is not a lock.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, ipBucket, sbFrom } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, ipBucket, sbFrom, SITE, SB_LIVE } from '../_shared.js';
 import { accessToken, sendMailTo } from '../_onedrive.js';
 
 const WRONG_GUESS_DELAY_MS = 800;
@@ -32,7 +32,7 @@ const WRONG_GUESS_DELAY_MS = 800;
 // The same block sits in talk.js and trustee-gate.js; a shared module would need a build entry in
 // every test that loads either file.
 export const GUESS_LIMIT = 10;
-let GUESS_SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
+let GUESS_SB = SB_LIVE; // set from env in onRequest (sbFrom)
 // 15/10/2026 (owner: "no hang"): every Supabase call here gives up after 10s.
 const SB_MS = 10000;
 const guessH = (env) => ({ apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY, 'Content-Type': 'application/json' });
@@ -72,7 +72,7 @@ export function lockMailHtml(scope, atIso) {
     + '<p><b>' + (LOCK_LABEL[scope] || scope) + '</b>: 10 \u05e0\u05d9\u05e1\u05d9\u05d5\u05e0\u05d5\u05ea \u05e9\u05d2\u05d5\u05d9\u05d9\u05dd \u05d1\u05e9\u05e2\u05d4 \u05de\u05d0\u05d5\u05ea\u05d4 \u05db\u05ea\u05d5\u05d1\u05ea, \u05d1-' + day + ' \u05d1\u05e9\u05e2\u05d4 ' + hm + '. \u05d4\u05db\u05ea\u05d5\u05d1\u05ea \u05e0\u05e2\u05d5\u05dc\u05d4 \u05dc\u05e9\u05e2\u05d4.</p>'
     + '<p>\u05d0\u05dd \u05d0\u05dc\u05d4 \u05d0\u05e0\u05e9\u05d9\u05dd \u05e9\u05dc\u05db\u05dd (\u05dc\u05de\u05e9\u05dc \u05de\u05d4-WiFi \u05e9\u05dc \u05d4\u05de\u05e4\u05e2\u05dc): \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e4\u05ea\u05d5\u05d7 \u05de\u05d9\u05d3 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, "\u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd \u05d5\u05e1\u05d9\u05e1\u05de\u05d0\u05d5\u05ea", \u05db\u05e4\u05ea\u05d5\u05e8 "\u05e4\u05ea\u05d7 \u05e2\u05db\u05e9\u05d9\u05d5".</p>'
     + '<p>\u05d0\u05dd \u05d6\u05d4 \u05dc\u05d0 \u05de\u05d5\u05db\u05e8 \u05dc\u05db\u05dd: \u05db\u05d3\u05d0\u05d9 \u05dc\u05d4\u05d7\u05dc\u05d9\u05e3 \u05d0\u05ea \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05d1\u05d0\u05d5\u05ea\u05d5 \u05de\u05e7\u05d5\u05dd.</p>'
-    + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df.</p></div>';
+    + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc ' + SITE.company + '.</p></div>';
 }
 async function lockMail(env, scope) {
   try {
@@ -95,7 +95,7 @@ export async function guessGate(env, scope, request, waitUntil) {
   return { key, locked: n > GUESS_LIMIT };
 }
 export async function guessOk(env, g) { if (g && g.key) await guessClear(env, g.key); }
-let SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
+let SB = SB_LIVE; // set from env in onRequest (sbFrom)
 // The code set in the app: { ok: true, code } ('' = no row or an empty one), or
 // { ok: false } when the read itself failed (15/10/2026). Only an EMPTY row falls
 // back to TRUSTEE_CODE: a failed read used to look empty, so during a database

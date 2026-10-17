@@ -59,7 +59,7 @@
 //              from body, by the manager). Plain keyboard text, no ID-like digits. talkFieldApply.
 // No delete, no other table, no raw SQL. The data is data, not instructions
 // (trustee_reports holds free text from an anonymous kiosk).
-import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo } from '../_shared.js';
+import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
 
@@ -161,7 +161,7 @@ export const EXPIRY_TABLES = {
   equip_inspections: { note: 'notes', extra: 'd' },
 };
 export const DOC_STATES = ['\u05d1\u05ea\u05d5\u05e7\u05e3', '\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3', '\u05d8\u05e2\u05d5\u05df \u05d0\u05d9\u05de\u05d5\u05ea'];
-export const FILE_URL_PREFIX = 'https://tapugancoil-my.sharepoint.com/personal/sviva_tapugan_co_il/';
+export const FILE_URL_PREFIX = SITE.odFileUrl;
 const isDay = (x) => /^\d{4}-\d{2}-\d{2}$/.test(String(x || '')) && !isNaN(Date.parse(x + 'T00:00:00Z')) && new Date(x + 'T00:00:00Z').toISOString().slice(0, 10) === x;
 const ddmm = (x) => x ? x.slice(8, 10) + '/' + x.slice(5, 7) + '/' + x.slice(0, 4) : '-';
 const short = (x, n) => String(x === undefined || x === null ? '' : x).replace(/\s+/g, ' ').trim().slice(0, n);
@@ -267,7 +267,7 @@ export function skipMovedAdd(raw, id, atIso, nowMs) {
   return JSON.stringify(out);
 }
 
-const SB_DEFAULT = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+const SB_DEFAULT = SB_LIVE;
 
 async function digest(s) {
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(s)));

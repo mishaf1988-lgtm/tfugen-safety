@@ -38,7 +38,7 @@
 // force:true; admin/manager session). One file per request (CPU budget): the
 // xlsm, then the request calls itself for the xlsx.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_LIVE } from '../_shared.js';
 import { odConfigured, accessToken, stateGet, stateSet, tokenRow, runLeased } from '../_onedrive.js';
 import { patchSheetRows, sheetsDigest, readSheetRows, picInfo, PIC_ROW_PT } from '../_xlsxpatch.js';
 import { runWatch, WATCH_KEY } from '../_watchdog.js';
@@ -271,7 +271,7 @@ const AFTER_PICS = 3;
 const LEASE_COST = 7;
 export async function readAll(env, path, budget) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
-  const base = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/';
+  const base = (env.SUPABASE_URL || SB_LIVE) + '/rest/v1/';
   const out = [];
   for (let page = 0; page < READ_MAX_PAGES; page++) {
     if (budget) budget.spend(1);
@@ -497,7 +497,7 @@ export function photoOf(id, hazards, reports) {
   const rec = k.charAt(0) === 'h' ? (hazards || []).find((x) => x.id === rid) : (reports || []).find((x) => x.id === rid);
   return rec && rec.photo_url && !/^pending:/.test(rec.photo_url) ? rec.photo_url : null;
 }
-const sbBase = (env) => env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+const sbBase = (env) => env.SUPABASE_URL || SB_LIVE;
 const sbHdr = (env) => ({ apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY });
 // url -> a link that opens the photo for a year (one call per bucket).
 export async function signPhotos(env, urls) {
@@ -604,7 +604,7 @@ export function mergeDropped(prevItems, items, reg, hazards, reports, nowIso, op
 // memory. More than MAX_PULL writes: the rest waits for the next run, and the
 // file is not rewritten until then (it would drop them).
 export async function applyEdits(env, ed, hazards, reports, max) {
-  const key = env.SUPABASE_SERVICE_ROLE_KEY, base = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/';
+  const key = env.SUPABASE_SERVICE_ROLE_KEY, base = (env.SUPABASE_URL || SB_LIVE) + '/rest/v1/';
   const h = { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
   let budget = max == null ? MAX_PULL : Math.min(MAX_PULL, max), done = { created: 0, hazards: 0, reports: 0, written: [], calls: 0 };
   if (ed.fresh.length && budget <= 0) { done.pending = true; return done; }

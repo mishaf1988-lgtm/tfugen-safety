@@ -14,10 +14,10 @@
 //
 //   POST {op:'list'}                       -> {codes:[{key,set,value,source,updated_at}]}
 //   POST {op:'set', key, value?}           -> {key,value,updated_at}; no value = 6 random digits
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, SB_TIMEOUT_MS as SB_MS, tmo, sbFrom } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, SB_TIMEOUT_MS as SB_MS, tmo, sbFrom, SITE, SB_LIVE } from '../_shared.js';
 import { accessToken, sendMailTo } from '../_onedrive.js';
 
-let SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
+let SB = SB_LIVE; // set from env in onRequest (sbFrom)
 export const CODE_KEYS = {
   induction_code: { label: '\u05e1\u05d9\u05e1\u05de\u05ea \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9 (\u05d8\u05d5\u05e4\u05e1 \u05e7\u05dc\u05d9\u05d8\u05d4)', env: null },
   trustee_code: { label: '\u05e1\u05d9\u05e1\u05de\u05ea \u05e0\u05d0\u05de\u05e0\u05d9 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea', env: 'TRUSTEE_CODE' },
@@ -60,7 +60,7 @@ export function changeMailHtml(label, who, atIso) {
     + '<p><b>' + esc(label) + '</b> \u05d4\u05d5\u05d7\u05dc\u05e4\u05d4 \u05d1-' + esc(day) + ' \u05d1\u05e9\u05e2\u05d4 ' + esc(hm) + ', \u05e2\u05dc \u05d9\u05d3\u05d9 ' + esc(who || '\u05dc\u05d0 \u05d9\u05d3\u05d5\u05e2') + '.</p>'
     + '<p>\u05d4\u05d7\u05dc\u05e4\u05ea \u05d1\u05e2\u05e6\u05de\u05da? \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05ea\u05e2\u05dc\u05dd \u05de\u05d4\u05de\u05d9\u05d9\u05dc.</p>'
     + '<p>\u05dc\u05d0 \u05d0\u05ea\u05d4? \u05d4\u05d9\u05db\u05e0\u05e1 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, "\u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd \u05d5\u05e1\u05d9\u05e1\u05de\u05d0\u05d5\u05ea", \u05d5\u05d4\u05d7\u05dc\u05e3 \u05d0\u05ea \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d5\u05d1. \u05db\u05d3\u05d0\u05d9 \u05d2\u05dd \u05dc\u05d4\u05d7\u05dc\u05d9\u05e3 \u05d0\u05ea \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05dc\u05da.</p>'
-    + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df. \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05e2\u05e6\u05de\u05d4 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7\u05ea.</p></div>';
+    + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc ' + SITE.company + '. \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05e2\u05e6\u05de\u05d4 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7\u05ea.</p></div>';
 }
 async function mailChange(env, label, who, atIso) {
   try {

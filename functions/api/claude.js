@@ -9,7 +9,7 @@
 // shape into Anthropic's {content:[{text}]} shape so all 14 client call
 // sites keep working unchanged.
 
-import { defaultAllowedOrigins, originPasses, corsHeaders, jsonResp, isAllowedCaller, requireRole, sbFrom, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
+import { defaultAllowedOrigins, originPasses, corsHeaders, jsonResp, isAllowedCaller, requireRole, sbFrom, SB_TIMEOUT_MS as SB_MS, tmo, SB_LIVE } from '../_shared.js';
 
 // Allowed models. Cloudflare Workers AI models start with "@cf/". Anthropic
 // models are kept for backward-compat — switch the client back any time by
@@ -112,7 +112,7 @@ const MAX_BODY_BYTES = 25000000;
 // real use (a batch of photo readings is two calls per photo). If the count
 // cannot be read the call goes on: the AI must not stop when the database blinks.
 export const AI_RATE_LIMIT = 200;
-let RATE_SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
+let RATE_SB = SB_LIVE; // set from env in onRequest (sbFrom)
 export async function aiRateKey(userId) {
   const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ai|' + String(userId || 'none'))));
   return 'guess:ai:' + Array.from(d.slice(0, 8)).map((b) => b.toString(16).padStart(2, '0')).join('');

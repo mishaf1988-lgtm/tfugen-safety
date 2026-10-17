@@ -24,7 +24,7 @@
 // tells the link holder about one worker, and asking costs a signature in that
 // worker's name when they had not signed (checker, 03/10/2026; accepted).
 // Not in MACHINE_PATHS: a person opens it, so the Israel-only rule applies.
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, ipBucket, sbFrom } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, ipBucket, sbFrom, SITE, SB_LIVE } from '../_shared.js';
 import { makeLinkToken, readLinkToken } from '../_closelink.js';
 import { hebrewName, hebrewText, heName, heText, plainQuotes } from '../_ai.js';
 import { accessToken, putFile, sendMailTo } from '../_onedrive.js';
@@ -32,13 +32,13 @@ import { LOGO_JPG } from '../_logo.js';
 import { readRecipients } from './hazard-report.js';
 import { REPORT_DEPTS } from './hazard-file.js';
 
-let SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
+let SB = SB_LIVE; // set from env in onRequest (sbFrom)
 // Every call from this file has a time limit (15/10/2026, review of the outside pages): a slow
 // database left the "saving" button spinning until Cloudflare gave up (~100s, error 524). Now the
 // person gets our error page within FETCH_MS, and the draft in the phone keeps what they typed.
 export const FETCH_MS = 20000;
 const fetch = (u, o) => globalThis.fetch(u, o && o.signal ? o : { ...(o || {}), signal: AbortSignal.timeout(FETCH_MS) });
-const APP_URL = 'https://tapugan-safety.pages.dev';
+const APP_URL = SITE.appUrl;
 const BUCKET = 'incidents-photos';
 const PREFIX = 'talk-link:v1:';
 export const TALK_TTL_DAYS = 14;
@@ -177,7 +177,7 @@ export const QZ = QZL.he;
 // \u05ea\u05d9\u05d1\u05d4 \u05dc\u05e8\u05e9\u05d5\u05dd \u05e9\u05dc \u05d4\u05d7\u05d1\u05e8\u05d4", "\u05d1\u05e8\u05d5\u05db\u05d9\u05dd \u05d4\u05d1\u05d0\u05d9\u05dd \u05dc\u05de\u05e4\u05e2\u05dc \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df", "\u05d4\u05de\u05e4\u05e2\u05dc \u05d4\u05d5\u05d0 \u05de\u05e4\u05e2\u05dc \u05de\u05d6\u05d5\u05df \u05d7\u05d9\u05d5\u05e0\u05d9"). The worker
 // reads in his language; the signed form is always in Hebrew. Keyboard characters only (CLAUDE.md).
 export const IND_L = {
-  he: { welcome: '\u05d1\u05e8\u05d5\u05db\u05d9\u05dd \u05d4\u05d1\u05d0\u05d9\u05dd \u05dc\u05de\u05e4\u05e2\u05dc \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df', vital: '\u05d4\u05de\u05e4\u05e2\u05dc \u05d4\u05d5\u05d0 \u05de\u05e4\u05e2\u05dc \u05de\u05d6\u05d5\u05df \u05d7\u05d9\u05d5\u05e0\u05d9', empNo: '\u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3', dep: '\u05de\u05d7\u05dc\u05e7\u05d4', depPick: '\u05d1\u05d7\u05e8 \u05de\u05d7\u05dc\u05e7\u05d4', depOther: '\u05d0\u05d7\u05e8', phone: '\u05de\u05e1\u05e4\u05e8 \u05d8\u05dc\u05e4\u05d5\u05df', job: '\u05ea\u05e4\u05e7\u05d9\u05d3', ag: '\u05d0\u05e0\u05d9 \u05e2\u05d5\u05d1\u05d3 \u05d3\u05e8\u05da \u05d7\u05d1\u05e8\u05ea \u05db\u05d5\u05d7 \u05d0\u05d3\u05dd', agName: '\u05e9\u05dd \u05d7\u05d1\u05e8\u05ea \u05db\u05d5\u05d7 \u05d4\u05d0\u05d3\u05dd (\u05d0\u05dd \u05d9\u05e9)', errT: '\u05d7\u05e1\u05e8\u05d9\u05dd \u05e4\u05e8\u05d8\u05d9\u05dd', needNo: '\u05db\u05ea\u05d5\u05d1 \u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3', needDep: '\u05d1\u05d7\u05e8 \u05de\u05d7\u05dc\u05e7\u05d4', needPhone: '\u05db\u05ea\u05d5\u05d1 \u05de\u05e1\u05e4\u05e8 \u05d8\u05dc\u05e4\u05d5\u05df \u05ea\u05e7\u05d9\u05df', needJob: '\u05db\u05ea\u05d5\u05d1 \u05d0\u05ea \u05d4\u05ea\u05e4\u05e7\u05d9\u05d3', needAg: '\u05db\u05ea\u05d5\u05d1 \u05d0\u05ea \u05e9\u05dd \u05d7\u05d1\u05e8\u05ea \u05db\u05d5\u05d7 \u05d4\u05d0\u05d3\u05dd' },
+  he: { welcome: '\u05d1\u05e8\u05d5\u05db\u05d9\u05dd \u05d4\u05d1\u05d0\u05d9\u05dd \u05dc\u05de\u05e4\u05e2\u05dc ' + SITE.company, vital: '\u05d4\u05de\u05e4\u05e2\u05dc \u05d4\u05d5\u05d0 \u05de\u05e4\u05e2\u05dc \u05de\u05d6\u05d5\u05df \u05d7\u05d9\u05d5\u05e0\u05d9', empNo: '\u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3', dep: '\u05de\u05d7\u05dc\u05e7\u05d4', depPick: '\u05d1\u05d7\u05e8 \u05de\u05d7\u05dc\u05e7\u05d4', depOther: '\u05d0\u05d7\u05e8', phone: '\u05de\u05e1\u05e4\u05e8 \u05d8\u05dc\u05e4\u05d5\u05df', job: '\u05ea\u05e4\u05e7\u05d9\u05d3', ag: '\u05d0\u05e0\u05d9 \u05e2\u05d5\u05d1\u05d3 \u05d3\u05e8\u05da \u05d7\u05d1\u05e8\u05ea \u05db\u05d5\u05d7 \u05d0\u05d3\u05dd', agName: '\u05e9\u05dd \u05d7\u05d1\u05e8\u05ea \u05db\u05d5\u05d7 \u05d4\u05d0\u05d3\u05dd (\u05d0\u05dd \u05d9\u05e9)', errT: '\u05d7\u05e1\u05e8\u05d9\u05dd \u05e4\u05e8\u05d8\u05d9\u05dd', needNo: '\u05db\u05ea\u05d5\u05d1 \u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3', needDep: '\u05d1\u05d7\u05e8 \u05de\u05d7\u05dc\u05e7\u05d4', needPhone: '\u05db\u05ea\u05d5\u05d1 \u05de\u05e1\u05e4\u05e8 \u05d8\u05dc\u05e4\u05d5\u05df \u05ea\u05e7\u05d9\u05df', needJob: '\u05db\u05ea\u05d5\u05d1 \u05d0\u05ea \u05d4\u05ea\u05e4\u05e7\u05d9\u05d3', needAg: '\u05db\u05ea\u05d5\u05d1 \u05d0\u05ea \u05e9\u05dd \u05d7\u05d1\u05e8\u05ea \u05db\u05d5\u05d7 \u05d4\u05d0\u05d3\u05dd' },
   ar: { welcome: '\u0623\u0647\u0644\u0627 \u0648\u0633\u0647\u0644\u0627 \u0628\u0643\u0645 \u0641\u064a \u0645\u0635\u0646\u0639 \u0635\u0646\u0627\u0639\u0627\u062a \u062a\u0641\u0648\u063a\u0627\u0646', vital: '\u0627\u0644\u0645\u0635\u0646\u0639 \u0647\u0648 \u0645\u0635\u0646\u0639 \u0623\u063a\u0630\u064a\u0629 \u062d\u064a\u0648\u064a', empNo: '\u0631\u0642\u0645 \u0627\u0644\u0639\u0627\u0645\u0644', dep: '\u0627\u0644\u0642\u0633\u0645', depPick: '\u0627\u062e\u062a\u0631 \u0627\u0644\u0642\u0633\u0645', depOther: '\u0622\u062e\u0631', phone: '\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062a\u0641', job: '\u0627\u0644\u0648\u0638\u064a\u0641\u0629', ag: '\u0623\u0639\u0645\u0644 \u0639\u0646 \u0637\u0631\u064a\u0642 \u0634\u0631\u0643\u0629 \u0642\u0648\u0649 \u0639\u0627\u0645\u0644\u0629', agName: '\u0627\u0633\u0645 \u0634\u0631\u0643\u0629 \u0627\u0644\u0642\u0648\u0649 \u0627\u0644\u0639\u0627\u0645\u0644\u0629 (\u0625\u0646 \u0648\u062c\u062f\u062a)', errT: '\u062a\u0641\u0627\u0635\u064a\u0644 \u0646\u0627\u0642\u0635\u0629', needNo: '\u0627\u0643\u062a\u0628 \u0631\u0642\u0645 \u0627\u0644\u0639\u0627\u0645\u0644', needDep: '\u0627\u062e\u062a\u0631 \u0627\u0644\u0642\u0633\u0645', needPhone: '\u0627\u0643\u062a\u0628 \u0631\u0642\u0645 \u0647\u0627\u062a\u0641 \u0635\u062d\u064a\u062d', needJob: '\u0627\u0643\u062a\u0628 \u0627\u0644\u0648\u0638\u064a\u0641\u0629', needAg: '\u0627\u0643\u062a\u0628 \u0627\u0633\u0645 \u0634\u0631\u0643\u0629 \u0627\u0644\u0642\u0648\u0649 \u0627\u0644\u0639\u0627\u0645\u0644\u0629' },
   ru: { welcome: '\u0414\u043e\u0431\u0440\u043e \u043f\u043e\u0436\u0430\u043b\u043e\u0432\u0430\u0442\u044c \u043d\u0430 \u0437\u0430\u0432\u043e\u0434 \u0422\u0430\u043f\u0443\u0433\u0430\u043d \u0418\u043d\u0434\u0430\u0441\u0442\u0440\u0438\u0437', vital: '\u0417\u0430\u0432\u043e\u0434 \u044f\u0432\u043b\u044f\u0435\u0442\u0441\u044f \u0436\u0438\u0437\u043d\u0435\u043d\u043d\u043e \u0432\u0430\u0436\u043d\u044b\u043c \u043f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u0435\u043c \u043f\u0438\u0449\u0435\u0432\u043e\u0439 \u043f\u0440\u043e\u043c\u044b\u0448\u043b\u0435\u043d\u043d\u043e\u0441\u0442\u0438', empNo: '\u0422\u0430\u0431\u0435\u043b\u044c\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440', dep: '\u041e\u0442\u0434\u0435\u043b', depPick: '\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043e\u0442\u0434\u0435\u043b', depOther: '\u0414\u0440\u0443\u0433\u043e\u0435', phone: '\u041d\u043e\u043c\u0435\u0440 \u0442\u0435\u043b\u0435\u0444\u043e\u043d\u0430', job: '\u0414\u043e\u043b\u0436\u043d\u043e\u0441\u0442\u044c', ag: '\u042f \u0440\u0430\u0431\u043e\u0442\u0430\u044e \u0447\u0435\u0440\u0435\u0437 \u043a\u0430\u0434\u0440\u043e\u0432\u043e\u0435 \u0430\u0433\u0435\u043d\u0442\u0441\u0442\u0432\u043e', agName: '\u041d\u0430\u0437\u0432\u0430\u043d\u0438\u0435 \u043a\u0430\u0434\u0440\u043e\u0432\u043e\u0433\u043e \u0430\u0433\u0435\u043d\u0442\u0441\u0442\u0432\u0430 (\u0435\u0441\u043b\u0438 \u0435\u0441\u0442\u044c)', errT: '\u041d\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0434\u0430\u043d\u043d\u044b\u0445', needNo: '\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u0442\u0430\u0431\u0435\u043b\u044c\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440', needDep: '\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043e\u0442\u0434\u0435\u043b', needPhone: '\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440 \u0442\u0435\u043b\u0435\u0444\u043e\u043d\u0430', needJob: '\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u0434\u043e\u043b\u0436\u043d\u043e\u0441\u0442\u044c', needAg: '\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0435 \u043a\u0430\u0434\u0440\u043e\u0432\u043e\u0433\u043e \u0430\u0433\u0435\u043d\u0442\u0441\u0442\u0432\u0430' },
   am: { welcome: '\u12c8\u12f0 \u1273\u1351\u130b\u1295 \u12a2\u1295\u12f1\u1235\u1275\u122a\u12ce\u127d \u134b\u1265\u122a\u12ab \u12a5\u1295\u12b3\u1295 \u1260\u12f0\u1205\u1293 \u1218\u1321', vital: '\u134b\u1265\u122a\u12ab\u12cd \u12a0\u1235\u1348\u120b\u130a \u12e8\u121d\u130d\u1265 \u134b\u1265\u122a\u12ab \u1290\u12cd', empNo: '\u12e8\u1220\u122b\u1270\u129b \u1241\u1325\u122d', dep: '\u12ad\u134d\u120d', depPick: '\u12ad\u134d\u120d \u12ed\u121d\u1228\u1321', depOther: '\u120c\u120b', phone: '\u1235\u120d\u12ad \u1241\u1325\u122d', job: '\u12e8\u1225\u122b \u12f5\u122d\u123b', ag: '\u12e8\u121d\u1220\u122b\u12cd \u1260\u1230\u12cd \u1283\u12ed\u120d \u12a9\u1263\u1295\u12eb \u1260\u12a9\u120d \u1290\u12cd', agName: '\u12e8\u1230\u12cd \u1283\u12ed\u120d \u12a9\u1263\u1295\u12eb\u12cd \u1235\u121d (\u12ab\u1208)', errT: '\u12dd\u122d\u12dd\u122e\u127d \u12ed\u130e\u12f5\u120b\u1209', needNo: '\u12e8\u1220\u122b\u1270\u129b \u1241\u1325\u122d \u12ed\u133b\u1349', needDep: '\u12ad\u134d\u120d \u12ed\u121d\u1228\u1321', needPhone: '\u1275\u12ad\u12ad\u1208\u129b \u1235\u120d\u12ad \u1241\u1325\u122d \u12ed\u133b\u1349', needJob: '\u12e8\u1225\u122b \u12f5\u122d\u123b\u12cd\u1295 \u12ed\u133b\u1349', needAg: '\u12e8\u1230\u12cd \u1283\u12ed\u120d \u12a9\u1263\u1295\u12eb\u12cd\u1295 \u1235\u121d \u12ed\u133b\u1349' },
@@ -300,7 +300,7 @@ async function sayStream(env, text, lang, ctx, extra) {
     cache = (typeof caches !== 'undefined' && caches.default) || null;
     if (cache) {
       const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode([env.TTS_MODEL || TTS_MODEL, env.TTS_VOICE || TTS_VOICE, lang, text].join('|'))));
-      key = new Request('https://tts-cache.tapugan-safety.pages.dev/' + Array.from(d.slice(0, 16)).map((b) => b.toString(16).padStart(2, '0')).join(''));
+      key = new Request('https://tts-cache.' + SITE.host + '/' + Array.from(d.slice(0, 16)).map((b) => b.toString(16).padStart(2, '0')).join(''));
       const hit = await cache.match(key);
       if (hit && hit.body) return new Response(hit.body, { headers: Object.assign({}, H, { 'X-TTS': 'cache' }) });
     }
@@ -562,7 +562,7 @@ async function codeGate(env, talk, cookieHeader) {
 // The same block sits in talk.js and trustee-gate.js; a shared module would need a build entry in
 // every test that loads either file.
 export const GUESS_LIMIT = 10;
-let GUESS_SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
+let GUESS_SB = SB_LIVE; // set from env in onRequest (sbFrom)
 const guessH = (env) => ({ apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY, 'Content-Type': 'application/json' });
 export async function guessKey(scope, request) {
   const ip = ipBucket(request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip'));
@@ -600,7 +600,7 @@ export function lockMailHtml(scope, atIso) {
     + '<p><b>' + (LOCK_LABEL[scope] || scope) + '</b>: 10 \u05e0\u05d9\u05e1\u05d9\u05d5\u05e0\u05d5\u05ea \u05e9\u05d2\u05d5\u05d9\u05d9\u05dd \u05d1\u05e9\u05e2\u05d4 \u05de\u05d0\u05d5\u05ea\u05d4 \u05db\u05ea\u05d5\u05d1\u05ea, \u05d1-' + day + ' \u05d1\u05e9\u05e2\u05d4 ' + hm + '. \u05d4\u05db\u05ea\u05d5\u05d1\u05ea \u05e0\u05e2\u05d5\u05dc\u05d4 \u05dc\u05e9\u05e2\u05d4.</p>'
     + '<p>\u05d0\u05dd \u05d0\u05dc\u05d4 \u05d0\u05e0\u05e9\u05d9\u05dd \u05e9\u05dc\u05db\u05dd (\u05dc\u05de\u05e9\u05dc \u05de\u05d4-WiFi \u05e9\u05dc \u05d4\u05de\u05e4\u05e2\u05dc): \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e4\u05ea\u05d5\u05d7 \u05de\u05d9\u05d3 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, "\u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd \u05d5\u05e1\u05d9\u05e1\u05de\u05d0\u05d5\u05ea", \u05db\u05e4\u05ea\u05d5\u05e8 "\u05e4\u05ea\u05d7 \u05e2\u05db\u05e9\u05d9\u05d5".</p>'
     + '<p>\u05d0\u05dd \u05d6\u05d4 \u05dc\u05d0 \u05de\u05d5\u05db\u05e8 \u05dc\u05db\u05dd: \u05db\u05d3\u05d0\u05d9 \u05dc\u05d4\u05d7\u05dc\u05d9\u05e3 \u05d0\u05ea \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05d1\u05d0\u05d5\u05ea\u05d5 \u05de\u05e7\u05d5\u05dd.</p>'
-    + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df.</p></div>';
+    + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc ' + SITE.company + '.</p></div>';
 }
 async function lockMail(env, scope) {
   try {
@@ -717,7 +717,7 @@ export function page(title, inner, tone, status, nonce, lang) {
     + '<div style="background:#fff;border-radius:12px;max-width:560px;margin:0 auto;box-shadow:0 4px 20px rgba(0,0,0,.08);overflow:hidden">'
     + '<div style="background:' + color + ';color:#fff;padding:14px 18px;font-size:18px;font-weight:700">' + esc(title) + '</div>'
     + '<div style="padding:16px 18px;font-size:16px;line-height:1.7;color:#1f2937">' + inner + '</div>'
-    + '<div dir="rtl" style="padding:10px 18px;background:#f9fafb;font-size:11px;color:#9ca3af">\u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df - \u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</div>'
+    + '<div dir="rtl" style="padding:10px 18px;background:#f9fafb;font-size:11px;color:#9ca3af">' + SITE.company + ' - \u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</div>'
     + '</div></body></html>';
   return new Response(html, { status: status || 200, headers: headers(nonce) });
 }
@@ -798,9 +798,9 @@ var r=f.querySelector('.qr');if(v===K[i]){r.style.color='#15803d';r.textContent=
 // 11_\u05d4\u05d3\u05e8\u05db\u05d5\u05ea/12_\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd/<year>). An HTML page with the text the worker read, the details
 // and the signature; Graph turns it into a PDF (the HTML is filed when that fails); one mail with
 // the form attached. The source HTML stays in the app folder: nothing is ever deleted in OneDrive.
-export const IND_HR = 'hr-tap@tapugan.co.il';
+export const IND_HR = SITE.hrEmail;
 export const IND_ROOT = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/11_\u05d4\u05d3\u05e8\u05db\u05d5\u05ea/12_\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd';
-export const IND_SRC = 'Apps/Tapugan Safety/\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd - \u05de\u05e7\u05d5\u05e8';
+export const IND_SRC = SITE.odRoot + '/\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd - \u05de\u05e7\u05d5\u05e8';
 const GRAPH_ROOT = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
 const fileSafe = (v) => String(v || '').replace(/[\\/:*?"<>|#%]/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 60);
 function b64(u8) { let out = ''; for (let i = 0; i < u8.length; i += 0x8000) out += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(out); }
@@ -809,8 +809,8 @@ export function inductionHtml(talk, row, sigB64, lang, when, answers, docs) {
   const tr = (k, v) => '<tr><td style="border:1px solid #999;padding:6px 10px;font-weight:bold">' + k + '</td><td style="border:1px solid #999;padding:6px 10px">' + v + '</td></tr>';
   return '<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>' + esc(x.title) + '</title></head>'
     + '<body style="font-family:Arial,sans-serif;font-size:13px;line-height:1.5;margin:24px;color:#111">'
-    + '<img alt="\u05ea\u05e4\u05d5\u05d2\u05df" style="height:56px;float:left;margin:0 0 8px 12px" src="data:image/jpeg;base64,' + LOGO_JPG + '">'
-    + '<div style="font-size:11px;color:#555">\u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df - \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05db\u05e0\u05e1\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05dc\u05de\u05e9\u05de\u05e8\u05ea, \u05d8\u05d5\u05e4\u05e1 08.02.01</div>'
+    + '<img alt="' + SITE.shortName + '" style="height:56px;float:left;margin:0 0 8px 12px" src="data:image/jpeg;base64,' + LOGO_JPG + '">'
+    + '<div style="font-size:11px;color:#555">' + SITE.company + ' - \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05db\u05e0\u05e1\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05dc\u05de\u05e9\u05de\u05e8\u05ea, \u05d8\u05d5\u05e4\u05e1 08.02.01</div>'
     + '<h1 style="font-size:18px;margin:4px 0 8px">' + esc(x.title) + '</h1>'
     + '<div style="font-size:16px;font-weight:bold;margin:2px 0">' + esc(IND_L.he.welcome) + '</div><div style="margin-bottom:8px">' + esc(IND_L.he.vital) + '</div>'
     + (read !== 'he' ? '<div style="margin-bottom:6px">\u05e9\u05e4\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d4\u05e2\u05d5\u05d1\u05d3 \u05e7\u05e8\u05d0: ' + esc(RL.name) + '</div>' : '')
@@ -892,7 +892,7 @@ export async function fileInduction(env, talk, row, sig, lang, nowMs, answers, d
       + '<table>' + cell('\u05e9\u05dd', esc(row.emp_name || '')) + cell('\u05de\u05e1\' \u05ea.\u05d6.', esc(row.id_no || '')) + (row.emp_no ? cell('\u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3', esc(row.emp_no)) : '') + cell('\u05de\u05d7\u05dc\u05e7\u05d4', esc(row.dept || '-')) + (row.phone ? cell('\u05d8\u05dc\u05e4\u05d5\u05df', esc(row.phone)) : '') + (row.job ? cell('\u05ea\u05e4\u05e7\u05d9\u05d3', esc(row.job)) : '') + (row.agency ? cell('\u05d7\u05d1\u05e8\u05ea \u05db\u05d5\u05d7 \u05d0\u05d3\u05dd', esc(row.agency)) : '') + cell('\u05ea\u05d0\u05e8\u05d9\u05da', esc(fdate(day)) + ' ' + esc(hm))
       + (row.quiz_n ? cell('\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05d1\u05e0\u05d4', row.quiz_ok + '/' + row.quiz_n) : '') + '</table>'
       + (out.url ? '<p>\u05ea\u05d5\u05d9\u05e7 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4: <a href="' + esc(out.url) + '">' + esc(name) + '</a></p>' : '')
-      + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df.</p></div>';
+      + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc ' + SITE.company + '.</p></div>';
     await sendMailTo(od.token, to, [], '\u05d8\u05d5\u05e4\u05e1 \u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9 \u05d7\u05ea\u05d5\u05dd: ' + (row.emp_name || '') + ', ' + fdate(day), mail,
       // A form with many photos can pass what a mail carries: then the link above only.
       bytes.length <= MAIL_ATTACH_MAX ? [{ '@odata.type': '#microsoft.graph.fileAttachment', name, contentType: type, contentBytes: b64(bytes) }] : []);
@@ -917,7 +917,7 @@ const errL = (k, lang, status) => { const L = LANGS[langOf(lang)]; return page(L
 export const F0801_ROOT = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/11_\u05d4\u05d3\u05e8\u05db\u05d5\u05ea';
 export const F0801_SUB = { annual: '\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05e0\u05ea\u05d9\u05ea', quality: '\u05d4\u05d3\u05e8\u05db\u05ea \u05d0\u05d9\u05db\u05d5\u05ea', induction: '\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd - \u05d8\u05d5\u05e4\u05e1 08.01' };
 export const F0801_WEEKLY = '\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e9\u05d1\u05d5\u05e2\u05d9\u05d5\u05ea';
-export const F0801_SRC = 'Apps/Tapugan Safety/\u05d8\u05e4\u05e1\u05d9 \u05d4\u05d3\u05e8\u05db\u05d4 - \u05de\u05e7\u05d5\u05e8';
+export const F0801_SRC = SITE.odRoot + '/\u05d8\u05e4\u05e1\u05d9 \u05d4\u05d3\u05e8\u05db\u05d4 - \u05de\u05e7\u05d5\u05e8';
 export const F0801_ROWS = 20;
 export function topicsOf(body) {
   return String(body || '').split(/\r?\n/).map((l) => l.replace(/^\s*(\d+[.)]|[-*])\s*/, '').trim()).filter((l) => l.length > 1);
@@ -941,7 +941,7 @@ export function form0801Html(talk, reads, sigOf, trSig) {
     + 'th{background:#d9d9d9;font-weight:normal}.pg{page-break-after:always;padding:8px 4px}.pg:last-child{page-break-after:auto}.h1{font-size:17px;font-weight:bold;text-align:center}'
     + '.sig{height:26px;max-width:120px}.lbl{font-weight:bold}.t2{color:#c00000;font-weight:bold;text-decoration:underline;margin:10px 0 4px}';
   const pages = Math.max(1, Math.ceil(reads.length / F0801_ROWS));
-  const head = (n) => '<table><tr><td rowspan="2" style="width:110px;text-align:center"><img alt="\u05ea\u05e4\u05d5\u05d2\u05df" style="height:44px" src="data:image/jpeg;base64,' + LOGO_JPG + '"></td>'
+  const head = (n) => '<table><tr><td rowspan="2" style="width:110px;text-align:center"><img alt="' + SITE.shortName + '" style="height:44px" src="data:image/jpeg;base64,' + LOGO_JPG + '"></td>'
     + '<td colspan="3" class="h1">\u05ea\u05d9\u05e2\u05d5\u05d3 \u05d1\u05d9\u05e6\u05d5\u05e2 \u05d4\u05d3\u05e8\u05db\u05d4</td></tr><tr><td style="font-size:11px">\u05d8\u05d5\u05e4\u05e1 08.01</td><td style="font-size:11px">\u05e2\u05de\u05d5\u05d3 ' + n + ' \u05de\u05ea\u05d5\u05da ' + pages + '</td><td style="font-size:11px">' + e(talk.title || '') + '</td></tr></table>';
   const top = '<table style="margin-top:10px"><tr><td rowspan="' + topics.length + '" style="width:110px;text-align:center">\u05e0\u05d5\u05e9\u05d0\u05d9 \u05d4\u05d4\u05d3\u05e8\u05db\u05d4</td>'
     + topics.map((t, i) => (i ? '<tr>' : '') + '<td style="width:24px;text-align:center">' + (i + 1) + '</td><td>' + e(t) + '</td></tr>').join('') + '</table>'

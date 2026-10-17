@@ -30,14 +30,14 @@
 // Env: SUPABASE_SERVICE_ROLE_KEY (required), META_PHONE_NUMBER_ID +
 // META_ACCESS_TOKEN (WhatsApp), RESEND_KEY (+ optional RESEND_FROM) for email.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, sbFrom } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, sbFrom, SITE, SB_LIVE } from '../_shared.js';
 import { odConfigured, tokenRow, hasMail, accessToken, sendMail, stateGet, stateSet, runLeased } from '../_onedrive.js';
 import { makeCloseToken, closeUrl } from '../_closelink.js';
 
-let SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
+let SUPABASE_URL = SB_LIVE; // set from env in onRequest (sbFrom)
 const META_API_VERSION = 'v25.0';
-const APP_URL = 'https://tapugan-safety.pages.dev';
-const PREFS_ID = 'admin@tfugen.local';
+const APP_URL = SITE.appUrl;
+const PREFS_ID = SITE.adminEmail;
 const EVENT = 'trustee_hazard';
 const MAX_AGE_MS = 48 * 3600 * 1000;
 // Retrying (29/09/2026, upgrade review 10): one attempt used to be all a
@@ -91,8 +91,8 @@ const DAILY_CAP = 15, CAP_KEY = 'notify_cap_day';
 // the first one on 2026-09-21 and said so. project-files/WHATSAPP-TEMPLATE.md
 // is the text to submit; the moment it is approved this code uses it with no
 // further change.
-const TEMPLATE_DEDICATED = 'tfugen_safety_report';
-const TEMPLATE_FALLBACK = 'tfugen_incident_alert';
+const TEMPLATE_DEDICATED = SITE.waTemplates.dedicated;
+const TEMPLATE_FALLBACK = SITE.waTemplates.fallback;
 // The built-in catalogue, and the fallback. Once migrations/2026-09-19_trustee_tasks.sql
 // has run the manager can rename a task from the app — and the message that
 // went out still carried this wording. taskName() reads the table first.
@@ -587,7 +587,7 @@ async function sendEmail(env, to, row, task, src, B) {
     : '';
   const subject = src.emoji + ' ' + src.subject + ' - ' + clean(row.u, 40) + ', ' + clean(task, 40);
   const html = '<div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">'
-    + '<div style="background:#cc1f1f;padding:16px;text-align:center;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:18px">' + src.emoji + ' ' + esc(src.title) + '</h1><p style="color:#ffcccc;margin:4px 0 0;font-size:12px">\u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df - \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</p></div>'
+    + '<div style="background:#cc1f1f;padding:16px;text-align:center;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:18px">' + src.emoji + ' ' + esc(src.title) + '</h1><p style="color:#ffcccc;margin:4px 0 0;font-size:12px">' + SITE.company + ' - \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</p></div>'
     + '<div style="background:#fff;padding:20px;border:1px solid #e5e7eb;font-size:14px;line-height:1.7">'
     + '<p><strong>' + esc(src.whoLabel) + ':</strong> ' + who + '</p><p><strong>' + esc(src.lineLabel) + ':</strong> ' + src.lineText(row, task) + '</p><p><strong>\u05ea\u05d0\u05e8\u05d9\u05da:</strong> ' + date + '</p><p><strong>\u05de\u05d9\u05e7\u05d5\u05dd:</strong> ' + loc + '</p><p><strong>\u05d4\u05de\u05de\u05e6\u05d0:</strong> ' + finding + '</p>' + photo
     + '<p style="margin-top:16px">' + closeBtn + '<a href="' + APP_URL + '" style="background:#cc1f1f;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold">\u05dc\u05e0\u05d9\u05ea\u05d5\u05d1 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4</a></p>'
@@ -617,7 +617,7 @@ async function sendEmail(env, to, row, task, src, B) {
     spend(B, 1);
     const r = await tfetch('https://api.resend.com/emails', {
       method: 'POST', headers: { Authorization: 'Bearer ' + env.RESEND_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: env.RESEND_FROM || 'Tapugan Safety <onboarding@resend.dev>', to: [to], subject, html, text: subject + ' - ' + clean(row.loc, 60) + ': ' + clean(row.f, 200) + ' ' + APP_URL })
+      body: JSON.stringify({ from: env.RESEND_FROM || SITE.name + ' <onboarding@resend.dev>', to: [to], subject, html, text: subject + ' - ' + clean(row.loc, 60) + ': ' + clean(row.f, 200) + ' ' + APP_URL })
     }, NET_MS);
     if (r.ok) return 'sent';
     const t = await r.text();

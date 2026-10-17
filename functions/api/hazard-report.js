@@ -19,7 +19,7 @@
 // test: true sends each report to the connected account only.
 // key (send / statusSend): one per press in the app, the same on its retries;
 // a department already mailed under it is not mailed again (BACKLOG 14.8).
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_TIMEOUT_MS as SB_MS, FILE_TIMEOUT_MS as FILE_MS, tmo } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_TIMEOUT_MS as SB_MS, FILE_TIMEOUT_MS as FILE_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { odConfigured, accessToken, tokenRow, hasMail, sendMailTo, stateSet, stateGet } from '../_onedrive.js';
 import { readSheetRows, sheetsDigest } from '../_xlsxpatch.js';
 import { makeCloseToken, closeUrl } from '../_closelink.js';
@@ -27,7 +27,7 @@ import { FILES, REPORT_DEPTS, buildRegister, readAll, TASKS_Q, photoOf, signPhot
 import { suggestAction } from '../_ai.js';
 
 const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
-const APP_URL = 'https://tapugan-safety.pages.dev';
+const APP_URL = SITE.appUrl;
 const CLOSE_TH = '\u05e1\u05d2\u05d9\u05e8\u05d4', CLOSE_LINK = '\u2705 \u05e1\u05de\u05df \u05db\u05d8\u05d5\u05e4\u05dc';
 const seg = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
 const S_DONE = '\u05e1\u05d2\u05d5\u05e8';
@@ -52,7 +52,7 @@ const DEFAULT_OPEN = '\u05e9\u05dc\u05d5\u05dd, \u05dc\u05d4\u05dc\u05df \u05d4\
 // Michael's own Outlook signature (29/09/2026, from his screenshot), under every
 // report. The closing line of the sheet (L2) is shown above it only when it is
 // something other than a "בברכה" line, which the signature already opens with.
-export const SIGNATURE = '<div style="margin-top:16px;font-family:Arial,sans-serif;font-size:14px">\u05d1\u05d1\u05e8\u05db\u05d4,<br><br><span style="color:#e00000;font-weight:bold">\u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da.</span><br>\u05de\u05e0\u05d4\u05dc \u05d0\u05d9\u05db\u05d5\u05ea \u05d4\u05e1\u05d1\u05d9\u05d1\u05d4 \u05d5\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea(\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea) // <span style="color:#e00000;font-weight:bold">\u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df \u05d1\u05e2&quot;\u05de</span><br><span style="font-size:12px"><span style="font-weight:bold">\u05e0\u05d9\u05d9\u05d3:</span> 0547940073 / <span style="font-weight:bold">\u05de\u05e9\u05e8\u05d3:</span> 08-6808365 / <a href="mailto:sviva@tapugan.co.il" style="font-weight:bold">sviva@tapugan.co.il</a></span><br><div style="border-top:2px solid #f5c400;width:340px;margin:12px 0"></div><a href="https://www.tapugan.co.il" style="color:#e00000;font-weight:bold">www.tapugan.co.il</a></div>';
+export const SIGNATURE = SITE.signature;
 const REGARDS = /^\s*\u05d1\u05d1\u05e8\u05db\u05d4/;
 const PHOTO_TH = '\u05ea\u05de\u05d5\u05e0\u05d4', PHOTO_LINK = '\u05ea\u05de\u05d5\u05e0\u05d4';
 // Pictures in a send: at most this many in all (each is a download, and the
@@ -236,7 +236,7 @@ export async function onRequest(context) {
       const text = String(body.action || '').replace(/[\u2013\u2014\u05be]/g, '-').replace(/\s+/g, ' ').trim().substring(0, 300);
       if (!m || text.length < 4) return jsonResp({ ok: false, error: 'bad request' }, 400, cors);
       const table = m[1] === 'h' ? 'tour_hazards' : 'trustee_reports';
-      const key = env.SUPABASE_SERVICE_ROLE_KEY, base = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+      const key = env.SUPABASE_SERVICE_ROLE_KEY, base = env.SUPABASE_URL || SB_LIVE;
       const up = await fetch(base + '/rest/v1/' + table + '?id=eq.' + encodeURIComponent(m[2]) + '&or=(action.is.null,action.eq.)', { method: 'PATCH', headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify({ action: text }), signal: tmo(SB_MS) });
       const got = up.ok ? await up.json().catch(() => []) : [];
       return jsonResp({ ok: up.ok && got.length === 1, saved: got.length === 1, action: text }, 200, cors);
@@ -250,7 +250,7 @@ export async function onRequest(context) {
       const resp = String(body.resp || '');
       if (!m || RESP_CHOICES.indexOf(resp) < 0) return jsonResp({ ok: false, error: 'bad request' }, 400, cors);
       const table = m[1] === 'h' ? 'tour_hazards' : 'trustee_reports';
-      const key = env.SUPABASE_SERVICE_ROLE_KEY, base = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+      const key = env.SUPABASE_SERVICE_ROLE_KEY, base = env.SUPABASE_URL || SB_LIVE;
       const up = await fetch(base + '/rest/v1/' + table + '?id=eq.' + encodeURIComponent(m[2]), { method: 'PATCH', headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify(m[1] === 'h' ? { resp, resp2: null } : { resp }), signal: tmo(SB_MS) });
       const got = up.ok ? await up.json().catch(() => []) : [];
       return jsonResp({ ok: up.ok && got.length === 1, saved: got.length === 1, resp }, 200, cors);
@@ -286,7 +286,7 @@ export async function onRequest(context) {
         const photos = new Map(), attachments = [];
         openRows[dept].forEach((x, i) => {
           const u = x.src && data.urls.get(x.src); if (!u) return;
-          if (pics[u]) { const cid = 'st' + dept.length + '-' + i + '@tapugan'; attachments.push({ '@odata.type': '#microsoft.graph.fileAttachment', name: 'photo-' + (i + 1) + '.jpg', contentType: 'image/jpeg', contentBytes: b64(pics[u]), isInline: true, contentId: cid }); photos.set(x.src, { cid }); }
+          if (pics[u]) { const cid = 'st' + dept.length + '-' + i + '@' + SITE.slug; attachments.push({ '@odata.type': '#microsoft.graph.fileAttachment', name: 'photo-' + (i + 1) + '.jpg', contentType: 'image/jpeg', contentBytes: b64(pics[u]), isInline: true, contentId: cid }); photos.set(x.src, { cid }); }
           else if (links[u]) photos.set(x.src, { link: links[u] });
         });
         // "Mark as handled" per open row, as in the report (close-hazard.js). No secret = no links.
@@ -346,7 +346,7 @@ export async function onRequest(context) {
       if (inSend.indexOf(rep0) >= 0 && rep0.rows.some((x) => x.src && data.urls.get(x.src))) {
         rep0.rows.forEach((x, i) => {
           const u = x.src && data.urls.get(x.src); if (!u) return;
-          if (pics[u]) { const cid = 'ph' + rep0.dept.length + '-' + i + '@tapugan'; attachments.push({ '@odata.type': '#microsoft.graph.fileAttachment', name: 'photo-' + (i + 1) + '.jpg', contentType: 'image/jpeg', contentBytes: b64(pics[u]), isInline: true, contentId: cid }); photos.set(x.src, { cid }); }
+          if (pics[u]) { const cid = 'ph' + rep0.dept.length + '-' + i + '@' + SITE.slug; attachments.push({ '@odata.type': '#microsoft.graph.fileAttachment', name: 'photo-' + (i + 1) + '.jpg', contentType: 'image/jpeg', contentBytes: b64(pics[u]), isInline: true, contentId: cid }); photos.set(x.src, { cid }); }
           else if (links[u]) photos.set(x.src, { link: links[u] });
         });
       }

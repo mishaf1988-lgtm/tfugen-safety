@@ -344,7 +344,8 @@ console.log('\n7. role is resolved by the full login email, never the local part
   // The server mirror (requireRole) must reject a foreign domain too.
   const shared = fs.readFileSync(path.join(ROOT, 'functions/_shared.js'), 'utf8');
   check('functions/_shared.js userRole requires the @tfugen.local domain',
-    /!==\s*'tfugen\.local'/.test(shared), 'userRole domain guard missing');
+    // since 17/10/2026 the domain comes from _site.js (SITE.loginDomain)
+    (/!==\s*'tfugen\.local'/.test(shared) || (/!==\s*SITE\.loginDomain/.test(shared) && /loginDomain: 'tfugen\.local'/.test(fs.readFileSync(path.join(ROOT, 'functions/_site.js'), 'utf8')))), 'userRole domain guard missing');
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

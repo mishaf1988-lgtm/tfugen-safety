@@ -1,10 +1,10 @@
 // Cloudflare Pages Function — admin-only rename user
 // Mirrors /api/rename-user.js (Vercel Edge Function).
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, sbFrom, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, sbFrom, SB_TIMEOUT_MS as SB_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 
-let SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
-const ADMIN_EMAIL = 'admin@tfugen.local';
+let SUPABASE_URL = SB_LIVE; // set from env in onRequest (sbFrom)
+const ADMIN_EMAIL = SITE.adminEmail;
 const MAX_BODY_BYTES = 2000;
 
 export async function onRequest({ request, env }) {
@@ -47,8 +47,8 @@ export async function onRequest({ request, env }) {
   if (oldUsername === newUsername) return jsonResp({ error: 'new_username equals old_username' }, 400, cors);
   if (oldUsername === 'admin') return jsonResp({ error: 'cannot rename the admin account' }, 400, cors);
 
-  const oldEmail = oldUsername + '@tfugen.local';
-  const newEmail = newUsername + '@tfugen.local';
+  const oldEmail = oldUsername + '@' + SITE.loginDomain;
+  const newEmail = newUsername + '@' + SITE.loginDomain;
 
   async function listAllUsers() {
     const all = [];

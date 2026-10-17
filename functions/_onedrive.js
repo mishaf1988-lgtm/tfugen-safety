@@ -1,3 +1,4 @@
+import { SITE } from './_site.js';
 // Server-side OneDrive access (Michael, 2026-09-27: "do it through the server").
 //
 // Why a separate Azure app: the in-browser OneDrive link is an SPA public
@@ -40,7 +41,7 @@ export function refreshScopes(granted) {
 }
 export function hasMailRead(row) { return !!(row && /(^|\s)Mail\.Read(\s|$)/i.test(String(row.scope || ''))); }
 export function hasMail(row) { return !!(row && /(^|\s)Mail\.Send(\s|$)/i.test(String(row.scope || ''))); }
-const SB_DEFAULT = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+const SB_DEFAULT = SITE.supabaseUrl;
 
 // Time limits (15/10/2026, owner: "no hang"). Every fetch in this file carries
 // one (tests/harness/onedrive-timeout-test.mjs). An abort throws, and every

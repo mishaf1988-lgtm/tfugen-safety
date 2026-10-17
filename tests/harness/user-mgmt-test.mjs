@@ -26,6 +26,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
 const build = path.join(HERE, '_build', 'usermgmt');
 fs.mkdirSync(build, { recursive: true });
 fs.copyFileSync(path.join(ROOT, 'functions/_shared.js'), path.join(build, '_shared.mjs'));
+fs.copyFileSync(path.join(ROOT, 'functions/_site.js'), path.join(build, '_site.js')); // _shared imports it (17/10/2026)
 for (const n of ['delete-user', 'rename-user']) {
   fs.writeFileSync(path.join(build, n + '.mjs'), fs.readFileSync(path.join(ROOT, 'functions/api', n + '.js'), 'utf8').replace("'../_shared.js'", "'./_shared.mjs'"));
 }

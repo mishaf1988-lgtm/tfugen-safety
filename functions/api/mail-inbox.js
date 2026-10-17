@@ -18,14 +18,14 @@
 // so the finding is marked closed here, with the service key.
 // The Excel log follows on its own: the insert fires trustee_reports_log.
 // Nothing is ever deleted. Each message is handled once (ids in server_state).
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, sbFrom, FILE_TIMEOUT_MS as FILE_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, sbFrom, FILE_TIMEOUT_MS as FILE_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, SB_TIMEOUT_MS as SB_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { odConfigured, accessToken, tokenRow, hasMailRead, stateGet, stateSet, sendMail } from '../_onedrive.js';
 import { imageInfo } from '../_xlsx.js';
 
-let SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
-const APP_URL = 'https://tapugan-safety.pages.dev';
+let SB = SB_LIVE; // set from env in onRequest (sbFrom)
+const APP_URL = SITE.appUrl;
 const BUCKET = 'incidents-photos';
-export const DOMAIN = '@tapugan.co.il';
+export const DOMAIN = SITE.mailDomain;
 export const TAG_RE = /\[TS-([A-Za-z0-9_-]{4,40})\]/;
 const REPLY_RE = /^\s*(re|\u05d4\u05e9\u05d1|\u05ea\u05e9\u05d5\u05d1\u05d4|\u05ea\u05d2\u05d5\u05d1\u05d4|aw|antw)\s*:/i;
 export const DONE_RE = /(\u05d8\u05d5\u05e4\u05dc|\u05d8\u05d5\u05e4\u05dc\u05d4|\u05ea\u05d5\u05e7\u05df|\u05ea\u05d5\u05e7\u05e0\u05d4|\u05ea\u05d5\u05e7\u05e0\u05d5|\u05e0\u05e1\u05d2\u05e8|\u05e0\u05e1\u05d2\u05e8\u05d4|\u05e1\u05d2\u05d5\u05e8|\u05d1\u05d5\u05e6\u05e2|\u05d1\u05d5\u05e6\u05e2\u05d4|\u05d4\u05d5\u05d7\u05dc\u05e3|\u05d4\u05d5\u05d7\u05dc\u05e4\u05d4|done|fixed|closed|resolved)/i;

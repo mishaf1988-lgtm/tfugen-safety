@@ -1,10 +1,10 @@
 // Cloudflare Pages Function — admin-only delete user
 // Mirrors /api/delete-user.js (Vercel Edge Function).
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, sbFrom, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, sbFrom, SB_TIMEOUT_MS as SB_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 
-let SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
-const ADMIN_EMAIL = 'admin@tfugen.local';
+let SUPABASE_URL = SB_LIVE; // set from env in onRequest (sbFrom)
+const ADMIN_EMAIL = SITE.adminEmail;
 const MAX_BODY_BYTES = 1000;
 
 export async function onRequest({ request, env }) {
@@ -40,7 +40,7 @@ export async function onRequest({ request, env }) {
   if (!username) return jsonResp({ error: 'username required' }, 400, cors);
   if (username === 'admin') return jsonResp({ error: 'cannot delete the admin account' }, 400, cors);
 
-  const targetEmail = username + '@tfugen.local';
+  const targetEmail = username + '@' + SITE.loginDomain;
 
   let authStatus = 'skipped';
   try {

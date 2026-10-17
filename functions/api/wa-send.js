@@ -9,9 +9,9 @@
 // (same pattern used by create/delete/reset/rename-user). Any logged-in
 // user can still send — the gate just rejects anonymous callers.
 
-import { defaultAllowedOrigins, originPasses, corsHeaders, jsonResp, requireRole } from '../_shared.js';
+import { defaultAllowedOrigins, originPasses, corsHeaders, jsonResp, requireRole, SB_LIVE } from '../_shared.js';
 
-const SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+const SUPABASE_URL = SB_LIVE;
 const META_API_VERSION = 'v25.0';
 
 export async function onRequest({ request, env }) {

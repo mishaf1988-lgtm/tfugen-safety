@@ -20,16 +20,16 @@
 // (signature in public.server_state). A failed upload leaves the signature
 // alone, so the next call tries again, and records the error for the tile.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_TIMEOUT_MS as SB_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { buildXlsx, XLSX_TYPE, imageInfo } from '../_xlsx.js';
 import { odConfigured, accessToken, putFile, itemUrl, stateGet, stateSet, tokenRow, hasMail, hasMailRead, runLeased } from '../_onedrive.js';
 import { readAll } from './hazard-file.js';
 
-export const LOG_FOLDER = 'Apps/Tapugan Safety/\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';
+export const LOG_FOLDER = SITE.odRoot + '/\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';
 // Every trustee photo is also copied, once, into this folder (Michael, 27/09:
 // "why not keep the photos in OneDrive, there is room"): the company's own
 // archive, a link that does not expire, opened only by a signed-in account.
-export const PHOTO_FOLDER = 'Apps/Tapugan Safety/\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/\u05ea\u05de\u05d5\u05e0\u05d5\u05ea';
+export const PHOTO_FOLDER = SITE.odRoot + '/\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/\u05ea\u05de\u05d5\u05e0\u05d5\u05ea';
 // Copies per write: each is a download + an upload, inside the 50-subrequest
 // budget with the 15 thumbnails. The rest go on the next write (the signature
 // is not saved while copies are pending, so the next trigger writes again).
@@ -133,7 +133,7 @@ export async function attachPhotos(env, aoa, reports, now, od) {
   now = now || Date.now();
   // od: {token, copied: {reportId: webUrl}} to copy photos to OneDrive; absent = links only.
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
-  const base = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+  const base = env.SUPABASE_URL || SB_LIVE;
   const hdr = { apikey: key, Authorization: 'Bearer ' + key };
   const byId = {};
   (reports || []).forEach((r) => { if (r && r.id) byId[r.id] = r; });
@@ -265,7 +265,7 @@ export async function runLog(env, force) {
     // write anyway, so copying never waits for the next report.
     let copied = {};
     try { copied = JSON.parse((st.trustee_photos && st.trustee_photos.value) || '{}') || {}; } catch (e) {}
-    const base = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+    const base = env.SUPABASE_URL || SB_LIVE;
     const missing = (reports || []).some((r) => r && r.id && storagePath(r.photo_url, base) && !(r.id in copied));
     if (st.trustee_log_sig && st.trustee_log_sig.value === await logSig(sig, reports, copied) && !missing) {
       // The log matches the data, so an error left by an earlier run is over
