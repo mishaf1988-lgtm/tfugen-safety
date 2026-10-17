@@ -33,7 +33,9 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
   await new Promise((r) => srv.on('listening', r));
   const port = srv.address().port;
   const browser = await pw.chromium.launch({ args: ['--host-resolver-rules=MAP ' + HOST + ' 127.0.0.1'] });
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  // A phone in Israel (17/10/2026): the incident form turns the local time it shows into UTC by the
+  // device's zone, so a browser on UTC would store a shifted hour.
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, timezoneId: 'Asia/Jerusalem', locale: 'he-IL' });
   const hosts = new Set(), errors = [];
   page.on('request', (r) => { try { hosts.add(new URL(r.url()).host); } catch (e) {} });
   page.on('pageerror', (e) => errors.push(String(e.message || e)));
@@ -71,7 +73,7 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
   await page.evaluate(async () => {
     const r = await fetch(SBU + '/rest/v1/docs?or=(id.like.e2e-*,n.like.e2e-*)&select=id', { headers: sbH() });
     (r.ok ? await r.json() : []).forEach((x) => sbDel('docs', x.id));
-    for (const t of ['ncr', 'tour_hazards']) {
+    for (const t of ['ncr', 'tour_hazards', 'inc']) {
       const q = await fetch(SBU + '/rest/v1/' + t + '?select=*&limit=500', { headers: sbH() });
       (q.ok ? await q.json() : []).filter((x) => Object.values(x).some((v) => String(v).indexOf('e2e-form-') === 0)).forEach((x) => sbDel(t, x.id));
     }
@@ -98,7 +100,7 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
   // As a person does it (17/10/2026): the page's "new" button, every visible field filled by its
   // type, the form's own save button. The id comes from the app's own insert; the row is read back
   // from the server, must hold the mark and the date typed, and is then removed.
-  for (const [pg, tbl] of [['docs', 'docs'], ['ncr', 'ncr'], ['thz', 'tour_hazards']]) {
+  for (const [pg, tbl] of [['docs', 'docs'], ['ncr', 'ncr'], ['thz', 'tour_hazards'], ['inc', 'inc']]) {
     const mark = 'e2e-form-' + pg + '-' + Date.now();
     const form = await page.evaluate(async ({ pg, tbl, mark }) => {
       const ids = [], ins0 = window.sbIns;
@@ -117,6 +119,7 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
           if (['hidden', 'file', 'button', 'submit', 'checkbox', 'radio', 'password', 'search'].indexOf(ty) >= 0) return;
           if (el.tagName === 'SELECT') { const o = [...el.options].find((x) => x.value && !x.disabled); if (o && !el.value) el.value = o.value; }
           else if (ty === 'date') el.value = iso;
+          else if (ty === 'datetime-local') el.value = iso + 'T08:00';
           else if (ty === 'time') el.value = '08:00';
           else if (ty === 'number') el.value = el.value || '1';
           else if (ty === 'email') el.value = 'a@b.co';
@@ -141,7 +144,41 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
     }, { tbl, id }) : { rows: [] };
     const row = saved.rows && saved.rows[0];
     const vals = row ? Object.values(row).map(String) : [];
-    check(pg + ': the row is on the server with the mark and the date typed', !!row && vals.some((v) => v.indexOf(mark) >= 0) && vals.indexOf(form.iso) >= 0, row || saved);
+    check(pg + ': the row is on the server with the mark and the date typed', !!row && vals.some((v) => v.indexOf(mark) >= 0) && vals.some((v) => v.indexOf(form.iso) === 0), row || saved);
+    if (row && pg === 'inc') {
+      const want = await page.evaluate((iso) => new Date(iso + 'T08:00').toISOString(), form.iso);
+      check('inc: 08:00 Israel time is stored as the same moment', Date.parse(row.dt) === Date.parse(want), { stored: row.dt, want });
+    }
+    if (id && pg === 'docs') {
+      // Edit the same row as a person does (17/10/2026): 👁 on it, "edit", change the first text
+      // field, the form's save. The server must hold the new text, still one row (no duplicate).
+      const mark2 = mark + '-edited';
+      const ed = await page.evaluate(async ({ tbl, id, mark2 }) => {
+        const r = await fetch(SBU + '/rest/v1/' + tbl + '?id=eq.' + encodeURIComponent(id) + '&select=*', { headers: sbH() });
+        const row = (await r.json())[0];
+        if (!DB[tbl].some((x) => x.id === id)) DB[tbl].push(row);
+        showView(tbl, id);
+        const eb = document.getElementById('view-edit');
+        if (!eb || eb.style.display === 'none') return { err: 'no edit button on the view' };
+        eb.click();
+        const m = [...document.querySelectorAll('.modal')].find((x) => (x.style.display === 'block' || x.style.display === 'flex') && x.id !== 'm-view');
+        if (!m) return { err: 'no edit form opened' };
+        const first = [...m.querySelectorAll('input[type=text],input:not([type]),textarea')].find((el) => el.offsetParent !== null && !el.readOnly && !el.disabled);
+        if (!first) return { err: 'no text field in ' + m.id };
+        first.value = mark2; first.dispatchEvent(new Event('input', { bubbles: true }));
+        const sv = [...m.querySelectorAll('button')].find((b) => b.offsetParent !== null && (/^\s*sv|save|Save/.test(b.getAttribute('onclick') || '') || /\u05e9\u05de\u05d5\u05e8/.test(b.textContent)));
+        if (!sv) return { err: 'no save button in ' + m.id };
+        sv.click();
+        await _obIdle();
+        return { form: m.id, open: m.style.display === 'block' || m.style.display === 'flex' };
+      }, { tbl, id, mark2 });
+      check(pg + ': edit through the view opened, saved and closed', ed && !ed.err && !ed.open, ed);
+      const after = await page.evaluate(async ({ tbl, mark, mark2 }) => {
+        const r = await fetch(SBU + '/rest/v1/' + tbl + '?select=*&or=(n.eq.' + encodeURIComponent(mark) + ',n.eq.' + encodeURIComponent(mark2) + ')', { headers: sbH() });
+        return r.ok ? await r.json() : [];
+      }, { tbl, mark, mark2 });
+      check(pg + ': the server holds the edit, one row, no duplicate', after.length === 1 && after[0].id === id && after[0].n === mark2, after);
+    }
     if (id) await page.evaluate(async ({ tbl, id }) => { sbDel(tbl, id); await _obIdle(); }, { tbl, id });
   }
   console.log('\n6. never the live database');
