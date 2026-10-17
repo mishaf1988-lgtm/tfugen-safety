@@ -26,7 +26,7 @@ try:
     log = (p.stdout or "") + (p.stderr or "")
     check("the export exits 0", p.returncode == 0, log[-1500:])
     check("the scan ends clean (nothing names Tapugan)", "clean:" in log and "nothing names Tapugan" in log, log[-800:])
-    for rel in ("index.html", "functions/_site.js", "db/schema.sql", "db/demo-data.sql", "SETUP.md", "README.md",
+    for rel in ("index.html", "CLAUDE.md", "functions/_site.js", "db/schema.sql", "db/demo-data.sql", "SETUP.md", "README.md",
                 "agents/README.md", "agents/routine-db.sh", "logo.jpg"):
         check("the copy has " + rel, os.path.exists(os.path.join(out, rel)))
     schema = open(os.path.join(out, "db", "schema.sql"), encoding="utf-8").read() if os.path.exists(os.path.join(out, "db", "schema.sql")) else ""

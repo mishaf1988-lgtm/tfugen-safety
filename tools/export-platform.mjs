@@ -33,7 +33,7 @@ const INCLUDE = [
   'tools/make-logo.py',
 ];
 const REPLACE = { 'functions/_site.js': 'tools/platform/_site.js', 'README.md': 'tools/platform/README.md',
-  'SETUP.md': 'tools/platform/SETUP.md', 'db/demo-data.sql': 'tools/platform/demo-data.sql' };
+  'SETUP.md': 'tools/platform/SETUP.md', 'db/demo-data.sql': 'tools/platform/demo-data.sql', 'CLAUDE.md': 'tools/platform/CLAUDE.md' };
 // Words that are only history in a comment here, rewritten in the copy alone. Changing them in
 // this repo would cost more than the word: the service worker reinstalls on every phone.
 const REWRITE = {
