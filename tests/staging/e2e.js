@@ -63,7 +63,33 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
   check('employees: the two sample rows', data.emp.indexOf('emp-t1') >= 0 && data.emp.indexOf('emp-t2') >= 0, data.emp);
   check('tour hazards: the sample row', data.thz.indexOf('th-t1') >= 0, data.thz);
 
-  console.log('\n4. never the live database');
+  console.log('\n4. a save, an edit and a delete through the app reach the test database');
+  // The app's own write path (sbIns / sbUpd / sbDel -> the outbox -> PostgREST with RLS), read
+  // back from the server, not from DB (17/10/2026, STATUS "סביבת פיתוח וניסוי": "forms and saving").
+  // A row left by an earlier run that stopped half way (an intentional break) is removed first.
+  await page.evaluate(async () => {
+    const r = await fetch(SBU + '/rest/v1/docs?id=like.e2e-*&select=id', { headers: sbH() });
+    (r.ok ? await r.json() : []).forEach((x) => sbDel('docs', x.id));
+    await _obIdle();
+  });
+  const rid = 'e2e-' + Date.now();
+  const read = () => page.evaluate(async (id) => {
+    const r = await fetch(SBU + '/rest/v1/docs?id=eq.' + encodeURIComponent(id) + '&select=id,n,e', { headers: sbH() });
+    return { status: r.status, rows: r.ok ? await r.json() : await r.text() };
+  }, rid);
+  await page.evaluate(async (id) => { sbIns('docs', { id: id, n: 'בדיקת e2e', e: null }); await _obIdle(); }, rid);
+  const ins = await read();
+  check('insert: the row is on the server, empty date as null', ins.status === 200 && ins.rows.length === 1 && ins.rows[0].e === null, ins);
+  await page.evaluate(async (id) => { sbUpd('docs', { id: id, e: '2027-01-31' }); await _obIdle(); }, rid);
+  const upd = await read();
+  check('update: the new date is on the server', upd.status === 200 && upd.rows.length === 1 && upd.rows[0].e === '2027-01-31', upd);
+  await page.evaluate(async (id) => { sbDel('docs', id); await _obIdle(); }, rid);
+  const del = await read();
+  check('delete: the row is gone from the server', del.status === 200 && del.rows.length === 0, del);
+  const left = await page.evaluate(() => _obGet().length);
+  check('the outbox is empty (nothing failed and waits)', left === 0, left);
+
+  console.log('\n5. never the live database');
   check('no request went to the live Supabase', !hosts.has(LIVE_DB), [...hosts]);
   check('requests did go to the test Supabase', hosts.has(TEST_DB), [...hosts]);
   check('no page errors', errors.length === 0, errors.slice(0, 5));

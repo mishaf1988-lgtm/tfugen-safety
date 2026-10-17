@@ -25,6 +25,7 @@ description: How to read and change the live Supabase database of tfugen-safety 
 - **משתמש Auth שנוצר ב-SQL:** עמודות הטוקנים ב-`auth.users` (`confirmation_token`, `recovery_token`, `email_change*`, `phone_change*`, `reauthentication_token`) חייבות להיות `''`, לא NULL. אחרת הכניסה מחזירה 500 "Database error querying schema" (16/10/2026).
 - **קובץ SQL גדול (מעל 100KB) מהענן למסד:** לא דרך הצ'אט. הקובץ ב-branch, `net.http_get` ל-raw של GitHub מתוך המסד, בדיקת MD5, ופונקציה שמריצה `execute` עם `set_config('search_path', 'public, extensions', true)` (בלי זה `nextval('x_seq')` לא נמצא). טרנזקציה אחת (`project-files/staging/README.md`).
 - migration בחי שמשנה סכמה: להריץ את אותה migration גם על הניסוי, אחרת הוא מתיישן.
+- **DELETE דרך `execute_sql` נתקע גם במסד הניסוי** (17/10/2026: פעמיים timeout של 60 שניות, השורה לא נמחקה, ו-UPDATE באותה קריאה בוטל איתו). מחיקה במסד הניסוי עוברת דרך האפליקציה (`sbDel` בתוך `tests/staging/e2e.js`, שמנקה שורות `e2e-` בתחילת כל ריצה), ו-UPDATE בקריאה נפרדת.
 
 ## מבנה המסד כקובץ, ובדיקה בלי מסד ניסוי (17/10/2026)
 - `tools/platform/schema-dump.sql`: שאילתת קריאה אחת שמחזירה את כל המבנה (טבלאות עד cron) כטקסט. התשובה (כ-160KB) נשמרת לקובץ ב-tool-results, ו-`project-files/staging/mcpres.py` (`rows(path)[0]['sql']`) מוציא אותה.
