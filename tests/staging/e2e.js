@@ -179,7 +179,29 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
       }, { tbl, mark, mark2 });
       check(pg + ': the server holds the edit, one row, no duplicate', after.length === 1 && after[0].id === id && after[0].n === mark2, after);
     }
-    if (id) await page.evaluate(async ({ tbl, id }) => { sbDel(tbl, id); await _obIdle(); }, { tbl, id });
+    if (id && pg === 'docs') {
+      // Delete as a person does (17/10/2026): the row's trash on the page, the delete password
+      // (a wrong one first: nothing may go), the dialog's confirm. Read back from the server.
+      const del = async (pw) => page.evaluate(async ({ tbl, id, pw }) => {
+        goPage('docs');
+        // The trash carries its table and id in data-dtbl / data-did (askDel(this.dataset.dtbl,this.dataset.did)).
+        const b = [...document.querySelectorAll('#pg-docs [data-did]')].find((x) => x.dataset.did === id && x.dataset.dtbl === tbl && /askDel/.test(x.getAttribute('onclick') || ''));
+        if (!b) return { err: 'no trash button for the row' };
+        b.click();
+        const m = document.getElementById('m-del-confirm');
+        if (!m || m.style.display !== 'block') return { err: 'the delete dialog did not open' };
+        document.getElementById('del-pw').value = pw;
+        confirmDel();
+        await _obIdle();
+        const r = await fetch(SBU + '/rest/v1/' + tbl + '?id=eq.' + encodeURIComponent(id) + '&select=id', { headers: sbH() });
+        return { open: m.style.display === 'block', server: r.ok ? (await r.json()).length : -1, local: DB[tbl].some((x) => x.id === id) };
+      }, { tbl, id, pw });
+      const wrong = await del('wrong-password');
+      check(pg + ': a wrong delete password deletes nothing', wrong && !wrong.err && wrong.open && wrong.server === 1 && wrong.local, wrong);
+      await page.evaluate(() => { try { cancelDel(); } catch (e) {} });
+      const right = await del(await page.evaluate(() => _delPw()));
+      check(pg + ': the trash, the password and confirm delete the row on the server', right && !right.err && !right.open && right.server === 0 && !right.local, right);
+    } else if (id) await page.evaluate(async ({ tbl, id }) => { sbDel(tbl, id); await _obIdle(); }, { tbl, id });
   }
   console.log('\n6. never the live database');
   check('no request went to the live Supabase', !hosts.has(LIVE_DB), [...hosts]);
