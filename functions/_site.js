@@ -6,6 +6,7 @@
 
 const HOST = 'tapugan-safety.pages.dev';
 const MANAGER_EMAIL = 'sviva@tapugan.co.il';
+const OWNER = '\u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da';           // the safety manager who runs the app
 const COMPANY = '\u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df';
 const reEsc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -14,6 +15,8 @@ export const SITE = {
   brand: 'Tapugan',                                    // the short Latin name (print headers, logo text)
   slug: 'tapugan-safety',                              // User-Agent toward GitHub
   shortName: '\u05ea\u05e4\u05d5\u05d2\u05df',         // the logo's alt text
+  owner: OWNER,                                        // page footers, the default auditor and signer, mail sign-offs
+  ownerTitle: '\u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea', // under the owner's name in mails to people
   company: COMPANY,                                    // footers of mails and pages
   companyEn: 'Tfugen Industries',                      // the AI prompts ("a safety expert at ...")
   filePrefix: 'tapugan',                               // names of files the app downloads
@@ -39,7 +42,7 @@ export const SITE = {
     taskOverdue: 'tfugen_task_overdue_v2', expiryWarning: 'tfugen_expiry_warning', roundMissed: 'tfugen_round_missed' },
   wabaId: '4400035656982783',
   // The manager's Outlook signature (29/09/2026, from his screenshot), under every hazard report.
-  signature: '<div style="margin-top:16px;font-family:Arial,sans-serif;font-size:14px">\u05d1\u05d1\u05e8\u05db\u05d4,<br><br><span style="color:#e00000;font-weight:bold">\u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da.</span><br>\u05de\u05e0\u05d4\u05dc \u05d0\u05d9\u05db\u05d5\u05ea \u05d4\u05e1\u05d1\u05d9\u05d1\u05d4 \u05d5\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea(\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea) // <span style="color:#e00000;font-weight:bold">' + COMPANY + ' \u05d1\u05e2&quot;\u05de</span><br><span style="font-size:12px"><span style="font-weight:bold">\u05e0\u05d9\u05d9\u05d3:</span> 0547940073 / <span style="font-weight:bold">\u05de\u05e9\u05e8\u05d3:</span> 08-6808365 / <a href="mailto:' + MANAGER_EMAIL + '" style="font-weight:bold">' + MANAGER_EMAIL + '</a></span><br><div style="border-top:2px solid #f5c400;width:340px;margin:12px 0"></div><a href="https://www.tapugan.co.il" style="color:#e00000;font-weight:bold">www.tapugan.co.il</a></div>'
+  signature: '<div style="margin-top:16px;font-family:Arial,sans-serif;font-size:14px">\u05d1\u05d1\u05e8\u05db\u05d4,<br><br><span style="color:#e00000;font-weight:bold">' + OWNER + '.</span><br>\u05de\u05e0\u05d4\u05dc \u05d0\u05d9\u05db\u05d5\u05ea \u05d4\u05e1\u05d1\u05d9\u05d1\u05d4 \u05d5\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea(\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea) // <span style="color:#e00000;font-weight:bold">' + COMPANY + ' \u05d1\u05e2&quot;\u05de</span><br><span style="font-size:12px"><span style="font-weight:bold">\u05e0\u05d9\u05d9\u05d3:</span> 0547940073 / <span style="font-weight:bold">\u05de\u05e9\u05e8\u05d3:</span> 08-6808365 / <a href="mailto:' + MANAGER_EMAIL + '" style="font-weight:bold">' + MANAGER_EMAIL + '</a></span><br><div style="border-top:2px solid #f5c400;width:340px;margin:12px 0"></div><a href="https://www.tapugan.co.il" style="color:#e00000;font-weight:bold">www.tapugan.co.il</a></div>'
 };
 
 // What the page knows (17/10/2026, step 1 of the app). index.html carries these as
@@ -49,7 +52,7 @@ export const SITE = {
 // and the test fails while they differ. Not served at request time on purpose: the page must
 // open the same with no network (service worker) and on /?inline=1. Server-only values (the
 // signature, OneDrive links, HR mail, repos) stay out of the page.
-export const CLIENT_KEYS = ['name', 'brand', 'slug', 'shortName', 'company', 'companyEn', 'filePrefix', 'host', 'appUrl',
+export const CLIENT_KEYS = ['name', 'brand', 'slug', 'shortName', 'owner', 'company', 'companyEn', 'filePrefix', 'host', 'appUrl',
   'supabaseUrl', 'supabaseKey', 'stagingSupabaseUrl', 'stagingSupabaseKey', 'loginDomain', 'adminEmail', 'managerEmail',
   'mailDomain', 'odRoot', 'backupPrefix', 'waTemplates'];
 export const clientSite = () => Object.fromEntries(CLIENT_KEYS.map((k) => [k, SITE[k]]));

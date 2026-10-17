@@ -453,7 +453,7 @@ export function missMailHtml(talk, dept, list, url, noIdList) {
     + (list.length ? '<ul style="margin:4px 0 10px">' + list.map(li).join('') + '</ul>' : '')
     + (nl.length ? '<p style="margin:4px 0">' + NO_ID_L + ' (' + nl.length + '):</p><ul style="margin:4px 0 10px;color:#555">' + nl.map(li).join('') + '</ul>' : '')
     + (url ? '<p>\u05d0\u05d9\u05da \u05d7\u05d5\u05ea\u05de\u05d9\u05dd: \u05e1\u05d5\u05e8\u05e7\u05d9\u05dd \u05d0\u05ea \u05d4-QR \u05e9\u05d1\u05db\u05e0\u05d9\u05e1\u05d4, \u05d0\u05d5 \u05e4\u05d5\u05ea\u05d7\u05d9\u05dd \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05d8\u05dc\u05e4\u05d5\u05df, \u05de\u05de\u05dc\u05d0\u05d9\u05dd \u05e9\u05dd, \u05ea"\u05d6 \u05d5\u05de\u05d7\u05dc\u05e7\u05d4 \u05d5\u05d7\u05d5\u05ea\u05de\u05d9\u05dd:<br><a href="' + esc(url) + '">' + esc(url) + '</a></p>' : '')
-    + '<p>\u05ea\u05d5\u05d3\u05d4,<br>\u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da, \u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</p></div>';
+    + '<p>\u05ea\u05d5\u05d3\u05d4,<br>' + esc(SITE.owner) + ', ' + esc(SITE.ownerTitle) + '</p></div>';
 }
 export function talkUrl(tok, lang, g, tr) { return APP_URL + '/api/talk?k=' + encodeURIComponent(tok) + (lang && lang !== 'he' ? '&l=' + lang : '') + (g ? '&g=1' : '') + (tr ? '&t=1' : ''); }
 export function makeTalkToken(env, id, nowMs) { return makeLinkToken(env, PREFIX, id, TALK_TTL_DAYS, nowMs); }
