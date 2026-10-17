@@ -46,6 +46,8 @@ try:
     run = lambda *a: subprocess.run(["node", os.path.join(ROOT, "tools", "export-platform.mjs"), clone] + list(a),
                                     cwd=ROOT, capture_output=True, text=True, encoding="utf-8", timeout=240)
     # A file there that no export wrote (no manifest yet): stop, list it, delete nothing.
+    p = run("--dry-run"); log = (p.stdout or "") + (p.stderr or "")
+    check("--dry-run lists the file and writes nothing", p.returncode == 3 and "old-file.txt" in log and not os.path.exists(os.path.join(clone, "index.html")), log[-400:])
     p = run(); log = (p.stdout or "") + (p.stderr or "")
     check("a file the export did not write stops it (exit 3, listed)", p.returncode == 3 and "old-file.txt" in log and "(not from the export)" in log, log[-600:])
     check("...and nothing was deleted", os.path.exists(os.path.join(clone, "old-file.txt")))
@@ -56,6 +58,9 @@ try:
     check("a file the export no longer makes is removed", not os.path.exists(os.path.join(clone, "old-file.txt")))
     check("the clone gets the app", os.path.exists(os.path.join(clone, "index.html")) and os.path.exists(os.path.join(clone, "CLAUDE.md")))
     check("the export leaves a manifest", os.path.exists(os.path.join(clone, ".export-manifest.json")))
+    p = run("--dry-run"); log = (p.stdout or "") + (p.stderr or "")
+    check("--dry-run after an export: nothing edited, exit 0", p.returncode == 0 and "nothing edited there" in log, log[-400:])
+    check("the line's own files never appear in the list", not any(k in log for k in ("handoff.md", "checklist-day1.md", "demo/", "docs/", "marketing/")), log[-400:])
     p = run(); log = (p.stdout or "") + (p.stderr or "")
     check("a second export with nothing edited there passes without --force", p.returncode == 0 and "clean:" in log, log[-600:])
     with open(os.path.join(clone, "CLAUDE.md"), "a", encoding="utf-8") as f: f.write("\nedited in safety-platform\n")

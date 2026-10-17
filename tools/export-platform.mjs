@@ -21,8 +21,10 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const ARGS = process.argv.slice(2).filter((a) => a !== '--force');
+const ARGS = process.argv.slice(2).filter((a) => a !== '--force' && a !== '--dry-run');
 const FORCE = process.argv.includes('--force');
+// --dry-run: only the check below, the list printed, nothing written or deleted (17/10/2026, the business line).
+const DRY = process.argv.includes('--dry-run');
 const OUT = path.resolve(ARGS[0] || '');
 if (!ARGS[0] || OUT === ROOT || OUT.startsWith(ROOT + path.sep)) {
   console.error('usage: node tools/export-platform.mjs <out-dir outside this repo>'); process.exit(2);
@@ -75,7 +77,7 @@ const DEPTS_RE = new RegExp(DEPTS.flatMap((d) => [d, esc(d).replace(/\\/g, '\\\\
 // of safety-platform: everything else in it is replaced, these are never deleted or written.
 const KEEP = ['.git', 'handoff.md', 'checklist-day1.md', 'demo', 'docs', 'marketing'];
 const kept = (rel) => KEEP.includes(rel.split('/')[0]);
-fs.mkdirSync(OUT, { recursive: true });
+if (!DRY) fs.mkdirSync(OUT, { recursive: true });
 // A file edited in safety-platform since the last export would be overwritten in silence
 // (17/10/2026, Michael: "how do we sync the business work with here"; CLAUDE.md was the near miss).
 // Each export leaves MANIFEST: the sha256 of every file it wrote. Before deleting anything, a file
@@ -91,7 +93,12 @@ const treeOf = (d, rel = '') => fs.readdirSync(path.join(d, rel), { withFileType
 {
   const mf = path.join(OUT, MANIFEST);
   const last = fs.existsSync(mf) ? JSON.parse(fs.readFileSync(mf, 'utf8')) : {};
-  const drift = treeOf(OUT).filter((r) => last[r] !== sha(path.join(OUT, r)));
+  const drift = (fs.existsSync(OUT) ? treeOf(OUT) : []).filter((r) => last[r] !== sha(path.join(OUT, r)));
+  if (DRY) {
+    console.log(drift.length ? '  ' + drift.length + ' files would stop the export:\n' + drift.map((r) => '    ' + r + (last[r] ? '  (edited there)' : '  (not from the export)')).join('\n')
+      : '  nothing edited there since the last export');
+    process.exit(drift.length ? 3 : 0);
+  }
   if (drift.length && !FORCE) {
     console.error('  ' + drift.length + ' files in ' + OUT + ' changed since the last export (or were never exported):\n'
       + drift.slice(0, 40).map((r) => '    ' + r + (last[r] ? '  (edited there)' : '  (not from the export)')).join('\n')
