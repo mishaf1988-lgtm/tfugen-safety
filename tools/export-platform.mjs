@@ -83,6 +83,9 @@ console.log('1. copy');
 let n = 0;
 for (const inc of INCLUDE) for (const f of walk(inc)) { if (SKIP.test(f)) continue; copy(f); n++; }
 for (const [to, from] of Object.entries(REPLACE)) { copy(to, from); n++; }
+// The general agents (17/10/2026, Michael: "only the general ones"): written for any factory in
+// tools/platform/agents/, served as agents/ in the copy. Tapugan's own Routines stay here.
+for (const f of fs.readdirSync(path.join(ROOT, 'tools/platform/agents'))) { copy('agents/' + f, 'tools/platform/agents/' + f); n++; }
 for (const [f, pairs] of Object.entries(REWRITE)) {
   const p = path.join(OUT, f); let s = fs.readFileSync(p, 'utf8');
   for (const [a, b] of pairs) { if (!s.includes(a)) throw new Error(f + ': "' + a + '" is gone, update REWRITE'); s = s.split(a).join(b); }
