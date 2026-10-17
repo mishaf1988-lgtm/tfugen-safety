@@ -27,6 +27,7 @@ Exit 0 = ok, 1 = missing lesson. Called from .github/workflows/tests.yml.
 Test: tests/harness/lessons-gate-test.py
 """
 import os, re, sys
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 LESSONS = ".claude/skills/tfugen-lessons/SKILL.md"
 FIX = re.compile(r"^\s*(fix|hotfix|תיקון)\b", re.I)
@@ -62,6 +63,14 @@ def check(title, body, files):
         return False, ("the skill line says something was learned, but no skill file changed. "
                        "Update a SKILL.md under .claude/skills/ (or name the michael-skills PR: michael-skills#N) "
                        "in this PR, or write 'skill: אין'.")
+    # A skill named in the line is the one that changed (17/10/2026, #1619 said "tfugen-ref" and
+    # only tfugen-lessons changed: the edit sat in a Bash command a hook blocked before it ran).
+    named = [n for n in sorted(set(re.findall(r"\btfugen-[a-z]+(?:-[a-z]+)*\b", sk.group(2))))
+             if os.path.isdir(os.path.join(ROOT, ".claude", "skills", n))]
+    missing = [n for n in named if not any(f.startswith(".claude/skills/%s/" % n) for f in files)]
+    if missing:
+        return False, ("the skill line names %s, but no file of it changed in this PR. Update it, "
+                       "or name the skill that did change." % ", ".join(missing))
     if not FIX.search(title or ""):
         return True, "not a fix PR"
     if LESSONS in files or any(has_domain_lessons(f) for f in files):

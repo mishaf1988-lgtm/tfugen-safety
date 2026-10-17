@@ -800,7 +800,7 @@ export function validityLine(raw, nowMs) {
 // weekday in michael-skills (private), research-queue.md: "## נסגר" lines start "- DD/MM/YYYY,",
 // "## שאלות למיכאל" lines start "- ". The digest reads the file with a read-only token
 // (env.GH_SKILLS_TOKEN); no token = no line. Nothing closed in 7 days = red (the Routine stopped).
-export const ASST_QUEUE = 'https://api.github.com/repos/mishaf1988-lgtm/michael-skills/contents/plugins/michael/skills/michael-assistant/references/research-queue.md';
+export const ASST_QUEUE = SITE.assistantQueue;   // '' = a factory without the assistant: no line
 function mdSection(md, title) {
   const out = []; let on = false;
   for (const ln of String(md || '').split(/\r?\n/)) {
@@ -824,7 +824,7 @@ export function assistantLine(q, nowMs) {
   return { text: H.asst + parts.join(', '), red: !closed.length };
 }
 export async function assistantQueue(env) {
-  if (!env.GH_SKILLS_TOKEN) return null;
+  if (!env.GH_SKILLS_TOKEN || !ASST_QUEUE) return null;
   try {
     const r = await fetch(ASST_QUEUE, { headers: { Authorization: 'Bearer ' + env.GH_SKILLS_TOKEN, Accept: 'application/vnd.github.raw', 'User-Agent': SITE.slug + '-digest' }, signal: tmo(SB_MS) });
     if (!r.ok) return { error: 'HTTP ' + r.status };

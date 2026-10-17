@@ -18,7 +18,7 @@
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 
 const SBU = SB_LIVE;
-const SBK = 'sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
+const SBK = SITE.supabaseKey;
 
 function decodeJwtEmail(token) {
   if (!token) return null;

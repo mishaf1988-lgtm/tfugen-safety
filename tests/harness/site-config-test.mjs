@@ -14,9 +14,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
 
-// tapugan / tfugen in any case, the live project id, the Hebrew short name, and the manager's
-// surname (17/10/2026, SITE.owner), raw, \uXXXX or &#NNNN; (a misspelt copy hid in the about box)
-const NAMES = /tapugan|tfugen|znhjtpcltrxxyfjczgvw|\\u05ea\\u05e4\\u05d5\\u05d2\\u05df|\u05ea\u05e4\u05d5\u05d2\u05df|\\u05e4\\u05e8\\u05d9\\u05d9\\u05dc|\u05e4\u05e8\u05d9\u05d9\u05dc|&#1508;&#1512;&#1497;&#1497;&#1500;/i;
+// The factory's own words live with its settings (functions/_site.js, NAMES_RE), so a new
+// factory's copy guards its own name and not Tapugan's.
+const { NAMES_RE: NAMES } = await import(path.join(ROOT, 'functions/_site.js'));
 const SETTINGS = ['functions/_site.js', 'functions/_logo.js'];
 // Left on purpose, each with its reason. A new entry needs one too.
 const ALLOWED = {
@@ -111,7 +111,7 @@ const pageHits = [];
 synced.scan.split('\n').forEach((ln, i) => {
   const t = ln.trim();
   if (t.startsWith('//') || t.startsWith('/*') || t.startsWith('*') || t.startsWith('<!--')) return;
-  if (!NAMES.test(ln) && !/&#1514;&#1508;&#1493;&#1490;&#1503;/.test(ln)) return;
+  if (!NAMES.test(ln)) return;
   if (PAGE_ALLOWED.some((a) => ln.includes(a))) return;
   pageHits.push((i + 1) + ' ' + t.slice(0, 90));
 });
@@ -136,5 +136,15 @@ const svgOut = svg.replace(/(text-anchor="middle">)[^<]*(<\/text>)/, '$1' + SITE
 if (process.argv.includes('--write')) { fs.writeFileSync(manPath, manOut); fs.writeFileSync(svgPath, svgOut); }
 check('manifest.webmanifest names the factory from _site.js (fix: --write)', process.argv.includes('--write') || manOut === man);
 check('icon.svg shows the first letter of SITE.brand (fix: --write)', process.argv.includes('--write') || svgOut === svg);
+// The empty settings a new factory gets (tools/platform/_site.js, step 2): same keys as this
+// factory's, or the exported copy breaks on the first key added here. Absent in that copy.
+const tmplPath = path.join(ROOT, 'tools/platform/_site.js');
+if (fs.existsSync(tmplPath)) {
+  const real = await import(path.join(ROOT, 'functions/_site.js')), tmpl = await import(tmplPath);
+  const shape = (m) => JSON.stringify([Object.keys(m.SITE).sort(), m.CLIENT_KEYS, Object.keys(m).sort()]);
+  check('tools/platform/_site.js has the same keys as functions/_site.js', shape(real) === shape(tmpl),
+    Object.keys(real.SITE).filter((k) => !(k in tmpl.SITE)).concat(Object.keys(tmpl.SITE).filter((k) => !(k in real.SITE))));
+  check('tools/platform/_site.js names no factory', !real.NAMES_RE.test(fs.readFileSync(tmplPath, 'utf8')));
+}
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
