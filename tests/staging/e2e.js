@@ -71,6 +71,10 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
   await page.evaluate(async () => {
     const r = await fetch(SBU + '/rest/v1/docs?or=(id.like.e2e-*,n.like.e2e-*)&select=id', { headers: sbH() });
     (r.ok ? await r.json() : []).forEach((x) => sbDel('docs', x.id));
+    for (const t of ['ncr', 'tour_hazards']) {
+      const q = await fetch(SBU + '/rest/v1/' + t + '?select=*&limit=500', { headers: sbH() });
+      (q.ok ? await q.json() : []).filter((x) => Object.values(x).some((v) => String(v).indexOf('e2e-form-') === 0)).forEach((x) => sbDel(t, x.id));
+    }
     await _obIdle();
   });
   const rid = 'e2e-' + Date.now();
@@ -90,44 +94,56 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
   const left = await page.evaluate(() => _obGet().length);
   check('the outbox is empty (nothing failed and waits)', left === 0, left);
 
-  console.log('\n5. the documents form on the screen: open, fill, save');
+  console.log('\n5. forms on the screen: open, fill, save, read back from the server');
   // As a person does it (17/10/2026): the page's "new" button, every visible field filled by its
-  // type, the form's own save button. Then the row is read back from the server and removed.
-  const mark = 'e2e-form-' + Date.now();
-  const form = await page.evaluate(async (mark) => {
-    goPage('docs');
-    const root = document.getElementById('pg-docs') || document.body;
-    const add = [...root.querySelectorAll('button,a')].find((b) => b.offsetParent !== null && /openModal\('m-(?!reports-sheet|modules-sheet|del|view)|^_?[a-z]*New\(|^new[A-Z]|^add[A-Z]/.test(b.getAttribute('onclick') || '') && !/Xl|Import|Rename|Reset|Delete|Starter/.test(b.getAttribute('onclick') || ''));
-    if (!add) return { err: 'no new button' };
-    add.click();
-    const m = [...document.querySelectorAll('.modal')].find((x) => x.style.display === 'block' || x.style.display === 'flex');
-    if (!m) return { err: 'no form opened' };
-    const iso = new Date(Date.now() + 200 * 864e5).toISOString().substring(0, 10);
-    [...m.querySelectorAll('input,textarea,select')].filter((el) => el.offsetParent !== null && !el.disabled && !el.readOnly).forEach((el) => {
-      const ty = (el.type || '').toLowerCase();
-      if (['hidden', 'file', 'button', 'submit', 'checkbox', 'radio', 'password', 'search'].indexOf(ty) >= 0) return;
-      if (el.tagName === 'SELECT') { const o = [...el.options].find((x) => x.value && !x.disabled); if (o && !el.value) el.value = o.value; }
-      else if (ty === 'date') el.value = iso;
-      else if (ty === 'number') el.value = el.value || '1';
-      else if (!el.value) el.value = mark;
-      el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-    const first = [...m.querySelectorAll('input[type=text],input:not([type]),textarea')].find((el) => el.offsetParent !== null && !el.readOnly && !el.disabled);
-    if (first) { first.value = mark; first.dispatchEvent(new Event('input', { bubbles: true })); }
-    const sv = [...m.querySelectorAll('button')].find((b) => b.offsetParent !== null && (/^\s*sv|save|Save/.test(b.getAttribute('onclick') || '') || /שמור/.test(b.textContent)));
-    if (!sv) return { err: 'no save button in ' + m.id };
-    sv.click();
-    await _obIdle();
-    return { form: m.id, iso: iso, open: m.style.display === 'block' || m.style.display === 'flex' };
-  }, mark);
-  check('the form opened and saved', form && !form.err && !form.open, form);
-  const saved = await page.evaluate(async (mark) => {
-    const r = await fetch(SBU + '/rest/v1/docs?n=eq.' + encodeURIComponent(mark) + '&select=id,n,e', { headers: sbH() });
-    return { status: r.status, rows: r.ok ? await r.json() : await r.text() };
-  }, mark);
-  check('the form row is on the server with the date typed', saved.status === 200 && saved.rows.length === 1 && saved.rows[0].e === (form && form.iso), saved);
-  if (saved.rows && saved.rows[0]) await page.evaluate(async (id) => { sbDel('docs', id); await _obIdle(); }, saved.rows[0].id);
-
+  // type, the form's own save button. The id comes from the app's own insert; the row is read back
+  // from the server, must hold the mark and the date typed, and is then removed.
+  for (const [pg, tbl] of [['docs', 'docs'], ['ncr', 'ncr'], ['thz', 'tour_hazards']]) {
+    const mark = 'e2e-form-' + pg + '-' + Date.now();
+    const form = await page.evaluate(async ({ pg, tbl, mark }) => {
+      const ids = [], ins0 = window.sbIns;
+      window.sbIns = function (t, r) { if (t === tbl && r && r.id) ids.push(r.id); return ins0.apply(this, arguments); };
+      try {
+        goPage(pg);
+        const root = document.getElementById('pg-' + pg) || document.body;
+        const add = [...root.querySelectorAll('button,a')].find((b) => b.offsetParent !== null && /openModal\('m-(?!reports-sheet|modules-sheet|del|view)|openNew[A-Za-z]*\(\)|^_?[a-z]*New\(|^new[A-Z]|^add[A-Z]/.test(b.getAttribute('onclick') || '') && !/Xl|Import|Rename|Reset|Delete|Starter/.test(b.getAttribute('onclick') || ''));
+        if (!add) return { err: 'no new button' };
+        add.click();
+        const m = [...document.querySelectorAll('.modal')].find((x) => x.style.display === 'block' || x.style.display === 'flex');
+        if (!m) return { err: 'no form opened' };
+        const iso = new Date(Date.now() + 200 * 864e5).toISOString().substring(0, 10);
+        [...m.querySelectorAll('input,textarea,select')].filter((el) => el.offsetParent !== null && !el.disabled && !el.readOnly).forEach((el) => {
+          const ty = (el.type || '').toLowerCase();
+          if (['hidden', 'file', 'button', 'submit', 'checkbox', 'radio', 'password', 'search'].indexOf(ty) >= 0) return;
+          if (el.tagName === 'SELECT') { const o = [...el.options].find((x) => x.value && !x.disabled); if (o && !el.value) el.value = o.value; }
+          else if (ty === 'date') el.value = iso;
+          else if (ty === 'time') el.value = '08:00';
+          else if (ty === 'number') el.value = el.value || '1';
+          else if (ty === 'email') el.value = 'a@b.co';
+          else if (ty === 'tel') el.value = '0501234567';
+          else if (!el.value) el.value = mark;
+          el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        const first = [...m.querySelectorAll('input[type=text],input:not([type]),textarea')].find((el) => el.offsetParent !== null && !el.readOnly && !el.disabled);
+        if (first) { first.value = mark; first.dispatchEvent(new Event('input', { bubbles: true })); }
+        const sv = [...m.querySelectorAll('button')].find((b) => b.offsetParent !== null && (/^\s*sv|save|Save/.test(b.getAttribute('onclick') || '') || /שמור/.test(b.textContent)));
+        if (!sv) return { err: 'no save button in ' + m.id };
+        sv.click();
+        await _obIdle();
+        return { form: m.id, iso: iso, open: m.style.display === 'block' || m.style.display === 'flex', ids: ids };
+      } finally { window.sbIns = ins0; }
+    }, { pg, tbl, mark });
+    check(pg + ': the form opened, saved and closed', form && !form.err && !form.open && form.ids.length === 1, form);
+    const id = form && form.ids && form.ids[0];
+    const saved = id ? await page.evaluate(async ({ tbl, id }) => {
+      const r = await fetch(SBU + '/rest/v1/' + tbl + '?id=eq.' + encodeURIComponent(id) + '&select=*', { headers: sbH() });
+      return { status: r.status, rows: r.ok ? await r.json() : await r.text() };
+    }, { tbl, id }) : { rows: [] };
+    const row = saved.rows && saved.rows[0];
+    const vals = row ? Object.values(row).map(String) : [];
+    check(pg + ': the row is on the server with the mark and the date typed', !!row && vals.some((v) => v.indexOf(mark) >= 0) && vals.indexOf(form.iso) >= 0, row || saved);
+    if (id) await page.evaluate(async ({ tbl, id }) => { sbDel(tbl, id); await _obIdle(); }, { tbl, id });
+  }
   console.log('\n6. never the live database');
   check('no request went to the live Supabase', !hosts.has(LIVE_DB), [...hosts]);
   check('requests did go to the test Supabase', hosts.has(TEST_DB), [...hosts]);
