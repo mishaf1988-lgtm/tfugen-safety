@@ -13,6 +13,11 @@ to approve `received_at`, built and verified the day before; a stale BACKLOG lin
 it was open. A specific identifier in the question (snake_case, rare: at most 6 hits)
 that already appears in DECISIONS.md or the STATUS archive denies once too, with where.
 
+Third check (lesson 10, recurred 10th time 17/10/2026): a questionnaire asked whether to make
+the repo private, decided that morning ("## ... ה-repo נשאר ציבורי"), in plain Hebrew with no
+identifier. A DECISIONS.md heading sharing 3 or more content words with the question denies
+once. Measured on that day's six questionnaires: the one repeat caught, the other five pass.
+
 Test:  echo '{"tool_name":"AskUserQuestion","session_id":"t","tool_input":{"questions":[{"question":"סריקת המייל הקיימת?","options":[]}]}}' | python3 .claude/hooks/live-check.py
 """
 import hashlib, json, os, re, sys, tempfile
@@ -54,6 +59,39 @@ def decided(t):
     return out
 
 
+# Words that say nothing about the subject, and names on every heading.
+STOP = {"מיכאל", "מומלץ", "שאלון", "בשאלון", "אחרי", "לפני", "עכשיו", "היום", "אותו", "להוסיף",
+        "לעשות", "חדשה", "שלך", "האם", "הכל", "כלומר", "יכול", "אחד", "פעם",
+        "claude", "tfugen", "safety", "tapugan", "https"}
+
+
+def words(s):
+    """Content words: Hebrew of 4+ letters with one prefix letter off (from 5), Latin parts of 4+."""
+    out = set()
+    for w in re.findall(r"[\u05d0-\u05ea]+|[A-Za-z][A-Za-z0-9_-]*", s):
+        if re.match(r"[A-Za-z]", w):
+            out.update(p for p in w.lower().split("-") if len(p) >= 4 and p not in STOP)
+            continue
+        if len(w) >= 5 and w[0] in "\u05d5\u05d4\u05d1\u05dc\u05de\u05e9\u05db":
+            w = w[1:]
+        if len(w) >= 4 and w not in STOP:
+            out.add(w)
+    return out
+
+
+def heading_hits(t):
+    """DECISIONS.md headings that share 3+ content words with the question: ['DECISIONS.md:12 ...']."""
+    root = os.environ.get("LIVE_CHECK_ROOT") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    try:
+        with open(os.path.join(root, "DECISIONS.md"), encoding="utf-8") as f:
+            lines = f.read().split("\n")
+    except OSError:
+        return []
+    q = words(t)
+    hits = [(len(q & words(l)), i + 1, l[3:].strip()) for i, l in enumerate(lines) if l.startswith("## ")]
+    return ["DECISIONS.md:" + str(n) + " " + h[:80] for c, n, h in sorted(hits, reverse=True) if c >= 3][:2]
+
+
 def main():
     try:
         d = json.load(sys.stdin)
@@ -64,7 +102,8 @@ def main():
     t = text_of(d.get("tool_input"))
     m = CLAIM.search(t)
     seen = [] if m else decided(t)
-    if not m and not seen:
+    heads = [] if (m or seen) else heading_hits(t)
+    if not m and not seen and not heads:
         return
     key = hashlib.sha1((str(d.get("session_id") or "") + "\n" + t).encode("utf-8")).hexdigest()[:16]
     mark = os.path.join(os.environ.get("LIVE_CHECK_STATE") or tempfile.gettempdir(), "live-check-" + key)
@@ -73,6 +112,10 @@ def main():
     try:
         open(mark, "w").close()
     except OSError:
+        return
+    if heads:
+        why = "live-check (לקח 10): לשאלה הזו כבר יש החלטה ב-DECISIONS (" + "; ".join(heads) + "). לקרוא אותה: אם היא עונה, לא לשאול שוב אלא לדווח מה הוחלט. שאלה שבאמת חדשה עוברת בפעם השנייה."
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": why}}, ensure_ascii=False))
         return
     if not m:
         why = "live-check (לקח 15): מה שהשאלון שואל עליו כבר מופיע בהחלטה או בפריט שנסגר (" + ", ".join(seen[:3]) + "). לקרוא שם, ולבדוק בקוד ובמסד אם זה כבר נעשה, לפני שמבקשים ממיכאל לאשר. אותה שאלה בפעם השנייה עוברת."
