@@ -55,6 +55,12 @@ check('in a production department: מנהל המחלקה, as before', byF('מש�
 check('maintenance: אחזקה (the 30/09 finding)', byF('שטח תנועה של מלגזות')[7] === 'אחזקה' && byF('בור פתוח')[7] === 'אחזקה', [byF('שטח תנועה של מלגזות')[7], byF('בור פתוח')[7]]);
 check('maintenance, an electrical finding: חשמל', ['כבל חשמל חשוף', 'תאורה לא עובדת בשער', 'פנס שבור', 'מפסק פתוח', 'אין הארקה'].every((f) => trusteeResp('אחזקה', f) === 'חשמל'));
 check('...not a dip in the floor or a notice board', trusteeResp('אחזקה', 'שקע ברצפה ליד השער') === 'אחזקה' && trusteeResp('אחזקה', 'לוח מודעות נפל') === 'אחזקה');
+// 17/10/2026 (Michael in a questionnaire): a repair finding in another department is maintenance's too,
+// and two trustee areas that had no department.
+check('another department, a repair finding: מנהל המחלקה + אחזקה', ['הער מסכן נא מעקה בטיחות', 'תעלה שבורה תוקנה הרבה פעמים', 'נזילה מהגג', 'סדק ברצפה'].every((f) => trusteeResp('חומר גלם', f) === 'מנהל המחלקה + אחזקה'));
+check('...a broken pallet or a torn strap stays the department\'s', trusteeResp('ייצור טוגנים', 'משטח שבור') === 'מנהל המחלקה' && trusteeResp('חומר גלם', 'סולם רצועת ביטחון קרועה') === 'מנהל המחלקה');
+check('maintenance, a railing: אחזקה (not doubled)', trusteeResp('אחזקה', 'מעקה בטיחות לדלת משרד') === 'אחזקה');
+check('areas: מחסן טכני -> אחזקה, בכניסה לקילופים -> ייצור טוגנים', trusteeDept('מחסן טכני · ליד מחסן טכני').dept === 'אחזקה' && trusteeDept('בכניסה לקילופים · מול פסולת נוזלי').dept === 'ייצור טוגנים');
 // 14/10/2026 (Michael: "change the routing before sending"): a resp the manager set wins over the computed one.
 {
   const r2 = buildRegister([], reports.map((r) => (r.f === 'משטח שבור' ? Object.assign({}, r, { resp: 'אחזקה' }) : r)), []).rows;

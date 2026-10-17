@@ -134,10 +134,14 @@ export const ELEC = ['\u05d7\u05e9\u05de\u05dc', '\u05db\u05d1\u05dc', '\u05ea\u
 // and the department manager's too (Michael: «\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4 \u05d5\u05de\u05d7\u05dc\u05e7\u05ea \u05d7\u05e9\u05de\u05dc»):
 // "\u05d7\u05e9\u05de\u05dc" in column H is what adds electrical and engineering to the report.
 export const TASK_ELEC = 9;
+// In another department a repair finding is maintenance's too, with the manager (17/10/2026,
+// Michael in a questionnaire after he routed a gate railing and a broken drain to maintenance by
+// hand: "\u05d1\u05e6\u05e2: \u05de\u05d9\u05dc\u05d9\u05dd \u05e9\u05dc \u05ea\u05d9\u05e7\u05d5\u05df \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4"). Word stems; not \u00ab\u05e9\u05d1\u05d5\u05e8\u00bb alone (a broken pallet is the department's).
+export const REPAIR = ['\u05de\u05e2\u05e7\u05d4', '\u05ea\u05e2\u05dc\u05d4', '\u05e1\u05d3\u05e7', '\u05e1\u05d3\u05d5\u05e7', '\u05e0\u05d6\u05d9\u05dc', '\u05d3\u05dc\u05d9\u05e4', '\u05ea\u05d9\u05e7\u05d5\u05df', '\u05dc\u05ea\u05e7\u05df', '\u05ea\u05d5\u05e7\u05e0'];
 export function trusteeResp(dept, text, task) {
   if (+task === TASK_ELEC) return dept === MAINT ? '\u05d7\u05e9\u05de\u05dc' : '\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4 + \u05d7\u05e9\u05de\u05dc';
-  if (dept !== MAINT) return '\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4';
   const t = String(text || '');
+  if (dept !== MAINT) return REPAIR.some((w) => t.indexOf(w) >= 0) ? '\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4 + ' + MAINT : '\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4';
   return ELEC.some((w) => t.indexOf(w) >= 0) ? '\u05d7\u05e9\u05de\u05dc' : MAINT;
 }
 const TRUSTEE_DUE_DAYS = 3;
