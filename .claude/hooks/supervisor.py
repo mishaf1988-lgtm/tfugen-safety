@@ -20,6 +20,10 @@ Before a turn ends it checks, locally and without network:
      "open" of that url came after it -> block, even on a question or with
      ci-wait running (Michael, 16/10/2026: "לא תמיד מציג את המשרד": the
      session was resumed twice, the hook asked again, and it was not opened)
+  7. the reply says it added to / updated / recorded in STATUS, DECISIONS,
+     BACKLOG, CLAUDE.md, ideas-lab or a tfugen-* skill, and that file changed
+     neither locally nor on origin/main in the last 12 hours -> block
+     (STATUS 99, Michael 12/10/2026: "מאשר"; lesson 42, lesson 19 recurred)
 It lets the stop through when the reply ends on a question to Michael (an
 approval he must give), when ci-wait.sh is running in the background (its
 end wakes the session), and never blocks twice in a row (stop_hook_active).
@@ -171,6 +175,43 @@ def squashed_into_main(cwd):
     return p.returncode == 0
 
 
+# "I added / updated / it was recorded" next to a shared file (STATUS 99).
+CLAIM_VERB = re.compile(r"(הוספתי|עדכנתי|רשמתי|נרשם|נרשמה|נרשמו|נוסף|נוספה|נוספו|עודכן|עודכנה|עודכנו)")
+CLAIM_FILES = [("STATUS-archive", "project-files/STATUS-archive.md"), ("STATUS", "STATUS.md"),
+               ("DECISIONS", "DECISIONS.md"), ("BACKLOG", "project-files/BACKLOG.md"),
+               ("CLAUDE.md", "CLAUDE.md"), ("ideas-lab", "project-files/ideas-lab.md")]
+
+
+def claimed_files(text):
+    """The repo files the reply says it wrote to, as paths."""
+    out = set()
+    for line in text.splitlines():
+        if not CLAIM_VERB.search(line):
+            continue
+        rest = line
+        for name, path in CLAIM_FILES:
+            if re.search(r"(?<!\w)" + re.escape(name) + r"(?![\w-])", rest):
+                out.add(path)
+                rest = rest.replace(name, " ")
+        for sk in re.findall(r"\btfugen-[a-z]+\b", rest):
+            out.add(".claude/skills/%s/SKILL.md" % sk)
+    return out
+
+
+def unchanged_claims(cwd, text):
+    """Claimed files that changed neither in the work tree nor on origin/main in 12 hours."""
+    claimed = claimed_files(text)
+    if not claimed:
+        return []
+    rc1, local = git(cwd, "diff", "--name-only", "HEAD")
+    rc2, recent = git(cwd, "log", "origin/main", "--since=12 hours ago", "--name-only", "--format=")
+    rc3, branch = git(cwd, "diff", "--name-only", "origin/main...HEAD")
+    if rc2:
+        return []  # no origin/main to compare with: say nothing
+    changed = set((local + "\n" + recent + "\n" + branch).split())
+    return sorted(f for f in claimed if f not in changed and os.path.exists(os.path.join(cwd, f)))
+
+
 def verdict(cwd, text, tools, waiting, recent=None):
     if text.rstrip()[-400:].count("?"):
         return None
@@ -183,6 +224,10 @@ def verdict(cwd, text, tools, waiting, recent=None):
     if rc == 0 and ahead not in ("", "0") and not squashed_into_main(cwd):
         return ("המפקח: %s commits על ה-branch עוד לא ב-main (Cloudflare מפרסם רק את main). "
                 "לפתוח PR אם אין, להריץ ברקע ci-wait.sh ולמזג כשירוק (לקח 25)." % ahead)
+    ghost = unchanged_claims(cwd, text)
+    if ghost:
+        return ("המפקח: כתבת שהוספת או עדכנת את %s, והקובץ לא השתנה (לא מקומית ולא ב-main ב-12 השעות האחרונות). "
+                "לכתוב את זה עכשיו, או לתקן את התשובה (STATUS 99, לקח 19)." % ", ".join(ghost))
     merged = any(t.endswith("merge_pull_request") for t in tools)
     merged_since = any(t.endswith("merge_pull_request") for t in (tools if recent is None else recent))
     # Michael, 02/10/2026 ("remember we said you must recommend new skills or

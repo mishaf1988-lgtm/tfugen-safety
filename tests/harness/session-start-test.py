@@ -18,6 +18,14 @@ o2 = run(d).stdout
 check("the agents' office: opened at the start of every conversation, URL from routine-office.md", "משרד הסוכנים" in o2 and "https://claude.ai/artifact/Abc123XYZ" in o2 and '"open"' in o2, o2)
 # Broken on purpose (16/10/2026): with the office lines taken out of report() the check above fails.
 os.remove(os.path.join(d, "project-files", "routine-office.md"))
+# STATUS 100 (17/10/2026): the items other conversations hold, from claim.sh --list.
+rc = lambda raw: subprocess.run([sys.executable, hook("session-start.py")], input="{}", capture_output=True, text=True, encoding="utf-8",
+                                timeout=30, env=dict(os.environ, CLAUDE_PROJECT_DIR=d, SESSION_START_CLAIMS=raw)).stdout
+o3 = rc(json.dumps({"ok": True, "claims": {"14.2": {"session": "session_X", "at": "2026-10-16T17:50:33.537Z", "note": "הגנת גרסה"}}}))
+check("a held item is shown: item, conversation, DD/MM/YYYY date, note", "פריטים תפוסים: 1" in o3 and "14.2: session_X, 16/10/2026 17:50 UTC (הגנת גרסה)" in o3, o3)
+check("no claims: no section", "פריטים תפוסים" not in rc(json.dumps({"ok": True, "claims": {}})))
+check("a bad answer (no key, offline): no section, no crash", "פריטים תפוסים" not in rc("ROUTINE_KEY missing"))
+check("no claim.sh and no stand-in: nothing", "פריטים תפוסים" not in run(d).stdout)
 check("prints the handoff", "handoff-05-10-2026-10.00.md" in o and "בדיקה X" in o, o)
 check("open items: 2, the closed one left out", "2 פריטים פתוחים" in o and "משימה ב" in o and "סגורה" not in o, o)
 check("last METRICS row with its header", "10/2026 | 12%" in o and "| חודש" in o and "09/2026" not in o, o)
