@@ -201,13 +201,22 @@ def summarize(prs, lessons_text, ym):
     return row, detail
 
 
-def render(existing, row, detail, ym, now, extra=None):
-    """Insert or replace this month's row, newest first; replace the detail block."""
+def table_rows(text):
+    if TABLE_START not in text:
+        return []
+    body = text.split(TABLE_START, 1)[1].split(TABLE_END, 1)[0]
+    return [l for l in body.splitlines() if ROW.match(l)]
+
+
+def render(existing, row, detail, ym, now, extra=None, carry=''):
+    """Insert or replace this month's row, newest first; replace the detail block.
+    carry: METRICS.md of the branch metrics/auto when its PR was not merged (14/10/2026 retro:
+    the push is forced, so last month's unmerged row was lost). Its rows for months that
+    the existing file lacks are kept; a month in both keeps the existing (merged) row."""
     month = row.split('|')[1].strip()
-    rows = []
-    if TABLE_START in existing:
-        body = existing.split(TABLE_START, 1)[1].split(TABLE_END, 1)[0]
-        rows = [l for l in body.splitlines() if ROW.match(l) and l.split('|')[1].strip() != month]
+    rows = [l for l in table_rows(existing) if l.split('|')[1].strip() != month]
+    have = {l.split('|')[1].strip() for l in rows} | {month}
+    rows += [l for l in table_rows(carry) if l.split('|')[1].strip() not in have]
     rows.append(row)
     rows.sort(key=lambda l: tuple(reversed(l.split('|')[1].strip().split('/'))), reverse=True)
     y, m = ym.split('-')
@@ -288,10 +297,12 @@ def main():
     lessons = read_lessons()
     row, detail = summarize(prs, lessons, ym)
     existing = open(OUT, encoding='utf-8').read() if os.path.exists(OUT) else ''
+    cf = os.environ.get('CARRY_FILE', '')
+    carry = open(cf, encoding='utf-8').read() if cf and os.path.exists(cf) else ''
     with open(OUT, 'w', encoding='utf-8') as f:
         log = open(AGENT_LOG, encoding='utf-8').read() if os.path.exists(AGENT_LOG) else ''
         common = open(AGENT_COMMON, encoding='utf-8').read() if os.path.exists(AGENT_COMMON) else ''
-        f.write(render(existing, row, detail, ym, now, lessons_digest(lessons, ym) + agents_digest(log, common, ym, routine_agents(), prs)))
+        f.write(render(existing, row, detail, ym, now, lessons_digest(lessons, ym) + agents_digest(log, common, ym, routine_agents(), prs), carry))
     print(row)
 
 
