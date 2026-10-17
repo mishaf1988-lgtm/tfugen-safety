@@ -16,9 +16,10 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const html = fs.readFileSync(path.join(here, '../../index.html'), 'utf8');
 
 console.log('\n1. one map');
-const m = /var AREA_DEPT=(\{[^;]*\});/.exec(html);
-const appMap = m ? new Function('return ' + m[1])() : null;
-check('the app has AREA_DEPT', !!appMap);
+// Both read SITE.areaDept (17/10/2026, product step 2): the server from _site.js, the page from its copy.
+const sm = /<script id="site-config">var SITE=(.*?);<\/script>/.exec(html);
+const appMap = html.includes('var AREA_DEPT=SITE.areaDept;') && sm ? JSON.parse(sm[1]).areaDept : null;
+check('the app has AREA_DEPT, from SITE', !!appMap);
 check('the app\'s map is the server\'s map, key for key', appMap && JSON.stringify(Object.entries(appMap).sort()) === JSON.stringify(Object.entries(AREA_DEPT).sort()), [appMap, AREA_DEPT]);
 const nd = /var NO_DEPT='([^']*)'/.exec(html);
 check('the same "no department" label', nd && new Function("return '" + nd[1] + "'")() === NO_DEPT && NO_DEPT === 'ללא מחלקה', nd && nd[1]);

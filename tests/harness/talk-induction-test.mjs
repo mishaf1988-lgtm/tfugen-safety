@@ -99,8 +99,9 @@ console.log('\n3. a talk for one department');
 console.log('\n4. the training departments');
 {
   const html = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
-  const m = /var _TBT_DEPTS=(\[.*?\]\]);/.exec(html);
-  const app = m ? JSON.parse(m[1]) : null;
+  // Both read SITE.tbtDepts (17/10/2026): talk.js from _site.js, the page from its copy.
+  const m = /<script id="site-config">var SITE=(.*?);<\/script>/.exec(html);
+  const app = html.includes('var _TBT_DEPTS=SITE.tbtDepts;') && m ? JSON.parse(m[1]).tbtDepts : null;
   check('index.html and talk.js have the same seven departments and card names', app && JSON.stringify(app) === JSON.stringify(TBT_DEPTS) && TBT_DEPTS.length === 7, app);
   check('a card named "יצור" belongs to טוגנים, and to no other department', deptMatch('טוגנים', 'יצור') && !deptMatch('אריזה', 'יצור'));
   check('management is in no training department; no department = everyone', !TBT_DEPTS.some((d) => deptMatch(d[0], 'הנהלה')) && deptMatch(null, 'הנהלה'));

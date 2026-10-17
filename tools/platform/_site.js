@@ -43,6 +43,26 @@ export const SITE = {
   waTemplates: { dedicated: 'safety_report', fallback: 'incident_alert', ncrCritical: 'ncr_critical',
     taskOverdue: 'task_overdue', expiryWarning: 'expiry_warning', roundMissed: 'round_missed' },
   wabaId: '',
+  // The factory's departments. depts: the hazard register and the department report (maintenance
+  // is added to the report by itself). areaDept: a trustee's area -> its department, e.g.
+  // { 'Packing': 'Production' }; an area not here is "no department". tbtDepts: the weekly
+  // training forms, each with the department names on the employee cards. tbtReport: training
+  // department -> department of the report (one of depts, or maintenance).
+  depts: ['\u05d9\u05d9\u05e6\u05d5\u05e8', '\u05d0\u05e8\u05d9\u05d6\u05d4', '\u05de\u05d7\u05e1\u05e0\u05d9\u05dd'],
+  areaDept: {},
+  tbtDepts: [['\u05d9\u05d9\u05e6\u05d5\u05e8', ['\u05d9\u05d9\u05e6\u05d5\u05e8']], ['\u05d0\u05e8\u05d9\u05d6\u05d4', ['\u05d0\u05e8\u05d9\u05d6\u05d4']], ['\u05de\u05d7\u05e1\u05e0\u05d9\u05dd', ['\u05de\u05d7\u05e1\u05e0\u05d9\u05dd']], ['\u05d0\u05d7\u05d6\u05e7\u05d4', ['\u05d0\u05d7\u05d6\u05e7\u05d4']]],
+  tbtReport: {'\u05d9\u05d9\u05e6\u05d5\u05e8': '\u05d9\u05d9\u05e6\u05d5\u05e8', '\u05d0\u05e8\u05d9\u05d6\u05d4': '\u05d0\u05e8\u05d9\u05d6\u05d4', '\u05de\u05d7\u05e1\u05e0\u05d9\u05dd': '\u05de\u05d7\u05e1\u05e0\u05d9\u05dd', '\u05d0\u05d7\u05d6\u05e7\u05d4': '\u05d0\u05d7\u05d6\u05e7\u05d4'},
+  // The annual training plan a new year starts from: [item, subject, who trains, audience].
+  // trainPlanAuto: item -> [talk kind, subject] of a closed talk that marks it done; {} = by hand only.
+  trainPlan: [
+    [1, '\u05d4\u05d3\u05e8\u05db\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05e0\u05ea\u05d9\u05ea', '\u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea', '\u05db\u05dc \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd'],
+    [2, '\u05e2\u05d6\u05e8\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4', '\u05de\u05d3\u05e8\u05d9\u05da \u05e2\u05d6\u05e8\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4', '\u05e6\u05d5\u05d5\u05ea \u05e2\u05d6\u05e8\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4'],
+    [3, '\u05db\u05d9\u05d1\u05d5\u05d9 \u05d0\u05e9 \u05d5\u05e0\u05d4\u05dc\u05d9 \u05d7\u05d9\u05e8\u05d5\u05dd', '\u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea', '\u05db\u05dc \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd'],
+    [4, '\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd', '\u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea', '\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e2\u05dd \u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd'],
+    [5, '\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4', '\u05de\u05de\u05d5\u05e0\u05d4 \u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4', '\u05db\u05dc \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd'],
+    [6, '\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e0\u05d5\u05e1\u05e4\u05d5\u05ea \u05dc\u05e4\u05d9 \u05e6\u05e8\u05db\u05d9\u05dd \u05e9\u05d9\u05d6\u05d5\u05d4\u05d5', '', '']
+  ],
+  trainPlanAuto: {},
   // The manager's mail signature, under every hazard report.
   signature: '<div style="margin-top:16px;font-family:Arial,sans-serif;font-size:14px">\u05d1\u05d1\u05e8\u05db\u05d4,<br><br><b>' + OWNER + '.</b><br>' + COMPANY + '<br><a href="mailto:' + MANAGER_EMAIL + '">' + MANAGER_EMAIL + '</a></div>'
 };
@@ -54,5 +74,5 @@ export const NAMES_RE = /(?!)/;
 
 export const CLIENT_KEYS = ['name', 'brand', 'slug', 'shortName', 'owner', 'company', 'companyEn', 'filePrefix', 'host', 'appUrl',
   'supabaseUrl', 'supabaseKey', 'stagingSupabaseUrl', 'stagingSupabaseKey', 'loginDomain', 'adminEmail', 'managerEmail',
-  'mailDomain', 'odRoot', 'backupPrefix', 'waTemplates'];
+  'mailDomain', 'odRoot', 'backupPrefix', 'waTemplates', 'depts', 'areaDept', 'tbtDepts', 'trainPlan', 'trainPlanAuto'];
 export const clientSite = () => Object.fromEntries(CLIENT_KEYS.map((k) => [k, SITE[k]]));

@@ -303,7 +303,7 @@ function upstreamError(r, cors) {
 
 // Departments ticked on the refresher form. Shape seen 23/09 (task 3285307):
 // reviewResult.questions[] with questionType "CheckBoxTemplate", title = the
-// department name ("\u05d8\u05d5\u05d2\u05e0\u05d9\u05dd", "\u05ea\u05d5\u05e6\"\u05d2", ...), selectedAnswers[0].text "1" when
+// department name (one of SITE.tbtDepts), selectedAnswers[0].text "1" when
 // ticked, "0" when not. Falls back to a generic "looks selected" walk for any
 // other form shape, and returns [] rather than guessing.
 function extractSelectedAnswers(rr) {
