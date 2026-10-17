@@ -76,7 +76,11 @@ def ideas_waiting(cwd):
     """Ideas waiting for Michael's verdict (15/10/2026, project-files/ideas-lab.md, the inventor Routine)."""
     t = read(os.path.join(cwd, "project-files", "ideas-lab.md"))
     sec = t.split("## ממתין להחלטה", 1)[1].split("\n## ", 1)[0] if "## ממתין להחלטה" in t else ""
-    return [l[4:].strip()[:100] for l in sec.splitlines() if l.startswith("### ")]
+    # An idea already chosen or rejected but left under this heading is not asked again
+    # (17/10/2026: idea 10, built on 16/10, came back in the end-of-task questionnaire).
+    blocks = re.split(r"(?m)^### ", sec)[1:]
+    return [b.splitlines()[0].strip()[:100] for b in blocks
+            if not re.search(r"\*\*מצב:\*\*\s*(נבחר|נדחה)", b)]
 
 
 def claims(cwd):
