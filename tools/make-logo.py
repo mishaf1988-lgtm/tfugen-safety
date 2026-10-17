@@ -19,8 +19,8 @@ im = im.resize((w, round(im.height * w / im.width)))
 b = io.BytesIO()
 im.save(b, 'JPEG', quality=85, optimize=True)
 out = (
-  "// The factory logo for documents the server builds (10/10/2026, Michael: \"\\u05d1\\u05d8\\u05d5\\u05e4\\u05e1\n"
-  "// \\u05e9\\u05e0\\u05e9\\u05dc\\u05d7 \\u05d7\\u05e1\\u05e8 \\u05dc\\u05d5\\u05d2\\u05d5 \\u05e9\\u05dc \\u05ea\\u05e4\\u05d5\\u05d2\\u05df\"). A Function cannot read /logo.jpg from the\n"
+  "// The factory logo for documents the server builds (10/10/2026: a form sent by mail went out\n"
+  "// without the logo). A Function cannot read /logo.jpg from the\n"
   "// repo, and fetching it from the site goes through the Israel-only gate, so the\n"
   "// picture rides in the code: /logo.jpg at %dx%d, JPEG, base64.\n"
   "// Written by `python3 tools/make-logo.py` from logo.jpg; do not edit by hand.\n"

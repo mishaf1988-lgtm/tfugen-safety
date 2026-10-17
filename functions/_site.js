@@ -37,6 +37,7 @@ export const SITE = {
   odFileUrl: 'https://tapugancoil-my.sharepoint.com/personal/sviva_tapugan_co_il/',
   backupPrefix: 'tapugan-backup',                      // names of the files already in _Backups
   codeRepos: [['mishaf1988-lgtm/tfugen-safety', false], ['mishaf1988-lgtm/michael-skills', true]],
+  assistantQueue: 'https://api.github.com/repos/mishaf1988-lgtm/michael-skills/contents/plugins/michael/skills/michael-assistant/references/research-queue.md', // the researcher's queue the weekly digest reads (GitHub contents API); '' = none
   // WhatsApp templates as approved by Meta for this account. The server sends the first two.
   waTemplates: { dedicated: 'tfugen_safety_report', fallback: 'tfugen_incident_alert', ncrCritical: 'tfugen_ncr_critical',
     taskOverdue: 'tfugen_task_overdue_v2', expiryWarning: 'tfugen_expiry_warning', roundMissed: 'tfugen_round_missed' },
@@ -44,6 +45,12 @@ export const SITE = {
   // The manager's Outlook signature (29/09/2026, from his screenshot), under every hazard report.
   signature: '<div style="margin-top:16px;font-family:Arial,sans-serif;font-size:14px">\u05d1\u05d1\u05e8\u05db\u05d4,<br><br><span style="color:#e00000;font-weight:bold">' + OWNER + '.</span><br>\u05de\u05e0\u05d4\u05dc \u05d0\u05d9\u05db\u05d5\u05ea \u05d4\u05e1\u05d1\u05d9\u05d1\u05d4 \u05d5\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea(\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea) // <span style="color:#e00000;font-weight:bold">' + COMPANY + ' \u05d1\u05e2&quot;\u05de</span><br><span style="font-size:12px"><span style="font-weight:bold">\u05e0\u05d9\u05d9\u05d3:</span> 0547940073 / <span style="font-weight:bold">\u05de\u05e9\u05e8\u05d3:</span> 08-6808365 / <a href="mailto:' + MANAGER_EMAIL + '" style="font-weight:bold">' + MANAGER_EMAIL + '</a></span><br><div style="border-top:2px solid #f5c400;width:340px;margin:12px 0"></div><a href="https://www.tapugan.co.il" style="color:#e00000;font-weight:bold">www.tapugan.co.il</a></div>'
 };
+
+// The words that give this factory away, for tests/harness/site-config-test.mjs: it fails when
+// one of them shows up outside this file (and the exported copy fails on any of them at all,
+// tools/export-platform.mjs). tapugan / tfugen in any case, the live project id, the Hebrew
+// short name, the manager's surname (a misspelt copy hid in the about box), raw, \uXXXX or &#NNNN;.
+export const NAMES_RE = /tapugan|tfugen|znhjtpcltrxxyfjczgvw|\\u05ea\\u05e4\\u05d5\\u05d2\\u05df|\u05ea\u05e4\u05d5\u05d2\u05df|&#1514;&#1508;&#1493;&#1490;&#1503;|\\u05e4\\u05e8\\u05d9\\u05d9\\u05dc|\u05e4\u05e8\u05d9\u05d9\u05dc|&#1508;&#1512;&#1497;&#1497;&#1500;/i;
 
 // What the page knows (17/10/2026, step 1 of the app). index.html carries these as
 // <script id="site-config">var SITE=...</script> before its main script, and the markup that
