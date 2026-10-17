@@ -61,6 +61,9 @@ h1{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;letter-s
 .detail dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 12px}
 .detail dt{color:var(--ink-2);font-size:13px}
 .detail dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.detail .go{align-self:flex-start;display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:8px;background:var(--accent);color:var(--desk);font-weight:700;text-decoration:none}
+.detail .go:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.detail .hint{font-size:12px;color:var(--ink-2)}
 .empty{background:var(--desk);border:1px dashed var(--ink-2);border-radius:8px;padding:18px;color:var(--ink-2)}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ink-2)}
 .legend span{display:inline-flex;align-items:center;gap:5px}
@@ -151,7 +154,15 @@ h1{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;letter-s
            ['מה עשה',a.did],['מה למד',a.learned],['מחכה לך',a.waiting],['עלות לריצה',a.cost]].forEach(function(r2){
             if(!r2[1])return;dl.appendChild(el('dt',null,r2[0]));dl.appendChild(el('dd',null,r2[1]));
           });
-          d.appendChild(dl);desks.appendChild(d);
+          d.appendChild(dl);
+          // 17/10/2026 (Michael: "all my agents must work from the project"): the Routine's own page
+          // in claude.ai lists every run in full and has Run now. The desk id is the trigger id.
+          if(/^trig_[A-Za-z0-9]+$/.test(a.id)){
+            var go=el('a','go','\u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05e1\u05d5\u05db\u05df');go.href='https://claude.ai/code/routines/'+a.id;go.target='_blank';go.rel='noopener';
+            d.appendChild(go);
+            d.appendChild(el('div','hint','\u05e9\u05dd: \u05db\u05dc \u05d4\u05e8\u05d9\u05e6\u05d5\u05ea \u05d1\u05de\u05dc\u05d5\u05d0\u05df, \u05d5\u05db\u05e4\u05ea\u05d5\u05e8 Run now \u05dc\u05d4\u05e4\u05e2\u05dc\u05d4 \u05d1\u05d9\u05d3.'));
+          }
+          desks.appendChild(d);
         }
       });
       room.appendChild(desks);floor.appendChild(room);
