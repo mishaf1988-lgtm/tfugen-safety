@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 01/10/2026 (HEAD = PR #1010). סודר מחדש ב-01/10/2026 (BACKLOG 31): כאן רק מה שפתוח; כל מה שנסגר ב-[`project-files/STATUS-archive.md`](project-files/STATUS-archive.md).
+**התאריך של כל פריט כתוב בשורה שלו** (השורה "Last updated" הוסרה 17/10/2026: היא לא עודכנה מ-01/10 והטעתה את פרויקט תפוגן ב-claude.ai). סודר מחדש ב-01/10/2026 (BACKLOG 31): כאן רק מה שפתוח; כל מה שנסגר ב-[`project-files/STATUS-archive.md`](project-files/STATUS-archive.md).
 
 ## 🔔 פתוח עכשיו (סעיף יחיד, 01/10/2026)
 
