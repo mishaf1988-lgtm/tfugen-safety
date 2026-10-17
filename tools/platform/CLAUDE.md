@@ -3,6 +3,7 @@
 Claude Code loads this file at the start of every session in this repo.
 
 הקובץ הזה מוחלף בכל ייצוא בגרסה מ-`tools/platform/CLAUDE.md`. שינוי כאן חייב להגיע גם לשם, אחרת הוא נמחק.
+הייצוא משאיר `.export-manifest.json` (טביעת אצבע של כל קובץ שכתב), ונעצר כשקובץ כאן נערך מאז הייצוא הקודם. לא למחוק אותו.
 
 ## 0. כללי הקו (גוברים על כל השאר)
 
@@ -11,7 +12,7 @@ Claude Code loads this file at the start of every session in this repo.
 3. מידע שמגיע מהקו של המעסיק (צ'אט אחר, קובץ, הדבקה) נבדק לפני שנכנס לכאן, ופרט מזהה נשאר בחוץ.
 4. נתוני הדגמה מומצאים בלבד (`demo/`).
 5. חשבונות העסק (מסד, אתר, מייל, דומיין) נפרדים, ולא משתמשים בחשבון של המעסיק לשום דבר.
-6. המסמכים של הקו (`handoff.md`, `checklist-day1.md`, `demo/`, `docs/`, `marketing/`) קיימים רק כאן ולא במקור הייצוא. ייצוא שמחליף את תוכן ה-repo חייב לשמור אותם.
+6. המסמכים של הקו (`handoff.md`, `checklist-day1.md`, `demo/`, `docs/`, `marketing/`) קיימים רק כאן ולא במקור הייצוא. ייצוא שמחליף את תוכן ה-repo חייב לשמור אותם. `.export-manifest.json` נוצר על ידי הייצוא, לא נערך ולא נמחק ידנית.
 
 ## The product
 

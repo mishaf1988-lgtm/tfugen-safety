@@ -17,11 +17,16 @@
 import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const OUT = path.resolve(process.argv[2] || '');
-if (!process.argv[2] || OUT === ROOT || OUT.startsWith(ROOT + path.sep)) {
+const ARGS = process.argv.slice(2).filter((a) => a !== '--force' && a !== '--dry-run');
+const FORCE = process.argv.includes('--force');
+// --dry-run: only the check below, the list printed, nothing written or deleted (17/10/2026, the business line).
+const DRY = process.argv.includes('--dry-run');
+const OUT = path.resolve(ARGS[0] || '');
+if (!ARGS[0] || OUT === ROOT || OUT.startsWith(ROOT + path.sep)) {
   console.error('usage: node tools/export-platform.mjs <out-dir outside this repo>'); process.exit(2);
 }
 
@@ -72,7 +77,35 @@ const DEPTS_RE = new RegExp(DEPTS.flatMap((d) => [d, esc(d).replace(/\\/g, '\\\\
 // of safety-platform: everything else in it is replaced, these are never deleted or written.
 const KEEP = ['.git', 'handoff.md', 'checklist-day1.md', 'demo', 'docs', 'marketing'];
 const kept = (rel) => KEEP.includes(rel.split('/')[0]);
-fs.mkdirSync(OUT, { recursive: true });
+if (!DRY) fs.mkdirSync(OUT, { recursive: true });
+// A file edited in safety-platform since the last export would be overwritten in silence
+// (17/10/2026, Michael: "how do we sync the business work with here"; CLAUDE.md was the near miss).
+// Each export leaves MANIFEST: the sha256 of every file it wrote. Before deleting anything, a file
+// that differs from it, or a file the last export did not write, stops the export with the list.
+// Bring the change to this repo (tools/platform/ or the code), then run again; --force overwrites.
+const MANIFEST = '.export-manifest.json';
+const sha = (abs) => crypto.createHash('sha256').update(fs.readFileSync(abs)).digest('hex');
+const treeOf = (d, rel = '') => fs.readdirSync(path.join(d, rel), { withFileTypes: true }).flatMap((e) => {
+  const r = rel ? rel + '/' + e.name : e.name;
+  if (kept(r) || r === MANIFEST) return [];
+  return e.isDirectory() ? treeOf(d, r) : [r];
+});
+{
+  const mf = path.join(OUT, MANIFEST);
+  const last = fs.existsSync(mf) ? JSON.parse(fs.readFileSync(mf, 'utf8')) : {};
+  const drift = (fs.existsSync(OUT) ? treeOf(OUT) : []).filter((r) => last[r] !== sha(path.join(OUT, r)));
+  if (DRY) {
+    console.log(drift.length ? '  ' + drift.length + ' files would stop the export:\n' + drift.map((r) => '    ' + r + (last[r] ? '  (edited there)' : '  (not from the export)')).join('\n')
+      : '  nothing edited there since the last export');
+    process.exit(drift.length ? 3 : 0);
+  }
+  if (drift.length && !FORCE) {
+    console.error('  ' + drift.length + ' files in ' + OUT + ' changed since the last export (or were never exported):\n'
+      + drift.slice(0, 40).map((r) => '    ' + r + (last[r] ? '  (edited there)' : '  (not from the export)')).join('\n')
+      + '\n  Bring each change to this repo first, then run again. To overwrite them anyway: --force');
+    process.exit(3);
+  }
+}
 for (const e of fs.readdirSync(OUT)) if (!kept(e)) fs.rmSync(path.join(OUT, e), { recursive: true, force: true });
 const copy = (rel, from = rel) => {
   if (kept(rel)) { console.error('  ' + rel + ' is kept in safety-platform; the export may not write it'); process.exit(1); }
@@ -196,3 +229,5 @@ if (hits.length) {
   process.exit(1);
 }
 console.log('  clean: ' + outFiles(OUT).length + ' files, nothing names Tapugan');
+fs.writeFileSync(path.join(OUT, MANIFEST), JSON.stringify(Object.fromEntries(treeOf(OUT).sort().map((r) => [r, sha(path.join(OUT, r))])), null, 1) + '\n');
+console.log('  ' + MANIFEST + ': the next export stops if one of these files is edited in safety-platform');
