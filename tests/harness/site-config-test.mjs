@@ -14,8 +14,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
 
-// tapugan / tfugen in any case, the live project id, and the Hebrew short name (raw or \uXXXX)
-const NAMES = /tapugan|tfugen|znhjtpcltrxxyfjczgvw|\\u05ea\\u05e4\\u05d5\\u05d2\\u05df|\u05ea\u05e4\u05d5\u05d2\u05df/i;
+// tapugan / tfugen in any case, the live project id, the Hebrew short name, and the manager's
+// surname (17/10/2026, SITE.owner), raw, \uXXXX or &#NNNN; (a misspelt copy hid in the about box)
+const NAMES = /tapugan|tfugen|znhjtpcltrxxyfjczgvw|\\u05ea\\u05e4\\u05d5\\u05d2\\u05df|\u05ea\u05e4\u05d5\u05d2\u05df|\\u05e4\\u05e8\\u05d9\\u05d9\\u05dc|\u05e4\u05e8\u05d9\u05d9\u05dc|&#1508;&#1512;&#1497;&#1497;&#1500;/i;
 const SETTINGS = ['functions/_site.js', 'functions/_logo.js'];
 // Left on purpose, each with its reason. A new entry needs one too.
 const ALLOWED = {
@@ -45,11 +46,12 @@ console.log('\n2. _site.js has what a new factory fills in');
 const src = fs.readFileSync(path.join(ROOT, 'functions/_site.js'), 'utf8');
 check('_site.js: no raw Hebrew (\\uXXXX, rule 1)', !/[\u0590-\u05ff]/.test(src));
 const { SITE } = await import(path.join(ROOT, 'functions/_site.js'));
-const KEYS = ['name', 'slug', 'shortName', 'company', 'host', 'appUrl', 'supabaseUrl', 'loginDomain', 'adminEmail', 'managerEmail', 'mailDomain', 'hrEmail', 'odRoot', 'odFileUrl', 'backupPrefix', 'signature'];
+const KEYS = ['name', 'slug', 'shortName', 'owner', 'ownerTitle', 'company', 'host', 'appUrl', 'supabaseUrl', 'loginDomain', 'adminEmail', 'managerEmail', 'mailDomain', 'hrEmail', 'odRoot', 'odFileUrl', 'backupPrefix', 'signature'];
 check('every value is filled', KEYS.every((k) => typeof SITE[k] === 'string' && SITE[k].length > 0), KEYS.filter((k) => !SITE[k]));
 check('appUrl is https:// + host', SITE.appUrl === 'https://' + SITE.host, SITE.appUrl);
 check('adminEmail is in loginDomain', SITE.adminEmail.endsWith('@' + SITE.loginDomain), SITE.adminEmail);
 check('the signature carries the manager\'s mail', SITE.signature.includes('mailto:' + SITE.managerEmail));
+check('the signature carries the owner\'s name', SITE.signature.includes(SITE.owner + '.'));
 check('previewRe: a preview of this site passes', SITE.previewRe.test('https://a1b2c3.' + SITE.host));
 check('previewRe: another site, or the host as a suffix of another name, does not', !SITE.previewRe.test('https://evil.com') && !SITE.previewRe.test('https://a1.' + SITE.host + '.evil.com') && !SITE.previewRe.test('https://a1x' + SITE.host.replace(/^[^.]+/, '')));
 
