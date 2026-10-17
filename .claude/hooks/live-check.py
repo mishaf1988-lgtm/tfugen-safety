@@ -62,7 +62,11 @@ def decided(t):
 # Words that say nothing about the subject, and names on every heading.
 STOP = {"מיכאל", "מומלץ", "שאלון", "בשאלון", "אחרי", "לפני", "עכשיו", "היום", "אותו", "להוסיף",
         "לעשות", "חדשה", "שלך", "האם", "הכל", "כלומר", "יכול", "אחד", "פעם",
-        "claude", "tfugen", "safety", "tapugan", "https"}
+        "claude", "tfugen", "safety", "tapugan", "https",
+        # 17/10/2026: tools and everyday words of this work matched a passkeys decision on three of
+        # them (Supabase, phone, sign-in) for a question about test runs. They name no subject.
+        "supabase", "cloudflare", "github", "preview", "טלפון", "כניסה", "שיחה", "פריט", "בדיקה",
+        "בדיקות", "בדיקת", "פתוח", "עודכן", "הלאה"}
 
 
 def words(s):
@@ -72,6 +76,8 @@ def words(s):
         if re.match(r"[A-Za-z]", w):
             out.update(p for p in w.lower().split("-") if len(p) >= 4 and p not in STOP)
             continue
+        if w in STOP:
+            continue  # before the prefix comes off: "מומלץ" would become "ומלץ" and pass
         if len(w) >= 5 and w[0] in "\u05d5\u05d4\u05d1\u05dc\u05de\u05e9\u05db":
             w = w[1:]
         if len(w) >= 4 and w not in STOP:
@@ -127,4 +133,5 @@ def main():
         "permissionDecisionReason": "live-check (לקח 61): השאלון אומר שמשהו קיים או עובד ('" + m.group(0) + "'). לבדוק מול המערכת החיה (מסד, הרשאות הטוקן, Graph, get_trigger) שזה באמת פעיל, ורק אז לשאול שוב. אותה שאלה בפעם השנייה עוברת."}}, ensure_ascii=False))
 
 
-main()
+if __name__ == "__main__":
+    main()
