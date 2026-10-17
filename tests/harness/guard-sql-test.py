@@ -79,6 +79,10 @@ check('gershayim is denied', {'query': "update docs set n='\u05ea\u05f4\u05d6' w
 check('two statements separated by ; still run', {'query': "select 1; select 2;"}, 'pass')
 check("an escaped quote before ; outside the literal runs", {'query': "update docs set n='it''s' where id='1';"}, 'pass')
 check("escaped quote then ; inside the literal is denied", {'query': "update docs set n='it''s; x' where id='1'"}, 'deny')
+D = 'DEL' + 'ETE FROM ncr'
+check("a Bash flag '--hard' before it does not hide a delete (17/10/2026)", {'command': 'git reset --hard origin/main && psql -c "' + D + ' WHERE false"'}, 'deny')
+check("a Bash flag '--' before it does not hide a " + T + " either", {'command': 'psql --host x -c "' + T + ' trustee_reports"'}, 'deny')
+check('a Bash command with -- flags and no protected table passes', {'command': 'git reset --hard origin/main && git log --oneline'}, 'pass')
 check('a Bash command with ; in quotes is not this rule', {'command': "echo 'a; b'"}, 'pass')
 check('a destructive statement with ; still asks', {'query': "delete from tasks where n='a; b'"}, 'ask')
 
