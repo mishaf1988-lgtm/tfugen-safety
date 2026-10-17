@@ -13,7 +13,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
 
 const LIVE = 'https://znhjtpcltrxxyfjczgvw.supabase.co', TEST = 'https://ldzbjbsumzqjyvtpiwqo.supabase.co';
 const a = html.indexOf('var _STAGING='), b = html.indexOf('\n', html.indexOf("if(_STAGING){", a));
-const snippet = a > 0 && b > a ? html.substring(a, b) : '';
+// The addresses come from SITE (17/10/2026, functions/_site.js), the page's own copy of which runs first.
+const cfg = /<script id="site-config">([^<]*)<\/script>/.exec(html);
+const snippet = cfg && a > 0 && b > a ? cfg[1] + '\n' + html.substring(a, b) : '';
 check('the host switch is in index.html', !!snippet);
 const run = (host) => {
   const doc = { title: 'Tapugan Safety' };
@@ -41,7 +43,7 @@ for (const h of ['tapugan-safety.pages.dev.evil.com', 'xtapugan-safety.pages.dev
 }
 
 console.log('\n4. the second client (_SB/_SK) follows the same choice');
-check('_SB and _SK are SBU and SBK, not a second hard-coded live URL', /var _SB=SBU;/.test(html) && /var _SK=SBK;/.test(html) && (html.match(/znhjtpcltrxxyfjczgvw\.supabase\.co'/g) || []).length === 1, (html.match(/znhjtpcltrxxyfjczgvw\.supabase\.co'/g) || []).length);
+check('_SB and _SK are SBU and SBK, not a second hard-coded live URL', /var _SB=SBU;/.test(html) && /var _SK=SBK;/.test(html) && (html.match(/znhjtpcltrxxyfjczgvw\.supabase\.co'/g) || []).length === 0 && /var SBU=_STAGING\?SITE\.stagingSupabaseUrl:SITE\.supabaseUrl;/.test(html), (html.match(/znhjtpcltrxxyfjczgvw\.supabase\.co'/g) || []).length);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

@@ -18,6 +18,7 @@ ok = bad = 0
 PUBLIC = {
     '0x4AAAAAAFKxZEGectSBXS2S',  # Turnstile site key, shown to every browser (index.html)
     'sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M',  # Supabase publishable key, in the page
+    'sb_publishable_zITtcP-mcfm8Jv6nBmqFjg_zXpCFdL1',  # the same for the test database (staging), in the page
 }
 SKIP_EXT = re.compile(r'\.(png|jpe?g|gif|pdf|xlsx|docx|pptx|woff2?|ico|zip|mp4)$', re.I)
 B = r'(?<![A-Za-z0-9+/_-])'
