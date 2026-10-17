@@ -63,6 +63,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 נאכף: `hook-utf8-test.py` (stdout וגם stdin); התיקייה: בענן `session-start.py` מעתיק את ה-hooks ל-`~/.claude` (`session-start-test.py`).
 חזר: 2 (14/10: התיקייה עברה ל-/home/user באמצע שיחה, ה-hooks כבו בשקט).
 
+
 ## לפני כתיבה למקום משותף
 
 **74. קבצים שאבדו עם השיחה (11/10/2026, PR זה).**

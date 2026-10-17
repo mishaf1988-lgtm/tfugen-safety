@@ -117,5 +117,24 @@ synced.scan.split('\n').forEach((ln, i) => {
 });
 check('index.html names the factory only through SITE (code) and data-site (markup)', pageHits.length === 0, pageHits.slice(0, 10));
 
+// The logo (17/10/2026): logo.jpg in the root is the one a new factory replaces. The page asks
+// for /logo.jpg; the server's copy in _logo.js and the home-screen icons are made from it.
+const { LOGO_SRC_SHA256 } = await import(path.join(ROOT, 'functions/_logo.js'));
+const { createHash } = await import('crypto');
+check('functions/_logo.js was made from the current logo.jpg (fix: python3 tools/make-logo.py, then NODE_PATH=$(npm root -g) node tools/make-icons.js)',
+  createHash('sha256').update(fs.readFileSync(path.join(ROOT, 'logo.jpg'))).digest('hex') === LOGO_SRC_SHA256);
+const logoRefs = [];
+idx.split('\n').forEach((ln, i) => { if (/data:image\/(jpe?g|png);base64/.test(ln) && /logo/i.test(ln)) logoRefs.push(i + 1); });
+check('index.html shows the logo only from /logo.jpg, no inline copy', logoRefs.length === 0, logoRefs);
+// What the phone shows for the installed app: its name (manifest) and the letter on the tab icon.
+// Written by --write like the page copy above.
+const manPath = path.join(ROOT, 'manifest.webmanifest'), svgPath = path.join(ROOT, 'icon.svg');
+const man = fs.readFileSync(manPath, 'utf8'), svg = fs.readFileSync(svgPath, 'utf8');
+const manOut = man.replace(/("name": )"[^"]*"/, '$1' + JSON.stringify(SITE.brand + ' - \u05de\u05e2\u05e8\u05db\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc ' + SITE.company))
+  .replace(/("short_name": )"[^"]*"/, '$1' + JSON.stringify(SITE.brand));
+const svgOut = svg.replace(/(text-anchor="middle">)[^<]*(<\/text>)/, '$1' + SITE.brand[0] + '$2');
+if (process.argv.includes('--write')) { fs.writeFileSync(manPath, manOut); fs.writeFileSync(svgPath, svgOut); }
+check('manifest.webmanifest names the factory from _site.js (fix: --write)', process.argv.includes('--write') || manOut === man);
+check('icon.svg shows the first letter of SITE.brand (fix: --write)', process.argv.includes('--write') || svgOut === svg);
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

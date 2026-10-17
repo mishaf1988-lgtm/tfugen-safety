@@ -19,7 +19,7 @@ pat = re.compile(
     r"([\w.]+\s*,\s*)*(public\s*\.\s*)?(ncr|ncr_ai|trustee_reports)\b", re.I)
 
 
-def plain(q):
+def plain(q, dashes=True):
     # Comments and double quotes do not change what a statement deletes: "ncr", ONLY ncr,
     # /**/ ncr and a table list ('truncate tasks, ncr') were only asked, not denied (retro 12/10/2026).
     # A comment marker inside a literal is not a comment ('a--b'; delete from ncr), so this walks
@@ -43,7 +43,7 @@ def plain(q):
                 out.append(c); i += 1
             else:
                 e += len(m.group(0)); out.append(q[i:e]); i = e
-        elif q.startswith("--", i):
+        elif dashes and q.startswith("--", i):
             j = q.find("\n", i); i = n if j < 0 else j
             out.append(" ")
         elif q.startswith("/*", i):
@@ -121,7 +121,9 @@ def semi_in_literal(q):
     return False
 
 
-m = pat.search(plain(text))
+# In a Bash command '--' is a flag, not a comment: 'git reset --hard && psql -c "delete from ncr"'
+# had everything after --hard blanked and passed (17/10/2026). So the text is read both ways.
+m = pat.search(plain(text)) or pat.search(plain(text, dashes=False))
 a = None if m else (ask.search(plain(sql)) or update_all(plain(sql)) or definer_no_path(plain(sql)))
 t = None if (m or a) else ("\u05f4" if "\u05f4" in sql else (";" if semi_in_literal(plain(sql)) else None))
 # tfugen-db rule 8 (03/10/2026, lesson 45): a DO $$ block hangs the connector the
