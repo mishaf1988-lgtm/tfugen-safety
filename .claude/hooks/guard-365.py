@@ -110,10 +110,35 @@ def upload_move_ok(args):
 # Python "del L[i]" and a "git mv" of a repo file were denied because a heredoc line elsewhere in
 # the same command mentioned OneDrive).
 ENTERS = re.compile(r"^\s*(cd|pushd|Set-Location|sl|chdir)\b|^\s*(export\s+|\$)?[A-Za-z_][A-Za-z0-9_]*\s*=", re.I)
+# The body of a heredoc fed to python3 / node / cat is that program's text, not shell: its "x = '_onedrive'"
+# is not a cd into the folder and its "rm" line is not a delete (17/10/2026, STATUS: python3 - <<'EOF'
+# that edited backup-od.js was denied twice). A body fed to a shell (bash, sh, pwsh, eval) still counts.
+HEREDOC = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1")
+SHELL_EXE = re.compile(r"^\s*(\S*/)?(bash|sh|zsh|dash|ksh|pwsh|powershell|source|eval|\.)(\s|$)", re.I)
+
+
+def drop_heredocs(cmd):
+    out, lines, i = [], cmd.split("\n"), 0
+    while i < len(lines):
+        line = lines[i]
+        out.append(line)
+        i += 1
+        m = HEREDOC.search(line)
+        if not m:
+            continue
+        stmt = STATEMENTS.split(line[:m.start()])[-1]
+        stmt = stmt.split("|")[-1]  # "cat <<EOF | bash": the last program reads it
+        if SHELL_EXE.search(stmt) or SHELL_EXE.search(line[m.end():].split("|")[-1]):
+            continue
+        while i < len(lines) and lines[i].lstrip("\t") != m.group(2):
+            i += 1
+        i += 1  # the closing line
+    return "\n".join(out)
 
 
 def shell_onedrive(cmd):
     """Why a shell command that names the synced OneDrive folder is denied, or None."""
+    cmd = drop_heredocs(cmd)
     stmts = STATEMENTS.split(cmd)  # a pipeline is one statement: "Get-ChildItem <OneDrive> | Remove-Item"
     inside = any(ENTERS.search(x) and ONEDRIVE_PATH.search(x) for x in stmts)
     segs = [seg for st in stmts if inside or ONEDRIVE_PATH.search(st) for seg in SEGMENTS.split(st)]

@@ -94,6 +94,11 @@ check('"git mv" of a repo file, the folder named in another statement, passes', 
 check('rm after cd into the folder is denied', 'Bash', 'deny', {'command': 'cd "%s/x" && rm a.xlsx' % OD})
 check('rm of a variable that holds the folder is denied', 'Bash', 'deny', {'command': 'D="%s/x"; rm "$D/a.xlsx"' % OD})
 check('rm with the folder in the same statement is still denied', 'Bash', 'deny', {'command': 'echo hi && rm "%s/x.docx"' % OD})
+# A heredoc body fed to a program (python3, cat) is its text, not shell; fed to a shell it still counts.
+check('a python3 heredoc with an "rm" line and an _onedrive variable passes', 'Bash', 'pass', {'command': "python3 - <<'EOF'\nrm tmp.txt\nx = 'backup_onedrive'\nEOF"})
+check('rm into the folder after a python3 heredoc is denied', 'Bash', 'deny', {'command': "python3 - <<'EOF'\nx = 1\nEOF\nrm \"%s/x.docx\"" % OD})
+check('a heredoc fed to bash that deletes in the folder is denied', 'Bash', 'deny', {'command': "bash <<'EOF'\nrm \"%s/x.docx\"\nEOF" % OD})
+check('cat heredoc piped to sh that deletes in the folder is denied', 'Bash', 'deny', {'command': "cat <<EOF | sh\nrm \"%s/x.docx\"\nEOF" % OD})
 check('Invoke-RestMethod GET to Graph passes', 'PowerShell', 'pass', {'command': 'Invoke-RestMethod https://graph.microsoft.com/v1.0/me'})
 check('Invoke-RestMethod -Method Post to Graph is denied', 'PowerShell', 'deny', {'command': 'Invoke-RestMethod -Uri https://graph.microsoft.com/v1.0/me/sendMail -Method Post -Body $b'})
 
