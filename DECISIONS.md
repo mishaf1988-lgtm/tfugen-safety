@@ -2635,3 +2635,11 @@ Anonymous sessions (emp mode) לא יכולים SELECT/UPDATE/DELETE שום דב
 **למה טריגר ולא הלקוח:** ערך שהשרת קובע זז תמיד, גם בכתיבה מהשרת או מטלפון ששעונו שגוי.
 **למה לא לשנות את שם `ts` ב-ptw:** שינוי שם הוא שבירה של טופס, הדפסה ויבוא, בשביל אותה תוצאה.
 **אכיפה:** `trust-batch-test.js` (שבירה: `ts=eq.08:00`).
+
+## 17/10/2026 - גיבוי הקוד ועבודת הסוכנים: zip שבועי של שני המאגרים ל-OneDrive
+**הבקשה (מיכאל):** "אני רוצה שהקוד וכל מה שעשיתי עם הסוכנים להעביר לגיבוי".
+**החלטה:** `backup-od.js` שלב 6: פעם בשבוע לכל מאגר, zip של `main` מ-GitHub ל-`Apps/Tapugan Safety/_Backups/code` (`tfugen-safety-DD-MM-YYYY.zip`, `michael-skills-DD-MM-YYYY.zip`), 8 אחרונים נשמרים. `tfugen-safety` ציבורי, בלי מפתח. `michael-skills` פרטי, דרך `GH_SKILLS_TOKEN` הקיים. אחרון בתור: רק עם תקציב שנשאר אחרי גיבויי הנתונים (ב-17/10/2026 הריצה השתמשה ב-15 מתוך 44).
+**מה בתוך ה-zip:** האפליקציה, השרת, ה-migrations, הפרומפטים של כל ה-Routines (`project-files/routine-*.md`), ה-skills, ה-hooks, ההחלטות, הלקחים והמדריכים.
+**מה לא בתוך ה-zip (נשאר בחשבונות):** הגדרות ה-Routines עצמן (המזהים והלוחות ב-`ACCOUNT-INVENTORY.md`, הפרומפט קורא את הקובץ ב-repo), היסטוריית השיחות ב-claude.ai, נתוני משרד הסוכנים (ArtifactData), הסודות ב-Cloudflare (שמות בלבד ב-`ACCOUNT-INVENTORY.md`). הנתונים עצמם כבר בגיבוי היומי (`cron`, `monthly`, `photos`, `talks`).
+**שחזור:** לפתוח את ה-zip, `git init` ו-push למאגר חדש, ולחבר אליו את פרויקט Pages. סדר ההעברה ובדיקה אחריה: `ACCOUNT-INVENTORY.md` סעיף 5.
+**אכיפה:** `backup-od-test.mjs` סעיף 1c (11 בדיקות, שבירה מכוונת: 5 נכשלו).

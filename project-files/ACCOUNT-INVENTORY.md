@@ -76,7 +76,7 @@ Network secret באותה סביבה (16/10/2026): מפתח API של Cloudflare,
 | `_נכנס מהמייל\לא לתיוק` | `od_move` | `backup-od` (מוחק אחרי 30 יום) |
 | `_בקשות מהמייל` | `mail_request` (השרת) | זרימה 2 |
 | `00_דוחות ומעקב\קטלוג מסמכים.xlsx`, גיליון Claude Log | Cowork | מיכאל |
-| `Apps/Tapugan Safety/_Backups` (cron, monthly, photos, talks) | `backup-od` | שחזור |
+| `Apps/Tapugan Safety/_Backups` (cron, monthly, photos, talks, code) | `backup-od` | שחזור. `code`: zip של שני המאגרים פעם בשבוע, 8 אחרונים (17/10/2026) |
 
 ### אפליקציית Azure (כניסת השרת ל-OneDrive ולמייל)
 Client ID ו-Tenant: ב-`project-files/ONEDRIVE-SERVER-SETUP.md`. הרשאות delegated: `offline_access User.Read Files.ReadWrite Mail.Send` (`functions/_onedrive.js`, `SCOPES`). **בלי Mail.Read** (דורש אישור מנהל, DECISIONS 27/09/2026). הטוקן נשמר ב-Supabase, טבלה `oauth_tokens`; התחברות מחדש מהאפליקציה (מסך ההגדרות, חיבור OneDrive).
@@ -95,7 +95,7 @@ Client ID ו-Tenant: ב-`project-files/ONEDRIVE-SERVER-SETUP.md`. הרשאות d
 | `ONEDRIVE_CLIENT_ID`, `ONEDRIVE_CLIENT_SECRET`, `ONEDRIVE_TENANT_ID` | אפליקציית Azure |
 | `TRUSTEE_NOTIFY_SECRET` | קריאות pg_cron לשרת, קישורי סגירה |
 | `TRUSTEE_CODE`, `TRUSTEE_REMEMBER` | כניסת נאמנים |
-| `GH_SKILLS_TOKEN` | המייל השבועי קורא את תור העוזר ב-michael-skills |
+| `GH_SKILLS_TOKEN` | המייל השבועי קורא את תור העוזר ב-michael-skills; `backup-od` מוריד איתו את ה-zip השבועי של michael-skills (17/10/2026) |
 | `GEMINI_API_KEY`, `GEMINI_MODEL`, `TTS_MODEL`, `TTS_VOICE` | הקראה בקול |
 | `META_ACCESS_TOKEN`, `META_PHONE_NUMBER_ID`, `META_WABA_ID` | וואטסאפ |
 | `RESEND_KEY`, `RESEND_FROM` | מייל גיבוי |

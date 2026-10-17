@@ -5,7 +5,7 @@
 // copied a few per run within Cloudflare's 50-subrequest budget, never
 // pruned; a stale bucket or a refusing OneDrive is a failure in
 // server_state.backup_od, and the weekly mail names it.
-import { onRequest, missing, pruneList, monthlyPick, STATE_KEY, DAILY, MONTHLY, PHOTOS, DAILY_KEEP, MONTHLY_KEEP, TALKS, TALKS_KEEP, talksName, talksPrune, talksFile, SKIP, SKIP_DAYS, SKIP_MAX, skipOld, skipSeen, SEEN_KEY } from './_build/backup-od.mjs';
+import { onRequest, missing, pruneList, monthlyPick, STATE_KEY, DAILY, MONTHLY, PHOTOS, DAILY_KEEP, MONTHLY_KEEP, TALKS, TALKS_KEEP, talksName, talksPrune, talksFile, SKIP, SKIP_DAYS, SKIP_MAX, skipOld, skipSeen, SEEN_KEY, CODE, CODE_KEEP, codeName, codeDue, codePrune } from './_build/backup-od.mjs';
 import { backupProblem, schemaProblem } from './_build/weekly-digest.mjs';
 import fs from 'fs';
 
@@ -35,7 +35,7 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
   check('the folders: under Apps/Tapugan Safety/_Backups', DAILY === 'Apps/Tapugan Safety/_Backups/cron' && MONTHLY === 'Apps/Tapugan Safety/_Backups/monthly' && PHOTOS === 'Apps/Tapugan Safety/_Backups/photos');
 
   function world(o) {
-    const w = { state: {}, od: { [DAILY]: new Map(), [MONTHLY]: new Map(), [PHOTOS]: new Map(), [TALKS]: new Map(), [SKIP]: new Map() }, created: {}, moved: {}, seen: {}, puts: [], dels: [], seq: 0, bodies: {}, talkReads: [], planReads: [] };
+    const w = { state: {}, od: { [DAILY]: new Map(), [MONTHLY]: new Map(), [PHOTOS]: new Map(), [TALKS]: new Map(), [SKIP]: new Map(), [CODE]: new Map() }, created: {}, moved: {}, seen: {}, puts: [], dels: [], seq: 0, bodies: {}, talkReads: [], planReads: [] };
     (o.skip || []).forEach((x) => { const id = 'id' + (++w.seq); w.od[SKIP].set(x.name, id); w.created[id] = x.created; if (x.moved) w.moved[id] = x.moved; if (x.seen !== null) w.seen[id] = x.seen || x.created; });
     if (Object.keys(w.moved).length) w.state.skip_moved = JSON.stringify(w.moved);
     // Seen since it was created, unless the case says otherwise (seen: null = never seen before).
@@ -61,6 +61,7 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
       if (m && mth === 'PUT') { if (o.putFail) return json({ error: { message: 'quota' } }, 507); const f = decodeURIComponent(m[1]), n = decodeURIComponent(m[2]); w.od[f].set(n, 'id' + (++w.seq)); w.puts.push(f + '|' + n); w.bodies[f + '|' + n] = init.body; return json({ id: 'x' }, 201); }
       m = /\/items\/([^/?]+)$/.exec(u);
       if (m && mth === 'DELETE') { const id = decodeURIComponent(m[1]); for (const map of Object.values(w.od)) for (const [n, i] of map) if (i === id) { map.delete(n); w.dels.push(n); } return new Response(null, { status: 204 }); }
+      if (u.startsWith('https://codeload.github.com/') || u.startsWith('https://api.github.com/repos/')) { w.gets = (w.gets || []).concat(u); w.ghAuth = (w.ghAuth || []).concat((init && init.headers && init.headers.Authorization) || ''); return o.codeFail ? json({}, 502) : new Response(new Uint8Array(o.codeBytes || 5000), { status: 200, headers: { 'Content-Type': 'application/zip' } }); }
       return json({ error: 'unexpected ' + mth + ' ' + u }, 599);
     };
     return w;
@@ -74,6 +75,32 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
     let rec = null; try { rec = JSON.parse(w.state[STATE_KEY]); } catch (e) {}
     return { status: r.status, j, w, rec };
   };
+
+  console.log('\n1c. the code, once a week (17/10/2026)');
+  {
+    check('zip name in Michael\'s date order', codeName('mishaf1988-lgtm/tfugen-safety', '2026-10-17') === 'tfugen-safety-17-10-2026.zip');
+    const Z = ['tfugen-safety-11-10-2026.zip', 'michael-skills-16-10-2026.zip'];
+    check('due: 6 days after the last zip, not yet', !codeDue(Z, 'mishaf1988-lgtm/tfugen-safety', '2026-10-17'));
+    check('due: 7 days after, yes', codeDue(Z, 'mishaf1988-lgtm/tfugen-safety', '2026-10-18'));
+    check('due: per repo (the other repo\'s zip does not count)', codeDue(['michael-skills-17-10-2026.zip'], 'mishaf1988-lgtm/tfugen-safety', '2026-10-17'));
+    const ZN = Array.from({ length: 10 }, (_, i) => codeName('mishaf1988-lgtm/tfugen-safety', new Date(Date.parse('2026-12-31T00:00:00Z') - i * 7 * DAY).toISOString().slice(0, 10)));
+    check('prune: the oldest beyond ' + CODE_KEEP + ', by the date, this repo only', codePrune(ZN.concat(['michael-skills-01-01-2020.zip']), 'mishaf1988-lgtm/tfugen-safety', CODE_KEEP).join() === ZN.slice(8).join(), codePrune(ZN, 'mishaf1988-lgtm/tfugen-safety', CODE_KEEP));
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+    const c1 = await call({ backups: [], photos: [] }, 'nsec');
+    const nm = codeName('mishaf1988-lgtm/tfugen-safety', today);
+    check('no zip yet: the public repo copied to _Backups/code, without a token', c1.w.od[CODE].has(nm) && (c1.w.gets || []).length === 1 && /codeload\.github\.com\/mishaf1988-lgtm\/tfugen-safety\/zip/.test(c1.w.gets[0]) && !c1.w.ghAuth[0], [c1.rec && c1.rec.code, c1.w.gets]);
+    check('...the private repo skipped and said so, not a failure', JSON.stringify((c1.rec.code || {}).skipped || []).includes('michael-skills: no GH_SKILLS_TOKEN') && !JSON.stringify(c1.rec.errors).includes('code'), c1.rec);
+    const c2 = await call({ backups: [], photos: [], od: { [CODE]: [nm] } }, 'nsec');
+    check('a zip from today: nothing downloaded', !(c2.w.gets || []).length, c2.w.gets);
+    const ENV0 = Object.assign({}, ENV); ENV.GH_SKILLS_TOKEN = 'ghp_x';
+    const c3 = await call({ backups: [], photos: [], od: { [CODE]: [nm] } }, 'nsec');
+    Object.keys(ENV).forEach((k) => { if (!(k in ENV0)) delete ENV[k]; });
+    check('with the token: the private repo through the API, the token sent', (c3.w.gets || []).length === 1 && /api\.github\.com\/repos\/mishaf1988-lgtm\/michael-skills\/zipball/.test(c3.w.gets[0]) && c3.w.ghAuth[0] === 'Bearer ghp_x', [c3.w.gets, c3.w.ghAuth]);
+    const c4 = await call({ backups: [], photos: [], codeFail: true }, 'nsec');
+    check('GitHub refusing: a failure in the record, the mail names it', JSON.stringify(c4.rec.errors).includes('code: mishaf1988-lgtm/tfugen-safety 502'), c4.rec.errors);
+    const c5 = await call({ backups: [], photos: [], codeBytes: 10 }, 'nsec');
+    check('an empty answer is not saved as a backup', !c5.w.od[CODE].size && JSON.stringify(c5.rec.errors).includes('too small'), c5.rec.errors);
+  }
 
   console.log('\n1b. "not filed": deleted after ' + SKIP_DAYS + ' days');
   {
