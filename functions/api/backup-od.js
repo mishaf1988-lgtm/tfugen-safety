@@ -23,6 +23,11 @@
 //                     Michael: OneDrive rather than Workers Paid; the nightly worker
 //                     has no room left, backup-cron-budget-test). The signatures are
 //                     images in incidents-photos, copied with the photos.
+//   _Backups/code     once a week, the code of the repos as a zip from GitHub (17/10/2026, Michael:
+//                     "the code and everything I did with the agents, to a backup"): the app, the
+//                     server, the Routine prompts (project-files/routine-*.md), the skills and the
+//                     decisions all live in the repo. CODE_KEEP kept. michael-skills is private and
+//                     reads with GH_SKILLS_TOKEN (the one the weekly mail reads its queue with); without it only the public repo.
 // The result goes to server_state.backup_od; the weekly mail names a failure.
 //
 // Cloudflare's free plan allows 50 subrequests per invocation. The token and
@@ -37,6 +42,23 @@ export const BASE = 'Apps/Tapugan Safety/_Backups';
 export const DAILY = BASE + '/cron', MONTHLY = BASE + '/monthly', PHOTOS = BASE + '/photos';
 export const DAILY_KEEP = 15, MONTHLY_KEEP = 12, PHOTO_MAX = 15;
 export const TALKS = BASE + '/talks', TALKS_KEEP = 15;
+export const CODE = BASE + '/code', CODE_KEEP = 8, CODE_EVERY_DAYS = 7;
+// [repo, private?]. A private one is skipped (and said so) until the token is there.
+export const CODE_REPOS = [['mishaf1988-lgtm/tfugen-safety', false], ['mishaf1988-lgtm/michael-skills', true]];
+const CODE_RE = /^(.+)-(\d{2})-(\d{2})-(\d{4})\.zip$/;
+export function codeName(repo, today) { const [y, m, d] = String(today).split('-'); return repo.split('/')[1] + '-' + d + '-' + m + '-' + y + '.zip'; }
+// The newest zip of this repo is at least CODE_EVERY_DAYS old (or there is none).
+export function codeDue(names, repo, today) {
+  const base = repo.split('/')[1], t = Date.parse(today + 'T00:00:00Z');
+  const ds = (names || []).map((n) => CODE_RE.exec(n)).filter((m) => m && m[1] === base).map((m) => Date.parse(m[4] + '-' + m[3] + '-' + m[2] + 'T00:00:00Z'));
+  return !ds.length || t - Math.max(...ds) >= CODE_EVERY_DAYS * 864e5;
+}
+// The zips of one repo beyond the newest `keep`, by the date in the name.
+export function codePrune(names, repo, keep) {
+  const base = repo.split('/')[1];
+  const key = (n) => { const m = CODE_RE.exec(n); return m && m[1] === base ? m[4] + m[3] + m[2] : ''; };
+  return names.filter((n) => key(n)).sort((a, b) => key(b).localeCompare(key(a))).slice(keep);
+}
 // "לא לתיוק" (11/10/2026, Michael in the questionnaire: "בצע: מחיקה אחרי 30 יום"): copies of mail
 // attachments that were not filed (invoices, quotes, duplicates). The original stays in the mail.
 // A file created there more than SKIP_DAYS ago is deleted (to the OneDrive recycle bin), at most
@@ -235,6 +257,33 @@ async function run(env) {
     used++;
     await stateSet(env, { [SEEN_KEY]: JSON.stringify(seen) });
   } catch (e) { err('skip', e); }
+
+  // 6. the code, once a week per repo, last: a day late is fine, the data backups come first.
+  // A zip is about 12MB: one GET from GitHub, one PUT (simple upload takes up to 250MB).
+  if (left() >= 4) try {
+    const od = await odList(CODE);
+    rec.code = { copied: [], skipped: [], pruned: 0 };
+    for (const [repo, priv] of CODE_REPOS) {
+      if (!codeDue(od.map((x) => x.name), repo, today)) continue;
+      if (priv && !env.GH_SKILLS_TOKEN) { rec.code.skipped.push(repo + ': no GH_SKILLS_TOKEN'); continue; }
+      if (left() < 3) { rec.code.skipped.push(repo + ': budget, tomorrow'); continue; }
+      const url = priv ? 'https://api.github.com/repos/' + repo + '/zipball/main' : 'https://codeload.github.com/' + repo + '/zip/refs/heads/main';
+      const hd = priv ? { Authorization: 'Bearer ' + env.GH_SKILLS_TOKEN, 'User-Agent': 'tapugan-backup', Accept: 'application/vnd.github+json' } : { 'User-Agent': 'tapugan-backup' };
+      const r = await f(url, { headers: hd, signal: tmo(60000) });
+      if (!r.ok) { err('code', repo + ' ' + r.status); continue; }
+      const bytes = await r.arrayBuffer();
+      if (bytes.byteLength < 1000) { err('code', repo + ' zip too small: ' + bytes.byteLength); continue; }
+      const n = codeName(repo, today);
+      const p = await f(GRAPH + '/root:/' + seg(CODE) + '/' + encodeURIComponent(n) + ':/content', { method: 'PUT', headers: { ...gh, 'Content-Type': 'application/zip' }, body: bytes, signal: tmo(60000) });
+      if (!p.ok) { err('code', 'onedrive put ' + n + ' ' + p.status); continue; }
+      rec.code.copied.push(n + ' (' + Math.round(bytes.byteLength / 1048576 * 10) / 10 + 'MB)');
+      od.push({ id: null, name: n });
+    }
+    for (const [repo] of CODE_REPOS) {
+      if (left() < 2) break;
+      rec.code.pruned += await prune(od, CODE_KEEP, (names) => codePrune(names, repo, CODE_KEEP));
+    }
+  } catch (e) { err('code', e); }
 
   if (!rec.newest) rec.errors.push('no complete backup in the bucket');
   else {
