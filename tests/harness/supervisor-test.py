@@ -165,5 +165,26 @@ def run_main(path):
 out = run_main(tr([lambda f: start(f, "resume"), lambda f: tline(f, "assistant", [{"type": "text", "text": "לבצע?"}])]))
 check("the hook blocks with the url, even on a closing question", '"block"' in out and OFF in out, out)
 
+print("\nSTATUS 99 (17/10/2026): 'I added to X' and X did not change")
+g = os.path.join(root, "g"); sh(root, "git", "clone", "-q", origin, g)
+for k, v in (("user.email", "t@t"), ("user.name", "t")):
+    sh(g, "git", "config", k, v)
+os.makedirs(os.path.join(g, ".claude", "skills", "tfugen-db"))
+for f in ("STATUS.md", "DECISIONS.md", ".claude/skills/tfugen-db/SKILL.md"):
+    open(os.path.join(g, f), "w").write("x\n")
+sh(g, "git", "add", "-A")
+subprocess.run(["git", "commit", "-q", "-m", "old"], cwd=g, check=True, capture_output=True,
+               env=dict(os.environ, GIT_AUTHOR_DATE="2026-01-01T10:00:00", GIT_COMMITTER_DATE="2026-01-01T10:00:00"))
+sh(g, "git", "push", "-q", "origin", "main"); sh(g, "git", "fetch", "-q", "origin")
+check("'הוספתי ל-STATUS' with STATUS unchanged for months: named", sup.unchanged_claims(g, "הוספתי שורה ל-STATUS.") == ["STATUS.md"], sup.unchanged_claims(g, "הוספתי שורה ל-STATUS."))
+check("a skill named next to 'עדכנתי': its SKILL.md is checked", sup.unchanged_claims(g, "עדכנתי את tfugen-db.") == [".claude/skills/tfugen-db/SKILL.md"])
+check("verdict blocks with the file name", "STATUS.md" in (sup.verdict(g, "נרשם ב-STATUS.", set(), False) or ""))
+open(os.path.join(g, "DECISIONS.md"), "a").write("y\n"); sh(g, "git", "commit", "-qam", "new"); sh(g, "git", "push", "-q", "origin", "main"); sh(g, "git", "fetch", "-q", "origin")
+check("DECISIONS changed on main today: passes", sup.unchanged_claims(g, "הוספתי החלטה ל-DECISIONS.") == [])
+open(os.path.join(g, "STATUS.md"), "a").write("z\n")
+check("STATUS changed in the work tree: passes", sup.unchanged_claims(g, "הוספתי ל-STATUS.") == [])
+check("STATUS-archive is not read as STATUS", sup.claimed_files("נרשם ב-STATUS-archive") == {"project-files/STATUS-archive.md"})
+check("a file named without a claim verb: nothing", sup.claimed_files("קראתי את STATUS ואת DECISIONS") == set())
+
 print("\n%d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)

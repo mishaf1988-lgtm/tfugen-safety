@@ -13,7 +13,7 @@ Output to stdout becomes context for the session. Never fails the start.
 
 Test:  python3 tests/harness/session-start-test.py
 """
-import datetime, json, os, re, shlex, sys
+import datetime, json, os, re, shlex, subprocess, sys
 sys.stdout.reconfigure(encoding="utf-8")  # Windows writes cp1255; Claude Code reads UTF-8 (05/10/2026)
 sys.stdin.reconfigure(encoding="utf-8")  # Claude Code sends UTF-8; Windows reads cp1255 (05/10/2026)
 
@@ -79,6 +79,33 @@ def ideas_waiting(cwd):
     return [l[4:].strip()[:100] for l in sec.splitlines() if l.startswith("### ")]
 
 
+def claims(cwd):
+    """Items other conversations hold now (STATUS 100, 12/10/2026, lesson 10: two conversations built
+    the same proposals). `claim.sh --list`; no key, offline or a bad answer: nothing, quietly.
+    SESSION_START_CLAIMS (a JSON answer) stands in for the call in tests."""
+    raw = os.environ.get("SESSION_START_CLAIMS")
+    if raw is None:
+        sh = os.path.join(cwd, "project-files", "claim.sh")
+        if not os.path.exists(sh):
+            return []
+        try:
+            raw = subprocess.run(["bash", sh, "--list"], capture_output=True, text=True, encoding="utf-8", timeout=10, cwd=cwd).stdout
+        except Exception:
+            return []
+    try:
+        c = json.loads(raw).get("claims") or {}
+    except Exception:
+        return []
+    out = []
+    for item, v in sorted(c.items(), key=lambda kv: str((kv[1] or {}).get("at") or "")):
+        v = v or {}
+        at = str(v.get("at") or "")
+        m = re.match(r"(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2})", at)
+        when = "%s/%s/%s %s UTC" % (m.group(3), m.group(2), m.group(1), m.group(4)) if m else at
+        out.append("%s: %s, %s%s" % (item, v.get("session") or "?", when, (" (" + str(v["note"])[:60] + ")") if v.get("note") else ""))
+    return out
+
+
 def office_url(cwd):
     """The agents' office page (16/10/2026, Michael: "always pin it to my conversations"). The Artifacts
     button of a conversation lists only the pages opened in it, so every new one opens the office."""
@@ -105,6 +132,9 @@ def report(cwd):
         out += ["", "-- אולי כבר בוצעו: %d פריטים שהבדיקה שלהם עודכנה אחרי התאריך האחרון בשורה (מוצגים %d הישנים). "
                 "לבדוק כל אחד בקוד, ואז לסגור לארכיון או להוסיף לשורה \"נבדק DD/MM/YYYY: עדיין פתוח כי ...\" (לקח 15) --"
                 % (total, len(maybe))] + maybe
+    held = claims(cwd)
+    if held:
+        out += ["", "-- 🔒 פריטים תפוסים: %d (claim.sh). לא לכתוב להם קוד; לבחור פריט אחר או לקרוא את השיחה (list_events) --" % len(held)] + held
     chrome = chrome_open(cwd)
     if chrome:
         out += ["", "-- 🌐 משימות לכרום: %d פתוחות (project-files/chrome-queue.md). להזכיר למיכאל --" % len(chrome)] + chrome
