@@ -88,6 +88,12 @@ check('the alias ri is denied', 'PowerShell', 'deny', {'command': 'ri "%s\\x.txt
 check('[IO.File]::Delete is denied', 'PowerShell', 'deny', {'command': '[System.IO.File]::Delete("%s\\x.txt")' % OD})
 check('Remove-Item in the repo passes', 'PowerShell', 'pass', {'command': 'Remove-Item -Recurse tests\\harness\\_build'})
 check('Get-ChildItem of the OneDrive folder passes', 'PowerShell', 'pass', {'command': 'Get-ChildItem "%s"' % OD})
+# 17/10/2026: only a delete whose own statement names the folder counts, or one after a cd / a variable into it.
+check('a Python "del L[i]" in a heredoc, the folder named on another line, passes', 'Bash', 'pass', {'command': "python3 - <<'EOF'\nL=[1,2]\ndel L[0]\nprint('saved to OneDrive')\nEOF"})
+check('"git mv" of a repo file, the folder named in another statement, passes', 'Bash', 'pass', {'command': "git mv handoff-1.md project-files/handoffs/ && git commit -m 'backup goes to OneDrive'"})
+check('rm after cd into the folder is denied', 'Bash', 'deny', {'command': 'cd "%s/x" && rm a.xlsx' % OD})
+check('rm of a variable that holds the folder is denied', 'Bash', 'deny', {'command': 'D="%s/x"; rm "$D/a.xlsx"' % OD})
+check('rm with the folder in the same statement is still denied', 'Bash', 'deny', {'command': 'echo hi && rm "%s/x.docx"' % OD})
 check('Invoke-RestMethod GET to Graph passes', 'PowerShell', 'pass', {'command': 'Invoke-RestMethod https://graph.microsoft.com/v1.0/me'})
 check('Invoke-RestMethod -Method Post to Graph is denied', 'PowerShell', 'deny', {'command': 'Invoke-RestMethod -Uri https://graph.microsoft.com/v1.0/me/sendMail -Method Post -Body $b'})
 

@@ -171,5 +171,6 @@ Cloudflare Pages מפרסם **רק את `main`** ל-`tapugan-safety.pages.dev`. 
 - **Skill עבודה במקביל: `.claude/skills/tfugen-orchestrate/SKILL.md`**: מנהל, עובדים ושני מפקחים (בודק ומתקן) כשיש כמה משימות בלתי תלויות (מיכאל, 02/10/2026). עד 3 מסלולים, `index.html` למסלול אחד בכל סבב
 - **Skill מדריכי משתמש: `.claude/skills/tfugen-guides/SKILL.md`**: מדריכי הנאמנים, משאבי אנוש והמנהלים: צילומים אמיתיים עם טבעת ממוספרת, PDF וכרטיס לוואטסאפ. מסך שהשתנה = לצלם מחדש (10/10/2026)
 - **Skill DB: `.claude/skills/tfugen-db/SKILL.md`**: איזה כלי Supabase עובד בענן, תהליך migration (קובץ, הרצה, אימות), מה אסור
+- **Skill צעד בטלפון: `.claude/skills/tfugen-phone-steps/SKILL.md`**: כשפעולה נשארת למיכאל (repo חדש, סוד, הגדרה): קודם לנסות לבד, ואז דף אחד עם כפתור לקישור, איור ממוספר מסומן כאיור, איך יודעים שהצליח, ובדיקה עצמית אחרי (מיכאל, 17/10/2026)
 - **Skill היסטוריה: `.claude/skills/tfugen-history/SKILL.md`** — הרקע שהוצא מהקובץ הזה (Vercel, 375 רשומות ncr, התנגשויות הסנכרון, אימות ה-MCP, מדיניות הסיסמאות). לטעון רק כשמשימה נוגעת בהם
 - **Hooks: `.claude/hooks/README.md`** — החוקים שנאכפים בקוד
