@@ -37,6 +37,7 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
   const hosts = new Set(), errors = [];
   page.on('request', (r) => { try { hosts.add(new URL(r.url()).host); } catch (e) {} });
   page.on('pageerror', (e) => errors.push(String(e.message || e)));
+  page.on('dialog', (d) => d.accept().catch(() => {}));
 
   console.log('\n1. the page on a preview host');
   await page.goto('http://' + HOST + ':' + port + '/index.html', { waitUntil: 'load' });
@@ -68,7 +69,7 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
   // back from the server, not from DB (17/10/2026, STATUS "סביבת פיתוח וניסוי": "forms and saving").
   // A row left by an earlier run that stopped half way (an intentional break) is removed first.
   await page.evaluate(async () => {
-    const r = await fetch(SBU + '/rest/v1/docs?id=like.e2e-*&select=id', { headers: sbH() });
+    const r = await fetch(SBU + '/rest/v1/docs?or=(id.like.e2e-*,n.like.e2e-*)&select=id', { headers: sbH() });
     (r.ok ? await r.json() : []).forEach((x) => sbDel('docs', x.id));
     await _obIdle();
   });
@@ -89,7 +90,45 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
   const left = await page.evaluate(() => _obGet().length);
   check('the outbox is empty (nothing failed and waits)', left === 0, left);
 
-  console.log('\n5. never the live database');
+  console.log('\n5. the documents form on the screen: open, fill, save');
+  // As a person does it (17/10/2026): the page's "new" button, every visible field filled by its
+  // type, the form's own save button. Then the row is read back from the server and removed.
+  const mark = 'e2e-form-' + Date.now();
+  const form = await page.evaluate(async (mark) => {
+    goPage('docs');
+    const root = document.getElementById('pg-docs') || document.body;
+    const add = [...root.querySelectorAll('button,a')].find((b) => b.offsetParent !== null && /openModal\('m-(?!reports-sheet|modules-sheet|del|view)|^_?[a-z]*New\(|^new[A-Z]|^add[A-Z]/.test(b.getAttribute('onclick') || '') && !/Xl|Import|Rename|Reset|Delete|Starter/.test(b.getAttribute('onclick') || ''));
+    if (!add) return { err: 'no new button' };
+    add.click();
+    const m = [...document.querySelectorAll('.modal')].find((x) => x.style.display === 'block' || x.style.display === 'flex');
+    if (!m) return { err: 'no form opened' };
+    const iso = new Date(Date.now() + 200 * 864e5).toISOString().substring(0, 10);
+    [...m.querySelectorAll('input,textarea,select')].filter((el) => el.offsetParent !== null && !el.disabled && !el.readOnly).forEach((el) => {
+      const ty = (el.type || '').toLowerCase();
+      if (['hidden', 'file', 'button', 'submit', 'checkbox', 'radio', 'password', 'search'].indexOf(ty) >= 0) return;
+      if (el.tagName === 'SELECT') { const o = [...el.options].find((x) => x.value && !x.disabled); if (o && !el.value) el.value = o.value; }
+      else if (ty === 'date') el.value = iso;
+      else if (ty === 'number') el.value = el.value || '1';
+      else if (!el.value) el.value = mark;
+      el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    const first = [...m.querySelectorAll('input[type=text],input:not([type]),textarea')].find((el) => el.offsetParent !== null && !el.readOnly && !el.disabled);
+    if (first) { first.value = mark; first.dispatchEvent(new Event('input', { bubbles: true })); }
+    const sv = [...m.querySelectorAll('button')].find((b) => b.offsetParent !== null && (/^\s*sv|save|Save/.test(b.getAttribute('onclick') || '') || /שמור/.test(b.textContent)));
+    if (!sv) return { err: 'no save button in ' + m.id };
+    sv.click();
+    await _obIdle();
+    return { form: m.id, iso: iso, open: m.style.display === 'block' || m.style.display === 'flex' };
+  }, mark);
+  check('the form opened and saved', form && !form.err && !form.open, form);
+  const saved = await page.evaluate(async (mark) => {
+    const r = await fetch(SBU + '/rest/v1/docs?n=eq.' + encodeURIComponent(mark) + '&select=id,n,e', { headers: sbH() });
+    return { status: r.status, rows: r.ok ? await r.json() : await r.text() };
+  }, mark);
+  check('the form row is on the server with the date typed', saved.status === 200 && saved.rows.length === 1 && saved.rows[0].e === (form && form.iso), saved);
+  if (saved.rows && saved.rows[0]) await page.evaluate(async (id) => { sbDel('docs', id); await _obIdle(); }, saved.rows[0].id);
+
+  console.log('\n6. never the live database');
   check('no request went to the live Supabase', !hosts.has(LIVE_DB), [...hosts]);
   check('requests did go to the test Supabase', hosts.has(TEST_DB), [...hosts]);
   check('no page errors', errors.length === 0, errors.slice(0, 5));
