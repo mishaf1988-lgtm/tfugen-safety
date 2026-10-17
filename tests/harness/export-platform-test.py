@@ -43,14 +43,25 @@ try:
         os.makedirs(os.path.dirname(os.path.join(clone, rel)) or clone, exist_ok=True)
         open(os.path.join(clone, rel), "w", encoding="utf-8").write(txt)
     open(os.path.join(clone, "old-file.txt"), "w").write("from an earlier export")
-    p = subprocess.run(["node", os.path.join(ROOT, "tools", "export-platform.mjs"), clone],
-                       cwd=ROOT, capture_output=True, text=True, encoding="utf-8", timeout=240)
-    log = (p.stdout or "") + (p.stderr or "")
-    check("export into a clone exits 0 and ends clean", p.returncode == 0 and "clean:" in log, log[-800:])
+    run = lambda *a: subprocess.run(["node", os.path.join(ROOT, "tools", "export-platform.mjs"), clone] + list(a),
+                                    cwd=ROOT, capture_output=True, text=True, encoding="utf-8", timeout=240)
+    # A file there that no export wrote (no manifest yet): stop, list it, delete nothing.
+    p = run(); log = (p.stdout or "") + (p.stderr or "")
+    check("a file the export did not write stops it (exit 3, listed)", p.returncode == 3 and "old-file.txt" in log and "(not from the export)" in log, log[-600:])
+    check("...and nothing was deleted", os.path.exists(os.path.join(clone, "old-file.txt")))
+    p = run("--force"); log = (p.stdout or "") + (p.stderr or "")
+    check("export into a clone with --force exits 0 and ends clean", p.returncode == 0 and "clean:" in log, log[-800:])
     check("the clone's own files are kept, unchanged", all(os.path.exists(os.path.join(clone, r)) and open(os.path.join(clone, r), encoding="utf-8").read() == t for r, t in own.items()),
           [r for r in own if not os.path.exists(os.path.join(clone, r))])
     check("a file the export no longer makes is removed", not os.path.exists(os.path.join(clone, "old-file.txt")))
     check("the clone gets the app", os.path.exists(os.path.join(clone, "index.html")) and os.path.exists(os.path.join(clone, "CLAUDE.md")))
+    check("the export leaves a manifest", os.path.exists(os.path.join(clone, ".export-manifest.json")))
+    p = run(); log = (p.stdout or "") + (p.stderr or "")
+    check("a second export with nothing edited there passes without --force", p.returncode == 0 and "clean:" in log, log[-600:])
+    with open(os.path.join(clone, "CLAUDE.md"), "a", encoding="utf-8") as f: f.write("\nedited in safety-platform\n")
+    p = run(); log = (p.stdout or "") + (p.stderr or "")
+    check("CLAUDE.md edited there stops the export (exit 3, edited there)", p.returncode == 3 and "CLAUDE.md  (edited there)" in log, log[-600:])
+    check("...and the edit is still there", "edited in safety-platform" in open(os.path.join(clone, "CLAUDE.md"), encoding="utf-8").read())
 finally:
     shutil.rmtree(clone, ignore_errors=True)
 print("\n%d passed, %d failed" % (ok, bad))

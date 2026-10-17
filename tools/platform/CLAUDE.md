@@ -3,6 +3,7 @@
 Claude Code loads this file at the start of every session in this repo.
 
 הקובץ הזה מוחלף בכל ייצוא בגרסה מ-`tools/platform/CLAUDE.md`. שינוי כאן חייב להגיע גם לשם, אחרת הוא נמחק.
+הייצוא משאיר `.export-manifest.json` (טביעת אצבע של כל קובץ שכתב), ונעצר כשקובץ כאן נערך מאז הייצוא הקודם. לא למחוק אותו.
 
 ## 0. כללי הקו (גוברים על כל השאר)
 
