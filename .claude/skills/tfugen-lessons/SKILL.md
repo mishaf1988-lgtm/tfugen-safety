@@ -40,8 +40,8 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 **2. נכשל ב-GitHub ועבר מקומית (01/10/2026, #1006).**
 מה קרה: `requests` חסר, playwright אחר.
 הכלל: למצוא את ההבדל ולקבע גרסאות. לא "flake".
-נאכף: חלקית: גרסאות ב-`tests.yml`; `short-wait-warn.py`.
-חזר: 2 (04/10 `mfa-test`, 06/10 `ncr-ai-prompt-test`: המתנה קבועה, הוחלפה בהמתנה לתנאי)
+נאכף: חלקית: גרסאות ב-`tests.yml`; `short-wait-warn.py`; `push-gate.py`.
+חזר: 3 (17/10 hook בלי UTF-8, #1652. 04/10, 06/10: המתנה קבועה)
 
 **3. עריכת בדיקה בזמן שה-harness רץ (01/10/2026, #1002).**
 מה קרה: בדיקה עודכנה באמצע ריצה: 6 כישלונות שווא.
