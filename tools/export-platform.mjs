@@ -11,6 +11,7 @@
 //   2. draws a placeholder logo and icons, and writes _logo.js from it (tools/make-logo.py);
 //   3. writes the page's copy of the settings, the app name and the tab icon letter from the
 //      empty settings (site-config-test.mjs --write), then runs that test on the copy;
+//   1b. writes db/schema.sql, the database with no rows, from tools/platform/schema-live.sql;
 //   4. scans every exported file, comments included, for anything that names Tapugan, its
 //      people, its accounts or its keys. One hit = exit 1, and nothing should be pushed.
 import fs from 'fs';
@@ -106,6 +107,43 @@ if (keys(real) !== keys(tmpl)) {
   process.exit(1);
 }
 console.log('  ' + n + ' files, settings replaced by the empty template');
+
+// The database with no rows (17/10/2026): tools/platform/schema-live.sql is the live structure,
+// written by tools/platform/schema-dump.sql. The values that name this factory are swapped for
+// the template's; a pair that no longer matches fails here, and anything left fails step 4.
+console.log('1b. database structure');
+const live = fs.readFileSync(path.join(ROOT, 'tools/platform/schema-live.sql'), 'utf8');
+// A migration newer than the dump means the copy would miss it: dump again before exporting.
+const dumped = (live.match(/^-- dumped (\d{4}-\d{2}-\d{2})/) || [])[1];
+const newer = fs.readdirSync(path.join(ROOT, 'migrations')).filter((f) => !dumped || f.slice(0, 10) > dumped);
+if (newer.length) {
+  console.error('  schema-live.sql is older than ' + newer.slice(0, 5).join(', ') + ': run tools/platform/schema-dump.sql again');
+  process.exit(1);
+}
+const DB_SUBS = [
+  [real.SITE.appUrl + '/api/', tmpl.SITE.appUrl + '/api/'],
+  ["'" + real.SITE.adminEmail + "'", "'" + tmpl.SITE.adminEmail + "'"],
+  ["'@" + real.SITE.loginDomain + "'", "'@" + tmpl.SITE.loginDomain + "'"],
+  ['tapugan_auth_read_backups', 'auth_read_backups'],
+];
+let db = live.replace(/^-- dumped .*\n/, '');
+for (const [a, b] of DB_SUBS) { if (!db.includes(a)) throw new Error('schema-live.sql: "' + a + '" is gone, update DB_SUBS'); db = db.split(a).join(b); }
+const DB_HEAD = `-- Builds the database of a new factory: structure only, no rows (Safety Platform).
+--
+-- 1. A new Supabase project (Postgres 17). SQL Editor: paste this whole file and run it once.
+-- 2. The secret the database sends with every call to the site, the same value as the site's
+--    TRUSTEE_NOTIFY_SECRET:   select vault.create_secret('<the value>', 'trustee_notify_secret');
+-- 3. The site address and the login domain below are the ones in functions/_site.js
+--    (${tmpl.SITE.appUrl}, @${tmpl.SITE.loginDomain}). Changed them there? Replace them here too.
+-- 4. Authentication > Users: add admin@<login domain> - the first administrator.
+--
+-- The cron jobs at the end call the site; one that should not run here is removed with
+-- select cron.unschedule('<name>');
+`;
+fs.mkdirSync(path.join(OUT, 'db'), { recursive: true });
+fs.writeFileSync(path.join(OUT, 'db/schema.sql'), DB_HEAD + '\n' + db);
+console.log('  db/schema.sql: ' + (db.match(/^create table /gm) || []).length + ' tables, '
+  + (db.match(/^create policy /gm) || []).length + ' policies, ' + (db.match(/^select cron\.schedule/gm) || []).length + ' cron jobs');
 
 console.log('2. placeholder logo and icons');
 execFileSync('python3', ['-c', `
