@@ -44,13 +44,15 @@
 | שם | מה |
 |---|---|
 | `ALLOWED_COUNTRIES` | מאילו מדינות האתר נפתח (ברירת המחדל: IL) |
-| `ANTHROPIC_KEY` או `GEMINI_API_KEY` | ניתוחי AI (NCR, 5 למה). בלי זה: Workers AI, אם הוגדר בסעיף 4 |
+| `ALLOWED_ORIGINS` | כתובות נוספות של האתר, מופרדות בפסיק. רק כשהאתר נפתח גם מכתובת אחרת מ-`HOST` (למשל דומיין משלכם וגם `pages.dev`); אחרת הפניות מהכתובת השנייה נחסמות |
+| `ANTHROPIC_KEY` או `GEMINI_API_KEY` | ניתוחי AI (NCR, 5 למה). בלי זה: Workers AI, אם הוגדר בסעיף 4. `GEMINI_MODEL` מחליף את המודל בלי שינוי קוד |
 | `RESEND_KEY`, `RESEND_FROM` | התראות במייל |
 | `META_ACCESS_TOKEN`, `META_PHONE_NUMBER_ID`, `META_WABA_ID` | התראות בוואטסאפ |
 | `ONEDRIVE_CLIENT_ID`, `ONEDRIVE_CLIENT_SECRET`, `ONEDRIVE_TENANT_ID` | גיבוי וקבצים ב-OneDrive |
 
 4. רשות: Settings > Bindings > Workers AI, בשם `AI`.
 5. Deployments > Retry deployment, כדי שהמשתנים ייכנסו.
+6. Preview (גרסת בדיקה מ-branch): השרת לא פונה למסד האמיתי מ-Preview. בלי `STAGING_SUPABASE_URL` ו-`STAGING_SUPABASE_SERVICE_ROLE_KEY` (פרויקט Supabase נפרד לבדיקות) ב-Variables של Preview, כל `/api/*` שם עונה 503 עם שמות המשתנים החסרים. האתר עצמו (Production) לא מושפע.
 
 ## 4. בדיקה ראשונה
 
@@ -66,3 +68,5 @@
 - **טבלה ריקה או שגיאה 401 בכל המסכים:** `SUPABASE_URL` או ה-publishable key לא תואמים לפרויקט.
 - **יצירת משתמש נכשלת:** Password requirements לא ריק (סעיף 1.5).
 - **האתר חסום:** `ALLOWED_COUNTRIES` לא כולל את המדינה שממנה פותחים.
+- **שגיאה 503 רק ב-Preview:** חסרים משתני `STAGING_` (סעיף 3.6). זה מכוון.
+- **הכניסה עובדת אבל פעולות שרת נכשלות מכתובת אחרת:** הכתובת לא ב-`HOST` ולא ב-`ALLOWED_ORIGINS`.
