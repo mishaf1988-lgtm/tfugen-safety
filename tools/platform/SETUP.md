@@ -14,7 +14,7 @@
    - Email: פעיל. "Confirm email" כבוי (המשתמשים לא מקבלים מייל; הכתובות פנימיות).
    - **Minimum password length = 8, ו-Password requirements ריק.** השרת יוצר סיסמה זמנית מאותיות קטנות וספרות. דרישת תווים מיוחדים תשבור את יצירת המשתמשים ואת "שכחתי סיסמה".
    - Anonymous sign-ins: **פעיל.** הקיוסק של הנאמנים נכנס כך, וההרשאות במסד מגבילות אותו לדיווח בלבד.
-6. Authentication > Users > Add user: `admin@<דומיין הכניסה>` (למשל `admin@factory.local`) עם סיסמה חזקה. זה האדמין הראשון; את שאר המשתמשים הוא יוצר מתוך האפליקציה.
+6. Authentication > Users > Add user: `admin@<דומיין הכניסה>` עם סיסמה חזקה. זה האדמין הראשון; את שאר המשתמשים הוא יוצר מתוך האפליקציה.
 7. Project Settings > API: להעתיק את Project URL, את ה-publishable key ואת ה-service_role key (סודי).
 
 ## 2. ההגדרות (בקוד)

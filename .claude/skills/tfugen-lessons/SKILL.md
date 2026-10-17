@@ -57,6 +57,12 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 ## בדיקות שבודקות את הדבר הנכון
 
+**111. בדיקה שסורקת רק קבצים במעקב רצה לפני git add (17/10/2026, PR זה).**
+מה קרה: `pii-md-test.py` עבר מקומית על `tools/platform/SETUP.md`, כי הקובץ עוד לא היה ב-git, ונכשל ב-CI על כתובת מייל לדוגמה. באותו יום אותה בדיקה תפסה כתובת דוגמה ב-STATUS.
+הכלל: קובץ חדש: `git add` לפני הבדיקות המקומיות. ובטקסט .md כתובת לדוגמה נכתבת כתבנית (`admin@<דומיין>`), לא ככתובת.
+נאכף: טקסט (ה-CI תופס, כאן רק חוסכים סבב).
+חזר: 0
+
 **57. hooks שקטים ב-Windows (05/10/2026, PR זה).**
 מה קרה: stdout ב-cp1255 ואימוג'י: session-start נפל בשקט. שיחה מחוץ לריפו: hooks לא נטענו.
 הכלל: hook קובע stdout ו-stdin ל-UTF-8, ובבדיקות `encoding="utf-8"`. בדיקה חיה רק מתיקיית הריפו, בלי `PYTHONUTF8=1`.
