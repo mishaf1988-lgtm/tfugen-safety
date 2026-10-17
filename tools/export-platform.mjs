@@ -1,6 +1,6 @@
 // Builds the safety-platform copy from this repo (17/10/2026, "product for sale" step 2).
 //
-//   node tools/export-platform.mjs <out-dir>
+//   node tools/export-platform.mjs <out-dir>   (an empty folder, or a clone of safety-platform: KEEP stays)
 //
 // Run it again whenever the app here improves; the output replaces the tree of
 // mishaf1988-lgtm/safety-platform. It is a closed list on purpose: a file reaches the product
@@ -67,9 +67,15 @@ const DEPTS = [he(0x5d8, 0x5d5, 0x5d2, 0x5e0, 0x5d9, 0x5dd), he(0x5de, 0x5e2, 0x
   he(0x5de, 0x5e2, 0x5e6, 0x5d1, 0x5d9, 0x5dd), he(0x5e7, 0x5d9, 0x5dc, 0x5d5, 0x5e4, 0x5d9, 0x5dd)];
 const DEPTS_RE = new RegExp(DEPTS.flatMap((d) => [d, esc(d).replace(/\\/g, '\\\\')]).join('|'));
 
-fs.rmSync(OUT, { recursive: true, force: true });
+// Files that live only in safety-platform (17/10/2026, the business line: its handoff, the day-one
+// checklist, demo data, documents and marketing), and its git folder. The out-dir may be a clone
+// of safety-platform: everything else in it is replaced, these are never deleted or written.
+const KEEP = ['.git', 'handoff.md', 'checklist-day1.md', 'demo', 'docs', 'marketing'];
+const kept = (rel) => KEEP.includes(rel.split('/')[0]);
 fs.mkdirSync(OUT, { recursive: true });
+for (const e of fs.readdirSync(OUT)) if (!kept(e)) fs.rmSync(path.join(OUT, e), { recursive: true, force: true });
 const copy = (rel, from = rel) => {
+  if (kept(rel)) { console.error('  ' + rel + ' is kept in safety-platform; the export may not write it'); process.exit(1); }
   const dst = path.join(OUT, rel);
   fs.mkdirSync(path.dirname(dst), { recursive: true });
   fs.copyFileSync(path.join(ROOT, from), dst);
@@ -177,7 +183,7 @@ catch (e) { console.error(String(e.stdout).split('\n').filter((l) => l.includes(
 
 console.log('4. scan for Tapugan');
 const hits = [];
-const outFiles = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? outFiles(path.join(d, e.name)) : [path.join(d, e.name)]);
+const outFiles = (d) => fs.readdirSync(d, { withFileTypes: true }).filter((e) => e.name !== '.git').flatMap((e) => e.isDirectory() ? outFiles(path.join(d, e.name)) : [path.join(d, e.name)]);
 for (const abs of outFiles(OUT)) {
   const buf = fs.readFileSync(abs);
   if (buf.includes(0)) continue; // images
