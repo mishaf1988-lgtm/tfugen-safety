@@ -41,6 +41,7 @@
 | `trig_01Fm5346rt5BNgeF49DqGbyz` | המגייס: החלפה שבועית | ו' 13:07 (ראשונה 23/10/2026) | `routine-rotation.md` | `session_01Q3LMWMr65icNtoe5zLifqr` (המגייס, נפתחה ביד על ידי מיכאל, דור 1) |
 | `trig_01Py8YXifD3HtnQUmFgoTRft` | הדוור של הצ'אט במשרד | א'-ה' 08:11, 12:11, 16:11 | `routine-chat-relay.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
 | `trig_011JPcX7WnZeJXJqKi6rvDDy` | בדיקת זמני Supabase ועלויות הסוכנים (חד-פעמי) | 22/10/2026 17:30 | הפרומפט בטריגר | `session_01HPcF58y98mzJ19wJ27EDn5` (רכז הדוחות; מיכאל 18/10/2026: "בדיקה של עלויות יכולה להיות תחת סוכן אחד"; הקודם `trig_01TFsrFwbqQM9fAoT8GfiobF` כובה) |
+| `trig_01FKenmRrWQ22S1566BReYri` | מנהל השיווק: פעמיים בשבוע (קו העסק) | א' ו-ד' 08:53 (ראשונה 21/10/2026) | `marketing/routine-marketing.md` ב-safety-platform | `session_01DRrGQfp26adBiipx3PkZdA` |
 
 שיחות "לא לארכב": השיחות בעמודה האחרונה, כולל המגייס. Routine יורה לתוך שיחה, וארכוב שלה עוצר אותו.
 
