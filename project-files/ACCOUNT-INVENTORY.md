@@ -34,10 +34,10 @@
 | `trig_01SzAJJc2RDFcLoAeBEcWonK` | רדאר רגולציה שבועי | א' 08:17 | הפרומפט בטריגר עצמו (לא בקובץ) | שיחה חדשה בכל ריצה |
 | `trig_01BimkS5EroGgvLB1tZo6zQo` | תור משימות מ-Claude Code (Cowork) | כל שעה, דקה 19 | הפרומפט בטריגר; הכללים ב-`cowork-queue.md` | Cowork, קשור למחשב של מיכאל |
 | `trig_016Cc2xKxQ9W5AEf75yLhmtA` | משרד הסוכנים: עדכון בוקר | כל יום 07:38 | `routine-office.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
-| ממתין (18/10/2026: השיחה שכתבה בתקרת השרשרת) | תפוגות שנתקעו אצל ספק | ב' 07:41 | `routine-supplier-followup.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
-| ממתין | תזכורת פרסום ההדרכה | א' 12:13 | `routine-talk-publish.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
-| ממתין | בודק לתור המשימות למחשב | כל יום 09:37 | `routine-cowork-check.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
-| ממתין | בדיקת הניסוי השבועית | ד' 06:29 | `routine-staging-e2e.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
+| `trig_0123Ws51KVsvwEqv6KmNo2si` | תפוגות שנתקעו אצל ספק | ב' 07:41 | `routine-supplier-followup.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
+| `trig_01HVj1UxeRaYm1btAAsuwDHW` | תזכורת פרסום ההדרכה | א' 12:13 | `routine-talk-publish.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
+| `trig_01Hqt7G6RLWeJbKEHXFzXWHW` | בודק לתור המשימות למחשב | כל יום 09:37 | `routine-cowork-check.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
+| `trig_01AVa8RiuYtaeXLrtkUsZqKH` | בדיקת הניסוי השבועית | ד' 06:29 | `routine-staging-e2e.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
 
 שיחות "לא לארכב": ארבע השיחות בעמודה האחרונה. Routine יורה לתוך שיחה, וארכוב שלה עוצר אותו.
 
