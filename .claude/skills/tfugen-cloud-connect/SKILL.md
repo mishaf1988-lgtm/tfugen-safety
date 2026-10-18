@@ -28,3 +28,9 @@ description: How to connect an outside service (Cloudflare, Supabase management,
 | שירות | Host | הרשאה | נרשם |
 |---|---|---|---|
 | Cloudflare | `api.cloudflare.com` | Pages, חשבון `c9d388e3a5f9ee9546e8aa6b6353ec87` | `ACCOUNT-INVENTORY.md` |
+
+## אחרי שמיכאל הוסיף סוד ב-Cloudflare (18/10/2026, C15)
+
+- לאמת ב-API: `pages/projects/<p>` מחזיר רק שם וסוג (`secret_text`), אף פעם לא ערך. לספור גם את Production, כדי לוודא שלא השתנה.
+- גרסה שנבנתה לפני שהסוד נוסף לא מכירה אותו. `POST deployments/<id>/retry` בונה אותה מחדש עם המשתנים של היום, ואז לבדוק אותה.
+- הוכחה שהסוד עובד היא קריאה שעוברת דרכו, למשל `PREVIEW_URL=... node tests/staging/e2e.js` (סעיף 6b), ולא רק שורה ברשימת המשתנים.
