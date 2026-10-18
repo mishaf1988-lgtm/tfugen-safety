@@ -73,3 +73,11 @@ Cloudflare Pages הוא הייצור היחיד, עכשיו גם בפועל.
 החלפה כפויה בכניסה ראשונה דורשת 10 תווים (`index.html`, חפש `must_change_password`),
 החלפה יזומה דורשת 8. "Prevent use of leaked passwords" אינו זמין בתוכנית החינמית
 (Pro ומעלה), נסגר 2026-09-22.
+
+## שיחה עובדת תקועה (18/10/2026)
+
+**מה קרה:** `session_01JT8F` (תשעה סוכנים) כתבה לעצמה `~/.claude/settings.json` עם `"$CLAUDE_PROJECT_DIR"` בנתיב (לקח 116). מ-06:30 UTC כל הודעה וכל טריגר נדחו: "UserPromptSubmit operation blocked by hook ... can't open file /home/user/.claude/hooks/hebrew-prompt.py". אף אחד לא ראה עד שמיכאל ביקש להריץ סוכנים ושום דבר לא קרה.
+
+**איך מזהים:** `list_events` על השיחה עם `kinds: ["result"]`: תוצאות של 0 תורות שה-result מתחיל ב-"UserPromptSubmit operation blocked by hook". מ-18/10/2026 `routine-cowork-check.md` צעד 3א בודק את זה כל יום.
+
+**איך מתקנים (באישור מיכאל, כי השיחה ברשימת "לא לארכב"):** `archive_session` ומיד `unarchive_session`. השיחה, ההיסטוריה שלה והטריגרים נשארים, והמחשב מתחלף בחדש, בלי הקובץ השבור. ההודעה הבאה (`send_message`) מעירה אותה. נבדק 18/10/2026: אחרי דקות היא הריצה שישה סוכנים ופתחה ארבעה טריגרים. לא לנסות לתקן מבפנים: השיחה לא מקבלת שום הודעה.
