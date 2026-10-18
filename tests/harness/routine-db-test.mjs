@@ -3,7 +3,7 @@
 // list of tables, medical tables expiry only, trustee reports without text or names,
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
-import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, MAIL_REQ_ID, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession } from './_build/routine-db.mjs';
+import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, MAIL_REQ_ID, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -248,6 +248,47 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     const big = {}; for (let i = 0; i < SKIP_MOVED_MAX + 10; i++) big['i' + i] = new Date(now - (i % 50) * D).toISOString();
     check('at most ' + SKIP_MOVED_MAX + ' entries, broken JSON starts over', Object.keys(JSON.parse(skipMovedAdd(JSON.stringify(big), 'n', new Date(now).toISOString(), now))).length === SKIP_MOVED_MAX && Object.keys(JSON.parse(skipMovedAdd('{x', 'n', new Date(now).toISOString(), now))).length === 1);
     check('without the key: 403, nothing moved', (await call(base, 'nope')).status === 403);
+    graph = async () => new Response('{}', { status: 500 });
+  }
+
+  console.log('\n4e2. od_mkdir: one new empty folder inside an existing one, never replacing (18/10/2026)');
+  {
+    const PAR = '07_env/water';
+    let drive = {};
+    const reset = () => { drive = { [OD_ROOT + PAR]: { id: 'p1', folder: {} }, [OD_ROOT + PAR + '/old']: { id: 'o1', folder: {} }, [OD_ROOT + PAR + '/a.pdf']: { id: 'f1', file: {} } }; };
+    graph = async (url, opt = {}) => {
+      const m = /\/root:\/([^?]*)/.exec(url);
+      if (m) { const path = m[1].split('/').map(decodeURIComponent).join('/'); const it = drive[path]; return it ? new Response(JSON.stringify(it), { status: 200 }) : new Response('{}', { status: 404 }); }
+      const c = /\/items\/([^/]+)\/children$/.exec(url);
+      if (c && opt.method === 'POST') {
+        const b = JSON.parse(opt.body), dir = Object.keys(drive).find((k) => drive[k].id === decodeURIComponent(c[1]));
+        if (!dir || drive[dir + '/' + b.name]) return new Response('{}', { status: 409 });
+        drive[dir + '/' + b.name] = { id: 'n' + Object.keys(drive).length, folder: {} };
+        return new Response(JSON.stringify({ webUrl: 'https://x/' + b.name }), { status: 201 });
+      }
+      return new Response('{}', { status: 400 });
+    };
+    const base = { op: 'od_mkdir', agent: 'ops-manager', parent: PAR, name: 'analyses', why: 'COA folders for the monthly report' };
+    reset(); calls = [];
+    let x = await call(base);
+    check('created: an empty folder under the parent, one POST with conflictBehavior=fail, nothing else written', x.json.ok && x.json.created === true && !!drive[OD_ROOT + PAR + '/analyses'] && calls.filter((c) => c.method === 'POST' && /\/children$/.test(c.url)).length === 1 && /conflictBehavior/.test(calls.find((c) => /\/children$/.test(c.url)).body) && !calls.some((c) => ['PUT', 'PATCH', 'DELETE'].includes(c.method) && c.url.startsWith('https://graph')), x.json);
+    reset(); calls = [];
+    x = await call({ ...base, name: 'old' });
+    check('a folder with that name already there: nothing created, nothing changed, ok with created=false', x.json.ok && x.json.created === false && x.json.exists === true && !calls.some((c) => c.method === 'POST' && /\/children$/.test(c.url)), x.json);
+    x = await call({ ...base, name: 'a.pdf' });
+    check('a FILE with that name: nothing created, exists=false so the caller sees it is not a folder', x.json.ok && x.json.created === false && x.json.exists === false, x.json);
+    reset();
+    x = await call({ ...base, parent: '07_env/missing' });
+    check('parent that does not exist: refused, nothing created', !x.json.ok && /parent 404/.test(x.json.error) && Object.keys(drive).length === 3, x.json);
+    x = await call({ ...base, parent: PAR + '/a.pdf' });
+    check('parent that is a file: refused', !x.json.ok && x.json.error === 'parent is not a folder', x.json);
+    check('parent with .., empty, too deep, in the old-versions / to-delete / ARCHIVE folders, the mail inbox or the request folder: refused',
+      ['../x', '', 'a/b/c/d/e/f', '_גרסאות קודמות', 'x/למחיקה/y', 'ARCHIVE/z', OD_INBOX, OD_INBOX + '/' + OD_SKIP, OD_REQ].every((pp) => !!odMkdirCheck({ ...base, parent: pp }).error) && OD_MKDIR_DEPTH === 5);
+    check('name with a slash, .., a dot start, a forbidden character, a protected folder name, spaces at the edge or too long: refused',
+      ['a/b', '..', '.hidden', 'a:b', 'a*', 'למחיקה', 'ARCHIVE', '_גרסאות קודמות', OD_INBOX, OD_REQ, ' x', 'x ', 'x'.repeat(121), ''].every((n) => !!odMkdirCheck({ ...base, name: n }).error));
+    check('a normal Hebrew name with spaces: allowed, the paths stay inside the safety folder', odMkdirCheck({ ...base, name: '\u05d0\u05e0\u05dc\u05d9\u05d6\u05d5\u05ea \u05dc\u05d3\u05d9\u05d5\u05d5\u05d7' }).parent === OD_ROOT + PAR && !odMkdirCheck({ ...base, name: '\u05d0\u05e0\u05dc\u05d9\u05d6\u05d5\u05ea \u05dc\u05d3\u05d9\u05d5\u05d5\u05d7' }).error);
+    check('why missing, a bad agent name, or an extra field: refused, nothing created', (await call({ ...base, why: '' })).status === 400 && (await call({ ...base, agent: 'Bad' })).status === 400 && (await call({ ...base, extra: 1 })).status === 400 && !Object.keys(drive).some((k) => k.endsWith('/analyses')));
+    check('without the key: 403, nothing created', (await call(base, 'nope')).status === 403 && !Object.keys(drive).some((k) => k.endsWith('/analyses')));
     graph = async () => new Response('{}', { status: 500 });
   }
 

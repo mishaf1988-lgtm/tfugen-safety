@@ -44,6 +44,12 @@
 //              exists inside the safety folder, under a new name. Graph with
 //              conflictBehavior=fail: an existing name is never replaced, no folder is
 //              created, nothing is deleted. Michael's computer is not needed. odMoveCheck.
+//   od_mkdir  (18/10/2026, Michael in the questionnaire: "בצע: לבנות יצירת תיקייה בשרת (מומלץ)",
+//              after "אין פתרון לא לחכות כול פעם למחשב דלוק?") create ONE new empty folder
+//              {parent, name} inside a folder that already exists in the safety folder. Graph
+//              with conflictBehavior=fail: an existing name is never touched, nothing is moved,
+//              replaced or deleted. Never inside the old-versions / to-delete / ARCHIVE folders
+//              or the mail inbox. Michael's computer is not needed. odMkdirCheck.
 //   mail_request  (11/10/2026, Michael: "בצע: זרימה שנייה") ask the second Power Automate
 //              flow for the attachments of one old mail: write a small text file with the
 //              message id into OD_REQ. The flow (When a file is created there) opens the
@@ -265,6 +271,21 @@ export function odMoveCheck(b) {
   if (!dir.length || bad(dir) || OD_NO_DIR.test(dir.join('/')) || (dir[0] === OD_INBOX && !skip)) return { error: 'bad to_dir' };
   if (!name || name.indexOf('/') >= 0 || OD_BAD.test(name) || name.length > 180 || !(skipTo ? skipNameOk(from[0], name) : OD_EXT.test(name))) return { error: 'bad name' };
   return { from: OD_ROOT + OD_INBOX + '/' + from[0], toDir: OD_ROOT + dir.join('/'), name, skip: skipTo };
+}
+// od_mkdir: { parent, name } as Graph paths under the drive root, or { error }.
+// The parent must be a path of 1 to 5 clean folder names that already exists (checked by the handler);
+// the new name is one clean folder name.
+export const OD_MKDIR_DEPTH = 5;
+export function odMkdirCheck(b) {
+  if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
+  if (String(b.why || '').trim().length < 5) return { error: 'why required' };
+  const parent = String(b.parent === undefined || b.parent === null ? '' : b.parent).split('/').filter(Boolean);
+  const name = String(b.name === undefined || b.name === null ? '' : b.name);
+  const bad = (x) => x === '.' || x === '..' || OD_BAD.test(x) || x.length > 120 || x !== x.trim() || x.startsWith('.');
+  if (!parent.length || parent.length > OD_MKDIR_DEPTH || parent.some(bad)) return { error: 'bad parent' };
+  if (OD_NO_DIR.test(parent.join('/')) || parent[0] === OD_INBOX || parent[0] === OD_REQ) return { error: 'bad parent' };
+  if (!name || name.indexOf('/') >= 0 || bad(name) || OD_NO_DIR.test(name) || name === OD_INBOX || name === OD_REQ) return { error: 'bad name' };
+  return { parent: OD_ROOT + parent.join('/'), name };
 }
 // 12/10/2026 (retro, Michael: "בצע"): OneDrive keeps createdDateTime on a move, so a file that waited a
 // month in the inbox and was then moved to "לא לתיוק" was deleted the next night. Every move there is
@@ -488,6 +509,31 @@ export async function onRequest(context) {
       const name = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '') + '-' + Math.random().toString(36).slice(2, 8) + '.txt';
       const f = await putFile(at.token, OD_ROOT + OD_REQ, name, id, 'text/plain');
       return jsonResp({ ok: true, file: OD_REQ + '/' + name, size: f.size || null }, 200, {});
+    }
+    if (body.op === 'od_mkdir') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'parent', 'name'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const c = odMkdirCheck(body);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const at = await accessToken(env);
+      const gh = { Authorization: 'Bearer ' + at.token, 'Content-Type': 'application/json' };
+      const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
+      const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+      const par = await fetch(G + enc(c.parent) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
+      if (!par.ok) return jsonResp({ ok: false, error: 'parent ' + par.status }, 200, {});
+      const pj = await par.json();
+      if (!pj.folder) return jsonResp({ ok: false, error: 'parent is not a folder' }, 200, {});
+      const taken = await fetch(G + enc(c.parent + '/' + c.name) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
+      if (taken.status !== 404) {
+        // Already there as a folder is not an error for the caller, nothing is changed.
+        if (taken.ok) { const tj = await taken.json().catch(() => ({})); return jsonResp({ ok: true, created: false, exists: !!tj.folder, path: c.parent + '/' + c.name }, 200, {}); }
+        return jsonResp({ ok: false, error: 'name check ' + taken.status }, 200, {});
+      }
+      const mk = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(pj.id) + '/children', {
+        method: 'POST', headers: gh, body: JSON.stringify({ name: c.name, folder: {}, '@microsoft.graph.conflictBehavior': 'fail' }), signal: tmo(GRAPH_MS),
+      });
+      const mj = await mk.json().catch(() => ({}));
+      if (!mk.ok) return jsonResp({ ok: false, error: 'create ' + mk.status }, 200, {});
+      return jsonResp({ ok: true, created: true, path: c.parent + '/' + c.name, webUrl: mj.webUrl || null }, 200, {});
     }
     if (body.op === 'od_move') {
       const c = odMoveCheck(body);
