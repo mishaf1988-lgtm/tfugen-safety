@@ -26,6 +26,7 @@
   --lamp-done:#47c27b; --lamp-run:#f2b552; --lamp-fail:#ef6a5f; --lamp-off:#5d6e80; --lamp-wait:#6b9cf2;
   --accent:#8fb4ee; --glow:rgba(242,181,82,.25); color-scheme:dark}
 html,body{height:100%;margin:0;overflow:hidden;background:var(--paper)}
+[hidden]{display:none!important}
 body{color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.4;
   background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
   background-size:28px 28px;background-position:-1px -1px}
@@ -43,6 +44,14 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
 .s-run .dot,.dot.s-run{background:var(--lamp-run);box-shadow:0 0 0 3px var(--glow)}
 .s-fail .dot,.dot.s-fail{background:var(--lamp-fail)}
 .s-wait .dot,.dot.s-wait{background:var(--lamp-wait)}
+.today{flex:none;display:flex;gap:4px;overflow-x:auto;scrollbar-width:thin;white-space:nowrap;font-size:12px;padding-bottom:2px}
+.today:empty{display:none}
+.today .lb{flex:none;font-weight:700;align-self:center}
+.today .tk{flex:none;display:inline-flex;gap:4px;align-items:center;padding:2px 8px;border-radius:6px;background:var(--desk);border:1px solid var(--line)}
+.today .tk b{font-family:var(--f-data);font-variant-numeric:tabular-nums}
+.today .tk.past{opacity:.55}
+.today .tk.now{border-color:var(--lamp-run);box-shadow:0 0 0 2px var(--glow)}
+.desk .tasks li .tm{flex:none;font-family:var(--f-data);font-size:10px;font-variant-numeric:tabular-nums;color:var(--ink-2)}
 .inbox{flex:none;display:flex;align-items:center;gap:6px;min-width:0;width:100%;box-sizing:border-box;text-align:start;
   background:var(--desk);border:1px solid var(--lamp-wait);border-radius:8px;padding:4px 8px;font:inherit;font-size:12px;color:inherit;cursor:pointer}
 .inbox span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -141,6 +150,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     <div class="stamp" id="stamp">טוען...</div>
   </header>
   <div class="strip" id="strip"></div>
+  <div class="today" id="today" aria-label="מי עובד היום ומתי"></div>
   <button type="button" class="inbox" id="inbox" hidden></button>
   <div class="floor" id="floor">
     <div class="empty" id="empty">המשרד ריק עדיין. כל בוקר ב-07:38 סוכן קטן עובר על כל הסוכנים ושם כל אחד בשולחן שלו.</div>
@@ -162,6 +172,17 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
       .formatToParts(d).forEach(function(x){p[x.type]=x.value;});
     return p.day+'/'+p.month+'/'+p.year+' '+p.hour+':'+p.minute;
   }
+  // 18/10/2026 (Michael: "when and on what each one works, on the main screen"): short Israel time for a
+  // run, HH:MM today, "מחר HH:MM" tomorrow, DD/MM HH:MM later.
+  function ymd(d){var p={};new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Jerusalem',day:'2-digit',month:'2-digit',year:'numeric'}).formatToParts(d).forEach(function(x){p[x.type]=x.value;});return p.year+p.month+p.day;}
+  function hm(iso){
+    if(!iso)return '';var d=new Date(iso);if(isNaN(d))return '';
+    var t=when(iso).slice(11),now=new Date();
+    if(ymd(d)===ymd(now))return t;
+    if(ymd(d)===ymd(new Date(now.getTime()+864e5)))return 'מחר '+t;
+    return when(iso).slice(0,5)+' '+t;
+  }
+  function byNext(x,y){return String(x.next_run||'~').localeCompare(String(y.next_run||'~'));}
   // A workstation: wall, desk, monitor (screen colour = state), and a person in a chair. A desk that
   // never ran has an empty chair; a waiting one has a question bubble.
   var NS='http://www.w3.org/2000/svg';
@@ -216,6 +237,21 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     });
     var ho=chatDocs.filter(function(m){return m.from==='handoff'&&(m.status==='sent'||m.status==='wait');});
     if(ho.length){var hc=el('span','chip s-wait');hc.appendChild(el('i','dot'));hc.appendChild(el('b',null,String(ho.length)));hc.appendChild(document.createTextNode(' העברות פתוחות'));strip.appendChild(hc);}
+    var today=document.getElementById('today');today.textContent='';
+    var now=new Date(),tk=[];
+    agents.forEach(function(a){
+      var w=a.worker||a.room||'';if(w==='המחשב שלך')w='העוזר שלך';
+      [['last_run','past'],['next_run','']].forEach(function(f){
+        var v=a[f[0]];if(!v)return;var d=new Date(v);if(isNaN(d)||ymd(d)!==ymd(now))return;
+        tk.push({t:v,name:a.name,w:w,cls:a.status==='run'&&f[1]==='past'?'now':(f[1]||(d<now?'past':''))});
+      });
+    });
+    if(tk.length){
+      tk.sort(function(x,y){return String(x.t).localeCompare(String(y.t));});
+      today.appendChild(el('span','lb','היום:'));
+      tk.forEach(function(x){var c=el('span','tk '+x.cls);c.appendChild(el('b',null,when(x.t).slice(11)));c.appendChild(document.createTextNode(x.name+(x.w?' ('+x.w+')':'')));c.title=x.cls==='past'?'רץ':'מתוכנן';today.appendChild(c);});
+      var nx=today.querySelector('.tk:not(.past)');if(nx&&nx.scrollIntoView)try{nx.scrollIntoView({block:'nearest',inline:'center'});}catch(e){}
+    }
     var inbox=document.getElementById('inbox');
     var waiting=agents.filter(function(a){return a.waiting;}).concat(chatDocs.filter(function(m){return m.from==='handoff'&&m.status==='wait';}).map(function(m){return {name:m.by+' > '+m.worker,waiting:m.note||'אישור',worker:m.worker};}));
     inbox.hidden=!waiting.length;inbox.textContent='';
@@ -244,8 +280,10 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
       b.title=w+': '+tasks.length+' משימות';
       b.appendChild(scene(s));
       b.appendChild(el('span','nm',w));
+      var nxt=tasks.filter(function(t){return t.next_run;}).sort(byNext)[0];
+      if(nxt)b.appendChild(el('span','nx','הבא: '+hm(nxt.next_run)+' '+nxt.name));
       var ul=el('ul','tasks');
-      tasks.forEach(function(t){var li=el('li','s-'+state(t));li.appendChild(el('i','dot'));li.appendChild(el('span',null,t.name));ul.appendChild(li);});
+      tasks.slice().sort(byNext).forEach(function(t){var li=el('li','s-'+state(t));li.appendChild(el('i','dot'));var tm=hm(t.next_run);if(tm)li.appendChild(el('b','tm',tm));li.appendChild(el('span',null,t.name));li.title=t.name+(t.schedule?': '+t.schedule:'');ul.appendChild(li);});
       b.appendChild(ul);
       b.addEventListener('click',function(){sel=(sel===w)?null:w;open=null;render();});
       desks.appendChild(b);
