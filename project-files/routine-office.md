@@ -21,7 +21,7 @@
    - status: last_run.status SUCCEEDED = done, FAILED = fail; fired_at בלי finished_at = run; אין last_run = never.
    - last_run = last_run.finished_at (או fired_at), next_run = next_run_at. schedule: התזמון בעברית מטבלת ה-Routines ב-project-files/ACCOUNT-INVENTORY.md.
    - name: השם מאותה טבלה (קצר). role: שורה אחת, מה הסוכן עושה, מהשורה הראשונה של קובץ ההוראות שלו (או מהפרומפט בטריגר).
-   - room: חדר המחקר = researcher, inventor, radar-learn, רדאר רגולציה, retro, preferences. חדר המסמכים = mail-filing, validity, od-scan, quotes, תור משימות. חדר הדוחות = compliance, inspector, factory-trends, nevo-versions, talk-field. תזכורות = טריגר חד-פעמי (run_once_at). סוכן חדש שלא ברשימה: לפי מה שהוא עושה.
+   - room: חדר המחקר = researcher, inventor, radar-learn, רדאר רגולציה, retro, preferences. חדר המסמכים = mail-filing, validity, od-scan, quotes, supplier-followup, cowork-check, תור משימות. חדר הדוחות = compliance, inspector, factory-trends, nevo-versions, talk-field, talk-publish, staging-e2e. תזכורות = טריגר חד-פעמי (run_once_at). סוכן חדש שלא ברשימה: לפי מה שהוא עושה.
    - did ו-learned: השורה האחרונה של הסוכן ב-project-files/agent-log.md (עמודת התוצאה, וה"למדתי"), עד 200 תווים כל אחד. אין שורה = ריק.
    - waiting: מה שכתוב באותה שורה אחרי "מחכה למיכאל", אחרת ריק. לא להמציא.
    - cost: מ-project-files/agent-costs.md, רק מספר לריצה שנמדד, עם הבסיס (מחירון או חיוב). לא נמדד = "לא נמדד עדיין". לא לחשב לבד (לקח 103).
