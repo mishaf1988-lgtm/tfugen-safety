@@ -4,7 +4,7 @@
 
 **העמוד:** `https://claude.ai/artifact/AmxFowGHYDqyhd1sE9qphi`, אוסף `chat`: מסמך לכל שורה. `worker` (שם העובד), `from` (`michael` / `worker`), `text`, `at` (ISO), ובשורה של מיכאל גם `status` (`new` / `sent` / `done` / `fail`), `sent_at`, `note`.
 
-**העובדים והשיחות:** מנהל התפעול = `session_01JT8Fct6Z6Qv2GbaBBqxtQT`, רכז המסמכים = `session_01Wu6gzvUs3SYbLQ5fiaGayV`, רכז הרכש = `session_012U83ozxzQjH8BcQ2AvykSf`, רכז הדוחות = `session_01HPcF58y98mzJ19wJ27EDn5`, החוקר = `session_019o8PKShtacN2m1BCbYdnQj`. עובד שהשיחה שלו מוחלפת: לעדכן כאן ובטבלה של `ACCOUNT-INVENTORY.md` באותו PR.
+**העובדים והשיחות:** במסמך `meta/workers` של הארטיפקט (ArtifactData get, `sessions`: שם העובד > מזהה השיחה). מתעדכן כל שבוע בהחלפת השיחות (`routine-rotation.md`); לא לקחת מזהה מקובץ.
 
 **ה-Routine:** `trig_01Py8YXifD3HtnQUmFgoTRft`, שלוש פעמים ביום, 08:11, 12:11 ו-16:11, א'-ה' (`CRON_TZ=Asia/Jerusalem 11 8,12,16 * * 0-4`; מיכאל בשאלון 18/10/2026: "בצע: 3 פעמים ביום", כי כל סבב קורא את כל ההקשר של השיחה, גם כשאין הודעות. לתשובה מיידית יש בעמוד כפתור "פתח את השיחה"), לתוך השיחה של מנהל התפעול (יש לה ArtifactData ו-`send_message`).
 
