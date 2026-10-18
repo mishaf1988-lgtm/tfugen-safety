@@ -54,6 +54,7 @@ Microsoft 365 (קריאה: מייל, OneDrive, יומן, Teams), Supabase (`exec
 ### סביבת הענן של Claude Code
 סביבה `env_016FAHJNzmeY9hnaYA4JDs5e`. משתנה סביבה: `ROUTINE_KEY` (אותו ערך כמו ב-Cloudflare; בלעדיו ה-Routines נופלים ל-`execute_sql` שמחכה ללחיצה). להעברה: סביבה חדשה עם המשתנה, ולפתוח בה את השיחות העובדות מחדש.
 Network secret באותה סביבה (16/10/2026): מפתח API של Cloudflare, Host `api.cloudflare.com`, Bearer, הרשאת Pages בחשבון `c9d388e3a5f9ee9546e8aa6b6353ec87` (לא רואה את רשימת החשבונות, לכן המזהה רשום כאן). Claude משנה איתו משתני Preview של `tapugan-safety` בלי מחשב. להעברה: מפתח חדש ב-Cloudflare (My Profile > API Tokens) ו-Network secret בסביבה החדשה.
+Network secret שני (18/10/2026, C20): Host `api.supabase.com`, מפתח Supabase מוגבל (`claude-staging`, scoped PAT) לפרויקט הניסוי `ldzbjbsumzqjyvtpiwqo` בלבד: Project Settings קריאה, Database ו-Auth Config כתיבה. החי מחזיר 403. **תוקף 24 שעות** מ-18/10/2026: אחרי זה לא עובד, ומפתח חדש נוצר רק כשיש משימה (supabase.com/dashboard/account/tokens, אותן הרשאות). להעברה: אותו דבר בחשבון החדש.
 
 ---
 
