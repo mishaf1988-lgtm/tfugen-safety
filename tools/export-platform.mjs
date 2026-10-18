@@ -87,7 +87,14 @@ if (!DRY) fs.mkdirSync(OUT, { recursive: true });
 // that differs from it, or a file the last export did not write, stops the export with the list.
 // Bring the change to this repo (tools/platform/ or the code), then run again; --force overwrites.
 const MANIFEST = '.export-manifest.json';
-const sha = (abs) => crypto.createHash('sha256').update(fs.readFileSync(abs)).digest('hex');
+// A text file is hashed with CRLF as LF (18/10/2026): git on Windows checks files out with CRLF, so
+// the first export from Michael's computer would have fingerprinted every file differently from a
+// cloud checkout, and the next export would stop on all of them. Binary files (a NUL) are hashed as is.
+const sha = (abs) => {
+  let b = fs.readFileSync(abs);
+  if (!b.includes(0)) b = Buffer.from(b.toString('latin1').replace(/\r\n/g, '\n'), 'latin1');
+  return crypto.createHash('sha256').update(b).digest('hex');
+};
 const treeOf = (d, rel = '') => fs.readdirSync(path.join(d, rel), { withFileTypes: true }).flatMap((e) => {
   const r = rel ? rel + '/' + e.name : e.name;
   if (kept(r) || r === MANIFEST) return [];
