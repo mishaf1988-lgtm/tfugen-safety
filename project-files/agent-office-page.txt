@@ -9,16 +9,19 @@
   --paper:#eef2f6; --ink:#1d2a38; --ink-2:#4f6072; --line:#b9c6d4; --room:#f8fafc; --desk:#ffffff;
   --lamp-done:#2f9e5b; --lamp-run:#e8a33d; --lamp-fail:#d1453b; --lamp-off:#9aa8b6; --lamp-wait:#3d7be8;
   --accent:#2457a6; --glow:rgba(232,163,61,.35);
+  --wall:#e4ebf2; --floor-a:#e9dfcf; --floor-b:#e2d6c3; --deskwood:#b98a5a; --chair:#41566d; --skin:#e0b48f; --shirt:#2457a6; --screen-off:#3a4654; --monitor:#2b3440;
   --f-display:"Suez One","Rubik",system-ui,sans-serif;
   --f-body:"Rubik",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
   --f-data:"IBM Plex Mono",ui-monospace,Menlo,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --paper:#111a24; --ink:#e3eaf2; --ink-2:#9db0c3; --line:#2c3c4e; --room:#162231; --desk:#1c2a3b;
+  --wall:#1f2c3b; --floor-a:#2a2620; --floor-b:#25211c; --deskwood:#7a5a3a; --chair:#5a7088; --skin:#c99a76; --shirt:#4f86d6; --screen-off:#2a333d; --monitor:#0f151c;
   --lamp-done:#47c27b; --lamp-run:#f2b552; --lamp-fail:#ef6a5f; --lamp-off:#5d6e80; --lamp-wait:#6b9cf2;
   --accent:#8fb4ee; --glow:rgba(242,181,82,.25); color-scheme:dark}}
 :root[data-theme="dark"]{
   --paper:#111a24; --ink:#e3eaf2; --ink-2:#9db0c3; --line:#2c3c4e; --room:#162231; --desk:#1c2a3b;
+  --wall:#1f2c3b; --floor-a:#2a2620; --floor-b:#25211c; --deskwood:#7a5a3a; --chair:#5a7088; --skin:#c99a76; --shirt:#4f86d6; --screen-off:#2a333d; --monitor:#0f151c;
   --lamp-done:#47c27b; --lamp-run:#f2b552; --lamp-fail:#ef6a5f; --lamp-off:#5d6e80; --lamp-wait:#6b9cf2;
   --accent:#8fb4ee; --glow:rgba(242,181,82,.25); color-scheme:dark}
 html,body{background:var(--paper)}
@@ -46,6 +49,23 @@ h1{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;letter-s
 .inbox li span{color:var(--ink-2)}
 .floor{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
 .room{background:var(--room);border:2px solid var(--ink-2);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:10px;position:relative;min-width:0}
+/* 18/10/2026 (Michael: "like a real office with employees sitting"): each room has a floor and
+   each desk is a workstation drawn in SVG: a person at a monitor, whose screen and pose show the state. */
+.room{background:linear-gradient(var(--room) 0 34px,transparent 34px),repeating-linear-gradient(90deg,var(--floor-a) 0 46px,var(--floor-b) 46px 92px)}
+.scene{display:block;width:100%;height:auto;border-radius:4px;background:var(--wall)}
+.scene .screen{fill:var(--screen-off)}
+.s-done .scene .screen{fill:var(--lamp-done)}
+.s-run .scene .screen{fill:var(--lamp-run)}
+.s-fail .scene .screen{fill:var(--lamp-fail)}
+.s-wait .scene .screen{fill:var(--lamp-wait)}
+.scene .hand{transform-box:fill-box;transform-origin:center}
+@media (prefers-reduced-motion: no-preference){
+  .s-run .scene .hand-r{animation:type .5s ease-in-out infinite alternate}
+  .s-run .scene .hand-l{animation:type .5s ease-in-out .25s infinite alternate}
+  .s-wait .scene .bubble{animation:bob 2s ease-in-out infinite}
+}
+@keyframes type{to{transform:translateY(2px)}}
+@keyframes bob{50%{transform:translateY(-2px)}}
 .room::after{content:"";position:absolute;top:-2px;inset-inline-end:28px;width:44px;height:2px;background:var(--room)}
 .room .sub{font-size:12px;color:var(--ink-2);margin-top:-6px}
 .desks{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
@@ -108,6 +128,41 @@ h1{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;letter-s
       .formatToParts(d).forEach(function(x){p[x.type]=x.value;});
     return p.day+'/'+p.month+'/'+p.year+' '+p.hour+':'+p.minute;
   }
+  // A workstation: wall, desk, monitor (screen colour = state), and a person in a chair. A desk that
+  // never ran has an empty chair; a waiting one has a question bubble.
+  var NS='http://www.w3.org/2000/svg';
+  function svg(tag,attrs){var e=document.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);return e;}
+  function scene(s){
+    var g=svg('svg',{viewBox:'0 0 140 78','class':'scene','aria-hidden':'true',focusable:'false'});
+    g.appendChild(svg('rect',{x:0,y:58,width:140,height:20,fill:'var(--floor-a)'}));
+    g.appendChild(svg('rect',{x:104,y:20,width:22,height:16,rx:2,fill:'var(--room)',stroke:'var(--line)'}));
+    if(s!=='never'){
+      g.appendChild(svg('rect',{x:30,y:44,width:24,height:6,rx:2,fill:'var(--chair)'}));
+      g.appendChild(svg('rect',{x:28,y:24,width:6,height:24,rx:2,fill:'var(--chair)'}));
+      g.appendChild(svg('rect',{x:36,y:30,width:16,height:16,rx:5,fill:'var(--shirt)'}));
+      g.appendChild(svg('circle',{cx:44,cy:23,r:7,fill:'var(--skin)'}));
+      g.appendChild(svg('rect',{'class':'hand hand-l',x:50,y:38,width:12,height:4,rx:2,fill:'var(--skin)'}));
+      g.appendChild(svg('rect',{'class':'hand hand-r',x:50,y:43,width:12,height:4,rx:2,fill:'var(--skin)'}));
+    }else{
+      g.appendChild(svg('rect',{x:30,y:44,width:24,height:6,rx:2,fill:'var(--chair)',opacity:.6}));
+      g.appendChild(svg('rect',{x:28,y:24,width:6,height:24,rx:2,fill:'var(--chair)',opacity:.6}));
+    }
+    g.appendChild(svg('rect',{x:20,y:48,width:96,height:5,rx:1,fill:'var(--deskwood)'}));
+    g.appendChild(svg('rect',{x:26,y:53,width:4,height:9,fill:'var(--deskwood)'}));
+    g.appendChild(svg('rect',{x:106,y:53,width:4,height:9,fill:'var(--deskwood)'}));
+    g.appendChild(svg('rect',{x:70,y:24,width:32,height:21,rx:2,fill:'var(--monitor)'}));
+    g.appendChild(svg('rect',{'class':'screen',x:72,y:26,width:28,height:17,rx:1}));
+    g.appendChild(svg('rect',{x:83,y:45,width:6,height:3,fill:'var(--monitor)'}));
+    var mark={done:'\u2713',fail:'!',wait:'?'}[s];
+    if(mark){var t=svg('text',{x:86,y:39,'text-anchor':'middle','font-size':12,'font-weight':700,fill:'#fff'});t.textContent=mark;g.appendChild(t);}
+    if(s==='wait'){
+      var b=svg('g',{'class':'bubble'});
+      b.appendChild(svg('rect',{x:50,y:2,width:18,height:13,rx:6,fill:'var(--lamp-wait)'}));
+      var q=svg('text',{x:59,y:12,'text-anchor':'middle','font-size':10,'font-weight':700,fill:'#fff'});q.textContent='?';b.appendChild(q);
+      g.appendChild(b);
+    }
+    return g;
+  }
   function state(a){
     if(a.waiting)return 'wait';
     return ({done:1,run:1,fail:1,never:1})[a.status]?a.status:'never';
@@ -143,6 +198,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;letter-s
         var s=state(a);
         var b=el('button','desk s-'+s);b.type='button';b.id='desk-'+a.id;
         b.setAttribute('aria-expanded',open===a.id?'true':'false');
+        b.appendChild(scene(s));
         var top=el('div','top');top.appendChild(el('i','dot'));top.appendChild(el('span','name',a.name));b.appendChild(top);
         if(a.role)b.appendChild(el('div','role',a.role));
         b.appendChild(el('div','when',LABEL[s]+(a.last_run?', '+when(a.last_run):'')));
