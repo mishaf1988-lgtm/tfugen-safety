@@ -95,3 +95,10 @@ description: How to read and change the live Supabase database of tfugen-safety 
 הכלל: זמן "עכשיו" לא נכתב מהראש. השרת חותם אותו (`STAMP_AT` ב-`routine-db.js`), ומחוץ לשרת: `date -u +%FT%TZ`.
 נאכף: `routine-db-test.mjs` (state_set של `mail_filing` ו-`validity_run` מקבל את שעת השרת).
 חזר: 0
+
+**113. פונקציית טריגר הוחלפה בסכמה הלא נכונה (18/10/2026, PR זה).**
+מה קרה: `create or replace function public.trustee_reports_close_ref()` הצליח, אבל הטריגר מפעיל את `private.trustee_reports_close_ref`. נוצרה פונקציה חדשה ומיותרת, והבדיקה בתוך `BEGIN ... ROLLBACK` הראתה שהתיקון לא עובד. DROP שלה נתקע (timeout) גם ב-`execute_sql` וגם ב-`apply_migration`, אז היא שונתה ל-`tmp_...` (השליפה מדלגת על `tmp_`) וחיכתה לכרום (C18).
+הכלל: לפני החלפת פונקציה של טריגר: `select tgfoid::regprocedure from pg_trigger where tgrelid = '<טבלה>'::regclass` ולהחליף בדיוק את מה שהטריגר מפעיל. ותמיד לאמת בטרנזקציה שמבוטלת לפני שאומרים "תוקן".
+נאכף: טקסט (הבדיקה ב-ROLLBACK היא שתפסה).
+חזר: 0
+

@@ -52,6 +52,17 @@
 3. דווח: שהמתג פעיל, ושם הפרויקט שבראש המסך.
 ```
 
+- [ ] **C18. מחיקת שתי פונקציות עזר במסד החי (18/10/2026, מיכאל בשאלון: "בצע: למחוק את הפונקציה המיותרת").** `DROP` נתקע מהענן גם ב-`execute_sql` וגם ב-`apply_migration` (פקודה הרסנית מחכה לאישור שאין לו מסך). שתיהן בלי טריגר ובלי הרשאה לאנונימי: `public.tmp_stray_close_ref_20261018` (נוצרה בטעות בתיקון של 18/10, לקח 113) ו-`private.tmp_cap_60_200` (עזר מ-15/10). אחרי הביצוע Claude בודק ב-`pg_proc` ומסמן כאן.
+```
+בצע:
+1. supabase.com/dashboard/project/znhjtpcltrxxyfjczgvw/sql/new  (הפרויקט tfugen-safety, החי)
+2. להדביק ולהריץ (Run):
+   drop function if exists public.tmp_stray_close_ref_20261018();
+   drop function if exists private.tmp_cap_60_200();
+3. אם מופיע חלון "destructive operation": לאשר.
+4. דווח: "Success. No rows returned".
+```
+
 ## בוצע
 
 - [x] **C16. שני Projects ב-claude.ai: תפוגן והעסק** (17/10/2026). **בוצע 17/10/2026 על ידי מיכאל מהטלפון** ("פתחתי פריקטים"), עם השמות וההוראות מהדף https://claude.ai/artifact/S33o6jFNUumGNyZbxGUCua. מהענן אין כלי שקורא Projects, ולכן אומת לפי הדיווח שלו.

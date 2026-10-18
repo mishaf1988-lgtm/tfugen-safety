@@ -1,4 +1,4 @@
--- dumped 2026-10-17 from the live project by tools/platform/schema-dump.sql; verified with schema-fingerprint.sql
+-- dumped 2026-10-18 from the live project by tools/platform/schema-dump.sql; verified with schema-fingerprint.sql
 create schema if not exists private;
 
 create extension if not exists "uuid-ossp" with schema extensions;
@@ -846,7 +846,7 @@ AS $function$
 BEGIN
   IF NEW.t = 8 AND NEW.ref IS NOT NULL AND NEW.ref <> '' THEN
     UPDATE public.trustee_reports
-       SET s = 'נסגר'
+       SET s = 'נסגר', closed_d = COALESCE(closed_d, NEW.d)
      WHERE id = NEW.ref
        AND ok = false
        AND t BETWEEN 1 AND 20 AND t <> 8
