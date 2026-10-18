@@ -160,6 +160,9 @@ export const EXPIRY_TABLES = {
   docs: { note: 'nt', extra: 's' },
   equip_inspections: { note: 'notes', extra: 'd' },
 };
+// equipment: the one state a run may set (18/10/2026, Michael: "בצע: לעשות את הצעות 1 עד 5"): taking a row
+// out of tracking after HIS decision ("לא רלוונטי" with e null), the way Drager 8000/7000 went by hand.
+export const EQUIP_OUT = '\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9';
 export const DOC_STATES = ['\u05d1\u05ea\u05d5\u05e7\u05e3', '\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3', '\u05d8\u05e2\u05d5\u05df \u05d0\u05d9\u05de\u05d5\u05ea'];
 export const FILE_URL_PREFIX = SITE.odFileUrl;
 const isDay = (x) => /^\d{4}-\d{2}-\d{2}$/.test(String(x || '')) && !isNaN(Date.parse(x + 'T00:00:00Z')) && new Date(x + 'T00:00:00Z').toISOString().slice(0, 10) === x;
@@ -174,7 +177,18 @@ export function expiryPatch(b, row, today) {
   const why = short(b.why, 300), doc = short(b.doc, 300);
   if (why.length < 5) return { error: 'why required' };
   const patch = {}, said = [];
-  if (b.e !== undefined) {
+  const outOfTracking = b.table === 'equip_inspections' && b.s !== undefined;
+  if (outOfTracking) {
+    // only this state, only together with e null and a document (his decision), so a run cannot hide a row by itself
+    if (b.s !== EQUIP_OUT || b.e !== null) return { error: 'bad s' };
+    if (!doc) return { error: 'doc required for s' };
+    const old = row.e ? String(row.e).slice(0, 10) : '';
+    patch.e = null; patch.s = EQUIP_OUT;
+    said.push('\u05ea\u05d5\u05e7\u05e3 ' + ddmm(old) + ' -> \u05d4\u05d5\u05e6\u05d0 \u05de\u05d4\u05de\u05e2\u05e7\u05d1 (' + EQUIP_OUT + ')');
+  } else if (b.e === null) {
+    return { error: 'bad e' };
+  }
+  if (b.e !== undefined && !outOfTracking) {
     if (!isDay(b.e) || b.e < '2000-01-01' || b.e > String(Number(today.slice(0, 4)) + 6) + today.slice(4)) return { error: 'bad e' };
     const old = row.e ? String(row.e).slice(0, 10) : '';
     // later than now = the run read a document that says so; earlier is always allowed (careful)
@@ -194,7 +208,7 @@ export function expiryPatch(b, row, today) {
     if (v !== row[t.extra]) { patch[t.extra] = v; said.push(t.extra + ' ' + (t.extra === 'd' ? ddmm(v) : v)); }
   }
   for (const k of Object.keys(b)) {
-    if (['op', 'table', 'id', 'agent', 'why', 'doc', 'e', 'file_url', t.extra].indexOf(k) < 0) return { error: 'field not allowed: ' + k };
+    if (['op', 'table', 'id', 'agent', 'why', 'doc', 'e', 'file_url', t.extra].concat(outOfTracking ? ['s'] : []).indexOf(k) < 0) return { error: 'field not allowed: ' + k };
   }
   if (!said.length) return { patch: null };
   const line = ddmm(today) + ' Claude (' + b.agent + '): ' + said.join(', ') + '. ' + why + (doc ? '. \u05de\u05e1\u05de\u05da: ' + doc : '');
