@@ -30,3 +30,6 @@ order by 1, 5 nulls last;
 אם גם המסד וגם Microsoft 365 לא זמינים: שורה אחת שהדוח לא הופק ולמה, ו-agent_report עם "ok":false ואותה שורה.
 
 ---
+
+
+**18/10/2026: עבר לרכז הדוחות** (מיכאל בשאלון: "בצע: עובד חדש 'רכז הדוחות'"): `trig_01HnozW9iwC58txeC5gRAF6F` לתוך `session_015knQ2u3y5veDDFu31LWkFW`; הקודם `trig_01Uq6xdHwgr3ymq1xqbMUhca` כובה.

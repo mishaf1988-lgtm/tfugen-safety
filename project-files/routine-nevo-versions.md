@@ -34,3 +34,6 @@ insert into public.server_state(key, value, updated_at) values ('nevo_versions',
    אסור לשנות קוד, מסמך, תוקף או הדרכה. רק רשימה.
 6. הודעה אחרונה: כמה חוקים נבדקו, כמה נכשלו (ושמותיהם), אילו התעדכנו, כמה מקומות מושפעים נמצאו, וקישור ל-PR אם נפתח.
 ---
+
+
+**18/10/2026: עבר לרכז הדוחות** (מיכאל בשאלון: "בצע: עובד חדש 'רכז הדוחות'"): `trig_018MkKsQYRHa3yNx65kx5mDB` לתוך `session_015knQ2u3y5veDDFu31LWkFW`; הקודם `trig_01ELCjhJydNgjT9obYdDqnSu` כובה.

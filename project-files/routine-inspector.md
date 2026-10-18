@@ -29,3 +29,6 @@
 7. branch routine/inspector-YYYY-MM-DD, commit, PR (בתיאור: "בלי לקח: דוח ביקורת", "רטרו: <משפט>", "skill: אין"), המתנה ל-tests (bash .claude/hooks/ci-wait.sh <branch> mishaf1988-lgtm/tfugen-safety) ומיזוג.
 8. הודעה אחרונה, שורה אחת: "הוכחו X מתוך 5" (מול החודש הקודם), מה לא הוכח, וקישור ל-PR.
 ---
+
+
+**18/10/2026: עבר לרכז הדוחות** (מיכאל בשאלון: "בצע: עובד חדש 'רכז הדוחות'"): `trig_01Aqn2WLiNXdjhvYTsM87vhg` לתוך `session_015knQ2u3y5veDDFu31LWkFW`; הקודם `trig_01UvD1ZgRH4tatvZTSEd8YWS` כובה.

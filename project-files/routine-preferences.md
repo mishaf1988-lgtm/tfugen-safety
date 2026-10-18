@@ -28,3 +28,6 @@
 7. branch routine/preferences-YYYY-MM-DD, commit, PR (בתיאור: "בלי לקח: מודל חודשי", "רטרו: <משפט>", "skill: אין"), המתנה ל-tests (bash .claude/hooks/ci-wait.sh <branch> mishaf1988-lgtm/tfugen-safety) ומיזוג.
 8. הודעה אחרונה, שורה אחת: כמה תשובות נבדקו, פגיעת המודל מול ה"מומלץ", ומועמדים אם יש.
 ---
+
+
+**18/10/2026: עבר לרכז הדוחות** (מיכאל בשאלון: "בצע: עובד חדש 'רכז הדוחות'"): `trig_01VfGkdnCHyw4WQkchA9imQg` לתוך `session_015knQ2u3y5veDDFu31LWkFW`; הקודם `trig_01FHHc5T6ctVPFUXqHo5Eh9E` כובה.
