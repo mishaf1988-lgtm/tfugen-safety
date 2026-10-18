@@ -25,25 +25,9 @@
 
 ## פתוח
 
-- [ ] **C15 (שונה 16/10/2026 18:00: `CLOUDFLARE_API_TOKEN` נשמר כ-Network secret בסביבה Default, נבדק (`tokens/verify`: active). Claude דרך ה-API: נוסף ל-Preview `STAGING_SUPABASE_URL`; נמחקו מ-Preview, באישור מיכאל בשאלון, שלושה מפתחות שהיו שמורים כטקסט גלוי (`SUPABASE_SERVICE_ROLE_KEY`, `META_ACCESS_TOKEN`, `ANTHROPIC_KEY`); Production נשאר 19 משתנים, נבדק 3 פעמים. **נשאר רק:** `STAGING_SUPABASE_SERVICE_ROLE_KEY` כ-Secret ב-Preview. Cloudflare לא מחזיר ערך סודי, ובטלפון של מיכאל אין בחירת Preview (גם הניסיון במצב מחשב לא הצליח). מהמחשב, דף ההוראות: https://claude.ai/artifact/91c12XMrhjJgYb2677Tp4r. אחרי זה: Claude מאמת דרך ה-API, מעלה גרסת תצוגה ומריץ `tests/staging/e2e.js` מולה. בגרסאות תצוגה אין AI עד שמוסיפים `ANTHROPIC_KEY` כ-Secret ב-Preview.) משתני Preview ב-Cloudflare: גרסאות התצוגה עובדות מול מסד הניסוי** (16/10/2026, מיכאל בשאלון: "בצע: מסד ניסוי חינמי נפרד (מומלץ)"; STATUS "סביבת פיתוח וניסוי", `project-files/staging/README.md`). בלי זה הדפדפן בגרסת תצוגה כבר עובד מול הניסוי, אבל פונקציות השרת שלה עובדות לפי משתני ה-Preview שקיימים היום. **קודם לקרוא מה יש, לשנות רק Preview, לא לגעת ב-Production.**
-```
-בצע (מיכאל אישר בשאלון 16/10/2026: "בצע: מסד ניסוי חינמי נפרד"):
-1. dash.cloudflare.com > Workers & Pages > tapugan-safety > Settings > Variables and Secrets.
-   בחר את הסביבה Preview בלבד. רשום לי מה מוגדר שם היום (רק שמות המשתנים, לא ערכים).
-   אם SUPABASE_URL או SUPABASE_SERVICE_ROLE_KEY מוגדרים ב-Preview עם הערכים של Production, זה אומר שגרסאות תצוגה כתבו עד היום למסד החי: לדווח.
-2. supabase.com/dashboard/project/ldzbjbsumzqjyvtpiwqo/settings/api-keys (הפרויקט tfugen-staging, לא tfugen-safety!).
-   העתק את המפתח service_role (או secret) של הפרויקט הזה.
-3. חזרה ל-Cloudflare, Preview בלבד:
-   SUPABASE_URL = https://ldzbjbsumzqjyvtpiwqo.supabase.co
-   SUPABASE_SERVICE_ROLE_KEY = (המפתח מצעד 2, כ-Secret)
-   ALLOWED_COUNTRIES = IL,US
-   (רק ב-Preview: Claude בענן יוצא מארה"ב, נבדק 16/10/2026 ב-cdn-cgi/trace: loc=US. בגרסת תצוגה יש רק נתוני דוגמה, ולכן זה בטוח. ב-Production נשאר IL.)
-   שמור. אל תשנה שום משתנה של Production.
-4. דווח: אילו משתנים היו ב-Preview לפני, ומה הוגדר.
-```
-
 ## בוצע
 
+- [x] **C15. סוד מסד הניסוי ב-Preview של Cloudflare** (16/10/2026). **בוצע 18/10/2026 על ידי מיכאל עם Claude בכרום**: Claude בכרום מילא Type ו-Name, מיכאל הדביק את המפתח ושמר. אומת 18/10/2026 דרך ה-API: ב-Preview 4 משתנים, `STAGING_SUPABASE_SERVICE_ROLE_KEY` מסוג secret_text; Production נשאר 19. ב-Production יש גם עותק של שני משתני `STAGING_` מ-16/10 (כשלא היה אפשר לבחור Preview מהטלפון); האתר החי לא קורא אותם (`functions/_middleware.js`), ולכן נשארים.
 - [x] **C18. מחיקת שתי פונקציות עזר במסד החי** (18/10/2026). **בוצע 18/10/2026 על ידי מיכאל** ("בוצע"). אומת ב-`pg_proc`: `public.tmp_stray_close_ref_20261018` ו-`private.tmp_cap_60_200` כבר לא קיימות.
 - [x] **C17. כניסה אנונימית במסד הניסוי** (17/10/2026). **בוצע 18/10/2026 על ידי מיכאל** ("בוצע"). אומת 18/10/2026: `tests/staging/e2e.js` 29/29, כולל סעיף 6: סשן אנונימי, הדיווח הגיע למסד, NCR ועובדים סגורים.
 - [x] **C16. שני Projects ב-claude.ai: תפוגן והעסק** (17/10/2026). **בוצע 17/10/2026 על ידי מיכאל מהטלפון** ("פתחתי פריקטים"), עם השמות וההוראות מהדף https://claude.ai/artifact/S33o6jFNUumGNyZbxGUCua. מהענן אין כלי שקורא Projects, ולכן אומת לפי הדיווח שלו.
