@@ -171,6 +171,16 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('equip_inspections: e and d, note in notes', x.json.ok && rows.equip_inspections[0].e === '2027-06-01' && rows.equip_inspections[0].d === '2026-06-01' && /routine-validity/.test(rows.equip_inspections[0].notes), x.json);
     check('equipment d in the future: refused', (await call({ op: 'expiry_set', table: 'equip_inspections', id: 'q1', agent: 'a-b', why: 'xxxxx', d: '2099-01-01' })).status === 400);
     check('expiryPatch: docs cannot set d, equipment cannot set s', !!expiryPatch({ ...base, d: '2026-01-01' }, rows.docs[0], '2026-10-11').error && !!expiryPatch({ ...base, table: 'equip_inspections', s: 'x' }, rows.equip_inspections[0], '2026-10-11').error);
+    // 18/10/2026 (Michael: "בצע: לעשות את הצעות 1 עד 5"): equipment may go out of tracking, nothing else about s
+    const OUT = '\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9';
+    const eq = { op: 'expiry_set', table: 'equip_inspections', id: 'q1', agent: 'routine-validity', why: 'out of tracking by decision' };
+    check('equipment s: another value refused', (await call({ ...eq, doc: 'q.txt', e: null, s: '\u05ea\u05e7\u05d9\u05df' })).status === 400);
+    check('equipment s without e null: refused', (await call({ ...eq, doc: 'q.txt', s: OUT })).status === 400);
+    check('equipment s without a document: refused', (await call({ ...eq, e: null, s: OUT })).status === 400);
+    check('equipment e null without s: refused', (await call({ ...eq, doc: 'q.txt', e: null })).status === 400);
+    check('docs: e null with s refused', (await call({ ...base, e: null, s: OUT, doc: 'q.txt' })).status === 400);
+    x = await call({ ...eq, doc: 'questionnaire 18/10/2026', e: null, s: OUT });
+    check('equipment out of tracking: e null, s set, note says so, one row', x.json.ok && x.json.changed && rows.equip_inspections[0].e === null && rows.equip_inspections[0].s === OUT && /Claude \(routine-validity\)/.test(rows.equip_inspections[0].notes) && rows.equip_inspections[0].notes.indexOf('questionnaire 18/10/2026') > 0, x.json);
     check('only docs and equip_inspections', Object.keys(EXPIRY_TABLES).join() === 'docs,equip_inspections');
     check('without the key: 403, nothing written', (await call({ ...base, e: '2026-01-01' }, 'nope')).status === 403 && rows.docs[0].e === '2027-01-01');
     rows = {};
