@@ -234,7 +234,8 @@ export const OD_REQ = '_\u05d1\u05e7\u05e9\u05d5\u05ea \u05de\u05d4\u05de\u05d9\
 // A Graph / Outlook message id: base64url-ish, as outlook_email_search returns it.
 export const MAIL_REQ_ID = /^[A-Za-z0-9_=+\/-]{40,400}$/;
 const OD_NO_DIR = /(^|\/)(_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea|\u05dc\u05de\u05d7\u05d9\u05e7\u05d4|ARCHIVE)(\/|$)/i;
-const OD_EXT = /\.(pdf|docx?|xlsx|jpe?g|png)$/i;
+// 18/10/2026 (Michael: "גם וגם"): csv too, the data file next to a lab certificate pdf.
+const OD_EXT = /\.(pdf|docx?|xlsx|csv|jpe?g|png)$/i;
 // Into "not filed" any file the flow saved may go (11/10/2026: a 4 MB .mp4 ad stayed in the inbox;
 // 12/10/2026: an attachment named "RAW", saved with no extension, was refused and stuck there),
 // under the same name; into a document folder only OD_EXT.
