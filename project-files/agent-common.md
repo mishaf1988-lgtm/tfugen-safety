@@ -50,7 +50,7 @@
 
 פורמט שורה: `- [ניסוי מ-DD/MM/YYYY] <השיטה, משפט אחד> | למי: <סוכנים> | מודדים: <מה ואיפה> | מקור: <קישור>`
 
-(אין עדיין שיטות בניסוי)
+- [ניסוי מ-18/10/2026] מאתגר נפרד לפני מיזוג של קוד: סוכן שכותב קוד ומתכוון למזג (`routine-night` ושיחות קוד) מריץ לפני המיזוג Agent שני שלא ראה את הדיון, שמנסה להפיל את ה-diff ובודק גם את אותו באג באתרים דומים (grep), ואז מתקנים או שורה ב-STATUS | למי: `routine-night` (שיחות קוד רגילות אופציונלי) | מודדים: (א) כמה PRs של `routine-night` צריכים PR תיקון על אותם קבצים תוך 7 ימים (ב-`git log`; קו בסיס 09/10/2026: #1294 ואחריו #1296 באותו יום, מתוך שישה PRs); (ב) עלות: עד כ-0.3 דולר לריצה (`agent-costs.md`); שיטה שלא מורידה את (א) אחרי 14 יום נמחקת | מקור: https://www.anthropic.com/engineering/building-effective-agents (דפוס evaluator-optimizer: "one LLM call generates a response while another provides evaluation and feedback in a loop"; מתאים כש"the LLM can provide such feedback"; המאמר ממליץ "adding complexity only when it demonstrably improves outcomes"), ומהנתונים שלנו: ב-`RETRO-LOG.md` 11 עד 15/10/2026 המאתגר העלה 17 טענות מתקבלות מתוך 20, ובשלוש ריצות מתוך חמש גילה שהתיקון הראשון כיסה רק חלק מהאתרים
 
 **מקורות לסקאוט, לפי סדר אמינות:**
 1. Anthropic: anthropic.com/engineering, docs.claude.com (Claude Code, Agent Skills, Routines), github.com/anthropics (skills, claude-code CHANGELOG).
