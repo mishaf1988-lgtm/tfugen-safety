@@ -68,7 +68,26 @@ def main():
     except Exception:
         print("{}"); return
     cmd = no_heredoc((d.get("tool_input") or {}).get("command", "") or "")
-    if d.get("tool_name", "Bash") != "Bash" or not re.search(r"(^|[;&|\s])git\s+push\b", cmd):
+    if d.get("tool_name", "Bash") != "Bash":
+        print("{}"); return
+    # 18/10/2026 (Michael: "מאשר"): a compound command whose branch step was refused by another hook
+    # never switched branch, and its commit landed on the local main (lesson 110). A commit on main
+    # in this repo is refused, unless the same command first makes or switches to a branch.
+    m = re.search(r"(^|[;&|\s])git\s+commit\b", cmd)
+    if m and not re.search(r"git\s+(checkout\s+(-q\s+)?-[bB]|switch\s+(-q\s+)?-[cC])\s", cmd[:m.start() + 1]):
+        br = os.environ.get("PUSH_GATE_BRANCH")
+        if br is None:
+            here = os.environ.get("CLAUDE_PROJECT_DIR") or d.get("cwd") or "."
+            try:
+                url = subprocess.run(["git", "remote", "get-url", "origin"], cwd=here, capture_output=True, text=True, timeout=10).stdout
+                br = subprocess.run(["git", "branch", "--show-current"], cwd=here, capture_output=True, text=True, timeout=10).stdout.strip() if "tfugen-safety" in url else ""
+            except Exception:
+                br = ""
+        if br == "main":
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                "permissionDecisionReason": "push-gate (\u05dc\u05e7\u05d7 110): commit \u05e2\u05dc main. \u05e7\u05d5\u05d3\u05dd branch: git checkout -B routine/<name>-<date> origin/main"}}, ensure_ascii=False))
+            return
+    if not re.search(r"(^|[;&|\s])git\s+push\b", cmd):
         print("{}"); return
     # The repo root, not the shell's cwd (the first live run came from tests/harness
     # and looked for tests/harness/tests/harness/...).
