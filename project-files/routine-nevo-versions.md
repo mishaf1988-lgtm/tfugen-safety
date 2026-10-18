@@ -6,7 +6,7 @@
 
 **הוקם 07/10/2026 מהענן, בלי תלות במיכאל:** `trig_01ELCjhJydNgjT9obYdDqnSu`. **מ-09/10/2026 מופעל לתוך `session_01JT8Fct6Z6Qv2GbaBBqxtQT`** ("Routines חודשיים בלי לחיצה", לא לארכב), עם פרומפט קצר שקורא את הקובץ הזה (נבדק ב-`list_triggers` 09/10/2026; קודם: `session_017Y8t6gZc26ysueKySAi7zV`). Routine רגיל שנוצר מהענן לא מקבל connectors ולא את כלי השיחות (נבדק בהפעלת ניסיון, והראשון `trig_0125XHPwWvh1Z1yLyk9SypW1` נמחק); Routine שמופעל לתוך שיחה קיימת משתמש בכלים שלה, ולשיחה הזו יש Supabase, `list_triggers` ו-`create_session` (נבדק: `count(*)` על `leg` = 39). הפרומפט בטריגר מתחיל ב"ריצה חדשה... git fetch + reset" כי השיחה נשמרת בין ריצות. ההגדרות למטה הן לתיעוד; אין מה להוסיף ביד.
 
-**ההגדרות:** לוח: ב-3 לכל חודש, 07:22 שעון ישראל (`CRON_TZ=Asia/Jerusalem 22 7 3 * *`), Sonnet 5.5.
+**ההגדרות:** לוח: ב-3 לכל חודש, 06:52 שעון ישראל (`CRON_TZ=Asia/Jerusalem 52 6 3 * *`), Sonnet 5.5.
 
 ---
 0. ידע משותף (09/10/2026): קרא את project-files/agent-common.md, סעיפי "פתיחה" ו"ידע משותף". בסוף הריצה: סעיף "סגירה" (שורת למידה אחת; שם הסוכן: routine-nevo-versions).

@@ -26,7 +26,8 @@
    - did ו-learned: השורה האחרונה של הסוכן ב-project-files/agent-log.md (עמודת התוצאה, וה"למדתי"), עד 200 תווים כל אחד. אין שורה = ריק.
    - waiting: מה שכתוב באותה שורה אחרי "מחכה למיכאל", אחרת ריק. לא להמציא.
    - cost: מ-project-files/agent-costs.md, רק מספר לריצה שנמדד, עם הבסיס (מחירון או חיוב). לא נמדד = "לא נמדד עדיין". לא לחשב לבד (לקח 103).
-4. ArtifactData על https://claude.ai/artifact/AmxFowGHYDqyhd1sE9qphi, פעולת batch אחת: set לכל שולחן באוסף agents, delete לשולחן שהטריגר שלו כבר לא ברשימה, ו-set ל-meta/office עם updated_at (עכשיו, ISO) ו-count = מספר השולחנות שנשארו אחרי ה-delete (17/10/2026: נכתב 19 כשבמשרד היו 18).
+3א. שולחן העוזר (18/10/2026, מיכאל: "אני לא רואה פה גם את העוזר שלי"): המסמך `assistant` באוסף agents אינו טריגר, ולכן לא נמחק בצעד 4. worker = "העוזר שלך", status = done, schedule = "כשאתה פונה אליו". did: "גרסה <N> (<DD/MM/YYYY>): <מה השתנה>" מה-commit האחרון שמעלה גרסה ב-mishaf1988-lgtm/michael-skills (mcp__github__list_commits, perPage 5; הגרסה מהודעת ה-commit). last_run = תאריך אותו commit. אין גישה: להשאיר את המסמך כמו שהוא.
+4. ArtifactData על https://claude.ai/artifact/AmxFowGHYDqyhd1sE9qphi, פעולת batch אחת: set לכל שולחן באוסף agents, delete לשולחן שהטריגר שלו כבר לא ברשימה (חוץ מ-`assistant`), ו-set ל-meta/office עם updated_at (עכשיו, ISO) ו-count = מספר השולחנות שנשארו אחרי ה-delete (17/10/2026: נכתב 19 כשבמשרד היו 18).
 5. אסור: מייל, הודעה, כתיבה ב-365, כתיבה במסד של האפליקציה, שינוי טריגר, PR. רק כתיבה במסד של הארטיפקט.
 6. הודעה אחרונה, שורה אחת: כמה שולחנות, כמה נכשלו, כמה מחכים למיכאל.
 ---

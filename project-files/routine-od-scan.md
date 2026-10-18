@@ -10,7 +10,7 @@
 
 - **Repository:** `mishaf1988-lgtm/tfugen-safety`
 - **Connectors:** Supabase
-- **Schedule:** ב-2 לכל חודש, 07:12 שעון ישראל (`CRON_TZ=Asia/Jerusalem 12 7 2 * *`)
+- **Schedule:** ב-2 לכל חודש, 06:51 שעון ישראל (`CRON_TZ=Asia/Jerusalem 51 6 2 * *`)
 - **התראה:** לטלפון
 - **Prompt:** הטקסט שבין הקווים
 

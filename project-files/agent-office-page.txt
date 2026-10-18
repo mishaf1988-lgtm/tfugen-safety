@@ -196,7 +196,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     // 18/10/2026 (Michael: "one agent can do several jobs... so the screen is not crowded"): one desk per
     // worker, that is per working session; its tasks are listed on the desk. Tasks of one worker run one
     // after another, different workers run at the same time. worker comes from routine-office.md.
-    var ORDER=['מנהל התפעול','רכז המסמכים','רכז הרכש','החוקר','הרדאר','המחשב שלך','תזכורות'];
+    var ORDER=['מנהל התפעול','רכז המסמכים','רכז הרכש','החוקר','הרדאר','המחשב שלך','העוזר שלך','תזכורות'];
     var RANK={fail:5,wait:4,run:3,done:2,never:1};
     var groups={};
     agents.forEach(function(t){var w=t.worker||t.room||'מנהל התפעול';(groups[w]=groups[w]||[]).push(t);});
