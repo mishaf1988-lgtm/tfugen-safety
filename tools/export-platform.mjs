@@ -18,8 +18,10 @@ import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
 import crypto from 'crypto';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
+// Windows (18/10/2026, the business line ran it on Michael's computer): import() takes a file://
+// URL, not a C:\ path, and node may not be on PATH, so the setup test runs with this same node.
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ARGS = process.argv.slice(2).filter((a) => a !== '--force' && a !== '--dry-run');
 const FORCE = process.argv.includes('--force');
@@ -61,7 +63,7 @@ const COMMENT_SUBS = [
 const isComment = (t) => /^(\/\/|\/\*|\*|#|<!--)/.test(t);
 const SKIP = /(^|\/)(__pycache__|node_modules|\.DS_Store)(\/|$)/;
 
-const { NAMES_RE } = await import(path.join(ROOT, 'functions/_site.js'));
+const { NAMES_RE } = await import(pathToFileURL(path.join(ROOT, 'functions/_site.js')).href);
 // Beyond the names: the owner's accounts, phones, the database and test-database keys, the
 // WhatsApp business id. Spelled in parts so this file does not trip its own scan.
 const PRIVATE = new RegExp(['mishaf' + '1988', 'sviva', '0547' + '940073', '08-680' + '8365',
@@ -73,9 +75,10 @@ const DEPTS = [he(0x5d8, 0x5d5, 0x5d2, 0x5e0, 0x5d9, 0x5dd), he(0x5de, 0x5e2, 0x
 const DEPTS_RE = new RegExp(DEPTS.flatMap((d) => [d, esc(d).replace(/\\/g, '\\\\')]).join('|'));
 
 // Files that live only in safety-platform (17/10/2026, the business line: its handoff, the day-one
-// checklist, demo data, documents and marketing), and its git folder. The out-dir may be a clone
+// checklist, demo data, documents and marketing; 18/10/2026: its automation demo, its CI and
+// its .gitignore, which --force would have deleted), and its git folder. The out-dir may be a clone
 // of safety-platform: everything else in it is replaced, these are never deleted or written.
-const KEEP = ['.git', 'handoff.md', 'checklist-day1.md', 'demo', 'docs', 'marketing'];
+const KEEP = ['.git', 'handoff.md', 'checklist-day1.md', 'demo', 'docs', 'marketing', 'automation', 'ci', '.github', '.gitignore'];
 const kept = (rel) => KEEP.includes(rel.split('/')[0]);
 if (!DRY) fs.mkdirSync(OUT, { recursive: true });
 // A file edited in safety-platform since the last export would be overwritten in silence
@@ -142,8 +145,8 @@ for (const f of INCLUDE.flatMap(walk).filter((f) => !SKIP.test(f) && /\.(m?js|ht
   fs.writeFileSync(p, out.join('\n'));
 }
 console.log('  ' + subbed + ' comment lines given generic words');
-const real = await import(path.join(ROOT, 'functions/_site.js'));
-const tmpl = await import(path.join(OUT, 'functions/_site.js') + '?t=' + Date.now());
+const real = await import(pathToFileURL(path.join(ROOT, 'functions/_site.js')).href);
+const tmpl = await import(pathToFileURL(path.join(OUT, 'functions/_site.js')).href + '?t=' + Date.now());
 const keys = (m) => JSON.stringify([Object.keys(m.SITE).sort(), m.CLIENT_KEYS, Object.keys(m).sort()]);
 if (keys(real) !== keys(tmpl)) {
   console.error('  tools/platform/_site.js and functions/_site.js have different keys; add the new one to the template');
@@ -169,7 +172,7 @@ const DB_SUBS = [
   ["'@" + real.SITE.loginDomain + "'", "'@" + tmpl.SITE.loginDomain + "'"],
   ['tapugan_auth_read_backups', 'auth_read_backups'],
 ];
-let db = live.replace(/^-- dumped .*\n/, '');
+let db = live.replace(/^-- dumped .*\r?\n/, ''); // \r: a Windows checkout (18/10/2026)
 for (const [a, b] of DB_SUBS) { if (!db.includes(a)) throw new Error('schema-live.sql: "' + a + '" is gone, update DB_SUBS'); db = db.split(a).join(b); }
 const DB_HEAD = `-- Builds the database of a new factory: structure only, no rows (Safety Platform).
 --
@@ -210,8 +213,8 @@ execFileSync('python3', [path.join(OUT, 'tools/make-logo.py')], { stdio: 'inheri
 
 console.log('3. settings into the page, then the setup test on the copy');
 const test = path.join(OUT, 'tests/harness/site-config-test.mjs');
-execFileSync('node', [test, '--write'], { stdio: 'ignore' });
-try { execFileSync('node', [test], { stdio: 'pipe' }); console.log('  site-config-test passes on the copy'); }
+execFileSync(process.execPath, [test, '--write'], { stdio: 'ignore' });
+try { execFileSync(process.execPath, [test], { stdio: 'pipe' }); console.log('  site-config-test passes on the copy'); }
 catch (e) { console.error(String(e.stdout).split('\n').filter((l) => l.includes('✗')).join('\n')); process.exit(1); }
 
 console.log('4. scan for Tapugan');
