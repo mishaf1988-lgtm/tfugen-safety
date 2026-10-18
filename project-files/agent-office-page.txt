@@ -120,8 +120,9 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
 .detail dd.wt{color:var(--lamp-wait);font-weight:500}
 .detail .go{align-self:flex-start;display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:8px;background:var(--accent);color:var(--desk);font-weight:700;text-decoration:none}
 .detail .acts{display:flex;flex-wrap:wrap;gap:8px}
-.detail .go.run{border:0;font:inherit;font-weight:700;cursor:pointer;background:var(--lamp-done)}
-.detail .go.run:disabled{opacity:.55;cursor:default}
+.detail .runbtn{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border:0;border-radius:8px;background:var(--lamp-done);color:var(--desk);font:inherit;font-weight:700;cursor:pointer}
+.detail .runbtn:disabled{opacity:.55;cursor:default}
+.detail .runbtn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .detail .go:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .detail .hint{font-size:12px;color:var(--ink-2)}
 /* 18/10/2026 (Michael: "a chat with each worker, to send tasks from the office, without opening wide chats"). */
@@ -374,7 +375,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
           // 18/10/2026 (Michael: "a Run now button on every desk"): the page cannot fire a trigger itself
           // (blocked_by_policy from the page), so the click is a chat row to the operations manager, who
           // fires it (routine-chat-relay.md, "Run now"). Two taps, since the viewer has no confirm().
-          var run=el('button','go run','\u25B6 \u05e8\u05d5\u05e5 \u05e2\u05db\u05e9\u05d9\u05d5');run.type='button';
+          var run=el('button','runbtn','\u25B6 \u05e8\u05d5\u05e5 \u05e2\u05db\u05e9\u05d9\u05d5');run.type='button';
           var rst=el('div','hint');
           (function(a,run,rst){var armed=0;run.addEventListener('click',function(){
             if(!dbh){rst.textContent='\u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d1\u05ea\u05e6\u05d5\u05d2\u05d4 \u05d4\u05d6\u05d5';return;}
