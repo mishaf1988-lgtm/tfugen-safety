@@ -71,6 +71,11 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
 .desks{flex:1;min-height:0;display:grid;grid-auto-rows:minmax(0,1fr);gap:4px;padding:6px}
 .desk{display:flex;flex-direction:column;min-width:0;min-height:0;gap:1px;padding:2px;border:0;border-radius:6px;background:none;
   font:inherit;color:inherit;cursor:pointer;text-align:center}
+.desk{position:relative}
+/* 18/10/2026 (Michael: "when the worker comes back with an answer, I want it above him, and I open it if I want"). */
+.desk .say{position:absolute;top:2px;inset-inline:8px;z-index:2;background:var(--lamp-wait);color:#fff;border-radius:8px;padding:2px 8px;font-size:11px;font-weight:500;line-height:1.35;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:start;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.desk .say::before{content:"\1F4AC  "}
 .desk:hover{background:color-mix(in srgb,var(--desk) 45%,transparent)}
 .desk:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .desk[aria-expanded="true"]{background:color-mix(in srgb,var(--accent) 18%,transparent)}
@@ -183,6 +188,10 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     if(ymd(d)===ymd(new Date(now.getTime()+864e5)))return 'מחר '+t;
     return when(iso).slice(0,5)+' '+t;
   }
+  // Replies Michael has opened, per viewer (a convenience; it never leaves this browser).
+  var seen={};try{seen=JSON.parse(localStorage.getItem('office-seen')||'{}')||{};}catch(e){seen={};}
+  function lastReply(w){var r=null;(typeof chatDocs!=='undefined'?chatDocs:[]).forEach(function(m){if(m.from==='worker'&&m.worker===w&&(!r||String(m.at)>String(r.at)))r=m;});return r;}
+  function markSeen(w){var r=lastReply(w);if(!r||seen[r.id])return;seen[r.id]=1;try{localStorage.setItem('office-seen',JSON.stringify(seen));}catch(e){}}
   function byNext(x,y){return String(x.next_run||'~').localeCompare(String(y.next_run||'~'));}
   // A workstation: wall, desk, monitor (screen colour = state), and a person in a chair. A desk that
   // never ran has an empty chair; a waiting one has a question bubble.
@@ -280,6 +289,8 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
       b.setAttribute('aria-expanded',sel===w?'true':'false');
       b.title=w+': '+tasks.length+' משימות';
       b.appendChild(scene(s));
+      var rp=lastReply(w);
+      if(rp&&!seen[rp.id]){var say=el('span','say',String(rp.text||'').replace(/\s+/g,' ').slice(0,90));say.title='תשובה חדשה. לחיצה פותחת';b.appendChild(say);b.title=w+': תשובה חדשה';}
       b.appendChild(el('span','nm',w));
       var nxt=tasks.filter(function(t){return t.next_run;}).sort(byNext)[0];
       if(nxt)b.appendChild(el('span','nx','הבא: '+hm(nxt.next_run)+' '+nxt.name));
@@ -360,6 +371,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     var dock=document.getElementById('dock');
     if(!sel||!groups[sel]){dock.hidden=true;dock.textContent='';dock.removeAttribute('data-w');return;}
     dock.hidden=false;
+    if(lastReply(sel)&&!seen[lastReply(sel).id]){markSeen(sel);setTimeout(render,0);}
     if(dock.getAttribute('data-w')!==sel){
       dock.textContent='';dock.setAttribute('data-w',sel);dock.classList.toggle('slim',!SESS[sel]);
       var hd=el('div','hd');hd.appendChild(el('i','dot s-'+wstate(sel)));hd.appendChild(el('b',null,'שיחה עם '+sel));
