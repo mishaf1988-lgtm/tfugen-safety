@@ -107,6 +107,29 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
 .detail .go{align-self:flex-start;display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:8px;background:var(--accent);color:var(--desk);font-weight:700;text-decoration:none}
 .detail .go:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .detail .hint{font-size:12px;color:var(--ink-2)}
+/* 18/10/2026 (Michael: "a chat with each worker, to send tasks from the office, without opening wide chats"). */
+/* The chat is docked under the office (18/10/2026, Michael: "a box on the screen where I see the office"), so both show at once. */
+.dock{flex:none;box-sizing:border-box;height:min(44dvh,380px);display:flex;flex-direction:column;gap:4px;min-height:0;
+  background:var(--desk);border:2px solid var(--accent);border-radius:8px;padding:6px 8px}
+.dock .hd{flex:none;display:flex;align-items:center;gap:8px}
+.dock .hd b{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dock .hd button{flex:none;min-width:40px;min-height:36px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--room);color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
+.dock .hd button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chat,.chat-in{flex:1;min-height:0;display:flex;flex-direction:column;gap:4px}
+.chat .ms{font-size:10px;opacity:.85;margin-top:2px}
+.chat .log{flex:1;min-height:0;display:flex;flex-direction:column;gap:4px;overflow:auto;padding:4px;background:var(--room);border:1px solid var(--line);border-radius:6px}
+.chat .m{max-width:92%;padding:4px 8px;border-radius:8px;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}
+.chat .m.me{align-self:flex-start;background:var(--accent);color:var(--desk)}
+.chat .m.bot{align-self:flex-end;background:var(--desk);border:1px solid var(--line)}
+.chat .m.auto{align-self:center;background:none;color:var(--ink-2);font-size:11px;padding:0}
+.chat form{display:flex;gap:6px;align-items:flex-end}
+.chat textarea{flex:1;min-width:0;box-sizing:border-box;min-height:44px;max-height:120px;resize:vertical;font:inherit;font-size:14px;color:var(--ink);background:var(--room);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.chat textarea:focus-visible,.chat button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chat button{flex:none;min-height:44px;padding:0 16px;border:0;border-radius:8px;background:var(--accent);color:var(--desk);font:inherit;font-weight:700;cursor:pointer}
+.chat button:disabled{opacity:.5;cursor:default}
+.chat .st{font-size:12px;color:var(--ink-2);min-height:16px}
+.dock .hint{font-size:11px;color:var(--ink-2);line-height:1.3}
+.chat .st.err{color:var(--lamp-fail)}
 </style>
 
 <div class="wrap" dir="rtl">
@@ -119,13 +142,14 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
   <div class="floor" id="floor">
     <div class="empty" id="empty">המשרד ריק עדיין. כל בוקר ב-07:38 סוכן קטן עובר על כל הסוכנים ושם כל אחד בשולחן שלו.</div>
   </div>
+  <section class="dock" id="dock" hidden></section>
 </div>
 
 <script>
 (function(){
   var ROOMS=['חדר המחקר','חדר המסמכים','חדר הדוחות','תזכורות'];
   var LABEL={done:'סיים',run:'עובד',fail:'נכשל',wait:'מחכה לך',never:'עוד לא רץ'};
-  var agents=[],meta=null,open=null;
+  var agents=[],meta=null,open=null,sel=null;
   function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
   // DD/MM/YYYY HH:MM, Israel time
   function when(iso){
@@ -191,7 +215,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     var waiting=agents.filter(function(a){return a.waiting;});
     inbox.hidden=!waiting.length;inbox.textContent='';
     if(waiting.length){inbox.appendChild(el('i','dot s-wait'));inbox.appendChild(el('span',null,'מחכה לך: '+waiting.map(function(a){return a.name+': '+a.waiting;}).join(' | ')));
-      inbox.onclick=function(){var t=waiting[0];open=t.worker||t.room||'מנהל התפעול';render();};}
+      inbox.onclick=function(){var t=waiting[0];open=t.worker||t.room||'מנהל התפעול';if(open==='המחשב שלך')open='העוזר שלך';sel=open;render();};}
     if(!agents.length){floor.appendChild(el('div','empty','המשרד ריק עדיין. כל בוקר ב-07:38 סוכן קטן עובר על כל הסוכנים ושם כל אחד בשולחן שלו.'));return;}
     // 18/10/2026 (Michael: "one agent can do several jobs... so the screen is not crowded"): one desk per
     // worker, that is per working session; its tasks are listed on the desk. Tasks of one worker run one
@@ -199,7 +223,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     var ORDER=['מנהל התפעול','רכז המסמכים','רכז הרכש','רכז הדוחות','החוקר','הרדאר','המחשב שלך','העוזר שלך','תזכורות'];
     var RANK={fail:5,wait:4,run:3,done:2,never:1};
     var groups={};
-    agents.forEach(function(t){var w=t.worker||t.room||'מנהל התפעול';(groups[w]=groups[w]||[]).push(t);});
+    agents.forEach(function(t){var w=t.worker||t.room||'מנהל התפעול';if(w==='המחשב שלך')w='העוזר שלך';(groups[w]=groups[w]||[]).push(t);});
     var names=Object.keys(groups).sort(function(x,y){
       var ix=ORDER.indexOf(x),iy=ORDER.indexOf(y);return (ix<0?99:ix)-(iy<0?99:iy)||x.localeCompare(y,'he');});
     names.forEach(function(w){groups[w].sort(function(x,y){return (x.order||99)-(y.order||99)||String(x.name).localeCompare(String(y.name),'he');});});
@@ -211,14 +235,14 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     names.forEach(function(w,i){
       var s=wstate(w),tasks=groups[w];
       var b=el('button','desk s-'+s);b.type='button';b.id='desk-w'+i;b.setAttribute('data-worker',w);
-      b.setAttribute('aria-expanded',open===w?'true':'false');
+      b.setAttribute('aria-expanded',sel===w?'true':'false');
       b.title=w+': '+tasks.length+' משימות';
       b.appendChild(scene(s));
       b.appendChild(el('span','nm',w));
       var ul=el('ul','tasks');
       tasks.forEach(function(t){var li=el('li','s-'+state(t));li.appendChild(el('i','dot'));li.appendChild(el('span',null,t.name));ul.appendChild(li);});
       b.appendChild(ul);
-      b.addEventListener('click',function(){open=(open===w)?null:w;render();});
+      b.addEventListener('click',function(){sel=(sel===w)?null:w;open=null;render();});
       desks.appendChild(b);
     });
     room.appendChild(desks);floor.appendChild(room);
@@ -249,7 +273,66 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
       });
       floor.appendChild(d);
     }
+    renderDock(groups,wstate);
     fit();
+  }
+  // Chat with a worker (18/10/2026). A page cannot reach the worker's session itself (the connector's
+  // send_message and list_events answered blocked_by_policy from the page, 18/10/2026), so the chat is a
+  // queue in this page's own db: Michael's line goes to collection chat with status new, and the courier
+  // (project-files/routine-chat-relay.md) hands it to the worker's standing session and writes the answer back.
+  var SESS={'מנהל התפעול':1,'רכז המסמכים':1,'רכז הרכש':1,'רכז הדוחות':1,'החוקר':1};
+  var dbh=null,chatDocs=[],chats={};
+  var STATUS={'new':'מחכה לדוור','sent':'נמסר לעובד, מחכה לתשובה','fail':'לא נמסר'};
+  function paint(c){
+    var log=c.log;log.textContent='';
+    var mine=chatDocs.filter(function(m){return m.worker===c.w;}).sort(function(a,b){return String(a.at||'').localeCompare(String(b.at||''));});
+    mine.forEach(function(m){
+      var me=m.from==='michael',box=el('div','m '+(me?'me':'bot'),String(m.text||''));
+      if(me&&STATUS[m.status]){box.appendChild(el('div','ms',STATUS[m.status]+(m.note?': '+m.note:'')));}
+      log.appendChild(box);
+    });
+    if(!mine.length)log.appendChild(el('div','m auto','עוד אין הודעות. כתוב משימה או שאלה למטה.'));
+    log.scrollTop=log.scrollHeight;
+  }
+  function paintAll(){Object.keys(chats).forEach(function(w){paint(chats[w]);});}
+  function renderDock(groups,wstate){
+    var dock=document.getElementById('dock');
+    if(!sel||!groups[sel]){dock.hidden=true;dock.textContent='';dock.removeAttribute('data-w');return;}
+    dock.hidden=false;
+    if(dock.getAttribute('data-w')!==sel){
+      dock.textContent='';dock.setAttribute('data-w',sel);
+      var hd=el('div','hd');hd.appendChild(el('i','dot s-'+wstate(sel)));hd.appendChild(el('b',null,'שיחה עם '+sel));
+      var det=el('button',null,'פרטים');det.type='button';var w0=sel;det.addEventListener('click',function(){open=w0;render();});
+      var x=el('button',null,'✕');x.type='button';x.setAttribute('aria-label','סגור את השיחה');x.addEventListener('click',function(){sel=null;render();});
+      hd.appendChild(det);hd.appendChild(x);dock.appendChild(hd);dock.appendChild(chatBox(sel));
+    }
+  }
+  function chatBox(w){
+    var box=el('div','chat');
+    if(!SESS[w]){box.appendChild(el('div','hint',w==='העוזר שלך'?'העוזר והמחשב פועלים בשיחה שלך עם Claude, לא כאן. פונים אליו שם.':'לעובד הזה אין שיחה קבועה, אין עם מי להתכתב.'));return box;}
+    var c=chats[w];
+    if(c){box.appendChild(c.node);paint(c);return box;}
+    c={w:w};chats[w]=c;
+    var node=el('div','chat-in');c.node=node;
+    c.log=el('div','log');c.log.setAttribute('aria-live','polite');node.appendChild(c.log);
+    var form=el('form');var ta=el('textarea');ta.rows=2;ta.setAttribute('aria-label','הודעה ל'+w);ta.placeholder='כתוב משימה או שאלה ל'+w;
+    var btn=el('button',null,'שלח');btn.type='submit';
+    var st=el('div','st');
+    form.appendChild(ta);form.appendChild(btn);node.appendChild(form);node.appendChild(st);
+    node.appendChild(el('div','hint','הדוור עובר כל שעה בשעות העבודה, מוסר לעובד ומחזיר את התשובה לכאן. מייל, מחיקה ופעולה רגישה מחכים לאישור שלך.'));
+    ta.addEventListener('keydown',function(e){if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();form.requestSubmit?form.requestSubmit():btn.click();}});
+    form.addEventListener('submit',function(e){
+      e.preventDefault();
+      var text=ta.value.trim();if(!text||btn.disabled)return;
+      if(!dbh){st.className='st err';st.textContent='אין חיבור לנתונים בתצוגה הזו';return;}
+      btn.disabled=true;st.className='st';st.textContent='שומר...';
+      dbh.collection('chat').add({worker:w,from:'michael',text:text.slice(0,4000),at:new Date().toISOString(),status:'new'}).then(function(){
+        ta.value='';st.textContent='נשמר. הדוור ימסור לעובד בסבב הבא.';
+      }).catch(function(err){st.className='st err';st.textContent='לא נשמר, נסה שוב ['+String(err&&err.code||'?')+']';})
+      .then(function(){btn.disabled=false;});
+    });
+    box.appendChild(node);paint(c);
+    return box;
   }
   // All desks on one screen: try every column count and keep the one with the largest desks.
   function fit(){
@@ -272,7 +355,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     });
   }
   window.addEventListener('resize',fit);
-  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&open){open=null;render();}});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&(open||sel)){if(open)open=null;else sel=null;render();}});
   render();
   if(!window.claude||!window.claude.use){document.getElementById('stamp').textContent='אין חיבור לנתונים בתצוגה הזו';return;}
   window.claude.use('db').then(function(db){
@@ -281,6 +364,8 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
       // A delivered snapshot's data() is frozen: x.id= failed silently and every desk was "undefined" (18/10/2026).
       agents=snap.docs.map(function(d){var x=Object.assign({},d.data()||{});x.id=d.id;return x;});render();
     },function(){document.getElementById('stamp').textContent='לא הצלחתי לקרוא את המשרד, נסה לרענן';});
+    dbh=db;
+    db.collection('chat').onSnapshot(function(snap){chatDocs=snap.docs.map(function(d){var x=Object.assign({},d.data()||{});x.id=d.id;return x;});paintAll();},function(){});
     db.doc('meta/office').onSnapshot(function(s){meta=s.data()||null;render();},function(){});
   });
 })();
