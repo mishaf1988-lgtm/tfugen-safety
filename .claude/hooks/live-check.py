@@ -15,8 +15,8 @@ that already appears in DECISIONS.md or the STATUS archive denies once too, with
 
 Third check (lesson 10, recurred 10th time 17/10/2026): a questionnaire asked whether to make
 the repo private, decided that morning ("## ... ה-repo נשאר ציבורי"), in plain Hebrew with no
-identifier. A DECISIONS.md heading sharing 3 or more content words with the question denies
-once. Measured on that day's six questionnaires: the one repeat caught, the other five pass.
+identifier. A DECISIONS.md heading sharing 3 or more content words with the question, and at
+least a quarter of its own content words (18/10/2026), denies once. Measured on that day's six questionnaires: the one repeat caught, the other five pass.
 
 Test:  echo '{"tool_name":"AskUserQuestion","session_id":"t","tool_input":{"questions":[{"question":"סריקת המייל הקיימת?","options":[]}]}}' | python3 .claude/hooks/live-check.py
 """
@@ -94,8 +94,17 @@ def heading_hits(t):
     except OSError:
         return []
     q = words(t)
-    hits = [(len(q & words(l)), i + 1, l[3:].strip()) for i, l in enumerate(lines) if l.startswith("## ")]
-    return ["DECISIONS.md:" + str(n) + " " + h[:80] for c, n, h in sorted(hits, reverse=True) if c >= 3][:2]
+    # 18/10/2026: three plain questions were stopped on 3 everyday words out of a long heading
+    # ("עבודה, עובדים, שיטה" of 23 in a heading about the researcher). A repeat shares a good part of
+    # the heading, so the 3 shared words must also be at least a quarter of the heading's words.
+    hits = []
+    for i, l in enumerate(lines):
+        if l.startswith("## "):
+            hw = words(l)
+            c = len(q & hw)
+            if c >= 3 and c * 4 >= len(hw):
+                hits.append((c, i + 1, l[3:].strip()))
+    return ["DECISIONS.md:" + str(n) + " " + h[:80] for c, n, h in sorted(hits, reverse=True)][:2]
 
 
 def main():

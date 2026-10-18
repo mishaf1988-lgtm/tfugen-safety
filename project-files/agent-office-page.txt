@@ -335,7 +335,9 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
   // send_message and list_events answered blocked_by_policy from the page, 18/10/2026), so the chat is a
   // queue in this page's own db: Michael's line goes to collection chat with status new, and the courier
   // (project-files/routine-chat-relay.md) hands it to the worker's standing session and writes the answer back.
-  var SESS={'מנהל התפעול':'session_01JT8Fct6Z6Qv2GbaBBqxtQT','רכז המסמכים':'session_01Wu6gzvUs3SYbLQ5fiaGayV','רכז הרכש':'session_012U83ozxzQjH8BcQ2AvykSf','רכז הדוחות':'session_01HPcF58y98mzJ19wJ27EDn5','החוקר':'session_019o8PKShtacN2m1BCbYdnQj'};
+  // Worker -> session comes only from meta/workers (below), which the weekly rotation updates;
+  // an id written here would go stale within a week (worker-map-test.py).
+  var SESS={};
   var dbh=null,chatDocs=[],chats={};
   var STATUS={'new':'נשלח, מחכה לעובד','sent':'נמסר לעובד, מחכה לתשובה','fail':'לא נמסר'};
   function paint(c){
@@ -449,7 +451,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     window.claude.use('comments').then(function(c){cmt=c;}).catch(function(){});
     db.collection('chat').onSnapshot(function(snap){chatDocs=snap.docs.map(function(d){var x=Object.assign({},d.data()||{});x.id=d.id;return x;});paintAll();render();},function(){});
     // 18/10/2026: the worker -> session map lives in meta/workers, so the weekly rotation (routine-rotation.md)
-    // changes it without a new page version. SESS above is the fallback.
+    // changes it without a new page version.
     db.doc('meta/workers').onSnapshot(function(s){var m=s.data();if(m&&m.sessions){Object.keys(m.sessions).forEach(function(k){SESS[k]=m.sessions[k];});render();}},function(){});
     db.doc('meta/office').onSnapshot(function(s){meta=s.data()||null;render();},function(){});
   });

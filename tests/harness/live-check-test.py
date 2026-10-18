@@ -9,7 +9,8 @@ import os
 os.makedirs(os.path.join(root, "project-files"))
 open(os.path.join(root, "DECISIONS.md"), "w", encoding="utf-8").write("## x\n**מה:** `received_at` ב-`trustee_reports`.\n" + "trustee_reports\n" * 10
     + "## 17/10/2026 - הקוד והסוכנים של מיכאל; ה-repo נשאר ציבורי, הסוכנים עוברים לפרטי\n"
-    + "## 2026-09-25 - פיילוט כניסה ב-Face ID / טביעת אצבע (passkeys של Supabase), קודם על הטלפון של מיכאל\n")
+    + "## 2026-09-25 - פיילוט כניסה ב-Face ID / טביעת אצבע (passkeys של Supabase), קודם על הטלפון של מיכאל\n"
+    + "## 15/10/2026: החוקר מחפש שיטות עבודה מבחוץ, והסוכנים נותנים משוב על הידע המשותף (מיכאל: שהחוקר יפתח שיטה וילמד את כל העובדים וישדרג את היכולות שלהם)\n")
 env = {"LIVE_CHECK_STATE": st, "LIVE_CHECK_ROOT": root}
 def ask(q, opts=(), sid="s"):
     return run("live-check.py", {"tool_name": "AskUserQuestion", "session_id": sid, "tool_input": {"questions": [{"question": q, "options": [{"label": l, "description": dsc} for l, dsc in opts]}]}}, env)
@@ -40,6 +41,9 @@ check("an unrelated question of the same day passes", ask("בערך כמה כס�
 TESTS = "מה כבר בדקת או ביצעת?"
 TOPTS = [("C17: כניסה אנונימית בניסוי", "מתג אחד ב-Supabase של פרויקט הניסוי"), ("#1595/#1596 בטלפון", "בדיקות בטלפון אמיתי"), ("לעצור כאן (מומלץ)", "ה-handoff מעודכן")]
 check("tools and everyday words do not match a decision (passkeys heading)", ask(TESTS, TOPTS, sid="t2") == "")
+# 18/10/2026: a question about making the workers faster shared 3 everyday words with a long heading.
+EFF = "איזו שיטה לבנות כדי להפוך את העבודה עם העובדים מהירה וזולה יותר?"
+check("3 shared words out of a long heading are not a repeat", ask(EFF, [("בצע: שיחה חדשה שבועית לכל עובד (מומלץ)", "")], sid="t3") == "")
 import sys, importlib
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".claude", "hooks"))
 LC = importlib.import_module("live-check")
