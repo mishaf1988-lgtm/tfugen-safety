@@ -4,7 +4,7 @@
 
 **הוקם 15/10/2026:** `trig_01UvD1ZgRH4tatvZTSEd8YWS` (נבדק בתשובת `create_trigger`: פעיל, הריצה הראשונה 05/11/2026).
 
-**ההגדרות:** ב-5 לכל חודש, 07:46 שעון ישראל (`CRON_TZ=Asia/Jerusalem 46 7 5 * *`), לתוך `session_01JT8Fct6Z6Qv2GbaBBqxtQT` (השיחה של ה-Routines החודשיים, לא לארכב). הריצות האחרות שם ב-1 עד 4 לחודש, ולכן אין התנגשות.
+**ההגדרות:** ב-5 לכל חודש, 08:16 שעון ישראל (`CRON_TZ=Asia/Jerusalem 16 8 5 * *`), לתוך `session_01JT8Fct6Z6Qv2GbaBBqxtQT` (השיחה של ה-Routines החודשיים, לא לארכב). הריצות האחרות שם ב-1 עד 4 לחודש, ולכן אין התנגשות.
 
 **הדוח:** `project-files/mock-inspection.md`, סעיף לכל חודש. **מדד:** כמה מתוך 5 דרישות הוכחו בתוך 3 חיפושים או פחות, ואיך זה משתנה מחודש לחודש.
 
@@ -29,3 +29,6 @@
 7. branch routine/inspector-YYYY-MM-DD, commit, PR (בתיאור: "בלי לקח: דוח ביקורת", "רטרו: <משפט>", "skill: אין"), המתנה ל-tests (bash .claude/hooks/ci-wait.sh <branch> mishaf1988-lgtm/tfugen-safety) ומיזוג.
 8. הודעה אחרונה, שורה אחת: "הוכחו X מתוך 5" (מול החודש הקודם), מה לא הוכח, וקישור ל-PR.
 ---
+
+
+**18/10/2026: עבר לרכז הדוחות** (מיכאל בשאלון: "בצע: עובד חדש 'רכז הדוחות'"): `trig_01RdFSKMnBXmENSsUd1i9XsN` לתוך `session_01HPcF58y98mzJ19wJ27EDn5`; הקודם `trig_01UvD1ZgRH4tatvZTSEd8YWS` כובה.

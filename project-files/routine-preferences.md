@@ -7,7 +7,7 @@
 
 **הוקם 15/10/2026:** `trig_01FHHc5T6ctVPFUXqHo5Eh9E` (נבדק בתשובת `create_trigger`: פעיל, הריצה הראשונה 06/11/2026).
 
-**ההגדרות:** ב-6 לכל חודש, 07:56 שעון ישראל (`CRON_TZ=Asia/Jerusalem 56 7 6 * *`), לתוך `session_01JT8Fct6Z6Qv2GbaBBqxtQT`, אחרי המפקח המדומה (5 לחודש).
+**ההגדרות:** ב-6 לכל חודש, 08:21 שעון ישראל (`CRON_TZ=Asia/Jerusalem 21 8 6 * *`), לתוך `session_01JT8Fct6Z6Qv2GbaBBqxtQT`, אחרי המפקח המדומה (5 לחודש).
 
 **הפרומפט (הטריגר קורא את הקובץ ומבצע את מה שבין הקווים):**
 
@@ -28,3 +28,6 @@
 7. branch routine/preferences-YYYY-MM-DD, commit, PR (בתיאור: "בלי לקח: מודל חודשי", "רטרו: <משפט>", "skill: אין"), המתנה ל-tests (bash .claude/hooks/ci-wait.sh <branch> mishaf1988-lgtm/tfugen-safety) ומיזוג.
 8. הודעה אחרונה, שורה אחת: כמה תשובות נבדקו, פגיעת המודל מול ה"מומלץ", ומועמדים אם יש.
 ---
+
+
+**18/10/2026: עבר לרכז הדוחות** (מיכאל בשאלון: "בצע: עובד חדש 'רכז הדוחות'"): `trig_01NbzPG4cRxNkLp4eqbAHaXN` לתוך `session_01HPcF58y98mzJ19wJ27EDn5`; הקודם `trig_01FHHc5T6ctVPFUXqHo5Eh9E` כובה.
