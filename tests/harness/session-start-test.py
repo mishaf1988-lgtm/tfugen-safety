@@ -104,4 +104,9 @@ check("a Stop value that is not a list: the repo's hooks still installed", "PreT
 check("the file mode 0600 is kept", (os.stat(sf).st_mode & 0o777) == 0o600, oct(os.stat(sf).st_mode & 0o777))
 open(sf, "w").write("{ broken json"); cl("true")
 check("a broken settings file is left as it is", open(sf).read() == "{ broken json", open(sf).read())
+# Lesson 116 (18/10/2026): CLAUDE.md told a session to write ~/.claude/settings.json by hand, it kept
+# "$CLAUDE_PROJECT_DIR" in the path, and every prompt and trigger of a nine-agent session was refused.
+_cm = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "CLAUDE.md"), encoding="utf-8").read()
+check("CLAUDE.md turns hooks on through session-start.py, not by hand (lesson 116)",
+      "python3 .claude/hooks/session-start.py" in _cm and "לפני כל פקודה" not in _cm)
 done()
