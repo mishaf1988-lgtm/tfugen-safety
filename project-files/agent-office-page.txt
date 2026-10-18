@@ -114,6 +114,8 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
 .dock .hd{flex:none;display:flex;align-items:center;gap:8px}
 .dock .hd b{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dock .hd button{flex:none;min-width:40px;min-height:36px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--room);color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
+.dock .hd .op{flex:none;display:inline-flex;align-items:center;min-height:36px;padding:0 10px;border-radius:8px;background:var(--accent);color:var(--desk);font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap}
+.dock .hd .op:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .dock .hd button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .chat,.chat-in{flex:1;min-height:0;display:flex;flex-direction:column;gap:4px}
 .chat .ms{font-size:10px;opacity:.85;margin-top:2px}
@@ -280,7 +282,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
   // send_message and list_events answered blocked_by_policy from the page, 18/10/2026), so the chat is a
   // queue in this page's own db: Michael's line goes to collection chat with status new, and the courier
   // (project-files/routine-chat-relay.md) hands it to the worker's standing session and writes the answer back.
-  var SESS={'מנהל התפעול':1,'רכז המסמכים':1,'רכז הרכש':1,'רכז הדוחות':1,'החוקר':1};
+  var SESS={'מנהל התפעול':'session_01JT8Fct6Z6Qv2GbaBBqxtQT','רכז המסמכים':'session_01Wu6gzvUs3SYbLQ5fiaGayV','רכז הרכש':'session_012U83ozxzQjH8BcQ2AvykSf','רכז הדוחות':'session_01HPcF58y98mzJ19wJ27EDn5','החוקר':'session_019o8PKShtacN2m1BCbYdnQj'};
   var dbh=null,chatDocs=[],chats={};
   var STATUS={'new':'מחכה לדוור','sent':'נמסר לעובד, מחכה לתשובה','fail':'לא נמסר'};
   function paint(c){
@@ -302,6 +304,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     if(dock.getAttribute('data-w')!==sel){
       dock.textContent='';dock.setAttribute('data-w',sel);
       var hd=el('div','hd');hd.appendChild(el('i','dot s-'+wstate(sel)));hd.appendChild(el('b',null,'שיחה עם '+sel));
+      if(SESS[sel]){var op=el('a','op','פתח את השיחה');op.href='https://claude.ai/code/'+SESS[sel];op.target='_blank';op.rel='noopener';op.title='תשובה מיידית: כותבים בשיחה הקבועה של העובד';hd.appendChild(op);}
       var det=el('button',null,'פרטים');det.type='button';var w0=sel;det.addEventListener('click',function(){open=w0;render();});
       var x=el('button',null,'✕');x.type='button';x.setAttribute('aria-label','סגור את השיחה');x.addEventListener('click',function(){sel=null;render();});
       hd.appendChild(det);hd.appendChild(x);dock.appendChild(hd);dock.appendChild(chatBox(sel));
@@ -319,7 +322,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     var btn=el('button',null,'שלח');btn.type='submit';
     var st=el('div','st');
     form.appendChild(ta);form.appendChild(btn);node.appendChild(form);node.appendChild(st);
-    node.appendChild(el('div','hint','הדוור עובר כל שעה בשעות העבודה, מוסר לעובד ומחזיר את התשובה לכאן. מייל, מחיקה ופעולה רגישה מחכים לאישור שלך.'));
+    node.appendChild(el('div','hint','הדוור עובר ב-08:11, 12:11 ו-16:11 (א\'-ה\'), מוסר לעובד ומחזיר את התשובה לכאן. לתשובה מיידית: פתח את השיחה. מייל, מחיקה ופעולה רגישה מחכים לאישור שלך.'));
     ta.addEventListener('keydown',function(e){if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();form.requestSubmit?form.requestSubmit():btn.click();}});
     form.addEventListener('submit',function(e){
       e.preventDefault();
@@ -327,7 +330,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
       if(!dbh){st.className='st err';st.textContent='אין חיבור לנתונים בתצוגה הזו';return;}
       btn.disabled=true;st.className='st';st.textContent='שומר...';
       dbh.collection('chat').add({worker:w,from:'michael',text:text.slice(0,4000),at:new Date().toISOString(),status:'new'}).then(function(){
-        ta.value='';st.textContent='נשמר. הדוור ימסור לעובד בסבב הבא.';
+        ta.value='';st.textContent='נשמר. הדוור ימסור לעובד בסבב הבא (08:11, 12:11, 16:11).';
       }).catch(function(err){st.className='st err';st.textContent='לא נשמר, נסה שוב ['+String(err&&err.code||'?')+']';})
       .then(function(){btn.disabled=false;});
     });
