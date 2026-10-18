@@ -46,5 +46,11 @@ check('push, a hook README changed only: no hook check', hook('git push origin x
 env = dict(os.environ, PUSH_GATE_CHANGED='.claude/hooks/push-gate.py,.claude/settings.json'); env.pop('PUSH_GATE_TEST', None)
 r = subprocess.run([sys.executable, HOOK], input=json.dumps({'tool_name': 'Bash', 'tool_input': {'command': 'git push origin x'}}), capture_output=True, text=True, timeout=120, env=env)
 check('the real hook-utf8 and settings tests run and are green on this tree', r.returncode == 0 and (json.loads(r.stdout or '{}') == {}), r.stdout[-300:] + r.stderr[-300:])
+# 18/10/2026: a commit on the local main is refused (lesson 110), unless the command branches first.
+B = lambda cmd, br: hook(cmd, '', 0, PUSH_GATE_BRANCH=br)
+check('commit on main: denied', B('git add -A && git commit -qm x', 'main').get('permissionDecision') == 'deny')
+check('commit on a routine branch: passes', B('git commit -qm x', 'routine/x-2026-10-18') == {})
+check('checkout -B then commit, while still on main: passes', B('git checkout -q -B routine/x origin/main; git add -A; git commit -qm x', 'main') == {})
+check('commit only inside a heredoc body on main: passes', B("cat > t <<'EOF'\ngit commit -m x\nEOF\nls", 'main') == {})
 print('\n%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)
