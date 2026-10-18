@@ -19,12 +19,12 @@
 |---|---|---|---|---|
 | `trig_01SpyucrTXeti3BCYJHGtBiL` | תיוק מהמייל ועדכון תוקף | א'-ה' 17:52 | `routine-mail-filing.md` | `session_01Wu6gzvUs3SYbLQ5fiaGayV` |
 | `trig_01RBgewBmxkUzbrbUnm18SST` | בודק התוקף מול המסמכים | מוצ"ש 22:44 | `routine-validity.md` | `session_01Wu6gzvUs3SYbLQ5fiaGayV` |
-| `trig_01HnozW9iwC58txeC5gRAF6F` | דוח ציות חודשי | 1 לחודש 08:03 | `routine-compliance.md` | `session_015knQ2u3y5veDDFu31LWkFW` |
+| `trig_01EuLgTAknYEbauZ7YpxXRwK` | דוח ציות חודשי | 1 לחודש 08:03 | `routine-compliance.md` | `session_01HPcF58y98mzJ19wJ27EDn5` |
 | `trig_01Ujrif3LhZNbedmWn64awTW` | מסמכים חדשים בתיקיית הבטיחות | 2 לחודש 06:51 | `routine-od-scan.md` | `session_01Wu6gzvUs3SYbLQ5fiaGayV` |
-| `trig_018MkKsQYRHa3yNx65kx5mDB` | נוסח החוקים בנבו | 3 לחודש 06:52 | `routine-nevo-versions.md` | `session_015knQ2u3y5veDDFu31LWkFW` |
-| `trig_01Pn6hQ5ujGP7QBThBkehjv3` | מגמות מנתוני המפעל | 4 לחודש 08:14 | `routine-factory-trends.md` | `session_015knQ2u3y5veDDFu31LWkFW` |
-| `trig_01Aqn2WLiNXdjhvYTsM87vhg` | המפקח המדומה | 5 לחודש 08:16 | `routine-inspector.md` | `session_015knQ2u3y5veDDFu31LWkFW` |
-| `trig_01VfGkdnCHyw4WQkchA9imQg` | מודל ההעדפות של מיכאל | 6 לחודש 08:21 | `routine-preferences.md` | `session_015knQ2u3y5veDDFu31LWkFW` |
+| `trig_01FpGaJFSZK9zgXVxXa7uRVu` | נוסח החוקים בנבו | 3 לחודש 06:52 | `routine-nevo-versions.md` | `session_01HPcF58y98mzJ19wJ27EDn5` |
+| `trig_01TJQdnfssHZYrCv32MsPiTQ` | מגמות מנתוני המפעל | 4 לחודש 08:14 | `routine-factory-trends.md` | `session_01HPcF58y98mzJ19wJ27EDn5` |
+| `trig_01RdFSKMnBXmENSsUd1i9XsN` | המפקח המדומה | 5 לחודש 08:16 | `routine-inspector.md` | `session_01HPcF58y98mzJ19wJ27EDn5` |
+| `trig_01NbzPG4cRxNkLp4eqbAHaXN` | מודל ההעדפות של מיכאל | 6 לחודש 08:21 | `routine-preferences.md` | `session_01HPcF58y98mzJ19wJ27EDn5` |
 | `trig_01SogHpEgS3nkMoworDxmfTh` | מעקב הצעות מחיר | מוצ"ש 22:47 | `routine-quotes.md` | `session_012U83ozxzQjH8BcQ2AvykSf` |
 | `trig_01DskPcZDAt1uAjsZgPyWkam` | חוקר העוזר | א'-ה' 06:47 | `routine-researcher.md` | `session_019o8PKShtacN2m1BCbYdnQj` |
 | `trig_01EDtjPSEhnt86YLLNFwxxm9` | רטרו יומי | א'-ה' 07:52 | `retro-prompt.md` | `session_019o8PKShtacN2m1BCbYdnQj` |

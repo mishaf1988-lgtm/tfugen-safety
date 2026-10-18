@@ -31,4 +31,4 @@
 ---
 
 
-**18/10/2026: עבר לרכז הדוחות** (מיכאל בשאלון: "בצע: עובד חדש 'רכז הדוחות'"): `trig_01Aqn2WLiNXdjhvYTsM87vhg` לתוך `session_015knQ2u3y5veDDFu31LWkFW`; הקודם `trig_01UvD1ZgRH4tatvZTSEd8YWS` כובה.
+**18/10/2026: עבר לרכז הדוחות** (מיכאל בשאלון: "בצע: עובד חדש 'רכז הדוחות'"): `trig_01RdFSKMnBXmENSsUd1i9XsN` לתוך `session_01HPcF58y98mzJ19wJ27EDn5`; הקודם `trig_01UvD1ZgRH4tatvZTSEd8YWS` כובה.

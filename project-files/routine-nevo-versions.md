@@ -36,4 +36,4 @@ insert into public.server_state(key, value, updated_at) values ('nevo_versions',
 ---
 
 
-**18/10/2026: עבר לרכז הדוחות** (מיכאל בשאלון: "בצע: עובד חדש 'רכז הדוחות'"): `trig_018MkKsQYRHa3yNx65kx5mDB` לתוך `session_015knQ2u3y5veDDFu31LWkFW`; הקודם `trig_01ELCjhJydNgjT9obYdDqnSu` כובה.
+**18/10/2026: עבר לרכז הדוחות** (מיכאל בשאלון: "בצע: עובד חדש 'רכז הדוחות'"): `trig_01FpGaJFSZK9zgXVxXa7uRVu` לתוך `session_01HPcF58y98mzJ19wJ27EDn5`; הקודם `trig_01ELCjhJydNgjT9obYdDqnSu` כובה.
