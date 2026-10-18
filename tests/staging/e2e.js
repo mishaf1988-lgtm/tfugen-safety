@@ -219,6 +219,7 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
   const anon = await kiosk.evaluate(async () => {
     window._captcha = () => Promise.resolve(null);
     try { await _sbAuth(); } catch (e) { return { err: String(e && (e.message || e)) }; }
+    SB_ON = true; // what _empGate does once the code passes: the queue may send (18/10/2026)
     const claims = JSON.parse(atob(_sbToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
     const d = new Date().toISOString().substring(0, 10), id = gid();
     const row = { id: id, u: 'e2e-kiosk', m: _truMonthKey(d), t: 1, d: d, location_id: null, loc: 'e2e-kiosk', ok: true, f: null, photo_url: null, s: TRUSTEE_S_OK, ts: new Date().toISOString() };
