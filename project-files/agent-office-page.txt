@@ -200,8 +200,43 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
   }
   // Replies Michael has opened, per viewer (a convenience; it never leaves this browser).
   var seen={};try{seen=JSON.parse(localStorage.getItem('office-seen')||'{}')||{};}catch(e){seen={};}
-  function lastReply(w){var r=null;(typeof chatDocs!=='undefined'?chatDocs:[]).forEach(function(m){if(m.from==='worker'&&m.worker===w&&(!r||String(m.at)>String(r.at)))r=m;});return r;}
-  function markSeen(w){var r=lastReply(w);if(!r||seen[r.id])return;seen[r.id]=1;try{localStorage.setItem('office-seen',JSON.stringify(seen));}catch(e){}}
+  function tms(v){var t=Date.parse(v||'');return isNaN(t)?0:t;}
+  function seenKey(r){return r.id+':'+String(r.text||'').length;}
+  function lastReply(w){var r=null;(typeof chatDocs!=='undefined'?chatDocs:[]).forEach(function(m){if(m.from==='worker'&&m.worker===w&&(!r||tms(m.at)>tms(r.at)))r=m;});return r;}
+  function markSeen(w){var r=lastReply(w);if(!r||seen[seenKey(r)])return;seen[seenKey(r)]=1;try{localStorage.setItem('office-seen',JSON.stringify(seen));}catch(e){}}
+  // 18/10/2026 (office review: "הבא: 12:13" stayed on a desk after the run at 12:14): the morning update
+  // writes next_run once a day, so the page computes the next run from the desk's cron (written by
+  // routine-office.md). A next_run in the past without a cron is not shown as next.
+  function cronField(f,lo,hi){
+    var set={};String(f).split(',').forEach(function(part){
+      var st=1,m=part.split('/');if(m[1])st=+m[1]||1;var r=m[0],a=lo,b=hi;
+      if(r!=='*'){var ab=r.split('-');a=+ab[0];b=ab.length>1?+ab[1]:(m[1]?hi:a);}
+      for(var v=a;v<=b;v+=st)set[v===7&&hi===6?0:v]=1;});
+    return set;
+  }
+  function tzParts(t,tz){var p={};new Intl.DateTimeFormat('en-GB',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date(t)).forEach(function(x){p[x.type]=+x.value;});if(p.hour===24)p.hour=0;return p;}
+  function zoned(y,mo,d,h,mi,tz){var g=Date.UTC(y,mo-1,d,h,mi);for(var i=0;i<2;i++){var p=tzParts(g,tz);g+=Date.UTC(y,mo-1,d,h,mi)-Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute);}return g;}
+  function cronNext(expr,now){
+    var tz='UTC',e=String(expr||'').trim(),m=/^CRON_TZ=(\S+)\s+(.*)$/.exec(e);if(m){tz=m[1];e=m[2];}
+    var f=e.split(/\s+/);if(f.length!==5)return null;
+    try{
+      var M=cronField(f[0],0,59),H=cronField(f[1],0,23),D=cronField(f[2],1,31),MO=cronField(f[3],1,12),W=cronField(f[4],0,6);
+      var mins=Object.keys(M).map(Number).sort(function(a,b){return a-b;}),hrs=Object.keys(H).map(Number).sort(function(a,b){return a-b;});
+      var p0=tzParts(now,tz),dAny=f[2]==='*',wAny=f[4]==='*';
+      for(var k=0;k<400;k++){
+        var dt=new Date(Date.UTC(p0.year,p0.month-1,p0.day+k)),y=dt.getUTCFullYear(),mo=dt.getUTCMonth()+1,d=dt.getUTCDate(),w=dt.getUTCDay();
+        if(!MO[mo])continue;
+        var dm=D[d],wm=W[w];if(!(dAny&&wAny?true:dAny?wm:wAny?dm:(dm||wm)))continue;
+        for(var i=0;i<hrs.length;i++)for(var j=0;j<mins.length;j++){var t=zoned(y,mo,d,hrs[i],mins[j],tz);if(t>now)return new Date(t).toISOString();}
+      }
+    }catch(err){}
+    return null;
+  }
+  function upcoming(a){
+    var now=Date.now();
+    if(a.cron){var n=cronNext(a.cron,now);if(n)return n;}
+    return a.next_run&&tms(a.next_run)>now?a.next_run:null;
+  }
   function byNext(x,y){return String(x.next_run||'~').localeCompare(String(y.next_run||'~'));}
   // A workstation: wall, desk, monitor (screen colour = state), and a person in a chair. A desk that
   // never ran has an empty chair; a waiting one has a question bubble.
@@ -281,7 +316,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     // 18/10/2026 (Michael: "one agent can do several jobs... so the screen is not crowded"): one desk per
     // worker, that is per working session; its tasks are listed on the desk. Tasks of one worker run one
     // after another, different workers run at the same time. worker comes from routine-office.md.
-    var ORDER=['מנהל התפעול','רכז המסמכים','רכז הרכש','רכז הדוחות','החוקר','הרדאר','המחשב שלך','העוזר שלך','תזכורות'];
+    var ORDER=['מנהל התפעול','רכז המסמכים','רכז הרכש','רכז הדוחות','החוקר','הרדאר','מנהל השיווק','המגייס','המחשב שלך','העוזר שלך','תזכורות'];
     var RANK={fail:5,wait:4,run:3,done:2,never:1};
     var groups={};
     agents.forEach(function(t){var w=t.worker||t.room||'מנהל התפעול';if(w==='המחשב שלך')w='העוזר שלך';(groups[w]=groups[w]||[]).push(t);});
@@ -300,7 +335,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
       b.title=w+': '+tasks.length+' משימות';
       b.appendChild(scene(s));
       var rp=lastReply(w);
-      if(rp&&!seen[rp.id]){var say=el('span','say',String(rp.text||'').replace(/\s+/g,' ').slice(0,90));say.title='תשובה חדשה. לחיצה פותחת';b.appendChild(say);b.title=w+': תשובה חדשה';}
+      if(rp&&!seen[seenKey(rp)]){var say=el('span','say',String(rp.text||'').replace(/\s+/g,' ').slice(0,90));say.title='תשובה חדשה. לחיצה פותחת';b.appendChild(say);b.title=w+': תשובה חדשה';}
       b.appendChild(el('span','nm',w));
       var nxt=tasks.filter(function(t){return t.next_run;}).sort(byNext)[0];
       if(nxt)b.appendChild(el('span','nx','הבא: '+hm(nxt.next_run)+' '+nxt.name));
@@ -352,7 +387,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
   var STATUS={'new':'נשלח, מחכה לעובד','sent':'נמסר לעובד, מחכה לתשובה','fail':'לא נמסר'};
   function paint(c){
     var log=c.log;log.textContent='';
-    var mine=chatDocs.filter(function(m){return m.worker===c.w||(m.from==='handoff'&&m.by===c.w);}).sort(function(a,b){return String(a.at||'').localeCompare(String(b.at||''));});
+    var mine=chatDocs.filter(function(m){return m.worker===c.w||(m.from==='handoff'&&m.by===c.w);}).sort(function(a,b){return tms(a.at)-tms(b.at);});
     mine.forEach(function(m){
       if(m.from==='handoff'){
         // 18/10/2026: a task one worker handed to another (agent-common.md), shown in both boxes.
@@ -383,7 +418,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     var dock=document.getElementById('dock');
     if(!sel||!groups[sel]){dock.hidden=true;dock.textContent='';dock.removeAttribute('data-w');document.documentElement.classList.remove('chatting');return;}
     dock.hidden=false;document.documentElement.classList.add('chatting');
-    if(lastReply(sel)&&!seen[lastReply(sel).id]){markSeen(sel);setTimeout(render,0);}
+    if(lastReply(sel)&&!seen[seenKey(lastReply(sel))]){markSeen(sel);setTimeout(render,0);}
     if(dock.getAttribute('data-w')!==sel){
       dock.textContent='';dock.setAttribute('data-w',sel);dock.classList.toggle('slim',!SESS[sel]);
       var hd=el('div','hd');hd.appendChild(el('i','dot s-'+wstate(sel)));hd.appendChild(el('b',null,'שיחה עם '+sel));
@@ -448,6 +483,9 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
       for(var k=li.length-1;k>0&&ul.scrollHeight>ul.clientHeight+1;k--){li[k].style.display='none';more.textContent='ועוד '+(li.length-k);}
     });
   }
+  var raw=[];
+  function refresh(){agents=raw.map(function(a){var x=Object.assign({},a);x.next_run=upcoming(a);return x;});render();}
+  setInterval(function(){if(raw.length)refresh();},60000);
   window.addEventListener('resize',fit);
   document.addEventListener('keydown',function(e){if(e.key==='Escape'&&(open||sel)){if(open)open=null;else sel=null;render();}});
   render();
@@ -456,7 +494,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     if(!db){document.getElementById('stamp').textContent='צריך להיכנס לחשבון כדי לראות את המשרד';return;}
     db.collection('agents').onSnapshot(function(snap){
       // A delivered snapshot's data() is frozen: x.id= failed silently and every desk was "undefined" (18/10/2026).
-      agents=snap.docs.map(function(d){var x=Object.assign({},d.data()||{});x.id=d.id;return x;});render();
+      raw=snap.docs.map(function(d){var x=Object.assign({},d.data()||{});x.id=d.id;return x;});refresh();
     },function(){document.getElementById('stamp').textContent='לא הצלחתי לקרוא את המשרד, נסה לרענן';});
     dbh=db;
     window.claude.use('comments').then(function(c){cmt=c;}).catch(function(){});
