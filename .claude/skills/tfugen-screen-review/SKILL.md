@@ -32,6 +32,7 @@ description: Checklist for reviewing a screenshot or a flow of the tfugen-safety
 | מונה 0 שלא מסתדר עם השאר (12 סה"כ, 1 פג, 6 קרובים, "תקינים: 0") | ייבוא הביא מילים אחרות לשדה? `select s, count(*)` במסד מול ההשוואה בקוד (לקח 65) | ציוד, 07/10 |
 | צילום עם נתונים אמיתיים | לזרוע `DB.*` מ-`execute_sql` (`json_agg(x)`, לא `t`: יש עמודה `t` ב-`near_miss` וב-`trustee_reports`), ואז `goPage` לכל דף ו-`openModal` לכל טופס ב-390. הלוגו שבור בקובץ מקומי (`/logo.jpg`), לא ליקוי | 07/10 |
 | שדה עם טקסט הסבר בתוכו (placeholder) | נחתך בשפה ארוכה (רוסית)? אם יש תווית מעליו, בלי placeholder. סדר השדות כמו שאדם ממלא (שם לפני ת.ז) | דף העובד, 03/10 |
+| ארטיפקט בטלפון: התחתית חסרה ואי אפשר לגלול | דף "מסך אחד" (`height:100dvh` ו-`overflow:hidden`) באפליקציה של Claude: המסגרת גבוהה ממה שרואים. כשתיבה לכתיבה פתוחה בטלפון: הדף גולל, וגוללים אליה. בדיקה: Playwright ב-390x844 עם `window.claude` מדומה, `formBottom<=innerHeight` אחרי פתיחה | משרד הסוכנים, 18/10 |
 
 ## איך בודקים
 - DB: `execute_sql` על הטבלה, ו-`query_logs` על `edge_logs` לפי `request.path` ו-`method` כדי לדעת אם השמירה בכלל יצאה מהטלפון.
