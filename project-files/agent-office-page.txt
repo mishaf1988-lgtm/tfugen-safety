@@ -448,6 +448,9 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     dbh=db;
     window.claude.use('comments').then(function(c){cmt=c;}).catch(function(){});
     db.collection('chat').onSnapshot(function(snap){chatDocs=snap.docs.map(function(d){var x=Object.assign({},d.data()||{});x.id=d.id;return x;});paintAll();render();},function(){});
+    // 18/10/2026: the worker -> session map lives in meta/workers, so the weekly rotation (routine-rotation.md)
+    // changes it without a new page version. SESS above is the fallback.
+    db.doc('meta/workers').onSnapshot(function(s){var m=s.data();if(m&&m.sessions){Object.keys(m.sessions).forEach(function(k){SESS[k]=m.sessions[k];});render();}},function(){});
     db.doc('meta/office').onSnapshot(function(s){meta=s.data()||null;render();},function(){});
   });
 })();
