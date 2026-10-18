@@ -38,7 +38,8 @@ finally:
 clone = tempfile.mkdtemp(prefix="platform-clone-")
 try:
     own = {".git/HEAD": "ref: refs/heads/main\n", "handoff.md": "# handoff\n", "checklist-day1.md": "- [ ] x\n",
-           "demo/a.sql": "-- demo\n", "docs/terms.md": "# terms\n", "marketing/plan.md": "# plan\n"}
+           "demo/a.sql": "-- demo\n", "docs/terms.md": "# terms\n", "marketing/plan.md": "# plan\n",
+           "automation/run.py": "# demo\n", "ci/check.py": "# ci\n", ".github/workflows/tests.yml": "on: push\n", ".gitignore": "*.pyc\n"}
     for rel, txt in own.items():
         os.makedirs(os.path.dirname(os.path.join(clone, rel)) or clone, exist_ok=True)
         open(os.path.join(clone, rel), "w", encoding="utf-8").write(txt)
@@ -60,7 +61,7 @@ try:
     check("the export leaves a manifest", os.path.exists(os.path.join(clone, ".export-manifest.json")))
     p = run("--dry-run"); log = (p.stdout or "") + (p.stderr or "")
     check("--dry-run after an export: nothing edited, exit 0", p.returncode == 0 and "nothing edited there" in log, log[-400:])
-    check("the line's own files never appear in the list", not any(k in log for k in ("handoff.md", "checklist-day1.md", "demo/", "docs/", "marketing/")), log[-400:])
+    check("the line's own files never appear in the list", not any(k in log for k in ("handoff.md", "checklist-day1.md", "demo/", "docs/", "marketing/", "automation/", "ci/", ".github/", ".gitignore")), log[-400:])
     p = run(); log = (p.stdout or "") + (p.stderr or "")
     check("a second export with nothing edited there passes without --force", p.returncode == 0 and "clean:" in log, log[-600:])
     with open(os.path.join(clone, "CLAUDE.md"), "a", encoding="utf-8") as f: f.write("\nedited in safety-platform\n")

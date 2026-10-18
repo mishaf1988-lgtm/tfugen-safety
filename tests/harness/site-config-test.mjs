@@ -8,15 +8,17 @@
 //   * _shared.js takes its addresses from SITE, so the endpoints that import them follow.
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+// import() takes a file:// URL; a bare C: path fails on Windows (18/10/2026).
+const imp = (p) => import(pathToFileURL(p).href);
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
 
 // The factory's own words live with its settings (functions/_site.js, NAMES_RE), so a new
 // factory's copy guards its own name and not Tapugan's.
-const { NAMES_RE: NAMES } = await import(path.join(ROOT, 'functions/_site.js'));
+const { NAMES_RE: NAMES } = await imp(path.join(ROOT, 'functions/_site.js'));
 const SETTINGS = ['functions/_site.js', 'functions/_logo.js'];
 // Left on purpose, each with its reason. A new entry needs one too.
 const ALLOWED = {
@@ -45,7 +47,7 @@ check('the factory is named only in _site.js and _logo.js', hits.length === 0, h
 console.log('\n2. _site.js has what a new factory fills in');
 const src = fs.readFileSync(path.join(ROOT, 'functions/_site.js'), 'utf8');
 check('_site.js: no raw Hebrew (\\uXXXX, rule 1)', !/[\u0590-\u05ff]/.test(src));
-const { SITE } = await import(path.join(ROOT, 'functions/_site.js'));
+const { SITE } = await imp(path.join(ROOT, 'functions/_site.js'));
 const KEYS = ['name', 'slug', 'shortName', 'owner', 'ownerTitle', 'company', 'host', 'appUrl', 'supabaseUrl', 'loginDomain', 'adminEmail', 'managerEmail', 'mailDomain', 'hrEmail', 'odRoot', 'odFileUrl', 'backupPrefix', 'signature'];
 check('every value is filled', KEYS.every((k) => typeof SITE[k] === 'string' && SITE[k].length > 0), KEYS.filter((k) => !SITE[k]));
 check('appUrl is https:// + host', SITE.appUrl === 'https://' + SITE.host, SITE.appUrl);
@@ -56,7 +58,7 @@ check('previewRe: a preview of this site passes', SITE.previewRe.test('https://a
 check('previewRe: another site, or the host as a suffix of another name, does not', !SITE.previewRe.test('https://evil.com') && !SITE.previewRe.test('https://a1.' + SITE.host + '.evil.com') && !SITE.previewRe.test('https://a1x' + SITE.host.replace(/^[^.]+/, '')));
 
 console.log('\n3. _shared.js takes its addresses from SITE');
-const sh = await import(path.join(ROOT, 'functions/_shared.js'));
+const sh = await imp(path.join(ROOT, 'functions/_shared.js'));
 check('CF_PROD = SITE.appUrl', sh.CF_PROD === SITE.appUrl);
 check('SB_LIVE = SITE.supabaseUrl, and sbFrom falls back to it', sh.SB_LIVE === SITE.supabaseUrl && sh.sbFrom({}) === SITE.supabaseUrl);
 check('ADMIN_EMAIL = SITE.adminEmail', sh.ADMIN_EMAIL === SITE.adminEmail);
@@ -67,7 +69,7 @@ console.log('\n4. index.html takes the factory from _site.js (17/10/2026, step 1
 // a copy: <script id="site-config">var SITE=...</script>, and data-site="<template>" on the few
 // elements of the markup that name the factory (data-site-<attr> for an attribute). The copy is
 // written from _site.js by `node tests/harness/site-config-test.mjs --write`; here it must match.
-const { clientSite } = await import(path.join(ROOT, 'functions/_site.js'));
+const { clientSite } = await imp(path.join(ROOT, 'functions/_site.js'));
 const CS = clientSite();
 const jsEsc = (s) => s.replace(/[^\x20-\x7e]|</g, (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
 const BLOCK_RE = /(<script id="site-config">)[^<]*(<\/script>)/;
@@ -119,7 +121,7 @@ check('index.html names the factory only through SITE (code) and data-site (mark
 
 // The logo (17/10/2026): logo.jpg in the root is the one a new factory replaces. The page asks
 // for /logo.jpg; the server's copy in _logo.js and the home-screen icons are made from it.
-const { LOGO_SRC_SHA256 } = await import(path.join(ROOT, 'functions/_logo.js'));
+const { LOGO_SRC_SHA256 } = await imp(path.join(ROOT, 'functions/_logo.js'));
 const { createHash } = await import('crypto');
 check('functions/_logo.js was made from the current logo.jpg (fix: python3 tools/make-logo.py, then NODE_PATH=$(npm root -g) node tools/make-icons.js)',
   createHash('sha256').update(fs.readFileSync(path.join(ROOT, 'logo.jpg'))).digest('hex') === LOGO_SRC_SHA256);
@@ -140,7 +142,7 @@ check('icon.svg shows the first letter of SITE.brand (fix: --write)', process.ar
 // factory's, or the exported copy breaks on the first key added here. Absent in that copy.
 const tmplPath = path.join(ROOT, 'tools/platform/_site.js');
 if (fs.existsSync(tmplPath)) {
-  const real = await import(path.join(ROOT, 'functions/_site.js')), tmpl = await import(tmplPath);
+  const real = await imp(path.join(ROOT, 'functions/_site.js')), tmpl = await imp(tmplPath);
   const shape = (m) => JSON.stringify([Object.keys(m.SITE).sort(), m.CLIENT_KEYS, Object.keys(m).sort()]);
   check('tools/platform/_site.js has the same keys as functions/_site.js', shape(real) === shape(tmpl),
     Object.keys(real.SITE).filter((k) => !(k in tmpl.SITE)).concat(Object.keys(tmpl.SITE).filter((k) => !(k in real.SITE))));
