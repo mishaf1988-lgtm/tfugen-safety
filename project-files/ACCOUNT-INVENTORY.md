@@ -32,7 +32,7 @@
 | `trig_01L7t6v87o3Bv4SAsxferZZJ` | חוקר ההמצאות | ו' 08:47 | `routine-inventor.md` | `session_019o8PKShtacN2m1BCbYdnQj` |
 | `trig_01SVUt7K2A3buwsB1Q6TBfXS` | הדרכה שבועית מהשטח | א' 05:53 | `routine-talk-field.md` | `session_01Wu6gzvUs3SYbLQ5fiaGayV` |
 | `trig_01SzAJJc2RDFcLoAeBEcWonK` | רדאר רגולציה שבועי | א' 08:17 | הפרומפט בטריגר עצמו (לא בקובץ) | שיחה חדשה בכל ריצה |
-| `trig_01BimkS5EroGgvLB1tZo6zQo` | תור משימות מ-Claude Code (Cowork) | כל שעה, דקה 19 | הפרומפט בטריגר; הכללים ב-`cowork-queue.md` | Cowork, קשור למחשב של מיכאל |
+| `trig_01BimkS5EroGgvLB1tZo6zQo` | תור משימות מ-Claude Code (Cowork) | א'-ה' 07:19-18:19, כל שעה (מ-18/10/2026; קודם כל שעה כל יום) | הפרומפט בטריגר; הכללים ב-`cowork-queue.md` | Cowork, קשור למחשב של מיכאל |
 | `trig_016Cc2xKxQ9W5AEf75yLhmtA` | משרד הסוכנים: עדכון בוקר | כל יום 07:38 | `routine-office.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
 | `trig_01GVrwUrwquFCyLY8qbojmx4` | תפוגות שנתקעו אצל ספק | ב' 08:17 | `routine-supplier-followup.md` | `session_012U83ozxzQjH8BcQ2AvykSf` |
 | `trig_019ETBjyiSvoqVzFVtCcavmG` | תזכורת פרסום ההדרכה | א' 12:13 | `routine-talk-publish.md` | `session_01Wu6gzvUs3SYbLQ5fiaGayV` |
