@@ -123,6 +123,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
 .chat .m{max-width:92%;padding:4px 8px;border-radius:8px;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}
 .chat .m.me{align-self:flex-start;background:var(--accent);color:var(--desk)}
 .chat .m.bot{align-self:flex-end;background:var(--desk);border:1px solid var(--line)}
+.chat .m.ho{align-self:stretch;background:color-mix(in srgb,var(--lamp-wait) 14%,var(--desk));border:1px dashed var(--lamp-wait);font-size:12px}
 .chat .m.auto{align-self:center;background:none;color:var(--ink-2);font-size:11px;padding:0}
 .chat form{display:flex;gap:6px;align-items:flex-end}
 .chat textarea{flex:1;min-width:0;box-sizing:border-box;min-height:44px;max-height:120px;resize:vertical;font:inherit;font-size:14px;color:var(--ink);background:var(--room);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
@@ -213,8 +214,10 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
       if(!cnt[k])return;
       var c=el('span','chip s-'+k);c.appendChild(el('i','dot'));c.appendChild(el('b',null,String(cnt[k])));c.appendChild(document.createTextNode(' '+LABEL[k]));strip.appendChild(c);
     });
+    var ho=chatDocs.filter(function(m){return m.from==='handoff'&&(m.status==='sent'||m.status==='wait');});
+    if(ho.length){var hc=el('span','chip s-wait');hc.appendChild(el('i','dot'));hc.appendChild(el('b',null,String(ho.length)));hc.appendChild(document.createTextNode(' העברות פתוחות'));strip.appendChild(hc);}
     var inbox=document.getElementById('inbox');
-    var waiting=agents.filter(function(a){return a.waiting;});
+    var waiting=agents.filter(function(a){return a.waiting;}).concat(chatDocs.filter(function(m){return m.from==='handoff'&&m.status==='wait';}).map(function(m){return {name:m.by+' > '+m.worker,waiting:m.note||'אישור',worker:m.worker};}));
     inbox.hidden=!waiting.length;inbox.textContent='';
     if(waiting.length){inbox.appendChild(el('i','dot s-wait'));inbox.appendChild(el('span',null,'מחכה לך: '+waiting.map(function(a){return a.name+': '+a.waiting;}).join(' | ')));
       inbox.onclick=function(){var t=waiting[0];open=t.worker||t.room||'מנהל התפעול';if(open==='המחשב שלך')open='העוזר שלך';sel=open;render();};}
@@ -287,9 +290,16 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
   var STATUS={'new':'נשלח, מחכה לעובד','sent':'נמסר לעובד, מחכה לתשובה','fail':'לא נמסר'};
   function paint(c){
     var log=c.log;log.textContent='';
-    var mine=chatDocs.filter(function(m){return m.worker===c.w;}).sort(function(a,b){return String(a.at||'').localeCompare(String(b.at||''));});
+    var mine=chatDocs.filter(function(m){return m.worker===c.w||(m.from==='handoff'&&m.by===c.w);}).sort(function(a,b){return String(a.at||'').localeCompare(String(b.at||''));});
     mine.forEach(function(m){
-      var me=m.from==='michael',box=el('div','m '+(me?'me':'bot'),String(m.text||''));
+      if(m.from==='handoff'){
+        // 18/10/2026: a task one worker handed to another (agent-common.md), shown in both boxes.
+        var hb=el('div','m ho',(m.by===c.w?'העברתי ל'+m.worker+': ':'משימה מ'+m.by+': ')+String(m.text||''));
+        var hs={sent:'בטיפול',wait:'מחכה לאישור שלך',done:'בוצע'}[m.status];
+        if(hs)hb.appendChild(el('div','ms',hs+(m.note?': '+m.note:'')));
+        log.appendChild(hb);return;
+      }
+      var me=m.from==='michael',box=el('div','m '+(me?'me':'bot'),(!me&&m.by&&m.by!==c.w?m.by+': ':'')+String(m.text||''));
       if(me&&STATUS[m.status]){box.appendChild(el('div','ms',STATUS[m.status]+(m.note?': '+m.note:'')));}
       log.appendChild(box);
     });
@@ -386,7 +396,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     },function(){document.getElementById('stamp').textContent='לא הצלחתי לקרוא את המשרד, נסה לרענן';});
     dbh=db;
     window.claude.use('comments').then(function(c){cmt=c;}).catch(function(){});
-    db.collection('chat').onSnapshot(function(snap){chatDocs=snap.docs.map(function(d){var x=Object.assign({},d.data()||{});x.id=d.id;return x;});paintAll();},function(){});
+    db.collection('chat').onSnapshot(function(snap){chatDocs=snap.docs.map(function(d){var x=Object.assign({},d.data()||{});x.id=d.id;return x;});paintAll();render();},function(){});
     db.doc('meta/office').onSnapshot(function(s){meta=s.data()||null;render();},function(){});
   });
 })();
