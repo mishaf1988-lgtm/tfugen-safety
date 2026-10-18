@@ -47,7 +47,14 @@ h1{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;letter-s
 .inbox h2,.room h2{font-family:var(--f-display);font-weight:400;font-size:17px;margin:0}
 .inbox ul{margin:0;padding-inline-start:18px;display:flex;flex-direction:column;gap:4px}
 .inbox li span{color:var(--ink-2)}
-.floor{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.floor{display:grid;grid-template-columns:1fr;gap:14px}
+.office .desks{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+.desk .info{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:12px;line-height:1.4}
+.desk .info dt{color:var(--ink-2)}
+.desk .info dd{margin:0;min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.desk .info dd.st{font-variant-numeric:tabular-nums}
+.desk .info dd.wt{color:var(--lamp-wait);font-weight:500}
+.desk .team{font-size:11px;color:var(--ink-2);border-top:1px dashed var(--line);padding-top:4px;margin-top:auto}
 .room{background:var(--room);border:2px solid var(--ink-2);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:10px;position:relative;min-width:0}
 /* 18/10/2026 (Michael: "like a real office with employees sitting"): each room has a floor and
    each desk is a workstation drawn in SVG: a person at a monitor, whose screen and pose show the state. */
@@ -185,51 +192,59 @@ h1{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;letter-s
     inbox.hidden=!waiting.length;
     waiting.forEach(function(a){var li=el('li');li.appendChild(el('strong',null,a.name+': '));li.appendChild(el('span',null,a.waiting));list.appendChild(li);});
     if(!agents.length){floor.appendChild(el('div','empty','המשרד ריק עדיין. כל בוקר ב-07:38 סוכן קטן עובר על כל הסוכנים ושם כל אחד בשולחן שלו.'));return;}
+    // 18/10/2026 (Michael: "one office where you see everyone at desks, each showing what it did,
+    // what it will do and its status"): one open space, desks ordered by team, and each desk says
+    // did / next / status without a click. The click still opens the full record and the agent link.
     var rooms=ROOMS.slice();
     agents.forEach(function(a){if(a.room&&rooms.indexOf(a.room)<0)rooms.push(a.room);});
-    rooms.forEach(function(r){
-      var inRoom=agents.filter(function(a){return (a.room||'חדר המסמכים')===r;});
-      if(!inRoom.length)return;
-      inRoom.sort(function(x,y){return (x.order||99)-(y.order||99)||String(x.name).localeCompare(String(y.name),'he');});
-      var room=el('section','room');room.appendChild(el('h2',null,r));
-      if(ROOM_SUB[r])room.appendChild(el('div','sub',ROOM_SUB[r]));
-      var desks=el('div','desks');
-      inRoom.forEach(function(a){
-        var s=state(a);
-        var b=el('button','desk s-'+s);b.type='button';b.id='desk-'+a.id;
-        b.setAttribute('aria-expanded',open===a.id?'true':'false');
-        b.appendChild(scene(s));
-        var top=el('div','top');top.appendChild(el('i','dot'));top.appendChild(el('span','name',a.name));b.appendChild(top);
-        if(a.role)b.appendChild(el('div','role',a.role));
-        b.appendChild(el('div','when',LABEL[s]+(a.last_run?', '+when(a.last_run):'')));
-        b.addEventListener('click',function(){open=(open===a.id)?null:a.id;render();});
-        desks.appendChild(b);
-        if(open===a.id){
-          var d=el('div','detail');var dl=el('dl');
-          [['מתי',a.schedule],['ריצה אחרונה',a.last_run?when(a.last_run)+' ('+LABEL[a.status]+')':'עוד לא רץ'],['ריצה הבאה',when(a.next_run)],
-           ['מה עשה',a.did],['מה למד',a.learned],['מחכה לך',a.waiting],['עלות לריצה',a.cost]].forEach(function(r2){
-            if(!r2[1])return;dl.appendChild(el('dt',null,r2[0]));dl.appendChild(el('dd',null,r2[1]));
-          });
-          d.appendChild(dl);
-          // 17/10/2026 (Michael: "all my agents must work from the project"): the Routine's own page
-          // in claude.ai lists every run in full and has Run now. The desk id is the trigger id.
-          if(/^trig_[A-Za-z0-9]+$/.test(a.id)){
-            var go=el('a','go','\u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05e1\u05d5\u05db\u05df');go.href='https://claude.ai/code/routines/'+a.id;go.target='_blank';go.rel='noopener';
-            d.appendChild(go);
-            d.appendChild(el('div','hint','\u05e9\u05dd: \u05db\u05dc \u05d4\u05e8\u05d9\u05e6\u05d5\u05ea \u05d1\u05de\u05dc\u05d5\u05d0\u05df, \u05d5\u05db\u05e4\u05ea\u05d5\u05e8 Run now \u05dc\u05d4\u05e4\u05e2\u05dc\u05d4 \u05d1\u05d9\u05d3.'));
-          }
-          desks.appendChild(d);
+    var all=agents.slice().sort(function(x,y){
+      return rooms.indexOf(x.room||'\u05d7\u05d3\u05e8 \u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd')-rooms.indexOf(y.room||'\u05d7\u05d3\u05e8 \u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd')
+        ||(x.order||99)-(y.order||99)||String(x.name).localeCompare(String(y.name),'he');});
+    var room=el('section','room office');room.appendChild(el('h2',null,'\u05d4\u05de\u05e9\u05e8\u05d3'));
+    var desks=el('div','desks');
+    all.forEach(function(a){
+      var s=state(a);
+      var b=el('button','desk s-'+s);b.type='button';b.id='desk-'+a.id;
+      b.setAttribute('aria-expanded',open===a.id?'true':'false');
+      b.appendChild(scene(s));
+      var top=el('div','top');top.appendChild(el('i','dot'));top.appendChild(el('span','name',a.name));b.appendChild(top);
+      if(a.role)b.appendChild(el('div','role',a.role));
+      var info=el('dl','info');
+      var add=function(k,v,cls){if(!v)return;info.appendChild(el('dt',null,k));info.appendChild(el('dd',cls||null,v));};
+      add('\u05e1\u05d8\u05d8\u05d5\u05e1',LABEL[s]+(a.last_run?', '+when(a.last_run):''),'st');
+      add('\u05e2\u05e9\u05d4',a.did||(a.last_run?'':'\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e2\u05d1\u05d3'));
+      add('\u05d4\u05d1\u05d0',(when(a.next_run)||'')+(a.schedule?(a.next_run?' (':'')+a.schedule+(a.next_run?')':''):''));
+      add('\u05de\u05d7\u05db\u05d4 \u05dc\u05da',a.waiting,'wt');
+      b.appendChild(info);
+      if(a.room)b.appendChild(el('div','team',a.room));
+      b.addEventListener('click',function(){open=(open===a.id)?null:a.id;render();});
+      desks.appendChild(b);
+      if(open===a.id){
+        var d=el('div','detail');var dl=el('dl');
+        [['\u05de\u05ea\u05d9',a.schedule],['\u05e8\u05d9\u05e6\u05d4 \u05d0\u05d7\u05e8\u05d5\u05e0\u05d4',a.last_run?when(a.last_run)+' ('+LABEL[a.status]+')':'\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e8\u05e5'],['\u05e8\u05d9\u05e6\u05d4 \u05d4\u05d1\u05d0\u05d4',when(a.next_run)],
+         ['\u05de\u05d4 \u05e2\u05e9\u05d4',a.did],['\u05de\u05d4 \u05dc\u05de\u05d3',a.learned],['\u05de\u05d7\u05db\u05d4 \u05dc\u05da',a.waiting],['\u05e2\u05dc\u05d5\u05ea \u05dc\u05e8\u05d9\u05e6\u05d4',a.cost]].forEach(function(r2){
+          if(!r2[1])return;dl.appendChild(el('dt',null,r2[0]));dl.appendChild(el('dd',null,r2[1]));
+        });
+        d.appendChild(dl);
+        // 17/10/2026 (Michael: "all my agents must work from the project"): the Routine's own page
+        // in claude.ai lists every run in full and has Run now. The desk id is the trigger id.
+        if(/^trig_[A-Za-z0-9]+$/.test(a.id)){
+          var go=el('a','go','\u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05e1\u05d5\u05db\u05df');go.href='https://claude.ai/code/routines/'+a.id;go.target='_blank';go.rel='noopener';
+          d.appendChild(go);
+          d.appendChild(el('div','hint','\u05e9\u05dd: \u05db\u05dc \u05d4\u05e8\u05d9\u05e6\u05d5\u05ea \u05d1\u05de\u05dc\u05d5\u05d0\u05df, \u05d5\u05db\u05e4\u05ea\u05d5\u05e8 Run now \u05dc\u05d4\u05e4\u05e2\u05dc\u05d4 \u05d1\u05d9\u05d3.'));
         }
-      });
-      room.appendChild(desks);floor.appendChild(room);
+        desks.appendChild(d);
+      }
     });
+    room.appendChild(desks);floor.appendChild(room);
   }
   render();
   if(!window.claude||!window.claude.use){document.getElementById('stamp').textContent='אין חיבור לנתונים בתצוגה הזו';return;}
   window.claude.use('db').then(function(db){
     if(!db){document.getElementById('stamp').textContent='צריך להיכנס לחשבון כדי לראות את המשרד';return;}
     db.collection('agents').onSnapshot(function(snap){
-      agents=snap.docs.map(function(d){var x=d.data()||{};x.id=d.id;return x;});render();
+      // A delivered snapshot's data() is frozen: x.id= failed silently and every desk was "undefined" (18/10/2026).
+      agents=snap.docs.map(function(d){var x=Object.assign({},d.data()||{});x.id=d.id;return x;});render();
     },function(){document.getElementById('stamp').textContent='לא הצלחתי לקרוא את המשרד, נסה לרענן';});
     db.doc('meta/office').onSnapshot(function(s){meta=s.data()||null;render();},function(){});
   });
