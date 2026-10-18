@@ -292,6 +292,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     var arr=Array.isArray(p)?p:(p&&(p.data||p.events))||[];
     return Array.isArray(arr)?arr:[];
   }
+  function diag(e){return e?String(e.code||'?')+(e.message?': '+String(e.message).slice(0,140):''):'?';}
   function paint(c){
     var log=c.log;log.textContent='';
     var shown=0;
@@ -314,7 +315,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     if(c.unwatch||!mcp)return;
     c.unwatch=mcp.watchTool(SERVER,'list_events',{session_id:c.sid,kinds:['user','assistant'],limit:30},function(ev){
       if(ev.type==='data'){c.err='';c.events=eventsOf(ev.result);}
-      else{var k=ev.error&&ev.error.code;c.err=(k==='approval_required'||k==='not_in_manifest')?'צריך לאשר לעמוד גישה לשיחות (Claude Code Remote)':'לא הצלחתי לקרוא את השיחה כרגע';}
+      else{var k=ev.error&&ev.error.code;c.err=((k==='approval_required'||k==='not_in_manifest')?'צריך לאשר לעמוד גישה לשיחות (Claude Code Remote)':'לא הצלחתי לקרוא את השיחה כרגע')+' ['+diag(ev.error)+']';}
       paint(c);
     },{refetchInterval:30000});
   }
@@ -358,6 +359,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
         st.textContent=k==='approval_required'||k==='not_in_manifest'?'צריך לאשר לעמוד לשלוח הודעות (חלון האישור של claude.ai)':
           k==='server_not_connected'||k==='needs_reauth'||k==='selection_required'?'המחבר Claude Code Remote לא מחובר: להתחבר מחדש ב-claude.ai, הגדרות, מחברים':
           k==='tool_error'?'השיחה של העובד לא קיבלה את ההודעה (ייתכן שהיא בארכיון)':'לא ידוע אם ההודעה הגיעה. לבדוק בשיחה לפני ששולחים שוב';
+        st.textContent+=' ['+diag(err)+']';
       }).then(function(){btn.disabled=false;});
     });
     box.appendChild(node);paint(c);watchChat(c);

@@ -35,8 +35,14 @@ window.claude = { use: (name) => Promise.resolve(name !== 'db' ? null : {
   const desks = await page.$$eval('button.desk', (bs) => bs.map((b) => [b.getAttribute('data-worker'), b.querySelectorAll('.tasks li').length]));
   check('one desk per worker, each listing its tasks', JSON.stringify(desks.sort()) === JSON.stringify([['W1', 2], ['W2', 1]]), desks);
   await page.click('button.desk[data-worker="W1"]');
+  // 18/10/2026: a click docks the chat of that worker under the office; the office stays visible.
+  const dock = await page.$eval('#dock', (d) => ({ hidden: d.hidden, title: (d.querySelector('b') || {}).textContent || '' }));
+  check('a click docks the chat of one worker under the office', !dock.hidden && /W1/.test(dock.title), dock);
+  check('the office stays visible with the chat open', (await page.$$eval('button.desk', (bs) => bs.filter((b) => b.getBoundingClientRect().height > 20).length)) === 2);
+  check('no detail card until "details" is pressed', (await page.$$eval('.detail', (ds) => ds.length)) === 0);
+  await page.click('#dock .hd button');
   const open = await page.$$eval('.detail', (ds) => ds.length);
-  check('a click opens one worker, not all of them', open === 1, open);
+  check('"details" opens one worker, not all of them', open === 1, open);
   const hrefs = await page.$$eval('.detail .go', (as) => as.map((a) => a.href));
   check('the open worker links each task to its own agent page (ids from frozen snapshots)', JSON.stringify(hrefs) === JSON.stringify(['https://claude.ai/code/routines/trig_A1', 'https://claude.ai/code/routines/trig_B2']), hrefs);
   check('no page errors', errors.length === 0, errors);
