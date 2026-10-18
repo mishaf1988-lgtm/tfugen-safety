@@ -115,7 +115,8 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
 .dock .hd b{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dock .hd button{flex:none;min-width:40px;min-height:36px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--room);color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
 .dock .hd button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.chat{flex:1;min-height:0;display:flex;flex-direction:column;gap:4px}
+.chat,.chat-in{flex:1;min-height:0;display:flex;flex-direction:column;gap:4px}
+.chat .ms{font-size:10px;opacity:.85;margin-top:2px}
 .chat .log{flex:1;min-height:0;display:flex;flex-direction:column;gap:4px;overflow:auto;padding:4px;background:var(--room);border:1px solid var(--line);border-radius:6px}
 .chat .m{max-width:92%;padding:4px 8px;border-radius:8px;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}
 .chat .m.me{align-self:flex-start;background:var(--accent);color:var(--desk)}
@@ -275,50 +276,25 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     renderDock(groups,wstate);
     fit();
   }
-  // Chat with a worker (18/10/2026). The worker is a standing session, so the page talks to the session
-  // itself through the viewer's "Claude Code Remote" connector: send_message to write, list_events to read.
-  // Nothing is stored in the page. The sessions are the ones in project-files/ACCOUNT-INVENTORY.md.
-  var SERVER='Claude Code Remote',TAG='[מיכאל כותב מהמשרד] ';
-  var SESS={'מנהל התפעול':'session_01JT8Fct6Z6Qv2GbaBBqxtQT','רכז המסמכים':'session_01Wu6gzvUs3SYbLQ5fiaGayV','רכז הרכש':'session_012U83ozxzQjH8BcQ2AvykSf','רכז הדוחות':'session_01HPcF58y98mzJ19wJ27EDn5','החוקר':'session_019o8PKShtacN2m1BCbYdnQj'};
-  var mcp=null,chats={};
-  function textOf(x){
-    if(x==null)return '';if(typeof x==='string')return x;
-    if(Array.isArray(x))return x.map(textOf).filter(Boolean).join('\n');
-    if(typeof x==='object'){if(typeof x.text==='string')return x.text;if(x.content!=null)return textOf(x.content);if(x.message!=null)return textOf(x.message);}
-    return '';
-  }
-  function eventsOf(res){
-    var p=res&&res.payload;if(p&&p.data&&!Array.isArray(p)&&p.data.events)p=p.data;
-    var arr=Array.isArray(p)?p:(p&&(p.data||p.events))||[];
-    return Array.isArray(arr)?arr:[];
-  }
-  function diag(e){return e?String(e.code||'?')+(e.message?': '+String(e.message).slice(0,140):''):'?';}
+  // Chat with a worker (18/10/2026). A page cannot reach the worker's session itself (the connector's
+  // send_message and list_events answered blocked_by_policy from the page, 18/10/2026), so the chat is a
+  // queue in this page's own db: Michael's line goes to collection chat with status new, and the courier
+  // (project-files/routine-chat-relay.md) hands it to the worker's standing session and writes the answer back.
+  var SESS={'מנהל התפעול':1,'רכז המסמכים':1,'רכז הרכש':1,'רכז הדוחות':1,'החוקר':1};
+  var dbh=null,chatDocs=[],chats={};
+  var STATUS={'new':'מחכה לדוור','sent':'נמסר לעובד, מחכה לתשובה','fail':'לא נמסר'};
   function paint(c){
     var log=c.log;log.textContent='';
-    var shown=0;
-    c.events.forEach(function(e){
-      var it=(e.data&&typeof e.data==='object')?e.data:e;
-      var role=it.role||(it.message&&it.message.role)||it.type||e.kind||'';
-      var t=textOf(it).trim();if(!t)return;
-      var m;
-      if(role==='user'){
-        if(t.indexOf(TAG)===0){m=el('div','m me',t.slice(TAG.length));}
-        else{m=el('div','m auto','משימה אוטומטית: '+t.slice(0,60)+(t.length>60?'...':''));}
-      }else if(role==='assistant'){m=el('div','m bot',t.length>1200?t.slice(0,1200)+'...':t);}
-      else return;
-      log.appendChild(m);shown++;
+    var mine=chatDocs.filter(function(m){return m.worker===c.w;}).sort(function(a,b){return String(a.at||'').localeCompare(String(b.at||''));});
+    mine.forEach(function(m){
+      var me=m.from==='michael',box=el('div','m '+(me?'me':'bot'),String(m.text||''));
+      if(me&&STATUS[m.status]){box.appendChild(el('div','ms',STATUS[m.status]+(m.note?': '+m.note:'')));}
+      log.appendChild(box);
     });
-    if(!shown)log.appendChild(el('div','m auto',c.err||'עוד אין הודעות. כתוב משהו למטה.'));
+    if(!mine.length)log.appendChild(el('div','m auto','עוד אין הודעות. כתוב משימה או שאלה למטה.'));
     log.scrollTop=log.scrollHeight;
   }
-  function watchChat(c){
-    if(c.unwatch||!mcp)return;
-    c.unwatch=mcp.watchTool(SERVER,'list_events',{session_id:c.sid,kinds:['user','assistant'],limit:30},function(ev){
-      if(ev.type==='data'){c.err='';c.events=eventsOf(ev.result);}
-      else{var k=ev.error&&ev.error.code;c.err=((k==='approval_required'||k==='not_in_manifest')?'צריך לאשר לעמוד גישה לשיחות (Claude Code Remote)':'לא הצלחתי לקרוא את השיחה כרגע')+' ['+diag(ev.error)+']';}
-      paint(c);
-    },{refetchInterval:30000});
-  }
+  function paintAll(){Object.keys(chats).forEach(function(w){paint(chats[w]);});}
   function renderDock(groups,wstate){
     var dock=document.getElementById('dock');
     if(!sel||!groups[sel]){dock.hidden=true;dock.textContent='';dock.removeAttribute('data-w');return;}
@@ -332,37 +308,30 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     }
   }
   function chatBox(w){
-    var sid=SESS[w],box=el('div','chat');
-    if(!sid){box.appendChild(el('div','hint',w==='העוזר שלך'?'העוזר והמחשב פועלים בשיחה שלך עם Claude, לא כאן. פונים אליו שם.':'לעובד הזה אין שיחה קבועה, אין עם מי להתכתב.'));return box;}
+    var box=el('div','chat');
+    if(!SESS[w]){box.appendChild(el('div','hint',w==='העוזר שלך'?'העוזר והמחשב פועלים בשיחה שלך עם Claude, לא כאן. פונים אליו שם.':'לעובד הזה אין שיחה קבועה, אין עם מי להתכתב.'));return box;}
     var c=chats[w];
-    if(c){box.appendChild(c.node);watchChat(c);return box;}
-    c={sid:sid,events:[],err:'',unwatch:null};chats[w]=c;
-    var node=el('div');c.node=node;
+    if(c){box.appendChild(c.node);paint(c);return box;}
+    c={w:w};chats[w]=c;
+    var node=el('div','chat-in');c.node=node;
     c.log=el('div','log');c.log.setAttribute('aria-live','polite');node.appendChild(c.log);
     var form=el('form');var ta=el('textarea');ta.rows=2;ta.setAttribute('aria-label','הודעה ל'+w);ta.placeholder='כתוב משימה או שאלה ל'+w;
     var btn=el('button',null,'שלח');btn.type='submit';
     var st=el('div','st');
     form.appendChild(ta);form.appendChild(btn);node.appendChild(form);node.appendChild(st);
-    node.appendChild(el('div','hint','ההודעה מגיעה לשיחה הקבועה של העובד והתשובה מתרעננת כל חצי דקה. מייל, מחיקה ופעולה רגישה מחכים לאישור שלך בשיחה שלו.'));
+    node.appendChild(el('div','hint','הדוור עובר כל שעה בשעות העבודה, מוסר לעובד ומחזיר את התשובה לכאן. מייל, מחיקה ופעולה רגישה מחכים לאישור שלך.'));
     ta.addEventListener('keydown',function(e){if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();form.requestSubmit?form.requestSubmit():btn.click();}});
     form.addEventListener('submit',function(e){
       e.preventDefault();
       var text=ta.value.trim();if(!text||btn.disabled)return;
-      if(!mcp){st.className='st err';st.textContent='אין חיבור לשיחות בתצוגה הזו';return;}
-      btn.disabled=true;st.className='st';st.textContent='שולח...';
-      mcp.callTool(SERVER,'send_message',{session_id:sid,message:TAG+text}).then(function(){
-        ta.value='';st.textContent='נשלח. התשובה תופיע למעלה כשהעובד יסיים.';
-        c.events=c.events.concat([{role:'user',content:TAG+text}]);paint(c);
-        [6000,25000,60000].forEach(function(ms){setTimeout(function(){mcp.invalidate(SERVER,'list_events').catch(function(){});},ms);});
-      }).catch(function(err){
-        var k=err&&err.code;st.className='st err';
-        st.textContent=k==='approval_required'||k==='not_in_manifest'?'צריך לאשר לעמוד לשלוח הודעות (חלון האישור של claude.ai)':
-          k==='server_not_connected'||k==='needs_reauth'||k==='selection_required'?'המחבר Claude Code Remote לא מחובר: להתחבר מחדש ב-claude.ai, הגדרות, מחברים':
-          k==='tool_error'?'השיחה של העובד לא קיבלה את ההודעה (ייתכן שהיא בארכיון)':'לא ידוע אם ההודעה הגיעה. לבדוק בשיחה לפני ששולחים שוב';
-        st.textContent+=' ['+diag(err)+']';
-      }).then(function(){btn.disabled=false;});
+      if(!dbh){st.className='st err';st.textContent='אין חיבור לנתונים בתצוגה הזו';return;}
+      btn.disabled=true;st.className='st';st.textContent='שומר...';
+      dbh.collection('chat').add({worker:w,from:'michael',text:text.slice(0,4000),at:new Date().toISOString(),status:'new'}).then(function(){
+        ta.value='';st.textContent='נשמר. הדוור ימסור לעובד בסבב הבא.';
+      }).catch(function(err){st.className='st err';st.textContent='לא נשמר, נסה שוב ['+String(err&&err.code||'?')+']';})
+      .then(function(){btn.disabled=false;});
     });
-    box.appendChild(node);paint(c);watchChat(c);
+    box.appendChild(node);paint(c);
     return box;
   }
   // All desks on one screen: try every column count and keep the one with the largest desks.
@@ -389,13 +358,14 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
   document.addEventListener('keydown',function(e){if(e.key==='Escape'&&(open||sel)){if(open)open=null;else sel=null;render();}});
   render();
   if(!window.claude||!window.claude.use){document.getElementById('stamp').textContent='אין חיבור לנתונים בתצוגה הזו';return;}
-  window.claude.use('mcp').then(function(m){mcp=m;if(sel)render();}).catch(function(){});
   window.claude.use('db').then(function(db){
     if(!db){document.getElementById('stamp').textContent='צריך להיכנס לחשבון כדי לראות את המשרד';return;}
     db.collection('agents').onSnapshot(function(snap){
       // A delivered snapshot's data() is frozen: x.id= failed silently and every desk was "undefined" (18/10/2026).
       agents=snap.docs.map(function(d){var x=Object.assign({},d.data()||{});x.id=d.id;return x;});render();
     },function(){document.getElementById('stamp').textContent='לא הצלחתי לקרוא את המשרד, נסה לרענן';});
+    dbh=db;
+    db.collection('chat').onSnapshot(function(snap){chatDocs=snap.docs.map(function(d){var x=Object.assign({},d.data()||{});x.id=d.id;return x;});paintAll();},function(){});
     db.doc('meta/office').onSnapshot(function(s){meta=s.data()||null;render();},function(){});
   });
 })();
