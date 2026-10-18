@@ -57,7 +57,7 @@ const COMMENT_SUBS = [
   [/tapugan-safety\.pages\.dev/gi, 'your-site.pages.dev'], [/tfugen-safety\.vercel\.app/gi, 'your-site.pages.dev'],
   [/tapugan\.co\.il/gi, 'example.com'], [/tfugen\.local/gi, 'factory.local'], [/tfugen-staging/gi, 'the test project'],
   [/mishaf1988-lgtm\/(tfugen-safety|michael-skills)/gi, 'owner/repo'], [/\btfugen_/gi, ''],
-  [/Tapugan Safety|TFUGEN SAFETY/g, 'Safety Platform'], [/tapugan|tfugen/gi, 'the factory'],
+  [/Tapugan Safety|TFUGEN SAFETY/g, 'Safety Platform'], [/tapugan|tfugen/gi, 'the factory'], [/\bsviva(?:'s)?\b/gi, 'the manager'],
   [new RegExp(esc(HE_NAME).replace(/\\/g, '\\\\'), 'g'), esc(HE_FACTORY)], [new RegExp(HE_NAME, 'g'), HE_FACTORY],
 ];
 const isComment = (t) => /^(\/\/|\/\*|\*|#|<!--)/.test(t);
@@ -66,7 +66,7 @@ const SKIP = /(^|\/)(__pycache__|node_modules|\.DS_Store)(\/|$)/;
 const { NAMES_RE } = await import(pathToFileURL(path.join(ROOT, 'functions/_site.js')).href);
 // Beyond the names: the owner's accounts, phones, the database and test-database keys, the
 // WhatsApp business id. Spelled in parts so this file does not trip its own scan.
-const PRIVATE = new RegExp(['mishaf' + '1988', 'sviva' + '@', '0547' + '940073', '08-680' + '8365',
+const PRIVATE = new RegExp(['mishaf' + '1988', 'sviva', '0547' + '940073', '08-680' + '8365',
   'ldzbjbsum' + 'zqjyvtpiwqo', 'N2ihyyjK' + '_qZEyB0', 'zITtcP' + '-mcfm8', '4400035' + '656982783'].join('|'), 'i');
 // Tapugan's own departments (17/10/2026): the lists in index.html, talk.js and hazard-file.js
 // still spell them, so the export fails until they come from the settings. Raw and \uXXXX.
@@ -146,7 +146,7 @@ for (const f of INCLUDE.flatMap(walk).filter((f) => !SKIP.test(f) && /\.(m?js|ht
   const p = path.join(OUT, f);
   const lines = fs.readFileSync(p, 'utf8').split('\n');
   const out = lines.map((ln) => {
-    if (!isComment(ln.trim()) || !(NAMES_RE.test(ln) || /tapugan|tfugen/i.test(ln))) return ln;
+    if (!isComment(ln.trim()) || !(NAMES_RE.test(ln) || /tapugan|tfugen|sviva/i.test(ln))) return ln;
     subbed++; return COMMENT_SUBS.reduce((s, [a, b]) => s.replace(a, b), ln);
   });
   fs.writeFileSync(p, out.join('\n'));

@@ -146,7 +146,7 @@ function post(fields, env, waitUntil) {
     check('keeps location / location_id from the finding, note in f', rep.loc === F1.loc && rep.location_id === 'L1' && rep.f === 'הוחלף פנס');
     check('d is a date, mgr_note says it came from the mail link', /^\d{4}-\d{2}-\d{2}$/.test(rep.d) && rep.mgr_note === 'נסגר מקישור במייל');
     check('photo uploaded as JPEG and linked', w.uploads.length === 1 && w.uploads[0].type === 'image/jpeg' && /tru-link-mudmp1oysfpo-\d+\.jpg$/.test(w.uploads[0].u) && rep.photo_url === SB + '/storage/v1/object/public/incidents-photos/' + w.uploads[0].u.split('/').pop());
-    check('finding marked closed, guarded by s=neq', w.patches.length === 1 && w.patches[0].body.s === 'נסגר' && /id=eq\.mudmp1oysfpo&s=neq\./.test(w.patches[0].u), w.patches);
+    check('finding marked closed with closed_d today, guarded by s=neq', w.patches.length === 1 && w.patches[0].body.s === 'נסגר' && /^\d{4}-\d{2}-\d{2}$/.test(w.patches[0].body.closed_d) && /id=eq\.mudmp1oysfpo&s=neq\./.test(w.patches[0].u), w.patches);
     check('manager gets a confirmation with who handled it', w.mails.length === 1 && w.mails[0].message.toRecipients[0].emailAddress.address === 'sviva@tapugan.co.il' && w.mails[0].message.body.content.includes('אבי כהן'), w.mails);
     check('nothing deleted', !w.patches.some((p) => /delete/i.test(p.u)));
   }

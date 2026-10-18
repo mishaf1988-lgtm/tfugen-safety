@@ -83,7 +83,7 @@ console.log('\n2. reset-password');
   globalThis.fetch = async (url, init) => { const b = init && init.body ? JSON.parse(init.body) : null; if (b && b.app_metadata) return new Response('nope', { status: 500 }); return inner(url, init); };
   const r2 = await call(resetPassword, { username: 'dani' });
   const j2 = await r2.json();
-  check('a failed flag write is reported as a failure, not success', r2.status === 502 && /flag failed/.test(j2.error || ''), { status: r2.status, j2 });
+  check('a failed flag write still returns the new password, with flagFailed (the password already changed)', r2.status === 200 && j2.success === true && /^[a-z0-9]{8}$/.test(j2.password || '') && j2.flagFailed === true, { status: r2.status, j2 });
   void w2;
 }
 
