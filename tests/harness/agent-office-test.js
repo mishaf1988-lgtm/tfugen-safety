@@ -16,8 +16,9 @@ const check = (label, cond, detail) => {
 const FAKE = `
 window.claude = { use: (name) => Promise.resolve(name !== 'db' ? null : {
   collection: () => ({ onSnapshot: (fn) => { setTimeout(() => fn(Object.freeze({ docs: [
-    ['trig_A1', { name: 'one', room: '\\u05d7\\u05d3\\u05e8 \\u05d4\\u05de\\u05e1\\u05de\\u05db\\u05d9\\u05dd', status: 'done', last_run: '2026-10-17T19:44:49Z' }],
-    ['trig_B2', { name: 'two', room: '\\u05d7\\u05d3\\u05e8 \\u05d4\\u05de\\u05e1\\u05de\\u05db\\u05d9\\u05dd', status: 'done', waiting: 'x' }],
+    ['trig_A1', { name: 'one', worker: 'W1', order: 1, status: 'done', last_run: '2026-10-17T19:44:49Z' }],
+    ['trig_B2', { name: 'two', worker: 'W1', order: 2, status: 'done', waiting: 'x' }],
+    ['trig_C3', { name: 'three', worker: 'W2', status: 'fail' }],
   ].map(([id, body]) => { const b = Object.freeze(body); return Object.freeze({ id, exists: true, data: () => b }); }) })), 0); return () => {}; } }),
   doc: () => ({ onSnapshot: () => () => {} }),
 }) };`;
@@ -30,13 +31,14 @@ window.claude = { use: (name) => Promise.resolve(name !== 'db' ? null : {
   page.on('pageerror', (e) => errors.push(String(e.message || e)));
   await page.setContent(html, { waitUntil: 'load' });
   await page.waitForSelector('button.desk');
-  const ids = await page.$$eval('button.desk', (bs) => bs.map((b) => b.id));
-  check('each desk carries its own id from frozen snapshots', ids.sort().join() === 'desk-trig_A1,desk-trig_B2', ids);
-  await page.click('button.desk >> nth=0');
+  // 18/10/2026: one desk per worker (a working session), its tasks listed on it.
+  const desks = await page.$$eval('button.desk', (bs) => bs.map((b) => [b.getAttribute('data-worker'), b.querySelectorAll('.tasks li').length]));
+  check('one desk per worker, each listing its tasks', JSON.stringify(desks.sort()) === JSON.stringify([['W1', 2], ['W2', 1]]), desks);
+  await page.click('button.desk[data-worker="W1"]');
   const open = await page.$$eval('.detail', (ds) => ds.length);
-  check('a click opens one desk, not all of them', open === 1, open);
-  const href = await page.$eval('.detail .go', (a) => a.href).catch(() => null);
-  check('the open desk links to its own agent page', href === 'https://claude.ai/code/routines/trig_A1', href);
+  check('a click opens one worker, not all of them', open === 1, open);
+  const hrefs = await page.$$eval('.detail .go', (as) => as.map((a) => a.href));
+  check('the open worker links each task to its own agent page (ids from frozen snapshots)', JSON.stringify(hrefs) === JSON.stringify(['https://claude.ai/code/routines/trig_A1', 'https://claude.ai/code/routines/trig_B2']), hrefs);
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + passed + ' passed, ' + failed + ' failed');
