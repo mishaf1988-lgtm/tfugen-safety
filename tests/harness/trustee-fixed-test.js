@@ -85,6 +85,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     }, await open());
     check('two rows go to the server: the finding and the closing report', r.n === 2 && r.f && r.c, r);
     check('the finding is a ליקוי with its own "before" photo, saved already closed', r.f && r.f.ok === false && r.f.s === 'נסגר' && r.f.photo_url === 'https://x/before.jpg', r.f);
+    // 18/10/2026: a finding closed on the spot carries its closing day, or "אמרתם, עשינו" and the closing times never see it
+    check('...with closed_d = the day it was reported', r.f && !!r.f.closed_d && r.f.closed_d === r.f.d, r.f && { d: r.f.d, closed_d: r.f.closed_d });
     check('the closing row is task 8, points at the finding, carries the "after" photo', r.c && r.c.ok === true && r.c.ref === r.f.id && r.c.photo_url === 'https://x/after.jpg' && r.c.u === r.f.u, r.c);
     check('scoring is the same as צלם אחרי: one closed, none open, task 8 done', r.sc.closed === 1 && r.sc.open === 0 && r.sc.task8, r.sc);
     check('the form closes', r.modal === 'none', r.modal);

@@ -21628,7 +21628,7 @@ function svTru(){
         if(!aPh){toast('\u05d7\u05e1\u05e8\u05d4 \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" - '+lbl);return;}
         // Closed on insert, so trustee-notify already reads it as fixed and
         // says so; close_ref then finds nothing left to close.
-        fnd.s=TRUSTEE_S_CLOSED;
+        fnd.s=TRUSTEE_S_CLOSED;fnd.closed_d=d;  // fixed on the spot: closed the day it was reported (18/10/2026, 6 of 9 closed findings had no closed_d)
         var cl=row(TRUSTEE_TASK_CLOSE,true,'\u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" - '+fnd.f.substring(0,120),aPh,'');
         cl.ref=fnd.id;cl.loc=fnd.loc;rows.push(cl);
       }
