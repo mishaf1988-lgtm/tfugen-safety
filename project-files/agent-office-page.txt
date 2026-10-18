@@ -284,7 +284,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
   // (project-files/routine-chat-relay.md) hands it to the worker's standing session and writes the answer back.
   var SESS={'מנהל התפעול':'session_01JT8Fct6Z6Qv2GbaBBqxtQT','רכז המסמכים':'session_01Wu6gzvUs3SYbLQ5fiaGayV','רכז הרכש':'session_012U83ozxzQjH8BcQ2AvykSf','רכז הדוחות':'session_01HPcF58y98mzJ19wJ27EDn5','החוקר':'session_019o8PKShtacN2m1BCbYdnQj'};
   var dbh=null,chatDocs=[],chats={};
-  var STATUS={'new':'מחכה לדוור','sent':'נמסר לעובד, מחכה לתשובה','fail':'לא נמסר'};
+  var STATUS={'new':'נשלח, מחכה לעובד','sent':'נמסר לעובד, מחכה לתשובה','fail':'לא נמסר'};
   function paint(c){
     var log=c.log;log.textContent='';
     var mine=chatDocs.filter(function(m){return m.worker===c.w;}).sort(function(a,b){return String(a.at||'').localeCompare(String(b.at||''));});
@@ -295,6 +295,16 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     });
     if(!mine.length)log.appendChild(el('div','m auto','עוד אין הודעות. כתוב משימה או שאלה למטה.'));
     log.scrollTop=log.scrollHeight;
+  }
+  var cmt=null;
+  function live(w,id,text,anchorEl){
+    if(!cmt||!id)return Promise.resolve(false);
+    return cmt.canSendToClaude().then(function(can){
+      if(can!=='available')return false;
+      return cmt.anchorFor(anchorEl).then(function(anchor){
+        return cmt.sendToClaude({anchor:anchor,text:'צ\'אט המשרד, אל '+w+' (שורה '+id+'):\n'+text});
+      }).then(function(){return true;});
+    }).catch(function(){return false;});
   }
   function paintAll(){Object.keys(chats).forEach(function(w){paint(chats[w]);});}
   function renderDock(groups,wstate){
@@ -329,8 +339,15 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
       var text=ta.value.trim();if(!text||btn.disabled)return;
       if(!dbh){st.className='st err';st.textContent='אין חיבור לנתונים בתצוגה הזו';return;}
       btn.disabled=true;st.className='st';st.textContent='שומר...';
-      dbh.collection('chat').add({worker:w,from:'michael',text:text.slice(0,4000),at:new Date().toISOString(),status:'new'}).then(function(){
-        ta.value='';st.textContent='נשמר. הדוור ימסור לעובד בסבב הבא (08:11, 12:11, 16:11).';
+      // 18/10/2026 (Michael: "the moment I send, it reaches the chat and he answers, without me opening it"):
+      // the line is also sent to Claude as a comment on this page, which wakes the watching dispatcher
+      // (routine-chat-relay.md, "now") at once. Without it the courier picks the row up at its next round.
+      var row={worker:w,from:'michael',text:text.slice(0,4000),at:new Date().toISOString(),status:'new'};
+      dbh.collection('chat').add(row).then(function(ref){
+        ta.value='';
+        return live(w,ref&&ref.id,row.text,node).then(function(ok){
+          st.textContent=ok?'נשלח. התשובה תופיע כאן בעוד כמה דקות.':'נשמר. הדוור ימסור לעובד בסבב הבא (08:11, 12:11, 16:11).';
+        });
       }).catch(function(err){st.className='st err';st.textContent='לא נשמר, נסה שוב ['+String(err&&err.code||'?')+']';})
       .then(function(){btn.disabled=false;});
     });
@@ -368,6 +385,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
       agents=snap.docs.map(function(d){var x=Object.assign({},d.data()||{});x.id=d.id;return x;});render();
     },function(){document.getElementById('stamp').textContent='לא הצלחתי לקרוא את המשרד, נסה לרענן';});
     dbh=db;
+    window.claude.use('comments').then(function(c){cmt=c;}).catch(function(){});
     db.collection('chat').onSnapshot(function(snap){chatDocs=snap.docs.map(function(d){var x=Object.assign({},d.data()||{});x.id=d.id;return x;});paintAll();},function(){});
     db.doc('meta/office').onSnapshot(function(s){meta=s.data()||null;render();},function(){});
   });
