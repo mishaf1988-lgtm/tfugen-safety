@@ -3,63 +3,73 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Suez+One&family=Rubik:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
-/* Layout: a floor plan seen from above. Rooms are outlined areas on blueprint paper, each desk a tile
-   with a desk lamp whose light is the agent's state. Summary strip first, rooms below. */
+/* Layout (18/10/2026, Michael: "everything on one screen, no scrolling up and down"): the page is exactly
+   one viewport. A one-line header with the counts, one line for what waits, and below it one office
+   whose desks are sized by fit() so all of them show at once. A click opens the desk's record on top. */
 :root{
   --paper:#eef2f6; --ink:#1d2a38; --ink-2:#4f6072; --line:#b9c6d4; --room:#f8fafc; --desk:#ffffff;
   --lamp-done:#2f9e5b; --lamp-run:#e8a33d; --lamp-fail:#d1453b; --lamp-off:#9aa8b6; --lamp-wait:#3d7be8;
   --accent:#2457a6; --glow:rgba(232,163,61,.35);
-  --wall:#e4ebf2; --floor-a:#e9dfcf; --floor-b:#e2d6c3; --deskwood:#b98a5a; --chair:#41566d; --skin:#e0b48f; --shirt:#2457a6; --screen-off:#3a4654; --monitor:#2b3440;
+  --wall:#e4ebf2; --floor-a:#e9dfcf; --floor-b:#e2d6c3; --deskwood:#b98a5a; --chair:#41566d; --skin:#e0b48f; --shirt:#2457a6; --screen-off:#3a4654; --monitor:#2b3440; --sky-a:#bfe0f7; --sky-b:#e8f4fc; --leaf:#3f8f55; --pot:#b8643c;
   --f-display:"Suez One","Rubik",system-ui,sans-serif;
   --f-body:"Rubik",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
   --f-data:"IBM Plex Mono",ui-monospace,Menlo,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --paper:#111a24; --ink:#e3eaf2; --ink-2:#9db0c3; --line:#2c3c4e; --room:#162231; --desk:#1c2a3b;
-  --wall:#1f2c3b; --floor-a:#2a2620; --floor-b:#25211c; --deskwood:#7a5a3a; --chair:#5a7088; --skin:#c99a76; --shirt:#4f86d6; --screen-off:#2a333d; --monitor:#0f151c;
+  --wall:#1f2c3b; --floor-a:#2a2620; --floor-b:#25211c; --deskwood:#7a5a3a; --chair:#5a7088; --skin:#c99a76; --shirt:#4f86d6; --screen-off:#2a333d; --monitor:#0f151c; --sky-a:#1b2c44; --sky-b:#2b4466; --leaf:#4fa866; --pot:#8a4a2c;
   --lamp-done:#47c27b; --lamp-run:#f2b552; --lamp-fail:#ef6a5f; --lamp-off:#5d6e80; --lamp-wait:#6b9cf2;
   --accent:#8fb4ee; --glow:rgba(242,181,82,.25); color-scheme:dark}}
 :root[data-theme="dark"]{
   --paper:#111a24; --ink:#e3eaf2; --ink-2:#9db0c3; --line:#2c3c4e; --room:#162231; --desk:#1c2a3b;
-  --wall:#1f2c3b; --floor-a:#2a2620; --floor-b:#25211c; --deskwood:#7a5a3a; --chair:#5a7088; --skin:#c99a76; --shirt:#4f86d6; --screen-off:#2a333d; --monitor:#0f151c;
+  --wall:#1f2c3b; --floor-a:#2a2620; --floor-b:#25211c; --deskwood:#7a5a3a; --chair:#5a7088; --skin:#c99a76; --shirt:#4f86d6; --screen-off:#2a333d; --monitor:#0f151c; --sky-a:#1b2c44; --sky-b:#2b4466; --leaf:#4fa866; --pot:#8a4a2c;
   --lamp-done:#47c27b; --lamp-run:#f2b552; --lamp-fail:#ef6a5f; --lamp-off:#5d6e80; --lamp-wait:#6b9cf2;
   --accent:#8fb4ee; --glow:rgba(242,181,82,.25); color-scheme:dark}
-html,body{background:var(--paper)}
-body{color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+html,body{height:100%;margin:0;overflow:hidden;background:var(--paper)}
+body{color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.4;
   background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
-  background-size:28px 28px;background-position:-1px -1px;background-attachment:fixed}
-.wrap{max-width:1080px;margin:0 auto;padding-block:18px 40px;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
-  display:flex;flex-direction:column;gap:18px}
-header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px}
-h1{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;letter-spacing:.2px;text-wrap:balance}
-.stamp{font-family:var(--f-data);font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
-.strip{display:flex;flex-wrap:wrap;gap:8px}
-.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:var(--desk);
-  border:1px solid var(--line);font-size:13px;font-variant-numeric:tabular-nums}
+  background-size:28px 28px;background-position:-1px -1px}
+.wrap{height:100vh;height:100dvh;box-sizing:border-box;max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:6px;
+  padding:8px max(8px,env(safe-area-inset-right,0px)) 8px max(8px,env(safe-area-inset-left,0px))}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;flex:none}
+h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-height:1.2}
+.stamp{font-family:var(--f-data);font-size:11px;color:var(--ink-2);font-variant-numeric:tabular-nums;margin-inline-start:auto}
+.strip{display:flex;flex-wrap:wrap;gap:4px;flex:none}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:var(--desk);
+  border:1px solid var(--line);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .chip b{font-weight:700}
-.dot{width:9px;height:9px;border-radius:50%;background:var(--lamp-off);flex:none}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--lamp-off);flex:none}
 .s-done .dot,.dot.s-done{background:var(--lamp-done)}
-.s-run .dot,.dot.s-run{background:var(--lamp-run);box-shadow:0 0 0 4px var(--glow)}
+.s-run .dot,.dot.s-run{background:var(--lamp-run);box-shadow:0 0 0 3px var(--glow)}
 .s-fail .dot,.dot.s-fail{background:var(--lamp-fail)}
 .s-wait .dot,.dot.s-wait{background:var(--lamp-wait)}
-.inbox{background:var(--desk);border:1px solid var(--lamp-wait);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
-.inbox h2,.room h2{font-family:var(--f-display);font-weight:400;font-size:17px;margin:0}
-.inbox ul{margin:0;padding-inline-start:18px;display:flex;flex-direction:column;gap:4px}
-.inbox li span{color:var(--ink-2)}
-.floor{display:grid;grid-template-columns:1fr;gap:14px}
-.office .desks{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
-.desk .info{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:12px;line-height:1.4}
-.desk .info dt{color:var(--ink-2)}
-.desk .info dd{margin:0;min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.desk .info dd.st{font-variant-numeric:tabular-nums}
-.desk .info dd.wt{color:var(--lamp-wait);font-weight:500}
-.desk .team{font-size:11px;color:var(--ink-2);border-top:1px dashed var(--line);padding-top:4px;margin-top:auto}
-.room{background:var(--room);border:2px solid var(--ink-2);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:10px;position:relative;min-width:0}
-/* 18/10/2026 (Michael: "like a real office with employees sitting"): each room has a floor and
-   each desk is a workstation drawn in SVG: a person at a monitor, whose screen and pose show the state. */
-.room{background:linear-gradient(var(--room) 0 34px,transparent 34px),repeating-linear-gradient(90deg,var(--floor-a) 0 46px,var(--floor-b) 46px 92px)}
-.scene{display:block;width:100%;height:auto;border-radius:4px;background:var(--wall)}
+.inbox{flex:none;display:flex;align-items:center;gap:6px;min-width:0;width:100%;box-sizing:border-box;text-align:start;
+  background:var(--desk);border:1px solid var(--lamp-wait);border-radius:8px;padding:4px 8px;font:inherit;font-size:12px;color:inherit;cursor:pointer}
+.inbox span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inbox:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.floor{flex:1;min-height:0;position:relative}
+.empty{background:var(--desk);border:1px dashed var(--ink-2);border-radius:8px;padding:18px;color:var(--ink-2)}
+/* One building: a wall with windows over one shared floor (18/10/2026, "like one building where you
+   see all the agents sitting together"). */
+.office{height:100%;box-sizing:border-box;display:flex;flex-direction:column;border:3px solid var(--ink-2);border-radius:6px;overflow:hidden;
+  background:repeating-linear-gradient(90deg,var(--floor-a) 0 46px,var(--floor-b) 46px 92px)}
+.office .wall{flex:none;height:30px;display:flex;align-items:center;justify-content:space-around;gap:6px;padding:0 8px;overflow:hidden;
+  background:var(--wall);border-bottom:5px solid var(--deskwood)}
+.office .window{flex:none;width:44px;height:20px;border:3px solid var(--room);border-radius:2px;
+  background:linear-gradient(var(--sky-a),var(--sky-b));box-shadow:inset 0 0 0 1px var(--line);position:relative}
+.office .window::after{content:"";position:absolute;inset:0 calc(50% - 1.5px);background:var(--room)}
+.office .sign{flex:none;font-family:var(--f-display);font-size:13px;background:var(--ink);color:var(--paper);padding:1px 10px;border-radius:3px;white-space:nowrap}
+.desks{flex:1;min-height:0;display:grid;grid-auto-rows:minmax(0,1fr);gap:4px;padding:6px}
+.desk{display:flex;flex-direction:column;min-width:0;min-height:0;gap:1px;padding:2px;border:0;border-radius:6px;background:none;
+  font:inherit;color:inherit;cursor:pointer;text-align:center}
+.desk:hover{background:color-mix(in srgb,var(--desk) 45%,transparent)}
+.desk:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.desk[aria-expanded="true"]{background:color-mix(in srgb,var(--accent) 18%,transparent)}
+.scene{flex:1;min-height:0;width:100%;height:100%;display:block}
+.desk .nm{flex:none;font-size:11px;font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  background:var(--desk);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+.desk .nx{flex:none;font-size:10px;line-height:1.2;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.desks.tight .nx{display:none}
 .scene .screen{fill:var(--screen-off)}
 .s-done .scene .screen{fill:var(--lamp-done)}
 .s-run .scene .screen{fill:var(--lamp-run)}
@@ -70,32 +80,26 @@ h1{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;letter-s
   .s-run .scene .hand-r{animation:type .5s ease-in-out infinite alternate}
   .s-run .scene .hand-l{animation:type .5s ease-in-out .25s infinite alternate}
   .s-wait .scene .bubble{animation:bob 2s ease-in-out infinite}
+  .s-run .dot{animation:lamp 2.4s ease-in-out infinite}
 }
 @keyframes type{to{transform:translateY(2px)}}
 @keyframes bob{50%{transform:translateY(-2px)}}
-.room::after{content:"";position:absolute;top:-2px;inset-inline-end:28px;width:44px;height:2px;background:var(--room)}
-.room .sub{font-size:12px;color:var(--ink-2);margin-top:-6px}
-.desks{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
-.desk{background:var(--desk);border:1px solid var(--line);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:6px;
-  text-align:start;font:inherit;color:inherit;cursor:pointer;min-width:0}
-.desk:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.desk[aria-expanded="true"]{border-color:var(--accent)}
-.desk .top{display:flex;align-items:center;gap:7px}
-.desk .name{font-weight:700;font-size:14px;line-height:1.3;overflow-wrap:anywhere}
-.desk .role{font-size:12px;color:var(--ink-2);line-height:1.35}
-.desk .when{font-family:var(--f-data);font-size:11px;color:var(--ink-2);font-variant-numeric:tabular-nums}
-.detail{grid-column:1/-1;background:var(--desk);border:1px solid var(--accent);border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:8px}
+@keyframes lamp{50%{box-shadow:0 0 0 6px transparent}}
+/* The record opens over the office, so the page itself never grows. */
+.detail{position:absolute;inset:6px;z-index:5;overflow:auto;background:var(--desk);border:2px solid var(--accent);border-radius:8px;
+  padding:12px;display:flex;flex-direction:column;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.detail .hd{display:flex;align-items:center;gap:8px}
+.detail .hd b{flex:1;font-size:16px}
+.detail .x{flex:none;min-width:40px;min-height:40px;border:1px solid var(--line);border-radius:8px;background:var(--room);color:var(--ink);font:inherit;font-size:18px;cursor:pointer}
+.detail .x:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.detail .role{color:var(--ink-2);font-size:13px}
 .detail dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 12px}
 .detail dt{color:var(--ink-2);font-size:13px}
 .detail dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.detail dd.wt{color:var(--lamp-wait);font-weight:500}
 .detail .go{align-self:flex-start;display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:8px;background:var(--accent);color:var(--desk);font-weight:700;text-decoration:none}
 .detail .go:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .detail .hint{font-size:12px;color:var(--ink-2)}
-.empty{background:var(--desk);border:1px dashed var(--ink-2);border-radius:8px;padding:18px;color:var(--ink-2)}
-.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ink-2)}
-.legend span{display:inline-flex;align-items:center;gap:5px}
-@media (prefers-reduced-motion: no-preference){.s-run .dot{animation:lamp 2.4s ease-in-out infinite}}
-@keyframes lamp{50%{box-shadow:0 0 0 7px transparent}}
 </style>
 
 <div class="wrap" dir="rtl">
@@ -104,26 +108,15 @@ h1{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;letter-s
     <div class="stamp" id="stamp">טוען...</div>
   </header>
   <div class="strip" id="strip"></div>
-  <section class="inbox" id="inbox" hidden>
-    <h2>מחכה לך</h2>
-    <ul id="inbox-list"></ul>
-  </section>
+  <button type="button" class="inbox" id="inbox" hidden></button>
   <div class="floor" id="floor">
     <div class="empty" id="empty">המשרד ריק עדיין. כל בוקר ב-07:38 סוכן קטן עובר על כל הסוכנים ושם כל אחד בשולחן שלו.</div>
-  </div>
-  <div class="legend">
-    <span><i class="dot s-done"></i>סיים בהצלחה</span>
-    <span><i class="dot s-run"></i>עובד עכשיו</span>
-    <span><i class="dot s-wait"></i>מחכה לך</span>
-    <span><i class="dot s-fail"></i>נכשל</span>
-    <span><i class="dot"></i>עוד לא רץ</span>
   </div>
 </div>
 
 <script>
 (function(){
   var ROOMS=['חדר המחקר','חדר המסמכים','חדר הדוחות','תזכורות'];
-  var ROOM_SUB={'חדר המחקר':'לומדים ומחפשים בחוץ','חדר המסמכים':'מייל, תיקיות ותוקף','חדר הדוחות':'דוחות, ביקורות ומגמות','תזכורות':'בדיקות חד-פעמיות'};
   var LABEL={done:'סיים',run:'עובד',fail:'נכשל',wait:'מחכה לך',never:'עוד לא רץ'};
   var agents=[],meta=null,open=null;
   function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
@@ -140,9 +133,9 @@ h1{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;letter-s
   var NS='http://www.w3.org/2000/svg';
   function svg(tag,attrs){var e=document.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);return e;}
   function scene(s){
-    var g=svg('svg',{viewBox:'0 0 140 78','class':'scene','aria-hidden':'true',focusable:'false'});
-    g.appendChild(svg('rect',{x:0,y:58,width:140,height:20,fill:'var(--floor-a)'}));
-    g.appendChild(svg('rect',{x:104,y:20,width:22,height:16,rx:2,fill:'var(--room)',stroke:'var(--line)'}));
+    var g=svg('svg',{viewBox:'0 0 140 64',preserveAspectRatio:'xMidYMax meet','class':'scene','aria-hidden':'true',focusable:'false'});
+    g.appendChild(svg('circle',{cx:128,cy:40,r:8,fill:'var(--leaf)'}));g.appendChild(svg('circle',{cx:122,cy:47,r:6,fill:'var(--leaf)'}));
+    g.appendChild(svg('rect',{x:120,y:50,width:16,height:12,rx:2,fill:'var(--pot)'}));
     if(s!=='never'){
       g.appendChild(svg('rect',{x:30,y:44,width:24,height:6,rx:2,fill:'var(--chair)'}));
       g.appendChild(svg('rect',{x:28,y:24,width:6,height:24,rx:2,fill:'var(--chair)'}));
@@ -187,57 +180,75 @@ h1{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;letter-s
       if(!cnt[k])return;
       var c=el('span','chip s-'+k);c.appendChild(el('i','dot'));c.appendChild(el('b',null,String(cnt[k])));c.appendChild(document.createTextNode(' '+LABEL[k]));strip.appendChild(c);
     });
-    var inbox=document.getElementById('inbox'),list=document.getElementById('inbox-list');list.textContent='';
+    var inbox=document.getElementById('inbox');
     var waiting=agents.filter(function(a){return a.waiting;});
-    inbox.hidden=!waiting.length;
-    waiting.forEach(function(a){var li=el('li');li.appendChild(el('strong',null,a.name+': '));li.appendChild(el('span',null,a.waiting));list.appendChild(li);});
+    inbox.hidden=!waiting.length;inbox.textContent='';
+    if(waiting.length){inbox.appendChild(el('i','dot s-wait'));inbox.appendChild(el('span',null,'מחכה לך: '+waiting.map(function(a){return a.name+': '+a.waiting;}).join(' | ')));
+      inbox.onclick=function(){open=waiting[0].id;render();};}
     if(!agents.length){floor.appendChild(el('div','empty','המשרד ריק עדיין. כל בוקר ב-07:38 סוכן קטן עובר על כל הסוכנים ושם כל אחד בשולחן שלו.'));return;}
-    // 18/10/2026 (Michael: "one office where you see everyone at desks, each showing what it did,
-    // what it will do and its status"): one open space, desks ordered by team, and each desk says
-    // did / next / status without a click. The click still opens the full record and the agent link.
     var rooms=ROOMS.slice();
     agents.forEach(function(a){if(a.room&&rooms.indexOf(a.room)<0)rooms.push(a.room);});
     var all=agents.slice().sort(function(x,y){
-      return rooms.indexOf(x.room||'\u05d7\u05d3\u05e8 \u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd')-rooms.indexOf(y.room||'\u05d7\u05d3\u05e8 \u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd')
+      return rooms.indexOf(x.room||'חדר המסמכים')-rooms.indexOf(y.room||'חדר המסמכים')
         ||(x.order||99)-(y.order||99)||String(x.name).localeCompare(String(y.name),'he');});
-    var room=el('section','room office');room.appendChild(el('h2',null,'\u05d4\u05de\u05e9\u05e8\u05d3'));
+    var room=el('section','room office');var wall=el('div','wall');wall.setAttribute('aria-hidden','true');
+    for(var w=0;w<5;w++){if(w===2)wall.appendChild(el('span','sign','משרד הסוכנים'));wall.appendChild(el('span','window'));}
+    room.appendChild(wall);
     var desks=el('div','desks');
     all.forEach(function(a){
       var s=state(a);
       var b=el('button','desk s-'+s);b.type='button';b.id='desk-'+a.id;
       b.setAttribute('aria-expanded',open===a.id?'true':'false');
+      b.title=a.name+': '+LABEL[s];
       b.appendChild(scene(s));
-      var top=el('div','top');top.appendChild(el('i','dot'));top.appendChild(el('span','name',a.name));b.appendChild(top);
-      if(a.role)b.appendChild(el('div','role',a.role));
-      var info=el('dl','info');
-      var add=function(k,v,cls){if(!v)return;info.appendChild(el('dt',null,k));info.appendChild(el('dd',cls||null,v));};
-      add('\u05e1\u05d8\u05d8\u05d5\u05e1',LABEL[s]+(a.last_run?', '+when(a.last_run):''),'st');
-      add('\u05e2\u05e9\u05d4',a.did||(a.last_run?'':'\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e2\u05d1\u05d3'));
-      add('\u05d4\u05d1\u05d0',(when(a.next_run)||'')+(a.schedule?(a.next_run?' (':'')+a.schedule+(a.next_run?')':''):''));
-      add('\u05de\u05d7\u05db\u05d4 \u05dc\u05da',a.waiting,'wt');
-      b.appendChild(info);
-      if(a.room)b.appendChild(el('div','team',a.room));
+      b.appendChild(el('span','nm',a.name));
+      // the short line: status, and when it runs next (the record has the rest)
+      b.appendChild(el('span','nx',LABEL[s]+(a.next_run?', הבא '+when(a.next_run).slice(0,5)+' '+when(a.next_run).slice(11):'')));
       b.addEventListener('click',function(){open=(open===a.id)?null:a.id;render();});
       desks.appendChild(b);
-      if(open===a.id){
-        var d=el('div','detail');var dl=el('dl');
-        [['\u05de\u05ea\u05d9',a.schedule],['\u05e8\u05d9\u05e6\u05d4 \u05d0\u05d7\u05e8\u05d5\u05e0\u05d4',a.last_run?when(a.last_run)+' ('+LABEL[a.status]+')':'\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e8\u05e5'],['\u05e8\u05d9\u05e6\u05d4 \u05d4\u05d1\u05d0\u05d4',when(a.next_run)],
-         ['\u05de\u05d4 \u05e2\u05e9\u05d4',a.did],['\u05de\u05d4 \u05dc\u05de\u05d3',a.learned],['\u05de\u05d7\u05db\u05d4 \u05dc\u05da',a.waiting],['\u05e2\u05dc\u05d5\u05ea \u05dc\u05e8\u05d9\u05e6\u05d4',a.cost]].forEach(function(r2){
-          if(!r2[1])return;dl.appendChild(el('dt',null,r2[0]));dl.appendChild(el('dd',null,r2[1]));
-        });
-        d.appendChild(dl);
-        // 17/10/2026 (Michael: "all my agents must work from the project"): the Routine's own page
-        // in claude.ai lists every run in full and has Run now. The desk id is the trigger id.
-        if(/^trig_[A-Za-z0-9]+$/.test(a.id)){
-          var go=el('a','go','\u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05e1\u05d5\u05db\u05df');go.href='https://claude.ai/code/routines/'+a.id;go.target='_blank';go.rel='noopener';
-          d.appendChild(go);
-          d.appendChild(el('div','hint','\u05e9\u05dd: \u05db\u05dc \u05d4\u05e8\u05d9\u05e6\u05d5\u05ea \u05d1\u05de\u05dc\u05d5\u05d0\u05df, \u05d5\u05db\u05e4\u05ea\u05d5\u05e8 Run now \u05dc\u05d4\u05e4\u05e2\u05dc\u05d4 \u05d1\u05d9\u05d3.'));
-        }
-        desks.appendChild(d);
-      }
     });
     room.appendChild(desks);floor.appendChild(room);
+    var a=all.filter(function(x){return x.id===open;})[0];
+    if(a){
+      var s2=state(a);
+      var d=el('div','detail');d.setAttribute('role','dialog');d.setAttribute('aria-label',a.name);
+      var hd=el('div','hd');hd.appendChild(el('i','dot s-'+s2));hd.appendChild(el('b',null,a.name));
+      var x=el('button','x','✕');x.type='button';x.setAttribute('aria-label','סגור');x.addEventListener('click',function(){open=null;render();});hd.appendChild(x);
+      d.appendChild(hd);
+      if(a.role)d.appendChild(el('div','role',a.role+(a.room?' | '+a.room:'')));
+      var dl=el('dl');
+      [['סטטוס',LABEL[s2]+(a.last_run?', '+when(a.last_run):'')],['מה עשה',a.did||(a.last_run?'':'עוד לא עבד')],
+       ['מה הבא',(when(a.next_run)||'')+(a.schedule?(a.next_run?' (':'')+a.schedule+(a.next_run?')':''):'')],
+       ['מחכה לך',a.waiting,'wt'],['מה למד',a.learned],['עלות לריצה',a.cost]].forEach(function(r2){
+        if(!r2[1])return;dl.appendChild(el('dt',null,r2[0]));dl.appendChild(el('dd',r2[2]||null,r2[1]));
+      });
+      d.appendChild(dl);
+      // 17/10/2026 (Michael: "all my agents must work from the project"): the Routine's own page
+      // in claude.ai lists every run in full and has Run now. The desk id is the trigger id.
+      if(/^trig_[A-Za-z0-9]+$/.test(a.id)){
+        var go=el('a','go','פתח את הסוכן');go.href='https://claude.ai/code/routines/'+a.id;go.target='_blank';go.rel='noopener';
+        d.appendChild(go);
+        d.appendChild(el('div','hint','שם: כל הריצות במלואן, וכפתור Run now להפעלה ביד.'));
+      }
+      floor.appendChild(d);
+    }
+    fit();
   }
+  // All desks on one screen: try every column count and keep the one that draws the people largest.
+  function fit(){
+    var d=document.querySelector('.office .desks');if(!d)return;
+    var n=d.children.length;if(!n)return;
+    var W=d.clientWidth-12,H=d.clientHeight-12,G=4,best=1,bs=-1,bh=0;
+    for(var c=1;c<=n;c++){
+      var r=Math.ceil(n/c),cw=(W-(c-1)*G)/c,ch=(H-(r-1)*G)/r,lab=ch>=74?30:17;
+      var sc=Math.min(cw/140,(ch-lab)/64);
+      if(sc>bs){bs=sc;best=c;bh=ch;}
+    }
+    d.style.gridTemplateColumns='repeat('+best+',minmax(0,1fr))';
+    d.classList.toggle('tight',bh<74);
+  }
+  window.addEventListener('resize',fit);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&open){open=null;render();}});
   render();
   if(!window.claude||!window.claude.use){document.getElementById('stamp').textContent='אין חיבור לנתונים בתצוגה הזו';return;}
   window.claude.use('db').then(function(db){
