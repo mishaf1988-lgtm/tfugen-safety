@@ -20,6 +20,10 @@ for rel in FILES:
 
 page = open(os.path.join(ROOT, FILES[0]), encoding='utf-8').read()
 check('the office page reads meta/workers', "db.doc('meta/workers')" in page)
+relay = open(os.path.join(ROOT, FILES[1]), encoding='utf-8').read()
+# 18/10/2026, lesson 117 (lessons-archive.md): the watch was missing for an hour and two messages waited 3 hours.
+check('the courier renews the ArtifactComments watch every round', '0א.' in relay and 'ArtifactComments watch' in relay)
+check('a relayed message is re-checked after 10 minutes', '1א.' in relay and 'delay_minutes 10' in relay)
 check('self: an id is caught', ids("var SESS={'x':'session_01JT8Fct6Z6Qv2GbaBBqxtQT'}") == ['session_01JT8Fct6Z6Qv2GbaBBqxtQT'])
 check('self: a placeholder is not', ids('send_message to session_<id>') == [])
 print('\nworker-map-test: %d passed, %d failed' % (passed, failed))
