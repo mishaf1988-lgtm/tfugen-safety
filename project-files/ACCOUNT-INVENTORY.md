@@ -20,6 +20,7 @@
 | `trig_01SpyucrTXeti3BCYJHGtBiL` | תיוק מהמייל ועדכון תוקף | א'-ה' 17:52 | `routine-mail-filing.md` | `session_01Wu6gzvUs3SYbLQ5fiaGayV` |
 | `trig_01RBgewBmxkUzbrbUnm18SST` | בודק התוקף מול המסמכים | מוצ"ש 22:44 | `routine-validity.md` | `session_01Wu6gzvUs3SYbLQ5fiaGayV` |
 | `trig_01EuLgTAknYEbauZ7YpxXRwK` | דוח ציות חודשי | 1 לחודש 08:03 | `routine-compliance.md` | `session_01HPcF58y98mzJ19wJ27EDn5` |
+| `trig_01UbfmW5kw4e7fBzuauumEUc` | סידור תעודות COA של שפכים | 17 לחודש 07:47 | `routine-coa.md` | `session_01HPcF58y98mzJ19wJ27EDn5` |
 | `trig_01Ujrif3LhZNbedmWn64awTW` | מסמכים חדשים בתיקיית הבטיחות | 2 לחודש 06:51 | `routine-od-scan.md` | `session_01Wu6gzvUs3SYbLQ5fiaGayV` |
 | `trig_01FpGaJFSZK9zgXVxXa7uRVu` | נוסח החוקים בנבו | 3 לחודש 06:52 | `routine-nevo-versions.md` | `session_01HPcF58y98mzJ19wJ27EDn5` |
 | `trig_01TJQdnfssHZYrCv32MsPiTQ` | מגמות מנתוני המפעל | 4 לחודש 08:14 | `routine-factory-trends.md` | `session_01HPcF58y98mzJ19wJ27EDn5` |
