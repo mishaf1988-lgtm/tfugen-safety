@@ -34,3 +34,7 @@
 - בגרסת תצוגה מוגדרת מותר גם US, כדי ש-Claude יוכל לבדוק אותה מהענן. כתובת החי לא משתנה.
 - בדיקה: `tests/harness/preview-staging-test.mjs`, 15 בדיקות, שבירה מכוונת של ה-503 נתפסה.
 - `ALLOWED_COUNTRIES` ב-Preview כבר לא נחוץ (C15 בגרסה הראשונה).
+
+## מול גרסת תצוגה אמיתית (18/10/2026)
+
+אחרי C15 (הסוד `STAGING_SUPABASE_SERVICE_ROLE_KEY` ב-Preview): `PREVIEW_URL=https://<hash>.tapugan-safety.pages.dev STAGING_PW=... node tests/staging/e2e.js`. את הכתובת האחרונה מקבלים מ-Cloudflare (`deployments?env=preview`). גרסה שנבנתה לפני שסוד נוסף לא מכירה אותו: לבנות מחדש (`deployments/<id>/retry`). סעיף 6b בודק את `/app.js?p=t1|t2` ואת `/api/codes` (קריאה בלבד).

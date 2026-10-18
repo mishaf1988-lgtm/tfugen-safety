@@ -8,6 +8,9 @@
 // exactly as on a real Cloudflare preview build; nothing here can reach the live one.
 //
 // Run:  STAGING_PW=<the password set a moment ago in auth.users of ldzbjbsumzqjyvtpiwqo> node tests/staging/e2e.js
+// Against a real preview build (18/10/2026, after chrome-queue C15): add PREVIEW_URL=https://<hash>.tapugan-safety.pages.dev
+// (the newest one: Cloudflare API, deployments?env=preview). Then the page, /app.js and /api/* come
+// from Cloudflare itself, and section 8 checks that a server function runs against the test database.
 // Then set a new random password again (project-files/staging/README.md).
 const http = require('http');
 const fs = require('fs');
@@ -18,6 +21,8 @@ const ROOT = path.resolve(__dirname, '../..');
 const HOST = 'e2e.tapugan-safety.pages.dev';
 const TEST_DB = 'ldzbjbsumzqjyvtpiwqo.supabase.co', LIVE_DB = 'znhjtpcltrxxyfjczgvw.supabase.co';
 const PASS = process.env.STAGING_PW || '';
+const PREVIEW = (process.env.PREVIEW_URL || '').replace(/\/+$/, '');
+if (PREVIEW && !/^https:\/\/[a-z0-9-]+\.tapugan-safety\.pages\.dev$/.test(PREVIEW)) { console.log('PREVIEW_URL is not a preview of tapugan-safety'); process.exit(2); }
 let ok = 0, bad = 0;
 const check = (l, c, d) => { if (c) { ok++; console.log('  ✓ ' + l); } else { bad++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 300) : '')); } };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
@@ -32,17 +37,20 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
   }).listen(0, '127.0.0.1');
   await new Promise((r) => srv.on('listening', r));
   const port = srv.address().port;
-  const browser = await pw.chromium.launch({ args: ['--host-resolver-rules=MAP ' + HOST + ' 127.0.0.1'] });
+  const BASE = PREVIEW || 'http://' + HOST + ':' + port;
+  const browser = await pw.chromium.launch(PREVIEW ? {} : { args: ['--host-resolver-rules=MAP ' + HOST + ' 127.0.0.1'] });
   // A phone in Israel (17/10/2026): the incident form turns the local time it shows into UTC by the
   // device's zone, so a browser on UTC would store a shifted hour.
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, timezoneId: 'Asia/Jerusalem', locale: 'he-IL' });
   const hosts = new Set(), errors = [];
   page.on('request', (r) => { try { hosts.add(new URL(r.url()).host); } catch (e) {} });
+  const parts = {};  // /app.js?p=t1|t2 (#1595): the two tails the main script loads
+  page.on('response', (r) => { const m = /\/app\.js\?p=(t[12])/.exec(r.url()); if (m) parts[m[1]] = r.status(); });
   page.on('pageerror', (e) => errors.push(String(e.message || e)));
   page.on('dialog', (d) => d.accept().catch(() => {}));
 
   console.log('\n1. the page on a preview host');
-  await page.goto('http://' + HOST + ':' + port + '/index.html', { waitUntil: 'load' });
+  await page.goto(BASE + '/index.html', { waitUntil: 'load' });
   await page.waitForTimeout(1500);
   const boot = await page.evaluate(() => ({ st: typeof _STAGING !== 'undefined' && _STAGING, sbu: typeof SBU !== 'undefined' && SBU, title: document.title }));
   check('index.html chose the test database', boot.st === true && boot.sbu === 'https://' + TEST_DB, boot);
@@ -214,7 +222,7 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
   const kiosk = await ctx2.newPage();
   kiosk.on('request', (r) => { try { hosts.add(new URL(r.url()).host); } catch (e) {} });
   kiosk.on('pageerror', (e) => errors.push('kiosk: ' + String(e.message || e)));
-  await kiosk.goto('http://' + HOST + ':' + port + '/index.html', { waitUntil: 'load' });
+  await kiosk.goto(BASE + '/index.html', { waitUntil: 'load' });
   await kiosk.waitForTimeout(1500);
   const anon = await kiosk.evaluate(async () => {
     window._captcha = () => Promise.resolve(null);
@@ -238,6 +246,17 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
   }
   await ctx2.close();
 
+  if (PREVIEW) {
+    console.log('\n6b. the preview build itself: its code parts and a server function');
+    check('both tails of the app came from the preview (#1595)', parts.t1 === 200 && parts.t2 === 200, parts);
+    // codes list: admin only, read-only, and it reads server_state through the swapped env.
+    const api = await page.evaluate(async () => {
+      const r = await fetch('/api/codes', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + _sbToken }, body: JSON.stringify({ op: 'list' }) });
+      let j = null; try { j = await r.json(); } catch (e) {}
+      return { status: r.status, codes: j && Array.isArray(j.codes) ? j.codes.length : null, error: j && j.error };
+    });
+    check('a server function accepted the test-database session and answered (/api/codes list)', api.status === 200 && api.codes > 0, api);
+  }
   console.log('\n7. never the live database');
   check('no request went to the live Supabase', !hosts.has(LIVE_DB), [...hosts]);
   check('requests did go to the test Supabase', hosts.has(TEST_DB), [...hosts]);
