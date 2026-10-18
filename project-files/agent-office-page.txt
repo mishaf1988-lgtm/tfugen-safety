@@ -119,6 +119,9 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
 .detail dd{margin:0;min-width:0;overflow-wrap:anywhere}
 .detail dd.wt{color:var(--lamp-wait);font-weight:500}
 .detail .go{align-self:flex-start;display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:8px;background:var(--accent);color:var(--desk);font-weight:700;text-decoration:none}
+.detail .acts{display:flex;flex-wrap:wrap;gap:8px}
+.detail .go.run{border:0;font:inherit;font-weight:700;cursor:pointer;background:var(--lamp-done)}
+.detail .go.run:disabled{opacity:.55;cursor:default}
 .detail .go:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .detail .hint{font-size:12px;color:var(--ink-2)}
 /* 18/10/2026 (Michael: "a chat with each worker, to send tasks from the office, without opening wide chats"). */
@@ -368,6 +371,23 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
         if(/^trig_[A-Za-z0-9]+$/.test(a.id)){
           var go=el('a','go','פתח את המשימה');go.href='https://claude.ai/code/routines/'+a.id;go.target='_blank';go.rel='noopener';
           sec.appendChild(go);
+          // 18/10/2026 (Michael: "a Run now button on every desk"): the page cannot fire a trigger itself
+          // (blocked_by_policy from the page), so the click is a chat row to the operations manager, who
+          // fires it (routine-chat-relay.md, "Run now"). Two taps, since the viewer has no confirm().
+          var run=el('button','go run','\u25B6 \u05e8\u05d5\u05e5 \u05e2\u05db\u05e9\u05d9\u05d5');run.type='button';
+          var rst=el('div','hint');
+          (function(a,run,rst){var armed=0;run.addEventListener('click',function(){
+            if(!dbh){rst.textContent='\u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d1\u05ea\u05e6\u05d5\u05d2\u05d4 \u05d4\u05d6\u05d5';return;}
+            if(!armed){armed=1;run.textContent='\u05dc\u05d7\u05e5 \u05e9\u05d5\u05d1 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8';setTimeout(function(){if(armed===1){armed=0;run.textContent='\u25B6 \u05e8\u05d5\u05e5 \u05e2\u05db\u05e9\u05d9\u05d5';}},5000);return;}
+            armed=2;run.disabled=true;rst.textContent='\u05e9\u05d5\u05dc\u05d7...';
+            var row={worker:'\u05de\u05e0\u05d4\u05dc \u05d4\u05ea\u05e4\u05e2\u05d5\u05dc',from:'michael',text:'\u05e8\u05d5\u05e5 \u05e2\u05db\u05e9\u05d9\u05d5: '+a.name,run:a.id,at:new Date().toISOString(),status:'new'};
+            dbh.collection('chat').add(row).then(function(ref){
+              run.textContent='\u05e0\u05e9\u05dc\u05d7';return live(row.worker,ref&&ref.id,'\u05e8\u05d5\u05e5 \u05e2\u05db\u05e9\u05d9\u05d5: '+a.name+' ('+a.id+')',run).then(function(ok){
+                rst.textContent=ok?'\u05e0\u05e9\u05dc\u05d7 \u05dc\u05de\u05e0\u05d4\u05dc \u05d4\u05ea\u05e4\u05e2\u05d5\u05dc. \u05d4\u05e1\u05d5\u05db\u05df \u05d9\u05ea\u05d7\u05d9\u05dc \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4-\u05e9\u05ea\u05d9\u05d9\u05dd.':'\u05e0\u05e9\u05de\u05e8. \u05d4\u05d3\u05d5\u05d5\u05e8 \u05d9\u05e4\u05e2\u05d9\u05dc \u05d1\u05e1\u05d1\u05d1 \u05d4\u05d1\u05d0. \u05dc\u05d4\u05e4\u05e2\u05dc\u05d4 \u05de\u05d9\u05d9\u05d3\u05d9\u05ea: \u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05de\u05e9\u05d9\u05de\u05d4.';
+              });
+            }).catch(function(err){rst.textContent='\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8, \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 ['+String(err&&err.code||'?')+']';run.disabled=false;armed=0;});
+          });})(a,run,rst);
+          var acts=el('div','acts');acts.appendChild(run);acts.appendChild(go);sec.appendChild(acts);sec.appendChild(rst);
         }
         d.appendChild(sec);
       });
@@ -423,6 +443,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
       dock.textContent='';dock.setAttribute('data-w',sel);dock.classList.toggle('slim',!SESS[sel]);
       var hd=el('div','hd');hd.appendChild(el('i','dot s-'+wstate(sel)));hd.appendChild(el('b',null,'שיחה עם '+sel));
       if(SESS[sel]){var op=el('a','op','פתח את השיחה');op.href='https://claude.ai/code/'+SESS[sel];op.target='_blank';op.rel='noopener';op.title='תשובה מיידית: כותבים בשיחה הקבועה של העובד';hd.appendChild(op);}
+      var rn=el('button',null,'\u25B6 \u05e8\u05d5\u05e5');rn.type='button';rn.title='\u05e8\u05d5\u05e5 \u05e2\u05db\u05e9\u05d9\u05d5: \u05d1\u05d7\u05e8 \u05de\u05e9\u05d9\u05de\u05d4';var w1=sel;rn.addEventListener('click',function(){open=w1;render();});hd.appendChild(rn);
       var det=el('button',null,'פרטים');det.type='button';var w0=sel;det.addEventListener('click',function(){open=w0;render();});
       var x=el('button',null,'✕');x.type='button';x.setAttribute('aria-label','סגור את השיחה');x.addEventListener('click',function(){sel=null;render();});
       hd.appendChild(det);hd.appendChild(x);dock.appendChild(hd);dock.appendChild(chatBox(sel));

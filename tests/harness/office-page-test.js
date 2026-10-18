@@ -33,5 +33,9 @@ check('a future next_run without cron stays', lib.upcoming({ next_run: '2099-01-
 check('cron wins over a stale next_run', lib.upcoming({ cron: '19 * * * *', next_run: '2026-10-18T05:19:00Z' }) !== '2026-10-18T05:19:00Z');
 check('a reply updated in place is new again', lib.seenKey({ id: 'reply-x', text: 'קיבלתי' }) !== lib.seenKey({ id: 'reply-x', text: 'קיבלתי. התשובה המלאה' }));
 check('chat order by time, with or without milliseconds', lib.tms('2026-10-18T16:19:30Z') < lib.tms('2026-10-18T16:19:30.500Z'));
+// Run now (18/10/2026): the page writes a chat row with run = the trigger id, and the operations manager fires it
+const relay = fs.readFileSync(path.join(__dirname, '../../project-files/routine-chat-relay.md'), 'utf8');
+check('Run now writes a chat row with the trigger id', /run:a\.id/.test(js) && /status:'new'/.test(js));
+check('the relay fires only a trigger that has a desk', /2א\. \*\*"רוץ עכשיו"\*\*/.test(relay) && /agents\/<run>/.test(relay) && /fire_trigger/.test(relay));
 console.log('\noffice-page-test: ' + passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);
