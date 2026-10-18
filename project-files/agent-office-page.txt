@@ -69,7 +69,14 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
 .desk .nm{flex:none;font-size:11px;font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   background:var(--desk);border:1px solid var(--line);border-radius:4px;padding:0 4px}
 .desk .nx{flex:none;font-size:10px;line-height:1.2;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
-.desks.tight .nx{display:none}
+.desk .scene{flex:0 1 42%;min-height:28px}
+.desk .tasks{flex:1;min-height:0;overflow:hidden;margin:2px 0 0;padding:4px 6px;list-style:none;text-align:start;
+  background:var(--desk);border:1px solid var(--line);border-radius:4px;display:flex;flex-direction:column;gap:1px}
+.desk .tasks li{display:flex;align-items:center;gap:5px;font-size:11px;line-height:1.35;min-width:0}
+.desk .tasks li.more{color:var(--ink-2);font-weight:500;justify-content:center}
+.desk .tasks li span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.detail .task{border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:6px}
+.detail .task h3{margin:0;font-size:15px;display:flex;align-items:center;gap:6px}
 .scene .screen{fill:var(--screen-off)}
 .s-done .scene .screen{fill:var(--lamp-done)}
 .s-run .scene .screen{fill:var(--lamp-run)}
@@ -184,68 +191,85 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     var waiting=agents.filter(function(a){return a.waiting;});
     inbox.hidden=!waiting.length;inbox.textContent='';
     if(waiting.length){inbox.appendChild(el('i','dot s-wait'));inbox.appendChild(el('span',null,'מחכה לך: '+waiting.map(function(a){return a.name+': '+a.waiting;}).join(' | ')));
-      inbox.onclick=function(){open=waiting[0].id;render();};}
+      inbox.onclick=function(){var t=waiting[0];open=t.worker||t.room||'מנהל התפעול';render();};}
     if(!agents.length){floor.appendChild(el('div','empty','המשרד ריק עדיין. כל בוקר ב-07:38 סוכן קטן עובר על כל הסוכנים ושם כל אחד בשולחן שלו.'));return;}
-    var rooms=ROOMS.slice();
-    agents.forEach(function(a){if(a.room&&rooms.indexOf(a.room)<0)rooms.push(a.room);});
-    var all=agents.slice().sort(function(x,y){
-      return rooms.indexOf(x.room||'חדר המסמכים')-rooms.indexOf(y.room||'חדר המסמכים')
-        ||(x.order||99)-(y.order||99)||String(x.name).localeCompare(String(y.name),'he');});
+    // 18/10/2026 (Michael: "one agent can do several jobs... so the screen is not crowded"): one desk per
+    // worker, that is per working session; its tasks are listed on the desk. Tasks of one worker run one
+    // after another, different workers run at the same time. worker comes from routine-office.md.
+    var ORDER=['מנהל התפעול','רכז המסמכים','רכז הרכש','החוקר','הרדאר','המחשב שלך','תזכורות'];
+    var RANK={fail:5,wait:4,run:3,done:2,never:1};
+    var groups={};
+    agents.forEach(function(t){var w=t.worker||t.room||'מנהל התפעול';(groups[w]=groups[w]||[]).push(t);});
+    var names=Object.keys(groups).sort(function(x,y){
+      var ix=ORDER.indexOf(x),iy=ORDER.indexOf(y);return (ix<0?99:ix)-(iy<0?99:iy)||x.localeCompare(y,'he');});
+    names.forEach(function(w){groups[w].sort(function(x,y){return (x.order||99)-(y.order||99)||String(x.name).localeCompare(String(y.name),'he');});});
+    var wstate=function(w){var best='never';groups[w].forEach(function(t){var s=state(t);if(RANK[s]>RANK[best])best=s;});return best;};
     var room=el('section','room office');var wall=el('div','wall');wall.setAttribute('aria-hidden','true');
     for(var w=0;w<5;w++){if(w===2)wall.appendChild(el('span','sign','משרד הסוכנים'));wall.appendChild(el('span','window'));}
     room.appendChild(wall);
     var desks=el('div','desks');
-    all.forEach(function(a){
-      var s=state(a);
-      var b=el('button','desk s-'+s);b.type='button';b.id='desk-'+a.id;
-      b.setAttribute('aria-expanded',open===a.id?'true':'false');
-      b.title=a.name+': '+LABEL[s];
+    names.forEach(function(w,i){
+      var s=wstate(w),tasks=groups[w];
+      var b=el('button','desk s-'+s);b.type='button';b.id='desk-w'+i;b.setAttribute('data-worker',w);
+      b.setAttribute('aria-expanded',open===w?'true':'false');
+      b.title=w+': '+tasks.length+' משימות';
       b.appendChild(scene(s));
-      b.appendChild(el('span','nm',a.name));
-      // the short line: status, and when it runs next (the record has the rest)
-      b.appendChild(el('span','nx',LABEL[s]+(a.next_run?', הבא '+when(a.next_run).slice(0,5)+' '+when(a.next_run).slice(11):'')));
-      b.addEventListener('click',function(){open=(open===a.id)?null:a.id;render();});
+      b.appendChild(el('span','nm',w));
+      var ul=el('ul','tasks');
+      tasks.forEach(function(t){var li=el('li','s-'+state(t));li.appendChild(el('i','dot'));li.appendChild(el('span',null,t.name));ul.appendChild(li);});
+      b.appendChild(ul);
+      b.addEventListener('click',function(){open=(open===w)?null:w;render();});
       desks.appendChild(b);
     });
     room.appendChild(desks);floor.appendChild(room);
-    var a=all.filter(function(x){return x.id===open;})[0];
-    if(a){
-      var s2=state(a);
-      var d=el('div','detail');d.setAttribute('role','dialog');d.setAttribute('aria-label',a.name);
-      var hd=el('div','hd');hd.appendChild(el('i','dot s-'+s2));hd.appendChild(el('b',null,a.name));
+    if(open&&groups[open]){
+      var d=el('div','detail');d.setAttribute('role','dialog');d.setAttribute('aria-label',open);
+      var hd=el('div','hd');hd.appendChild(el('i','dot s-'+wstate(open)));hd.appendChild(el('b',null,open+' ('+groups[open].length+' משימות)'));
       var x=el('button','x','✕');x.type='button';x.setAttribute('aria-label','סגור');x.addEventListener('click',function(){open=null;render();});hd.appendChild(x);
       d.appendChild(hd);
-      if(a.role)d.appendChild(el('div','role',a.role+(a.room?' | '+a.room:'')));
-      var dl=el('dl');
-      [['סטטוס',LABEL[s2]+(a.last_run?', '+when(a.last_run):'')],['מה עשה',a.did||(a.last_run?'':'עוד לא עבד')],
-       ['מה הבא',(when(a.next_run)||'')+(a.schedule?(a.next_run?' (':'')+a.schedule+(a.next_run?')':''):'')],
-       ['מחכה לך',a.waiting,'wt'],['מה למד',a.learned],['עלות לריצה',a.cost]].forEach(function(r2){
-        if(!r2[1])return;dl.appendChild(el('dt',null,r2[0]));dl.appendChild(el('dd',r2[2]||null,r2[1]));
+      d.appendChild(el('div','hint','המשימות של עובד אחד רצות אחת אחרי השנייה. עובדים שונים רצים במקביל.'));
+      groups[open].forEach(function(a){
+        var s2=state(a),sec=el('section','task s-'+s2);
+        var h=el('h3');h.appendChild(el('i','dot'));h.appendChild(document.createTextNode(' '+a.name));sec.appendChild(h);
+        if(a.role)sec.appendChild(el('div','role',a.role));
+        var dl=el('dl');
+        [['סטטוס',LABEL[s2]+(a.last_run?', '+when(a.last_run):'')],['מה עשה',a.did||(a.last_run?'':'עוד לא עבד')],
+         ['מה הבא',(when(a.next_run)||'')+(a.schedule?(a.next_run?' (':'')+a.schedule+(a.next_run?')':''):'')],
+         ['מחכה לך',a.waiting,'wt'],['מה למד',a.learned],['עלות לריצה',a.cost]].forEach(function(r2){
+          if(!r2[1])return;dl.appendChild(el('dt',null,r2[0]));dl.appendChild(el('dd',r2[2]||null,r2[1]));
+        });
+        sec.appendChild(dl);
+        // 17/10/2026 (Michael: "all my agents must work from the project"): the Routine's own page
+        // in claude.ai lists every run in full and has Run now. The task id is the trigger id.
+        if(/^trig_[A-Za-z0-9]+$/.test(a.id)){
+          var go=el('a','go','פתח את המשימה');go.href='https://claude.ai/code/routines/'+a.id;go.target='_blank';go.rel='noopener';
+          sec.appendChild(go);
+        }
+        d.appendChild(sec);
       });
-      d.appendChild(dl);
-      // 17/10/2026 (Michael: "all my agents must work from the project"): the Routine's own page
-      // in claude.ai lists every run in full and has Run now. The desk id is the trigger id.
-      if(/^trig_[A-Za-z0-9]+$/.test(a.id)){
-        var go=el('a','go','פתח את הסוכן');go.href='https://claude.ai/code/routines/'+a.id;go.target='_blank';go.rel='noopener';
-        d.appendChild(go);
-        d.appendChild(el('div','hint','שם: כל הריצות במלואן, וכפתור Run now להפעלה ביד.'));
-      }
       floor.appendChild(d);
     }
     fit();
   }
-  // All desks on one screen: try every column count and keep the one that draws the people largest.
+  // All desks on one screen: try every column count and keep the one with the largest desks.
   function fit(){
     var d=document.querySelector('.office .desks');if(!d)return;
     var n=d.children.length;if(!n)return;
-    var W=d.clientWidth-12,H=d.clientHeight-12,G=4,best=1,bs=-1,bh=0;
+    var W=d.clientWidth-12,H=d.clientHeight-12,G=6,best=1,bs=-1;
     for(var c=1;c<=n;c++){
-      var r=Math.ceil(n/c),cw=(W-(c-1)*G)/c,ch=(H-(r-1)*G)/r,lab=ch>=74?30:17;
-      var sc=Math.min(cw/140,(ch-lab)/64);
-      if(sc>bs){bs=sc;best=c;bh=ch;}
+      var r=Math.ceil(n/c),cw=(W-(c-1)*G)/c,ch=(H-(r-1)*G)/r;
+      var sc=Math.min(cw/160,ch/200);
+      if(sc>bs){bs=sc;best=c;}
     }
     d.style.gridTemplateColumns='repeat('+best+',minmax(0,1fr))';
-    d.classList.toggle('tight',bh<74);
+    // A list longer than its desk shows what fits and "ועוד N"; the click opens all of them.
+    Array.prototype.forEach.call(d.querySelectorAll('.tasks'),function(ul){
+      var more=ul.querySelector('.more');if(more)ul.removeChild(more);
+      var li=Array.prototype.slice.call(ul.children);li.forEach(function(x){x.style.display='';});
+      if(ul.scrollHeight<=ul.clientHeight+1)return;
+      more=el('li','more');ul.appendChild(more);
+      for(var k=li.length-1;k>0&&ul.scrollHeight>ul.clientHeight+1;k--){li[k].style.display='none';more.textContent='ועוד '+(li.length-k);}
+    });
   }
   window.addEventListener('resize',fit);
   document.addEventListener('keydown',function(e){if(e.key==='Escape'&&open){open=null;render();}});

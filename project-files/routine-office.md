@@ -8,7 +8,7 @@
 
 **קישור לכל סוכן (17/10/2026, מיכאל: "הכל חייב לעבוד שם, כל הסוכנים שלי"):** בפרטי השולחן כפתור "פתח את הסוכן" ל-`https://claude.ai/code/routines/<מזהה>`: כל הריצות במלואן ו-Run now. כך כל סוכן נראה ומופעל מהטלפון ומכל פרויקט, בלי מחבר Routines בצ'אט. בעמוד בלבד, השדות לא השתנו.
 
-**שדות של שולחן:** `name`, `role` (שורה אחת), `room` (אחד מ: חדר המחקר, חדר המסמכים, חדר הדוחות, תזכורות), `order`, `schedule` (בעברית), `status` (`done` / `run` / `fail` / `never`), `last_run`, `next_run` (ISO), `did`, `learned`, `waiting` (ריק = לא מחכה), `cost`.
+**שדות של שולחן:** `name`, `worker`, `role` (שורה אחת), `room` (אחד מ: חדר המחקר, חדר המסמכים, חדר הדוחות, תזכורות), `order`, `schedule` (בעברית), `status` (`done` / `run` / `fail` / `never`), `last_run`, `next_run` (ISO), `did`, `learned`, `waiting` (ריק = לא מחכה), `cost`.
 
 **הפרומפט (הטריגר קורא את הקובץ ומבצע את מה שבין הקווים):**
 
@@ -21,6 +21,7 @@
    - status: last_run.status SUCCEEDED = done, FAILED = fail; fired_at בלי finished_at = run; אין last_run = never.
    - last_run = last_run.finished_at (או fired_at), next_run = next_run_at. schedule: התזמון בעברית מטבלת ה-Routines ב-project-files/ACCOUNT-INVENTORY.md.
    - name: השם מאותה טבלה (קצר). role: שורה אחת, מה הסוכן עושה, מהשורה הראשונה של קובץ ההוראות שלו (או מהפרומפט בטריגר).
+   - worker (18/10/2026, מיכאל: "בצע: חמישה עובדים, משימות על כל שולחן"): לפי persistent_session_id של הטריגר. session_01JT8Fct6Z6Qv2GbaBBqxtQT = מנהל התפעול, session_01Wu6gzvUs3SYbLQ5fiaGayV = רכז המסמכים, session_012U83ozxzQjH8BcQ2AvykSf = רכז הרכש, session_019o8PKShtacN2m1BCbYdnQj = החוקר. בלי שיחה קבועה: רדאר רגולציה = הרדאר, "תור משימות" (Cowork) = המחשב שלך, run_once_at = תזכורות. שיחה אחרת שלא ברשימה: "עובד חדש" ושורה בהודעה האחרונה. העמוד מציג שולחן לכל worker, והמשימות שלו ברשימה.
    - room: חדר המחקר = researcher, inventor, radar-learn, רדאר רגולציה, retro, preferences. חדר המסמכים = mail-filing, validity, od-scan, quotes, supplier-followup, cowork-check, תור משימות. חדר הדוחות = compliance, inspector, factory-trends, nevo-versions, talk-field, talk-publish, staging-e2e. תזכורות = טריגר חד-פעמי (run_once_at). סוכן חדש שלא ברשימה: לפי מה שהוא עושה.
    - did ו-learned: השורה האחרונה של הסוכן ב-project-files/agent-log.md (עמודת התוצאה, וה"למדתי"), עד 200 תווים כל אחד. אין שורה = ריק.
    - waiting: מה שכתוב באותה שורה אחרי "מחכה למיכאל", אחרת ריק. לא להמציא.
