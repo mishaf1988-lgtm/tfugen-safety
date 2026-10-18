@@ -31,3 +31,6 @@ select value, updated_at from public.server_state where key = 'od_scan'
 6. חכה לשיחה-הבת: get_session כל כמה דקות עד שהיא לא עובדת (עד 30 דקות), ואז list_events (kinds ["result"]) לתוצאה.
 7. הודעה אחרונה: אילו מסמכים חדשים נמצאו, מה נכנס ל-factory.md, הגרסה החדשה וקישור ל-PR. אם משהו נכשל: בדיוק מה.
 ---
+
+
+**18/10/2026: עבר לרכז המסמכים** (מיכאל בשאלון: "בצע: לפי תחום"): `trig_01Ujrif3LhZNbedmWn64awTW` לתוך `session_01Wu6gzvUs3SYbLQ5fiaGayV`; הקודם `trig_01PgHBDZYCBf8M9GsytoVMjd` כובה.
