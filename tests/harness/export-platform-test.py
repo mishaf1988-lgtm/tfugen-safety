@@ -69,5 +69,26 @@ try:
     check("...and the edit is still there", "edited in safety-platform" in open(os.path.join(clone, "CLAUDE.md"), encoding="utf-8").read())
 finally:
     shutil.rmtree(clone, ignore_errors=True)
+
+# 18/10/2026 (retro): the scan never proved it catches anything. Each leak below is appended to a
+# code line (not a comment, comments are rewritten) of a copied file, the export must stop with
+# exit 1 and name the file; the file is restored afterwards. Spelled in parts so this file is clean.
+victim = os.path.join(ROOT, "functions", "api", "od-read.js")
+orig = open(victim, "rb").read()
+try:
+    for label, leak in (("a bare owner user name", "sviva" + "_x"), ("the owner phone", "0547" + "940073"),
+                        ("the company name", "Tapu" + "gan"), ("the owner mail", "sviva" + "@x.co")):
+        open(victim, "wb").write(orig + ("\nconst leak = '" + leak + "';\n").encode("utf-8"))
+        tmp = tempfile.mkdtemp(prefix="platform-leak-")
+        try:
+            p = subprocess.run(["node", os.path.join(ROOT, "tools", "export-platform.mjs"), tmp],
+                               cwd=ROOT, capture_output=True, text=True, encoding="utf-8", timeout=240)
+            log = (p.stdout or "") + (p.stderr or "")
+            check("a leak is caught (" + label + "): exit 1 and the file is named", p.returncode == 1 and "od-read.js" in log, (p.returncode, log[-400:]))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+finally:
+    open(victim, "wb").write(orig)
+check("the injected file is restored", open(victim, "rb").read() == orig)
 print("\n%d passed, %d failed" % (ok, bad))
 sys.exit(1 if bad else 0)

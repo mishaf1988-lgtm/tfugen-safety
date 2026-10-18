@@ -104,19 +104,23 @@ export async function onRequest({ request, env }) {
   // changes, so sending both in one PUT could let the trigger wipe the flag
   // that same statement set.
   const existingApp = (targetUser && targetUser.app_metadata) || {};
-  const appResp = await fetch(SUPABASE_URL + '/auth/v1/admin/users/' + targetUser.id, {
-    method: 'PUT',
-    headers: {
-      apikey: serviceKey,
-      Authorization: 'Bearer ' + serviceKey,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ app_metadata: Object.assign({}, existingApp, { must_change_password: true }) }), signal: tmo(SB_MS)
-  });
-  if (!appResp.ok) {
-    const errText = await appResp.text();
-    return jsonResp({ error: 'password reset flag failed (' + appResp.status + '): ' + errText.slice(0, 300) }, 502, cors);
-  }
+  // The password has already changed. If this second request fails, the admin
+  // must still get the password (a 502 here would lock the user out with
+  // nobody knowing the new one); the browser still forces the change through
+  // user_metadata, and flagFailed tells the caller the RLS flag is missing.
+  let flagFailed = false;
+  try {
+    const appResp = await fetch(SUPABASE_URL + '/auth/v1/admin/users/' + targetUser.id, {
+      method: 'PUT',
+      headers: {
+        apikey: serviceKey,
+        Authorization: 'Bearer ' + serviceKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ app_metadata: Object.assign({}, existingApp, { must_change_password: true }) }), signal: tmo(SB_MS)
+    });
+    if (!appResp.ok) flagFailed = true;
+  } catch (e) { flagFailed = true; }
 
-  return jsonResp({ success: true, username, password: newPassword }, 200, cors);
+  return jsonResp(flagFailed ? { success: true, username, password: newPassword, flagFailed: true } : { success: true, username, password: newPassword }, 200, cors);
 }
