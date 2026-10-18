@@ -59,8 +59,12 @@ try:
     check("a file the export no longer makes is removed", not os.path.exists(os.path.join(clone, "old-file.txt")))
     check("the clone gets the app", os.path.exists(os.path.join(clone, "index.html")) and os.path.exists(os.path.join(clone, "CLAUDE.md")))
     check("the export leaves a manifest", os.path.exists(os.path.join(clone, ".export-manifest.json")))
+    # 18/10/2026: a Windows checkout has CRLF; the same file must not count as edited there.
+    cm = os.path.join(clone, "CLAUDE.md")
+    with open(cm, "rb") as f: lf = f.read()
+    with open(cm, "wb") as f: f.write(lf.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
     p = run("--dry-run"); log = (p.stdout or "") + (p.stderr or "")
-    check("--dry-run after an export: nothing edited, exit 0", p.returncode == 0 and "nothing edited there" in log, log[-400:])
+    check("--dry-run after an export: nothing edited, exit 0 (CLAUDE.md in CRLF still counts as unedited)", p.returncode == 0 and "nothing edited there" in log, log[-400:])
     check("the line's own files never appear in the list", not any(k in log for k in ("handoff.md", "checklist-day1.md", "demo/", "docs/", "marketing/", "automation/", "ci/", ".github/", ".gitignore")), log[-400:])
     p = run(); log = (p.stdout or "") + (p.stderr or "")
     check("a second export with nothing edited there passes without --force", p.returncode == 0 and "clean:" in log, log[-600:])
