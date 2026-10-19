@@ -21,13 +21,13 @@
 | `trig_01URTB4VwhD3cc1cdDhkCvA7` | תיוק מהמייל ועדכון תוקף 10:52 | א'-ה' 10:52 | `routine-mail-filing.md` | `session_01HK2YJUpeGksTy3KHZ2sGCm` |
 | `trig_01CyB8c6LpkB3ArivGH4oQku` | תיוק מהמייל ועדכון תוקף 13:52 | א'-ה' 13:52 | `routine-mail-filing.md` | `session_01HK2YJUpeGksTy3KHZ2sGCm` |
 | `trig_01Mg4hEDfQKBBHw2sbZTTUAH` | בודק התוקף מול המסמכים | מוצ"ש 22:44 | `routine-validity.md` | `session_01HK2YJUpeGksTy3KHZ2sGCm` |
-| `trig_01EuLgTAknYEbauZ7YpxXRwK` | דוח ציות חודשי | 1 לחודש 08:03 | `routine-compliance.md` | `session_01HPcF58y98mzJ19wJ27EDn5` |
-| `trig_01UbfmW5kw4e7fBzuauumEUc` | סידור תעודות COA של שפכים | 17 לחודש 07:47 | `routine-coa.md` | `session_01HPcF58y98mzJ19wJ27EDn5` |
+| `trig_01ARtxNGLkCWwQyY1ofKoVfX` | דוח ציות חודשי | 1 לחודש 08:03 | `routine-compliance.md` | `session_01FXKjCZExakD2sbqi9eZVin` |
+| `trig_01LFRERke4X4ehYiUYaE44bK` | סידור תעודות COA של שפכים | 17 לחודש 07:47 | `routine-coa.md` | `session_01FXKjCZExakD2sbqi9eZVin` |
 | `trig_015cu3tQjAe6oJsGziXAfZJN` | מסמכים חדשים בתיקיית הבטיחות | 2 לחודש 06:51 | `routine-od-scan.md` | `session_01HK2YJUpeGksTy3KHZ2sGCm` |
-| `trig_01FpGaJFSZK9zgXVxXa7uRVu` | נוסח החוקים בנבו | 3 לחודש 06:52 | `routine-nevo-versions.md` | `session_01HPcF58y98mzJ19wJ27EDn5` |
-| `trig_01TJQdnfssHZYrCv32MsPiTQ` | מגמות מנתוני המפעל | 4 לחודש 08:14 | `routine-factory-trends.md` | `session_01HPcF58y98mzJ19wJ27EDn5` |
-| `trig_01RdFSKMnBXmENSsUd1i9XsN` | המפקח המדומה | 5 לחודש 08:16 | `routine-inspector.md` | `session_01HPcF58y98mzJ19wJ27EDn5` |
-| `trig_01NbzPG4cRxNkLp4eqbAHaXN` | מודל ההעדפות של מיכאל | 6 לחודש 08:21 | `routine-preferences.md` | `session_01HPcF58y98mzJ19wJ27EDn5` |
+| `trig_019NrPDFDdsfkYrmKcLcABw5` | נוסח החוקים בנבו | 3 לחודש 06:52 | `routine-nevo-versions.md` | `session_01FXKjCZExakD2sbqi9eZVin` |
+| `trig_012v3HyJ1xpKcKE177emqtji` | מגמות מנתוני המפעל | 4 לחודש 08:14 | `routine-factory-trends.md` | `session_01FXKjCZExakD2sbqi9eZVin` |
+| `trig_01PCAkeVUANPkzuCgmszt9k5` | המפקח המדומה | 5 לחודש 08:16 | `routine-inspector.md` | `session_01FXKjCZExakD2sbqi9eZVin` |
+| `trig_015nyt8LcbxN3pPj3fEfKjcm` | מודל ההעדפות של מיכאל | 6 לחודש 08:21 | `routine-preferences.md` | `session_01FXKjCZExakD2sbqi9eZVin` |
 | `trig_01SogHpEgS3nkMoworDxmfTh` | מעקב הצעות מחיר | מוצ"ש 22:47 | `routine-quotes.md` | `session_012U83ozxzQjH8BcQ2AvykSf` |
 | `trig_01DskPcZDAt1uAjsZgPyWkam` | חוקר העוזר | א'-ה' 06:47 | `routine-researcher.md` | `session_019o8PKShtacN2m1BCbYdnQj` |
 | `trig_01EDtjPSEhnt86YLLNFwxxm9` | רטרו יומי | א'-ה' 07:52 | `retro-prompt.md` | `session_019o8PKShtacN2m1BCbYdnQj` |
@@ -43,7 +43,7 @@
 | `trig_01AVa8RiuYtaeXLrtkUsZqKH` | בדיקת הניסוי השבועית | ד' 06:29 | `routine-staging-e2e.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
 | `trig_01Fm5346rt5BNgeF49DqGbyz` | המגייס: החלפה שבועית | ו' 13:07 (ראשונה 23/10/2026) | `routine-rotation.md` | `session_01Q3LMWMr65icNtoe5zLifqr` (המגייס, נפתחה ביד על ידי מיכאל, דור 1) |
 | `trig_01Py8YXifD3HtnQUmFgoTRft` | הדוור של הצ'אט במשרד | א'-ה' 08:11, 12:11, 16:11 | `routine-chat-relay.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
-| `trig_011JPcX7WnZeJXJqKi6rvDDy` | בדיקת זמני Supabase ועלויות הסוכנים (חד-פעמי) | 22/10/2026 17:30 | הפרומפט בטריגר | `session_01HPcF58y98mzJ19wJ27EDn5` (רכז הדוחות; מיכאל 18/10/2026: "בדיקה של עלויות יכולה להיות תחת סוכן אחד"; הקודם `trig_01TFsrFwbqQM9fAoT8GfiobF` כובה) |
+| `trig_01Wm6Nzy3sYFXusWuA6H3VYJ` | בדיקת זמני Supabase ועלויות הסוכנים (חד-פעמי) | 22/10/2026 17:30 | הפרומפט בטריגר | `session_01FXKjCZExakD2sbqi9eZVin` (רכז הדוחות; מיכאל 18/10/2026: "בדיקה של עלויות יכולה להיות תחת סוכן אחד"; הקודם `trig_01TFsrFwbqQM9fAoT8GfiobF` כובה) |
 | `trig_01FKenmRrWQ22S1566BReYri` | מנהל השיווק: פעמיים בשבוע (קו העסק) | א' ו-ד' 08:53 (ראשונה 21/10/2026) | `marketing/routine-marketing.md` ב-safety-platform | `session_01DRrGQfp26adBiipx3PkZdA` |
 | `trig_01TofqtqNWtrXMnqiNjHq1nZ` | העוזר בוואטסאפ | א'-ה' 07:47 (עדכון בוקר) + מפעיל API (הודעה ממיכאל דרך `/api/wa-hook`) | `routine-wa-assistant.md` | `session_01ANNSTD9gftqbzoeDj9Fkmv` (Sonnet) |
 
