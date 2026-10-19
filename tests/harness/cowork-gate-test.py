@@ -14,4 +14,7 @@ check("batch entry without בצע: denied", deny({"action": "batch", "writes": [
 check("set with בצע: passes", ad({"action": "set", "collection": "cowork_tasks", "doc_id": "x", "data": {"status": "open", "approved_by_michael": B + ": ליצור תיקייה"}}) == "")
 check("report-back update: passes", ad({"action": "update", "collection": "cowork_tasks", "doc_id": "x", "data": {"filed_checked": "18/10/2026"}}) == "")
 check("other collection and other tools: pass", ad({"action": "set", "collection": "chat", "doc_id": "x", "data": {"status": "open"}}) == "" and run("cowork-gate.py", {"tool_name": "Bash", "tool_input": {"command": "ls"}}) == "")
+check("approval that only contains the letters (לבצע): denied", deny({"action": "set", "collection": "cowork_tasks", "doc_id": "x", "data": {"status": "open", "approved_by_michael": "האם לבצע?"}}))
+check("update from a file (file_path) into cowork_tasks: denied", deny({"action": "update", "collection": "cowork_tasks", "doc_id": "x", "file_path": "/tmp/t.json"}))
+check("update from a file into another collection: passes", ad({"action": "update", "collection": "chat", "doc_id": "x", "file_path": "/tmp/t.json"}) == "")
 done()

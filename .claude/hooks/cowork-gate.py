@@ -10,21 +10,25 @@ Updates that only report back (filed_checked, report, status done) pass.
 
 Test:  echo '{"tool_name":"ArtifactData","tool_input":{"action":"set","collection":"cowork_tasks","doc_id":"x","data":{"status":"open","approved_by_michael":"שאלון"}}}' | python3 .claude/hooks/cowork-gate.py
 """
-import json, sys
+import json, re, sys
 sys.stdin.reconfigure(encoding="utf-8")
 sys.stdout.reconfigure(encoding="utf-8")
 
-WORD = "בצע"  # בצע
+# whole word only: "לבצע", "מבצע" and "לא לבצע" are not an approval (retro 19/10/2026)
+WORD = re.compile(r"(?<![\u0590-\u05ff])בצע(?![\u0590-\u05ff])")
 
 
 def bad(op, coll, data):
     """Reason string if this write would queue a Cowork task without בצע, else None."""
-    if coll != "cowork_tasks" or not isinstance(data, dict):
+    if coll != "cowork_tasks":
         return None
+    if not isinstance(data, dict):
+        # an update that takes its fields from a file (file_path) cannot be inspected: deny
+        return "write from a file (file_path) to cowork_tasks cannot be checked" if data == "FILE" else None
     appr = data.get("approved_by_michael")
     opens = data.get("status") == "open"
     if op == "set" or opens or appr is not None:
-        if not isinstance(appr, str) or WORD not in appr:
+        if not isinstance(appr, str) or not WORD.search(appr):
             return "approved_by_michael בלי המילה בצע"
     return None
 
@@ -40,7 +44,10 @@ def main():
     act = ti.get("action")
     writes = []
     if act in ("set", "update"):
-        writes = [(act, ti.get("collection"), ti.get("data"))]
+        data = ti.get("data")
+        if data is None and ti.get("file_path"):
+            data = "FILE"
+        writes = [(act, ti.get("collection"), data)]
     elif act == "batch":
         writes = [(w.get("op"), w.get("collection"), w.get("data")) for w in ti.get("writes") or [] if isinstance(w, dict)]
     for op, coll, data in writes:
