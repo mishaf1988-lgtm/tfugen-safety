@@ -48,6 +48,16 @@ const MACHINE_PATHS = ['/api/trustee-notify', '/api/trustee-log', '/api/mail-inb
 // with the same secret header. Only that one call is let through: the rest of
 // /api/vitre (employee phones, SMS) is a browser endpoint and stays behind the
 // gate. The endpoint still checks the secret itself; this only skips the country.
+// Meta's crawler (19/10/2026, Michael through Chrome: "facebookexternalhit gets 403 on /privacy, so
+// Meta will not publish the WhatsApp app"). It calls from abroad, so the country gate refused it.
+// Only the two policy pages, only GET/HEAD, and without X-Robots-Tag on that answer. The pages are
+// public text with no data; a spoofed user agent gets the same two pages and nothing else.
+export const META_POLICY_PATHS = ['/privacy', '/privacy.html', '/user-data-deletion', '/user-data-deletion.html'];
+const META_UA = /facebookexternalhit|Facebot/i;
+function metaCrawler(request, path) {
+  return META_POLICY_PATHS.indexOf(path) >= 0 && (request.method === 'GET' || request.method === 'HEAD')
+    && META_UA.test(request.headers.get('user-agent') || '');
+}
 function machineCall(request, path) {
   if (MACHINE_PATHS.indexOf(path) >= 0) return true;
   if (path !== '/api/vitre' || request.method !== 'POST' || !request.headers.get('x-notify-secret')) return false;
@@ -155,6 +165,15 @@ export async function onRequest(context) {
     return new Response(JSON.stringify({ error: 'preview: test database not configured', why: previewWhy }), { status: 503, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...MUST_HAVE } });
   }
   if (!preview && machineCall(request, path)) return next();
+  if (!preview && metaCrawler(request, path)) {
+    const res = await next();
+    try {
+      const out = new Response(res.body, res);
+      Object.keys(MUST_HAVE).forEach(function (k) { if (k !== 'X-Robots-Tag' && !out.headers.get(k)) out.headers.set(k, MUST_HAVE[k]); });
+      out.headers.delete('X-Robots-Tag');
+      return out;
+    } catch (e) { return res; }
+  }
 
   const country = (request.cf && request.cf.country) || null;
   const allowed = String((env && env.ALLOWED_COUNTRIES) || DEFAULT_ALLOWED)
