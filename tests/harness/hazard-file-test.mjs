@@ -421,6 +421,15 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   check('... without a valid session: refused, nothing removed', bad.status === 401 && JSON.parse(w.state.hazard_xlsm_dropped).items.length === 1, bad.status);
   globalThis.fetch = wf;
 
+  console.log('\n3b2. a run with nothing to write clears an earlier error (19/10/2026)');
+  w = world({ file: src });
+  await runFileLocked(ENV, 'xlsm', true);
+  w.state.hazard_xlsm_err = 'The operation was aborted due to timeout';
+  w.meta.cTag = w.state.hazard_xlsm_ctag; // the file in OneDrive is the copy we wrote
+  const putsBefore = w.puts.length;
+  r = await runFileLocked(ENV, 'xlsm', false);
+  check('unchanged run (reason unchanged): nothing written, the old timeout cleared, ok_at set', r.ok && r.reason === 'unchanged' && w.puts.length === putsBefore && w.state.hazard_xlsm_err === '' && !!w.state.hazard_xlsm_ok_at, [r, w.state.hazard_xlsm_err, w.puts.length - putsBefore]);
+
   console.log('\n3c. one run per file (29/09: overlapping runs wrote an old copy)');
   w = world({ file: src, lockHeld: true });
   r = await runFileLocked(ENV, 'xlsm', true);

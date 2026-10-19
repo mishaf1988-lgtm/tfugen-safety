@@ -137,11 +137,13 @@ export function assess(st, nowMs, connected, started, vitre, lat, slowOpen) {
     const err = v(p.k + '_err');
     if (SECRET_RE.test(err)) return; // said once above
     const errAt = Date.parse(v(p.k + '_err_at') || at(p.k + '_err')) || 0;
-    if (err) {
+    const ok = Date.parse(v(p.k + '_ok_at')) || 0;
+    // 19/10/2026 (mail "timeout since 19:15", the 19:45 run succeeded): a run that finished
+    // after the error clears it, even when nothing was written and err stayed in server_state.
+    if (err && !(errAt && ok > errAt)) {
       if (nowMs - errAt >= ERR_MS) out.push({ key: 'err:' + p.k, title: p.name + ': \u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e2\u05d3\u05db\u05d5\u05df', detail: String(err).substring(0, 200) + (errAt ? ' (\u05de\u05d0\u05d6 ' + ilTime(new Date(errAt).toISOString()) + ')' : '') });
       return; // a fresh error is the next run's to clear; it is not also "stale"
     }
-    const ok = Date.parse(v(p.k + '_ok_at')) || 0;
     const since = ok || Date.parse(started) || nowMs;
     if (connected && nowMs - since >= (ok ? STALE_MS : FIRST_MS)) {
       out.push({ key: 'stale:' + p.k, title: p.name + ': \u05dc\u05d0 \u05d4\u05ea\u05e2\u05d3\u05db\u05df', detail: ok ? '\u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05de\u05d5\u05e6\u05dc\u05d7\u05ea \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: ' + ilTime(new Date(ok).toISOString()) + '. \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d0\u05d5 \u05d1\u05e7\u05d5\u05d1\u05e5 \u05dc\u05d0 \u05e2\u05d5\u05d1\u05e8\u05d9\u05dd \u05dc\u05e6\u05d3 \u05d4\u05e9\u05e0\u05d9.' : '\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e8\u05e9\u05de\u05d4 \u05d1\u05d3\u05d9\u05e7\u05d4 \u05de\u05d5\u05e6\u05dc\u05d7\u05ea.' });

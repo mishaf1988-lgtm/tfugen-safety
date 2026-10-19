@@ -834,7 +834,9 @@ export async function runFileLocked(env, which, force, opt) {
   if (r && r.busy) return { ok: true, file: which, pushed: false, reason: 'busy' };
   // Proof of life for the sync watchdog (_watchdog.js): a run that finished,
   // written or unchanged, means the file and the app agree.
-  if (r && r.ok) await stateSet(env, { ['hazard_' + which + '_ok_at']: new Date().toISOString() }).catch(() => {});
+  // A run with nothing to write also clears an earlier error (19/10/2026: the tours screen and the
+  // watchdog kept a timeout from 19:15 open after the 19:45 run succeeded).
+  if (r && r.ok) await stateSet(env, { ['hazard_' + which + '_ok_at']: new Date().toISOString(), ['hazard_' + which + '_err']: '' }).catch(() => {});
   return r;
 }
 
