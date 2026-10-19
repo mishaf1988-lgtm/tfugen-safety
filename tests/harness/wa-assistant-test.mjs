@@ -46,6 +46,8 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   check('a read receipt is not a message', st.length === 0);
   const ms = inboundMessages(JSON.parse(msgBody('972-50', 'wamid.1', 'hi', 'wamid.C')));
   check('a text message: from digits, text, context', ms.length === 1 && ms[0].from === '97250' && ms[0].text === 'hi' && ms[0].context === 'wamid.C', ms);
+  const bt = ASSISTANT_TEMPLATE.components[0].text;
+  check('the template body does not start or end with the parameter (Meta: create 400)', !/^\s*\{\{1\}\}/.test(bt) && !/\{\{1\}\}\s*$/.test(bt), bt);
   check('the template line has no newline', waOneLine('a\n\nb   c') === 'a | b c');
   check('the assistant template is a utility template with one parameter', ASSISTANT_TEMPLATE.category === 'UTILITY' && /\{\{1\}\}/.test(ASSISTANT_TEMPLATE.components[0].text) && !/\{\{2\}\}/.test(ASSISTANT_TEMPLATE.components[0].text));
 

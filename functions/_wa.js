@@ -9,12 +9,13 @@ import { SITE, SB_TIMEOUT_MS, tmo } from './_shared.js';
 
 export const META_API_VERSION = 'v25.0';
 // The utility template for an update when the 24 hour window is closed. One parameter, the text.
+// Meta refuses a body that starts or ends with a parameter (create 400, 19/10/2026), so text surrounds {{1}}.
 // Meta rejects newlines and runs of spaces in a parameter, so waOneLine() flattens it first.
 export const ASSISTANT_TEMPLATE = {
   name: SITE.waTemplates.assistant,
   category: 'UTILITY',
   language: 'he',
-  components: [{ type: 'BODY', text: '\u05e2\u05d3\u05db\u05d5\u05df \u05de\u05d4\u05e2\u05d5\u05d6\u05e8: {{1}}',
+  components: [{ type: 'BODY', text: '\u05e2\u05d3\u05db\u05d5\u05df \u05de\u05d4\u05e2\u05d5\u05d6\u05e8:\n\n{{1}}\n\n\u05dc\u05ea\u05e9\u05d5\u05d1\u05d4, \u05db\u05ea\u05d1\u05d5 \u05db\u05d0\u05df.',
     example: { body_text: [['\u05e8\u05db\u05d6 \u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05ea\u05d9\u05d9\u05e7 3 \u05e7\u05d1\u05e6\u05d9\u05dd. \u05de\u05d7\u05db\u05d4 \u05dc\u05da: \u05d0\u05d9\u05e9\u05d5\u05e8 \u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 \u05d7\u05d3\u05e9\u05d4.']] } }],
 };
 // Meta error codes that mean "outside the customer service window, send a template".
