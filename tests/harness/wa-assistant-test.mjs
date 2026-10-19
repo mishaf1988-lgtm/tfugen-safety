@@ -77,6 +77,13 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   check('no saved owner number: nothing is fired', fires.length === 2);
   owner = OWNER;
   check('fireText marks a non-text message', /type: image/.test(fireText({ id: 'w', ts: 0, type: 'image', text: '', context: '' }, '')));
+  check('the last call is noted without number or text', state.wa_hook_last && state.wa_hook_last.sig === true && !JSON.stringify(state.wa_hook_last).includes(OWNER), state.wa_hook_last);
+  const bad = msgBody(OWNER, 'wamid.S', 'x');
+  await post(bad, await sign(bad, 'wrong'));
+  check('a wrong secret is noted as sig false', state.wa_hook_last && state.wa_hook_last.sig === false && state.wa_hook_last.secret_set === true, state.wa_hook_last);
+  const ok2 = msgBody(OWNER, 'wamid.F', 'secret words');
+  await post(ok2, await sign(ok2, ENV.META_APP_SECRET));
+  check('a fire is noted with its status, not the text', state.wa_hook_last && state.wa_hook_last.fired === 1 && state.wa_hook_last.fire_status === 200 && !JSON.stringify(state.wa_hook_last).includes('secret words'), state.wa_hook_last);
 
   console.log('\n3. wa_me: only to Michael');
   const call = async (body) => (await rdb({ request: new Request('https://x/api/routine-db', { method: 'POST', headers: { 'x-routine-key': 'k-1', 'content-type': 'application/json' }, body: JSON.stringify(body) }), env: ENV })).json();
