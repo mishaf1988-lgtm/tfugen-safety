@@ -642,7 +642,7 @@ export async function onRequest(context) {
       if (body.fire_probe && out.fire_set) {
         const fr = await g(env.ASSISTANT_FIRE_URL, { method: 'POST',
           headers: { Authorization: 'Bearer ' + env.ASSISTANT_FIRE_TOKEN, 'anthropic-beta': 'experimental-cc-routine-2026-04-01', 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: '[בדיקת חיבור מהשרת, לא הודעה ממיכאל] לסיים בשורה אחת, בלי wa_me.' }) });
+          body: JSON.stringify({ text: '[\u05d1\u05d3\u05d9\u05e7\u05ea \u05d7\u05d9\u05d1\u05d5\u05e8 \u05de\u05d4\u05e9\u05e8\u05ea, \u05dc\u05d0 \u05d4\u05d5\u05d3\u05e2\u05d4 \u05de\u05de\u05d9\u05db\u05d0\u05dc] \u05dc\u05e1\u05d9\u05d9\u05dd \u05d1\u05e9\u05d5\u05e8\u05d4 \u05d0\u05d7\u05ea, \u05d1\u05dc\u05d9 wa_me.' }) });
         out.fire_status = fr.status;
       }
       return jsonResp(out, 200, {});
