@@ -13,7 +13,7 @@ const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co', OWNER = '972501234567';
 let fireStatus = 200;
 const ENV = { META_APP_SECRET: 'app-secret', WA_VERIFY_TOKEN: 'vt-1', ASSISTANT_FIRE_URL: 'https://api.anthropic.com/v1/claude_code/routines/trig_X/fire',
   ASSISTANT_FIRE_TOKEN: 'tok', SUPABASE_SERVICE_ROLE_KEY: 'srv', ROUTINE_KEY: 'k-1', META_PHONE_NUMBER_ID: 'P1', META_ACCESS_TOKEN: 'mt' };
-let fires = [], metas = [], logs = [], state = {}, metaReply = () => ({ ok: true, body: { messages: [{ id: 'wamid.OUT1' }] } }), owner = OWNER;
+let graph = null, graphCalls = [], fires = [], metas = [], logs = [], state = {}, metaReply = () => ({ ok: true, body: { messages: [{ id: 'wamid.OUT1' }] } }), owner = OWNER;
 globalThis.fetch = async (url, opt = {}) => {
   const m = opt.method || 'GET';
   if (url.startsWith(SB + '/rest/v1/notification_prefs')) return new Response(JSON.stringify(owner ? [{ prefs: { trustee_hazard: { whatsapp_to: '+' + owner } } }] : []), { status: 200 });
@@ -27,6 +27,7 @@ globalThis.fetch = async (url, opt = {}) => {
     return new Response(JSON.stringify(/wamid=eq\.wamid\.ALERT/.test(url) ? [{ event_type: 'trustee_hazard', payload: { title: 'X - leak', id: 'r9' }, ts: 't' }] : []), { status: 200 });
   }
   if (url === ENV.ASSISTANT_FIRE_URL) { fires.push({ auth: opt.headers.Authorization, beta: opt.headers['anthropic-beta'], body: JSON.parse(opt.body) }); return new Response('{}', { status: fireStatus }); }
+  if (url.startsWith('https://graph.facebook.com/') && graph) { const r = graph(url, m, opt); if (r) { graphCalls.push({ url, m }); return new Response(JSON.stringify(r.body), { status: r.status || 200 }); } }
   if (url.startsWith('https://graph.facebook.com/')) { const b = JSON.parse(opt.body); metas.push(b); const r = metaReply(b); return new Response(JSON.stringify(r.body), { status: r.ok ? 200 : 400 }); }
   return new Response('[]', { status: 200 });
 };
@@ -111,6 +112,36 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   j = await call({ op: 'wa_me', text: 'x' });
   check('no owner number: nothing is sent', !j.ok && /owner/.test(j.error));
   owner = OWNER;
+
+  console.log('\n3b. wa_check: the setup against Meta, no value shown');
+  const { hmacHex } = await import('./_build/_wa.mjs');
+  const proof = await hmacHex(ENV.META_APP_SECRET, ENV.META_ACCESS_TOKEN);
+  let subs = [], wabaApps = [];
+  graph = (url, m, opt) => {
+    if (/debug_token/.test(url)) return { body: { data: { app_id: 'APP1' } } };
+    if (/\/me\?/.test(url)) return /appsecret_proof=([0-9a-f]+)/.exec(url)[1] === proof ? { body: { id: 'u' } } : { status: 400, body: { error: { message: 'Invalid appsecret_proof' } } };
+    if (/APP1\/subscriptions/.test(url) && m === 'GET') return { body: { data: subs } };
+    if (/APP1\/subscriptions/.test(url) && m === 'POST') { const f = new URLSearchParams(opt.body); subs = [{ object: f.get('object'), callback_url: f.get('callback_url'), active: true, fields: [{ name: f.get('fields') }] }]; return { body: { success: true } }; }
+    if (/subscribed_apps/.test(url) && m === 'GET') return { body: { data: wabaApps } };
+    if (/subscribed_apps/.test(url) && m === 'POST') { wabaApps = [{ whatsapp_business_api_data: { id: 'APP1' } }]; return { body: { success: true } }; }
+    return null;
+  };
+  let c = await call({ op: 'wa_check' });
+  check('the right secret passes appsecret_proof', c.ok && c.secret_ok === true && c.app_id === 'APP1', c);
+  check('no messages field and no WABA app: reported, nothing changed', c.messages_ok === false && c.waba_has_app === false && !graphCalls.some((x) => x.m === 'POST'), c);
+  check('no secret, token or number in the answer', !/app-secret|"mt"|tok|972/.test(JSON.stringify(c)), c);
+  c = await call({ op: 'wa_check', subscribe: true });
+  check('subscribe: messages on the app hook, and the WABA subscribed', c.subscribed_now && c.messages_ok && c.waba_subscribed_now && c.waba_has_app === true && /\/api\/wa-hook$/.test(c.app_sub.callback_url), c);
+  const posts = graphCalls.filter((x) => x.m === 'POST').length;
+  c = await call({ op: 'wa_check', subscribe: true });
+  check('subscribe again when all is set: no new POST', graphCalls.filter((x) => x.m === 'POST').length === posts && c.messages_ok, c);
+  const fb = fires.length;
+  c = await call({ op: 'wa_check', fire_probe: true });
+  check('fire_probe: status only, and the text is not Michael\'s header line', c.fire_status === 200 && fires.length === fb + 1 && fires[fires.length - 1].body.text.indexOf('\u05de\u05de\u05d9\u05db\u05d0\u05dc, \u05e0\u05d1\u05d3\u05e7') < 0, c);
+  ENV.META_APP_SECRET = 'wrong';
+  c = await call({ op: 'wa_check' });
+  check('a wrong secret is reported as secret_ok false', c.secret_ok === false && /appsecret_proof/.test(c.secret_err || ''), c);
+  ENV.META_APP_SECRET = 'app-secret'; graph = null;
 
   console.log('\n4. the front door');
   const mw = fs.readFileSync(new URL('../../functions/_middleware.js', import.meta.url), 'utf8');
