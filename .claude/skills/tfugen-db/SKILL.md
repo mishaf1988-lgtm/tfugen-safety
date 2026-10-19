@@ -108,3 +108,9 @@ description: How to read and change the live Supabase database of tfugen-safety 
 נאכף: בדיקות (`export-platform-test.py` מזריק דליפות ונכשל כשהכלל מוחזר; `close-hazard-test.mjs` בודק `closed_d` ב-PATCH).
 חזר: 0
 
+**118. שער שנבדק רק בצורת הכתיבה שהכותב חשב עליה (19/10/2026, PR זה).**
+מה קרה: `cowork-gate` בדק רק `set` ו-`update` עם `data`, והמאתגר עקף אותו ב-`batch` עם `file_path` וב-`str_replace`; `wa-hook` סימן הודעה של מיכאל כנקלטה לפני שהשיגור הצליח; `push-gate` התיר `checkout -b X; commit`.
+הכלל: שער (hook, בדיקת הרשאה) נבדק בטבלה של כל צורות הכתיבה שהכלי מאפשר (action x data/file_path/writes), ומה שאי אפשר לבדוק בתוכן נחסם ולא עובר. סימון "נקלט" נעשה רק אחרי שהפעולה הצליחה.
+נאכף: בדיקות (`cowork-gate-test.py` במטריצה, `wa-assistant-test.mjs`, `push-gate-test.py`).
+חזר: 0
+
