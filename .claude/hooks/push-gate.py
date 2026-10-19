@@ -74,7 +74,11 @@ def main():
     # never switched branch, and its commit landed on the local main (lesson 110). A commit on main
     # in this repo is refused, unless the same command first makes or switches to a branch.
     m = re.search(r"(^|[;&|\s])git\s+commit\b", cmd)
-    if m and not re.search(r"git\s+(checkout\s+(-q\s+)?-[bB]|switch\s+(-q\s+)?-[cC])\s", cmd[:m.start() + 1]):
+    pre = cmd[:m.start() + 1] if m else ""
+    # -B / -C always succeed; -b / -c fail when the branch exists, so the commit must be chained with && (retro 19/10/2026)
+    branched = re.search(r"git\s+(checkout\s+(-q\s+)?-B|switch\s+(-q\s+)?-C)\s", pre) or \
+        re.search(r"git\s+(checkout\s+(-q\s+)?-b|switch\s+(-q\s+)?-c)\s[^;\n|]*&&[^;\n]*$", pre)
+    if m and not branched:
         br = os.environ.get("PUSH_GATE_BRANCH")
         if br is None:
             here = os.environ.get("CLAUDE_PROJECT_DIR") or d.get("cwd") or "."
