@@ -11,11 +11,11 @@ export const META_API_VERSION = 'v25.0';
 // The utility template for an update when the 24 hour window is closed. One parameter, the text.
 // Meta rejects newlines and runs of spaces in a parameter, so waOneLine() flattens it first.
 export const ASSISTANT_TEMPLATE = {
-  name: 'tfugen_assistant_update',
+  name: SITE.waTemplates.assistant,
   category: 'UTILITY',
   language: 'he',
-  components: [{ type: 'BODY', text: 'עדכון מהעוזר: {{1}}',
-    example: { body_text: [['רכז המסמכים תייק 3 קבצים. מחכה לך: אישור תיקייה חדשה.']] } }],
+  components: [{ type: 'BODY', text: '\u05e2\u05d3\u05db\u05d5\u05df \u05de\u05d4\u05e2\u05d5\u05d6\u05e8: {{1}}',
+    example: { body_text: [['\u05e8\u05db\u05d6 \u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05ea\u05d9\u05d9\u05e7 3 \u05e7\u05d1\u05e6\u05d9\u05dd. \u05de\u05d7\u05db\u05d4 \u05dc\u05da: \u05d0\u05d9\u05e9\u05d5\u05e8 \u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 \u05d7\u05d3\u05e9\u05d4.']] } }],
 };
 // Meta error codes that mean "outside the customer service window, send a template".
 export const WINDOW_CLOSED = [131047, 131026];

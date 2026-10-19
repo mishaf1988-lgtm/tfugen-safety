@@ -41,7 +41,8 @@ export const SITE = {
   assistantQueue: '', // the researcher's queue the weekly digest reads (GitHub contents API); '' = none
   // WhatsApp templates as approved by Meta for this account. The server sends the first two.
   waTemplates: { dedicated: 'safety_report', fallback: 'incident_alert', ncrCritical: 'ncr_critical',
-    taskOverdue: 'task_overdue', expiryWarning: 'expiry_warning', roundMissed: 'round_missed' },
+    taskOverdue: 'task_overdue', expiryWarning: 'expiry_warning', roundMissed: 'round_missed',
+    assistant: 'assistant_update' },
   wabaId: '',
   // The factory's departments. depts: the hazard register and the department report (maintenance
   // is added to the report by itself). areaDept: a trustee's area -> its department, e.g.
