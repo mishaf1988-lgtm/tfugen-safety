@@ -27,13 +27,13 @@
 
 ## פתוח
 
-- [ ] **C22. וואטסאפ: לחבר את ה-webhook של Meta לעוזר** (19/10/2026, מיכאל בשאלון: "בצע: אותו מספר, העוזר רק על הודעה חדשה"). אחרי ש-#PR של העוזר מוזג. ערך ה-verify token: בדף ההוראות של העוזר (Artifact), לא כאן.
+- [ ] **C22. וואטסאפ: לחבר את העוזר (טוקן, Cloudflare, Meta)** (19/10/2026, מיכאל: "תכתוב לי הוראות מלאות לכרום שיעשה הכל"). ה-verify token בטקסט הוא אימות חד-פעמי של ה-webhook, לא מפתח גישה. אחרי הביצוע: retry לפריסה ב-API, בדיקת השמות ב-`pages/projects`, ו-`wa_me` בדיקה.
 ```
-ב-developers.facebook.com > My Apps > האפליקציה של וואטסאפ (בטיחות) > WhatsApp > Configuration:
-1. Webhook > Edit: Callback URL = https://tapugan-safety.pages.dev/api/wa-hook ; Verify token = הערך שמיכאל ידביק. Verify and save.
-2. Webhook fields > messages > Subscribe.
-3. App settings > Basic > App secret > Show: לא להעתיק לשום מקום, רק להגיד למיכאל שהוא מוצג, כדי שיעתיק בעצמו ל-Cloudflare בשם META_APP_SECRET (Settings > Variables and Secrets > Add > Secret, Production).
-לא לשנות שום הגדרה אחרת, לא למחוק כלום. בסוף: צילום של מסך ה-Webhook עם "messages: Subscribed".
+משימה: לחבר את העוזר בוואטסאפ של מערכת הבטיחות. שלושה חלקים, לפי הסדר. לא לשנות שום הגדרה אחרת, לא למחוק שום דבר, ולא לכתוב אף ערך סודי (טוקן, App secret) בצ'אט, בצילום או בתשובה: רק להעתיק ישר משדה לשדה. אם משהו לא נראה כמו שכתוב, לעצור ולתאר מה רואים.
+חלק 1: https://claude.ai/code/routines/trig_01TofqtqNWtrXMnqiNjHq1nZ > Edit > Select a trigger > Add another trigger > API > Generate token (להעתיק מיד) > שמירה. לא לגעת בתזמון 07:47.
+חלק 2: https://dash.cloudflare.com/c9d388e3a5f9ee9546e8aa6b6353ec87/pages/view/tapugan-safety/settings/environment-variables > Production > Add > Secret, ASSISTANT_FIRE_TOKEN = הטוקן > Save. לא לגעת במשתנה אחר.
+חלק 3: https://developers.facebook.com/apps/ > האפליקציה של הוואטסאפ העסקי (יותר מאחת: לעצור ולשאול) > WhatsApp > Configuration > Webhook > Edit: Callback URL https://tapugan-safety.pages.dev/api/wa-hook, Verify token = הערך מהדף של העוזר (Artifact GJaz2Vh5NtW1a5PjWJu1y9) > Verify and save. Webhook fields > messages > Subscribe. App settings > Basic > App secret > Show (סיסמה: לעצור ולבקש) > ב-Cloudflare Add > Secret, META_APP_SECRET.
+בסוף: לכל חלק בוצע או לא; האם שני השמות מופיעים כ-Secret; האם האימות עבר ו-messages Subscribed. בלי שום ערך סודי.
 ```
 
 ## בוצע
