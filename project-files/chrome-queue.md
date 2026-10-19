@@ -27,6 +27,14 @@
 
 ## פתוח
 
+- [ ] **C22. וואטסאפ: לחבר את ה-webhook של Meta לעוזר** (19/10/2026, מיכאל בשאלון: "בצע: אותו מספר, העוזר רק על הודעה חדשה"). אחרי ש-#PR של העוזר מוזג. ערך ה-verify token: בדף ההוראות של העוזר (Artifact), לא כאן.
+```
+ב-developers.facebook.com > My Apps > האפליקציה של וואטסאפ (בטיחות) > WhatsApp > Configuration:
+1. Webhook > Edit: Callback URL = https://tapugan-safety.pages.dev/api/wa-hook ; Verify token = הערך שמיכאל ידביק. Verify and save.
+2. Webhook fields > messages > Subscribe.
+3. App settings > Basic > App secret > Show: לא להעתיק לשום מקום, רק להגיד למיכאל שהוא מוצג, כדי שיעתיק בעצמו ל-Cloudflare בשם META_APP_SECRET (Settings > Variables and Secrets > Add > Secret, Production).
+לא לשנות שום הגדרה אחרת, לא למחוק כלום. בסוף: צילום של מסך ה-Webhook עם "messages: Subscribed".
+```
 
 ## בוצע
 

@@ -32,6 +32,11 @@
 //              it codes it: {item, session, note}. Another session's claim younger than
 //              CLAIM_HOURS wins and is returned (mine:false, holder); release:true drops one's own.
 //              That day two sessions built the same retro items in parallel. claims: the fresh list.
+//   wa_me      (19/10/2026, Michael: "updates on WhatsApp... I talk to my assistant") one message
+//              {text} to Michael's own number only (notification_prefs, _wa.js), never to anyone else.
+//              Free text inside the 24 hour window, else the utility template. Logged in
+//              notifications_log (event assistant, payload.wamid) so his reply can be matched.
+//   wa_tpl     create the assistant's template in Meta once (ASSISTANT_TEMPLATE), or report that it exists.
 //   expiry_set  (11/10/2026, Michael in the questionnaire: "בצע: תיוק מייל + תוקף")
 //              update one row of docs / equip_inspections after a document was read:
 //              e, file_url (only under Michael's OneDrive), s (docs) or d (equipment).
@@ -68,6 +73,7 @@
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
+import { ownerWa, sendToOwner, ASSISTANT_TEMPLATE } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks'];
@@ -571,6 +577,32 @@ export async function onRequest(context) {
         } catch (e) { recorded = false; }
       }
       return jsonResp({ ok: true, path: c.toDir + '/' + c.name, size: mj.size || sj.size || null, webUrl: mj.webUrl || null, recorded }, 200, {});
+    }
+    if (body.op === 'wa_me') {
+      if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
+      const to = await ownerWa(env, url);
+      if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
+      const r = await sendToOwner(env, to, body.text, { noTemplate: body.no_template === true });
+      try {
+        await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
+          body: JSON.stringify([{ id: 'wa' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
+            event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error',
+            payload: { title: String(body.text || '').replace(/\s+/g, ' ').slice(0, 120), via: r.via || null, wamid: r.wamid || null, detail: r.error || null } }]) });
+      } catch (e) { /* the message went out; a missing log line is not a failure */ }
+      return jsonResp(r, 200, {});
+    }
+    if (body.op === 'wa_tpl') {
+      if (!env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
+      const waba = env.META_WABA_ID || SITE.wabaId;
+      const G = 'https://graph.facebook.com/v25.0/' + encodeURIComponent(waba) + '/message_templates';
+      const auth = { Authorization: 'Bearer ' + env.META_ACCESS_TOKEN, 'Content-Type': 'application/json' };
+      const got = await fetch(G + '?name=' + encodeURIComponent(ASSISTANT_TEMPLATE.name) + '&fields=name,status,category', { headers: auth, signal: tmo(GRAPH_MS) });
+      const gj = await got.json().catch(() => ({}));
+      const have = gj && Array.isArray(gj.data) && gj.data.find((t) => t.name === ASSISTANT_TEMPLATE.name);
+      if (have) return jsonResp({ ok: true, already: true, status: have.status, category: have.category }, 200, {});
+      const mk = await fetch(G, { method: 'POST', headers: auth, body: JSON.stringify(ASSISTANT_TEMPLATE), signal: tmo(GRAPH_MS) });
+      const mj = await mk.json().catch(() => ({}));
+      return jsonResp(mk.ok ? { ok: true, created: true, status: mj.status || 'PENDING', id: mj.id || null } : { ok: false, error: 'create ' + mk.status, detail: mj.error && mj.error.message ? String(mj.error.message).slice(0, 200) : null }, 200, {});
     }
     return jsonResp({ ok: false, error: 'unknown op' }, 400, {});
   } catch (e) {
