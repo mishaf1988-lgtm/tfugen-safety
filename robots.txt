@@ -4,5 +4,15 @@
 #
 # This file asks. The X-Robots-Tag header in _headers tells, on every
 # response, and is what a crawler that ignores this one still has to obey.
+# Meta checks the privacy and data deletion pages before it publishes the
+# WhatsApp app (19/10/2026). Those four paths only; the rest stays closed to it too.
+User-agent: facebookexternalhit
+User-agent: Facebot
+Allow: /privacy
+Allow: /privacy.html
+Allow: /user-data-deletion
+Allow: /user-data-deletion.html
+Disallow: /
+
 User-agent: *
 Disallow: /

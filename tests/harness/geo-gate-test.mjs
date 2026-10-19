@@ -35,7 +35,7 @@ const call = async (o) => {
   const res = await onRequest({
     request: req,
     env: o.env || {},
-    next: async () => { served++; return new Response('THE APP', { headers: { 'Content-Type': 'text/html' } }); }
+    next: async () => { served++; return new Response('THE APP', { headers: Object.assign({ 'Content-Type': 'text/html' }, o.nextHeaders || {}) }); }
   });
   return { served, status: res.status, body: await res.text(), headers: res.headers };
 };
@@ -169,6 +169,35 @@ console.log('\n9. repo files are not URLs (security scan 10/10/2026)');
   check('a machine path from abroad still passes', m.served === 1, m.status);
   const r = await call({ country: 'IL', path: '/STATUS.md' });
   check('the 404 carries the security headers', r.headers.get('X-Robots-Tag') === 'noindex, nofollow' && r.headers.get('X-Content-Type-Options') === 'nosniff');
+}
+
+console.log('\n10. Meta\'s crawler reads the two policy pages, and only them (19/10/2026)');
+{
+  const FB = { 'user-agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)' };
+  // Pages adds X-Robots-Tag from _headers to the static page before the middleware sees it.
+  const r = await call({ country: 'US', path: '/privacy', headers: FB, nextHeaders: { 'X-Robots-Tag': 'noindex, nofollow' } });
+  check('facebookexternalhit from abroad gets /privacy', r.status === 200 && r.served === 1, r);
+  check('...without X-Robots-Tag, with the other security headers', !r.headers.get('X-Robots-Tag') && r.headers.get('X-Content-Type-Options') === 'nosniff', [...r.headers]);
+  const d = await call({ country: 'IE', path: '/user-data-deletion.html', headers: { 'user-agent': 'Facebot' } });
+  check('Facebot gets the data deletion page', d.status === 200 && d.served === 1, d);
+  const h = await call({ country: 'US', path: '/privacy.html', method: 'HEAD', headers: FB });
+  check('HEAD works too (curl -I)', h.status === 200 && h.served === 1, h);
+  const app = await call({ country: 'US', path: '/', headers: FB });
+  check('the same crawler on the app: refused', app.status === 403 && app.served === 0, app.status);
+  const api = await call({ country: 'US', path: '/api/wa-send', headers: FB });
+  check('...and on a browser endpoint: refused', api.status === 403 && api.served === 0, api.status);
+  const post = await call({ country: 'US', path: '/privacy', method: 'POST', headers: FB });
+  check('...and a POST to the page: refused', post.status === 403 && post.served === 0, post.status);
+  const human = await call({ country: 'US', path: '/privacy', headers: { 'user-agent': 'Mozilla/5.0' } });
+  check('a browser from abroad on /privacy: still refused', human.status === 403 && human.served === 0, human.status);
+  const il = await call({ country: 'IL', path: '/privacy' });
+  check('from Israel the page keeps X-Robots-Tag', il.status === 200 && il.headers.get('X-Robots-Tag') === 'noindex, nofollow');
+  const robots = fs.readFileSync(path.join(ROOT, 'robots.txt'), 'utf8');
+  const fbBlock = robots.split('User-agent: *')[0];
+  check('robots.txt: the Meta block comes before "User-agent: *" and allows the four paths only',
+    /User-agent: facebookexternalhit/.test(fbBlock) && /User-agent: Facebot/.test(fbBlock)
+    && (fbBlock.match(/^Allow: /gm) || []).length === 4 && /^Disallow: \/$/m.test(fbBlock), fbBlock);
+  check('robots.txt: everyone else is still Disallow: /', /User-agent: \*\nDisallow: \/\s*$/.test(robots));
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
