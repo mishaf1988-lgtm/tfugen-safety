@@ -29,6 +29,8 @@ check('...with the time in DD/MM/YYYY HH:MM (Israel)', /\d{2}\/\d{2}\/2026 \d{2}
 check('40 minutes is not yet stale (3 ticks)', assess(S({ ...fresh, deck_ok_at: ago(40) }), NOW, true, ago(600)).length === 0);
 l = assess(S({ ...fresh, hazard_xlsx_err: 'onedrive 423: locked', hazard_xlsx_err_at: ago(35), hazard_xlsx_ok_at: ago(35) }), NOW, true, ago(600));
 check('an error 35 minutes old: "err:hazard_xlsx" only (not also stale)', keys(l).join() === 'err:hazard_xlsx' && /423/.test(l[0].detail), l);
+check('an error from 19:15 and a successful run at 19:45: no open error (19/10/2026 mail)', assess(S({ ...fresh, hazard_xlsx_err: 'The operation was aborted due to timeout', hazard_xlsx_err_at: ago(50), hazard_xlsx_ok_at: ago(20) }), NOW, true, ago(600)).length === 0);
+check('...but a success before the error does not clear it', keys(assess(S({ ...fresh, hazard_xlsx_err: 'x', hazard_xlsx_err_at: ago(50), hazard_xlsx_ok_at: ago(60) }), NOW, true, ago(600))).join() === 'err:hazard_xlsx');
 check('an error 10 minutes old: nothing yet (the next run may clear it)', assess(S({ ...fresh, hazard_xlsx_err: 'x', hazard_xlsx_err_at: ago(10), hazard_xlsx_ok_at: ago(60) }), NOW, true, ago(600)).length === 0);
 const drop = JSON.stringify({ at: ago(5), items: [{ n: 37, r: 40, ci: 10, val: 'סגור', why: 'both', id: 'h:th-37' }, { n: 'נ-2', r: 55, ci: 5, val: 'אחר', why: 'tru_col' }] });
 l = assess(S({ ...fresh, hazard_xlsm_dropped: drop }), NOW, true, ago(600));
@@ -46,7 +48,7 @@ check('163 rows: nothing yet', assess(S({ ...fresh, hazard_xlsm_rows: '163' }), 
 const expired = 'microsoft token: AADSTS7000222: The provided client secret keys for app are expired.';
 l = assess(S({ ...fresh, hazard_xlsm_err: expired, hazard_xlsm_err_at: ago(35), deck_err: expired, deck_err_at: ago(2) }), NOW, true, ago(600));
 check('expired secret: one "secret" problem at once, not one per part', keys(l).join() === 'secret' && /פג תוקף הסוד/.test(l[0].title) && /ONEDRIVE_CLIENT_SECRET/.test(l[0].detail) && /Certificates & secrets/.test(l[0].detail), l);
-check('...a different error is still an "err:" after 30 minutes', keys(assess(S({ ...fresh, hazard_xlsm_err: 'onedrive 423', hazard_xlsm_err_at: ago(35) }), NOW, true, ago(600))).join() === 'err:hazard_xlsm');
+check('...a different error is still an "err:" after 30 minutes', keys(assess(S({ ...fresh, hazard_xlsm_err: 'onedrive 423', hazard_xlsm_err_at: ago(35), hazard_xlsm_ok_at: ago(40) }), NOW, true, ago(600))).join() === 'err:hazard_xlsm');
 
 // The daily Vitre refresher import (vitre.js op:'sync', 06:00).
 const vs = (o) => JSON.stringify({ at: ago(60), ok: true, found: 3, added: 0, failed: 0, pending: 0, error: null, ...o });
