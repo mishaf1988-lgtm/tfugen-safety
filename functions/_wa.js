@@ -68,11 +68,14 @@ export async function sendToOwner(env, to, text, opts) {
 }
 
 // Meta signs every webhook body with the app secret: X-Hub-Signature-256: sha256=<hex>.
+export async function hmacHex(secret, data) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data)));
+  return Array.from(mac).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 export async function metaSigOk(raw, header, secret) {
   if (!secret || !header || header.indexOf('sha256=') !== 0) return false;
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(raw)));
-  const want = Array.from(mac).map((b) => b.toString(16).padStart(2, '0')).join('');
+  const want = await hmacHex(secret, raw);
   const got = header.slice(7).toLowerCase();
   if (got.length !== want.length) return false;
   let d = 0;

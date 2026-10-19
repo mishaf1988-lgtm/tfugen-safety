@@ -37,6 +37,10 @@
 //              Free text inside the 24 hour window, else the utility template. Logged in
 //              notifications_log (event assistant, payload.wamid) so his reply can be matched.
 //   wa_tpl     create the assistant's template in Meta once (ASSISTANT_TEMPLATE), or report that it exists.
+//   wa_check   the assistant's setup, checked against Meta without showing a value (19/10/2026, Michael:
+//              "do the check yourself"): META_APP_SECRET by appsecret_proof, the app's webhook fields,
+//              the WABA's subscribed apps, and with fire_probe the fire token (status only). subscribe: true
+//              adds the "messages" field and the WABA subscription when missing.
 //   expiry_set  (11/10/2026, Michael in the questionnaire: "בצע: תיוק מייל + תוקף")
 //              update one row of docs / equip_inspections after a document was read:
 //              e, file_url (only under Michael's OneDrive), s (docs) or d (equipment).
@@ -73,7 +77,7 @@
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
-import { ownerWa, sendToOwner, ASSISTANT_TEMPLATE } from '../_wa.js';
+import { ownerWa, sendToOwner, ASSISTANT_TEMPLATE, hmacHex } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks'];
@@ -590,6 +594,58 @@ export async function onRequest(context) {
             payload: { title: String(body.text || '').replace(/\s+/g, ' ').slice(0, 120), via: r.via || null, wamid: r.wamid || null, detail: r.error || null } }]) });
       } catch (e) { /* the message went out; a missing log line is not a failure */ }
       return jsonResp(r, 200, {});
+    }
+    if (body.op === 'wa_check') {
+      if (!env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
+      const V = 'https://graph.facebook.com/v25.0/', tok = env.META_ACCESS_TOKEN, sec = env.META_APP_SECRET || '';
+      const waba = env.META_WABA_ID || SITE.wabaId, hook = SITE.appUrl + '/api/wa-hook';
+      const g = async (u, init) => {
+        try { const r = await fetch(u, Object.assign({ signal: tmo(GRAPH_MS) }, init || {})); return { status: r.status, j: await r.json().catch(() => ({})) }; }
+        catch (e) { return { status: 'network', j: {} }; }
+      };
+      const err = (r) => r.j && r.j.error ? String(r.j.error.message || r.j.error.code).slice(0, 160) : null;
+      const bearer = { Authorization: 'Bearer ' + tok };
+      const out = { ok: true, secret_set: !!sec, verify_set: !!env.WA_VERIFY_TOKEN, fire_set: !!(env.ASSISTANT_FIRE_URL && env.ASSISTANT_FIRE_TOKEN), hook };
+      const dbg = await g(V + 'debug_token?input_token=' + encodeURIComponent(tok), { headers: bearer });
+      const appId = dbg.j && dbg.j.data && dbg.j.data.app_id ? String(dbg.j.data.app_id) : null;
+      out.app_id = appId;
+      if (sec) {
+        const me = await g(V + 'me?fields=id&appsecret_proof=' + (await hmacHex(sec, tok)), { headers: bearer });
+        out.secret_ok = me.status === 200; out.secret_err = err(me);
+      }
+      const appTok = appId && sec ? encodeURIComponent(appId + '|' + sec) : '';
+      const readSubs = async () => {
+        const r = await g(V + appId + '/subscriptions?access_token=' + appTok);
+        const w = ((r.j && r.j.data) || []).find((x) => x.object === 'whatsapp_business_account');
+        return { err: err(r), sub: w ? { callback_url: w.callback_url, active: w.active, fields: (w.fields || []).map((f) => f.name || f) } : null };
+      };
+      const readWaba = async () => {
+        const r = await g(V + encodeURIComponent(waba) + '/subscribed_apps', { headers: bearer });
+        const ids = ((r.j && r.j.data) || []).map((a) => String((a.whatsapp_business_api_data || {}).id || a.id || ''));
+        return { err: err(r), has: appId ? ids.indexOf(appId) >= 0 : null };
+      };
+      let s = appTok ? await readSubs() : { err: 'no app id or secret', sub: null };
+      let w = await readWaba();
+      const subOk = () => !!(s.sub && s.sub.callback_url === hook && s.sub.fields.indexOf('messages') >= 0);
+      if (body.subscribe && appTok && !subOk() && env.WA_VERIFY_TOKEN) {
+        const f = new URLSearchParams({ object: 'whatsapp_business_account', callback_url: hook, fields: 'messages', verify_token: env.WA_VERIFY_TOKEN, access_token: appId + '|' + sec });
+        const r = await g(V + appId + '/subscriptions', { method: 'POST', body: f });
+        out.subscribed_now = r.status === 200; out.subscribe_err = err(r);
+        s = await readSubs();
+      }
+      if (body.subscribe && w.has === false) {
+        const r = await g(V + encodeURIComponent(waba) + '/subscribed_apps', { method: 'POST', headers: bearer });
+        out.waba_subscribed_now = r.status === 200; out.waba_err = err(r);
+        w = await readWaba();
+      }
+      out.app_sub = s.sub; out.app_sub_err = s.err; out.messages_ok = subOk(); out.waba_has_app = w.has; out.waba_apps_err = w.err;
+      if (body.fire_probe && out.fire_set) {
+        const fr = await g(env.ASSISTANT_FIRE_URL, { method: 'POST',
+          headers: { Authorization: 'Bearer ' + env.ASSISTANT_FIRE_TOKEN, 'anthropic-beta': 'experimental-cc-routine-2026-04-01', 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: '[\u05d1\u05d3\u05d9\u05e7\u05ea \u05d7\u05d9\u05d1\u05d5\u05e8 \u05de\u05d4\u05e9\u05e8\u05ea, \u05dc\u05d0 \u05d4\u05d5\u05d3\u05e2\u05d4 \u05de\u05de\u05d9\u05db\u05d0\u05dc] \u05dc\u05e1\u05d9\u05d9\u05dd \u05d1\u05e9\u05d5\u05e8\u05d4 \u05d0\u05d7\u05ea, \u05d1\u05dc\u05d9 wa_me.' }) });
+        out.fire_status = fr.status;
+      }
+      return jsonResp(out, 200, {});
     }
     if (body.op === 'wa_tpl') {
       if (!env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
