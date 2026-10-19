@@ -18,6 +18,8 @@
 | מזהה | שם | מתי (שעון ישראל) | קובץ הוראות | שיחה |
 |---|---|---|---|---|
 | `trig_0191nGk9xs9QPCejRAJWbGjA` | תיוק מהמייל ועדכון תוקף | א'-ה' 17:52 | `routine-mail-filing.md` | `session_01HK2YJUpeGksTy3KHZ2sGCm` |
+| `trig_01URTB4VwhD3cc1cdDhkCvA7` | תיוק מהמייל ועדכון תוקף 10:52 | א'-ה' 10:52 | `routine-mail-filing.md` | `session_01HK2YJUpeGksTy3KHZ2sGCm` |
+| `trig_01CyB8c6LpkB3ArivGH4oQku` | תיוק מהמייל ועדכון תוקף 13:52 | א'-ה' 13:52 | `routine-mail-filing.md` | `session_01HK2YJUpeGksTy3KHZ2sGCm` |
 | `trig_01Mg4hEDfQKBBHw2sbZTTUAH` | בודק התוקף מול המסמכים | מוצ"ש 22:44 | `routine-validity.md` | `session_01HK2YJUpeGksTy3KHZ2sGCm` |
 | `trig_01EuLgTAknYEbauZ7YpxXRwK` | דוח ציות חודשי | 1 לחודש 08:03 | `routine-compliance.md` | `session_01HPcF58y98mzJ19wJ27EDn5` |
 | `trig_01UbfmW5kw4e7fBzuauumEUc` | סידור תעודות COA של שפכים | 17 לחודש 07:47 | `routine-coa.md` | `session_01HPcF58y98mzJ19wJ27EDn5` |
