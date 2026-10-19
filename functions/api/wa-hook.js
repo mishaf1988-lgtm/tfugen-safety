@@ -17,6 +17,17 @@ import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
 import { ownerWa, metaSigOk, inboundMessages } from '../_wa.js';
 
 const SEEN_KEY = 'wa_hook_seen', SEEN_MAX = 100;
+// 19/10/2026 (setup through Claude in Chrome: a pasted value could not be seen, Cloudflare hides
+// secrets): the last call, so a wrong META_APP_SECRET (sig false) or ASSISTANT_FIRE_TOKEN
+// (fire_status 401) shows in server_state without a new token. No number and no text in it.
+export const LAST_KEY = 'wa_hook_last';
+async function note(env, value) {
+  if (!env.SUPABASE_SERVICE_ROLE_KEY) return;
+  try {
+    await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([{ key: LAST_KEY, value: Object.assign({ at: new Date().toISOString() }, value), updated_at: new Date().toISOString() }]) });
+  } catch (e) { /* a missing note is not a failure */ }
+}
 
 export function fireText(m, about) {
   const lines = ['[\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05de\u05de\u05d9\u05db\u05d0\u05dc, \u05e0\u05d1\u05d3\u05e7 \u05d1\u05e9\u05e8\u05ea: \u05d7\u05ea\u05d9\u05de\u05ea Meta \u05d5\u05d4\u05de\u05e1\u05e4\u05e8 \u05e9\u05dc\u05d5]',
@@ -63,17 +74,21 @@ async function handle(env, raw) {
   const msgs = inboundMessages(body);
   if (!msgs.length) return;
   const owner = await ownerWa(env, sbFrom(env));
+  const seen = { sig: true, msgs: msgs.length, owner_saved: !!owner, from_owner: 0, fired: 0, fire_status: null };
   for (const m of msgs) {
     if (!owner || m.from !== owner) continue;
+    seen.from_owner++;
     if (!(await firstTime(env, m.id))) continue;
     const text = fireText(m, await aboutAlert(env, m.context));
-    await fetch(env.ASSISTANT_FIRE_URL, {
+    const fr = await fetch(env.ASSISTANT_FIRE_URL, {
       method: 'POST', signal: tmo(20000),
       headers: { Authorization: 'Bearer ' + env.ASSISTANT_FIRE_TOKEN, 'anthropic-beta': 'experimental-cc-routine-2026-04-01',
         'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
     }).catch(() => null);
+    seen.fired++; seen.fire_status = fr ? fr.status : 'network';
   }
+  await note(env, seen);
 }
 
 export async function onRequest(context) {
@@ -86,8 +101,12 @@ export async function onRequest(context) {
   }
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, {});
   const raw = await request.text();
-  if (!(await metaSigOk(raw, request.headers.get('x-hub-signature-256') || '', env.META_APP_SECRET))) return new Response('forbidden', { status: 403 });
-  if (!env.ASSISTANT_FIRE_URL || !env.ASSISTANT_FIRE_TOKEN || !env.SUPABASE_SERVICE_ROLE_KEY) return new Response('ok', { status: 200 });
+  const sigHeader = request.headers.get('x-hub-signature-256') || '';
+  if (!(await metaSigOk(raw, sigHeader, env.META_APP_SECRET))) {
+    if (sigHeader) { const n = note(env, { sig: false, secret_set: !!env.META_APP_SECRET }); if (context.waitUntil) context.waitUntil(n); else await n; }
+    return new Response('forbidden', { status: 403 });
+  }
+  if (!env.ASSISTANT_FIRE_URL || !env.ASSISTANT_FIRE_TOKEN || !env.SUPABASE_SERVICE_ROLE_KEY) { await note(env, { sig: true, fire_configured: false }); return new Response('ok', { status: 200 }); }
   const job = handle(env, raw).catch(() => null);
   if (context.waitUntil) context.waitUntil(job); else await job;
   return new Response('ok', { status: 200 });
