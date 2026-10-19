@@ -18,17 +18,21 @@ sys.stdout.reconfigure(encoding="utf-8")
 WORD = re.compile(r"(?<![\u0590-\u05ff])בצע(?![\u0590-\u05ff])")
 
 
+# "לא בצע" / "לא לבצע" / "לא מאושר, בצע?" is a refusal, not an approval
+NEG = re.compile(r"(?<![\u0590-\u05ff])לא(?![\u0590-\u05ff])")
+
+
 def bad(op, coll, data):
     """Reason string if this write would queue a Cowork task without בצע, else None."""
     if coll != "cowork_tasks":
         return None
     if not isinstance(data, dict):
         # an update that takes its fields from a file (file_path) cannot be inspected: deny
-        return "write from a file (file_path) to cowork_tasks cannot be checked" if data == "FILE" else None
+        return "write from a file (file_path) or a str_replace on cowork_tasks cannot be checked" if data == "FILE" else None
     appr = data.get("approved_by_michael")
     opens = data.get("status") == "open"
     if op == "set" or opens or appr is not None:
-        if not isinstance(appr, str) or not WORD.search(appr):
+        if not isinstance(appr, str) or not WORD.search(appr) or NEG.search(appr):
             return "approved_by_michael בלי המילה בצע"
     return None
 
@@ -49,7 +53,11 @@ def main():
             data = "FILE"
         writes = [(act, ti.get("collection"), data)]
     elif act == "batch":
-        writes = [(w.get("op"), w.get("collection"), w.get("data")) for w in ti.get("writes") or [] if isinstance(w, dict)]
+        writes = [(w.get("op"), w.get("collection"), "FILE" if w.get("data") is None and w.get("file_path") else w.get("data"))
+                  for w in ti.get("writes") or [] if isinstance(w, dict)]
+    elif act == "str_replace" and ti.get("collection") == "cowork_tasks":
+        # edits one field of a task in place: cannot be checked, and approved_by_michael / status are the fields that matter
+        writes = [("update", "cowork_tasks", "FILE")]
     for op, coll, data in writes:
         if op not in ("set", "update"):
             continue
