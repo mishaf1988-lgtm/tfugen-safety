@@ -28,7 +28,7 @@
 | `trig_012v3HyJ1xpKcKE177emqtji` | מגמות מנתוני המפעל | 4 לחודש 08:14 | `routine-factory-trends.md` | `session_01FXKjCZExakD2sbqi9eZVin` |
 | `trig_01PCAkeVUANPkzuCgmszt9k5` | המפקח המדומה | 5 לחודש 08:16 | `routine-inspector.md` | `session_01FXKjCZExakD2sbqi9eZVin` |
 | `trig_015nyt8LcbxN3pPj3fEfKjcm` | מודל ההעדפות של מיכאל | 6 לחודש 08:21 | `routine-preferences.md` | `session_01FXKjCZExakD2sbqi9eZVin` |
-| `trig_01SogHpEgS3nkMoworDxmfTh` | מעקב הצעות מחיר | מוצ"ש 22:47 | `routine-quotes.md` | `session_012U83ozxzQjH8BcQ2AvykSf` |
+| `trig_0112ddFifkor46mUGHrEQVCD` | מעקב הצעות מחיר | מוצ"ש 22:47 | `routine-quotes.md` | `session_01SNYNvuNvJZiQVL1VPDNuhF` |
 | `trig_01DskPcZDAt1uAjsZgPyWkam` | חוקר העוזר | א'-ה' 06:47 | `routine-researcher.md` | `session_019o8PKShtacN2m1BCbYdnQj` |
 | `trig_01EDtjPSEhnt86YLLNFwxxm9` | רטרו יומי | א'-ה' 07:52 | `retro-prompt.md` | `session_019o8PKShtacN2m1BCbYdnQj` |
 | `trig_01XPwRokY9GmbtX533Res2TU` | הרדאר מלמד את העוזר | ב' 08:37 | `routine-radar-learn.md` | `session_019o8PKShtacN2m1BCbYdnQj` |
@@ -37,7 +37,7 @@
 | `trig_01SzAJJc2RDFcLoAeBEcWonK` | רדאר רגולציה שבועי | א' 08:17 | הפרומפט בטריגר עצמו (לא בקובץ) | שיחה חדשה בכל ריצה |
 | `trig_01BimkS5EroGgvLB1tZo6zQo` | תור משימות מ-Claude Code (Cowork) | א'-ה' 07:19-18:19, כל שעה (מ-18/10/2026; קודם כל שעה כל יום) | הפרומפט בטריגר; הכללים ב-`cowork-queue.md` | Cowork, קשור למחשב של מיכאל |
 | `trig_016Cc2xKxQ9W5AEf75yLhmtA` | משרד הסוכנים: עדכון בוקר | כל יום 07:38 | `routine-office.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
-| `trig_01GVrwUrwquFCyLY8qbojmx4` | תפוגות שנתקעו אצל ספק | ב' 08:17 | `routine-supplier-followup.md` | `session_012U83ozxzQjH8BcQ2AvykSf` |
+| `trig_01RzUquedmBPwvRU8Jx8t4yh` | תפוגות שנתקעו אצל ספק | ב' 08:17 | `routine-supplier-followup.md` | `session_01SNYNvuNvJZiQVL1VPDNuhF` |
 | `trig_01CoMmnoXCbn1a3sxgtCsUca` | תזכורת פרסום ההדרכה | א' 12:13 | `routine-talk-publish.md` | `session_01HK2YJUpeGksTy3KHZ2sGCm` |
 | `trig_01Hqt7G6RLWeJbKEHXFzXWHW` | בודק לתור המשימות למחשב | כל יום 09:37 | `routine-cowork-check.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
 | `trig_01AVa8RiuYtaeXLrtkUsZqKH` | בדיקת הניסוי השבועית | ד' 06:29 | `routine-staging-e2e.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
