@@ -285,7 +285,7 @@ async function logDelivery(sb, src, row, task, res) {
   const title = titleOf(row, task), logs = [];
   if (res.whatsapp) logs.push({ channel: res.whatsapp === 'sent' ? 'whatsapp' : 'whatsapp_error', detail: res.whatsapp });
   if (res.email) logs.push({ channel: res.email === 'sent' ? 'email' : 'email_error', detail: res.email });
-  await logRows(sb, logs.map((l) => ({ event_type: src.event, channel: l.channel, payload: { id: row.id, title, detail: l.detail } })));
+  await logRows(sb, logs.map((l) => ({ event_type: src.event, channel: l.channel, payload: Object.assign({ id: row.id, title, detail: l.detail }, l.channel === 'whatsapp' && res.whatsapp_id ? { wamid: res.whatsapp_id } : {}) })));
 }
 // strict: a failed read throws, so an unread map is never written back as empty.
 async function failGet(env, B, strict) {
@@ -499,7 +499,7 @@ async function lineFor(sb, src, row) {
 
 async function deliver(env, prefs, row, task, src, B) {
   const res = {};
-  if (prefs.whatsapp && prefs.whatsapp_to) res.whatsapp = await sendWhatsApp(env, prefs.whatsapp_to, row, task, src, B);
+  if (prefs.whatsapp && prefs.whatsapp_to) res.whatsapp = await sendWhatsApp(env, prefs.whatsapp_to, row, task, src, B, res);
   if (prefs.email && prefs.email_to) res.email = await sendEmail(env, prefs.email_to, row, task, src, B);
   return res;
 }
@@ -519,7 +519,7 @@ async function metaSend(env, to, template, params, B) {
   return { ok: resp.ok, status: resp.status, parsed };
 }
 
-async function sendWhatsApp(env, to, row, task, src, B) {
+async function sendWhatsApp(env, to, row, task, src, B, out) {
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return 'error: WhatsApp not configured (META env vars)';
   const who = clean(row.u, 40), loc = clean(row.loc || '\u05dc\u05d0 \u05e6\u05d5\u05d9\u05df', 60), finding = clean(row.f || '\u05dc\u05dc\u05d0 \u05ea\u05d9\u05d0\u05d5\u05e8', 150);
   try {
@@ -537,7 +537,8 @@ async function sendWhatsApp(env, to, row, task, src, B) {
       // reporting a road accident. This is the order the labels actually want.
       r = await metaSend(env, to, TEMPLATE_FALLBACK, [kind, loc, finding], B);
     }
-    if (r.ok) return 'sent';
+    // 19/10/2026: the message id, so a WhatsApp reply to this alert reaches the assistant with what it answers (wa-hook.js).
+    if (r.ok) { const m = r.parsed && r.parsed.messages && r.parsed.messages[0]; if (out && m && m.id) out.whatsapp_id = String(m.id).slice(0, 120); return 'sent'; }
     const e2 = r.parsed && r.parsed.error;
     return 'error: Meta ' + r.status + (e2 && e2.message ? ' ' + String(e2.message).substring(0, 160) : '');
   } catch (e) {
