@@ -55,7 +55,7 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   let j = await call({ dry: true });
   check('dry: the text, nothing sent', j.dry && !metas.length && /מלגזה, מחסן/.test(j.text) && /routine-validity/.test(j.text) && !/routine-old/.test(j.text), j);
   j = await call({ force: true });
-  check('force: sent to Michael only, the day marked, logged', j.sent && metas.length === 1 && metas[0].to === OWNER && state[LAST_KEY] === ilDay(new Date()) && logs.some((l) => l.event_type === 'assistant' && l.payload.kind === 'morning' && l.payload.wamid === 'wamid.M'), { j, state, logs });
+  check('force: sent to Michael only, the day marked, logged', j.sent && metas.length === 1 && metas[0].to === OWNER && metas[0].type === 'template' && j.via === 'template' && state[LAST_KEY] === ilDay(new Date()) && logs.some((l) => l.event_type === 'assistant' && l.payload.kind === 'morning' && l.payload.wamid === 'wamid.M'), { j, state, logs });
   let n = metas.length;
   j = await call({});
   check('the scheduled call now (not 07:xx Israel, or already sent): nothing more', !j.sent && metas.length === n, j);

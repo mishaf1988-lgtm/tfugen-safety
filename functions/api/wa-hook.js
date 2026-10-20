@@ -14,7 +14,7 @@
 // notifications_log (payload.wamid), so the assistant knows what Michael is answering.
 // Machine path in _middleware: Meta calls from outside Israel.
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
-import { ownerWa, metaSigOk, inboundMessages } from '../_wa.js';
+import { ownerWa, metaSigOk, inboundMessages, noteOwnerIn } from '../_wa.js';
 
 const SEEN_KEY = 'wa_hook_seen', SEEN_MAX = 100;
 // 19/10/2026 (setup through Claude in Chrome: a pasted value could not be seen, Cloudflare hides
@@ -88,6 +88,7 @@ async function handle(env, raw) {
   for (const m of msgs) {
     if (!owner || m.from !== owner) continue;
     seen.from_owner++;
+    await noteOwnerIn(env, sbFrom(env), m.ts ? new Date(m.ts * 1000).toISOString() : new Date().toISOString());
     if (!(await firstTime(env, m.id))) continue;
     const text = fireText(m, await aboutAlert(env, m.context));
     const fr = await fetch(env.ASSISTANT_FIRE_URL, {

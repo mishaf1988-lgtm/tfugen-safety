@@ -50,15 +50,49 @@ export async function metaPost(env, payload) {
   return { ok: r.ok, status: r.status, parsed };
 }
 
-// Free text inside the window; a closed window falls back to the template (one line, 1000 chars).
+// 20/10/2026 (the first morning update: Meta answered 200 to the free text and dropped it later,
+// since Michael had not written for more than 24 hours; Meta tells that only to the webhook).
+// wa-hook keeps when Michael last wrote, and free text goes out only inside the window.
+export const OWNER_IN_KEY = 'wa_owner_in_at';
+export const WINDOW_MS = 23 * 3600000; // an hour short of Meta's 24, for clocks and delays
+async function stateRow(env, sbUrl, key) {
+  const k = env.SUPABASE_SERVICE_ROLE_KEY;
+  const r = await fetch(sbUrl + '/rest/v1/server_state?key=eq.' + key + '&select=value',
+    { headers: { apikey: k, Authorization: 'Bearer ' + k }, signal: tmo(SB_TIMEOUT_MS) });
+  if (!r.ok) return null;
+  const rows = await r.json();
+  return rows && rows[0] ? rows[0].value : null;
+}
+export async function ownerWindowOpen(env, sbUrl, nowMs) {
+  if (!env.SUPABASE_SERVICE_ROLE_KEY) return false;
+  try {
+    const at = Date.parse(await stateRow(env, sbUrl, OWNER_IN_KEY)) || 0;
+    return (nowMs || Date.now()) - at < WINDOW_MS;
+  } catch (e) { return false; }
+}
+export async function noteOwnerIn(env, sbUrl, iso) {
+  const k = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!k) return;
+  try {
+    await fetch(sbUrl + '/rest/v1/server_state?on_conflict=key', { method: 'POST', signal: tmo(SB_TIMEOUT_MS),
+      headers: { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([{ key: OWNER_IN_KEY, value: iso, updated_at: new Date().toISOString() }]) });
+  } catch (e) { /* the next message notes it again */ }
+}
+
+// Free text inside the window (opts.windowOpen true); outside it the template (one line, 1000 chars).
+// A closed window that Meta still reports at once (131047) also falls back to the template.
 export async function sendToOwner(env, to, text, opts) {
+  const o = opts || {};
   const body = String(text || '').trim().slice(0, 4096);
   if (!body) return { ok: false, error: 'empty text' };
-  const t = await metaPost(env, { messaging_product: 'whatsapp', to, type: 'text', text: { body } });
   const id = (r) => r.parsed && r.parsed.messages && r.parsed.messages[0] && r.parsed.messages[0].id || null;
-  if (t.ok) return { ok: true, via: 'text', wamid: id(t) };
-  const code = t.parsed && t.parsed.error && t.parsed.error.code;
-  if (WINDOW_CLOSED.indexOf(code) < 0 || (opts && opts.noTemplate)) return { ok: false, error: 'meta ' + t.status + ' ' + (code || ''), code };
+  if (o.windowOpen !== false) {
+    const t = await metaPost(env, { messaging_product: 'whatsapp', to, type: 'text', text: { body } });
+    if (t.ok) return { ok: true, via: 'text', wamid: id(t) };
+    const code = t.parsed && t.parsed.error && t.parsed.error.code;
+    if (WINDOW_CLOSED.indexOf(code) < 0 || o.noTemplate) return { ok: false, error: 'meta ' + t.status + ' ' + (code || ''), code };
+  } else if (o.noTemplate) return { ok: false, error: 'window closed (no message from Michael in 23 hours)', code: 131047 };
   const p = await metaPost(env, { messaging_product: 'whatsapp', to, type: 'template',
     template: { name: ASSISTANT_TEMPLATE.name, language: { code: ASSISTANT_TEMPLATE.language },
       components: [{ type: 'body', parameters: [{ type: 'text', text: waOneLine(body, 1000) }] }] } });
