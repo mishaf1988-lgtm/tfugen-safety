@@ -93,6 +93,7 @@
 **כלים ו-Routines**
 - פרומפט של Routine: קצר וקבוע, קורא את ההוראות מקובץ ב-repo. `update_trigger` עם `prompt` עובד רק מהשיחה שאליה הטריגר יורה (08/10/2026; `tfugen-db` 7).
 - `persistent_session_id` שמתחיל ב-`cse_` הוא אותה שיחה כמו `session_` עם אותו המשך (09/10/2026, `list_triggers` מול `list_sessions`).
+- **בשיחה שנפתחה מהפעלה עם `text` אין send_message** (גם לא get_session ו-list_sessions): ToolSearch מחזיר "No matching deferred tools found" (20/10/2026, ניסיון ישיר; לקח 134). יש בה fire_trigger, send_later ו-ArtifactData. העברה לעובד משיחה כזו: שורת chat עם `relay_now: true` ו-fire_trigger על הדוור בלי text.
 - הפעלת Routine **עם `text`** (`fire_trigger` עם טקסט, או ה-API עם טוקן) פותחת תמיד שיחה חדשה בלי repo, גם בטריגר קבוע; רק הפעלה בלי `text` נכנסת לשיחה הקבועה. ה-`session_id` בתשובה אומר לאן נכנסה (20/10/2026, שיחת הפיתוח; לקח 133).
 - `fire_trigger` **משיחה אחרת** לא יורה לתוך השיחה של הטריגר: נפתחת שיחה חדשה וריקה, בלי ה-repo ועל מודל אחר. היא נכשלת, ואפילו שולחת למיכאל התראת כשל מטעה (09/10/2026, `trig_01D1YtJGSQqvB2jxH31if3FC`). להתחלה מיידית: `create_session` עם ה-repo, ובפרומפט הפותח ההוראה לבצע את קובץ ה-Routine.
 - `fire_trigger` לתוך השיחה שמפעילה אותו: הטקסט הנוסף לא נשלח, והריצה מקבלת את הפרומפט המלא (08/10/2026). הגבלה של ריצת בדיקה נאכפת על ידי השיחה עצמה.
