@@ -588,7 +588,10 @@ export async function onRequest(context) {
       const d = draftRequest(body);
       if (d.error) return jsonResp({ ok: false, error: d.error }, 400, {});
       const at = await accessToken(env);
-      const name = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '') + '-' + Math.random().toString(36).slice(2, 8) + '.txt';
+      // 20/10/2026: a call that timed out had written its file, and the retry made a second draft. The name
+      // is the day and the content's hash, so the same draft again the same day overwrites its own file,
+      // which the flow ("when a file is created") does not see as new.
+      const name = new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + (await digest(d.file)).slice(0, 16) + '.txt';
       const f = await putFile(at.token, OD_ROOT + OD_DRAFT, name, d.file, 'text/plain');
       return jsonResp({ ok: true, file: OD_DRAFT + '/' + name, size: f.size || null }, 200, {});
     }
