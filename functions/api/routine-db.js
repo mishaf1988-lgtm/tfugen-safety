@@ -292,6 +292,16 @@ export function draftRequest(b) {
   if (at.error) return { error: at.error };
   const req = { to, subject, body: kept, html: '<div dir="rtl">' + html + SITE.signature + '</div>' };
   if (at.attach.length) req.attachments = at.attach.map((a) => ({ path: a.path, name: a.name }));
+  // 20/10/2026 (Michael: "this is a mail in a thread, so it must go in the thread of the mails"): reply_to =
+  // the id of the last mail in the thread (outlook_email_search "id"). The flow then makes the draft with
+  // Graph createReply on it: Outlook keeps the thread and the quoted mails, our text goes above them, and the
+  // recipients are ours. reply_body is that request's body, ready to send as is.
+  if (b.reply_to !== undefined && b.reply_to !== null && b.reply_to !== '') {
+    const id = String(b.reply_to).trim();
+    if (!MAIL_REQ_ID.test(id)) return { error: 'bad reply_to' };
+    req.reply_to = id;
+    req.reply_body = JSON.stringify({ message: { toRecipients: list.map((a) => ({ emailAddress: { address: a } })) }, comment: req.html });
+  }
   return { file: JSON.stringify(req), attach: at.attach };
 }
 // A passport number never goes out on WhatsApp (20/10/2026: the assistant's answer about the forklift
@@ -648,7 +658,7 @@ export async function onRequest(context) {
       return jsonResp({ ok: true, file: OD_REQ + '/' + name, size: f.size || null }, 200, {});
     }
     if (body.op === 'mail_draft') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'subject', 'body', 'attach'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'subject', 'body', 'attach', 'reply_to'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
       if (String(body.why || '').trim().length < 5) return jsonResp({ ok: false, error: 'why required' }, 400, {});
       const d = draftRequest(body);

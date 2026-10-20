@@ -393,6 +393,16 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('an attachment that is not there: refused, no request file (the flow would make no draft)', !x.json.ok && /attach missing/.test(x.json.error) && !puts.length, x.json);
     x = await call(D);
     check('no attach: no attachments key, as before', x.json.ok && !('attachments' in JSON.parse(puts[0].body)));
+    // 20/10/2026 (Michael: "this is a mail in a thread, so it goes in the thread")
+    puts = [];
+    const RID = 'AAMkADNmMjhjNWNiLTk4ZTItNDA4Ny1hYTM4LWM3MWJjMTc2MzUyMwBGAAAAAACvmdaXkAHZSoM_lWbFdKqPBwDNY6eUSe9PQJ-U8t9dbCM3AAAAAAEJAA=';
+    x = await call({ ...D, reply_to: RID });
+    const rj = puts[0] ? JSON.parse(puts[0].body) : {}, rb = rj.reply_body ? JSON.parse(rj.reply_body) : {};
+    check('reply_to: the id and a createReply body with our recipients and our text above the thread', x.json.ok && rj.reply_to === RID && rb.message.toRecipients.length === 2 && rb.message.toRecipients[1].emailAddress.address === 'tzachi@tapugan.co.il' && rb.comment === rj.html, rj);
+    puts = [];
+    check('a bad reply_to (short, a path, a quote): refused, nothing written', (await Promise.all(['abc', '../x/' + RID, RID + '"'].map((r) => call({ ...D, reply_to: r })))).every((r) => r.status === 400) && !puts.length);
+    x = await call(D);
+    check('no reply_to: a new mail as before, no reply keys', x.json.ok && !('reply_to' in JSON.parse(puts[0].body)) && !('reply_body' in JSON.parse(puts[0].body)));
     check('attach: .., a protected folder, the draft or request folder, a non-document, empty or more than 5: refused',
       [['../a.pdf'], ['x/למחיקה/a.pdf'], ['ARCHIVE/a.pdf'], [OD_DRAFT + '/a.pdf'], [OD_REQ + '/a.pdf'], ['a.exe'], [], ['1.pdf', '2.pdf', '3.pdf', '4.pdf', '5.pdf', '6.pdf'], 'a.pdf'].every((a) => !!draftAttach(a).error));
     puts = [];
