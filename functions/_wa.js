@@ -21,6 +21,27 @@ export const ASSISTANT_TEMPLATE = {
 // Meta error codes that mean "outside the customer service window, send a template".
 export const WINDOW_CLOSED = [131047, 131026];
 
+// Text from the database for a person's phone: keyboard characters only (CLAUDE.md).
+export function keyboardText(s) {
+  return String(s == null ? '' : s).replace(/[\u2013\u2014\u05be]/g, '-').replace(/[\u201c\u201d\u05f4]/g, '"')
+    .replace(/[\u2018\u2019\u05f3]/g, "'").replace(/\u2026/g, '...').replace(/\s*\u00b7\s*/g, ', ');
+}
+
+// One message from the assistant for a new hazard or near miss (20/10/2026, Michael: "maybe the
+// message comes from the assistant instead of two messages", and in the questionnaire "the
+// recommended set"). The options are numbered so a reply "1" works; a reply in words reaches the
+// assistant too. oneLine: outside the 24 hour window, inside the template.
+export const HAZARD_OPTIONS = ['\u05de\u05e9\u05d9\u05de\u05d4 \u05dc\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4', '\u05d0\u05e0\u05d9 \u05de\u05d8\u05e4\u05dc', '\u05e1\u05d5\u05d3\u05e8 \u05d1\u05de\u05e7\u05d5\u05dd', '\u05dc\u05d0 \u05de\u05e4\u05d2\u05e2'];
+export function hazardAsk(head, kind, loc, finding, oneLine) {
+  const k = keyboardText(kind), l = keyboardText(loc), f = keyboardText(finding);
+  if (oneLine) {
+    return waOneLine(head + ': ' + k + '; \u05de\u05d9\u05e7\u05d5\u05dd: ' + l + '; \u05de\u05de\u05e6\u05d0: ' + f + '. \u05e2\u05e0\u05d5 \u05d1\u05de\u05e1\u05e4\u05e8: '
+      + HAZARD_OPTIONS.map((o, i) => (i + 1) + ' ' + o).join('; ') + '.', 1000);
+  }
+  return [head + ': ' + k, '\u05de\u05d9\u05e7\u05d5\u05dd: ' + l, '\u05de\u05de\u05e6\u05d0: ' + f, '', '\u05de\u05d4 \u05e2\u05d5\u05e9\u05d9\u05dd? \u05e2\u05e0\u05d5 \u05e2\u05dc \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05d4\u05d6\u05d5 \u05d1\u05de\u05e1\u05e4\u05e8:']
+    .concat(HAZARD_OPTIONS.map((o, i) => (i + 1) + '. ' + o), ['\u05d0\u05d5 \u05db\u05ea\u05d1\u05d5 \u05d1\u05de\u05d9\u05dc\u05d9\u05dd.']).join('\n');
+}
+
 export function digits(s) { return String(s == null ? '' : s).replace(/[^0-9]/g, ''); }
 export function waOneLine(s, max) {
   return String(s == null ? '' : s).replace(/\s*\n+\s*/g, ' | ').replace(/[\t ]{2,}/g, ' ').trim().slice(0, max || 1000);
