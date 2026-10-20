@@ -2,7 +2,7 @@
 // questionnaire: "same number, the assistant only on a new message"). wa-hook.js takes only a
 // Meta-signed message from Michael's own number and fires the assistant's Routine once per message;
 // routine-db op wa_me answers only to that number, falling back to the template outside the window.
-import { onRequest as hook, fireText } from './_build/wa-hook.mjs';
+import { onRequest as hook, fireText, ACK_TEXT } from './_build/wa-hook.mjs';
 import { onRequest as rdb, hazardChoiceNote } from './_build/routine-db.mjs';
 import { metaSigOk, inboundMessages, waOneLine, ASSISTANT_TEMPLATE } from './_build/_wa.mjs';
 import fs from 'fs';
@@ -71,6 +71,7 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   const r1 = await post(raw, await sign(raw, ENV.META_APP_SECRET));
   check('Michael\'s message opens the window: wa_owner_in_at noted', !!state.wa_owner_in_at && Date.parse(state.wa_owner_in_at) === 1792400000 * 1000, state.wa_owner_in_at);
   check('Michael\'s signed message fires the assistant once', r1.status === 200 && fires.length === 1, fires);
+  check('an immediate "got it" to Michael, free text (20/10/2026: "do it: an immediate got it")', metas.length === 1 && metas[0].to === OWNER && metas[0].type === 'text' && metas[0].text.body === ACK_TEXT, metas);
   check('with the routine token and the beta header', fires[0] && fires[0].auth === 'Bearer tok' && fires[0].beta === 'experimental-cc-routine-2026-04-01');
   check('the fire text says checked by the server and holds the message', fires[0] && /wamid: wamid\.A/.test(fires[0].body.text) && fires[0].body.text.indexOf('מה המצב?') > 0);
   await post(raw, await sign(raw, ENV.META_APP_SECRET));
@@ -105,6 +106,8 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   await post(fl, await sign(fl, ENV.META_APP_SECRET));
   check('the same message sent again after the failure is fired (not lost)', fires.length === nf + 2 && fires[fires.length - 1].body.text.includes('wamid.FAIL'), fires.length - nf);
 
+  check('one "got it" per fire that succeeded (the 500 got none), none for another number or a repeat', metas.length === fires.length - 1 && metas.every((x) => x.to === OWNER && x.text.body === ACK_TEXT), [metas.length, fires.length]);
+  metas.length = 0;
   console.log('\n3. wa_me: only to Michael');
   const call = async (body) => (await rdb({ request: new Request('https://x/api/routine-db', { method: 'POST', headers: { 'x-routine-key': 'k-1', 'content-type': 'application/json' }, body: JSON.stringify(body) }), env: ENV })).json();
   state.wa_owner_in_at = new Date().toISOString(); // Michael wrote a minute ago: the window is open
