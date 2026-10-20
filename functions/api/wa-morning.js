@@ -31,9 +31,27 @@ const dmy = (ymd) => { const p = String(ymd || '').slice(0, 10).split('-'); retu
 export const keyboard = (s) => String(s || '').replace(/[\u2013\u2014\u05be]/g, '-').replace(/[\u201c\u201d\u05f4]/g, '"').replace(/[\u2018\u2019\u05f3]/g, "'").replace(/\u2026/g, '...');
 const clip = (s, n) => { s = keyboard(s).replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trim() + '.' : s; };
 
+// Agent names in agent_log are technical (routine-*); the update shows the office name.
+export const AGENT_NAMES = { 'routine-coa': '\u05e1\u05d9\u05d3\u05d5\u05e8 \u05ea\u05e2\u05d5\u05d3\u05d5\u05ea COA', 'routine-compliance': '\u05d3\u05d5\u05d7 \u05d4\u05e6\u05d9\u05d5\u05ea', 'routine-factory-trends': '\u05de\u05d2\u05de\u05d5\u05ea \u05d4\u05de\u05e4\u05e2\u05dc',
+  'routine-inspector': '\u05d4\u05de\u05e4\u05e7\u05d7 \u05d4\u05de\u05d3\u05d5\u05de\u05d4', 'routine-inventor': '\u05d7\u05d5\u05e7\u05e8 \u05d4\u05d4\u05de\u05e6\u05d0\u05d5\u05ea', 'routine-mail-filing': '\u05ea\u05d9\u05d5\u05e7 \u05de\u05d4\u05de\u05d9\u05d9\u05dc', 'routine-nevo-versions': '\u05de\u05e2\u05e7\u05d1 \u05e0\u05d1\u05d5',
+  'routine-od-scan': '\u05e1\u05e8\u05d9\u05e7\u05ea \u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea', 'routine-preferences': '\u05de\u05d5\u05d3\u05dc \u05d4\u05d4\u05e2\u05d3\u05e4\u05d5\u05ea', 'routine-quotes': '\u05de\u05e2\u05e7\u05d1 \u05d4\u05e6\u05e2\u05d5\u05ea \u05de\u05d7\u05d9\u05e8', 'routine-radar-learn': '\u05d4\u05e8\u05d3\u05d0\u05e8',
+  'routine-researcher': '\u05d7\u05d5\u05e7\u05e8 \u05d4\u05e2\u05d5\u05d6\u05e8', 'routine-talk-field': '\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9\u05ea', 'routine-validity': '\u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3', 'routine-wa-assistant': '\u05d4\u05e2\u05d5\u05d6\u05e8 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4' };
+export const agentName = (a) => AGENT_NAMES[a] || String(a || '').replace(/^routine-/, '');
+
 // Pure: the text. items = [{n, e}] already sorted by e, today = 'YYYY-MM-DD',
 // failed = agent names that reported ok:false in the last 24 hours.
-export function buildBrief(items, failed, today) {
+export function buildBrief(items, failed, today, compact) {
+  failed = failed.map(agentName);
+  // compact (20/10/2026, Michael's screenshot): outside the 24 hour window the template carries one
+  // line between its own "update from the assistant:" and "to answer, write here", so no heading, no
+  // closing line, and items joined by "; " instead of new lines that would turn into " | ".
+  if (compact) {
+    const parts = [];
+    if (items.length) parts.push('\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea: ' + items.slice(0, 3).map((x) => clip(x.n, 50) + (x.e < today ? ' (\u05e4\u05d2 ' : ' (\u05e2\u05d3 ') + dmy(x.e) + ')').join('; ')
+      + (items.length > 3 ? '; \u05d5\u05e2\u05d5\u05d3 ' + (items.length - 3) : '') + '.');
+    if (failed.length) parts.push('\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc: ' + failed.slice(0, 5).join(', ') + '.');
+    return (parts.length ? parts.join(' ') : '\u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.').slice(0, MAX_CHARS);
+  }
   const lines = [];
   if (items.length) {
     lines.push('\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea:');
@@ -94,13 +112,14 @@ export async function onRequest(context) {
 export async function run(env, now, body) {
   if (!body.force && !body.dry && !dueNow(now)) return { ok: true, sent: false, reason: 'not 07:xx on a workday in Israel' };
   const g = await gather(env, now);
-  const text = buildBrief(g.items, g.failed, g.today);
+  const open = await ownerWindowOpen(env, sbFrom(env), now.getTime());
+  const text = buildBrief(g.items, g.failed, g.today, !open);
   if (body.dry) return { ok: true, sent: false, dry: true, text };
   if (!body.force && (await stateGet(env, LAST_KEY).catch(() => null)) === g.today) return { ok: true, sent: false, reason: 'already sent today' };
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };
   const to = await ownerWa(env, sbFrom(env));
   if (!to) return { ok: false, error: 'no owner number in notification_prefs' };
-  const r = await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, sbFrom(env), now.getTime()) });
+  const r = await sendToOwner(env, to, text, { windowOpen: open });
   if (r.ok) await stateSet(env, LAST_KEY, g.today).catch(() => {});
   await sb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
     body: JSON.stringify([{ id: 'wm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
