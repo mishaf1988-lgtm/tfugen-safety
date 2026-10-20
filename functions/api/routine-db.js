@@ -34,7 +34,8 @@
 //              That day two sessions built the same retro items in parallel. claims: the fresh list.
 //   wa_me      (19/10/2026, Michael: "updates on WhatsApp... I talk to my assistant") one message
 //              {text} to Michael's own number only (notification_prefs, _wa.js), never to anyone else.
-//              Free text inside the 24 hour window, else the utility template. Logged in
+//              Free text inside the 24 hour window, else the utility template. choices (20/10/2026):
+//              up to 10 short answers, sent as buttons or a list inside the window (_wa.js choicesPayload). Logged in
 //              notifications_log (event assistant, payload.wamid) so his reply can be matched.
 //   wa_tpl     create the assistant's template in Meta once (ASSISTANT_TEMPLATE), or report that it exists.
 //   hazard_choice  Michael's answer to the assistant's hazard message (20/10/2026, Michael: "only
@@ -668,7 +669,7 @@ export async function onRequest(context) {
       if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
       const to = await ownerWa(env, url);
       if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
-      const r = await sendToOwner(env, to, body.text, { noTemplate: body.no_template === true, windowOpen: await ownerWindowOpen(env, url) });
+      const r = await sendToOwner(env, to, body.text, { noTemplate: body.no_template === true, windowOpen: await ownerWindowOpen(env, url), choices: Array.isArray(body.choices) ? body.choices : null });
       if (r.ok) await noteLastOut(env, url, body.text, body.ref);
       try {
         await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
