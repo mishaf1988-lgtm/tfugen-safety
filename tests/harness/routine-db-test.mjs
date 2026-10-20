@@ -100,7 +100,8 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     const ops = [...src.matchAll(/body\.op === '([a-z_]+)'/g)].map((m) => ({ op: m[1], at: m.index }));
     const owner = (p) => ops.filter((o) => o.at < p).pop();
     const own = [...src.matchAll(/method:\s*'PATCH'/g)].map((m) => (owner(m.index) || {}).op).sort().join();
-    check('no DELETE anywhere; one PATCH each in expiry_set, od_move and talk_field (15/10/2026)', !/method:\s*'DELETE'/.test(src) && patches.length === 3 && own === 'expiry_set,od_move,talk_field', own);
+    // 20/10/2026: hazard_choice, one note column on trustee_reports / near_miss (Michael: "only record").
+    check('no DELETE anywhere; one PATCH each in expiry_set, hazard_choice, od_move and talk_field', !/method:\s*'DELETE'/.test(src) && patches.length === 4 && own === 'expiry_set,hazard_choice,od_move,talk_field', own);
   }
 
   console.log('\n4b. agent_report: append-only run log');

@@ -37,6 +37,9 @@
 //              Free text inside the 24 hour window, else the utility template. Logged in
 //              notifications_log (event assistant, payload.wamid) so his reply can be matched.
 //   wa_tpl     create the assistant's template in Meta once (ASSISTANT_TEMPLATE), or report that it exists.
+//   hazard_choice  Michael's answer to the assistant's hazard message (20/10/2026, Michael: "only
+//              record, I route"): {src: trustee_hazard|near_miss, id, choice: 1-4}. Writes one line
+//              to trustee_reports.mgr_note / near_miss.notes and nothing else: no status, no closing.
 //   wa_check   the assistant's setup, checked against Meta without showing a value (19/10/2026, Michael:
 //              "do the check yourself"): META_APP_SECRET by appsecret_proof, the app's webhook fields,
 //              the WABA's subscribed apps, and with fire_probe the fire token (status only). subscribe: true
@@ -77,7 +80,7 @@
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
-import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex } from '../_wa.js';
+import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks'];
@@ -89,6 +92,17 @@ export function agentEntry(b, nowIso) {
   if (!/^[a-z0-9-]{2,40}$/.test(name)) return null;
   const t = (x) => String(x === undefined || x === null ? '' : x).replace(/\s+/g, ' ').trim().slice(0, 300);
   return { agent: name, at: nowIso, ok: b.ok === true, line: t(b.line), learned: t(b.learned) };
+}
+// Michael's choice on a hazard, as a note (hazard_choice). Pure, tested. The same choice twice = no change.
+export const HAZARD_NOTE_TABLE = { trustee_hazard: ['trustee_reports', 'mgr_note'], near_miss: ['near_miss', 'notes'] };
+export function hazardChoiceNote(prev, choice, today) {
+  const n = Number(choice);
+  if (!(n >= 1 && n <= HAZARD_OPTIONS.length) || Math.floor(n) !== n) return { error: 'choice must be 1-' + HAZARD_OPTIONS.length };
+  const p = today.split('-');
+  const line = (n === 1 ? '\u05dc\u05e0\u05d9\u05ea\u05d5\u05d1: ' : '') + HAZARD_OPTIONS[n - 1] + ' (\u05de\u05d9\u05db\u05d0\u05dc \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 ' + p[2] + '/' + p[1] + '/' + p[0] + ')';
+  const before = String(prev || '');
+  if (before.indexOf(line) >= 0) return { note: before, changed: false };
+  return { note: (before ? before + ' | ' + line : line).slice(0, 1000), changed: true };
 }
 // Work claims between parallel sessions (12/10/2026). Pure helpers, tested.
 export const CLAIM_KEY = 'work_claims', CLAIM_HOURS = 6, CLAIM_MAX = 100;
@@ -463,6 +477,28 @@ export async function onRequest(context) {
         if (!r.ok) return jsonResp({ ok: false, error: 'write ' + r.status }, 200, {});
       }
       return jsonResp({ ok: true, ...res.ans }, 200, {});
+    }
+    if (body.op === 'hazard_choice') {
+      const t = HAZARD_NOTE_TABLE[body.src];
+      if (!t) return jsonResp({ ok: false, error: 'src must be trustee_hazard or near_miss' }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'src', 'id', 'choice'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const id = String(body.id === undefined || body.id === null ? '' : body.id);
+      if (!/^[A-Za-z0-9_.-]{1,80}$/.test(id)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
+      const g = await fetch(url + '/rest/v1/' + t[0] + '?select=id,' + t[1] + '&id=eq.' + encodeURIComponent(id), { headers: h, signal: tmo(SB_MS) });
+      if (!g.ok) return jsonResp({ ok: false, error: 'read ' + g.status }, 200, {});
+      const rows = await g.json();
+      if (!Array.isArray(rows) || rows.length !== 1) return jsonResp({ ok: false, error: 'row not found' }, 200, {});
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+      const c = hazardChoiceNote(rows[0][t[1]], body.choice, today);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      if (!c.changed) return jsonResp({ ok: true, changed: false, note: c.note }, 200, {});
+      const w = await fetch(url + '/rest/v1/' + t[0] + '?id=eq.' + encodeURIComponent(id), {
+        method: 'PATCH', headers: { ...h, Prefer: 'return=representation' }, body: JSON.stringify({ [t[1]]: c.note }), signal: tmo(SB_MS),
+      });
+      if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status }, 200, {});
+      const after = await w.json();
+      if (!Array.isArray(after) || after.length !== 1) return jsonResp({ ok: false, error: 'write touched ' + (Array.isArray(after) ? after.length : '?') + ' rows' }, 200, {});
+      return jsonResp({ ok: true, changed: true, note: c.note }, 200, {});
     }
     if (body.op === 'expiry_set') {
       const t = EXPIRY_TABLES[body.table];
