@@ -264,8 +264,11 @@ export const OD_REQ = '_\u05d1\u05e7\u05e9\u05d5\u05ea \u05de\u05d4\u05de\u05d9\
 export const OD_DRAFT = '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d9\u05d9\u05dc';
 export const DRAFT_TO = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$/;
 export function draftRequest(b) {
-  const to = String(b.to || '').trim(), subject = String(b.subject || '').replace(/\s+/g, ' ').trim(), text = String(b.body || '').replace(/\r\n/g, '\n').trim();
-  if (!DRAFT_TO.test(to)) return { error: 'bad to' };
+  // Up to 3 recipients, "a@x; b@y" (20/10/2026: one mail to the two people in charge of the ammonia
+  // equipment); the flow's To field takes them separated by ";".
+  const list = String(b.to || '').split(/[;,]/).map((x) => x.trim()).filter(Boolean);
+  if (!list.length || list.length > 3 || !list.every((x) => DRAFT_TO.test(x))) return { error: 'bad to' };
+  const to = list.join(';'), subject = String(b.subject || '').replace(/\s+/g, ' ').trim(), text = String(b.body || '').replace(/\r\n/g, '\n').trim();
   if (!subject || subject.length > 200) return { error: 'subject 1-200 characters' };
   if (!text || text.length > 5000) return { error: 'body 1-5000 characters' };
   // 20/10/2026 (Michael: "instead of my name, attach the signature I have in the mail"): a draft made
