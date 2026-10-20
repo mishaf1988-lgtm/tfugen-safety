@@ -42,6 +42,28 @@ export function hazardAsk(head, kind, loc, finding, oneLine) {
     .concat(HAZARD_OPTIONS.map((o, i) => (i + 1) + '. ' + o), ['\u05d0\u05d5 \u05db\u05ea\u05d1\u05d5 \u05d1\u05de\u05d9\u05dc\u05d9\u05dd.']).join('\n');
 }
 
+// Buttons (20/10/2026, Michael in the questionnaire: "do it: buttons in WhatsApp"). A question with
+// up to 10 choices goes out, inside the 24 hour window, as reply buttons (up to 3) or a list (4 to 10),
+// so one tap answers it. Each choice starts with its number, so the reply that comes back ("2. ...")
+// reads like a typed "2" to the assistant. Meta: a button title up to 20 characters, a list row 24,
+// the body 1024, titles unique (the numbers make them so). Outside the window: the template, no choices.
+export const BTN_MAX = 20, ROW_MAX = 24, CHOICE_BODY_MAX = 1024;
+export const CHOOSE = '\u05d1\u05d7\u05e8\u05d5';
+export function cleanChoices(choices) {
+  return (Array.isArray(choices) ? choices : []).map((c) => keyboardText(c).replace(/\s+/g, ' ').trim()).filter(Boolean).slice(0, 10);
+}
+export function choicesPayload(to, text, choices) {
+  const cs = cleanChoices(choices), body = String(text || '').trim();
+  if (!cs.length || !body || body.length > CHOICE_BODY_MAX) return null;
+  const lab = (c, i, max) => ((i + 1) + '. ' + c).slice(0, max).trim();
+  if (cs.length <= 3) {
+    return { messaging_product: 'whatsapp', to, type: 'interactive', interactive: { type: 'button', body: { text: body },
+      action: { buttons: cs.map((c, i) => ({ type: 'reply', reply: { id: 'c' + (i + 1), title: lab(c, i, BTN_MAX) } })) } } };
+  }
+  return { messaging_product: 'whatsapp', to, type: 'interactive', interactive: { type: 'list', body: { text: body },
+    action: { button: CHOOSE, sections: [{ rows: cs.map((c, i) => ({ id: 'c' + (i + 1), title: lab(c, i, ROW_MAX) })) }] } } };
+}
+
 export function digits(s) { return String(s == null ? '' : s).replace(/[^0-9]/g, ''); }
 export function waOneLine(s, max) {
   return String(s == null ? '' : s).replace(/\s*\n+\s*/g, ' | ').replace(/[\t ]{2,}/g, ' ').trim().slice(0, max || 1000);
@@ -133,6 +155,15 @@ export async function sendToOwner(env, to, text, opts) {
   if (!body) return { ok: false, error: 'empty text' };
   const id = (r) => r.parsed && r.parsed.messages && r.parsed.messages[0] && r.parsed.messages[0].id || null;
   if (o.windowOpen !== false) {
+    // Choices: buttons or a list. A refusal other than a closed window falls back to the plain text,
+    // which carries the same numbered choices, so a question is never lost to a bad button.
+    const ip = o.choices ? choicesPayload(to, body, o.choices) : null;
+    if (ip) {
+      const b = await metaPost(env, ip);
+      if (b.ok) return { ok: true, via: 'interactive', wamid: id(b) };
+      const bc = b.parsed && b.parsed.error && b.parsed.error.code;
+      if (WINDOW_CLOSED.indexOf(bc) >= 0 && o.noTemplate) return { ok: false, error: 'meta ' + b.status + ' ' + bc, code: bc };
+    }
     const t = await metaPost(env, { messaging_product: 'whatsapp', to, type: 'text', text: { body } });
     if (t.ok) return { ok: true, via: 'text', wamid: id(t) };
     const code = t.parsed && t.parsed.error && t.parsed.error.code;
@@ -171,7 +202,9 @@ export function inboundMessages(body) {
       if (!m || !m.id || !m.from) return;
       const text = m.type === 'text' ? (m.text && m.text.body) : m.type === 'button' ? (m.button && m.button.text)
         : m.type === 'interactive' ? (m.interactive && (m.interactive.button_reply || m.interactive.list_reply || {}).title) : '';
+      const pick = m.type === 'interactive' && m.interactive ? (m.interactive.button_reply || m.interactive.list_reply || {}).id : '';
       out.push({ id: String(m.id).slice(0, 120), from: digits(m.from), ts: Number(m.timestamp) || 0, type: String(m.type || ''),
+        choice: /^c([1-9]|10)$/.test(String(pick || '')) ? Number(String(pick).slice(1)) : null,
         text: String(text || '').slice(0, 3000), context: m.context && m.context.id ? String(m.context.id).slice(0, 120) : '' });
     });
   }));

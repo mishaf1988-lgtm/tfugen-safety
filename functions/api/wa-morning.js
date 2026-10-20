@@ -182,6 +182,9 @@ export async function calendarStep(env, now, dry) {
 }
 
 // The call itself, with the clock as an argument (tested at 07:47 Israel).
+// 20/10/2026 (Michael: "do it: buttons in WhatsApp"): three questions to tap under the update, inside
+// the window. A tap reaches the assistant as "1. ...", like a typed message.
+export const MORNING_CHOICES = ['\u05de\u05d4 \u05d3\u05d7\u05d5\u05e3', '\u05de\u05d4 \u05de\u05d7\u05db\u05d4 \u05dc\u05d9', '\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea'];
 export async function run(env, now, body) {
   if (body.calendar) return { ok: true, sent: false, cal: await calendarStep(env, now, false).catch((e) => ({ error: String(e.message || e).slice(0, 200) })) };
   if (!body.force && !body.dry && !dueNow(now)) return { ok: true, sent: false, reason: 'not 07:xx on a workday in Israel' };
@@ -195,7 +198,7 @@ export async function run(env, now, body) {
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };
   const to = await ownerWa(env, sbFrom(env));
   if (!to) return { ok: false, error: 'no owner number in notification_prefs' };
-  const r = await sendToOwner(env, to, text, { windowOpen: open });
+  const r = await sendToOwner(env, to, text, { windowOpen: open, choices: open ? MORNING_CHOICES : null });
   if (r.ok) { await stateSet(env, LAST_KEY, g.today).catch(() => {}); await noteLastOut(env, sbFrom(env), text, 'morning'); }
   await sb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
     body: JSON.stringify([{ id: 'wm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
