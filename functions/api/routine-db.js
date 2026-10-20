@@ -745,6 +745,9 @@ export async function onRequest(context) {
             headers: { Authorization: 'Bearer ' + env.ASSISTANT2_FIRE_TOKEN, 'anthropic-beta': 'experimental-cc-routine-2026-04-01', 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: '[\u05d1\u05d3\u05d9\u05e7\u05ea \u05d7\u05d9\u05d1\u05d5\u05e8 \u05de\u05d4\u05e9\u05e8\u05ea, \u05dc\u05d0 \u05d4\u05d5\u05d3\u05e2\u05d4 \u05de\u05de\u05d9\u05db\u05d0\u05dc] \u05dc\u05e1\u05d9\u05d9\u05dd \u05d1\u05e9\u05d5\u05e8\u05d4 \u05d0\u05d7\u05ea, \u05d1\u05dc\u05d9 wa_me.' }) });
           out.probe2_status = fr.status; out.probe2_body = fr.j && typeof fr.j === 'object' ? Object.keys(fr.j).slice(0, 8) : null;
+          // The session the fire landed in (an id and a link, not a secret): get_session on it shows
+          // whether the Routine woke its own session or opened a fresh one (lesson 133).
+          if (fr.j && typeof fr.j === 'object') { out.probe2_session = fr.j.claude_code_session_id || null; out.probe2_session_url = fr.j.claude_code_session_url || null; }
         }
       }
       return jsonResp(out, 200, {});
