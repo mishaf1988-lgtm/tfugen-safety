@@ -137,6 +137,7 @@ description: How to read and change the live Supabase database of tfugen-safety 
 הכלל: 200 מ-API של Routine רק אומר שההפעלה התקבלה. הוכחה היא אירוע חדש בשיחה עצמה (`list_events`). מעבר עושים רק אחרי ניסיון שלא חי (`wa_check` `fire_probe_trigger`) ואירוע שנראה בשיחה.
 נאכף: `wa-fast-test.mjs`, `wa-assistant-test.mjs` (הניסיון בלי מעבר); הכתובת נכתבת רק אחרי שהניסיון עבר (`routine-wa-assistant.md`, "איפה הודעה ממיכאל רצה").
 הסיבה נמצאה (20/10/2026): הפעלה עם `text` פותחת תמיד שיחה חדשה, גם בטריגר הישן; רק בלי `text` היא נכנסת לשיחה הקבועה. ההנחה "הטריגר הישן מעיר את השיחה שלו" לא נבדקה מעולם: ההודעות טופלו בשיחות חדשות. לפני שמתכננים סביב "השיחה של הטריגר": `fire_trigger` עם אותו סוג הפעלה (עם/בלי `text`), והשוואת `session_id` בתשובה ל-`cse_<השיחה>`. `wa_check` מחזיר `probe2_session` ו-`fire_session`, ועם `expect_session: <השיחה>` גם `probe2_landed` / `fire_landed` (false = ההפעלה הלכה לשיחה אחרת; `sameSession` ב-`_wa.js`, `wa-assistant-test.mjs`). לפני כל תוכנית שנשענת על "הטריגר מעיר את השיחה X": הבדיקה הזו עם `expect_session`.
+**נמדד שוב 20/10/2026 (C27):** הפעלה דרך ה-API עם טוקן פותחת שיחה חדשה **גם בלי טקסט** (`relay_fire` על הדוור: `landed: false`, `origin: fire_routine`). רק `fire_trigger` מתוך שיחה ושעון נכנסים לשיחה הקבועה. כלומר אין דרך מהשרת להעיר שיחה קבועה.
 חזר: 0
 
 **134. העוזר בוואטסאפ סימן העברה כ"נשלחה" והיא לא יצאה (20/10/2026).**
