@@ -62,6 +62,7 @@
 //              with conflictBehavior=fail: an existing name is never touched, nothing is moved,
 //              replaced or deleted. Never inside the old-versions / to-delete / ARCHIVE folders
 //              or the mail inbox. Michael's computer is not needed. odMkdirCheck.
+//   mail_draft  (20/10/2026) a draft in Michael's Outlook via the third Power Automate flow: {agent, why, to, subject, body}. Never sent.
 //   mail_request  (11/10/2026, Michael: "בצע: זרימה שנייה") ask the second Power Automate
 //              flow for the attachments of one old mail: write a small text file with the
 //              message id into OD_REQ. The flow (When a file is created there) opens the
@@ -256,6 +257,20 @@ export const OD_SKIP = '\u05dc\u05d0 \u05dc\u05ea\u05d9\u05d5\u05e7';
 // The folder the second flow watches for requests (inside the safety folder).
 export const OD_REQ = '_\u05d1\u05e7\u05e9\u05d5\u05ea \u05de\u05d4\u05de\u05d9\u05d9\u05dc';
 // A Graph / Outlook message id: base64url-ish, as outlook_email_search returns it.
+// 20/10/2026 (Michael: "maybe through other tools", after the 365 connector turned out read only):
+// a draft in Michael's Outlook through Power Automate, like mail_request. The server writes one
+// request file; the flow "\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05de\u05d4\u05e2\u05d5\u05d6\u05e8" (power-automate-mail.md, flow 3) saves it as a draft.
+// Never sent: the flow has no send step, and Michael sends from Outlook.
+export const OD_DRAFT = '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d9\u05d9\u05dc';
+export const DRAFT_TO = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$/;
+export function draftRequest(b) {
+  const to = String(b.to || '').trim(), subject = String(b.subject || '').replace(/\s+/g, ' ').trim(), text = String(b.body || '').replace(/\r\n/g, '\n').trim();
+  if (!DRAFT_TO.test(to)) return { error: 'bad to' };
+  if (!subject || subject.length > 200) return { error: 'subject 1-200 characters' };
+  if (!text || text.length > 5000) return { error: 'body 1-5000 characters' };
+  const html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').split('\n').join('<br>');
+  return { file: JSON.stringify({ to, subject, body: text, html: '<div dir="rtl">' + html + '</div>' }) };
+}
 export const MAIL_REQ_ID = /^[A-Za-z0-9_=+\/-]{40,400}$/;
 const OD_NO_DIR = /(^|\/)(_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea|\u05dc\u05de\u05d7\u05d9\u05e7\u05d4|ARCHIVE)(\/|$)/i;
 // 18/10/2026 (Michael: "גם וגם"): csv too, the data file next to a lab certificate pdf.
@@ -556,6 +571,17 @@ export async function onRequest(context) {
       const name = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '') + '-' + Math.random().toString(36).slice(2, 8) + '.txt';
       const f = await putFile(at.token, OD_ROOT + OD_REQ, name, id, 'text/plain');
       return jsonResp({ ok: true, file: OD_REQ + '/' + name, size: f.size || null }, 200, {});
+    }
+    if (body.op === 'mail_draft') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'subject', 'body'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
+      if (String(body.why || '').trim().length < 5) return jsonResp({ ok: false, error: 'why required' }, 400, {});
+      const d = draftRequest(body);
+      if (d.error) return jsonResp({ ok: false, error: d.error }, 400, {});
+      const at = await accessToken(env);
+      const name = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '') + '-' + Math.random().toString(36).slice(2, 8) + '.txt';
+      const f = await putFile(at.token, OD_ROOT + OD_DRAFT, name, d.file, 'text/plain');
+      return jsonResp({ ok: true, file: OD_DRAFT + '/' + name, size: f.size || null }, 200, {});
     }
     if (body.op === 'od_mkdir') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'parent', 'name'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});

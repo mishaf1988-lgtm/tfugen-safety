@@ -27,6 +27,19 @@
 
 ## פתוח
 
+- [ ] **C23. Power Automate: זרימת "טיוטות מהעוזר"** (20/10/2026, מיכאל: "אולי דרך כלים נוספים"). הפירוט: `power-automate-mail.md`, זרימה 3. טקסט להדבקה בכרום:
+  ```
+  אתה בונה בשבילי זרימה ב-Power Automate. עבור על השלבים ברצף, עצור רק אם משהו לא תואם, ותאר מה אתה רואה. אל תוסיף שום פעולה ששולחת מייל.
+  1. ב-OneDrive (https://www.office.com/launch/onedrive), בתיקייה "שולחן העבודה" > "ניהול בטיחות", צור תיקייה חדשה בשם: _טיוטות למייל (אם קיימת, דלג).
+  2. פתח https://make.powerautomate.com > Create > Automated cloud flow. שם: טיוטות מהעוזר. טריגר: OneDrive for Business "When a file is created (properties only)". Folder: /שולחן העבודה/ניהול בטיחות/_טיוטות למייל.
+  3. New step: OneDrive for Business "Get file content". File: Id מהטריגר.
+  4. New step: Data Operation "Compose". Inputs, בלשונית Expression: json(trim(string(body('Get_file_content'))))
+  5. New step: Office 365 Outlook, חפש "Draft an email message". אם קיים: To = outputs('Compose')?['to'], Subject = outputs('Compose')?['subject'], Body = outputs('Compose')?['html'] (כל אחד כ-Expression). אם לא קיים: Office 365 Outlook "Send an HTTP request", Method POST, URI https://graph.microsoft.com/v1.0/me/messages, Content-Type application/json, Body:
+     {"subject": "@{outputs('Compose')?['subject']}", "body": {"contentType": "HTML", "content": "@{outputs('Compose')?['html']}"}, "toRecipients": [{"emailAddress": {"address": "@{outputs('Compose')?['to']}"}}]}
+  6. Save. אל תריץ בדיקה ידנית.
+  בסוף: דוח קצר: איזו פעולה נבחרה בשלב 5 (Draft an email message או Send an HTTP request), והאם השמירה הצליחה.
+  ```
+  אחרי הביצוע: Claude שולח בקשת טיוטה אחת לבדיקה (`mail_draft`), ומיכאל מאשר שהטיוטה הופיעה ב-Drafts.
 - [x] **C22. וואטסאפ: לחבר את העוזר (טוקן, Cloudflare, Meta)** (נסגר 20/10/2026: מיכאל כתב לעוזר בוואטסאפ וקיבל תשובה; Publish לא נדרש) (19/10/2026, מיכאל: "תכתוב לי הוראות מלאות לכרום שיעשה הכל"). ה-verify token בטקסט הוא אימות חד-פעמי של ה-webhook, לא מפתח גישה. אחרי הביצוע: retry לפריסה ב-API, בדיקת השמות ב-`pages/projects`, ו-`wa_me` בדיקה. **19/10/2026:** ה-webhook אומת. נשאר רק Subscribe ל-`messages` (מיכאל קיבל הוראות בצ'אט, שלבים 1-7, רצופים). אחרי: `routine-db.sh '{"op":"wa_check"}'` מאמת מול Meta את הסוד, ה-Subscribe והמינוי של ה-WABA, ו-`subscribe:true` משלים בעצמו מה שחסר.
 ```
 משימה: לחבר את העוזר בוואטסאפ של מערכת הבטיחות. שלושה חלקים, לפי הסדר. לא לשנות שום הגדרה אחרת, לא למחוק שום דבר, ולא לכתוב אף ערך סודי (טוקן, App secret) בצ'אט, בצילום או בתשובה: רק להעתיק ישר משדה לשדה. אם משהו לא נראה כמו שכתוב, לעצור ולתאר מה רואים.
