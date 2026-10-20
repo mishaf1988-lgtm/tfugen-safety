@@ -276,6 +276,11 @@ export function draftRequest(b) {
   let cut = -1;
   for (let i = Math.max(0, lines.length - 4); i < lines.length; i++) if (lines[i].trim().indexOf(SITE.owner) === 0) { cut = i; break; }
   if (cut >= 0) { if (cut > 0 && /^\u05d1\u05d1\u05e8\u05db\u05d4,?$/.test(lines[cut - 1].trim())) cut--; lines.length = cut; }
+  // 20/10/2026 (Michael: "approve removing the thanks"): a closing "thanks," or "regards," as the last line
+  // goes too, since the signature opens with "regards,".
+  while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+  while (lines.length && /^(\u05ea\u05d5\u05d3\u05d4|\u05d1\u05d1\u05e8\u05db\u05d4)[,.!]?$/.test(lines[lines.length - 1].trim())) lines.pop();
+  while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
   const kept = lines.join('\n').replace(/\s+$/, '');
   const html = kept.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').split('\n').join('<br>');
   return { file: JSON.stringify({ to, subject, body: kept, html: '<div dir="rtl">' + html + SITE.signature + '</div>' }) };
