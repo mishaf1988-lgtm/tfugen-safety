@@ -628,7 +628,7 @@ export async function onRequest(context) {
       let w = await readWaba();
       const subOk = () => !!(s.sub && s.sub.callback_url === hook && s.sub.fields.indexOf('messages') >= 0);
       if (body.subscribe && appTok && !subOk() && env.WA_VERIFY_TOKEN) {
-        const f = new URLSearchParams({ object: 'whatsapp_business_account', callback_url: hook, fields: 'messages', verify_token: env.WA_VERIFY_TOKEN, access_token: appId + '|' + sec });
+        const f = new URLSearchParams({ object: 'whatsapp_business_account', callback_url: hook, fields: Array.from(new Set(((s.sub && s.sub.fields) || []).filter((n) => /^[a-z_]+$/.test(String(n))).concat(['messages']))).join(','), verify_token: env.WA_VERIFY_TOKEN, access_token: appId + '|' + sec });
         const r = await g(V + appId + '/subscriptions', { method: 'POST', body: f });
         out.subscribed_now = r.status === 200; out.subscribe_err = err(r);
         s = await readSubs();

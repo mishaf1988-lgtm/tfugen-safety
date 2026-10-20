@@ -53,7 +53,7 @@ export const SECRET_RE = /AADSTS7000222|AADSTS7000215|invalid_client/;
 export const PARTS = [
   { k: 'hazard_xlsm', name: '\u05e0\u05d9\u05d4\u05d5\u05dc \u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd.xlsm' },
   { k: 'hazard_xlsx', name: '\u05e0\u05d9\u05d4\u05d5\u05dc \u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd.xlsx' },
-  { k: 'deck', name: '\u05de\u05e6\u05d2\u05ea \u05d4\u05d5\u05d5\u05e2\u05d3\u05d4' },
+  { k: 'deck', partialOk: true, name: '\u05de\u05e6\u05d2\u05ea \u05d4\u05d5\u05d5\u05e2\u05d3\u05d4' },
   { k: 'trustee_log', name: '\u05d9\u05d5\u05de\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd' },
 ];
 const FILES = [['xlsm', '\u05e0\u05d9\u05d4\u05d5\u05dc \u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd.xlsm'], ['xlsx', '\u05e0\u05d9\u05d4\u05d5\u05dc \u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd.xlsx']];
@@ -140,7 +140,8 @@ export function assess(st, nowMs, connected, started, vitre, lat, slowOpen) {
     const ok = Date.parse(v(p.k + '_ok_at')) || 0;
     // 19/10/2026 (mail "timeout since 19:15", the 19:45 run succeeded): a run that finished
     // after the error clears it, even when nothing was written and err stayed in server_state.
-    if (err && !(errAt && ok > errAt)) {
+    // deck: ok_at is written after a run that finished with a chart error still set (hazard-deck.js), so a later ok_at does not clear it
+    if (err && !(!p.partialOk && errAt && ok > errAt)) {
       if (nowMs - errAt >= ERR_MS) out.push({ key: 'err:' + p.k, title: p.name + ': \u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e2\u05d3\u05db\u05d5\u05df', detail: String(err).substring(0, 200) + (errAt ? ' (\u05de\u05d0\u05d6 ' + ilTime(new Date(errAt).toISOString()) + ')' : '') });
       return; // a fresh error is the next run's to clear; it is not also "stale"
     }
