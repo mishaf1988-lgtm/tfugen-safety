@@ -71,6 +71,8 @@
 //              needs POSTMAN_FIRE_TOKEN. {agent, expect_session?} -> {fired, status, session, landed?}.
 //   od_put_pdf  (20/10/2026) ONE new PDF {agent, why, dir, name, b64} into an existing folder of the safety folder; never
 //              replaces a file, never into the protected folders. odPutPdfCheck.
+//   dev_request / dev_done  (20/10/2026) {agent, text} a request to development, kept in server_state.dev_inbox;
+//              {id, note} closes one. devInboxAdd / devInboxDone.
 //   od_archive  (20/10/2026) {agent, why, path, replaced_by}: the old version of a form moves to "_גרסאות קודמות" in its
 //              folder (created if missing), only when the new file sits beside it. odArchiveCheck.
 //   mail_request  (11/10/2026, Michael: "בצע: זרימה שנייה") ask the second Power Automate
@@ -95,7 +97,7 @@ import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZ
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out'];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -111,6 +113,32 @@ export function agentEntry(b, nowIso) {
   // snapshot carry it; the office is not on the server.
   if (t(b.for_michael)) e.for_michael = t(b.for_michael);
   return e;
+}
+// dev_inbox (20/10/2026, Michael: "the assistant must know how to solve the problems it hits and hand the
+// completions and fixes to an agent"): a request to development from any agent, kept in server_state
+// (the office board refused the assistant's write as exfiltration). Every development conversation sees
+// the open ones at start (session-start.py), and the postman passes new ones on. dev_done closes one.
+export const DEV_INBOX_KEY = 'dev_inbox', DEV_INBOX_MAX = 50;
+export function devInboxAdd(raw, b, nowIso) {
+  const agent = String(b.agent || ''), text = String(b.text || '').replace(/\r\n/g, '\n').trim();
+  if (!/^[a-z0-9-]{2,40}$/.test(agent)) return { error: 'bad agent name' };
+  if (text.length < 10 || text.length > 1500) return { error: 'text 10-1500 characters' };
+  let list = [];
+  try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
+  if (!Array.isArray(list)) list = [];
+  const id = 'dev-' + nowIso.replace(/\D/g, '').slice(0, 14) + '-' + Math.random().toString(36).slice(2, 6);
+  list.push({ id, at: nowIso, agent, text, status: 'open' });
+  // the oldest done ones go first; open ones stay
+  while (list.length > DEV_INBOX_MAX) { const i = list.findIndex((x) => x.status !== 'open'); list.splice(i >= 0 ? i : 0, 1); }
+  return { list, id };
+}
+export function devInboxDone(raw, id, note, nowIso) {
+  let list = [];
+  try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
+  const x = Array.isArray(list) && list.find((y) => y && y.id === id);
+  if (!x) return { error: 'no such request' };
+  x.status = 'done'; x.done_at = nowIso; x.note = String(note || '').slice(0, 300);
+  return { list };
 }
 // Michael's choice on a hazard, as a note (hazard_choice): moved to _wa.js on 20/10/2026, where the
 // server's fast lane (wa-hook.js) writes the same note.
@@ -559,6 +587,19 @@ export async function onRequest(context) {
       const rows = await stateRead([body.key]);
       const got = Array.isArray(rows) && rows[0] ? rows[0].value : null;
       return jsonResp({ ok: got === value, value: got }, 200, {});
+    }
+    if (body.op === 'dev_request' || body.op === 'dev_done') {
+      const now = new Date().toISOString();
+      const rows = await stateRead([DEV_INBOX_KEY]);
+      const raw = rows && rows[0] && rows[0].value;
+      const r = body.op === 'dev_request' ? devInboxAdd(raw, body, now) : devInboxDone(raw, String(body.id || ''), body.note, now);
+      if (r.error) return jsonResp({ ok: false, error: r.error }, 400, {});
+      const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', {
+        method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify([{ key: DEV_INBOX_KEY, value: JSON.stringify(r.list), updated_at: now }]), signal: tmo(SB_MS),
+      });
+      if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status }, 200, {});
+      return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length }, 200, {});
     }
     if (body.op === 'agent_report') {
       const e = agentEntry(body, new Date().toISOString());
