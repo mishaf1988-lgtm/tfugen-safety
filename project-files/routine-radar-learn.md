@@ -4,7 +4,7 @@
 
 **הוקם 07/10/2026 מהענן, בלי תלות במיכאל:** `trig_01WexSqc8Qve5PG2Wmo3d41N` נמחק ב-09/10/2026 (המחליף בשורה הבאה), מופעל לתוך השיחה העובדת `session_017Y8t6gZc26ysueKySAi7zV` ("עובד Routines", לא לארכב). Routine רגיל שנוצר מהענן לא מקבל connectors ולא את כלי השיחות (נבדק בהפעלת ניסיון, והראשון `trig_01FtL8cE6oZhjLvS9DH3jgj5` נמחק); Routine שמופעל לתוך שיחה קיימת משתמש בכלים שלה, ולשיחה הזו יש Supabase, `list_triggers` ו-`create_session` (נבדק: `count(*)` על `leg` = 39). הפרומפט בטריגר מתחיל ב"ריצה חדשה... git fetch + reset" כי השיחה נשמרת בין ריצות. ההגדרות למטה הן לתיעוד; אין מה להוסיף ביד.
 
-**מ-09/10/2026:** `trig_01XPwRokY9GmbtX533Res2TU` בשיחה `session_019o8PKShtacN2m1BCbYdnQj` ("Routines: חוקר, רדאר-לומד, רטרו", לא לארכב), עם פרומפט קצר שקורא את הקובץ הזה (נבדק ב-`list_triggers`). הישן `trig_01WexSqc8Qve5PG2Wmo3d41N` (שיחה `session_017Y8t6gZc26ysueKySAi7zV`, בארכיון) נמחק.
+**מ-09/10/2026:** `trig_01WzoFsHLwgUUURuhyfFDAvS` בשיחה `session_01XecBM5b3kHkbb67kjSpmPs` ("Routines: חוקר, רדאר-לומד, רטרו", לא לארכב), עם פרומפט קצר שקורא את הקובץ הזה (נבדק ב-`list_triggers`). הישן `trig_01WexSqc8Qve5PG2Wmo3d41N` (שיחה `session_017Y8t6gZc26ysueKySAi7zV`, בארכיון) נמחק.
 
 **ההגדרות:** לוח: יום שני 07:43 שעון ישראל (`CRON_TZ=Asia/Jerusalem 43 7 * * 1`), Sonnet 5.5.
 
