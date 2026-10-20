@@ -16,6 +16,7 @@
 //   body {dry: true}    returns the text, sends nothing
 //   body {force: true}  sends now, any hour or day (a manual retry)
 //   body {calendar: true} only the calendar requests, now; no WhatsApp (a check after the flow is built)
+//   body {watch: true}  the watchdog for a stuck run, every 5 minutes (watchVerdict)
 // The same run writes calendar requests for upcoming expiries (calendarStep, below).
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
 import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut } from '../_wa.js';
@@ -39,7 +40,7 @@ const clip = (s, n) => { s = keyboard(s).replace(/\s+/g, ' ').trim(); return s.l
 export const AGENT_NAMES = { 'routine-coa': '\u05e1\u05d9\u05d3\u05d5\u05e8 \u05ea\u05e2\u05d5\u05d3\u05d5\u05ea COA', 'routine-compliance': '\u05d3\u05d5\u05d7 \u05d4\u05e6\u05d9\u05d5\u05ea', 'routine-factory-trends': '\u05de\u05d2\u05de\u05d5\u05ea \u05d4\u05de\u05e4\u05e2\u05dc',
   'routine-inspector': '\u05d4\u05de\u05e4\u05e7\u05d7 \u05d4\u05de\u05d3\u05d5\u05de\u05d4', 'routine-inventor': '\u05d7\u05d5\u05e7\u05e8 \u05d4\u05d4\u05de\u05e6\u05d0\u05d5\u05ea', 'routine-mail-filing': '\u05ea\u05d9\u05d5\u05e7 \u05de\u05d4\u05de\u05d9\u05d9\u05dc', 'routine-nevo-versions': '\u05de\u05e2\u05e7\u05d1 \u05e0\u05d1\u05d5',
   'routine-od-scan': '\u05e1\u05e8\u05d9\u05e7\u05ea \u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea', 'routine-preferences': '\u05de\u05d5\u05d3\u05dc \u05d4\u05d4\u05e2\u05d3\u05e4\u05d5\u05ea', 'routine-quotes': '\u05de\u05e2\u05e7\u05d1 \u05d4\u05e6\u05e2\u05d5\u05ea \u05de\u05d7\u05d9\u05e8', 'routine-radar-learn': '\u05d4\u05e8\u05d3\u05d0\u05e8',
-  'routine-researcher': '\u05d7\u05d5\u05e7\u05e8 \u05d4\u05e2\u05d5\u05d6\u05e8', 'routine-talk-field': '\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9\u05ea', 'routine-validity': '\u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3', 'routine-wa-assistant': '\u05d4\u05e2\u05d5\u05d6\u05e8 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4' };
+  'routine-researcher': '\u05d7\u05d5\u05e7\u05e8 \u05d4\u05e2\u05d5\u05d6\u05e8', 'routine-talk-field': '\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9\u05ea', 'routine-validity': '\u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3', 'routine-wa-assistant': '\u05d4\u05e2\u05d5\u05d6\u05e8 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4', 'dev': '\u05e4\u05d9\u05ea\u05d5\u05d7' };
 export const agentName = (a) => AGENT_NAMES[a] || String(a || '').replace(/^routine-/, '');
 
 // Pure: the text. items = [{n, e}] already sorted by e, today = 'YYYY-MM-DD',
@@ -193,11 +194,47 @@ export async function calendarStep(env, now, dry) {
   return { written, error };
 }
 
+// The watchdog (20/10/2026, Michael in the questionnaire: "do it: a guard for a run that got stuck"; the
+// same evening a message got "got it" and then 13 minutes of nothing). pg_cron calls {watch: true} every
+// 5 minutes. Michael's latest message (owner_in) with no answer after it: after WATCH_MIN minutes one
+// line goes to him, once per message. An answer that only says it started ("מתחיל") counts after
+// WATCH_START_MIN. Pure: last = the latest owner_in row, outs = assistant rows after it.
+export const WATCH_KEY = 'wa_watch_last', WATCH_MIN = 10, WATCH_START_MIN = 20, WATCH_MAX_MIN = 60;
+const STARTED = /^\s*\u05de\u05ea\u05d7\u05d9\u05dc/;
+export function watchVerdict(last, outs, nowMs, warned) {
+  if (!last || !last.ts) return null;
+  const wamid = (last.payload && last.payload.wamid) || last.ts;
+  if (warned === wamid) return null;
+  const age = (nowMs - Date.parse(last.ts)) / 60000;
+  if (!(age >= WATCH_MIN) || age > WATCH_MAX_MIN) return null;
+  const real = (outs || []).filter((x) => !STARTED.test(String((x.payload && (x.payload.text || x.payload.title)) || '')));
+  if (real.length) return null;
+  if ((outs || []).length && age < WATCH_START_MIN) return null;
+  const hm = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(last.ts));
+  return { wamid, text: '\u05e2\u05d3\u05d9\u05d9\u05df \u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc\u05d4\u05d5\u05d3\u05e2\u05d4 \u05de-' + hm
+    + '. \u05d9\u05d9\u05ea\u05db\u05df \u05e9\u05d4\u05e8\u05d9\u05e6\u05d4 \u05e0\u05ea\u05e7\u05e2\u05d4. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05e9\u05d5\u05d1, \u05d0\u05d5 \u05dc\u05d7\u05db\u05d5\u05ea \u05e2\u05d5\u05d3 \u05db\u05de\u05d4 \u05d3\u05e7\u05d5\u05ea.' };
+}
+export async function watch(env, now) {
+  const rows = await sb(env, 'notifications_log?select=ts,payload&event_type=eq.owner_in&order=ts.desc&limit=1').catch(() => []);
+  const last = Array.isArray(rows) && rows[0];
+  if (!last) return { ok: true, sent: false, reason: 'no message' };
+  const outs = await sb(env, 'notifications_log?select=ts,payload&event_type=eq.assistant&ts=gt.' + encodeURIComponent(last.ts) + '&limit=20').catch(() => []);
+  const v = watchVerdict(last, outs, now.getTime(), await stateGet(env, WATCH_KEY).catch(() => null));
+  if (!v) return { ok: true, sent: false };
+  if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };
+  const to = await ownerWa(env, sbFrom(env));
+  if (!to) return { ok: false, error: 'no owner number in notification_prefs' };
+  await stateSet(env, WATCH_KEY, v.wamid);
+  const r = await sendToOwner(env, to, v.text, { windowOpen: true, noTemplate: true });
+  return { ok: r.ok, sent: r.ok, error: r.error || null };
+}
+
 // The call itself, with the clock as an argument (tested at 07:47 Israel).
 // 20/10/2026 (Michael: "do it: buttons in WhatsApp"): three questions to tap under the update, inside
 // the window. A tap reaches the assistant as "1. ...", like a typed message.
 export const MORNING_CHOICES = ['\u05de\u05d4 \u05d3\u05d7\u05d5\u05e3', '\u05de\u05d4 \u05de\u05d7\u05db\u05d4 \u05dc\u05d9', '\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea'];
 export async function run(env, now, body) {
+  if (body.watch) return watch(env, now);
   if (body.calendar) return { ok: true, sent: false, cal: await calendarStep(env, now, false).catch((e) => ({ error: String(e.message || e).slice(0, 200) })) };
   if (!body.force && !body.dry && !dueNow(now)) return { ok: true, sent: false, reason: 'not 07:xx on a workday in Israel' };
   // Calendar first and on its own: a WhatsApp failure or "already sent today" does not stop it.

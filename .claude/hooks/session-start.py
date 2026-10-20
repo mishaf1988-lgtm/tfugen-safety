@@ -83,6 +83,30 @@ def ideas_waiting(cwd):
             if not re.search(r"\*\*מצב:\*\*\s*(נבחר|נדחה)", b)]
 
 
+def dev_inbox(cwd):
+    """Open requests to development (routine-db dev_request, 20/10/2026, Michael: "the assistant must
+    hand the completions and fixes to an agent"). No key, offline or a bad answer: nothing, quietly.
+    SESSION_START_DEV (a JSON answer) stands in for the call in tests."""
+    raw = os.environ.get("SESSION_START_DEV")
+    if raw is None:
+        sh = os.path.join(cwd, "project-files", "routine-db.sh")
+        if not os.path.exists(sh) or not os.environ.get("ROUTINE_KEY"):
+            return []
+        try:
+            raw = subprocess.run(["bash", sh, '{"op":"state_get","keys":["dev_inbox"]}'], capture_output=True, text=True,
+                                 encoding="utf-8", timeout=10, cwd=cwd).stdout
+        except Exception:
+            return []
+    try:
+        rows = json.loads(raw).get("rows") or []
+        v = rows[0].get("value") if rows else "[]"
+        items = json.loads(v) if isinstance(v, str) else (v or [])
+        return ["%s (%s, %s): %s" % (x.get("id"), x.get("agent"), str(x.get("at"))[:10], re.sub(r"\s+", " ", str(x.get("text")))[:200])
+                for x in items if isinstance(x, dict) and x.get("status") == "open"]
+    except Exception:
+        return []
+
+
 def claims(cwd):
     """Items other conversations hold now (STATUS 100, 12/10/2026, lesson 10: two conversations built
     the same proposals). `claim.sh --list`; no key, offline or a bad answer: nothing, quietly.
@@ -139,6 +163,9 @@ def report(cwd):
     held = claims(cwd)
     if held:
         out += ["", "-- 🔒 פריטים תפוסים: %d (claim.sh). לא לכתוב להם קוד; לבחור פריט אחר או לקרוא את השיחה (list_events) --" % len(held)] + held
+    dev = dev_inbox(cwd)
+    if dev:
+        out += ["", "-- 🛠️ בקשות לפיתוח: %d פתוחות (dev_inbox). לטפל, ובסוף routine-db dev_done עם id ו-note --" % len(dev)] + dev
     chrome = chrome_open(cwd)
     if chrome:
         out += ["", "-- 🌐 משימות לכרום: %d פתוחות (project-files/chrome-queue.md). להזכיר למיכאל --" % len(chrome)] + chrome

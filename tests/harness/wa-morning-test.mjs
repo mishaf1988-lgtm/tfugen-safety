@@ -1,6 +1,6 @@
 // The morning update on WhatsApp from the server (20/10/2026): pg_cron calls /api/wa-morning twice,
 // only the call on 07:xx in Israel on Sunday-Thursday sends, once a day, to Michael's number only.
-import { onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX } from './_build/wa-morning.mjs';
+import { watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX } from './_build/wa-morning.mjs';
 import { OD_ROOT } from './_build/routine-db.mjs';
 import fs from 'fs';
 
@@ -64,6 +64,16 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   check('for_michael: a "from the workers" line with the office name', /\u05de\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd:/.test(nb) && /\u05e1\u05d9\u05d3\u05d5\u05e8 \u05ea\u05e2\u05d5\u05d3\u05d5\u05ea COA: \u05d3\u05d5\u05d7 \u05d4\u05de\u05d9\u05dd/.test(nb) && !/\u05d0\u05d9\u05df \u05e9\u05d5\u05dd/.test(nb), nb);
   const nc = buildBrief([], [], '2026-10-20', true, [{ agent: 'routine-quotes', text: 'x' }, { agent: 'routine-coa', text: 'y' }]);
   check('for_michael compact: one line, both', !/\n/.test(nc) && /: x; /.test(nc) && /: y\./.test(nc), nc);
+
+  // 20/10/2026: the watchdog for a stuck run
+  {
+    const T = Date.parse('2026-10-20T18:00:00Z'), last = { ts: '2026-10-20T18:00:00Z', payload: { wamid: 'w1' } };
+    check('watch: no answer after ' + WATCH_MIN + ' minutes: one line, with the time in Israel', /\u05e2\u05d3\u05d9\u05d9\u05df \u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc\u05d4\u05d5\u05d3\u05e2\u05d4 \u05de-21:00/.test((watchVerdict(last, [], T + 11 * 60000, null) || {}).text || ''), watchVerdict(last, [], T + 11 * 60000, null));
+    check('watch: before ' + WATCH_MIN + ' minutes, after an answer, already warned, or an hour later: nothing',
+      !watchVerdict(last, [], T + 5 * 60000, null) && !watchVerdict(last, [{ payload: { text: '\u05d4\u05d8\u05d9\u05d5\u05d8\u05d4 \u05de\u05d5\u05db\u05e0\u05d4' } }], T + 15 * 60000, null) && !watchVerdict(last, [], T + 15 * 60000, 'w1') && !watchVerdict(last, [], T + 61 * 60000, null));
+    const started = [{ payload: { text: '\u05de\u05ea\u05d7\u05d9\u05dc: \u05de\u05d7\u05e4\u05e9' } }];
+    check('watch: only "started": waits to 20 minutes, then warns', !watchVerdict(last, started, T + 15 * 60000, null) && !!watchVerdict(last, started, T + 21 * 60000, null));
+  }
 
   console.log('\n3. the endpoint');
   check('no secret: 403', (await onRequest({ request: new Request('https://x/api/wa-morning', { method: 'POST', body: '{}' }), env: ENV })).status === 403);

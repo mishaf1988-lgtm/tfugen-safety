@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession } from './_build/routine-db.mjs';
+import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -122,6 +122,20 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   check('the log keeps the last ' + AGENT_LOG_MAX, lg.length === AGENT_LOG_MAX && lg[0].at === '1' && lg[lg.length - 1].agent === 'retro');
   state.wa_last_out = JSON.stringify({ at: '2026-10-20T18:00:00Z', text: 'x'.repeat(3000) });
   check('agent_report for_michael: kept (cut to 300), absent when empty', (await call({ op: 'agent_report', agent: 'routine-coa', ok: true, for_michael: 'z'.repeat(400) })).json.entry.for_michael.length === 300 && !('for_michael' in (await call({ op: 'agent_report', agent: 'routine-coa', ok: true })).json.entry));
+  // 20/10/2026: dev_inbox, requests to development (the office board refused the assistant's write)
+  {
+    let r = await call({ op: 'dev_request', agent: 'routine-wa-assistant', text: 'צריך צעד חודשי חדש לדוח המים' });
+    const inbox = JSON.parse(state.dev_inbox || '[]');
+    check('dev_request: kept open with an id, the agent and the text', r.json.ok && /^dev-\d{14}-/.test(r.json.id) && inbox.length === 1 && inbox[0].status === 'open' && inbox[0].agent === 'routine-wa-assistant', { r: r.json, inbox });
+    check('dev_inbox is readable through state_get, not writable through state_set', (await call({ op: 'state_get', keys: ['dev_inbox'] })).json.rows.length === 1 && (await call({ op: 'state_set', key: 'dev_inbox', value: '[]' })).status === 400);
+    r = await call({ op: 'dev_done', id: inbox[0].id, note: 'מוזג #1789' });
+    check('dev_done with a note: a for_michael line from "dev" in agent_log', JSON.parse(state.agent_log).some((x) => x.agent === 'dev' && x.for_michael === 'מוזג #1789'), state.agent_log);
+    check('dev_done: closed with the note; an unknown id refused', r.json.ok && r.json.open === 0 && JSON.parse(state.dev_inbox)[0].status === 'done' && (await call({ op: 'dev_done', id: 'dev-x' })).status === 400, r.json);
+    check('a short text, a bad agent: refused', (await call({ op: 'dev_request', agent: 'routine-wa-assistant', text: 'קצר' })).status === 400 && (await call({ op: 'dev_request', agent: 'Bad Name', text: 'x'.repeat(20) })).status === 400);
+    let raw = JSON.stringify([{ id: 'o', status: 'open' }].concat(Array.from({ length: DEV_INBOX_MAX }, (_, i) => ({ id: 'd' + i, status: 'done' }))));
+    const full = devInboxAdd(raw, { agent: 'dev', text: 'x'.repeat(20) }, '2026-10-20T20:00:00Z');
+    check('at most ' + DEV_INBOX_MAX + ': the oldest done one goes, an open one stays', full.list.length === DEV_INBOX_MAX && full.list[0].id === 'o' && !full.list.some((x) => x.id === 'd0'), full.list.length);
+  }
   check('wa_last_out (the assistant\'s last answer, 20/10/2026) is readable, not writable', (await call({ op: 'state_get', keys: ['wa_last_out'] })).json.rows.length === 1 && (await call({ op: 'state_set', key: 'wa_last_out', value: '{}' })).status === 400);
   check('agent_log is readable through state_get, not writable through state_set', (await call({ op: 'state_get', keys: ['agent_log'] })).json.rows.length === 1 && (await call({ op: 'state_set', key: 'agent_log', value: '[]' })).status === 400);
 

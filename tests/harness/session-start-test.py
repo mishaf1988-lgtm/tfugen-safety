@@ -26,6 +26,14 @@ check("a held item is shown: item, conversation, DD/MM/YYYY date, note", "פרי
 check("no claims: no section", "פריטים תפוסים" not in rc(json.dumps({"ok": True, "claims": {}})))
 check("a bad answer (no key, offline): no section, no crash", "פריטים תפוסים" not in rc("ROUTINE_KEY missing"))
 check("no claim.sh and no stand-in: nothing", "פריטים תפוסים" not in run(d).stdout)
+# 20/10/2026: open requests to development (dev_inbox), from routine-db state_get.
+rd = lambda raw: subprocess.run([sys.executable, hook("session-start.py")], input="{}", capture_output=True, text=True, encoding="utf-8",
+                                timeout=30, env=dict(os.environ, CLAUDE_PROJECT_DIR=d, SESSION_START_DEV=raw)).stdout
+dv = json.dumps([{"id": "dev-1", "at": "2026-10-20T20:00:00Z", "agent": "routine-wa-assistant", "text": "צעד חודשי לדוח המים", "status": "open"},
+                 {"id": "dev-0", "at": "2026-10-19T20:00:00Z", "agent": "routine-coa", "text": "ישן", "status": "done"}])
+o4 = rd(json.dumps({"ok": True, "rows": [{"key": "dev_inbox", "value": dv}]}))
+check("open requests to development: counted, listed with id and agent, done ones left out", "בקשות לפיתוח: 1" in o4 and "dev-1 (routine-wa-assistant" in o4 and "dev-0" not in o4, o4)
+check("dev_inbox: a bad answer, no section", "בקשות לפיתוח" not in rd("ROUTINE_KEY missing"))
 check("prints the handoff", "handoff-05-10-2026-10.00.md" in o and "בדיקה X" in o, o)
 check("open items: 2, the closed one left out", "2 פריטים פתוחים" in o and "משימה ב" in o and "סגורה" not in o, o)
 check("last METRICS row with its header", "10/2026 | 12%" in o and "| חודש" in o and "09/2026" not in o, o)
