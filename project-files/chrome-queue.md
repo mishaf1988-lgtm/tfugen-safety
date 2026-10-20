@@ -40,6 +40,25 @@
   בסוף: דוח קצר: איזו פעולה נבחרה בשלב 5 (Draft an email message או Send an HTTP request), והאם השמירה הצליחה.
   ```
   אחרי הביצוע: Claude שולח בקשת טיוטה אחת לבדיקה (`mail_draft`), ומיכאל מאשר שהטיוטה הופיעה ב-Drafts.
+- [ ] **C24. Power Automate: "תורים ליומן" ו"קבצים ממיילים ששלחתי"** (20/10/2026, מיכאל בשאלון: "בצע: תורים ביומן לתפוגות (מומלץ), בצע: קבצים ממיילים ששלחתי (מומלץ)"). הפירוט: `power-automate-mail.md`, זרימות 4 ו-5. אפשר באותה ישיבה עם C23. טקסט להדבקה בכרום:
+  ```
+  אתה בונה בשבילי שתי זרימות ב-Power Automate. עבור על השלבים ברצף, עצור רק אם משהו לא תואם, ותאר מה אתה רואה. אל תוסיף שום פעולה ששולחת מייל או הזמנה, ואל תשנה זרימה קיימת.
+  זרימה א, "תורים ליומן":
+  1. ב-OneDrive (https://www.office.com/launch/onedrive), בתיקייה "שולחן העבודה" > "ניהול בטיחות", צור תיקייה חדשה בשם: _תורים ליומן (אם קיימת, דלג).
+  2. https://make.powerautomate.com > Create > Automated cloud flow. שם: תורים ליומן. טריגר: OneDrive for Business "When a file is created (properties only)". Folder: /שולחן העבודה/ניהול בטיחות/_תורים ליומן.
+  3. New step: OneDrive for Business "Get file content". File: Id מהטריגר.
+  4. New step: Data Operation "Compose". Inputs, בלשונית Expression: json(trim(string(body('Get_file_content'))))
+  5. New step: Office 365 Outlook "Create event (V4)". Calendar id: Calendar. כל אחד כ-Expression: Subject = outputs('Compose')?['subject'], Start time = outputs('Compose')?['start'], End time = outputs('Compose')?['end'], Body = outputs('Compose')?['html']. Time zone: (UTC+02:00) Jerusalem. Show as: busy. Reminder: 15. שדות Required attendees ו-Optional attendees נשארים ריקים.
+  6. Save. אל תריץ בדיקה ידנית.
+  זרימה ב, "קבצים ממיילים ששלחתי":
+  7. ב-My flows פתח את הזרימה הקיימת "קבצים מספקים לנכנס מהמייל" (רק לקריאה, בלי לשמור בה שום שינוי). העתק את הביטוי createArray(...) מה-Condition הראשון שלה, ואת כל השורות של ה-Condition על סוג הקובץ בתוך Apply to each.
+  8. Create > Automated cloud flow. שם: קבצים ממיילים ששלחתי. טריגר: Office 365 Outlook "When a new email arrives (V3)". Folder: Sent Items. Include Attachments: Yes. Only with Attachments: Yes.
+  9. New step: Condition. שורה אחת, Expression: empty(intersection(<ה-createArray שהעתקת>,split(toLower(coalesce(triggerOutputs()?['body/toRecipients'],'')),';'))) , is equal to, true.
+  10. בענף True: Apply to each על Attachments. בתוכו Condition עם אותן שורות שהעתקת משלב 7. בענף True שלו: OneDrive for Business "Create file". Folder Path: /שולחן העבודה/ניהול בטיחות/_נכנס מהמייל. File Name, Expression: concat(replace(replace(substring(string(triggerOutputs()?['body/receivedDateTime']),0,16),'T',' '),':',''),' - נשלח - ',item()?['name']). File Content, Expression: item()?['contentBytes'].
+  11. Save, ובדוק ב-Flow checker שאין שגיאות. אל תריץ בדיקה ידנית.
+  בסוף: דוח קצר: לכל זרימה נשמרה או לא, ומה הראה ה-Flow checker. בלי כתובות מייל בדוח.
+  ```
+  אחרי הביצוע: Claude קורא ל-`/api/wa-morning` עם `{"calendar":true}` (רק התורים, בלי וואטסאפ) ובודק ש-`cal.written` > 0, ומיכאל מאשר שהתורים הופיעו ביומן; הקובץ הראשון עם "נשלח" בשם יופיע ב-`_נכנס מהמייל` במייל הבא עם קובץ שמיכאל ישלח.
 - [x] **C22. וואטסאפ: לחבר את העוזר (טוקן, Cloudflare, Meta)** (נסגר 20/10/2026: מיכאל כתב לעוזר בוואטסאפ וקיבל תשובה; Publish לא נדרש) (19/10/2026, מיכאל: "תכתוב לי הוראות מלאות לכרום שיעשה הכל"). ה-verify token בטקסט הוא אימות חד-פעמי של ה-webhook, לא מפתח גישה. אחרי הביצוע: retry לפריסה ב-API, בדיקת השמות ב-`pages/projects`, ו-`wa_me` בדיקה. **19/10/2026:** ה-webhook אומת. נשאר רק Subscribe ל-`messages` (מיכאל קיבל הוראות בצ'אט, שלבים 1-7, רצופים). אחרי: `routine-db.sh '{"op":"wa_check"}'` מאמת מול Meta את הסוד, ה-Subscribe והמינוי של ה-WABA, ו-`subscribe:true` משלים בעצמו מה שחסר.
 ```
 משימה: לחבר את העוזר בוואטסאפ של מערכת הבטיחות. שלושה חלקים, לפי הסדר. לא לשנות שום הגדרה אחרת, לא למחוק שום דבר, ולא לכתוב אף ערך סודי (טוקן, App secret) בצ'אט, בצילום או בתשובה: רק להעתיק ישר משדה לשדה. אם משהו לא נראה כמו שכתוב, לעצור ולתאר מה רואים.
