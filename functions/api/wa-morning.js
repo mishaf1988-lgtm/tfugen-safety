@@ -14,8 +14,11 @@
 //   body {}             the scheduled call
 //   body {dry: true}    returns the text, sends nothing
 //   body {force: true}  sends now, any hour or day (a manual retry)
+//   body {calendar: true} only the calendar requests, now; no WhatsApp (a check after the flow is built)
+// The same run writes calendar requests for upcoming expiries (calendarStep, below).
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
 import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut } from '../_wa.js';
+import { odConfigured, accessToken, putFile } from '../_onedrive.js';
 
 export const LAST_KEY = 'wa_morning_last';
 export const MAX_CHARS = 700;
@@ -113,14 +116,82 @@ export async function onRequest(context) {
   return jsonResp(await run(env, new Date(), body), 200, {});
 }
 
+// ---- calendar requests (20/10/2026, Michael: "do it: calendar slots for expiries") ----
+// The server token has no Calendars scope and the 365 connector is read only, so like mail_request the
+// server writes one JSON file per expiry into the safety folder, and the Power Automate flow
+// "\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df" (power-automate-mail.md, flow 4) turns it into an event in Michael's calendar.
+// Which: docs and equip_inspections with e up to CAL_DAYS ahead (expired ones too), at most CAL_MAX new
+// a day so the first run does not flood the calendar. When: LEAD_DAYS before e, at the earliest
+// tomorrow, moved off Friday and Saturday, 09:00-09:30 Israel. server_state.cal_sent keeps
+// "table:id:e" of what was written; a renewed item (new e) gets a new event when it comes close again.
+export const OD_CAL = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df';
+export const CAL_KEY = 'cal_sent', CAL_DAYS = 45, LEAD_DAYS = 21, CAL_MAX = 5;
+const addDays = (ymd, n) => new Date(Date.parse(ymd + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
+export function eventDay(e, today) {
+  let d = addDays(e, -LEAD_DAYS);
+  const first = addDays(today, 1);
+  if (d < first) d = first;
+  const w = new Date(d + 'T00:00:00Z').getUTCDay();
+  return w === 5 ? addDays(d, 2) : w === 6 ? addDays(d, 1) : d;
+}
+// Pure. rows = [{t, id, n, e, vendor, loc}], sent = {key: 1}. Returns the files to write, in e order,
+// and the sent map pruned to what is still in the window (a renewed or deleted item leaves it).
+export function calendarPlan(rows, sent, today) {
+  const ok = rows.filter((r) => r && r.id != null && r.n && /^\d{4}-\d{2}-\d{2}$/.test(String(r.e || '').slice(0, 10)))
+    .map((r) => Object.assign({}, r, { e: String(r.e).slice(0, 10), key: r.t + ':' + r.id + ':' + String(r.e).slice(0, 10) }))
+    .sort((a, b) => a.e.localeCompare(b.e));
+  const keep = {};
+  ok.forEach((r) => { if (sent && sent[r.key]) keep[r.key] = 1; });
+  const todo = ok.filter((r) => !keep[r.key]).slice(0, CAL_MAX).map((r) => {
+    const day = eventDay(r.e, today);
+    const what = r.loc ? clip(r.n, 70) + ', ' + clip(r.loc, 40) : clip(r.n, 90);
+    const lines = ['\u05ea\u05e4\u05d5\u05d2\u05d4: ' + dmy(r.e) + (r.e < today ? ' (\u05db\u05d1\u05e8 \u05e4\u05d2)' : '')];
+    if (r.vendor) lines.push('\u05e1\u05e4\u05e7: ' + clip(r.vendor, 60));
+    lines.push('\u05e0\u05d5\u05e6\u05e8 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05db\u05d3\u05d9 \u05dc\u05ea\u05d0\u05dd \u05d1\u05d6\u05de\u05df. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05d6\u05d9\u05d6 \u05d0\u05d5 \u05dc\u05de\u05d7\u05d5\u05e7 \u05d1\u05d9\u05d5\u05de\u05df.');
+    const esc = (x) => x.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return { key: r.key, day, file: JSON.stringify({
+      subject: '\u05dc\u05ea\u05d0\u05dd: ' + what + (r.e < today ? ' (\u05e4\u05d2 ' : ' (\u05e2\u05d3 ') + dmy(r.e) + ')',
+      start: day + 'T09:00:00', end: day + 'T09:30:00', tz: 'Israel Standard Time',
+      html: '<div dir="rtl">' + lines.map(esc).join('<br>') + '</div>' }) };
+  });
+  return { todo, keep };
+}
+export async function calendarStep(env, now, dry) {
+  if (!odConfigured(env)) return { skipped: 'onedrive not configured' };
+  const today = ilDay(now), until = addDays(today, CAL_DAYS);
+  const q = (t, cols) => sb(env, t + '?select=' + cols + '&e=not.is.null&e=lte.' + until + '&order=e.asc&limit=100');
+  const [docs, equip] = await Promise.all([q('docs', 'id,n,e'), q('equip_inspections', 'id,n,loc,vendor,e')]);
+  const rows = [].concat((docs || []).map((x) => Object.assign({ t: 'docs' }, x)), (equip || []).map((x) => Object.assign({ t: 'equip' }, x)));
+  let sent = {};
+  try { sent = JSON.parse((await stateGet(env, CAL_KEY)) || '{}') || {}; } catch (e) { sent = {}; }
+  const p = calendarPlan(rows, sent, today);
+  if (dry) return { would: p.todo.map((x) => ({ day: x.day, subject: JSON.parse(x.file).subject })) };
+  const keep = p.keep;
+  let written = 0, error = null;
+  if (p.todo.length) {
+    try {
+      const at = await accessToken(env);
+      for (const x of p.todo) {
+        await putFile(at.token, OD_CAL, x.key.replace(/:/g, '_') + '.txt', x.file, 'text/plain');
+        keep[x.key] = 1; written++;
+      }
+    } catch (e) { error = String(e.message || e).slice(0, 200); }
+  }
+  await stateSet(env, CAL_KEY, JSON.stringify(keep));
+  return { written, error };
+}
+
 // The call itself, with the clock as an argument (tested at 07:47 Israel).
 export async function run(env, now, body) {
+  if (body.calendar) return { ok: true, sent: false, cal: await calendarStep(env, now, false).catch((e) => ({ error: String(e.message || e).slice(0, 200) })) };
   if (!body.force && !body.dry && !dueNow(now)) return { ok: true, sent: false, reason: 'not 07:xx on a workday in Israel' };
+  // Calendar first and on its own: a WhatsApp failure or "already sent today" does not stop it.
+  const cal = await calendarStep(env, now, !!body.dry).catch((e) => ({ error: String(e.message || e).slice(0, 200) }));
   const g = await gather(env, now);
   const open = await ownerWindowOpen(env, sbFrom(env), now.getTime());
   const text = buildBrief(g.items, g.failed, g.today, !open);
-  if (body.dry) return { ok: true, sent: false, dry: true, text };
-  if (!body.force && (await stateGet(env, LAST_KEY).catch(() => null)) === g.today) return { ok: true, sent: false, reason: 'already sent today' };
+  if (body.dry) return { ok: true, sent: false, dry: true, text, cal };
+  if (!body.force && (await stateGet(env, LAST_KEY).catch(() => null)) === g.today) return { ok: true, sent: false, reason: 'already sent today', cal };
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };
   const to = await ownerWa(env, sbFrom(env));
   if (!to) return { ok: false, error: 'no owner number in notification_prefs' };
@@ -130,5 +201,5 @@ export async function run(env, now, body) {
     body: JSON.stringify([{ id: 'wm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
       event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error',
       payload: { title: clip(text, 120), kind: 'morning', via: r.via || null, wamid: r.wamid || null, detail: r.error || null } }]) }).catch(() => {});
-  return { ok: r.ok, sent: r.ok, via: r.via || null, error: r.error || null, chars: text.length };
+  return { ok: r.ok, sent: r.ok, via: r.via || null, error: r.error || null, chars: text.length, cal };
 }

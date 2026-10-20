@@ -1,15 +1,21 @@
 // The morning update on WhatsApp from the server (20/10/2026): pg_cron calls /api/wa-morning twice,
 // only the call on 07:xx in Israel on Sunday-Thursday sends, once a day, to Michael's number only.
-import { onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY } from './_build/wa-morning.mjs';
+import { onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX } from './_build/wa-morning.mjs';
+import { OD_ROOT } from './_build/routine-db.mjs';
 import fs from 'fs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 300) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co', OWNER = '972501234567';
 const ENV = { TRUSTEE_NOTIFY_SECRET: 'sec', SUPABASE_SERVICE_ROLE_KEY: 'srv', META_PHONE_NUMBER_ID: 'P1', META_ACCESS_TOKEN: 'mt' };
-let state = {}, metas = [], logs = [], docs = [], equip = [];
+let state = {}, metas = [], logs = [], docs = [], equip = [], puts = [], putFail = 0;
 globalThis.fetch = async (url, opt = {}) => {
   const m = opt.method || 'GET';
+  if (url.startsWith(SB + '/rest/v1/oauth_tokens')) return new Response(JSON.stringify([{ user_email: 'm', refresh_token: 'r', access_token: 'AT', expires_at: new Date(Date.now() + 3600000).toISOString(), scope: '' }]), { status: 200 });
+  if (url.startsWith('https://graph.microsoft.com/') && m === 'PUT') {
+    if (putFail && puts.length >= putFail - 1) return new Response(JSON.stringify({ error: { code: 'x' } }), { status: 503 });
+    puts.push({ url, body: opt.body }); return new Response(JSON.stringify({ webUrl: 'w', size: 1 }), { status: 201 });
+  }
   if (url.startsWith(SB + '/rest/v1/notification_prefs')) return new Response(JSON.stringify([{ prefs: { trustee_hazard: { whatsapp_to: '+' + OWNER } } }]), { status: 200 });
   if (url.startsWith(SB + '/rest/v1/server_state')) {
     if (m === 'POST') { JSON.parse(opt.body).forEach((r) => { state[r.key] = r.value; }); return new Response('', { status: 201 }); }
@@ -87,6 +93,42 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   const rt = fs.readFileSync(new URL('../../project-files/routine-wa-assistant.md', import.meta.url), 'utf8');
   check('the assistant answers in a fixed format, numbered sections (20/10/2026: "not by sections")', /\u05e4\u05d5\u05e8\u05de\u05d8 \u05e7\u05d1\u05d5\u05e2/.test(rt) && /\u05de\u05d7\u05db\u05d4 \u05dc\u05da:\n   1\. /.test(rt));
   check('the assistant no longer sends the morning update itself', /מ-20\/10\/2026 השרת שולח אותו/.test(rt));
+
+  console.log('\n5. calendar requests for expiries (20/10/2026, Michael: "do it: calendar slots")');
+  check('the folder is inside the safety folder', OD_CAL === OD_ROOT + '_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df', OD_CAL);
+  check('21 days before the expiry', eventDay('2026-11-30', '2026-10-20') === '2026-11-09');
+  check('too close or expired: tomorrow', eventDay('2026-10-25', '2026-10-20') === '2026-10-21' && eventDay('2026-09-01', '2026-10-20') === '2026-10-21');
+  check('a Friday moves to Sunday, a Saturday to Sunday', eventDay('2026-11-27', '2026-10-20') === '2026-11-08' && eventDay('2026-10-22', '2026-10-23') === '2026-10-25' && eventDay('2026-11-28', '2026-10-20') === '2026-11-08', [eventDay('2026-11-27', '2026-10-20'), eventDay('2026-10-22', '2026-10-23'), eventDay('2026-11-28', '2026-10-20')]);
+  const rows = [{ t: 'equip', id: 7, n: 'Crane \u2014 hall', loc: 'A', vendor: 'V<x>', e: '2026-11-30' }, { t: 'docs', id: 3, n: 'Permit', e: '2026-09-01' }, { t: 'docs', id: 4, n: '', e: '2026-11-01' }, { t: 'docs', id: 5, n: 'Bad', e: '' }];
+  let p = calendarPlan(rows, { 'docs:9:2026-11-01': 1, 'docs:3:2026-09-01': 1 }, '2026-10-20');
+  check('already written: not again; nameless or dateless rows: skipped', p.todo.length === 1 && p.todo[0].key === 'equip:7:2026-11-30', p.todo);
+  check('the sent map keeps only what is still in the window', JSON.stringify(p.keep) === JSON.stringify({ 'docs:3:2026-09-01': 1 }), p.keep);
+  const f = JSON.parse(p.todo[0].file);
+  check('the event: subject, 09:00-09:30 on the day, Israel time', f.subject === '\u05dc\u05ea\u05d0\u05dd: Crane - hall, A (\u05e2\u05d3 30/11/2026)' && f.start === '2026-11-09T09:00:00' && f.end === '2026-11-09T09:30:00' && f.tz === 'Israel Standard Time', f);
+  check('the body: rtl, escaped, the vendor, no long dash', /^<div dir="rtl">/.test(f.html) && /V&lt;x&gt;/.test(f.html) && !/\u2014/.test(f.html + f.subject), f.html);
+  const many = Array.from({ length: 9 }, (_, i) => ({ t: 'docs', id: i, n: 'D' + i, e: '2026-11-0' + (9 - i) }));
+  p = calendarPlan(many, {}, '2026-10-20');
+  check('at most ' + CAL_MAX + ' new a day, the nearest first', p.todo.length === CAL_MAX && p.todo[0].key === 'docs:8:2026-11-01', p.todo.map((x) => x.key));
+  const OD = Object.assign({}, ENV, { ONEDRIVE_CLIENT_ID: 'c', ONEDRIVE_CLIENT_SECRET: 's' });
+  docs = [{ id: 3, n: 'Permit', e: '2026-09-01' }]; equip = [{ id: 7, n: 'Crane', loc: 'A', vendor: 'V', e: '2026-11-30' }];
+  state = { agent_log: '[]' }; puts = [];
+  j = await run(ENV, mon, { dry: true });
+  check('no OneDrive settings: skipped, nothing written', j.cal && j.cal.skipped && !puts.length, j.cal);
+  j = await run(OD, mon, { dry: true });
+  check('dry: lists what it would write, writes nothing', j.cal && j.cal.would.length === 2 && !puts.length && !(CAL_KEY in state), j.cal);
+  j = await run(OD, mon, {});
+  check('the 07:47 run: two files in the folder, the map saved', j.cal.written === 2 && puts.length === 2 && puts.every((x) => x.url.indexOf(encodeURIComponent('_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df')) > 0) && Object.keys(JSON.parse(state[CAL_KEY])).length === 2, [j.cal, puts.map((x) => x.url), state[CAL_KEY]]);
+  j = await run(OD, new Date('2026-10-19T04:48:00Z'), {});
+  check('a second call: no file again, even when WhatsApp says already sent', j.reason === 'already sent today' && j.cal.written === 0 && puts.length === 2, j);
+  equip = [{ id: 7, n: 'Crane', loc: 'A', vendor: 'V', e: '2027-11-30' }]; docs = [{ id: 3, n: 'Permit', e: '2026-09-01' }, { id: 4, n: 'Other', e: '2026-10-30' }, { id: 6, n: 'Third', e: '2026-10-31' }];
+  putFail = 2; puts = [];
+  j = await run(OD, new Date('2026-10-20T04:47:00Z'), {});
+  const kept = JSON.parse(state[CAL_KEY]);
+  check('a failed upload: only what was written is marked, the error is returned, the renewed item left the map', j.cal.written === 1 && /onedrive 503/.test(j.cal.error) && kept['docs:4:2026-10-30'] && !kept['docs:6:2026-10-31'] && !kept['equip:7:2026-11-30'], [j.cal, kept]);
+  putFail = 0; n = metas.length; puts = [];
+  equip = [{ id: 8, n: 'Hoist', e: '2026-11-20' }]; docs = [];
+  j = await run(OD, new Date('2026-10-20T12:00:00Z'), { calendar: true });
+  check('calendar only: any hour, the file written, no WhatsApp', j.cal.written === 1 && puts.length === 1 && metas.length === n, [j, metas.length - n]);
 
   console.log('\nwa-morning-test: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
