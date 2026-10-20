@@ -107,12 +107,12 @@
   ```
   אחרי הביצוע: Claude מוודא ב-API של Cloudflare שהשם קיים, מזג כלשהו ל-main (פריסה), ואז `routine-db.sh '{"op":"relay_fire","agent":"dev","expect_session":"session_01JT8Fct6Z6Qv2GbaBBqxtQT"}'`: מצופה `fired: true` ו-`landed: true`, ואירוע חדש בשיחה של הדוור (`list_events`). רק אז C27 נסגר.
 
-- [ ] **C29. Power Automate: עותק (CC) בטיוטה, בזרימה "טיוטות מהעוזר"** (20/10/2026, דוח המים החודשי למשרד הבריאות: לאופיר, ובעותק צחי, סתיו וטל). השרת כבר שולח `cc` בבקשת הטיוטה. בתשובה בשרשור (C28) העותק כבר עובד; במייל חדש הזרימה מתעלמת ממנו עד שזה נעשה. טקסט להדבקה בכרום:
+- [ ] **C29. Power Automate: עותק (CC) בטיוטה, בזרימה "טיוטות מהעוזר"** (20/10/2026, דוח המים החודשי למשרד הבריאות: לאופיר, ובעותק צחי, סתיו וטל). השרת כבר שולח `cc` בבקשת הטיוטה. ניסיון ראשון 20/10/2026: הכרום התנתק, לא בוצע; הניסוח של השלבים עודכן לפי מה שהכרום תיאר (Advanced parameters, גלגל שיניים, fx). בתשובה בשרשור (C28) העותק כבר עובד; במייל חדש הזרימה מתעלמת ממנו עד שזה נעשה. טקסט להדבקה בכרום:
   ```
   אתה מעדכן זרימה קיימת ב-Power Automate. שינוי של שדה אחד בלבד. אל תוסיף שום פעולה ששולחת מייל, ואל תשנה שום דבר אחר.
   1. פתח https://make.powerautomate.com > My flows > "טיוטות מהעוזר" > Edit.
-  2. בענף If yes של ה-Condition, פתח את הפעולה "Draft an email message" > Show advanced options (או Show all).
-  3. בשדה CC, בלשונית Expression: outputs('Compose')?['cc']
+  2. בענף If yes (True) של ה-Condition, פתח את הפעולה "Draft an email message" > Advanced parameters, וסמן CC.
+  3. בשדה CC: גלגל השיניים > Use dynamic content > fx, והדבק: outputs('Compose')?['cc']
   4. Save. בדוק שה-Flow checker מראה 0 שגיאות. אל תריץ בדיקה ידנית.
   בסוף: דוח קצר: האם השדה CC נמצא ומולא, ומה ה-Flow checker הראה.
   ```
