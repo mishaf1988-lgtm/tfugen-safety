@@ -55,6 +55,12 @@ const MACHINE_PATHS = ['/api/trustee-notify', '/api/trustee-log', '/api/mail-inb
 // public text with no data; a spoofed user agent gets the same two pages and nothing else.
 export const META_POLICY_PATHS = ['/privacy', '/privacy.html', '/user-data-deletion', '/user-data-deletion.html'];
 const META_UA = /facebookexternalhit|Facebot/i;
+// 20/10/2026: the logo under the mail signature (_site.js). Outlook and Gmail fetch a mail's pictures through
+// their own servers, often abroad, so the country gate would leave a broken picture. Only this one public
+// file, only GET/HEAD; it is the same logo the login page shows to anyone.
+export function mailLogo(request, path) {
+  return path === '/logo.jpg' && (request.method === 'GET' || request.method === 'HEAD');
+}
 function metaCrawler(request, path) {
   return META_POLICY_PATHS.indexOf(path) >= 0 && (request.method === 'GET' || request.method === 'HEAD')
     && META_UA.test(request.headers.get('user-agent') || '');
@@ -166,6 +172,7 @@ export async function onRequest(context) {
     return new Response(JSON.stringify({ error: 'preview: test database not configured', why: previewWhy }), { status: 503, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...MUST_HAVE } });
   }
   if (!preview && machineCall(request, path)) return next();
+  if (!preview && mailLogo(request, path)) return next();
   if (!preview && metaCrawler(request, path)) {
     const res = await next();
     try {

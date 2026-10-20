@@ -171,6 +171,18 @@ console.log('\n9. repo files are not URLs (security scan 10/10/2026)');
   check('the 404 carries the security headers', r.headers.get('X-Robots-Tag') === 'noindex, nofollow' && r.headers.get('X-Content-Type-Options') === 'nosniff');
 }
 
+console.log('\n9b. the logo under the mail signature, from any country (20/10/2026)');
+{
+  const r = await call({ country: 'IE', path: '/logo.jpg' });
+  check('/logo.jpg from abroad (a mail client fetching the signature picture): served', r.status === 200 && r.served === 1, r.status);
+  const p2 = await call({ country: 'IE', path: '/logo.jpg', method: 'POST' });
+  check('...but not a POST', p2.served === 0, p2.status);
+  for (const p of ['/', '/icon-192.png', '/index.html']) {
+    const o = await call({ country: 'IE', path: p });
+    check(p + ' from abroad: still blocked', o.served === 0, o.status);
+  }
+}
+
 console.log('\n10. Meta\'s crawler reads the two policy pages, and only them (19/10/2026)');
 {
   const FB = { 'user-agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)' };
