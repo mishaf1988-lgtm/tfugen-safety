@@ -162,6 +162,30 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
   html.chatting .dock{height:auto}
   html.chatting .chat .log{flex:none;min-height:120px;max-height:45dvh}
 }
+/* 20/10/2026 (Michael, phone screenshot: "can't see well on the phone"; in the questionnaire: "do it: a list,
+   a row per worker"): on a phone the desks become rows, name, lamp, next run and a new answer in full,
+   and the page scrolls. The computer keeps the one-screen office. */
+@media (max-width:600px){
+  html,body{height:auto;overflow:auto}
+  .wrap{height:auto;min-height:100dvh}
+  .floor,html.chatting .floor{flex:none;height:auto}
+  .office{height:auto}
+  .office .wall{display:none}
+  .desks{display:flex;flex-direction:column;gap:6px;padding:6px}
+  .desk{display:grid;grid-template-columns:12px minmax(0,1fr);align-items:center;gap:3px 10px;padding:10px 12px;text-align:start;
+    background:var(--desk);border:1px solid var(--line);border-radius:8px;min-height:44px}
+  .desk::before{content:"";grid-row:1;grid-column:1;width:12px;height:12px;border-radius:50%;background:var(--lamp-off)}
+  .desk.s-done::before{background:var(--lamp-done)}
+  .desk.s-run::before{background:var(--lamp-run)}
+  .desk.s-fail::before{background:var(--lamp-fail)}
+  .desk.s-wait::before{background:var(--lamp-wait)}
+  .desk .scene,.desk .tasks{display:none}
+  .desk .nm{grid-row:1;grid-column:2;font-size:16px;white-space:normal;background:none;border:0;padding:0}
+  .desk .nx{grid-row:2;grid-column:2;font-size:13px;white-space:normal}
+  .desk .say{grid-row:3;grid-column:2;position:static;white-space:normal;font-size:14px;padding:6px 10px;box-shadow:none}
+  .detail{position:fixed;inset:8px}
+  .inbox span{white-space:normal}
+}
 </style>
 
 <div class="wrap" dir="rtl">
@@ -488,6 +512,8 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
   // All desks on one screen: try every column count and keep the one with the largest desks.
   function fit(){
     var d=document.querySelector('.office .desks');if(!d)return;
+    // A phone shows the desks as a list (the CSS above): no columns to fit.
+    if(window.matchMedia&&window.matchMedia('(max-width:600px)').matches){d.style.gridTemplateColumns='';return;}
     var n=d.children.length;if(!n)return;
     var W=d.clientWidth-12,H=d.clientHeight-12,G=6,best=1,bs=-1;
     for(var c=1;c<=n;c++){
