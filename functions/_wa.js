@@ -84,6 +84,12 @@ export function hazardChoiceNote(prev, choice, today) {
 // fire_probe_trigger (the new token, a URL from the trigger id, never live), and only then the URL is set.
 export const FIRE_URL_RE = /^trig_[A-Za-z0-9]{10,40}$/;
 export function fireUrlOf(trig) { return FIRE_URL_RE.test(String(trig || '')) ? 'https://api.anthropic.com/v1/claude_code/routines/' + trig + '/fire' : null; }
+// cse_X and session_X name the same session (agent-common.md). A Routine fire answers with the
+// session it opened or woke; with text in the fire it is always a new one (20/10/2026, lesson 133).
+export function sameSession(a, b) {
+  const k = (s) => String(s || '').replace(/^(cse_|session_)/, '');
+  return !!k(a) && k(a) === k(b);
+}
 export function assistantFire(env) {
   if (env.ASSISTANT2_FIRE_URL && env.ASSISTANT2_FIRE_TOKEN) return { url: env.ASSISTANT2_FIRE_URL, token: env.ASSISTANT2_FIRE_TOKEN, which: 'new' };
   if (env.ASSISTANT_FIRE_URL && env.ASSISTANT_FIRE_TOKEN) return { url: env.ASSISTANT_FIRE_URL, token: env.ASSISTANT_FIRE_TOKEN, which: 'old' };

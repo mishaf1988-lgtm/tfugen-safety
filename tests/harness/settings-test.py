@@ -19,5 +19,5 @@ missing = [c for c in cmds(new) if not any(os.path.exists(os.path.join(d, c)) fo
 check("every hook in the settings exists", not missing, missing)
 check("no current hook dropped", cmds(old) <= cmds(new), cmds(old) - cmds(new))
 check("permissions unchanged", new.get("permissions") == old.get("permissions"))
-check("pr-gate, push-recheck, hebrew-midturn, session-start wired", {"pr-gate.py", "push-recheck.py", "hebrew-midturn.py", "session-start.py"} <= cmds(new))
+check("pr-gate, push-recheck, hebrew-midturn, session-start wired", {"pr-gate.py", "push-recheck.py", "hebrew-midturn.py", "session-start.py", "questionnaire-hebrew.py"} <= cmds(new))
 done()
