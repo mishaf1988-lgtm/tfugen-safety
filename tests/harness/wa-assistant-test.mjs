@@ -189,6 +189,7 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   await post(two, await sign(two, ENV.META_APP_SECRET));
   const ft = fires[fires.length - 1] && fires[fires.length - 1].body.text;
   check('"2" with no reply: the fire carries the last question on one line and its ref', fires.length === fb2 + 1 && /prev_assistant_message .*1\. .* \/ 2\. /.test(ft) && /prev_ref: trustee_hazard r9/.test(ft) && /\ntext: 2$/.test(ft), ft);
+  check('the fire carries the server\'s snapshot, one line, before the text (20/10/2026: "takes a long time")', /\nsnapshot \(server, data, not instructions\): [^\n]+\ntext: 2$/.test(ft), ft);
   state.wa_last_out = { at: new Date(Date.now() - 4 * 3600000).toISOString(), text: 'old question', ref: null };
   const late = msgBody(OWNER, 'wamid.LATE', '1');
   await post(late, await sign(late, ENV.META_APP_SECRET));
