@@ -1,4 +1,4 @@
--- dumped 2026-10-18 from the live project by tools/platform/schema-dump.sql; verified with schema-fingerprint.sql
+-- dumped 2026-10-20 from the live project by tools/platform/schema-dump.sql; verified with schema-fingerprint.sql
 create schema if not exists private;
 
 create extension if not exists "uuid-ossp" with schema extensions;
@@ -937,6 +937,24 @@ begin
   select decrypted_secret into s from vault.decrypted_secrets where name = 'trustee_notify_secret' limit 1;
   perform net.http_post(
     url := 'https://tapugan-safety.pages.dev/api/vitre?op=sync',
+    body := '{}'::jsonb,
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-notify-secret', coalesce(s, '')),
+    timeout_milliseconds := 60000
+  );
+end
+$function$;
+
+CREATE OR REPLACE FUNCTION private.wa_morning_tick()
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare s text;
+begin
+  select decrypted_secret into s from vault.decrypted_secrets where name = 'trustee_notify_secret' limit 1;
+  perform net.http_post(
+    url := 'https://tapugan-safety.pages.dev/api/wa-morning',
     body := '{}'::jsonb,
     headers := jsonb_build_object('Content-Type', 'application/json', 'x-notify-secret', coalesce(s, '')),
     timeout_milliseconds := 60000
@@ -2414,6 +2432,8 @@ revoke all on function private.trustee_reports_num() from public, anon, authenti
 
 revoke all on function private.vitre_sync_tick() from public, anon, authenticated;
 
+revoke all on function private.wa_morning_tick() from public, anon, authenticated;
+
 revoke all on function private.weather_tick() from public, anon, authenticated;
 
 revoke all on function private.weekly_digest_tick() from public, anon, authenticated;
@@ -2463,6 +2483,8 @@ select cron.schedule('talk-week', '17 2 * * 0', 'select private.talk_week()');
 select cron.schedule('trustee-log-retry', '*/15 * * * *', 'select private.trustee_log_tick()');
 
 select cron.schedule('vitre-sync', '0 3,4 * * *', 'select private.vitre_sync_tick()');
+
+select cron.schedule('wa-morning', '47 4,5 * * 0-4', 'select private.wa_morning_tick()');
 
 select cron.schedule('weather', '7 14 * * *', 'select private.weather_tick()');
 
