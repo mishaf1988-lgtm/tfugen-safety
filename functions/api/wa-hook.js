@@ -24,6 +24,7 @@ const SEEN_KEY = 'wa_hook_seen', SEEN_MAX = 100;
 // secrets): the last call, so a wrong META_APP_SECRET (sig false) or ASSISTANT_FIRE_TOKEN
 // (fire_status 401) shows in server_state without a new token. No number and no text in it.
 export const LAST_KEY = 'wa_hook_last';
+export const SNAP_MS = 4000;
 async function note(env, value) {
   if (!env.SUPABASE_SERVICE_ROLE_KEY) return;
   try {
@@ -187,8 +188,17 @@ async function handle(env, raw) {
       seen.fast_fail = fr0.kind;
     }
     if (wa) { const a = await sendToOwner(env, owner, ACK_TEXT, { windowOpen: true, noTemplate: true }).catch(() => null); seen.ack = !!(a && a.ok); seen.ack_ms = Date.now() - t0; }
+    // 20/10/2026 20:30: a message got "got it" and then nothing, no log line and no fire. The work after the
+    // response runs in waitUntil, which Cloudflare stops about 30 seconds after the response; the snapshot
+    // read and the fire (20 seconds on a bad day) did not fit. The snapshot is a bonus: SNAP_MS at most,
+    // and the progress is noted before the fire, so a cut shows where it stopped.
     let snap = null;
-    try { const g = await gather(env, new Date()); snap = buildBrief(g.items, g.failed, g.today, true); } catch (e) { snap = null; }
+    try {
+      const g = await Promise.race([gather(env, new Date()), new Promise((res) => setTimeout(() => res(null), SNAP_MS))]);
+      snap = g ? buildBrief(g.items, g.failed, g.today, true) : null;
+    } catch (e) { snap = null; }
+    seen.snap = !!snap; seen.pre_fire_ms = Date.now() - t0;
+    await note(env, Object.assign({ stage: 'firing' }, seen));
     const text = fireText(m, about, prev, snap);
     const af = assistantFire(env);
     seen.fire_to = af ? af.which : null;
