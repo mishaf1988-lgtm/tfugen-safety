@@ -67,6 +67,8 @@ jobs:
       - run: python3 tests/harness/status-dup-test.py
       # Same reason: a replaced Routine id left live in STATUS or routine-*.md (lesson 67).
       - run: python3 tests/harness/stale-trigger-test.py
+      # Same reason: a new routine-*.md (an .md-only PR) that the WhatsApp assistant's worker map lacks (20/10/2026).
+      - run: python3 tests/harness/wa-worker-map-test.py
       # Same reason: a Routine prompt file without step 0 (agent-common.md), 09/10/2026.
       - run: python3 tests/harness/routine-common-test.py
       # A handoff PR is .md only too (CLAUDE.md: only the latest handoff in the root).
