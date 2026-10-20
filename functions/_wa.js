@@ -79,6 +79,11 @@ export function hazardChoiceNote(prev, choice, today) {
 // Which assistant Routine the server wakes (20/10/2026, the lean session): the new pair ASSISTANT2_FIRE_URL
 // + ASSISTANT2_FIRE_TOKEN once both are set, else the old pair. The switch is one secret Michael adds (the
 // token, which only the Routine's page shows), with no window in which the URL and the token disagree.
+// 20/10/2026 (lesson 133): the switch went live the moment the token was there, and the new Routine did not
+// run (the fire answered 200, the session never woke). So a new pair is tested first with wa_check
+// fire_probe_trigger (the new token, a URL from the trigger id, never live), and only then the URL is set.
+export const FIRE_URL_RE = /^trig_[A-Za-z0-9]{10,40}$/;
+export function fireUrlOf(trig) { return FIRE_URL_RE.test(String(trig || '')) ? 'https://api.anthropic.com/v1/claude_code/routines/' + trig + '/fire' : null; }
 export function assistantFire(env) {
   if (env.ASSISTANT2_FIRE_URL && env.ASSISTANT2_FIRE_TOKEN) return { url: env.ASSISTANT2_FIRE_URL, token: env.ASSISTANT2_FIRE_TOKEN, which: 'new' };
   if (env.ASSISTANT_FIRE_URL && env.ASSISTANT_FIRE_TOKEN) return { url: env.ASSISTANT_FIRE_URL, token: env.ASSISTANT_FIRE_TOKEN, which: 'old' };

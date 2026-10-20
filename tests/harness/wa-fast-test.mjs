@@ -2,7 +2,7 @@
 // A number 1-4 that answers a hazard alert, and "what is urgent" / "expiries", are answered by wa-hook
 // itself by rules; everything else, and anything unclear, still goes to the assistant.
 import { fastRoute, hazardRef, fastHazardText, FAST_BRIEF } from './_build/wa-hook.mjs';
-import { HAZARD_OPTIONS, hazardAsk, assistantFire } from './_build/_wa.mjs';
+import { HAZARD_OPTIONS, hazardAsk, assistantFire, fireUrlOf } from './_build/_wa.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 300) : '')); } };
@@ -34,6 +34,7 @@ check('only the old pair: the old one', assistantFire(O).which === 'old' && assi
 check('the new URL alone (token not added yet): still the old one', assistantFire({ ...O, ASSISTANT2_FIRE_URL: 'u2' }).which === 'old');
 check('both new: the new one, URL and token together', JSON.stringify(assistantFire({ ...O, ASSISTANT2_FIRE_URL: 'u2', ASSISTANT2_FIRE_TOKEN: 't2' })) === JSON.stringify({ url: 'u2', token: 't2', which: 'new' }));
 check('nothing set: none', assistantFire({}) === null);
+check('a probe URL only from a trigger id (lesson 133)', fireUrlOf('trig_011XSXRjssx2uPNu1rk4P9L2') === 'https://api.anthropic.com/v1/claude_code/routines/trig_011XSXRjssx2uPNu1rk4P9L2/fire' && fireUrlOf('https://evil/x') === null && fireUrlOf('trig_../../x') === null);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

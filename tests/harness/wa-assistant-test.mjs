@@ -151,6 +151,8 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   // wa_review (20/10/2026): the weekly quality review reads Michael's messages and the answers, nothing else.
   const rv = await call({ op: 'wa_review', days: 30 });
   check('wa_review: only owner_in and assistant on WhatsApp, at most 7 days, as who/text', rv.ok && rv.days === 7 && reviewUrls.length === 1 && /channel=eq\.whatsapp/.test(reviewUrls[0]) && rv.rows.length === 2 && rv.rows[0].who === 'michael' && rv.rows[1].who === 'assistant' && rv.rows[1].text === 'answer' && rv.rows[1].fast === true, { rv, reviewUrls });
+  const pr = await call({ op: 'wa_check', fire_probe_trigger: 'trig_011XSXRjssx2uPNu1rk4P9L2' });
+  check('a probe of a new trigger with no new token: reported, nothing fired (lesson 133)', pr.probe2_status === 'no new token' && pr.fire_to === 'old', pr);
   let c = await call({ op: 'wa_check' });
   check('the right secret passes appsecret_proof', c.ok && c.secret_ok === true && c.app_id === 'APP1', c);
   check('no messages field and no WABA app: reported, nothing changed', c.messages_ok === false && c.waba_has_app === false && !graphCalls.some((x) => x.m === 'POST'), c);
