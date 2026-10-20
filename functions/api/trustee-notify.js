@@ -33,6 +33,7 @@
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, sbFrom, SITE, SB_LIVE } from '../_shared.js';
 import { odConfigured, tokenRow, hasMail, accessToken, sendMail, stateGet, stateSet, runLeased } from '../_onedrive.js';
 import { makeCloseToken, closeUrl } from '../_closelink.js';
+import { sendToOwner, ownerWindowOpen, hazardAsk } from '../_wa.js';
 
 let SUPABASE_URL = SB_LIVE; // set from env in onRequest (sbFrom)
 const META_API_VERSION = 'v25.0';
@@ -84,15 +85,8 @@ const anySent = (res) => !!res && (res.whatsapp === 'sent' || res.email === 'sen
 // only the phone stops ringing. Real use so far: at most 2 in a day. The
 // insert ceiling for anonymous sessions is in migrations/2026-09-30_anon_write_cap.sql.
 const DAILY_CAP = 15, CAP_KEY = 'notify_cap_day';
-// The template this system is meant to send on. Until it exists and is
-// approved in Meta, the approved incident template carries the message -- and
-// carries it badly: its fixed text reads «🚨 תקרית בטיחות ... נא לטפל מיידית»,
-// which is a road accident, not a fire extinguisher missing a seal. Michael saw
-// the first one on 2026-09-21 and said so. project-files/WHATSAPP-TEMPLATE.md
-// is the text to submit; the moment it is approved this code uses it with no
-// further change.
-const TEMPLATE_DEDICATED = SITE.waTemplates.dedicated;
-const TEMPLATE_FALLBACK = SITE.waTemplates.fallback;
+// 20/10/2026: WhatsApp goes out as the assistant's message (sendWhatsApp, _wa.js). The two
+// incident templates (SITE.waTemplates.dedicated, .fallback) are no longer sent from here.
 // The built-in catalogue, and the fallback. Once migrations/2026-09-19_trustee_tasks.sql
 // has run the manager can rename a task from the app — and the message that
 // went out still carried this wording. taskName() reads the table first.
@@ -504,43 +498,25 @@ async function deliver(env, prefs, row, task, src, B) {
   return res;
 }
 
-async function metaSend(env, to, template, params, B) {
-  spend(B, 1);
-  const resp = await tfetch(`https://graph.facebook.com/${META_API_VERSION}/${env.META_PHONE_NUMBER_ID}/messages`, {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + env.META_ACCESS_TOKEN, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      messaging_product: 'whatsapp', to, type: 'template',
-      template: { name: template, language: { code: 'he' }, components: [{ type: 'body', parameters: params.map((p) => ({ type: 'text', text: p })) }] }
-    })
-  }, NET_MS);
-  const text = await resp.text();
-  let parsed; try { parsed = JSON.parse(text); } catch (e) { parsed = { raw: text }; }
-  return { ok: resp.ok, status: resp.status, parsed };
-}
-
 async function sendWhatsApp(env, to, row, task, src, B, out) {
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return 'error: WhatsApp not configured (META env vars)';
-  const who = clean(row.u, 40), loc = clean(row.loc || '\u05dc\u05d0 \u05e6\u05d5\u05d9\u05df', 60), finding = clean(row.f || '\u05dc\u05dc\u05d0 \u05ea\u05d9\u05d0\u05d5\u05e8', 150);
+  const loc = clean(row.loc || '\u05dc\u05d0 \u05e6\u05d5\u05d9\u05df', 60), finding = clean(row.f || '\u05dc\u05dc\u05d0 \u05ea\u05d9\u05d0\u05d5\u05e8', 150);
   try {
     const kind = clean(src.kindLabel(row, task), 90);
-    // The template we want: {{1}} reporter, {{2}} kind, {{3}} location, {{4}} finding.
-    let r = await metaSend(env, to, TEMPLATE_DEDICATED, [who, kind, loc, finding], B);
-    const err = r.parsed && r.parsed.error;
-    const missing = !r.ok && err && (err.code === 132001 || /template/i.test(String(err.message || '')));
-    if (missing) {
-      // The approved incident template, whose fixed labels are, in order:
-      //   סוג: {{1}}   מיקום: {{2}}   חומרה: {{3}}
-      // We were passing location, kind, finding -- so every line was captioned
-      // as something it was not: the store room appeared under «סוג», the task
-      // name under «מיקום». Read on a phone it looked like a broken system
-      // reporting a road accident. This is the order the labels actually want.
-      r = await metaSend(env, to, TEMPLATE_FALLBACK, [kind, loc, finding], B);
-    }
+    // 20/10/2026 (Michael: "maybe the message comes from the assistant instead of two messages"): one
+    // message in the assistant's voice, with the numbered choices. The number is Michael's own
+    // (notification_prefs, the same row wa-hook trusts), so free text inside the 24 hour window and
+    // the assistant's approved template outside it (_wa.js sendToOwner). No reporter name: the
+    // assistant's messages carry no employee names. The cap notice keeps no choices.
+    const ask = src.event === 'trustee_hazard' || src.event === 'near_miss';
+    const head = src.event === 'near_miss' ? '\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2 \u05d7\u05d3\u05e9' : ask ? '\u05de\u05e4\u05d2\u05e2 \u05d7\u05d3\u05e9' : kind;
+    spend(B, 2);
+    const open = await ownerWindowOpen(env, sbFrom(env));
+    const text = ask ? hazardAsk(head, kind, loc, finding, !open) : [kind, loc, finding].join(open ? '\n' : '; ');
+    const r = await sendToOwner(env, to, text, { windowOpen: open });
     // 19/10/2026: the message id, so a WhatsApp reply to this alert reaches the assistant with what it answers (wa-hook.js).
-    if (r.ok) { const m = r.parsed && r.parsed.messages && r.parsed.messages[0]; if (out && m && m.id) out.whatsapp_id = String(m.id).slice(0, 120); return 'sent'; }
-    const e2 = r.parsed && r.parsed.error;
-    return 'error: Meta ' + r.status + (e2 && e2.message ? ' ' + String(e2.message).substring(0, 160) : '');
+    if (r.ok) { if (out && r.wamid) out.whatsapp_id = String(r.wamid).slice(0, 120); return 'sent'; }
+    return 'error: ' + String(r.error || 'unknown').replace(/^meta /, 'Meta ').replace(/^template /, 'Meta template ');
   } catch (e) {
     return 'error: network ' + String(e && e.message || e).substring(0, 120);
   }
