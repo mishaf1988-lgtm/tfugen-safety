@@ -104,7 +104,13 @@ export function agentEntry(b, nowIso) {
   const name = String(b.agent || '');
   if (!/^[a-z0-9-]{2,40}$/.test(name)) return null;
   const t = (x) => String(x === undefined || x === null ? '' : x).replace(/\s+/g, ' ').trim().slice(0, 300);
-  return { agent: name, at: nowIso, ok: b.ok === true, line: t(b.line), learned: t(b.learned) };
+  const e = { agent: name, at: nowIso, ok: b.ok === true, line: t(b.line), learned: t(b.learned) };
+  // for_michael (20/10/2026, Michael: "the assistant must know how to do or pass a task and get data back"):
+  // what Michael has to know or do from this run, e.g. a worker's answer to a task the WhatsApp assistant
+  // passed on, or "the water report draft is ready". The morning WhatsApp update and the assistant's
+  // snapshot carry it; the office is not on the server.
+  if (t(b.for_michael)) e.for_michael = t(b.for_michael);
+  return e;
 }
 // Michael's choice on a hazard, as a note (hazard_choice): moved to _wa.js on 20/10/2026, where the
 // server's fast lane (wa-hook.js) writes the same note.
