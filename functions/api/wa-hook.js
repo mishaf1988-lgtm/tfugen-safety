@@ -14,7 +14,7 @@
 // notifications_log (payload.wamid), so the assistant knows what Michael is answering.
 // Machine path in _middleware: Meta calls from outside Israel.
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
-import { ownerWa, metaSigOk, inboundMessages, noteOwnerIn, lastOut, sendToOwner } from '../_wa.js';
+import { ownerWa, metaSigOk, inboundMessages, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 
 export const FAIL_TEXT = '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05dc\u05e2\u05d5\u05d6\u05e8. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.';
@@ -91,6 +91,56 @@ async function aboutAlert(env, wamid) {
   } catch (e) { return ''; }
 }
 
+// The fast lane (20/10/2026, Michael in the questionnaire: "do it: a fast lane in the server"; measured
+// that day: 40-60 seconds an answer through the assistant's Routine). Two kinds of message are answered
+// here, in about a second, by rules and not by a model (no cost, no guess): a number 1-4 that answers a
+// hazard alert (the same note the assistant writes with routine-db hazard_choice), and "what is urgent" /
+// "expiries" (the morning brief the server already builds). Anything else, and anything unclear, goes to
+// the assistant as before. Pure, tested.
+export const FAST_BRIEF = /^(\u05de\u05d4 )?(\u05d3\u05d7\u05d5\u05e3|\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea|\u05e4\u05d2|\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3|\u05de\u05d4 \u05e4\u05d2)$/;
+export function hazardRef(about, prev) {
+  const a = String(about || ''), m = /^(trustee_hazard|near_miss) \|.*\| id ([A-Za-z0-9_.-]{1,80}) \|/.exec(a);
+  if (m) return { src: m[1], id: m[2] };
+  if (a) return null; // a reply to some other message is about that message
+  // The last message's ref alone is not enough: the assistant can ask another question under the same
+  // ref ("1. docs coordinator 2. reports coordinator"). Only the alert itself, with its four options.
+  const r = /^(trustee_hazard|near_miss) ([A-Za-z0-9_.-]{1,80})$/.exec(String((prev && prev.ref) || ''));
+  const pt = String((prev && prev.text) || '');
+  return r && HAZARD_OPTIONS.every((o) => pt.indexOf(o) >= 0) ? { src: r[1], id: r[2] } : null;
+}
+export function fastRoute(m, about, prev) {
+  const raw = String((m && m.text) || '').trim();
+  if (!raw || raw.length > 40) return null;
+  const hz = hazardRef(about, prev);
+  const n = m.choice || (/^([1-4])(\.|\s|$)/.exec(raw) || [])[1];
+  if (hz && n && Number(n) >= 1 && Number(n) <= HAZARD_OPTIONS.length && (m.choice || /^[1-4](\.? *.{0,30})?$/.test(raw))) return { kind: 'hazard', src: hz.src, id: hz.id, choice: Number(n) };
+  const words = raw.replace(/^[0-9]{1,2}\. */, '').replace(/[?!.,]/g, '').replace(/\s+/g, ' ').trim();
+  if (FAST_BRIEF.test(words)) return { kind: 'brief' };
+  return null;
+}
+export function fastHazardText(choice, changed) {
+  return '\u05e8\u05e9\u05de\u05ea\u05d9 \u05d1\u05de\u05e4\u05d2\u05e2: ' + HAZARD_OPTIONS[choice - 1] + '.' + (changed ? '' : ' (\u05db\u05d1\u05e8 \u05d4\u05d9\u05d4 \u05e8\u05e9\u05d5\u05dd.)') + (choice === 1 ? ' \u05d0\u05ea \u05d4\u05d4\u05e2\u05d1\u05e8\u05d4 \u05dc\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4 \u05d0\u05ea\u05d4 \u05e2\u05d5\u05e9\u05d4.' : '');
+}
+async function fastHazard(env, r) {
+  const t = HAZARD_NOTE_TABLE[r.src];
+  const rows = await sbJson(env, t[0] + '?select=id,' + t[1] + '&id=eq.' + encodeURIComponent(r.id));
+  if (!Array.isArray(rows) || rows.length !== 1) return null;
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+  const c = hazardChoiceNote(rows[0][t[1]], r.choice, today);
+  if (c.error) return null;
+  if (c.changed) {
+    const after = await sbJson(env, t[0] + '?id=eq.' + encodeURIComponent(r.id), { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ [t[1]]: c.note }) });
+    if (!Array.isArray(after) || after.length !== 1) return null;
+  }
+  return fastHazardText(r.choice, c.changed);
+}
+async function logOut(env, text, r) {
+  try {
+    await sbJson(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify([{ id: 'wf' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
+        event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error', payload: { title: String(text).replace(/\s+/g, ' ').slice(0, 120), via: r.via || null, wamid: r.wamid || null, fast: true } }]) });
+  } catch (e) { /* the answer went out; a missing log line is not a failure */ }
+}
 async function handle(env, raw) {
   let body; try { body = JSON.parse(raw); } catch (e) { return; }
   const msgs = inboundMessages(body);
@@ -107,11 +157,25 @@ async function handle(env, raw) {
     // 20 seconds on 20/10 10:30). Michael just wrote, so the window is open; no template. Not kept as
     // the last question (wa_last_out): the assistant's answer is. A fire that fails says so.
     const wa = env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN;
-    if (wa) { const a = await sendToOwner(env, owner, ACK_TEXT, { windowOpen: true, noTemplate: true }).catch(() => null); seen.ack = !!(a && a.ok); }
     const about = await aboutAlert(env, m.context);
+    const prev = about ? null : await lastOut(env, sbFrom(env));
+    // The fast lane first: an answer here means no "got it", no Routine. A failure on the way (read, write,
+    // send) falls through to the assistant, so a message is never lost to the fast lane.
+    const fr0 = wa ? fastRoute(m, about, prev) : null;
+    if (fr0) {
+      let ans = null, ref = null;
+      try {
+        if (fr0.kind === 'hazard') { ans = await fastHazard(env, fr0); ref = fr0.src + ' ' + fr0.id; }
+        else { const g = await gather(env, new Date()); ans = buildBrief(g.items, g.failed, g.today, false); ref = 'brief'; }
+      } catch (e) { ans = null; }
+      const sr = ans ? await sendToOwner(env, owner, ans, { windowOpen: true, noTemplate: true }).catch(() => null) : null;
+      if (sr && sr.ok) { seen.fast = fr0.kind; await noteLastOut(env, sbFrom(env), ans, ref); await logOut(env, ans, sr); continue; }
+      seen.fast_fail = fr0.kind;
+    }
+    if (wa) { const a = await sendToOwner(env, owner, ACK_TEXT, { windowOpen: true, noTemplate: true }).catch(() => null); seen.ack = !!(a && a.ok); }
     let snap = null;
     try { const g = await gather(env, new Date()); snap = buildBrief(g.items, g.failed, g.today, true); } catch (e) { snap = null; }
-    const text = fireText(m, about, about ? null : await lastOut(env, sbFrom(env)), snap);
+    const text = fireText(m, about, prev, snap);
     const fr = await fetch(env.ASSISTANT_FIRE_URL, {
       method: 'POST', signal: tmo(20000),
       headers: { Authorization: 'Bearer ' + env.ASSISTANT_FIRE_TOKEN, 'anthropic-beta': 'experimental-cc-routine-2026-04-01',

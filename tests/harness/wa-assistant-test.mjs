@@ -202,8 +202,14 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   check('a question older than 3 hours is not attached', !/prev_assistant_message/.test(fires[fires.length - 1].body.text), fires[fires.length - 1].body.text);
   const rep2 = msgBody(OWNER, 'wamid.R2', '3', 'wamid.ALERT');
   state.wa_last_out = { at: new Date().toISOString(), text: 'q', ref: null };
+  const fb3 = fires.length, mb3 = metas.length;
   await post(rep2, await sign(rep2, ENV.META_APP_SECRET));
-  check('a WhatsApp reply to a known alert: reply_to, not the last question', /reply_to/.test(fires[fires.length - 1].body.text) && !/prev_assistant_message/.test(fires[fires.length - 1].body.text));
+  // 20/10/2026: a number in reply to a hazard alert is the server's fast lane (wa-fast-test.mjs): the note
+  // is written, the answer goes out at once, and no Routine is fired.
+  check('a "3" in reply to a known alert: the fast lane writes the note and answers, no fire', fires.length === fb3 && hzWrites.some((w) => w.tb === 'trustee_reports' && /\u05e1\u05d5\u05d3\u05e8 \u05d1\u05de\u05e7\u05d5\u05dd/.test(w.b.mgr_note)) && metas.slice(mb3).some((b) => b.text && /^\u05e8\u05e9\u05de\u05ea\u05d9 \u05d1\u05de\u05e4\u05d2\u05e2/.test(b.text.body)), { fires: fires.length - fb3, metas: metas.slice(mb3) });
+  const rep3 = msgBody(OWNER, 'wamid.R3', 'mah zeh', 'wamid.ALERT');
+  await post(rep3, await sign(rep3, ENV.META_APP_SECRET));
+  check('words in reply to a known alert: reply_to to the assistant, not the last question', /reply_to/.test(fires[fires.length - 1].body.text) && !/prev_assistant_message/.test(fires[fires.length - 1].body.text));
 
   console.log('\n4. the front door');
   const mw = fs.readFileSync(new URL('../../functions/_middleware.js', import.meta.url), 'utf8');

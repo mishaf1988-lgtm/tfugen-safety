@@ -82,7 +82,7 @@
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
-import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut } from '../_wa.js';
+import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hazardChoiceNote } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks'];
@@ -95,17 +95,9 @@ export function agentEntry(b, nowIso) {
   const t = (x) => String(x === undefined || x === null ? '' : x).replace(/\s+/g, ' ').trim().slice(0, 300);
   return { agent: name, at: nowIso, ok: b.ok === true, line: t(b.line), learned: t(b.learned) };
 }
-// Michael's choice on a hazard, as a note (hazard_choice). Pure, tested. The same choice twice = no change.
-export const HAZARD_NOTE_TABLE = { trustee_hazard: ['trustee_reports', 'mgr_note'], near_miss: ['near_miss', 'notes'] };
-export function hazardChoiceNote(prev, choice, today) {
-  const n = Number(choice);
-  if (!(n >= 1 && n <= HAZARD_OPTIONS.length) || Math.floor(n) !== n) return { error: 'choice must be 1-' + HAZARD_OPTIONS.length };
-  const p = today.split('-');
-  const line = (n === 1 ? '\u05dc\u05e0\u05d9\u05ea\u05d5\u05d1: ' : '') + HAZARD_OPTIONS[n - 1] + ' (\u05de\u05d9\u05db\u05d0\u05dc \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 ' + p[2] + '/' + p[1] + '/' + p[0] + ')';
-  const before = String(prev || '');
-  if (before.indexOf(line) >= 0) return { note: before, changed: false };
-  return { note: (before ? before + ' | ' + line : line).slice(0, 1000), changed: true };
-}
+// Michael's choice on a hazard, as a note (hazard_choice): moved to _wa.js on 20/10/2026, where the
+// server's fast lane (wa-hook.js) writes the same note.
+export { HAZARD_NOTE_TABLE, hazardChoiceNote };
 // Work claims between parallel sessions (12/10/2026). Pure helpers, tested.
 export const CLAIM_KEY = 'work_claims', CLAIM_HOURS = 6, CLAIM_MAX = 100;
 export function claimSession(x) { const v = String(x || '').trim().replace(/^cse_/, 'session_'); return /^[A-Za-z0-9_-]{8,80}$/.test(v) ? v : null; }

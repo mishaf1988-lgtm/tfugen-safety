@@ -64,6 +64,18 @@ export function choicesPayload(to, text, choices) {
     action: { button: CHOOSE, sections: [{ rows: cs.map((c, i) => ({ id: 'c' + (i + 1), title: lab(c, i, ROW_MAX) })) }] } } };
 }
 
+// Michael's choice on a hazard, as a note (routine-db hazard_choice, and the fast lane in wa-hook.js). Pure, tested. The same choice twice = no change.
+export const HAZARD_NOTE_TABLE = { trustee_hazard: ['trustee_reports', 'mgr_note'], near_miss: ['near_miss', 'notes'] };
+export function hazardChoiceNote(prev, choice, today) {
+  const n = Number(choice);
+  if (!(n >= 1 && n <= HAZARD_OPTIONS.length) || Math.floor(n) !== n) return { error: 'choice must be 1-' + HAZARD_OPTIONS.length };
+  const p = today.split('-');
+  const line = (n === 1 ? '\u05dc\u05e0\u05d9\u05ea\u05d5\u05d1: ' : '') + HAZARD_OPTIONS[n - 1] + ' (\u05de\u05d9\u05db\u05d0\u05dc \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 ' + p[2] + '/' + p[1] + '/' + p[0] + ')';
+  const before = String(prev || '');
+  if (before.indexOf(line) >= 0) return { note: before, changed: false };
+  return { note: (before ? before + ' | ' + line : line).slice(0, 1000), changed: true };
+}
+
 export function digits(s) { return String(s == null ? '' : s).replace(/[^0-9]/g, ''); }
 export function waOneLine(s, max) {
   return String(s == null ? '' : s).replace(/\s*\n+\s*/g, ' | ').replace(/[\t ]{2,}/g, ' ').trim().slice(0, max || 1000);
