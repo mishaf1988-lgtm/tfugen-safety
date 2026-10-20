@@ -29,10 +29,10 @@
 | `trig_01PCAkeVUANPkzuCgmszt9k5` | המפקח המדומה | 5 לחודש 08:16 | `routine-inspector.md` | `session_01FXKjCZExakD2sbqi9eZVin` |
 | `trig_015nyt8LcbxN3pPj3fEfKjcm` | מודל ההעדפות של מיכאל | 6 לחודש 08:21 | `routine-preferences.md` | `session_01FXKjCZExakD2sbqi9eZVin` |
 | `trig_0112ddFifkor46mUGHrEQVCD` | מעקב הצעות מחיר | מוצ"ש 22:47 | `routine-quotes.md` | `session_01SNYNvuNvJZiQVL1VPDNuhF` |
-| `trig_01DskPcZDAt1uAjsZgPyWkam` | חוקר העוזר | א'-ה' 06:47 | `routine-researcher.md` | `session_019o8PKShtacN2m1BCbYdnQj` |
-| `trig_01EDtjPSEhnt86YLLNFwxxm9` | רטרו יומי | א'-ה' 07:52 | `retro-prompt.md` | `session_019o8PKShtacN2m1BCbYdnQj` |
-| `trig_01XPwRokY9GmbtX533Res2TU` | הרדאר מלמד את העוזר | ב' 08:37 | `routine-radar-learn.md` | `session_019o8PKShtacN2m1BCbYdnQj` |
-| `trig_01L7t6v87o3Bv4SAsxferZZJ` | חוקר ההמצאות | ו' 08:47 | `routine-inventor.md` | `session_019o8PKShtacN2m1BCbYdnQj` |
+| `trig_01PrGDTUzea2ewuNBTApskNc` | חוקר העוזר | א'-ה' 06:47 | `routine-researcher.md` | `session_01XecBM5b3kHkbb67kjSpmPs` |
+| `trig_01KKNK11KbArFxmStSuuawww` | רטרו יומי | א'-ה' 07:52 | `retro-prompt.md` | `session_01XecBM5b3kHkbb67kjSpmPs` |
+| `trig_01WzoFsHLwgUUURuhyfFDAvS` | הרדאר מלמד את העוזר | ב' 08:37 | `routine-radar-learn.md` | `session_01XecBM5b3kHkbb67kjSpmPs` |
+| `trig_01F6R3kkBFwxJMhrgVDJqvbF` | חוקר ההמצאות | ו' 08:47 | `routine-inventor.md` | `session_01XecBM5b3kHkbb67kjSpmPs` |
 | `trig_01FKWxifq39whQgdyrVNo8CW` | הדרכה שבועית מהשטח | א' 05:53 | `routine-talk-field.md` | `session_01HK2YJUpeGksTy3KHZ2sGCm` |
 | `trig_01SzAJJc2RDFcLoAeBEcWonK` | רדאר רגולציה שבועי | א' 08:17 | הפרומפט בטריגר עצמו (לא בקובץ) | שיחה חדשה בכל ריצה |
 | `trig_01BimkS5EroGgvLB1tZo6zQo` | תור משימות מ-Claude Code (Cowork) | א'-ה' 07:19-18:19, כל שעה (מ-18/10/2026; קודם כל שעה כל יום) | הפרומפט בטריגר; הכללים ב-`cowork-queue.md` | Cowork, קשור למחשב של מיכאל |
