@@ -3,7 +3,7 @@
 // Meta-signed message from Michael's own number and fires the assistant's Routine once per message;
 // routine-db op wa_me answers only to that number, falling back to the template outside the window.
 import { onRequest as hook, fireText } from './_build/wa-hook.mjs';
-import { onRequest as rdb } from './_build/routine-db.mjs';
+import { onRequest as rdb, hazardChoiceNote } from './_build/routine-db.mjs';
 import { metaSigOk, inboundMessages, waOneLine, ASSISTANT_TEMPLATE } from './_build/_wa.mjs';
 import fs from 'fs';
 
@@ -13,7 +13,7 @@ const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co', OWNER = '972501234567';
 let fireStatus = 200;
 const ENV = { META_APP_SECRET: 'app-secret', WA_VERIFY_TOKEN: 'vt-1', ASSISTANT_FIRE_URL: 'https://api.anthropic.com/v1/claude_code/routines/trig_X/fire',
   ASSISTANT_FIRE_TOKEN: 'tok', SUPABASE_SERVICE_ROLE_KEY: 'srv', ROUTINE_KEY: 'k-1', META_PHONE_NUMBER_ID: 'P1', META_ACCESS_TOKEN: 'mt' };
-let graph = null, graphCalls = [], fires = [], metas = [], logs = [], state = {}, metaReply = () => ({ ok: true, body: { messages: [{ id: 'wamid.OUT1' }] } }), owner = OWNER;
+let hz = {}, hzWrites = [], graph = null, graphCalls = [], fires = [], metas = [], logs = [], state = {}, metaReply = () => ({ ok: true, body: { messages: [{ id: 'wamid.OUT1' }] } }), owner = OWNER;
 globalThis.fetch = async (url, opt = {}) => {
   const m = opt.method || 'GET';
   if (url.startsWith(SB + '/rest/v1/notification_prefs')) return new Response(JSON.stringify(owner ? [{ prefs: { trustee_hazard: { whatsapp_to: '+' + owner } } }] : []), { status: 200 });
@@ -21,6 +21,13 @@ globalThis.fetch = async (url, opt = {}) => {
     if (m === 'POST') { JSON.parse(opt.body).forEach((r) => { state[r.key] = r.value; }); return new Response('', { status: 201 }); }
     const k = /key=eq\.([^&]*)/.exec(url)[1];
     return new Response(JSON.stringify(k in state ? [{ value: state[k] }] : []), { status: 200 });
+  }
+  if (url.startsWith(SB + '/rest/v1/trustee_reports') || url.startsWith(SB + '/rest/v1/near_miss')) {
+    const tb = url.startsWith(SB + '/rest/v1/near_miss') ? 'near_miss' : 'trustee_reports', col = tb === 'near_miss' ? 'notes' : 'mgr_note';
+    const row = hz[tb]; const id = (/id=eq\.([^&]*)/.exec(url) || [])[1];
+    if (!row || row.id !== id) return new Response('[]', { status: 200 });
+    if (m === 'PATCH') { const b = JSON.parse(opt.body); hzWrites.push({ tb, b }); Object.assign(row, b); return new Response(JSON.stringify([row]), { status: 200 }); }
+    return new Response(JSON.stringify([{ id: row.id, [col]: row[col] }]), { status: 200 });
   }
   if (url.startsWith(SB + '/rest/v1/notifications_log')) {
     if (m === 'POST') { logs.push(...JSON.parse(opt.body)); return new Response('', { status: 201 }); }
@@ -153,6 +160,24 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   c = await call({ op: 'wa_check' });
   check('a wrong secret is reported as secret_ok false', c.secret_ok === false && /appsecret_proof/.test(c.secret_err || ''), c);
   ENV.META_APP_SECRET = 'app-secret'; graph = null;
+
+  console.log('\n3c. hazard_choice: Michael\'s answer becomes a note, nothing else (20/10/2026: "only record, I route")');
+  let hc = hazardChoiceNote('', 1, '2026-10-20');
+  check('choice 1: "to route" line with the date', hc.changed && /^\u05dc\u05e0\u05d9\u05ea\u05d5\u05d1: \u05de\u05e9\u05d9\u05de\u05d4 \u05dc\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4 \(\u05de\u05d9\u05db\u05d0\u05dc \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 20\/10\/2026\)$/.test(hc.note), hc);
+  check('an earlier note is kept, the choice added after " | "', hazardChoiceNote('X', 3, '2026-10-20').note.indexOf('X | ') === 0);
+  check('the same choice again: no change', hazardChoiceNote(hc.note, 1, '2026-10-20').changed === false);
+  check('choice 0, 5, 1.5 or text: refused', ['0', 5, 1.5, 'x'].every((c) => !!hazardChoiceNote('', c, '2026-10-20').error));
+  hz = { trustee_reports: { id: 'r9', mgr_note: null }, near_miss: { id: 'n1', notes: 'old' } };
+  let hj = await call({ op: 'hazard_choice', src: 'trustee_hazard', id: 'r9', choice: 2 });
+  check('trustee hazard: only mgr_note written', hj.ok && hj.changed && hzWrites.length === 1 && Object.keys(hzWrites[0].b).join() === 'mgr_note' && hzWrites[0].tb === 'trustee_reports', { hj, hzWrites });
+  hj = await call({ op: 'hazard_choice', src: 'near_miss', id: 'n1', choice: 4 });
+  check('near miss: only notes, the old text kept', hj.ok && hzWrites.length === 2 && Object.keys(hzWrites[1].b).join() === 'notes' && /^old \| /.test(hzWrites[1].b.notes), hzWrites[1]);
+  hj = await call({ op: 'hazard_choice', src: 'trustee_hazard', id: 'r9', choice: 2, s: 'closed' });
+  check('an extra field (status, closing) is refused', !hj.ok && /field not allowed/.test(hj.error) && hzWrites.length === 2, hj);
+  hj = await call({ op: 'hazard_choice', src: 'ncr', id: 'r9', choice: 2 });
+  check('another table is refused', !hj.ok && hzWrites.length === 2, hj);
+  hj = await call({ op: 'hazard_choice', src: 'trustee_hazard', id: 'nope', choice: 2 });
+  check('a row that does not exist: nothing written', !hj.ok && /not found/.test(hj.error) && hzWrites.length === 2, hj);
 
   console.log('\n4. the front door');
   const mw = fs.readFileSync(new URL('../../functions/_middleware.js', import.meta.url), 'utf8');
