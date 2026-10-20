@@ -46,6 +46,20 @@ window.claude = { use: (name) => Promise.resolve(name !== 'db' ? null : {
   const hrefs = await page.$$eval('.detail .go', (as) => as.map((a) => a.href));
   check('the open worker links each task to its own agent page (ids from frozen snapshots)', JSON.stringify(hrefs) === JSON.stringify(['https://claude.ai/code/routines/trig_A1', 'https://claude.ai/code/routines/trig_B2']), hrefs);
   check('no page errors', errors.length === 0, errors);
+  // 20/10/2026 (Michael, phone: "can't see well on the phone"; "do it: a list, a row per worker"): on a phone
+  // each desk is a row with the lamp, the name in large type, the next run, no scene, and the page scrolls.
+  const phone = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await phone.setContent(html, { waitUntil: 'load' });
+  await phone.waitForSelector('button.desk');
+  const rows = await phone.$$eval('button.desk', (bs) => bs.map((b) => { const r = b.getBoundingClientRect(), nm = b.querySelector('.nm');
+    return { w: Math.round(r.width), nm: parseFloat(getComputedStyle(nm).fontSize), scene: getComputedStyle(b.querySelector('.scene')).display, lamp: getComputedStyle(b, '::before').backgroundColor }; }));
+  check('phone: one full-width row per worker, name in 16px, no scene, a coloured lamp', rows.length === 2 && rows.every((r) => r.w > 330 && r.nm >= 16 && r.scene === 'none' && r.lamp !== 'rgba(0, 0, 0, 0)'), rows);
+  check('phone: the page scrolls instead of squeezing', await phone.evaluate(() => getComputedStyle(document.body).overflow !== 'hidden'));
+  if (process.env.SHOT) await phone.screenshot({ path: process.env.SHOT, fullPage: true });
+  const desk = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await desk.setContent(html, { waitUntil: 'load' });
+  await desk.waitForSelector('button.desk');
+  check('computer: the one-screen office with scenes stays', await desk.$eval('button.desk .scene', (sv) => getComputedStyle(sv).display !== 'none'));
   await browser.close();
   console.log('\n' + passed + ' passed, ' + failed + ' failed');
   process.exit(failed ? 1 : 0);
