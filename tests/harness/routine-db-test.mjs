@@ -313,7 +313,7 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     puts = [];
     await call({ ...D, body: 'שלום,\nאבקש תעודה.\n\nתודה,\n' + SITE.owner + '\nממונה בטיחות, תעשיות תפוגן' });
     const g = puts[0] ? JSON.parse(puts[0].body) : {};
-    check('a typed sign-off (his name and the role line) is dropped, "thanks" stays, the signature replaces it', g.body === 'שלום,\nאבקש תעודה.\n\nתודה,' && g.html.split(SITE.owner).length === 2, g);
+    check('a typed sign-off (his name, the role line and the closing "thanks") is dropped, the signature replaces it', g.body === 'שלום,\nאבקש תעודה.' && g.html.split(SITE.owner).length === 2, g);
     puts = [];
     await call({ ...D, body: 'שלום,\nנא לתאם.\nבברכה,\n' + SITE.owner });
     const g2 = puts[0] ? JSON.parse(puts[0].body) : {};
@@ -321,6 +321,9 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     puts = [];
     await call({ ...D, body: SITE.owner + ' ביקש לבדוק את הבקר.\nשורה 2\nשורה 3\nשורה 4\nשורה 5' });
     const g3 = puts[0] ? JSON.parse(puts[0].body) : {};
+    puts = []; await call({ ...D, body: 'שלום,\nתודה על המענה המהיר.\nתודה,\n' });
+    const g4 = puts[0] ? JSON.parse(puts[0].body) : {};
+    check('a closing "thanks," without his name goes too; "thanks" inside a sentence stays', g4.body === 'שלום,\nתודה על המענה המהיר.', g4.body);
     check('his name early in the text (not in the last 4 lines) stays', g3.body.indexOf(SITE.owner) === 0, g3.body);
     puts = [];
     check('a bad address, an empty subject or body, or an extra field (cc, send): refused, nothing written',
