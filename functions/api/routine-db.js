@@ -599,6 +599,19 @@ export async function onRequest(context) {
         body: JSON.stringify([{ key: DEV_INBOX_KEY, value: JSON.stringify(r.list), updated_at: now }]), signal: tmo(SB_MS),
       });
       if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status }, 200, {});
+      // 20/10/2026 (Michael in the questionnaire: "do it: development done = a message to you"): the note goes to
+      // Michael as for_michael from "dev" (the morning update, the assistant's snapshot). A failed log line is not a
+      // failure of the close.
+      if (body.op === 'dev_done' && String(body.note || '').trim()) {
+        try {
+          const lr = await stateRead(['agent_log']);
+          let log = []; try { log = JSON.parse(lr && lr[0] && lr[0].value || '[]'); } catch (x) { log = []; }
+          if (!Array.isArray(log)) log = [];
+          log.push(agentEntry({ agent: 'dev', ok: true, line: 'dev_done ' + body.id, for_michael: body.note }, now));
+          await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+            body: JSON.stringify([{ key: 'agent_log', value: JSON.stringify(log.slice(-AGENT_LOG_MAX)), updated_at: now }]), signal: tmo(SB_MS) });
+        } catch (x) { /* the close is written; Michael sees it in the office */ }
+      }
       return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length }, 200, {});
     }
     if (body.op === 'agent_report') {

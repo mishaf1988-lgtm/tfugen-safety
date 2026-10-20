@@ -129,6 +129,7 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('dev_request: kept open with an id, the agent and the text', r.json.ok && /^dev-\d{14}-/.test(r.json.id) && inbox.length === 1 && inbox[0].status === 'open' && inbox[0].agent === 'routine-wa-assistant', { r: r.json, inbox });
     check('dev_inbox is readable through state_get, not writable through state_set', (await call({ op: 'state_get', keys: ['dev_inbox'] })).json.rows.length === 1 && (await call({ op: 'state_set', key: 'dev_inbox', value: '[]' })).status === 400);
     r = await call({ op: 'dev_done', id: inbox[0].id, note: 'מוזג #1789' });
+    check('dev_done with a note: a for_michael line from "dev" in agent_log', JSON.parse(state.agent_log).some((x) => x.agent === 'dev' && x.for_michael === 'מוזג #1789'), state.agent_log);
     check('dev_done: closed with the note; an unknown id refused', r.json.ok && r.json.open === 0 && JSON.parse(state.dev_inbox)[0].status === 'done' && (await call({ op: 'dev_done', id: 'dev-x' })).status === 400, r.json);
     check('a short text, a bad agent: refused', (await call({ op: 'dev_request', agent: 'routine-wa-assistant', text: 'קצר' })).status === 400 && (await call({ op: 'dev_request', agent: 'Bad Name', text: 'x'.repeat(20) })).status === 400);
     let raw = JSON.stringify([{ id: 'o', status: 'open' }].concat(Array.from({ length: DEV_INBOX_MAX }, (_, i) => ({ id: 'd' + i, status: 'done' }))));
