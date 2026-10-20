@@ -80,6 +80,7 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   const sql = fs.readFileSync(new URL('../../migrations/2026-10-20_wa_morning_cron.sql', import.meta.url), 'utf8');
   check('pg_cron at 04:47 and 05:47 UTC, Sunday-Thursday, with the Vault secret', /cron\.schedule\('wa-morning', '47 4,5 \* \* 0-4'/.test(sql) && /x-notify-secret/.test(sql) && /revoke all on function private\.wa_morning_tick/.test(sql));
   const rt = fs.readFileSync(new URL('../../project-files/routine-wa-assistant.md', import.meta.url), 'utf8');
+  check('the assistant answers in a fixed format, numbered sections (20/10/2026: "not by sections")', /\u05e4\u05d5\u05e8\u05de\u05d8 \u05e7\u05d1\u05d5\u05e2/.test(rt) && /\u05de\u05d7\u05db\u05d4 \u05dc\u05da:\n   1\. /.test(rt));
   check('the assistant no longer sends the morning update itself', /מ-20\/10\/2026 השרת שולח אותו/.test(rt));
 
   console.log('\nwa-morning-test: ' + pass + ' passed, ' + fail + ' failed');
