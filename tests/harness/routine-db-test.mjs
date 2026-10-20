@@ -317,7 +317,7 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     const g5 = puts[0] ? JSON.parse(puts[0].body) : {};
     check('two recipients: joined with ";" for the flow', g5.to === 'a@tapugan.co.il;b@tapugan.co.il', g5.to);
     puts = [];
-    check('four recipients or one bad address among two: refused', (await call({ ...D, to: 'a@x.co;b@x.co;c@x.co;d@x.co' })).status === 400 && (await call({ ...D, to: 'a@x.co;nope' })).status === 400 && !puts.length);
+    check('six recipients or one bad address among two: refused', (await call({ ...D, to: 'a@x.co;b@x.co;c@x.co;d@x.co;e@x.co;f@x.co' })).status === 400 && (await call({ ...D, to: 'a@x.co;nope' })).status === 400 && !puts.length);
     check('the logo under the signature, from the site', /<img src="https:\/\/tapugan-safety\.pages\.dev\/logo\.jpg" width="120" height="80"/.test(fj.html), fj.html.slice(-300));
     check('his Outlook signature (SITE.signature) is added once at the end', fj.html.endsWith(SITE.signature + '</div>') && fj.html.split('0547940073').length === 2, fj.html.slice(-200));
     puts = [];
