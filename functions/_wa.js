@@ -76,6 +76,15 @@ export function hazardChoiceNote(prev, choice, today) {
   return { note: (before ? before + ' | ' + line : line).slice(0, 1000), changed: true };
 }
 
+// Which assistant Routine the server wakes (20/10/2026, the lean session): the new pair ASSISTANT2_FIRE_URL
+// + ASSISTANT2_FIRE_TOKEN once both are set, else the old pair. The switch is one secret Michael adds (the
+// token, which only the Routine's page shows), with no window in which the URL and the token disagree.
+export function assistantFire(env) {
+  if (env.ASSISTANT2_FIRE_URL && env.ASSISTANT2_FIRE_TOKEN) return { url: env.ASSISTANT2_FIRE_URL, token: env.ASSISTANT2_FIRE_TOKEN, which: 'new' };
+  if (env.ASSISTANT_FIRE_URL && env.ASSISTANT_FIRE_TOKEN) return { url: env.ASSISTANT_FIRE_URL, token: env.ASSISTANT_FIRE_TOKEN, which: 'old' };
+  return null;
+}
+
 export function digits(s) { return String(s == null ? '' : s).replace(/[^0-9]/g, ''); }
 export function waOneLine(s, max) {
   return String(s == null ? '' : s).replace(/\s*\n+\s*/g, ' | ').replace(/[\t ]{2,}/g, ' ').trim().slice(0, max || 1000);
