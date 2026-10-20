@@ -17,6 +17,7 @@ import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
 import { ownerWa, metaSigOk, inboundMessages, noteOwnerIn, lastOut, sendToOwner } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 
+export const FAIL_TEXT = '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05dc\u05e2\u05d5\u05d6\u05e8. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.';
 export const ACK_TEXT = '\u05e7\u05d9\u05d1\u05dc\u05ea\u05d9, \u05d1\u05d5\u05d3\u05e7 \u05d5\u05e2\u05d5\u05e0\u05d4 \u05e2\u05d5\u05d3 \u05e8\u05d2\u05e2.';
 const SEEN_KEY = 'wa_hook_seen', SEEN_MAX = 100;
 // 19/10/2026 (setup through Claude in Chrome: a pasted value could not be seen, Cloudflare hides
@@ -100,6 +101,12 @@ async function handle(env, raw) {
     seen.from_owner++;
     await noteOwnerIn(env, sbFrom(env), m.ts ? new Date(m.ts * 1000).toISOString() : new Date().toISOString());
     if (!(await firstTime(env, m.id))) continue;
+    // 20/10/2026 (Michael in the questionnaire: "do it: an immediate 'got it' from the server"): the
+    // assistant takes 30-60 seconds, so the server answers first, before the fire (which itself took
+    // 20 seconds on 20/10 10:30). Michael just wrote, so the window is open; no template. Not kept as
+    // the last question (wa_last_out): the assistant's answer is. A fire that fails says so.
+    const wa = env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN;
+    if (wa) { const a = await sendToOwner(env, owner, ACK_TEXT, { windowOpen: true, noTemplate: true }).catch(() => null); seen.ack = !!(a && a.ok); }
     const about = await aboutAlert(env, m.context);
     let snap = null;
     try { const g = await gather(env, new Date()); snap = buildBrief(g.items, g.failed, g.today, true); } catch (e) { snap = null; }
@@ -112,13 +119,7 @@ async function handle(env, raw) {
     }).catch(() => null);
     seen.fire_status = fr ? fr.status : 'network';
     if (fr && fr.ok) seen.fired++; else await forget(env, m.id);
-    // 20/10/2026 (Michael in the questionnaire: "do it: an immediate 'got it' from the server"): the
-    // assistant takes 30-60 seconds, so the server answers at once. Michael just wrote, so the window
-    // is open; no template. Not kept as the last question (wa_last_out): the assistant's answer is.
-    if (fr && fr.ok && env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN) {
-      const a = await sendToOwner(env, owner, ACK_TEXT, { windowOpen: true, noTemplate: true }).catch(() => null);
-      seen.ack = !!(a && a.ok);
-    }
+    if (!(fr && fr.ok) && wa) await sendToOwner(env, owner, FAIL_TEXT, { windowOpen: true, noTemplate: true }).catch(() => null);
   }
   await note(env, seen);
 }
