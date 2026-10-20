@@ -32,7 +32,7 @@
 - **הבקשה:** `routine-db.sh '{"op":"mail_draft","agent":"...","why":"...","to":"...","subject":"...","body":"..."}'`, רק אחרי "בצע" של מיכאל על הנוסח. השרת כותב קובץ `.txt` שתוכנו JSON (`to`, `subject`, `body`, `html` עם `<br>` ו-`dir="rtl"`) לתיקייה `ניהול בטיחות\_טיוטות למייל`. בלי cc, בלי קבצים מצורפים, ושדה נוסף נדחה.
 - **הזרימה** "טיוטות מהעוזר": טריגר `When a file is created (properties only)` של OneDrive for Business על `/שולחן העבודה/ניהול בטיחות/_טיוטות למייל`; `Get file content` (Id מהטריגר); `Compose` עם `json(trim(string(body('Get_file_content'))))`; ואז Office 365 Outlook **`Draft an email message`** (To = `outputs('Compose')?['to']`, Subject = `outputs('Compose')?['subject']`, Body = `outputs('Compose')?['html']`). אם הפעולה הזו לא קיימת בחשבון: Office 365 Outlook **`Send an HTTP request`**, Method POST, URI `https://graph.microsoft.com/v1.0/me/messages`, Body: `{"subject": "@{outputs('Compose')?['subject']}", "body": {"contentType": "HTML", "content": "@{outputs('Compose')?['html']}"}, "toRecipients": [{"emailAddress": {"address": "@{outputs('Compose')?['to']}"}}]}` (יוצר טיוטה ב-Drafts, לא שולח).
 - **אין בזרימה שום פעולת שליחה.** מיכאל שולח מ-Outlook.
-- **נבדק:** עוד לא (C23 בתור הכרום).
+- **נבדק 20/10/2026:** נבנתה על ידי Claude בכרום (C23), עם `Draft an email message` (לא נדרש HTTP), Flow checker 0/0. בקשת `mail_draft` אחת לבדיקה, למיכאל עצמו: הטיוטה "בדיקה: טיוטה מהעוזר" הופיעה ב-Drafts תוך דקה, עם ירידת השורה.
 
 ## זרימה 4: תורים ביומן לתפוגות (20/10/2026)
 מיכאל, 20/10/2026, בשאלון: "בצע: תורים ביומן לתפוגות (מומלץ)". לשרת אין הרשאת יומן והחיבור ל-365 ב-Claude לקריאה בלבד, ולכן אותו מבנה כמו זרימות 2 ו-3.
@@ -40,7 +40,7 @@
 - **התיקייה:** `ניהול בטיחות\_תורים ליומן`.
 - **הזרימה** "תורים ליומן": טריגר `When a file is created (properties only)` של OneDrive for Business על `/שולחן העבודה/ניהול בטיחות/_תורים ליומן`; `Get file content` (Id מהטריגר); `Compose` עם `json(trim(string(body('Get_file_content'))))`; Office 365 Outlook **`Create event (V4)`**: Calendar id = Calendar, Subject = `outputs('Compose')?['subject']`, Start time = `outputs('Compose')?['start']`, End time = `outputs('Compose')?['end']`, Time zone = `(UTC+02:00) Jerusalem`, Body = `outputs('Compose')?['html']`, Show as = busy, Reminder = 15. בלי מוזמנים: התור רק ביומן של מיכאל, ואף אחד לא מקבל הזמנה.
 - **מחיקה או הזזה ביומן:** מיכאל חופשי. השרת לא יוצר את אותו תור שוב.
-- **נבדק:** עוד לא (C24 בתור הכרום). הבדיקה העצמית: `POST /api/wa-morning` עם `{"dry":true}` מחזיר `cal.would` (מה ייכתב), ועם `{"calendar":true}` כותב רק את התורים, בלי וואטסאפ.
+- **נבדק 20/10/2026:** נבנתה על ידי Claude בכרום (C24), Flow checker 0/0. ברשימת לוחות השנה אין "Calendar", הלוח הראשי נקרא "לוח שנה". `{"calendar":true}` כתב 5 קבצים, וחמשת האירועים הופיעו ביומן ב-21/10/2026 09:00 (Israel Standard Time, busy, בלי מוזמנים) תוך 2-3 דקות. הבדיקה העצמית: `{"dry":true}` מחזיר `cal.would`, `{"calendar":true}` כותב רק את התורים.
 
 ## זרימה 5: קבצים ממיילים ששלחתי (20/10/2026)
 מיכאל, 20/10/2026, בשאלון: "בצע: קבצים ממיילים ששלחתי (מומלץ)". זרימה 1 קוראת רק את תיבת הדואר הנכנס, ומסמך שמיכאל שולח (טופס חתום, דוח לרשות, תעודה שהעביר לספק) לא הגיע לתיוק.
@@ -48,7 +48,7 @@
 - **החרגה (Condition ראשון):** אותה רשימה של זרימה 1, על הנמענים: `empty(intersection(createArray(<הרשימה מהזרימה 1>),split(toLower(coalesce(triggerOutputs()?['body/toRecipients'],'')),';')))` is equal to `true`. מייל למשאבי אנוש או לכתובת רגישה לא נשמר.
 - **בענף True:** Apply to each על Attachments, עם אותו Condition על סוג הקובץ כמו בזרימה 1 (כל השורות, כולל "יש סיומת" ו"מעל 1024 בתים"), ו-Create file ל-`/שולחן העבודה/ניהול בטיחות/_נכנס מהמייל` בשם `concat(replace(replace(substring(string(triggerOutputs()?['body/receivedDateTime']),0,16),'T',' '),':',''),' - נשלח - ',item()?['name'])`, תוכן `item()?['contentBytes']`. הזמן בתחילת השם, כמו בזרימה 1, כדי ש-`routine-mail-filing` ימצא את המייל.
 - **בתיוק:** `routine-mail-filing.md` צעד 2ב.
-- **נבדק:** עוד לא (C24).
+- **נבדק 20/10/2026:** נבנתה על ידי Claude בכרום (C24), Flow checker 0/0; התיקייה נקראת בממשק "פריטים שנשלחו". 11 שורות הסוג הוזנו ביד והושוו לקוד של זרימה 1 (ההדבקה נחסמה). שונה מזרימה 1: chunked transfer כבוי ב-Create file (קבצים גדולים מאוד עלולים להיכשל), ו-`sviva@` ברשימת ההחרגה, אז מייל שמיכאל שולח גם לעצמו לא נשמר. הקובץ הראשון: במייל הבא עם קובץ שמיכאל שולח.
 
 ## ניקוי "לא לתיוק" (11/10/2026, מיכאל בשאלון: "בצע: מחיקה אחרי 30 יום (מומלץ)")
 `backup-od.js` (כל בוקר 06:30), צעד 5: קבצים בתיקייה `_נכנס מהמייל/לא לתיוק` שנוצרו לפני יותר מ-30 יום נמחקים (לסל המחזור של OneDrive, 93 יום), עד 20 ביום, ורק כשנשאר תקציב אחרי הגיבויים. רק התיקייה הזו, רק קבצים. הכול שם עותקים: המקור נשאר במייל. חריג יחיד לכלל "מחיקה אף פעם" ב-365, כמו ניקוי הגיבויים.
