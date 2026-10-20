@@ -94,7 +94,12 @@ export async function gather(env, now) {
   let log = [];
   try { log = JSON.parse((await stateGet(env, 'agent_log')) || '[]'); } catch (e) { log = []; }
   const since = now.getTime() - 86400000;
-  const failed = Array.from(new Set((Array.isArray(log) ? log : []).filter((x) => x && x.ok === false && Date.parse(x.at) >= since).map((x) => String(x.agent))));
+  // 20/10/2026 (Michael: "do it: the assistant does not report itself as failed"): an agent counts as
+  // failed only when its latest report in the 24 hours failed. A failure followed by a good run is over.
+  const latest = {};
+  (Array.isArray(log) ? log : []).filter((x) => x && x.agent && Date.parse(x.at) >= since)
+    .forEach((x) => { const a = String(x.agent); if (!latest[a] || Date.parse(x.at) >= Date.parse(latest[a].at)) latest[a] = x; });
+  const failed = Object.keys(latest).filter((a) => latest[a].ok === false);
   return { today, items, failed };
 }
 

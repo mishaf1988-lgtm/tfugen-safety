@@ -58,8 +58,13 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   check('a wrong secret: 403', (await onRequest({ request: new Request('https://x/api/wa-morning', { method: 'POST', headers: { 'x-notify-secret': 'no' }, body: '{}' }), env: ENV })).status === 403);
   docs = [{ n: 'אישור כיבוי אש', e: '2026-01-01' }]; equip = [{ n: 'מלגזה', loc: 'מחסן', e: '2026-01-02' }];
   state.agent_log = JSON.stringify([{ agent: 'routine-validity', ok: false, at: new Date().toISOString() }, { agent: 'routine-old', ok: false, at: '2020-01-01T00:00:00Z' }]);
+  // 20/10/2026: a failure followed by a good run of the same agent is not reported.
+  const t0 = Date.now();
+  state.agent_log = JSON.stringify([{ agent: 'routine-validity', ok: false, at: new Date(t0 - 3600e3).toISOString() },
+    { agent: 'routine-wa-assistant', ok: false, at: new Date(t0 - 7200e3).toISOString() }, { agent: 'routine-wa-assistant', ok: true, at: new Date(t0 - 600e3).toISOString() },
+    { agent: 'routine-old', ok: false, at: '2020-01-01T00:00:00Z' }]);
   let j = await call({ dry: true });
-  check('dry: the text, nothing sent', j.dry && !metas.length && /מלגזה, מחסן/.test(j.text) && /\u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3/.test(j.text) && !/old/.test(j.text), j);
+  check('dry: the text, nothing sent', j.dry && !metas.length && /מלגזה, מחסן/.test(j.text) && /\u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3/.test(j.text) && !/old/.test(j.text) && !/\u05d4\u05e2\u05d5\u05d6\u05e8 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4/.test(j.text), j);
   j = await call({ force: true });
   check('force: sent to Michael only, the day marked, logged', j.sent && metas.length === 1 && metas[0].to === OWNER && metas[0].type === 'template' && j.via === 'template' && state[LAST_KEY] === ilDay(new Date()) && logs.some((l) => l.event_type === 'assistant' && l.payload.kind === 'morning' && l.payload.wamid === 'wamid.M'), { j, state, logs });
   let n = metas.length;
