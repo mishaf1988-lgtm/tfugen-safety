@@ -100,6 +100,7 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   const ok2 = msgBody(OWNER, 'wamid.F', 'secret words');
   await post(ok2, await sign(ok2, ENV.META_APP_SECRET));
   check('a fire is noted with its status, not the text', state.wa_hook_last && state.wa_hook_last.fired === 1 && state.wa_hook_last.fire_status === 200 && !JSON.stringify(state.wa_hook_last).includes('secret words'), state.wa_hook_last);
+  check('the fire is noted with the session it opened and the milliseconds to the ack and to the fire (20/10/2026: tracing a slow answer)', state.wa_hook_last.fire_session === fireSession && typeof state.wa_hook_last.fire_ms === 'number' && typeof state.wa_hook_last.ack_ms === 'number' && state.wa_hook_last.ack_ms <= state.wa_hook_last.fire_ms, state.wa_hook_last);
 
   // retro 19/10/2026: a failed fire must not mark the message as seen (Meta gets 200 and never retries)
   const nf = fires.length;
