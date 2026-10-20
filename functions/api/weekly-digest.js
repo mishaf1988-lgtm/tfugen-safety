@@ -39,7 +39,7 @@
 // OneDrive connection = the mail cannot go; the result says so.
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, FILE_TIMEOUT_MS as FILE_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { odConfigured, accessToken, tokenRow, hasMail, sendMail, stateGet, stateSet } from '../_onedrive.js';
-import { buildRegister, readAll, TASKS_Q } from './hazard-file.js';
+import { buildRegister, readAll, TASKS_Q, isFinding } from './hazard-file.js';
 import { meetingDate } from './hazard-deck.js';
 import { WATCH_KEY, ilTime } from '../_watchdog.js';
 import { UPLOAD_LOG } from './od-read.js';
@@ -486,6 +486,7 @@ export function digestHtml(d, today, meta) {
   // the fine ones collapse into one short grey line of names (statusBlock).
   h += statusBlock(m);
   if (m.locks) h += '<p style="margin:4px 0;color:#b91c1c;font-weight:bold">' + esc(m.locks.text) + '</p>';
+  if (m.pendAct) h += '<p style="margin:4px 0;color:#b45309;font-weight:bold">' + esc(m.pendAct.text) + '</p>';
   if (m.pwAge) h += m.pwAge.map((x) => '<p style="margin:4px 0' + (x.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(x.text) + '</p>').join('');
   const on = m.odNew || [];
   h += h2(H.odNew, on.length) + (on.length ? '<ul style="margin:0;padding-right:20px">' + on.slice(0, 15).map((f) => '<li>' + esc(f.p) + ' (' + esc(fd(new Date(f.c).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }))) + ')</li>').join('') + (on.length > 15 ? '<li>' + esc(H.more + (on.length - 15)) + '</li>' : '') + '</ul>' : '<p style="color:#555">' + H.none + '</p>');
@@ -860,6 +861,17 @@ export function guessLocksLine(raw, nowMs) {
   const n = (s) => wk.filter((x) => x.s === s).length;
   return { red: true, text: '\ud83d\udd12 \u05e0\u05e2\u05d9\u05dc\u05d5\u05ea \u05e2\u05dc \u05e0\u05d9\u05d7\u05d5\u05e9 \u05e1\u05d9\u05e1\u05de\u05d4 \u05d4\u05e9\u05d1\u05d5\u05e2: ' + wk.length + ' (\u05e1\u05d9\u05e1\u05de\u05ea \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9: ' + n('ind') + ', \u05e1\u05d9\u05e1\u05de\u05ea \u05e0\u05d0\u05de\u05e0\u05d9\u05dd: ' + n('tru') + '). \u05db\u05dc \u05e0\u05e2\u05d9\u05dc\u05d4 = 10 \u05e0\u05d9\u05e1\u05d9\u05d5\u05e0\u05d5\u05ea \u05de\u05d0\u05d5\u05ea\u05d4 \u05db\u05ea\u05d5\u05d1\u05ea \u05d1\u05e9\u05e2\u05d4. \u05d0\u05dd \u05d6\u05d4 \u05dc\u05d0 \u05d0\u05ea\u05dd, \u05db\u05d3\u05d0\u05d9 \u05dc\u05d4\u05d7\u05dc\u05d9\u05e3 \u05e1\u05d9\u05e1\u05de\u05d4 \u05d1"\u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd \u05d5\u05e1\u05d9\u05e1\u05de\u05d0\u05d5\u05ea".' };
 }
+// 20/10/2026 (Michael: "approve" to the suggestion after C25): open findings with no required action.
+// The assistant's suggestion is saved only after the manager approves it in the department report
+// screen (DECISIONS 06/10/2026), so two trustee findings of 18/10/2026 waited there unseen.
+export function pendingActionsLine(hazards, reports) {
+  const empty = (x) => !String((x && x.action) || '').trim();
+  const h = (hazards || []).filter((x) => x && x.s && x.s !== '\u05e1\u05d2\u05d5\u05e8' && empty(x)).map((x) => String(x.n || ''));
+  const t = (reports || []).filter((x) => isFinding(x) && x.s !== '\u05e0\u05e1\u05d2\u05e8' && empty(x)).map((x) => '\u05e0-' + (x.num || ''));
+  const all = h.concat(t).filter(Boolean);
+  if (!all.length) return null;
+  return { text: '\ud83d\udee0 \u05de\u05d7\u05db\u05d9\u05dd \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d3\u05e8\u05e9\u05ea: ' + all.length + ' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd, \u05d4\u05d4\u05e6\u05e2\u05d4 \u05e9\u05dc \u05d4\u05e2\u05d5\u05d6\u05e8 \u05d1\u05de\u05e1\u05da "\ud83d\udce7 \u05d3\u05d5\u05d7 \u05dc\u05de\u05d7\u05dc\u05e7\u05d5\u05ea": ' + all.slice(0, 8).join(', ') + (all.length > 8 ? ' \u05d5\u05e2\u05d5\u05d3 ' + (all.length - 8) : '') + '.' };
+}
 export function xlsxGapsLine(raw, nowMs) {
   let r = null; try { r = JSON.parse(raw || 'null'); } catch (e) { r = null; }
   if (!r || !r.at) return { text: H.xg + H.xgNever, red: false, unknown: true };
@@ -896,7 +908,7 @@ async function build(env) {
   const os = odScanProblem(v('od_scan'), Date.now());
   if (os) watchOpen.push(os);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { plan: pl, meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, openTyped: tk ? openTypedLines(tk.talks, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), mf: mailFilingLine(v('mail_filing'), Date.now()), vd: validityLine(v('validity_run'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()), pwAge: passwordAgeLines(st, env, Date.now()), stateFail: stFail };
+  const meta = { plan: pl, meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, openTyped: tk ? openTypedLines(tk.talks, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), mf: mailFilingLine(v('mail_filing'), Date.now()), vd: validityLine(v('validity_run'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()), pendAct: pendingActionsLine(hazards, reports), pwAge: passwordAgeLines(st, env, Date.now()), stateFail: stFail };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }

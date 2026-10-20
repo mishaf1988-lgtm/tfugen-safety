@@ -4,7 +4,7 @@
 // reads as Michael reads dates, that pg_cron's call sends it once to the
 // connected account and a second call the same day is skipped, and that a
 // missing permission or a refusing Outlook is reported, not swallowed.
-import { planLateLine, planLate } from './_build/weekly-digest.mjs';
+import { planLateLine, planLate, pendingActionsLine } from './_build/weekly-digest.mjs';
 import { attachQuotes, quoteKey, contactOf, vendorOf, QUOTE_WAIT_DAYS, QUOTE_HREF_MAX } from './_build/weekly-digest.mjs';
 import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS, assistantLine, assistantQueue, agentsLine, AGENT_PERIODS, mailFilingLine, MF_STALE_DAYS, validityLine, VD_STALE_DAYS, statusBlock, eqiFailLine, markNoTask, NO_TASK_DAYS } from './_build/weekly-digest.mjs';
 
@@ -516,6 +516,16 @@ const ROWS = [
     const html = digestHtml(digestOf([], '2026-10-15'), '2026-10-15', { meeting: '2026-10-20', deckAt: '', watchOpen: [], plan: l });
     check('plan: the line is in the mail', html.includes('12 HACCP'));
     check('plan: read from the server, this year only, closed talks only', /train_plan\?select=yr,n,t,q,done&yr=eq\./.test(fs0.readFileSync(new URL('../../functions/api/weekly-digest.js', import.meta.url), 'utf8')) && /closed_at=not\.is\.null&kind=in\.\(annual,quality\)/.test(fs0.readFileSync(new URL('../../functions/api/weekly-digest.js', import.meta.url), 'utf8')));
+  }
+  {
+    // 20/10/2026: open findings with no required action wait for the manager's approval of the suggestion.
+    const hz = [{ n: 31, s: '\u05e4\u05ea\u05d5\u05d7', action: '' }, { n: 32, s: '\u05e1\u05d2\u05d5\u05e8', action: '' }, { n: 33, s: '\u05e4\u05ea\u05d5\u05d7', action: 'fix it' }];
+    const tr = [{ num: 16, ok: false, t: 2, s: '\u05e4\u05ea\u05d5\u05d7', action: null }, { num: 8, ok: false, t: 2, s: '\u05e0\u05e1\u05d2\u05e8', action: '' }, { num: 9, ok: true, t: 2, s: '', action: '' }, { num: 10, ok: false, t: 8, s: '\u05e4\u05ea\u05d5\u05d7', action: '' }];
+    const pa = pendingActionsLine(hz, tr);
+    check('pending actions: open manager hazard and open trustee finding without action, nothing else', pa && /: 2 /.test(pa.text) && /31, \u05e0-16\./.test(pa.text) && !/32|\u05e0-8|\u05e0-9|\u05e0-10/.test(pa.text), pa);
+    check('pending actions: none = no line', pendingActionsLine([hz[2]], [tr[1]]) === null);
+    const html = digestHtml(digestOf([], '2026-10-20'), '2026-10-20', { pendAct: pa });
+    check('pending actions: the line is in the mail', html.includes('\u05e0-16'));
   }
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
 })();
