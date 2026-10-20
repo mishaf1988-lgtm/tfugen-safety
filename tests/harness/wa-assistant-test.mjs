@@ -121,7 +121,7 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
     if (/debug_token/.test(url)) return { body: { data: { app_id: 'APP1' } } };
     if (/\/me\?/.test(url)) return /appsecret_proof=([0-9a-f]+)/.exec(url)[1] === proof ? { body: { id: 'u' } } : { status: 400, body: { error: { message: 'Invalid appsecret_proof' } } };
     if (/APP1\/subscriptions/.test(url) && m === 'GET') return { body: { data: subs } };
-    if (/APP1\/subscriptions/.test(url) && m === 'POST') { const f = new URLSearchParams(opt.body); subs = [{ object: f.get('object'), callback_url: f.get('callback_url'), active: true, fields: [{ name: f.get('fields') }] }]; return { body: { success: true } }; }
+    if (/APP1\/subscriptions/.test(url) && m === 'POST') { const f = new URLSearchParams(opt.body); subs = [{ object: f.get('object'), callback_url: f.get('callback_url'), active: true, fields: f.get('fields').split(',').map((n) => ({ name: n })) }]; return { body: { success: true } }; }
     if (/subscribed_apps/.test(url) && m === 'GET') return { body: { data: wabaApps } };
     if (/subscribed_apps/.test(url) && m === 'POST') { wabaApps = [{ whatsapp_business_api_data: { id: 'APP1' } }]; return { body: { success: true } }; }
     return null;
@@ -132,6 +132,9 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   check('no secret, token or number in the answer', !/app-secret|"mt"|tok|972/.test(JSON.stringify(c)), c);
   c = await call({ op: 'wa_check', subscribe: true });
   check('subscribe: messages on the app hook, and the WABA subscribed', c.subscribed_now && c.messages_ok && c.waba_subscribed_now && c.waba_has_app === true && /\/api\/wa-hook$/.test(c.app_sub.callback_url), c);
+  subs = [{ object: 'whatsapp_business_account', callback_url: 'https://old/hook', active: true, fields: [{ name: 'message_template_status_update' }] }];
+  c = await call({ op: 'wa_check', subscribe: true });
+  check('subscribe keeps a field that was already subscribed (the POST replaces the list)', c.subscribed_now && c.app_sub.fields.indexOf('message_template_status_update') >= 0 && c.app_sub.fields.indexOf('messages') >= 0, c.app_sub);
   const posts = graphCalls.filter((x) => x.m === 'POST').length;
   c = await call({ op: 'wa_check', subscribe: true });
   check('subscribe again when all is set: no new POST', graphCalls.filter((x) => x.m === 'POST').length === posts && c.messages_ok, c);
