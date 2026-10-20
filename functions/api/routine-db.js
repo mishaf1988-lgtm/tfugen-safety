@@ -273,6 +273,10 @@ export function draftRequest(b) {
   const list = String(b.to || '').split(/[;,]/).map((x) => x.trim()).filter(Boolean);
   // 5 since 20/10/2026 (Michael: "Geny was in it too"): a reply in a thread keeps everyone already on it.
   if (!list.length || list.length > 5 || !list.every((x) => DRAFT_TO.test(x))) return { error: 'bad to' };
+  // cc (20/10/2026, the monthly water report to the Ministry of Health goes to one inspector with three in copy):
+  // up to 5, the same rules as to; the flow's CC field takes them separated by ";".
+  const ccList = String(b.cc || '').split(/[;,]/).map((x) => x.trim()).filter(Boolean);
+  if (ccList.length > 5 || !ccList.every((x) => DRAFT_TO.test(x))) return { error: 'bad cc' };
   const to = list.join(';'), subject = String(b.subject || '').replace(/\s+/g, ' ').trim(), text = String(b.body || '').replace(/\r\n/g, '\n').trim();
   if (!subject || subject.length > 200) return { error: 'subject 1-200 characters' };
   if (!text || text.length > 5000) return { error: 'body 1-5000 characters' };
@@ -296,6 +300,7 @@ export function draftRequest(b) {
   // The style too (20/10/2026): a reply in a thread (Graph createReply "comment") drops dir="rtl" and keeps styles.
   const req = { to, subject, body: kept, html: '<div dir="rtl" style="direction:rtl;text-align:right">' + html + SITE.signature + '</div>' };
   if (at.attach.length) req.attachments = at.attach.map((a) => ({ path: a.path, name: a.name }));
+  if (ccList.length) req.cc = ccList.join(';');
   // 20/10/2026 (Michael: "this is a mail in a thread, so it must go in the thread of the mails"): reply_to =
   // the id of the last mail in the thread (outlook_email_search "id"). The flow then makes the draft with
   // Graph createReply on it: Outlook keeps the thread and the quoted mails, our text goes above them, and the
@@ -304,7 +309,9 @@ export function draftRequest(b) {
     const id = String(b.reply_to).trim();
     if (!MAIL_REQ_ID.test(id)) return { error: 'bad reply_to' };
     req.reply_to = id;
-    req.reply_body = JSON.stringify({ message: { toRecipients: list.map((a) => ({ emailAddress: { address: a } })) }, comment: req.html });
+    const message = { toRecipients: list.map((a) => ({ emailAddress: { address: a } })) };
+    if (ccList.length) message.ccRecipients = ccList.map((a) => ({ emailAddress: { address: a } }));
+    req.reply_body = JSON.stringify({ message, comment: req.html });
   }
   return { file: JSON.stringify(req), attach: at.attach };
 }
@@ -662,7 +669,7 @@ export async function onRequest(context) {
       return jsonResp({ ok: true, file: OD_REQ + '/' + name, size: f.size || null }, 200, {});
     }
     if (body.op === 'mail_draft') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'subject', 'body', 'attach', 'reply_to'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'cc', 'subject', 'body', 'attach', 'reply_to'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
       if (String(body.why || '').trim().length < 5) return jsonResp({ ok: false, error: 'why required' }, 400, {});
       const d = draftRequest(body);

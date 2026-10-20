@@ -336,9 +336,9 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('a closing "thanks," without his name goes too; "thanks" inside a sentence stays', g4.body === 'שלום,\nתודה על המענה המהיר.', g4.body);
     check('his name early in the text (not in the last 4 lines) stays', g3.body.indexOf(SITE.owner) === 0, g3.body);
     puts = [];
-    check('a bad address, an empty subject or body, or an extra field (cc, send): refused, nothing written',
+    check('a bad address, an empty subject or body, a bad cc (cc allowed since 20/10/2026), or an extra field (send): refused, nothing written',
       (await call({ ...D, to: 'x@y' })).status === 400 && (await call({ ...D, subject: '' })).status === 400 && (await call({ ...D, body: '' })).status === 400
-      && (await call({ ...D, cc: 'a@b.co' })).status === 400 && (await call({ ...D, send: true })).status === 400 && !puts.length);
+      && (await call({ ...D, cc: 'not-an-address' })).status === 400 && (await call({ ...D, send: true })).status === 400 && !puts.length);
     check('without the key: 403', (await call(D, 'nope')).status === 403 && !puts.length);
   }
 
@@ -404,6 +404,16 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     puts = [];
     check('a bad reply_to (short, a path, a quote): refused, nothing written', (await Promise.all(['abc', '../x/' + RID, RID + '"'].map((r) => call({ ...D, reply_to: r })))).every((r) => r.status === 400) && !puts.length);
     x = await call(D);
+    // 20/10/2026: cc, the monthly water report (one inspector, three in copy)
+    puts = [];
+    x = await call({ ...D, cc: 'a@tapugan.co.il; b@x.co', reply_to: RID });
+    const cj = puts[0] ? JSON.parse(puts[0].body) : {}, cb = cj.reply_body ? JSON.parse(cj.reply_body) : {};
+    check('cc: in the request for the flow, and as ccRecipients of a thread reply', x.json.ok && cj.cc === 'a@tapugan.co.il;b@x.co' && cb.message.ccRecipients.length === 2 && cb.message.ccRecipients[1].emailAddress.address === 'b@x.co', cj);
+    puts = [];
+    check('a bad cc or more than 5: refused, nothing written', (await call({ ...D, cc: 'nope' })).status === 400 && (await call({ ...D, cc: 'a@x.co;b@x.co;c@x.co;d@x.co;e@x.co;f@x.co' })).status === 400 && !puts.length);
+    x = await call(D);
+    check('no cc: no cc key', x.json.ok && !('cc' in JSON.parse(puts[0].body)));
+    puts = []; x = await call(D);
     check('no reply_to: a new mail as before, no reply keys', x.json.ok && !('reply_to' in JSON.parse(puts[0].body)) && !('reply_body' in JSON.parse(puts[0].body)));
     check('attach: .., a protected folder, the draft or request folder, a non-document, empty or more than 5: refused',
       [['../a.pdf'], ['x/למחיקה/a.pdf'], ['ARCHIVE/a.pdf'], [OD_DRAFT + '/a.pdf'], [OD_REQ + '/a.pdf'], ['a.exe'], [], ['1.pdf', '2.pdf', '3.pdf', '4.pdf', '5.pdf', '6.pdf'], 'a.pdf'].every((a) => !!draftAttach(a).error));
