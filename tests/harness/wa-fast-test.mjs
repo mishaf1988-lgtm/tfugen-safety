@@ -2,7 +2,7 @@
 // A number 1-4 that answers a hazard alert, and "what is urgent" / "expiries", are answered by wa-hook
 // itself by rules; everything else, and anything unclear, still goes to the assistant.
 import { fastRoute, hazardRef, fastHazardText, FAST_BRIEF } from './_build/wa-hook.mjs';
-import { HAZARD_OPTIONS, hazardAsk } from './_build/_wa.mjs';
+import { HAZARD_OPTIONS, hazardAsk, assistantFire } from './_build/_wa.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 300) : '')); } };
@@ -27,6 +27,13 @@ console.log('\n2. the brief');
 ['מה המצב?', '2. מה מחכה לי', 'תעביר לרכז המסמכים', 'בצע', 'כן'].forEach((w) => check('"' + w + '" = to the assistant', fastRoute(m(w), '', null) === null));
 check('the four hazard options are what the alert lists', HAZARD_OPTIONS.every((o) => alertText.indexOf(o) >= 0));
 check('the brief words are a closed list', FAST_BRIEF.test('דחוף') && !FAST_BRIEF.test('לא דחוף'));
+
+console.log('\n3. which Routine the server wakes (the lean session, 20/10/2026)');
+const O = { ASSISTANT_FIRE_URL: 'u1', ASSISTANT_FIRE_TOKEN: 't1' };
+check('only the old pair: the old one', assistantFire(O).which === 'old' && assistantFire(O).url === 'u1');
+check('the new URL alone (token not added yet): still the old one', assistantFire({ ...O, ASSISTANT2_FIRE_URL: 'u2' }).which === 'old');
+check('both new: the new one, URL and token together', JSON.stringify(assistantFire({ ...O, ASSISTANT2_FIRE_URL: 'u2', ASSISTANT2_FIRE_TOKEN: 't2' })) === JSON.stringify({ url: 'u2', token: 't2', which: 'new' }));
+check('nothing set: none', assistantFire({}) === null);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

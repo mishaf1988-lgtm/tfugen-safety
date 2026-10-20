@@ -82,7 +82,7 @@
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
-import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hazardChoiceNote } from '../_wa.js';
+import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks'];
@@ -681,7 +681,7 @@ export async function onRequest(context) {
       };
       const err = (r) => r.j && r.j.error ? String(r.j.error.message || r.j.error.code).slice(0, 160) : null;
       const bearer = { Authorization: 'Bearer ' + tok };
-      const out = { ok: true, secret_set: !!sec, verify_set: !!env.WA_VERIFY_TOKEN, fire_set: !!(env.ASSISTANT_FIRE_URL && env.ASSISTANT_FIRE_TOKEN), hook };
+      const out = { ok: true, secret_set: !!sec, verify_set: !!env.WA_VERIFY_TOKEN, fire_set: !!assistantFire(env), fire_to: assistantFire(env) ? assistantFire(env).which : null, fire2_url_set: !!env.ASSISTANT2_FIRE_URL, fire2_key_set: !!env.ASSISTANT2_FIRE_TOKEN, hook };
       const dbg = await g(V + 'debug_token?input_token=' + encodeURIComponent(tok), { headers: bearer });
       const appId = dbg.j && dbg.j.data && dbg.j.data.app_id ? String(dbg.j.data.app_id) : null;
       out.app_id = appId;
@@ -716,8 +716,9 @@ export async function onRequest(context) {
       }
       out.app_sub = s.sub; out.app_sub_err = s.err; out.messages_ok = subOk(); out.waba_has_app = w.has; out.waba_apps_err = w.err;
       if (body.fire_probe && out.fire_set) {
-        const fr = await g(env.ASSISTANT_FIRE_URL, { method: 'POST',
-          headers: { Authorization: 'Bearer ' + env.ASSISTANT_FIRE_TOKEN, 'anthropic-beta': 'experimental-cc-routine-2026-04-01', 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+        const af = assistantFire(env);
+        const fr = await g(af.url, { method: 'POST',
+          headers: { Authorization: 'Bearer ' + af.token, 'anthropic-beta': 'experimental-cc-routine-2026-04-01', 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: '[\u05d1\u05d3\u05d9\u05e7\u05ea \u05d7\u05d9\u05d1\u05d5\u05e8 \u05de\u05d4\u05e9\u05e8\u05ea, \u05dc\u05d0 \u05d4\u05d5\u05d3\u05e2\u05d4 \u05de\u05de\u05d9\u05db\u05d0\u05dc] \u05dc\u05e1\u05d9\u05d9\u05dd \u05d1\u05e9\u05d5\u05e8\u05d4 \u05d0\u05d7\u05ea, \u05d1\u05dc\u05d9 wa_me.' }) });
         out.fire_status = fr.status;
       }

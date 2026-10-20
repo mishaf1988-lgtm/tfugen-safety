@@ -14,7 +14,7 @@
 // notifications_log (payload.wamid), so the assistant knows what Michael is answering.
 // Machine path in _middleware: Meta calls from outside Israel.
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
-import { ownerWa, metaSigOk, inboundMessages, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote } from '../_wa.js';
+import { ownerWa, metaSigOk, inboundMessages, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 
 export const FAIL_TEXT = '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05dc\u05e2\u05d5\u05d6\u05e8. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.';
@@ -176,9 +176,11 @@ async function handle(env, raw) {
     let snap = null;
     try { const g = await gather(env, new Date()); snap = buildBrief(g.items, g.failed, g.today, true); } catch (e) { snap = null; }
     const text = fireText(m, about, prev, snap);
-    const fr = await fetch(env.ASSISTANT_FIRE_URL, {
+    const af = assistantFire(env);
+    seen.fire_to = af ? af.which : null;
+    const fr = !af ? null : await fetch(af.url, {
       method: 'POST', signal: tmo(20000),
-      headers: { Authorization: 'Bearer ' + env.ASSISTANT_FIRE_TOKEN, 'anthropic-beta': 'experimental-cc-routine-2026-04-01',
+      headers: { Authorization: 'Bearer ' + af.token, 'anthropic-beta': 'experimental-cc-routine-2026-04-01',
         'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
     }).catch(() => null);
@@ -204,7 +206,7 @@ export async function onRequest(context) {
     if (sigHeader) { const n = note(env, { sig: false, secret_set: !!env.META_APP_SECRET }); if (context.waitUntil) context.waitUntil(n); else await n; }
     return new Response('forbidden', { status: 403 });
   }
-  if (!env.ASSISTANT_FIRE_URL || !env.ASSISTANT_FIRE_TOKEN || !env.SUPABASE_SERVICE_ROLE_KEY) { await note(env, { sig: true, fire_configured: false }); return new Response('ok', { status: 200 }); }
+  if (!assistantFire(env) || !env.SUPABASE_SERVICE_ROLE_KEY) { await note(env, { sig: true, fire_configured: false }); return new Response('ok', { status: 200 }); }
   const job = handle(env, raw).catch(() => null);
   if (context.waitUntil) context.waitUntil(job); else await job;
   return new Response('ok', { status: 200 });

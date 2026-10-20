@@ -135,7 +135,7 @@ export const PREVIEW_HOST_RE = SITE.previewHostRe;
 // a WhatsApp, an email, a Vitre call, a GitHub write or a machine-path request for real.
 export const PREVIEW_STRIP = ['META_ACCESS_TOKEN', 'META_PHONE_NUMBER_ID', 'META_WABA_ID', 'RESEND_KEY',
   'VITRE_API_KEY_ID', 'VITRE_API_KEY_SECRET', 'VITRE_PHOTO_KEY', 'ONEDRIVE_CLIENT_ID', 'ONEDRIVE_CLIENT_SECRET',
-  'ONEDRIVE_TENANT_ID', 'GH_SKILLS_TOKEN', 'ROUTINE_KEY', 'TRUSTEE_NOTIFY_SECRET', 'META_APP_SECRET', 'WA_VERIFY_TOKEN', 'ASSISTANT_FIRE_TOKEN'];
+  'ONEDRIVE_TENANT_ID', 'GH_SKILLS_TOKEN', 'ROUTINE_KEY', 'TRUSTEE_NOTIFY_SECRET', 'META_APP_SECRET', 'WA_VERIFY_TOKEN', 'ASSISTANT_FIRE_TOKEN', 'ASSISTANT2_FIRE_TOKEN'];
 // Returns true when env now points at the test database (and the outside secrets are gone).
 // Any failure, or a missing STAGING_ variable, returns false, and the caller refuses /api/*:
 // a preview that cannot be made safe answers nothing rather than reaching the live database.
