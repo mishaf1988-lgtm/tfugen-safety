@@ -46,7 +46,7 @@
 | `trig_01Wm6Nzy3sYFXusWuA6H3VYJ` | בדיקת זמני Supabase ועלויות הסוכנים (חד-פעמי) | 22/10/2026 17:30 | הפרומפט בטריגר | `session_01FXKjCZExakD2sbqi9eZVin` (רכז הדוחות; מיכאל 18/10/2026: "בדיקה של עלויות יכולה להיות תחת סוכן אחד"; הקודם `trig_01TFsrFwbqQM9fAoT8GfiobF` כובה) |
 | `trig_01FKenmRrWQ22S1566BReYri` | מנהל השיווק: פעמיים בשבוע (קו העסק) | א' ו-ד' 08:53 (ראשונה 21/10/2026) | `marketing/routine-marketing.md` ב-safety-platform | `session_01DRrGQfp26adBiipx3PkZdA` |
 | `trig_01TofqtqNWtrXMnqiNjHq1nZ` | העוזר בוואטסאפ | א'-ה' 07:47 (עדכון בוקר) + מפעיל API (הודעה ממיכאל דרך `/api/wa-hook`) | `routine-wa-assistant.md` | `session_01ANNSTD9gftqbzoeDj9Fkmv` (Sonnet) |
-| `trig_011XSXRjssx2uPNu1rk4P9L2` | העוזר בוואטסאפ (שיחה רזה, 20/10/2026) | מפעיל API בלבד, בלי שעון (את עדכון הבוקר שולח השרת) | `routine-wa-assistant.md` | `session_01NyqL1Nxaxeyn4cp8MRCfpd` (Sonnet). **כבוי (20/10/2026), השיחה בארכיון:** הפעלה עם `text` פותחת תמיד שיחה חדשה, כך שהזוג החדש לא נחוץ (`routine-wa-assistant.md`). `ASSISTANT2_FIRE_URL` הוסר; `ASSISTANT2_FIRE_TOKEN` נשאר ב-Cloudflare ולא בשימוש (מחיקה: החלטה של מיכאל) |
+| `trig_011XSXRjssx2uPNu1rk4P9L2` | העוזר בוואטסאפ (שיחה רזה, 20/10/2026) | מפעיל API בלבד, בלי שעון (את עדכון הבוקר שולח השרת) | `routine-wa-assistant.md` | `session_01NyqL1Nxaxeyn4cp8MRCfpd` (Sonnet). **כבוי (20/10/2026), השיחה בארכיון:** הפעלה עם `text` פותחת תמיד שיחה חדשה, כך שהזוג החדש לא נחוץ (`routine-wa-assistant.md`). `ASSISTANT2_FIRE_URL` ו-`ASSISTANT2_FIRE_TOKEN` נמחקו מ-Cloudflare (20/10/2026, מיכאל בשאלון) |
 | `trig_01JfYyhTEaXb8Vwt724UXHDF` | העוזר בוואטסאפ (Opus), ניסיון 20/10/2026 | בלי שעון, בלי טוקן | `routine-wa-assistant.md` | `session_012r4x8zMkBEqBg64CFmpF9U` (Opus, בארכיון). **כבוי:** נפתח לבדיקה, והוכיח שבלי `text` ההפעלה נכנסת לשיחה ועם `text` לא |
 
 שיחות "לא לארכב": השיחות בעמודה האחרונה, כולל המגייס. Routine יורה לתוך שיחה, וארכוב שלה עוצר אותו.
@@ -118,7 +118,7 @@ Client ID ו-Tenant: ב-`project-files/ONEDRIVE-SERVER-SETUP.md`. הרשאות d
 | `GH_SKILLS_TOKEN` | המייל השבועי קורא את תור העוזר ב-michael-skills; `backup-od` מוריד איתו את ה-zip השבועי של michael-skills (17/10/2026) |
 | `GEMINI_API_KEY`, `GEMINI_MODEL`, `TTS_MODEL`, `TTS_VOICE` | הקראה בקול |
 | `META_ACCESS_TOKEN`, `META_PHONE_NUMBER_ID`, `META_WABA_ID` | וואטסאפ |
-| `META_APP_SECRET`, `WA_VERIFY_TOKEN`, `ASSISTANT_FIRE_URL`, `ASSISTANT_FIRE_TOKEN`, `ASSISTANT2_FIRE_URL`, `ASSISTANT2_FIRE_TOKEN` | העוזר בוואטסאפ (19/10/2026): חתימת ה-webhook של Meta, אימות ה-webhook, וה-API trigger של `trig_01TofqtqNWtrXMnqiNjHq1nZ`. `WA_VERIFY_TOKEN` ו-`ASSISTANT_FIRE_URL` נכתבו דרך ה-API; השניים האחרים רק מיכאל (ערכים ש-Meta ו-claude.ai מראים פעם אחת) |
+| `META_APP_SECRET`, `WA_VERIFY_TOKEN`, `ASSISTANT_FIRE_URL`, `ASSISTANT_FIRE_TOKEN` | העוזר בוואטסאפ (19/10/2026): חתימת ה-webhook של Meta, אימות ה-webhook, וה-API trigger של `trig_01TofqtqNWtrXMnqiNjHq1nZ`. `WA_VERIFY_TOKEN` ו-`ASSISTANT_FIRE_URL` נכתבו דרך ה-API; השניים האחרים רק מיכאל (ערכים ש-Meta ו-claude.ai מראים פעם אחת) |
 | `RESEND_KEY`, `RESEND_FROM` | מייל גיבוי |
 | `VITRE_API_KEY_ID`, `VITRE_API_KEY_SECRET`, `VITRE_NOTIFY_CREATED_BY`, `VITRE_NOTIFY_ENABLED`, `VITRE_PHOTO_KEY`, `VITRE_PHOTO_TEMPLATE` | Vitre |
 | `ALLOWED_COUNTRIES`, `ALLOWED_ORIGINS`, `SUBREQ_LIMIT` | הגבלות |
