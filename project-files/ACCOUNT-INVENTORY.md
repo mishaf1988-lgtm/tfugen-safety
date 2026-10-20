@@ -130,6 +130,7 @@ Worker נפרד: `tapugan-backup-cron` (`workers/backup-cron.js`), גיבוי י
 | `vitre-sync` | 03:00, 04:00 | סנכרון Vitre |
 | `xlsx-gaps` | 03:05 | פערים מול ה-Excel |
 | `weather` | 14:07 | מזג האוויר של מחר (התחזית של השירות המטאורולוגי, שדרות), שורה במסך הבית. נכנס כשה-migration `2026-10-15_weather_cron.sql` רץ |
+| `wa-morning` | 04:47, 05:47 א'-ה' | עדכון הבוקר בוואטסאפ מהשרת (`/api/wa-morning`); נשלח רק בקריאה שנופלת על 07:xx בישראל, פעם ביום. נכנס כשה-migration `2026-10-20_wa_morning_cron.sql` רץ |
 | `od-scan` | 02:50 | קבצים חדשים בתיקיית הבטיחות |
 | `weekly-digest` | א' 04:00, 05:00 | המייל השבועי |
 | `talk-week` | א' 02:17 | שיחת הבטיחות השבועית |

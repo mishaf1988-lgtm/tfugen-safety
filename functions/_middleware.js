@@ -38,7 +38,8 @@ const DEFAULT_ALLOWED = 'IL';
 // its own authentication and does not become weaker for being reachable.
 // /api/trustee-log (2026-09-27) is the same kind of caller: the trustee_reports
 // statement trigger, rebuilding the OneDrive log, with the same secret.
-const MACHINE_PATHS = ['/api/trustee-notify', '/api/trustee-log', '/api/mail-inbox', '/api/hazard-file', '/api/od-read', '/api/meeting-data', '/api/hazard-deck', '/api/weekly-digest', '/api/backup-od', '/api/od-scan', '/api/xlsx-gaps', '/api/routine-db', '/api/weather', '/api/wa-hook'];
+const MACHINE_PATHS = ['/api/trustee-notify', '/api/trustee-log', '/api/mail-inbox', '/api/hazard-file', '/api/od-read', '/api/meeting-data', '/api/hazard-deck', '/api/weekly-digest', '/api/backup-od', '/api/od-scan', '/api/xlsx-gaps', '/api/routine-db', '/api/weather', '/api/wa-hook', '/api/wa-morning'];
+// /api/wa-morning (20/10/2026): pg_cron's morning update on WhatsApp, with the Vault secret like /api/weather.
 // /api/wa-hook (19/10/2026): Meta's webhook calls from outside Israel. The endpoint checks Meta's
 // signature (META_APP_SECRET) and Michael's number itself.
 // /api/routine-db (09/10/2026, Michael: "בצע: בלי טבלת רפואה"): the Routines run in the
