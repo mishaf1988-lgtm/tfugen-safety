@@ -3,6 +3,7 @@
 // list of tables, medical tables expiry only, trustee reports without text or names,
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
+import { SITE } from './_build/_shared.mjs';
 import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
@@ -304,7 +305,20 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     const D = { op: 'mail_draft', agent: 'dev', why: 'gas controller cert', to: 'tammybeg@gazit.co.il', subject: 'תעודת כיול', body: 'שלום,\nשורה <b>2</b>' };
     let x = await call(D);
     const fj = puts[0] ? JSON.parse(puts[0].body) : {};
-    check('one PUT into the draft folder, JSON with to, subject, body and an RTL html with <br> and escaped tags', x.json.ok && puts.length === 1 && puts[0].url.indexOf('/root:/' + OD_ROOT + OD_DRAFT + '/') > 0 && fj.to === D.to && fj.subject === D.subject && fj.body === D.body && /^<div dir="rtl">.*<br>.*&lt;b&gt;2&lt;\/b&gt;<\/div>$/.test(fj.html), { x: x.json, puts });
+    check('one PUT into the draft folder, JSON with to, subject, body and an RTL html with <br> and escaped tags', x.json.ok && puts.length === 1 && puts[0].url.indexOf('/root:/' + OD_ROOT + OD_DRAFT + '/') > 0 && fj.to === D.to && fj.subject === D.subject && fj.body === D.body && /^<div dir="rtl">.*<br>.*&lt;b&gt;2&lt;\/b&gt;<div style=/.test(fj.html), { x: x.json, puts });
+    check('his Outlook signature (SITE.signature) is added once at the end', fj.html.endsWith(SITE.signature + '</div>') && fj.html.split('0547940073').length === 2, fj.html.slice(-200));
+    puts = [];
+    await call({ ...D, body: 'שלום,\nאבקש תעודה.\n\nתודה,\n' + SITE.owner + '\nממונה בטיחות, תעשיות תפוגן' });
+    const g = puts[0] ? JSON.parse(puts[0].body) : {};
+    check('a typed sign-off (his name and the role line) is dropped, "thanks" stays, the signature replaces it', g.body === 'שלום,\nאבקש תעודה.\n\nתודה,' && g.html.split(SITE.owner).length === 2, g);
+    puts = [];
+    await call({ ...D, body: 'שלום,\nנא לתאם.\nבברכה,\n' + SITE.owner });
+    const g2 = puts[0] ? JSON.parse(puts[0].body) : {};
+    check('a "regards" line before his name goes too (the signature opens with it)', g2.body === 'שלום,\nנא לתאם.', g2.body);
+    puts = [];
+    await call({ ...D, body: SITE.owner + ' ביקש לבדוק את הבקר.\nשורה 2\nשורה 3\nשורה 4\nשורה 5' });
+    const g3 = puts[0] ? JSON.parse(puts[0].body) : {};
+    check('his name early in the text (not in the last 4 lines) stays', g3.body.indexOf(SITE.owner) === 0, g3.body);
     puts = [];
     check('a bad address, an empty subject or body, or an extra field (cc, send): refused, nothing written',
       (await call({ ...D, to: 'x@y' })).status === 400 && (await call({ ...D, subject: '' })).status === 400 && (await call({ ...D, body: '' })).status === 400

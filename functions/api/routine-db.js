@@ -268,8 +268,17 @@ export function draftRequest(b) {
   if (!DRAFT_TO.test(to)) return { error: 'bad to' };
   if (!subject || subject.length > 200) return { error: 'subject 1-200 characters' };
   if (!text || text.length > 5000) return { error: 'body 1-5000 characters' };
-  const html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').split('\n').join('<br>');
-  return { file: JSON.stringify({ to, subject, body: text, html: '<div dir="rtl">' + html + '</div>' }) };
+  // 20/10/2026 (Michael: "instead of my name, attach the signature I have in the mail"): a draft made
+  // through Graph gets no Outlook signature, so the server adds his (SITE.signature, the one under the
+  // hazard reports). A typed sign-off at the end (his name and what follows, and a "regards" line
+  // before it, which the signature opens with) is dropped so it does not appear twice.
+  const lines = text.split('\n');
+  let cut = -1;
+  for (let i = Math.max(0, lines.length - 4); i < lines.length; i++) if (lines[i].trim().indexOf(SITE.owner) === 0) { cut = i; break; }
+  if (cut >= 0) { if (cut > 0 && /^\u05d1\u05d1\u05e8\u05db\u05d4,?$/.test(lines[cut - 1].trim())) cut--; lines.length = cut; }
+  const kept = lines.join('\n').replace(/\s+$/, '');
+  const html = kept.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').split('\n').join('<br>');
+  return { file: JSON.stringify({ to, subject, body: kept, html: '<div dir="rtl">' + html + SITE.signature + '</div>' }) };
 }
 export const MAIL_REQ_ID = /^[A-Za-z0-9_=+\/-]{40,400}$/;
 const OD_NO_DIR = /(^|\/)(_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea|\u05dc\u05de\u05d7\u05d9\u05e7\u05d4|ARCHIVE)(\/|$)/i;
