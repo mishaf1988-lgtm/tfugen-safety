@@ -37,6 +37,8 @@
 //              Free text inside the 24 hour window, else the utility template. choices (20/10/2026):
 //              up to 10 short answers, sent as buttons or a list inside the window (_wa.js choicesPayload). Logged in
 //              notifications_log (event assistant, payload.wamid) so his reply can be matched.
+//   wa_review  (20/10/2026) Michael's WhatsApp messages and the assistant's answers, 7 days at most, for the
+//              weekly quality review (retro-prompt.md 7a). Read only; those two event types only.
 //   wa_tpl     create the assistant's template in Meta once (ASSISTANT_TEMPLATE), or report that it exists.
 //   hazard_choice  Michael's answer to the assistant's hazard message (20/10/2026, Michael: "only
 //              record, I route"): {src: trustee_hazard|near_miss, id, choice: 1-4}. Writes one line
@@ -667,9 +669,21 @@ export async function onRequest(context) {
         await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
           body: JSON.stringify([{ id: 'wa' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
             event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error',
-            payload: { title: String(body.text || '').replace(/\s+/g, ' ').slice(0, 120), via: r.via || null, wamid: r.wamid || null, detail: r.error || null } }]) });
+            payload: { title: String(body.text || '').replace(/\s+/g, ' ').slice(0, 120), text: String(body.text || '').slice(0, 1500), via: r.via || null, wamid: r.wamid || null, detail: r.error || null } }]) });
       } catch (e) { /* the message went out; a missing log line is not a failure */ }
       return jsonResp(r, 200, {});
+    }
+    // wa_review (20/10/2026, Michael: "not only time, also wisdom, quality and expertise"): the weekly
+    // quality review in the retro (retro-prompt.md 7a) reads Michael's messages to his assistant and its
+    // answers, 7 days at most, and nothing else from notifications_log (no alert, no other channel).
+    if (body.op === 'wa_review') {
+      const days = Math.min(7, Math.max(1, Number(body.days) || 7));
+      const since = new Date(Date.now() - days * 864e5).toISOString();
+      const r = await fetch(url + '/rest/v1/notifications_log?select=ts,event_type,payload->>text,payload->>title,payload->>fast,payload->>via'
+        + '&event_type=in.(owner_in,assistant)&channel=eq.whatsapp&ts=gte.' + encodeURIComponent(since) + '&order=ts.asc&limit=300', { headers: h, signal: tmo(SB_MS) });
+      if (!r.ok) return jsonResp({ ok: false, error: 'read ' + r.status }, 200, {});
+      const rows = (await r.json()).map((x) => ({ ts: x.ts, who: x.event_type === 'owner_in' ? 'michael' : 'assistant', text: x.text || x.title || '', fast: x.fast === 'true', via: x.via || null }));
+      return jsonResp({ ok: true, days, rows }, 200, {});
     }
     if (body.op === 'wa_check') {
       if (!env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});

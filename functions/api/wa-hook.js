@@ -134,11 +134,21 @@ async function fastHazard(env, r) {
   }
   return fastHazardText(r.choice, c.changed);
 }
+// Michael's own message, for the weekly quality review of the assistant's answers (20/10/2026, Michael:
+// "not only time, also wisdom, quality and expertise"; retro-prompt.md 7a). His own words to his own
+// assistant, in the app's own log; no one else's message reaches this point.
+async function logIn(env, m) {
+  try {
+    await sbJson(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify([{ id: 'wi' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
+        event_type: 'owner_in', channel: 'whatsapp', payload: { title: String(m.text || '').replace(/\s+/g, ' ').slice(0, 120), text: String(m.text || '').slice(0, 1500), wamid: m.id, choice: m.choice || null } }]) });
+  } catch (e) { /* a missing log line costs only the review */ }
+}
 async function logOut(env, text, r) {
   try {
     await sbJson(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
       body: JSON.stringify([{ id: 'wf' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
-        event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error', payload: { title: String(text).replace(/\s+/g, ' ').slice(0, 120), via: r.via || null, wamid: r.wamid || null, fast: true } }]) });
+        event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error', payload: { title: String(text).replace(/\s+/g, ' ').slice(0, 120), text: String(text).slice(0, 1500), via: r.via || null, wamid: r.wamid || null, fast: true } }]) });
   } catch (e) { /* the answer went out; a missing log line is not a failure */ }
 }
 async function handle(env, raw) {
@@ -152,6 +162,7 @@ async function handle(env, raw) {
     seen.from_owner++;
     await noteOwnerIn(env, sbFrom(env), m.ts ? new Date(m.ts * 1000).toISOString() : new Date().toISOString());
     if (!(await firstTime(env, m.id))) continue;
+    await logIn(env, m);
     // 20/10/2026 (Michael in the questionnaire: "do it: an immediate 'got it' from the server"): the
     // assistant takes 30-60 seconds, so the server answers first, before the fire (which itself took
     // 20 seconds on 20/10 10:30). Michael just wrote, so the window is open; no template. Not kept as

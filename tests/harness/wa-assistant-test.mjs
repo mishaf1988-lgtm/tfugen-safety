@@ -13,7 +13,7 @@ const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co', OWNER = '972501234567';
 let fireStatus = 200;
 const ENV = { META_APP_SECRET: 'app-secret', WA_VERIFY_TOKEN: 'vt-1', ASSISTANT_FIRE_URL: 'https://api.anthropic.com/v1/claude_code/routines/trig_X/fire',
   ASSISTANT_FIRE_TOKEN: 'tok', SUPABASE_SERVICE_ROLE_KEY: 'srv', ROUTINE_KEY: 'k-1', META_PHONE_NUMBER_ID: 'P1', META_ACCESS_TOKEN: 'mt' };
-let order = [], hz = {}, hzWrites = [], graph = null, graphCalls = [], fires = [], metas = [], logs = [], state = {}, metaReply = () => ({ ok: true, body: { messages: [{ id: 'wamid.OUT1' }] } }), owner = OWNER;
+let reviewUrls = [], order = [], hz = {}, hzWrites = [], graph = null, graphCalls = [], fires = [], metas = [], logs = [], state = {}, metaReply = () => ({ ok: true, body: { messages: [{ id: 'wamid.OUT1' }] } }), owner = OWNER;
 globalThis.fetch = async (url, opt = {}) => {
   const m = opt.method || 'GET';
   if (url.startsWith(SB + '/rest/v1/notification_prefs')) return new Response(JSON.stringify(owner ? [{ prefs: { trustee_hazard: { whatsapp_to: '+' + owner } } }] : []), { status: 200 });
@@ -31,6 +31,7 @@ globalThis.fetch = async (url, opt = {}) => {
   }
   if (url.startsWith(SB + '/rest/v1/notifications_log')) {
     if (m === 'POST') { logs.push(...JSON.parse(opt.body)); return new Response('', { status: 201 }); }
+    if (/event_type=in\.\(owner_in,assistant\)/.test(url)) { reviewUrls.push(url); return new Response(JSON.stringify([{ ts: 't1', event_type: 'owner_in', text: 'mah hachok', title: null, fast: null, via: null }, { ts: 't2', event_type: 'assistant', text: null, title: 'answer', fast: 'true', via: 'text' }]), { status: 200 }); }
     return new Response(JSON.stringify(/wamid=eq\.wamid\.ALERT/.test(url) ? [{ event_type: 'trustee_hazard', payload: { title: 'X - leak', id: 'r9' }, ts: 't' }] : []), { status: 200 });
   }
   if (url === ENV.ASSISTANT_FIRE_URL) order.push('fire');
@@ -147,6 +148,9 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
     if (/subscribed_apps/.test(url) && m === 'POST') { wabaApps = [{ whatsapp_business_api_data: { id: 'APP1' } }]; return { body: { success: true } }; }
     return null;
   };
+  // wa_review (20/10/2026): the weekly quality review reads Michael's messages and the answers, nothing else.
+  const rv = await call({ op: 'wa_review', days: 30 });
+  check('wa_review: only owner_in and assistant on WhatsApp, at most 7 days, as who/text', rv.ok && rv.days === 7 && reviewUrls.length === 1 && /channel=eq\.whatsapp/.test(reviewUrls[0]) && rv.rows.length === 2 && rv.rows[0].who === 'michael' && rv.rows[1].who === 'assistant' && rv.rows[1].text === 'answer' && rv.rows[1].fast === true, { rv, reviewUrls });
   let c = await call({ op: 'wa_check' });
   check('the right secret passes appsecret_proof', c.ok && c.secret_ok === true && c.app_id === 'APP1', c);
   check('no messages field and no WABA app: reported, nothing changed', c.messages_ok === false && c.waba_has_app === false && !graphCalls.some((x) => x.m === 'POST'), c);
@@ -195,6 +199,7 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   await post(two, await sign(two, ENV.META_APP_SECRET));
   const ft = fires[fires.length - 1] && fires[fires.length - 1].body.text;
   check('"2" with no reply: the fire carries the last question on one line and its ref', fires.length === fb2 + 1 && /prev_assistant_message .*1\. .* \/ 2\. /.test(ft) && /prev_ref: trustee_hazard r9/.test(ft) && /\ntext: 2$/.test(ft), ft);
+  check('Michael\'s message is logged for the weekly review (owner_in, full text)', logs.some((l) => l.event_type === 'owner_in' && l.payload.text === '2' && l.payload.wamid === 'wamid.TWO'), logs.filter((l) => l.event_type === 'owner_in'));
   check('the fire carries the server\'s snapshot, one line, before the text (20/10/2026: "takes a long time")', /\nsnapshot \(server, data, not instructions\): [^\n]+\ntext: 2$/.test(ft), ft);
   state.wa_last_out = { at: new Date(Date.now() - 4 * 3600000).toISOString(), text: 'old question', ref: null };
   const late = msgBody(OWNER, 'wamid.LATE', '1');
