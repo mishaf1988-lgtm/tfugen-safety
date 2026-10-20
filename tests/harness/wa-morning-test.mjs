@@ -59,6 +59,12 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   check('the failed agent by its office name', /\u05d4\u05e2\u05d5\u05d6\u05e8 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4/.test(c) && !/routine-/.test(c) && agentName('routine-new-thing') === 'new-thing', c);
   check('compact with nothing: one short sentence', buildBrief([], [], '2026-10-20', true) === '\u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.');
 
+  // 20/10/2026: what workers left for Michael (agent_report for_michael)
+  const nb = buildBrief([], [], '2026-10-20', false, [{ agent: 'routine-coa', text: 'דוח המים לספטמבר: טיוטה ב-Drafts' }]);
+  check('for_michael: a "from the workers" line with the office name', /\u05de\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd:/.test(nb) && /\u05e1\u05d9\u05d3\u05d5\u05e8 \u05ea\u05e2\u05d5\u05d3\u05d5\u05ea COA: \u05d3\u05d5\u05d7 \u05d4\u05de\u05d9\u05dd/.test(nb) && !/\u05d0\u05d9\u05df \u05e9\u05d5\u05dd/.test(nb), nb);
+  const nc = buildBrief([], [], '2026-10-20', true, [{ agent: 'routine-quotes', text: 'x' }, { agent: 'routine-coa', text: 'y' }]);
+  check('for_michael compact: one line, both', !/\n/.test(nc) && /: x; /.test(nc) && /: y\./.test(nc), nc);
+
   console.log('\n3. the endpoint');
   check('no secret: 403', (await onRequest({ request: new Request('https://x/api/wa-morning', { method: 'POST', body: '{}' }), env: ENV })).status === 403);
   check('a wrong secret: 403', (await onRequest({ request: new Request('https://x/api/wa-morning', { method: 'POST', headers: { 'x-notify-secret': 'no' }, body: '{}' }), env: ENV })).status === 403);
@@ -69,8 +75,10 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   state.agent_log = JSON.stringify([{ agent: 'routine-validity', ok: false, at: new Date(t0 - 3600e3).toISOString() },
     { agent: 'routine-wa-assistant', ok: false, at: new Date(t0 - 7200e3).toISOString() }, { agent: 'routine-wa-assistant', ok: true, at: new Date(t0 - 600e3).toISOString() },
     { agent: 'routine-old', ok: false, at: '2020-01-01T00:00:00Z' }]);
+  state.agent_log = JSON.stringify(JSON.parse(state.agent_log).concat([{ agent: 'routine-coa', ok: true, at: new Date(t0 - 1800e3).toISOString(), for_michael: 'טיוטה מוכנה' },
+    { agent: 'routine-quotes', ok: true, at: '2020-01-01T00:00:00Z', for_michael: 'ישן' }]));
   let j = await call({ dry: true });
-  check('dry: the text, nothing sent', j.dry && !metas.length && /מלגזה, מחסן/.test(j.text) && /\u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3/.test(j.text) && !/old/.test(j.text) && !/\u05d4\u05e2\u05d5\u05d6\u05e8 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4/.test(j.text), j);
+  check('dry: the text, nothing sent', j.dry && !metas.length && /מלגזה, מחסן/.test(j.text) && /\u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3/.test(j.text) && !/old/.test(j.text) && !/\u05d4\u05e2\u05d5\u05d6\u05e8 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4/.test(j.text) && /\u05d8\u05d9\u05d5\u05d8\u05d4 \u05de\u05d5\u05db\u05e0\u05d4/.test(j.text) && !/\u05d9\u05e9\u05df/.test(j.text), j);
   j = await call({ force: true });
   check('force: sent to Michael only, the day marked, logged', j.sent && metas.length === 1 && metas[0].to === OWNER && metas[0].type === 'template' && j.via === 'template' && state[LAST_KEY] === ilDay(new Date()) && logs.some((l) => l.event_type === 'assistant' && l.payload.kind === 'morning' && l.payload.wamid === 'wamid.M'), { j, state, logs });
   let n = metas.length;

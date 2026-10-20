@@ -6,7 +6,8 @@
 // pg_cron calls POST /api/wa-morning at 04:47 and 05:47 UTC, Sunday to Thursday, with the Vault
 // secret (x-notify-secret), like /api/weather. Only the call that lands on 07:xx in Israel sends,
 // so daylight saving needs no second job; server_state.wa_morning_last stops a second send that day.
-// The text (routine-wa-assistant.md step 3, at most 700 characters): agents that failed in the last
+// The text (routine-wa-assistant.md step 3, at most 700 characters): what workers left for Michael
+// (agent_report for_michael, since the last update), agents that failed in the last
 // 24 hours (agent_log) and up to 3 urgent expiries (docs, equip_inspections: expired or within 7
 // days). No employee names: docs.n and equip_inspections.n are document and equipment names.
 // What waits for Michael in the office (ArtifactData) is not on the server; the line points to the
@@ -43,13 +44,16 @@ export const agentName = (a) => AGENT_NAMES[a] || String(a || '').replace(/^rout
 
 // Pure: the text. items = [{n, e}] already sorted by e, today = 'YYYY-MM-DD',
 // failed = agent names that reported ok:false in the last 24 hours.
-export function buildBrief(items, failed, today, compact) {
+// notes = [{agent, text}]: agent_report for_michael lines since the last update (20/10/2026).
+export function buildBrief(items, failed, today, compact, notes) {
   failed = failed.map(agentName);
+  notes = (notes || []).slice(0, 3);
   // compact (20/10/2026, Michael's screenshot): outside the 24 hour window the template carries one
   // line between its own "update from the assistant:" and "to answer, write here", so no heading, no
   // closing line, and items joined by "; " instead of new lines that would turn into " | ".
   if (compact) {
     const parts = [];
+    if (notes.length) parts.push('\u05de\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd: ' + notes.map((x) => agentName(x.agent) + ': ' + clip(x.text, 160)).join('; ') + '.');
     if (items.length) parts.push('\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea: ' + items.slice(0, 3).map((x) => clip(x.n, 50) + (x.e < today ? ' (\u05e4\u05d2 ' : ' (\u05e2\u05d3 ') + dmy(x.e) + ')').join('; ')
       + (items.length > 3 ? '; \u05d5\u05e2\u05d5\u05d3 ' + (items.length - 3) : '') + '.');
     if (failed.length) parts.push('\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc: ' + failed.slice(0, 5).join(', ') + '.');
@@ -60,6 +64,10 @@ export function buildBrief(items, failed, today, compact) {
     lines.push('\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea:');
     items.slice(0, 3).forEach((x) => lines.push('- ' + clip(x.n, 60) + (x.e < today ? ' (\u05e4\u05d2 ' : ' (\u05e2\u05d3 ') + dmy(x.e) + ')'));
     if (items.length > 3) lines.push('\u05d5\u05e2\u05d5\u05d3 ' + (items.length - 3) + ' \u05d1\u05de\u05e1\u05da \u05d4\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea.');
+  }
+  if (notes.length) {
+    lines.push('\u05de\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd:');
+    notes.forEach((x) => lines.push('- ' + agentName(x.agent) + ': ' + clip(x.text, 160)));
   }
   if (failed.length) lines.push('\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc \u05d1-24 \u05d4\u05e9\u05e2\u05d5\u05ea \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d5\u05ea: ' + failed.slice(0, 5).join(', ') + '.');
   if (!lines.length) return '\u05d1\u05d5\u05e7\u05e8 \u05d8\u05d5\u05d1, \u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.';
@@ -103,7 +111,11 @@ export async function gather(env, now) {
   (Array.isArray(log) ? log : []).filter((x) => x && x.agent && Date.parse(x.at) >= since)
     .forEach((x) => { const a = String(x.agent); if (!latest[a] || Date.parse(x.at) >= Date.parse(latest[a].at)) latest[a] = x; });
   const failed = Object.keys(latest).filter((a) => latest[a].ok === false);
-  return { today, items, failed };
+  // for_michael since the previous update: 24 hours, and on Sunday since Thursday's update (72 hours).
+  const nsince = now.getTime() - (ilDow(now) === 0 ? 3 : 1) * 86400000;
+  const notes = (Array.isArray(log) ? log : []).filter((x) => x && x.agent && x.for_michael && Date.parse(x.at) >= nsince)
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).map((x) => ({ agent: x.agent, text: x.for_michael }));
+  return { today, items, failed, notes };
 }
 
 export async function onRequest(context) {
@@ -192,7 +204,7 @@ export async function run(env, now, body) {
   const cal = await calendarStep(env, now, !!body.dry).catch((e) => ({ error: String(e.message || e).slice(0, 200) }));
   const g = await gather(env, now);
   const open = await ownerWindowOpen(env, sbFrom(env), now.getTime());
-  const text = buildBrief(g.items, g.failed, g.today, !open);
+  const text = buildBrief(g.items, g.failed, g.today, !open, g.notes);
   if (body.dry) return { ok: true, sent: false, dry: true, text, cal };
   if (!body.force && (await stateGet(env, LAST_KEY).catch(() => null)) === g.today) return { ok: true, sent: false, reason: 'already sent today', cal };
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };

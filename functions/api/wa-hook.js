@@ -195,7 +195,7 @@ async function handle(env, raw) {
     let snap = null;
     try {
       const g = await Promise.race([gather(env, new Date()), new Promise((res) => setTimeout(() => res(null), SNAP_MS))]);
-      snap = g ? buildBrief(g.items, g.failed, g.today, true) : null;
+      snap = g ? buildBrief(g.items, g.failed, g.today, true, g.notes) : null;
     } catch (e) { snap = null; }
     seen.snap = !!snap; seen.pre_fire_ms = Date.now() - t0;
     await note(env, Object.assign({ stage: 'firing' }, seen));
