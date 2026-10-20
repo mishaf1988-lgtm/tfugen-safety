@@ -14,12 +14,13 @@ const require = createRequire(import.meta.url);
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
 const here = path.dirname(fileURLToPath(import.meta.url));
-const AREA = 'תשתיות ואמוניה', WHO = 'שלומי ויורי', NOT_MINE = 'לא באחריותך, להעביר לאחראי';
+const AREA = 'קירור ואמוניה', WHO = 'יורי, ושלומי מעליו', NOT_MINE = 'לא באחריותך, להעביר לאחראי';
 const TODAY = '2026-10-20';
 
 console.log('\n1. one place for the areas');
 check('SITE.equipAreas maps the area to who runs it', SITE.equipAreas && SITE.equipAreas[AREA] === WHO, SITE.equipAreas);
 check('the page gets it (CLIENT_KEYS)', CLIENT_KEYS.includes('equipAreas'));
+check('two areas: infrastructure (Shlomi) and refrigeration and ammonia (Yuri, Shlomi over him)', SITE.equipAreas['תשתיות'] === 'שלומי (מהנדס המפעל)' && Object.keys(SITE.equipAreas).length === 2, SITE.equipAreas);
 check('no mail address in it (a public file)', !/@/.test(JSON.stringify(SITE.equipAreas)));
 const cols = JSON.parse(fs.readFileSync(path.join(here, 'db-columns.json'), 'utf8'));
 check('db-columns.json has equip_inspections.resp_area', (cols.equip_inspections || []).includes('resp_area'));
@@ -87,10 +88,10 @@ try {
       }, 80);
     }, 80));
   }, [AREA, iso(-3), iso(5)]);
-  check('expiry page: the area and who in the responsible column', r.gl.includes(AREA + ': ' + 'שלומי ויורי'), r.gl);
+  check('expiry page: the area and who in the responsible column', r.gl.includes(AREA + ': ' + WHO), r.gl);
   check('expiry page: marked "pass to the responsible"', r.gl.includes('להעביר לאחראי'), r.gl);
   check('expiry page: an item with no area shows its supplier, no mark', r.ml.includes('פריד') && !r.ml.includes('להעביר לאחראי'), r.ml);
-  check('the card offers the safety manager (empty) and the area with who', r.opts && r.opts[0].startsWith('|') && r.opts.some((o) => o === AREA + '|' + AREA + ': שלומי ויורי'), r.opts);
+  check('the card offers the safety manager (empty) and the area with who', r.opts && r.opts[0].startsWith('|') && r.opts.some((o) => o === AREA + '|' + AREA + ': ' + WHO), r.opts);
   check('the card opens on the saved area', r.val === AREA, r.val);
   check('saving with the safety manager stores null, not \'\'', r.cleared === null, r.cleared);
   check('saving with an area stores it', r.set === AREA, r.set);
