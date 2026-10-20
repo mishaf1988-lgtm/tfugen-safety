@@ -4,7 +4,7 @@
 // routine-db op wa_me answers only to that number, falling back to the template outside the window.
 import { onRequest as hook, fireText, ACK_TEXT, FAIL_TEXT } from './_build/wa-hook.mjs';
 import { onRequest as rdb, hazardChoiceNote } from './_build/routine-db.mjs';
-import { metaSigOk, inboundMessages, waOneLine, ASSISTANT_TEMPLATE } from './_build/_wa.mjs';
+import { metaSigOk, inboundMessages, waOneLine, ASSISTANT_TEMPLATE, sameSession } from './_build/_wa.mjs';
 import fs from 'fs';
 
 let pass = 0, fail = 0;
@@ -13,7 +13,7 @@ const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co', OWNER = '972501234567';
 let fireStatus = 200;
 const ENV = { META_APP_SECRET: 'app-secret', WA_VERIFY_TOKEN: 'vt-1', ASSISTANT_FIRE_URL: 'https://api.anthropic.com/v1/claude_code/routines/trig_X/fire',
   ASSISTANT_FIRE_TOKEN: 'tok', SUPABASE_SERVICE_ROLE_KEY: 'srv', ROUTINE_KEY: 'k-1', META_PHONE_NUMBER_ID: 'P1', META_ACCESS_TOKEN: 'mt' };
-let reviewUrls = [], order = [], hz = {}, hzWrites = [], graph = null, graphCalls = [], fires = [], metas = [], logs = [], state = {}, metaReply = () => ({ ok: true, body: { messages: [{ id: 'wamid.OUT1' }] } }), owner = OWNER;
+let fireSession = 'cse_01OLD', probe2Auth = [], reviewUrls = [], order = [], hz = {}, hzWrites = [], graph = null, graphCalls = [], fires = [], metas = [], logs = [], state = {}, metaReply = () => ({ ok: true, body: { messages: [{ id: 'wamid.OUT1' }] } }), owner = OWNER;
 globalThis.fetch = async (url, opt = {}) => {
   const m = opt.method || 'GET';
   if (url.startsWith(SB + '/rest/v1/notification_prefs')) return new Response(JSON.stringify(owner ? [{ prefs: { trustee_hazard: { whatsapp_to: '+' + owner } } }] : []), { status: 200 });
@@ -36,7 +36,8 @@ globalThis.fetch = async (url, opt = {}) => {
   }
   if (url === ENV.ASSISTANT_FIRE_URL) order.push('fire');
   if (url.startsWith('https://graph.facebook.com/')) order.push('meta');
-  if (url === ENV.ASSISTANT_FIRE_URL) { fires.push({ auth: opt.headers.Authorization, beta: opt.headers['anthropic-beta'], body: JSON.parse(opt.body) }); return new Response('{}', { status: fireStatus }); }
+  if (url === ENV.ASSISTANT_FIRE_URL) { fires.push({ auth: opt.headers.Authorization, beta: opt.headers['anthropic-beta'], body: JSON.parse(opt.body) }); return new Response(JSON.stringify({ type: 'routine_fire', claude_code_session_id: fireSession }), { status: fireStatus }); }
+  if (url === 'https://api.anthropic.com/v1/claude_code/routines/trig_01NEWNEWNEWNEWNEWNEWNEWN/fire') { probe2Auth.push(opt.headers.Authorization); return new Response(JSON.stringify({ claude_code_session_id: 'cse_01FRESH', claude_code_session_url: 'https://claude.ai/code/cse_01FRESH' }), { status: 200 }); }
   if (url.startsWith('https://graph.facebook.com/') && graph) { const r = graph(url, m, opt); if (r) { graphCalls.push({ url, m }); return new Response(JSON.stringify(r.body), { status: r.status || 200 }); } }
   if (url.startsWith('https://graph.facebook.com/')) { const b = JSON.parse(opt.body); metas.push(b); const r = metaReply(b); return new Response(JSON.stringify(r.body), { status: r.ok ? 200 : 400 }); }
   return new Response('[]', { status: 200 });
@@ -165,6 +166,17 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   const posts = graphCalls.filter((x) => x.m === 'POST').length;
   c = await call({ op: 'wa_check', subscribe: true });
   check('subscribe again when all is set: no new POST', graphCalls.filter((x) => x.m === 'POST').length === posts && c.messages_ok, c);
+  c = await call({ op: 'wa_check', fire_probe: true, expect_session: 'session_01OLD' });
+  check('fire_probe with expect_session: the session it landed in, and landed true (cse_ = session_)', c.fire_session === 'cse_01OLD' && c.fire_landed === true, c);
+  fireSession = 'cse_01FRESH';
+  c = await call({ op: 'wa_check', fire_probe: true, expect_session: 'session_01OLD' });
+  check('a fire that opened another session: landed false (lesson 133)', c.fire_landed === false && c.fire_session === 'cse_01FRESH', c);
+  fireSession = 'cse_01OLD';
+  ENV.ASSISTANT2_FIRE_TOKEN = 'tok2';
+  c = await call({ op: 'wa_check', fire_probe_trigger: 'trig_01NEWNEWNEWNEWNEWNEWNEWN', expect_session: 'session_01LEAN' });
+  check('probe of a new trigger: its own token, the session, landed false when it went elsewhere', probe2Auth[probe2Auth.length - 1] === 'Bearer tok2' && c.probe2_session === 'cse_01FRESH' && c.probe2_landed === false && c.fire_to === 'old', c);
+  delete ENV.ASSISTANT2_FIRE_TOKEN;
+  check('sameSession: prefixes, empty, different', sameSession('cse_A1', 'session_A1') && !sameSession('', '') && !sameSession(null, 'x') && !sameSession('cse_A1', 'cse_A2'));
   const fb = fires.length;
   c = await call({ op: 'wa_check', fire_probe: true });
   check('fire_probe: status only, and the text is not Michael\'s header line', c.fire_status === 200 && fires.length === fb + 1 && fires[fires.length - 1].body.text.indexOf('\u05de\u05de\u05d9\u05db\u05d0\u05dc, \u05e0\u05d1\u05d3\u05e7') < 0, c);

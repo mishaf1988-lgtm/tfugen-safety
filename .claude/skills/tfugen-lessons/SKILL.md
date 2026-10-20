@@ -139,8 +139,8 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 **13. הודעות המתנה באנגלית (01/10/2026).**
 מה קרה: נכתבו באנגלית.
 הכלל: עברית תמיד.
-נאכף: `hebrew-reply.py` (Stop) בודק כל קטע טקסט לחוד, `hebrew-reply-test.py`; תזכורת בתחילת כל תור `hebrew-prompt.py`, והודעת `ci-watch.py` בעברית (`hebrew-prompt-test.py`).
-חזר: 59 (17/10: 5 ביניים באנגלית, נתפסו. 13/10: 8 הודעות ביניים קצרות באנגלית לפני כלי, בשיחה ארוכה מאוד, `hebrew-midturn` תפס כל אחת. ההודעות היו בנות 5-10 מילים, וכנראה קל יותר לכתוב קצר באנגלית. 12/10: 3 הודעות ביניים באנגלית, `hebrew-midturn` תפס. 10/10 אחרי ה-hook: 3 פעמים הודעת ביניים באנגלית בלי פלט כלי באנגלית לפניה. 10/10: פעמיים הודעת "מחכה ל-CI" באנגלית, מיד אחרי ההודעה באנגלית של `ci-watch.py`. לפני כן: ה-hooks לא נטענו מ-`/home/user`). בלי repo כתיקיית עבודה אין hooks.
+נאכף: `hebrew-reply.py` (Stop) בודק כל קטע טקסט לחוד, `hebrew-reply-test.py`; תזכורת בתחילת כל תור `hebrew-prompt.py`, והודעת `ci-watch.py` בעברית (`hebrew-prompt-test.py`); שאלון באנגלית נחסם ב-`questionnaire-hebrew.py` (PreToolUse על AskUserQuestion, `questionnaire-hebrew-test.py`).
+חזר: 60 (20/10: שאלון שלם באנגלית, מיכאל דחה וכתב "בעברית"; נוסף `questionnaire-hebrew.py`. לפני כן בעיקר הודעות ביניים קצרות, ש-`hebrew-midturn` תופס). בלי repo כתיקיית עבודה אין hooks.
 
 **14. שיחה ארוכה מדי (01/10/2026).**
 מה קרה: הודעות איטיות ויקרות; "שיחה חדשה" הוטל על מיכאל.
