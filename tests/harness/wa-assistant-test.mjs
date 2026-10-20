@@ -2,7 +2,7 @@
 // questionnaire: "same number, the assistant only on a new message"). wa-hook.js takes only a
 // Meta-signed message from Michael's own number and fires the assistant's Routine once per message;
 // routine-db op wa_me answers only to that number, falling back to the template outside the window.
-import { onRequest as hook, fireText, ACK_TEXT } from './_build/wa-hook.mjs';
+import { onRequest as hook, fireText, ACK_TEXT, FAIL_TEXT } from './_build/wa-hook.mjs';
 import { onRequest as rdb, hazardChoiceNote } from './_build/routine-db.mjs';
 import { metaSigOk, inboundMessages, waOneLine, ASSISTANT_TEMPLATE } from './_build/_wa.mjs';
 import fs from 'fs';
@@ -13,7 +13,7 @@ const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co', OWNER = '972501234567';
 let fireStatus = 200;
 const ENV = { META_APP_SECRET: 'app-secret', WA_VERIFY_TOKEN: 'vt-1', ASSISTANT_FIRE_URL: 'https://api.anthropic.com/v1/claude_code/routines/trig_X/fire',
   ASSISTANT_FIRE_TOKEN: 'tok', SUPABASE_SERVICE_ROLE_KEY: 'srv', ROUTINE_KEY: 'k-1', META_PHONE_NUMBER_ID: 'P1', META_ACCESS_TOKEN: 'mt' };
-let hz = {}, hzWrites = [], graph = null, graphCalls = [], fires = [], metas = [], logs = [], state = {}, metaReply = () => ({ ok: true, body: { messages: [{ id: 'wamid.OUT1' }] } }), owner = OWNER;
+let order = [], hz = {}, hzWrites = [], graph = null, graphCalls = [], fires = [], metas = [], logs = [], state = {}, metaReply = () => ({ ok: true, body: { messages: [{ id: 'wamid.OUT1' }] } }), owner = OWNER;
 globalThis.fetch = async (url, opt = {}) => {
   const m = opt.method || 'GET';
   if (url.startsWith(SB + '/rest/v1/notification_prefs')) return new Response(JSON.stringify(owner ? [{ prefs: { trustee_hazard: { whatsapp_to: '+' + owner } } }] : []), { status: 200 });
@@ -33,6 +33,8 @@ globalThis.fetch = async (url, opt = {}) => {
     if (m === 'POST') { logs.push(...JSON.parse(opt.body)); return new Response('', { status: 201 }); }
     return new Response(JSON.stringify(/wamid=eq\.wamid\.ALERT/.test(url) ? [{ event_type: 'trustee_hazard', payload: { title: 'X - leak', id: 'r9' }, ts: 't' }] : []), { status: 200 });
   }
+  if (url === ENV.ASSISTANT_FIRE_URL) order.push('fire');
+  if (url.startsWith('https://graph.facebook.com/')) order.push('meta');
   if (url === ENV.ASSISTANT_FIRE_URL) { fires.push({ auth: opt.headers.Authorization, beta: opt.headers['anthropic-beta'], body: JSON.parse(opt.body) }); return new Response('{}', { status: fireStatus }); }
   if (url.startsWith('https://graph.facebook.com/') && graph) { const r = graph(url, m, opt); if (r) { graphCalls.push({ url, m }); return new Response(JSON.stringify(r.body), { status: r.status || 200 }); } }
   if (url.startsWith('https://graph.facebook.com/')) { const b = JSON.parse(opt.body); metas.push(b); const r = metaReply(b); return new Response(JSON.stringify(r.body), { status: r.ok ? 200 : 400 }); }
@@ -71,6 +73,7 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   const r1 = await post(raw, await sign(raw, ENV.META_APP_SECRET));
   check('Michael\'s message opens the window: wa_owner_in_at noted', !!state.wa_owner_in_at && Date.parse(state.wa_owner_in_at) === 1792400000 * 1000, state.wa_owner_in_at);
   check('Michael\'s signed message fires the assistant once', r1.status === 200 && fires.length === 1, fires);
+  check('the "got it" goes out before the fire (20/10/2026 10:30: the fire took 20 seconds)', order.indexOf('meta') >= 0 && order.indexOf('meta') < order.indexOf('fire'), order);
   check('an immediate "got it" to Michael, free text (20/10/2026: "do it: an immediate got it")', metas.length === 1 && metas[0].to === OWNER && metas[0].type === 'text' && metas[0].text.body === ACK_TEXT, metas);
   check('with the routine token and the beta header', fires[0] && fires[0].auth === 'Bearer tok' && fires[0].beta === 'experimental-cc-routine-2026-04-01');
   check('the fire text says checked by the server and holds the message', fires[0] && /wamid: wamid\.A/.test(fires[0].body.text) && fires[0].body.text.indexOf('מה המצב?') > 0);
@@ -106,7 +109,7 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   await post(fl, await sign(fl, ENV.META_APP_SECRET));
   check('the same message sent again after the failure is fired (not lost)', fires.length === nf + 2 && fires[fires.length - 1].body.text.includes('wamid.FAIL'), fires.length - nf);
 
-  check('one "got it" per fire that succeeded (the 500 got none), none for another number or a repeat', metas.length === fires.length - 1 && metas.every((x) => x.to === OWNER && x.text.body === ACK_TEXT), [metas.length, fires.length]);
+  check('one "got it" per message tried, the 500 also gets "could not pass it on", none for another number or a repeat', metas.filter((x) => x.text.body === ACK_TEXT).length === fires.length && metas.filter((x) => x.text.body === FAIL_TEXT).length === 1 && metas.every((x) => x.to === OWNER), metas.map((x) => x.text.body.slice(0, 6)));
   metas.length = 0;
   console.log('\n3. wa_me: only to Michael');
   const call = async (body) => (await rdb({ request: new Request('https://x/api/routine-db', { method: 'POST', headers: { 'x-routine-key': 'k-1', 'content-type': 'application/json' }, body: JSON.stringify(body) }), env: ENV })).json();
