@@ -67,6 +67,8 @@
 //              or the mail inbox. Michael's computer is not needed. odMkdirCheck.
 //   mail_draft  (20/10/2026) a draft in Michael's Outlook via the third Power Automate flow: {agent, why, to, subject, body,
 //              attach?: [up to 5 .pdf/.docx/.xlsx paths in the safety folder, each checked to exist]}. Never sent.
+//   relay_fire  (20/10/2026) wake the postman now, without text (its own session), at most once in 2 minutes;
+//              needs POSTMAN_FIRE_TOKEN. {agent, expect_session?} -> {fired, status, session, landed?}.
 //   od_put_pdf  (20/10/2026) ONE new PDF {agent, why, dir, name, b64} into an existing folder of the safety folder; never
 //              replaces a file, never into the protected folders. odPutPdfCheck.
 //   mail_request  (11/10/2026, Michael: "בצע: זרימה שנייה") ask the second Power Automate
@@ -349,6 +351,7 @@ export function odMkdirCheck(b) {
 // 20/10/2026 (Michael: "you have a tool to make a draft, attach the unsigned draft"): files a draft may
 // carry, up to 5, each a .pdf/.docx/.xlsx path inside the safety folder and outside the protected
 // folders. The flow reads each by its full path ("/" + OD_ROOT + rel) and attaches it.
+export const POSTMAN_TRIGGER = 'trig_01Py8YXifD3HtnQUmFgoTRft', RELAY_FIRE_KEY = 'relay_fire_at', RELAY_FIRE_GAP_S = 120;
 export const DRAFT_ATTACH_MAX = 5;
 export function draftAttach(list) {
   if (list === undefined || list === null) return { attach: [] };
@@ -817,6 +820,29 @@ export async function onRequest(context) {
           if (body.expect_session) out.probe2_landed = sameSession(out.probe2_session, body.expect_session);
         }
       }
+      return jsonResp(out, 200, {});
+    }
+    // relay_fire (20/10/2026, Michael in the questionnaire: "בצע: טוקן לדוור"): the WhatsApp assistant runs in a
+    // session with no session tools (lesson 134), so after it writes a chat row with relay_now it asks the server
+    // to wake the postman now. The fire carries no text, so it lands in the postman's own session (lesson 133).
+    // At most once in RELAY_FIRE_GAP_S: a loop cannot wake it over and over (each run reads its whole context).
+    if (body.op === 'relay_fire') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'expect_session'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      if (!env.POSTMAN_FIRE_TOKEN) return jsonResp({ ok: false, error: 'no postman token', fired: false }, 200, {});
+      const last = (await stateRead([RELAY_FIRE_KEY]).catch(() => []))[0];
+      const ago = last && last.value ? (Date.now() - Date.parse(last.value)) / 1000 : Infinity;
+      if (ago < RELAY_FIRE_GAP_S) return jsonResp({ ok: true, fired: false, why: 'fired ' + Math.round(ago) + 's ago' }, 200, {});
+      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify([{ key: RELAY_FIRE_KEY, value: new Date().toISOString(), updated_at: new Date().toISOString() }]), signal: tmo(SB_MS) });
+      let fr = { status: 'network', j: {} };
+      try {
+        const r = await fetch(fireUrlOf(POSTMAN_TRIGGER), { method: 'POST', signal: tmo(GRAPH_MS),
+          headers: { Authorization: 'Bearer ' + env.POSTMAN_FIRE_TOKEN, 'anthropic-beta': 'experimental-cc-routine-2026-04-01', 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+          body: JSON.stringify({}) });
+        fr = { status: r.status, j: await r.json().catch(() => ({})) };
+      } catch (e) { /* reported as network */ }
+      const out = { ok: fr.status === 200, fired: fr.status === 200, status: fr.status, session: (fr.j && fr.j.claude_code_session_id) || null };
+      if (body.expect_session) out.landed = sameSession(out.session, body.expect_session);
       return jsonResp(out, 200, {});
     }
     if (body.op === 'wa_tpl') {
