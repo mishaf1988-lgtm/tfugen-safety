@@ -65,7 +65,10 @@
 //              with conflictBehavior=fail: an existing name is never touched, nothing is moved,
 //              replaced or deleted. Never inside the old-versions / to-delete / ARCHIVE folders
 //              or the mail inbox. Michael's computer is not needed. odMkdirCheck.
-//   mail_draft  (20/10/2026) a draft in Michael's Outlook via the third Power Automate flow: {agent, why, to, subject, body}. Never sent.
+//   mail_draft  (20/10/2026) a draft in Michael's Outlook via the third Power Automate flow: {agent, why, to, subject, body,
+//              attach?: [up to 5 .pdf/.docx/.xlsx paths in the safety folder, each checked to exist]}. Never sent.
+//   od_put_pdf  (20/10/2026) ONE new PDF {agent, why, dir, name, b64} into an existing folder of the safety folder; never
+//              replaces a file, never into the protected folders. odPutPdfCheck.
 //   mail_request  (11/10/2026, Michael: "בצע: זרימה שנייה") ask the second Power Automate
 //              flow for the attachments of one old mail: write a small text file with the
 //              message id into OD_REQ. The flow (When a file is created there) opens the
@@ -281,7 +284,11 @@ export function draftRequest(b) {
   while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
   const kept = lines.join('\n').replace(/\s+$/, '');
   const html = kept.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').split('\n').join('<br>');
-  return { file: JSON.stringify({ to, subject, body: kept, html: '<div dir="rtl">' + html + SITE.signature + '</div>' }) };
+  const at = draftAttach(b.attach);
+  if (at.error) return { error: at.error };
+  const req = { to, subject, body: kept, html: '<div dir="rtl">' + html + SITE.signature + '</div>' };
+  if (at.attach.length) req.attachments = at.attach.map((a) => ({ path: a.path, name: a.name }));
+  return { file: JSON.stringify(req), attach: at.attach };
 }
 export const MAIL_REQ_ID = /^[A-Za-z0-9_=+\/-]{40,400}$/;
 const OD_NO_DIR = /(^|\/)(_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea|\u05dc\u05de\u05d7\u05d9\u05e7\u05d4|ARCHIVE)(\/|$)/i;
@@ -338,6 +345,37 @@ export function odMkdirCheck(b) {
   if (OD_NO_DIR.test(parent.join('/')) || parent[0] === OD_INBOX || parent[0] === OD_REQ) return { error: 'bad parent' };
   if (!name || name.indexOf('/') >= 0 || bad(name) || OD_NO_DIR.test(name) || name === OD_INBOX || name === OD_REQ) return { error: 'bad name' };
   return { parent: OD_ROOT + parent.join('/'), name };
+}
+// 20/10/2026 (Michael: "you have a tool to make a draft, attach the unsigned draft"): files a draft may
+// carry, up to 5, each a .pdf/.docx/.xlsx path inside the safety folder and outside the protected
+// folders. The flow reads each by its full path ("/" + OD_ROOT + rel) and attaches it.
+export const DRAFT_ATTACH_MAX = 5;
+export function draftAttach(list) {
+  if (list === undefined || list === null) return { attach: [] };
+  if (!Array.isArray(list) || !list.length || list.length > DRAFT_ATTACH_MAX) return { error: 'attach: 1-' + DRAFT_ATTACH_MAX + ' paths' };
+  const out = [];
+  for (const raw of list) {
+    const parts = String(raw || '').split('/').filter(Boolean);
+    const bad = (x) => x === '.' || x === '..' || OD_BAD.test(x) || x.length > 200 || x.startsWith('.');
+    if (!parts.length || parts.length > OD_MKDIR_DEPTH + 1 || parts.some(bad) || !/\.(pdf|docx|xlsx)$/i.test(parts[parts.length - 1])) return { error: 'attach: bad path' };
+    if (OD_NO_DIR.test(parts.join('/')) || parts[0] === OD_REQ || parts[0] === OD_DRAFT) return { error: 'attach: bad path' };
+    out.push({ rel: parts.join('/'), path: '/' + OD_ROOT + parts.join('/'), name: parts[parts.length - 1] });
+  }
+  return { attach: out };
+}
+// od_put_pdf (20/10/2026): ONE new PDF {dir, name, b64} into a folder that already exists inside the safety
+// folder, e.g. an appointment letter and its certificate merged into one file. A PDF only (%PDF- at the
+// start), 4 MB at most, never replacing a file (name taken = refused), never into the protected folders.
+export const OD_PUT_MAX = 4 * 1024 * 1024;
+export function odPutPdfCheck(b) {
+  const c = odMkdirCheck({ agent: b.agent, why: b.why, parent: b.dir, name: b.name });
+  if (c.error) return { error: c.error === 'bad parent' ? 'bad dir' : c.error };
+  if (!/\.pdf$/i.test(c.name)) return { error: 'bad name' };
+  let bytes;
+  try { bytes = Uint8Array.from(atob(String(b.b64 || '')), (ch) => ch.charCodeAt(0)); } catch (e) { return { error: 'bad b64' }; }
+  if (!bytes.length || bytes.length > OD_PUT_MAX) return { error: 'size 1-' + OD_PUT_MAX };
+  if (String.fromCharCode(...bytes.slice(0, 5)) !== '%PDF-') return { error: 'not a pdf' };
+  return { dir: c.parent, name: c.name, bytes };
 }
 // 12/10/2026 (retro, Michael: "בצע"): OneDrive keeps createdDateTime on a move, so a file that waited a
 // month in the inbox and was then moved to "לא לתיוק" was deleted the next night. Every move there is
@@ -585,18 +623,43 @@ export async function onRequest(context) {
       return jsonResp({ ok: true, file: OD_REQ + '/' + name, size: f.size || null }, 200, {});
     }
     if (body.op === 'mail_draft') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'subject', 'body'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'subject', 'body', 'attach'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
       if (String(body.why || '').trim().length < 5) return jsonResp({ ok: false, error: 'why required' }, 400, {});
       const d = draftRequest(body);
       if (d.error) return jsonResp({ ok: false, error: d.error }, 400, {});
       const at = await accessToken(env);
+      // Every attachment must be there now: a missing one would stop the flow with no draft at all.
+      for (const a of d.attach) {
+        const seg = (OD_ROOT + a.rel).split('/').filter(Boolean).map(encodeURIComponent).join('/');
+        const r = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + seg + '?select=id,file', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) });
+        const j = r.ok ? await r.json().catch(() => ({})) : {};
+        if (!r.ok || !j.file) return jsonResp({ ok: false, error: 'attach missing: ' + a.name }, 200, {});
+      }
       // 20/10/2026: a call that timed out had written its file, and the retry made a second draft. The name
       // is the day and the content's hash, so the same draft again the same day overwrites its own file,
       // which the flow ("when a file is created") does not see as new.
       const name = new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + (await digest(d.file)).slice(0, 16) + '.txt';
       const f = await putFile(at.token, OD_ROOT + OD_DRAFT, name, d.file, 'text/plain');
-      return jsonResp({ ok: true, file: OD_DRAFT + '/' + name, size: f.size || null }, 200, {});
+      return jsonResp({ ok: true, file: OD_DRAFT + '/' + name, size: f.size || null, attachments: d.attach.length }, 200, {});
+    }
+    if (body.op === 'od_put_pdf') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'dir', 'name', 'b64'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const c = odPutPdfCheck(body);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const at = await accessToken(env);
+      const gh = { Authorization: 'Bearer ' + at.token };
+      const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
+      const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+      const par = await fetch(G + enc(c.dir) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
+      if (!par.ok) return jsonResp({ ok: false, error: 'dir ' + par.status }, 200, {});
+      if (!(await par.json().catch(() => ({}))).folder) return jsonResp({ ok: false, error: 'dir is not a folder' }, 200, {});
+      const taken = await fetch(G + enc(c.dir + '/' + c.name) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
+      if (taken.status !== 404) return jsonResp({ ok: false, error: taken.ok ? 'name taken' : 'name check ' + taken.status }, 200, {});
+      const up = await fetch(G + enc(c.dir + '/' + c.name) + ':/content?@microsoft.graph.conflictBehavior=fail', { method: 'PUT', headers: { ...gh, 'Content-Type': 'application/pdf' }, body: c.bytes, signal: tmo(GRAPH_MS) });
+      const uj = await up.json().catch(() => ({}));
+      if (!up.ok) return jsonResp({ ok: false, error: 'put ' + up.status }, 200, {});
+      return jsonResp({ ok: true, path: c.dir.slice(OD_ROOT.length) + '/' + c.name, size: uj.size || null, webUrl: uj.webUrl || null }, 200, {});
     }
     if (body.op === 'od_mkdir') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'parent', 'name'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});

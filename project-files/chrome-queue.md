@@ -81,6 +81,21 @@
 בסוף: לכל חלק בוצע או לא; האם שני השמות מופיעים כ-Secret; האם האימות עבר ו-messages Subscribed. בלי שום ערך סודי.
 ```
 
+- [ ] **C26. Power Automate: קבצים מצורפים בזרימה "טיוטות מהעוזר"** (20/10/2026, מיכאל: "יש לך כלי להכין טיוטה וצרף את הטיוטה ללא חתימה"). השרת כבר שולח בבקשת הטיוטה רשימת `attachments` (נתיב ושם של כל קובץ ב-OneDrive). הזרימה צריכה לצרף אותם. הראשונה שמחכה: ארבעת הקבצים של מפעילי דוד הקיטור (כתב מינוי לא חתום + תעודה) לגני ולצחי. טקסט להדבקה בכרום:
+  ```
+  אתה מעדכן זרימה קיימת ב-Power Automate. עבור על השלבים ברצף, עצור רק אם משהו לא תואם, ותאר מה אתה רואה. אל תוסיף שום פעולה ששולחת מייל, ואל תשנה את הטריגר.
+  1. פתח https://make.powerautomate.com > My flows > "טיוטות מהעוזר" > Edit.
+  2. אחרי הפעולה Compose: New step > Variables "Initialize variable". Name: att, Type: Array, Value: []
+  3. אחריה: Control "Apply to each". בשדה "Select an output", בלשונית Expression: coalesce(outputs('Compose')?['attachments'], json('[]'))
+  4. בתוך הלולאה: OneDrive for Business "Get file content using path". File Path, בלשונית Expression: items('Apply_to_each')?['path']
+  5. בתוך הלולאה, אחריה: Variables "Append to array variable". Name: att. Value (טקסט, עם שני ביטויים במקומות המסומנים):
+     {"Name": "<Expression: items('Apply_to_each')?['name']>", "ContentBytes": "<Expression: body('Get_file_content_using_path')?['$content']>"}
+  6. בפעולה "Draft an email message" (אחרי הלולאה): פתח Show advanced options, בשדה Attachments לחץ על הכפתור שמחליף לקלט של מערך שלם (Switch to input entire array), ושים Expression: variables('att')
+  7. Save. אל תריץ בדיקה ידנית. בדוק שה-Flow checker מראה 0 שגיאות.
+  בסוף: דוח קצר: האם כל שבעת השלבים עברו, ומה ה-Flow checker הראה.
+  ```
+  אחרי הביצוע: Claude שולח `mail_draft` לבדיקה למיכאל עצמו עם קובץ מצורף אחד, ואז את הטיוטה לגני ולצחי עם ארבעת הקבצים.
+
 ## בוצע
 
 - [x] **C21. קיצור מתוזמן יומי ב-Claude בכרום שקורא את התור הזה** (18/10/2026, מיכאל בשאלון: "בצע: קיצור מתוזמן בכרום"). בוצע 18/10/2026 על ידי מיכאל: הקיצור "תור כרום תפוגן", יומי ב-08:00, רק מזכיר ולא מבצע. אומת לפי מיכאל בשאלון ("כבר יצרתי את הקיצור"); ב-18/10/2026 Claude בכרום קרא את התור, הציג את C21 ושאל לפני ביצוע. מהענן אין כלי שקורא קיצורים של כרום.
