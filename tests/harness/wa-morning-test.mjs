@@ -37,8 +37,12 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   check('nothing waiting: the one-line answer', /^בוקר טוב, אין/.test(buildBrief([], [], '2026-10-20')));
   const four = [{ n: 'A', e: '2026-10-01' }, { n: 'B', e: '2026-10-22' }, { n: 'C', e: '2026-10-25' }, { n: 'D', e: '2026-10-26' }];
   const t = buildBrief(four, ['routine-od-scan'], '2026-10-20');
-  check('at most 3 expiries, the rest counted, the failed agent named', /- A \(פג 01\/10\)/.test(t) && /- B \(עד 22\/10\)/.test(t) && !/- D/.test(t) && /ועוד 1/.test(t) && /routine-od-scan/.test(t), t);
+  check('at most 3 expiries, the rest counted, the failed agent named', /- A \(פג 01\/10\/2026\)/.test(t) && /- B \(עד 22\/10\/2026\)/.test(t) && !/- D/.test(t) && /ועוד 1/.test(t) && /routine-od-scan/.test(t), t);
   check('the date as DD/MM/YYYY', /20\/10\/2026/.test(t));
+  // 20/10/2026, the first dry run: "(expired 09/11)" read as a future date; it was 09/11/2025.
+  const old = buildBrief([{ n: '\u05d8\u05d5\u05e4\u05e1 9\u05d0 \u2013 \u05ea\u05e7\u05d9\u05e0\u05d5\u05ea', e: '2025-11-09' }], [], '2026-10-20');
+  check('an expiry from last year shows its year', /\(\u05e4\u05d2 09\/11\/2025\)/.test(old), old);
+  check('a long dash in a name from the database becomes "-"', !/\u2013/.test(old) && /9\u05d0 - /.test(old), old);
   const long = buildBrief([{ n: 'x'.repeat(500), e: '2026-10-01' }, { n: 'y'.repeat(500), e: '2026-10-02' }], ['a'.repeat(300)], '2026-10-20');
   check('never over ' + MAX_CHARS + ' characters', long.length <= MAX_CHARS, long.length);
   check('keyboard characters only (no long dash, no curly quotes)', !/[—–“”…־]/.test(t + long));

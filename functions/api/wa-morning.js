@@ -25,9 +25,11 @@ export function ilDay(d) { return new Intl.DateTimeFormat('en-CA', { timeZone: T
 export function ilHour(d) { return Number(new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', hourCycle: 'h23' }).format(d)); }
 export function ilDow(d) { return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'short' }).format(d)); }
 export function dueNow(d) { const w = ilDow(d); return w >= 0 && w <= 4 && ilHour(d) === 7; }
-const dm = (ymd) => { const p = String(ymd || '').slice(0, 10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] : ''; };
 const dmy = (ymd) => { const p = String(ymd || '').slice(0, 10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : ''; };
-const clip = (s, n) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trim() + '.' : s; };
+// Names come from the database: their long dashes, curly quotes and ellipses become keyboard characters
+// (CLAUDE.md, text sent to people).
+export const keyboard = (s) => String(s || '').replace(/[\u2013\u2014\u05be]/g, '-').replace(/[\u201c\u201d\u05f4]/g, '"').replace(/[\u2018\u2019\u05f3]/g, "'").replace(/\u2026/g, '...');
+const clip = (s, n) => { s = keyboard(s).replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trim() + '.' : s; };
 
 // Pure: the text. items = [{n, e}] already sorted by e, today = 'YYYY-MM-DD',
 // failed = agent names that reported ok:false in the last 24 hours.
@@ -35,7 +37,7 @@ export function buildBrief(items, failed, today) {
   const lines = [];
   if (items.length) {
     lines.push('\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea:');
-    items.slice(0, 3).forEach((x) => lines.push('- ' + clip(x.n, 60) + (x.e < today ? ' (\u05e4\u05d2 ' : ' (\u05e2\u05d3 ') + dm(x.e) + ')'));
+    items.slice(0, 3).forEach((x) => lines.push('- ' + clip(x.n, 60) + (x.e < today ? ' (\u05e4\u05d2 ' : ' (\u05e2\u05d3 ') + dmy(x.e) + ')'));
     if (items.length > 3) lines.push('\u05d5\u05e2\u05d5\u05d3 ' + (items.length - 3) + ' \u05d1\u05de\u05e1\u05da \u05d4\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea.');
   }
   if (failed.length) lines.push('\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc \u05d1-24 \u05d4\u05e9\u05e2\u05d5\u05ea \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d5\u05ea: ' + failed.slice(0, 5).join(', ') + '.');
