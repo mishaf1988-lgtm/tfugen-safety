@@ -101,6 +101,30 @@ export async function noteOwnerIn(env, sbUrl, iso) {
   } catch (e) { /* the next message notes it again */ }
 }
 
+// 20/10/2026 (Michael answered "2" without replying to the message, and the assistant asked what
+// it meant: each message starts a fresh run). The last message the assistant sent is kept, and
+// wa-hook adds it to the next message from Michael, with the hazard it was about (ref).
+export const LAST_OUT_KEY = 'wa_last_out';
+export const LAST_OUT_MS = 3 * 3600000;
+export async function noteLastOut(env, sbUrl, text, ref) {
+  const k = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!k) return;
+  try {
+    await fetch(sbUrl + '/rest/v1/server_state?on_conflict=key', { method: 'POST', signal: tmo(SB_TIMEOUT_MS),
+      headers: { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([{ key: LAST_OUT_KEY, value: { at: new Date().toISOString(), text: String(text || '').slice(0, 1500), ref: ref ? String(ref).slice(0, 120) : null }, updated_at: new Date().toISOString() }]) });
+  } catch (e) { /* a missing note only costs the context of one answer */ }
+}
+export async function lastOut(env, sbUrl, nowMs) {
+  if (!env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  try {
+    let v = await stateRow(env, sbUrl, LAST_OUT_KEY);
+    if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { return null; } }
+    if (!v || !v.text) return null;
+    return (nowMs || Date.now()) - (Date.parse(v.at) || 0) < LAST_OUT_MS ? v : null;
+  } catch (e) { return null; }
+}
+
 // Free text inside the window (opts.windowOpen true); outside it the template (one line, 1000 chars).
 // A closed window that Meta still reports at once (131047) also falls back to the template.
 export async function sendToOwner(env, to, text, opts) {

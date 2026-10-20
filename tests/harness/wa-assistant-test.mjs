@@ -179,6 +179,25 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   hj = await call({ op: 'hazard_choice', src: 'trustee_hazard', id: 'nope', choice: 2 });
   check('a row that does not exist: nothing written', !hj.ok && /not found/.test(hj.error) && hzWrites.length === 2, hj);
 
+  console.log('\n3d. the last question goes with the next answer (20/10/2026: "2" without a reply, the assistant asked what it meant)');
+  metaReply = () => ({ ok: true, body: { messages: [{ id: 'wamid.Q1' }] } });
+  state.wa_owner_in_at = new Date().toISOString();
+  let qj = await call({ op: 'wa_me', text: 'מה לעשות?\n1. רכז המסמכים\n2. רכז הדוחות', ref: 'trustee_hazard r9' });
+  check('wa_me notes what it sent, with its ref', qj.ok && state.wa_last_out && /2\. /.test(state.wa_last_out.text) && state.wa_last_out.ref === 'trustee_hazard r9', state.wa_last_out);
+  const fb2 = fires.length;
+  const two = msgBody(OWNER, 'wamid.TWO', '2');
+  await post(two, await sign(two, ENV.META_APP_SECRET));
+  const ft = fires[fires.length - 1] && fires[fires.length - 1].body.text;
+  check('"2" with no reply: the fire carries the last question on one line and its ref', fires.length === fb2 + 1 && /prev_assistant_message .*1\. .* \/ 2\. /.test(ft) && /prev_ref: trustee_hazard r9/.test(ft) && /\ntext: 2$/.test(ft), ft);
+  state.wa_last_out = { at: new Date(Date.now() - 4 * 3600000).toISOString(), text: 'old question', ref: null };
+  const late = msgBody(OWNER, 'wamid.LATE', '1');
+  await post(late, await sign(late, ENV.META_APP_SECRET));
+  check('a question older than 3 hours is not attached', !/prev_assistant_message/.test(fires[fires.length - 1].body.text), fires[fires.length - 1].body.text);
+  const rep2 = msgBody(OWNER, 'wamid.R2', '3', 'wamid.ALERT');
+  state.wa_last_out = { at: new Date().toISOString(), text: 'q', ref: null };
+  await post(rep2, await sign(rep2, ENV.META_APP_SECRET));
+  check('a WhatsApp reply to a known alert: reply_to, not the last question', /reply_to/.test(fires[fires.length - 1].body.text) && !/prev_assistant_message/.test(fires[fires.length - 1].body.text));
+
   console.log('\n4. the front door');
   const mw = fs.readFileSync(new URL('../../functions/_middleware.js', import.meta.url), 'utf8');
   check('wa-hook is a machine path (Meta calls from abroad)', /'\/api\/wa-hook'/.test(mw));
