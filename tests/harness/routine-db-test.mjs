@@ -4,13 +4,13 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession } from './_build/routine-db.mjs';
+import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const ENV = { ROUTINE_KEY: 'k-123', SUPABASE_SERVICE_ROLE_KEY: 'srv' };
-let calls = [], state = {};
+let calls = [], state = {}, fires = [], fireSession = 'cse_01POSTMAN';
 globalThis.fetch = async (url, opt = {}) => {
   calls.push({ url, method: opt.method || 'GET', body: opt.body });
   if (url.startsWith(SB + '/rest/v1/server_state')) {
@@ -20,6 +20,7 @@ globalThis.fetch = async (url, opt = {}) => {
   }
   if (url.startsWith(SB + '/rest/v1/oauth_tokens')) return new Response(JSON.stringify([{ user_email: 'm', refresh_token: 'r', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite' }]), { status: 200 });
   if (url.startsWith('https://graph.microsoft.com/')) return graph(url, opt);
+  if (url.startsWith('https://api.anthropic.com/')) { fires.push({ url, auth: opt.headers.Authorization, body: JSON.parse(opt.body) }); return new Response(JSON.stringify({ claude_code_session_id: fireSession }), { status: 200 }); }
   // expiry_set: a small docs / equip_inspections table (rows[table] = [...])
   const m = /\/rest\/v1\/(docs|equip_inspections)\?(.*)$/.exec(url);
   if (m && rows[m[1]]) {
@@ -406,6 +407,22 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('not a PDF, not .pdf, too big, a protected folder, a bad b64, or an extra field: refused',
       [{ b64: Buffer.from('hello').toString('base64') }, { name: 'b.docx' }, { dir: 'x/למחיקה' }, { b64: '***' }].every((o) => !!odPutPdfCheck({ ...P, ...o }).error) && !!odPutPdfCheck({ ...P, b64: Buffer.alloc(OD_PUT_MAX + 1, 37).toString('base64') }).error && (await call({ ...P, overwrite: true })).status === 400 && !puts.length);
     graph = async () => new Response('{}', { status: 500 });
+  }
+
+  console.log('\n4f4. relay_fire: wake the postman now, without text (20/10/2026, Michael: "בצע: טוקן לדוור")');
+  {
+    let x = await call({ op: 'relay_fire', agent: 'routine-wa-assistant' });
+    check('no POSTMAN_FIRE_TOKEN: nothing fired, said so', !x.json.ok && x.json.error === 'no postman token' && !fires.length, x.json);
+    const E2 = { ...ENV, POSTMAN_FIRE_TOKEN: 'pt-1' };
+    delete state.relay_fire_at;
+    x = await call({ op: 'relay_fire', agent: 'routine-wa-assistant', expect_session: 'session_01POSTMAN' }, 'k-123', 'POST', E2);
+    check('fired once at the postman trigger, its own token, no text (so it lands in its own session), landed true', x.json.fired && fires.length === 1 && fires[0].url.indexOf('/routines/' + POSTMAN_TRIGGER + '/fire') > 0 && fires[0].auth === 'Bearer pt-1' && !('text' in fires[0].body) && x.json.landed === true, { x: x.json, f: fires[0] });
+    x = await call({ op: 'relay_fire', agent: 'routine-wa-assistant' }, 'k-123', 'POST', E2);
+    check('again within ' + RELAY_FIRE_GAP_S + 's: not fired (a loop cannot wake it over and over)', x.json.ok && !x.json.fired && fires.length === 1, x.json);
+    state.relay_fire_at = new Date(Date.now() - (RELAY_FIRE_GAP_S + 5) * 1000).toISOString(); fireSession = 'cse_01FRESH';
+    x = await call({ op: 'relay_fire', agent: 'routine-wa-assistant', expect_session: 'session_01POSTMAN' }, 'k-123', 'POST', E2);
+    check('after the gap: fired again; a fire that went to another session says landed false', x.json.fired && fires.length === 2 && x.json.landed === false, x.json);
+    check('an extra field (text): refused, nothing fired', (await call({ op: 'relay_fire', agent: 'x', text: 'hi' }, 'k-123', 'POST', E2)).status === 400 && fires.length === 2);
   }
 
   console.log('\n5. the country gate lets it through (the cloud is not in Israel)');
