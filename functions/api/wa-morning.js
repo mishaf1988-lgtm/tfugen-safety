@@ -15,7 +15,7 @@
 //   body {dry: true}    returns the text, sends nothing
 //   body {force: true}  sends now, any hour or day (a manual retry)
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
-import { ownerWa, sendToOwner } from '../_wa.js';
+import { ownerWa, sendToOwner, ownerWindowOpen } from '../_wa.js';
 
 export const LAST_KEY = 'wa_morning_last';
 export const MAX_CHARS = 700;
@@ -100,7 +100,7 @@ export async function run(env, now, body) {
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };
   const to = await ownerWa(env, sbFrom(env));
   if (!to) return { ok: false, error: 'no owner number in notification_prefs' };
-  const r = await sendToOwner(env, to, text);
+  const r = await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, sbFrom(env), now.getTime()) });
   if (r.ok) await stateSet(env, LAST_KEY, g.today).catch(() => {});
   await sb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
     body: JSON.stringify([{ id: 'wm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),

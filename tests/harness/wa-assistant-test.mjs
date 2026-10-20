@@ -62,6 +62,7 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   check('an unsigned POST is refused', (await post(raw)).status === 403 && fires.length === 0);
   check('a POST signed with another secret is refused', (await post(raw, await sign(raw, 'other'))).status === 403 && fires.length === 0);
   const r1 = await post(raw, await sign(raw, ENV.META_APP_SECRET));
+  check('Michael\'s message opens the window: wa_owner_in_at noted', !!state.wa_owner_in_at && Date.parse(state.wa_owner_in_at) === 1792400000 * 1000, state.wa_owner_in_at);
   check('Michael\'s signed message fires the assistant once', r1.status === 200 && fires.length === 1, fires);
   check('with the routine token and the beta header', fires[0] && fires[0].auth === 'Bearer tok' && fires[0].beta === 'experimental-cc-routine-2026-04-01');
   check('the fire text says checked by the server and holds the message', fires[0] && /wamid: wamid\.A/.test(fires[0].body.text) && fires[0].body.text.indexOf('מה המצב?') > 0);
@@ -99,6 +100,7 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
 
   console.log('\n3. wa_me: only to Michael');
   const call = async (body) => (await rdb({ request: new Request('https://x/api/routine-db', { method: 'POST', headers: { 'x-routine-key': 'k-1', 'content-type': 'application/json' }, body: JSON.stringify(body) }), env: ENV })).json();
+  state.wa_owner_in_at = new Date().toISOString(); // Michael wrote a minute ago: the window is open
   let j = await call({ op: 'wa_me', text: 'עדכון', to: '972500000000' });
   check('sent as free text to the owner, never to a "to" in the body', j.ok && j.via === 'text' && metas.length === 1 && metas[0].to === OWNER && metas[0].type === 'text', { j, metas });
   check('logged with the message id', logs.some((l) => l.event_type === 'assistant' && l.payload.wamid === 'wamid.OUT1'));
@@ -106,6 +108,12 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   j = await call({ op: 'wa_me', text: 'שורה 1\nשורה 2' });
   const tpl = metas[metas.length - 1];
   check('window closed: the template, one line', j.ok && j.via === 'template' && tpl.template.name === ASSISTANT_TEMPLATE.name && tpl.template.components[0].parameters[0].text.indexOf('\n') < 0, { j, tpl });
+  metaReply = () => ({ ok: true, body: { messages: [{ id: 'wamid.T2' }] } });
+  state.wa_owner_in_at = new Date(Date.now() - 25 * 3600000).toISOString();
+  const before = metas.length;
+  j = await call({ op: 'wa_me', text: 'closed window' });
+  check('no message from Michael in 23 hours: straight to the template, no free text tried (20/10/2026: Meta took it and dropped it)', j.ok && j.via === 'template' && metas.length === before + 1 && metas[before].type === 'template', { j, m: metas.slice(before) });
+  metaReply = (b) => b.type === 'text' ? { ok: false, body: { error: { code: 131047 } } } : { ok: true, body: { messages: [{ id: 'wamid.T1' }] } };
   j = await call({ op: 'wa_me', text: 'x', no_template: true });
   check('no_template: a closed window is an error, no template', !j.ok && j.code === 131047);
   owner = '';
