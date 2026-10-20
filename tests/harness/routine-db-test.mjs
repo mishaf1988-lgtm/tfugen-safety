@@ -309,7 +309,7 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     const D = { op: 'mail_draft', agent: 'dev', why: 'gas controller cert', to: 'tammybeg@gazit.co.il', subject: 'תעודת כיול', body: 'שלום,\nשורה <b>2</b>' };
     let x = await call(D);
     const fj = puts[0] ? JSON.parse(puts[0].body) : {};
-    check('one PUT into the draft folder, JSON with to, subject, body and an RTL html with <br> and escaped tags', x.json.ok && puts.length === 1 && puts[0].url.indexOf('/root:/' + OD_ROOT + OD_DRAFT + '/') > 0 && fj.to === D.to && fj.subject === D.subject && fj.body === D.body && /^<div dir="rtl">.*<br>.*&lt;b&gt;2&lt;\/b&gt;<div style=/.test(fj.html), { x: x.json, puts });
+    check('one PUT into the draft folder, JSON with to, subject, body and an RTL html (dir and style, 20/10/2026: a thread reply keeps only the style) with <br> and escaped tags', x.json.ok && puts.length === 1 && puts[0].url.indexOf('/root:/' + OD_ROOT + OD_DRAFT + '/') > 0 && fj.to === D.to && fj.subject === D.subject && fj.body === D.body && /^<div dir="rtl" style="direction:rtl;text-align:right">.*<br>.*&lt;b&gt;2&lt;\/b&gt;<div style=/.test(fj.html), { x: x.json, puts });
     puts = []; await call(D); await call(D); await call({ ...D, subject: 'אחר' });
     check('the same draft twice (a retry after a timeout) goes to the same file name; another draft to another', puts.length === 3 && puts[0].url === puts[1].url && puts[0].url !== puts[2].url && /\/\d{8}-[0-9a-f]{16}\.txt:\/content$/.test(puts[0].url), puts.map((x) => x.url.slice(-40)));
     puts = [];

@@ -293,7 +293,8 @@ export function draftRequest(b) {
   const html = kept.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').split('\n').join('<br>');
   const at = draftAttach(b.attach);
   if (at.error) return { error: at.error };
-  const req = { to, subject, body: kept, html: '<div dir="rtl">' + html + SITE.signature + '</div>' };
+  // The style too (20/10/2026): a reply in a thread (Graph createReply "comment") drops dir="rtl" and keeps styles.
+  const req = { to, subject, body: kept, html: '<div dir="rtl" style="direction:rtl;text-align:right">' + html + SITE.signature + '</div>' };
   if (at.attach.length) req.attachments = at.attach.map((a) => ({ path: a.path, name: a.name }));
   // 20/10/2026 (Michael: "this is a mail in a thread, so it must go in the thread of the mails"): reply_to =
   // the id of the last mail in the thread (outlook_email_search "id"). The flow then makes the draft with
