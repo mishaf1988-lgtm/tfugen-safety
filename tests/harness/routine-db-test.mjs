@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession } from './_build/routine-db.mjs';
+import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -369,6 +369,43 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('live without the key: 403', (await call({ op: 'live' }, 'nope', 'POST', ENVL)).status === 403);
     l = await call({ op: 'live' }, 'k-123', 'POST', ENV);
     check('live with no ASSETS binding: ok false, says why', !l.json.ok && /ASSETS/.test(l.json.error), l.json);
+  }
+
+  console.log('\n4f3. mail_draft with attachments, od_put_pdf (20/10/2026: "attach the unsigned draft")');
+  {
+    const DIR = '21_x/boilers', have = { [OD_ROOT + DIR]: { id: 'D', folder: {} }, [OD_ROOT + DIR + '/a.pdf']: { id: 'A', file: {} } };
+    let puts = [];
+    graph = async (url, opt = {}) => {
+      const u = decodeURIComponent(url);
+      if (opt.method === 'PUT') { puts.push({ url: u, body: opt.body }); return new Response(JSON.stringify({ size: 9, webUrl: 'https://od/x' }), { status: 201 }); }
+      const m = /\/root:\/(.+?)\?select=/.exec(u);
+      if (m) { const it = have[m[1]]; return it ? new Response(JSON.stringify(it), { status: 200 }) : new Response('{}', { status: 404 }); }
+      return new Response('{}', { status: 400 });
+    };
+    const D = { op: 'mail_draft', agent: 'dev', why: 'certificates to HR', to: 'Geny@tapugan.co.il;tzachi@tapugan.co.il', subject: 'הסמכות', body: 'מצורפות ההסמכות' };
+    let x = await call({ ...D, attach: [DIR + '/a.pdf'] });
+    const fj = puts[0] ? JSON.parse(puts[0].body) : {};
+    check('an attachment that exists: in the request as its full path and name', x.json.ok && x.json.attachments === 1 && fj.attachments.length === 1 && fj.attachments[0].path === '/' + OD_ROOT + DIR + '/a.pdf' && fj.attachments[0].name === 'a.pdf', { x: x.json, fj });
+    puts = [];
+    x = await call({ ...D, attach: [DIR + '/missing.pdf'] });
+    check('an attachment that is not there: refused, no request file (the flow would make no draft)', !x.json.ok && /attach missing/.test(x.json.error) && !puts.length, x.json);
+    x = await call(D);
+    check('no attach: no attachments key, as before', x.json.ok && !('attachments' in JSON.parse(puts[0].body)));
+    check('attach: .., a protected folder, the draft or request folder, a non-document, empty or more than 5: refused',
+      [['../a.pdf'], ['x/למחיקה/a.pdf'], ['ARCHIVE/a.pdf'], [OD_DRAFT + '/a.pdf'], [OD_REQ + '/a.pdf'], ['a.exe'], [], ['1.pdf', '2.pdf', '3.pdf', '4.pdf', '5.pdf', '6.pdf'], 'a.pdf'].every((a) => !!draftAttach(a).error));
+    puts = [];
+    const pdf = Buffer.from('%PDF-1.7 test').toString('base64');
+    const P = { op: 'od_put_pdf', agent: 'dev', why: 'merged letter and certificate', dir: DIR, name: 'b.pdf', b64: pdf };
+    x = await call(P);
+    check('od_put_pdf: one PUT with conflictBehavior=fail, into the folder, the bytes as sent', x.json.ok && puts.length === 1 && puts[0].url.indexOf(OD_ROOT + DIR + '/b.pdf:/content?@microsoft.graph.conflictBehavior=fail') > 0 && String.fromCharCode(...puts[0].body.slice(0, 5)) === '%PDF-', { x: x.json, u: puts[0] && puts[0].url });
+    puts = [];
+    x = await call({ ...P, name: 'a.pdf' });
+    check('a name that is taken: refused, nothing written', !x.json.ok && x.json.error === 'name taken' && !puts.length, x.json);
+    x = await call({ ...P, dir: '21_x/none' });
+    check('a folder that is not there: refused', !x.json.ok && /^dir 404/.test(x.json.error) && !puts.length, x.json);
+    check('not a PDF, not .pdf, too big, a protected folder, a bad b64, or an extra field: refused',
+      [{ b64: Buffer.from('hello').toString('base64') }, { name: 'b.docx' }, { dir: 'x/למחיקה' }, { b64: '***' }].every((o) => !!odPutPdfCheck({ ...P, ...o }).error) && !!odPutPdfCheck({ ...P, b64: Buffer.alloc(OD_PUT_MAX + 1, 37).toString('base64') }).error && (await call({ ...P, overwrite: true })).status === 400 && !puts.length);
+    graph = async () => new Response('{}', { status: 500 });
   }
 
   console.log('\n5. the country gate lets it through (the cloud is not in Israel)');
