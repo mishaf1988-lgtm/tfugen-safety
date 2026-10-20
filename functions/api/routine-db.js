@@ -71,6 +71,8 @@
 //              needs POSTMAN_FIRE_TOKEN. {agent, expect_session?} -> {fired, status, session, landed?}.
 //   od_put_pdf  (20/10/2026) ONE new PDF {agent, why, dir, name, b64} into an existing folder of the safety folder; never
 //              replaces a file, never into the protected folders. odPutPdfCheck.
+//   od_archive  (20/10/2026) {agent, why, path, replaced_by}: the old version of a form moves to "_גרסאות קודמות" in its
+//              folder (created if missing), only when the new file sits beside it. odArchiveCheck.
 //   mail_request  (11/10/2026, Michael: "בצע: זרימה שנייה") ask the second Power Automate
 //              flow for the attachments of one old mail: write a small text file with the
 //              message id into OD_REQ. The flow (When a file is created there) opens the
@@ -292,6 +294,9 @@ export function draftRequest(b) {
   if (at.attach.length) req.attachments = at.attach.map((a) => ({ path: a.path, name: a.name }));
   return { file: JSON.stringify(req), attach: at.attach };
 }
+// A passport number never goes out on WhatsApp (20/10/2026: the assistant's answer about the forklift
+// course carried personal details). Names cannot be told apart from words; a passport number can.
+export function hasPassport(t) { return /(^|[^A-Za-z0-9])[A-Z]{1,2}[0-9]{6,8}(?![A-Za-z0-9])/.test(String(t || '')); }
 export const MAIL_REQ_ID = /^[A-Za-z0-9_=+\/-]{40,400}$/;
 const OD_NO_DIR = /(^|\/)(_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea|\u05dc\u05de\u05d7\u05d9\u05e7\u05d4|ARCHIVE)(\/|$)/i;
 // 18/10/2026 (Michael: "גם וגם"): csv too, the data file next to a lab certificate pdf.
@@ -365,6 +370,23 @@ export function draftAttach(list) {
     out.push({ rel: parts.join('/'), path: '/' + OD_ROOT + parts.join('/'), name: parts[parts.length - 1] });
   }
   return { attach: out };
+}
+// od_archive (20/10/2026, Michael: "when the assistant works on a form it must not keep the old form, move it
+// to the archive"): ONE file inside the safety folder moves to "_גרסאות קודמות" in its own folder (created if
+// missing), same name. Only when the file that replaces it (replaced_by) sits in the same folder, so this
+// archives a version and never hides a document. Never from the inbox, the requests or the drafts folder.
+export const OD_ARCHIVE_DIR = '_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea';
+export function odArchiveCheck(b) {
+  if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
+  if (String(b.why || '').trim().length < 5) return { error: 'why required' };
+  const parts = String(b.path || '').split('/').filter(Boolean);
+  const by = String(b.replaced_by || '');
+  const bad = (x) => x === '.' || x === '..' || OD_BAD.test(x) || x.length > 200 || x.startsWith('.');
+  if (parts.length < 2 || parts.length > OD_MKDIR_DEPTH + 1 || parts.some(bad) || !OD_EXT.test(parts[parts.length - 1])) return { error: 'bad path' };
+  if (OD_NO_DIR.test(parts.join('/')) || [OD_INBOX, OD_REQ, OD_DRAFT].indexOf(parts[0]) >= 0) return { error: 'bad path' };
+  if (!by || by.indexOf('/') >= 0 || bad(by) || !OD_EXT.test(by) || by === parts[parts.length - 1]) return { error: 'replaced_by: the new file name in the same folder' };
+  const dir = OD_ROOT + parts.slice(0, -1).join('/');
+  return { from: OD_ROOT + parts.join('/'), dir, by: dir + '/' + by, name: parts[parts.length - 1] };
 }
 // od_put_pdf (20/10/2026): ONE new PDF {dir, name, b64} into a folder that already exists inside the safety
 // folder, e.g. an appointment letter and its certificate merged into one file. A PDF only (%PDF- at the
@@ -689,6 +711,42 @@ export async function onRequest(context) {
       if (!mk.ok) return jsonResp({ ok: false, error: 'create ' + mk.status }, 200, {});
       return jsonResp({ ok: true, created: true, path: c.parent + '/' + c.name, webUrl: mj.webUrl || null }, 200, {});
     }
+    if (body.op === 'od_archive') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path', 'replaced_by'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const c = odArchiveCheck(body);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const at = await accessToken(env);
+      const gh = { Authorization: 'Bearer ' + at.token, 'Content-Type': 'application/json' };
+      const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
+      const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+      const src = await fetch(G + enc(c.from) + '?select=id,file', { headers: gh, signal: tmo(GRAPH_MS) });
+      if (!src.ok) return jsonResp({ ok: false, error: 'source ' + src.status }, 200, {});
+      const sj = await src.json();
+      if (!sj.file) return jsonResp({ ok: false, error: 'source is not a file' }, 200, {});
+      const nb = await fetch(G + enc(c.by) + '?select=id,file', { headers: gh, signal: tmo(GRAPH_MS) });
+      if (!nb.ok) return jsonResp({ ok: false, error: 'replaced_by ' + nb.status }, 200, {});
+      if (!(await nb.json()).file) return jsonResp({ ok: false, error: 'replaced_by is not a file' }, 200, {});
+      let arc = await fetch(G + enc(c.dir + '/' + OD_ARCHIVE_DIR) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
+      let aj;
+      if (arc.status === 404) {
+        const par = await fetch(G + enc(c.dir) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
+        if (!par.ok) return jsonResp({ ok: false, error: 'folder ' + par.status }, 200, {});
+        const pj = await par.json();
+        arc = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(pj.id) + '/children', {
+          method: 'POST', headers: gh, body: JSON.stringify({ name: OD_ARCHIVE_DIR, folder: {}, '@microsoft.graph.conflictBehavior': 'fail' }), signal: tmo(GRAPH_MS),
+        });
+        if (!arc.ok) return jsonResp({ ok: false, error: 'create archive ' + arc.status }, 200, {});
+      } else if (!arc.ok) return jsonResp({ ok: false, error: 'archive ' + arc.status }, 200, {});
+      aj = await arc.json();
+      if (!aj.folder) return jsonResp({ ok: false, error: 'archive is not a folder' }, 200, {});
+      const taken = await fetch(G + enc(c.dir + '/' + OD_ARCHIVE_DIR + '/' + c.name) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
+      if (taken.status !== 404) return jsonResp({ ok: false, error: taken.ok ? 'name taken in archive' : 'name check ' + taken.status }, 200, {});
+      const mv = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(sj.id) + '?@microsoft.graph.conflictBehavior=fail', {
+        method: 'PATCH', headers: gh, body: JSON.stringify({ parentReference: { id: aj.id } }), signal: tmo(GRAPH_MS),
+      });
+      if (!mv.ok) return jsonResp({ ok: false, error: 'move ' + mv.status }, 200, {});
+      return jsonResp({ ok: true, path: c.dir.slice(OD_ROOT.length) + '/' + OD_ARCHIVE_DIR + '/' + c.name }, 200, {});
+    }
     if (body.op === 'od_move') {
       const c = odMoveCheck(body);
       if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
@@ -726,6 +784,7 @@ export async function onRequest(context) {
       return jsonResp({ ok: true, path: c.toDir + '/' + c.name, size: mj.size || sj.size || null, webUrl: mj.webUrl || null, recorded }, 200, {});
     }
     if (body.op === 'wa_me') {
+      if (hasPassport(body.text)) return jsonResp({ ok: false, error: 'passport number in text: write "4 workers from the list", no ids (20/10/2026)' }, 400, {});
       if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
       const to = await ownerWa(env, url);
       if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});

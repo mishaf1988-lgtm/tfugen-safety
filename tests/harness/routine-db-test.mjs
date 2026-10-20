@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession } from './_build/routine-db.mjs';
+import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -103,7 +103,8 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     const owner = (p) => ops.filter((o) => o.at < p).pop();
     const own = [...src.matchAll(/method:\s*'PATCH'/g)].map((m) => (owner(m.index) || {}).op).sort().join();
     // 20/10/2026: hazard_choice, one note column on trustee_reports / near_miss (Michael: "only record").
-    check('no DELETE anywhere; one PATCH each in expiry_set, hazard_choice, od_move and talk_field', !/method:\s*'DELETE'/.test(src) && patches.length === 4 && own === 'expiry_set,hazard_choice,od_move,talk_field', own);
+    // 20/10/2026: od_archive, a move of an old form version into "_גרסאות קודמות" (Michael: "to the archive").
+    check('no DELETE anywhere; one PATCH each in expiry_set, hazard_choice, od_archive, od_move and talk_field', !/method:\s*'DELETE'/.test(src) && patches.length === 5 && own === 'expiry_set,hazard_choice,od_archive,od_move,talk_field', own);
   }
 
   console.log('\n4b. agent_report: append-only run log');
@@ -406,6 +407,32 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('a folder that is not there: refused', !x.json.ok && /^dir 404/.test(x.json.error) && !puts.length, x.json);
     check('not a PDF, not .pdf, too big, a protected folder, a bad b64, or an extra field: refused',
       [{ b64: Buffer.from('hello').toString('base64') }, { name: 'b.docx' }, { dir: 'x/למחיקה' }, { b64: '***' }].every((o) => !!odPutPdfCheck({ ...P, ...o }).error) && !!odPutPdfCheck({ ...P, b64: Buffer.alloc(OD_PUT_MAX + 1, 37).toString('base64') }).error && (await call({ ...P, overwrite: true })).status === 400 && !puts.length);
+    graph = async () => new Response('{}', { status: 500 });
+  }
+
+  console.log('\n4f3b. od_archive: the old form moves to "_גרסאות קודמות" (20/10/2026, Michael: "צריך להעביר לארכיון")');
+  {
+    const DIR = '11_x/07_forms', have = { [OD_ROOT + DIR]: { id: 'D', folder: {} }, [OD_ROOT + DIR + '/old.pdf']: { id: 'O', file: {} }, [OD_ROOT + DIR + '/new.pdf']: { id: 'N', file: {} } };
+    let posts = [], patches = [];
+    graph = async (url, opt = {}) => {
+      const u = decodeURIComponent(url);
+      if (opt.method === 'POST') { posts.push({ url: u, body: JSON.parse(opt.body) }); have[OD_ROOT + DIR + '/' + OD_ARCHIVE_DIR] = { id: 'AR', folder: {} }; return new Response(JSON.stringify({ id: 'AR', folder: {} }), { status: 201 }); }
+      if (opt.method === 'PATCH') { patches.push({ url: u, body: JSON.parse(opt.body) }); return new Response('{}', { status: 200 }); }
+      const m = /\/root:\/(.+?)\?select=/.exec(u);
+      if (m) { const it = have[m[1]]; return it ? new Response(JSON.stringify(it), { status: 200 }) : new Response('{}', { status: 404 }); }
+      return new Response('{}', { status: 400 });
+    };
+    const A = { op: 'od_archive', agent: 'routine-wa-assistant', why: 'new version of the form', path: DIR + '/old.pdf', replaced_by: 'new.pdf' };
+    let x = await call(A);
+    check('od_archive: the archive folder is created once, then the old file moves into it, same name', x.json.ok && posts.length === 1 && posts[0].body.name === OD_ARCHIVE_DIR && posts[0].body['@microsoft.graph.conflictBehavior'] === 'fail' && patches.length === 1 && patches[0].url.indexOf('/items/O?') > 0 && patches[0].body.parentReference.id === 'AR' && !('name' in patches[0].body) && x.json.path === DIR + '/' + OD_ARCHIVE_DIR + '/old.pdf', { x: x.json, posts, patches });
+    posts = []; patches = [];
+    have[OD_ROOT + DIR + '/' + OD_ARCHIVE_DIR + '/old.pdf'] = { id: 'X', file: {} };
+    x = await call(A);
+    check('the same name already in the archive: refused, nothing moved, no second folder', !x.json.ok && /name taken/.test(x.json.error) && !patches.length && !posts.length, x.json);
+    x = await call({ ...A, replaced_by: 'missing.pdf' });
+    check('no new file beside it: refused (archiving never hides the only copy)', !x.json.ok && /^replaced_by 404/.test(x.json.error) && !patches.length, x.json);
+    check('from the inbox, the drafts, an archive folder, a folder path, itself as replaced_by, a path in replaced_by, no why, or an extra field: refused',
+      [{ path: OD_INBOX + '/a.pdf' }, { path: OD_DRAFT + '/a.pdf' }, { path: DIR + '/' + OD_ARCHIVE_DIR + '/a.pdf' }, { path: 'x/ARCHIVE/a.pdf' }, { path: 'a.pdf' }, { path: DIR + '/../a.pdf' }, { replaced_by: 'old.pdf' }, { replaced_by: 'x/new.pdf' }, { why: '' }, { path: DIR + '/a.exe' }].every((o) => !!odArchiveCheck({ ...A, ...o }).error) && (await call({ ...A, delete: true })).status === 400 && !patches.length);
     graph = async () => new Response('{}', { status: 500 });
   }
 

@@ -3,7 +3,7 @@
 // Meta-signed message from Michael's own number and fires the assistant's Routine once per message;
 // routine-db op wa_me answers only to that number, falling back to the template outside the window.
 import { onRequest as hook, fireText, ACK_TEXT, FAIL_TEXT } from './_build/wa-hook.mjs';
-import { onRequest as rdb, hazardChoiceNote } from './_build/routine-db.mjs';
+import { onRequest as rdb, hazardChoiceNote, hasPassport } from './_build/routine-db.mjs';
 import { metaSigOk, inboundMessages, waOneLine, ASSISTANT_TEMPLATE, sameSession } from './_build/_wa.mjs';
 import fs from 'fs';
 
@@ -237,6 +237,13 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   check('wa-hook is a machine path (Meta calls from abroad)', /'\/api\/wa-hook'/.test(mw));
   check('the new secrets are stripped on a preview', /'META_APP_SECRET', 'WA_VERIFY_TOKEN', 'ASSISTANT_FIRE_TOKEN'/.test(mw));
 
+  // 20/10/2026: no passport number on WhatsApp
+  check('passport number: refused', hasPassport('4 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd: AD3659758') && hasPassport('AC3341142, ...'));
+  check('company number, phone, C27, ISO45001, #1784: pass', !hasPassport('511969008 054-7940073 C27 ISO45001 #1784 trig_01Tofq session_01McD38'));
+  {
+    const r = await rdb({ request: new Request('https://x/api/routine-db', { method: 'POST', headers: { 'x-routine-key': 'k-1', 'content-type': 'application/json' }, body: JSON.stringify({ op: 'wa_me', text: 'AD3659758' }) }), env: ENV });
+    check('wa_me with a passport number: 400, nothing sent', r.status === 400, r.status);
+  }
   console.log('\nwa-assistant-test: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })();

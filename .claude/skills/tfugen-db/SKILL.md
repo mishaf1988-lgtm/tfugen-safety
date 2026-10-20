@@ -151,3 +151,9 @@ description: How to read and change the live Supabase database of tfugen-safety 
 הכלל: עבודה ב-`waitUntil` מוגבלת בזמן: מה שאינו חובה (התמונה) מקבל תקרה קצרה (`SNAP_MS`), וההתקדמות נרשמת לפני הצעד הארוך (`stage: firing`), כדי שחיתוך ייראה.
 נאכף: `wa-hook.js` (`SNAP_MS`, `pre_fire_ms`, `snap`), `wa-assistant-test.mjs`.
 חזר: 0
+
+**136. העוזר בוואטסאפ ניסה להוריד קובץ מהמייל, נכשל, ובנה טופס מחדש (20/10/2026).**
+מה קרה: בטופס במבי הראשון העוזר לא מצא את המקור ב-OneDrive ובנה טופס חדש. בניסוי השני ניסה קודם `mailAtt` ב-od-read, שתמיד מחזיר 403 (Mail.Read בוטל ב-27/09/2026), ורק אחר כך עבר ל-`mail_request`. אחר כך בנה מאפס כלי שכותב על ה-PDF המקורי, ובתשובה בוואטסאפ נכתב שם של עובדת. הריצה לקחה 6 דקות במקום 3.
+הכלל: קובץ שקיים רק במייל מבקשים ישר ב-`mail_request`. טופס ממלאים על המקור עם `project-files/pdf-fill/fill.mjs`. בהודעה אין פרטים אישיים.
+נאכף: `routine-wa-assistant.md` ("משימת מסמכים או מייל"); `wa_me` מחזיר 400 על מספר דרכון (`hasPassport`, `wa-assistant-test.mjs`); `pdf-fill-test.mjs`. על שם אין אכיפה, כי אי אפשר להבחין בקוד בין שם למילה.
+חזר: 0
