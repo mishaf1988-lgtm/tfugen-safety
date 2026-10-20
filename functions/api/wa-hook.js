@@ -14,9 +14,10 @@
 // notifications_log (payload.wamid), so the assistant knows what Michael is answering.
 // Machine path in _middleware: Meta calls from outside Israel.
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
-import { ownerWa, metaSigOk, inboundMessages, noteOwnerIn, lastOut } from '../_wa.js';
+import { ownerWa, metaSigOk, inboundMessages, noteOwnerIn, lastOut, sendToOwner } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 
+export const ACK_TEXT = '\u05e7\u05d9\u05d1\u05dc\u05ea\u05d9, \u05d1\u05d5\u05d3\u05e7 \u05d5\u05e2\u05d5\u05e0\u05d4 \u05e2\u05d5\u05d3 \u05e8\u05d2\u05e2.';
 const SEEN_KEY = 'wa_hook_seen', SEEN_MAX = 100;
 // 19/10/2026 (setup through Claude in Chrome: a pasted value could not be seen, Cloudflare hides
 // secrets): the last call, so a wrong META_APP_SECRET (sig false) or ASSISTANT_FIRE_TOKEN
@@ -111,6 +112,13 @@ async function handle(env, raw) {
     }).catch(() => null);
     seen.fire_status = fr ? fr.status : 'network';
     if (fr && fr.ok) seen.fired++; else await forget(env, m.id);
+    // 20/10/2026 (Michael in the questionnaire: "do it: an immediate 'got it' from the server"): the
+    // assistant takes 30-60 seconds, so the server answers at once. Michael just wrote, so the window
+    // is open; no template. Not kept as the last question (wa_last_out): the assistant's answer is.
+    if (fr && fr.ok && env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN) {
+      const a = await sendToOwner(env, owner, ACK_TEXT, { windowOpen: true, noTemplate: true }).catch(() => null);
+      seen.ack = !!(a && a.ok);
+    }
   }
   await note(env, seen);
 }
