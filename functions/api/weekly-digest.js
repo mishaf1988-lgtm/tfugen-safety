@@ -115,6 +115,7 @@ export function digestOf(rows, today) {
 
 const H = {
   title: '\u05e1\u05d9\u05db\u05d5\u05dd \u05e9\u05d1\u05d5\u05e2\u05d9 - \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d5\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd',
+  notMine: '\u05dc\u05d0 \u05d1\u05d0\u05d7\u05e8\u05d9\u05d5\u05ea\u05da, \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05dc\u05d0\u05d7\u05e8\u05d0\u05d9',
   overdue: '\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d1\u05d0\u05d9\u05d7\u05d5\u05e8 \u05dc\u05e4\u05d9 \u05d0\u05d7\u05e8\u05d0\u05d9',
   soon: '\u05d9\u05e2\u05d3 \u05d1\u05e9\u05d1\u05d5\u05e2 \u05d4\u05e7\u05e8\u05d5\u05d1',
   noDue: '\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05dc\u05d9 \u05d9\u05e2\u05d3',
@@ -312,6 +313,8 @@ export function expiringOf(lists, today) {
     const e = ymd(r && r.e); if (!e) return;
     const days = dayDiff(today, e); if (days > EXP_DAYS) return;
     const x = { label, name: String(pick(r, nc)), owner: String(pick(r, oc)), e, days };
+    const area = String((r && r.resp_area) || '').trim();
+    if (area) { x.area = area; x.who = String((SITE.equipAreas || {})[area] || ''); }
     if (t) { x.t = t; x.row = r; }
     if (src && r.id != null) { x.src = src; x.id = String(r.id); }
     out.push(x);
@@ -378,6 +381,9 @@ export function attachQuotes(list, contacts, track, today) {
   (list || []).forEach((x) => {
     const key = x.t ? quoteKey(x.t, x.row && x.row.id, x.e) : '';
     if (!key) return;
+    // Equipment of another area (resp_area, 20/10/2026): its people deal with the supplier. No quote
+    // mail from Michael; the row is only marked (Michael in the questionnaire: "only marked").
+    if (x.area) return;
     const vendor = vendorOf(x.t, x.row);
     // A document with no supplier (a license from an authority) has no one to ask for a quote (08/10/2026).
     if (x.t === 'docs' && !vendor) return;
@@ -441,7 +447,8 @@ function expBlock(list, failed) {
   if (!list.length) h += '<p style="color:#555">' + H.none + '</p>';
   else {
     h += '<table style="border-collapse:collapse;width:100%;margin-bottom:8px"><tr>' + H.expTh.map((t) => '<th style="' + cell + ';background:#1f3864;color:#fff">' + esc(t) + '</th>').join('') + '</tr>'
-      + list.slice(0, EXP_SHOW).map((x) => '<tr style="background:' + (x.days < 0 ? '#fde8e8' : '#fff') + '">' + [x.label, x.name, x.owner].map((v) => '<td style="' + cell + '">' + esc(v) + '</td>').join('')
+      + list.slice(0, EXP_SHOW).map((x) => '<tr style="background:' + (x.days < 0 ? '#fde8e8' : '#fff') + '">' + [x.label, x.name].map((v) => '<td style="' + cell + '">' + esc(v) + '</td>').join('')
+        + '<td style="' + cell + '">' + (x.area ? '<b>' + esc(x.area + (x.who ? ': ' + x.who : '')) + '</b><br><span style="color:#b45309">' + esc(H.notMine) + '</span>' + (x.owner ? '<br><span style="color:#555">' + esc(x.owner) + '</span>' : '') : esc(x.owner)) + '</td>'
         + '<td style="' + cell + ';white-space:nowrap">' + esc(fd(x.e)) + '<br><span style="color:' + (x.days < 0 ? '#b91c1c;font-weight:bold' : '#555') + '">' + esc(expWhen(x)) + '</span>'
         + (x.noTask ? '<br><span style="color:#b91c1c;font-weight:bold">' + esc(H.noTask) + '</span>' : '') + '</td>'
         + '</tr>').join('') + '</table>';
@@ -547,7 +554,7 @@ export async function expiries(env, today) {
   const failed = [];
   const lists = await Promise.all(EXP_SRC.map(async ([t, label, nc, oc]) => {
     try {
-      const sel = Array.from(new Set(['id', 'e'].concat(nc, oc, QUOTE_SRC[t] ? QUOTE_SRC[t][1] : []))).join(',');
+      const sel = Array.from(new Set(['id', 'e'].concat(nc, oc, QUOTE_SRC[t] ? QUOTE_SRC[t][1] : [], t === 'equip_inspections' ? ['resp_area'] : []))).join(',');
       const r = await fetch(base + t + '?select=' + sel + '&e=lte.' + lim + '&order=e.asc&limit=500', { headers: { apikey: key, Authorization: 'Bearer ' + key }, signal: tmo(SB_MS) });
       if (!r.ok) { failed.push(label); return [label, nc, oc, []]; }
       const j = await r.json();

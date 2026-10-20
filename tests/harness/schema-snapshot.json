@@ -1,5 +1,5 @@
 {
-  "_captured": "2026-09-21 from the live project znhjtpcltrxxyfjczgvw via Supabase MCP (after the drift fix); inc / tour_hazards / trustee_reports refreshed 2026-09-28 (closed_d, inc dept/dept_group/reported/src); toolbox_talks / toolbox_reads added 2026-10-03; toolbox_talks trainer / trainer_qual 2026-10-05; wst site / cert / file_url 2026-10-13",
+  "_captured": "2026-09-21 from the live project znhjtpcltrxxyfjczgvw via Supabase MCP (after the drift fix); inc / tour_hazards / trustee_reports refreshed 2026-09-28 (closed_d, inc dept/dept_group/reported/src); toolbox_talks / toolbox_reads added 2026-10-03; toolbox_talks trainer / trainer_qual 2026-10-05; wst site / cert / file_url 2026-10-13; equip_inspections resp_area 2026-10-20",
   "_howto": "refresh with: SELECT table_name, string_agg(column_name, ',' ORDER BY column_name) FROM information_schema.columns WHERE table_schema='public' GROUP BY table_name;",
   "tables": {
     "app_users": [
@@ -195,6 +195,7 @@
       "photo_url",
       "previous_report_number",
       "report_number",
+      "resp_area",
       "s",
       "serial_number",
       "status",
