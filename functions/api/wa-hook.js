@@ -156,6 +156,9 @@ async function handle(env, raw) {
   const msgs = inboundMessages(body);
   if (!msgs.length) return;
   const owner = await ownerWa(env, sbFrom(env));
+  // 20/10/2026 (Michael: "the assistant answers slowly again"): the milliseconds from the webhook to the ack,
+  // to the fire, and the session the fire opened, so one answer can be traced end to end (get_session on it).
+  const t0 = Date.now();
   const seen = { sig: true, msgs: msgs.length, owner_saved: !!owner, from_owner: 0, fired: 0, fire_status: null };
   for (const m of msgs) {
     if (!owner || m.from !== owner) continue;
@@ -183,7 +186,7 @@ async function handle(env, raw) {
       if (sr && sr.ok) { seen.fast = fr0.kind; await noteLastOut(env, sbFrom(env), ans, ref); await logOut(env, ans, sr); continue; }
       seen.fast_fail = fr0.kind;
     }
-    if (wa) { const a = await sendToOwner(env, owner, ACK_TEXT, { windowOpen: true, noTemplate: true }).catch(() => null); seen.ack = !!(a && a.ok); }
+    if (wa) { const a = await sendToOwner(env, owner, ACK_TEXT, { windowOpen: true, noTemplate: true }).catch(() => null); seen.ack = !!(a && a.ok); seen.ack_ms = Date.now() - t0; }
     let snap = null;
     try { const g = await gather(env, new Date()); snap = buildBrief(g.items, g.failed, g.today, true); } catch (e) { snap = null; }
     const text = fireText(m, about, prev, snap);
@@ -196,6 +199,8 @@ async function handle(env, raw) {
       body: JSON.stringify({ text }),
     }).catch(() => null);
     seen.fire_status = fr ? fr.status : 'network';
+    seen.fire_ms = Date.now() - t0;
+    if (fr && fr.ok) { const fj = await fr.clone().json().catch(() => null); seen.fire_session = (fj && fj.claude_code_session_id) || null; }
     if (fr && fr.ok) seen.fired++; else await forget(env, m.id);
     if (!(fr && fr.ok) && wa) await sendToOwner(env, owner, FAIL_TEXT, { windowOpen: true, noTemplate: true }).catch(() => null);
   }
