@@ -78,10 +78,12 @@ open(Q, "w", encoding="utf-8").write("## פתוח\n\n- [ ] **C1. זרימה** (1
 PC = P + "\n\nאין קוד"
 r = sup.verdict(work, P, MERGED | {"mcp__claude-code-remote__create_session"}, False)
 check("merged, an open Chrome task, no reminder: blocks and names the count", r and "1 משימות" in r and "chrome-queue" in r, r)
-check("with a 🌐 לכרום line: lets it through", sup.verdict(work, P + "\n🌐 לכרום (1): C1.", MERGED | {"mcp__claude-code-remote__create_session"}, False) is None)
+check("with a 🌐 לכרום line and its text in a box: lets it through", sup.verdict(work, P + "\n🌐 לכרום (1): C1.\n```\nטקסט\n```", MERGED | {"mcp__claude-code-remote__create_session"}, False) is None)
+r = sup.verdict(work, P + "\n🌐 לכרום (1): C1.", MERGED | {"mcp__claude-code-remote__create_session"}, False)
+check("a 🌐 לכרום line without the text in a box: blocks (20/10/2026, \"בתיבה תמיד\")", r and "בבלוק קוד" in r, r)
 check("no merge since the last reply: no reminder needed", sup.verdict(work, "סיימתי.", set(), False) is None)
 # 13/10/2026: a 🌐 line that names a task already closed (C0 is [x]) blocks; open only passes
-r = sup.verdict(work, P + "\n🌐 לכרום: C0 ו-C1.", MERGED | {"mcp__claude-code-remote__create_session"}, False)
+r = sup.verdict(work, P + "\n🌐 לכרום: C0 ו-C1.\n```\nx\n```", MERGED | {"mcp__claude-code-remote__create_session"}, False)
 check("a 🌐 line naming a closed task (C0): blocks and names it", r and "C0" in r and "chrome-queue" in r and "C1" not in r.split(":")[1], r)
 check("... C10 is not C1: no false match", sup.chrome_stale(work, "🌐 לכרום: C10") == [], sup.chrome_stale(work, "🌐 לכרום: C10"))
 open(Q, "w", encoding="utf-8").write("## בוצע\n\n- [x] **C1. זרימה**\n")

@@ -120,6 +120,8 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   await call({ op: 'agent_report', agent: 'retro', ok: true });
   lg = JSON.parse(state.agent_log);
   check('the log keeps the last ' + AGENT_LOG_MAX, lg.length === AGENT_LOG_MAX && lg[0].at === '1' && lg[lg.length - 1].agent === 'retro');
+  state.wa_last_out = JSON.stringify({ at: '2026-10-20T18:00:00Z', text: 'x'.repeat(3000) });
+  check('wa_last_out (the assistant\'s last answer, 20/10/2026) is readable, not writable', (await call({ op: 'state_get', keys: ['wa_last_out'] })).json.rows.length === 1 && (await call({ op: 'state_set', key: 'wa_last_out', value: '{}' })).status === 400);
   check('agent_log is readable through state_get, not writable through state_set', (await call({ op: 'state_get', keys: ['agent_log'] })).json.rows.length === 1 && (await call({ op: 'state_set', key: 'agent_log', value: '[]' })).status === 400);
 
   console.log('\n4g. claim: one session takes an open item (12/10/2026, lesson 10)');
@@ -315,7 +317,7 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     const g5 = puts[0] ? JSON.parse(puts[0].body) : {};
     check('two recipients: joined with ";" for the flow', g5.to === 'a@tapugan.co.il;b@tapugan.co.il', g5.to);
     puts = [];
-    check('four recipients or one bad address among two: refused', (await call({ ...D, to: 'a@x.co;b@x.co;c@x.co;d@x.co' })).status === 400 && (await call({ ...D, to: 'a@x.co;nope' })).status === 400 && !puts.length);
+    check('six recipients or one bad address among two: refused', (await call({ ...D, to: 'a@x.co;b@x.co;c@x.co;d@x.co;e@x.co;f@x.co' })).status === 400 && (await call({ ...D, to: 'a@x.co;nope' })).status === 400 && !puts.length);
     check('the logo under the signature, from the site', /<img src="https:\/\/tapugan-safety\.pages\.dev\/logo\.jpg" width="120" height="80"/.test(fj.html), fj.html.slice(-300));
     check('his Outlook signature (SITE.signature) is added once at the end', fj.html.endsWith(SITE.signature + '</div>') && fj.html.split('0547940073').length === 2, fj.html.slice(-200));
     puts = [];
@@ -393,6 +395,16 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('an attachment that is not there: refused, no request file (the flow would make no draft)', !x.json.ok && /attach missing/.test(x.json.error) && !puts.length, x.json);
     x = await call(D);
     check('no attach: no attachments key, as before', x.json.ok && !('attachments' in JSON.parse(puts[0].body)));
+    // 20/10/2026 (Michael: "this is a mail in a thread, so it goes in the thread")
+    puts = [];
+    const RID = 'AAMkADNmMjhjNWNiLTk4ZTItNDA4Ny1hYTM4LWM3MWJjMTc2MzUyMwBGAAAAAACvmdaXkAHZSoM_lWbFdKqPBwDNY6eUSe9PQJ-U8t9dbCM3AAAAAAEJAA=';
+    x = await call({ ...D, reply_to: RID });
+    const rj = puts[0] ? JSON.parse(puts[0].body) : {}, rb = rj.reply_body ? JSON.parse(rj.reply_body) : {};
+    check('reply_to: the id and a createReply body with our recipients and our text above the thread', x.json.ok && rj.reply_to === RID && rb.message.toRecipients.length === 2 && rb.message.toRecipients[1].emailAddress.address === 'tzachi@tapugan.co.il' && rb.comment === rj.html, rj);
+    puts = [];
+    check('a bad reply_to (short, a path, a quote): refused, nothing written', (await Promise.all(['abc', '../x/' + RID, RID + '"'].map((r) => call({ ...D, reply_to: r })))).every((r) => r.status === 400) && !puts.length);
+    x = await call(D);
+    check('no reply_to: a new mail as before, no reply keys', x.json.ok && !('reply_to' in JSON.parse(puts[0].body)) && !('reply_body' in JSON.parse(puts[0].body)));
     check('attach: .., a protected folder, the draft or request folder, a non-document, empty or more than 5: refused',
       [['../a.pdf'], ['x/למחיקה/a.pdf'], ['ARCHIVE/a.pdf'], [OD_DRAFT + '/a.pdf'], [OD_REQ + '/a.pdf'], ['a.exe'], [], ['1.pdf', '2.pdf', '3.pdf', '4.pdf', '5.pdf', '6.pdf'], 'a.pdf'].every((a) => !!draftAttach(a).error));
     puts = [];

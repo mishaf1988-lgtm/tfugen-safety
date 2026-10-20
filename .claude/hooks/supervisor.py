@@ -246,6 +246,11 @@ def verdict(cwd, text, tools, waiting, recent=None):
     if merged_since and chrome and CHROME not in text:
         return ("המפקח: יש %d משימות פתוחות לכרום (project-files/chrome-queue.md), ובסיכום אין שורה \"🌐 לכרום\" "
                 "(מיכאל 12/10/2026: \"לתזכר אותי לבקש מהכרום\"). להוסיף: מה מחכה, ושהטקסט להדבקה בקובץ." % len(chrome))
+    # Michael, 20/10/2026: "write me what to pass to Chrome, in a box, always". A "לכרום" line
+    # that names an open task carries its paste text as a code block in the reply itself.
+    if CHROME in text and chrome and "```" not in text:
+        return ("המפקח: יש שורת \"🌐 לכרום\" בלי תיבה עם הטקסט להדבקה (מיכאל 20/10/2026: \"רשום לי מה להעביר לכרום בתיבה תמיד\"). "
+                "להדביק בתשובה את הטקסט של המשימה מ-project-files/chrome-queue.md בבלוק קוד.")
     if merged and not any(t.endswith("create_session") for t in tools) and not no_code_handoff(cwd) and not chain_limit_handoff(cwd):
         return ("המפקח: מוזג, ולא נפתחה שיחה הבאה. לפני שעוצרים: היה לקח? (tfugen-lessons). "
                 "אחר כך הפריט הבא שאפשר לעשות בקוד מ-STATUS/BACKLOG (לקח 24), "

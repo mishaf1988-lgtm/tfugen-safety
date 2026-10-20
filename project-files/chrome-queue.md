@@ -8,6 +8,8 @@
 
 **איך נכתבת משימה:** שורה `- [ ] **C<מספר>. <מה>** (<תאריך>, <מקור>)`, ומתחתיה הטקסט המוכן להדבקה בכרום, בבלוק. הטקסט כולל את ה"בצע" שכבר ניתן ואיפה ניתן, מה לבדוק בסוף, ומה לא לעשות (לא לשלוח מייל, לא למחוק). משימה חדשה נרשמת באותו PR שיצר את הצורך בה.
 
+**בצ'אט: הטקסט לכרום תמיד בתיבה** (מיכאל, 20/10/2026: "רשום לי מה להעביר לכרום בתיבה תמיד"): כשמזכירים משימה פתוחה כאן בתשובה למיכאל, מדביקים בתשובה עצמה את הטקסט שלה בבלוק קוד, לא רק את המספר והנתיב.
+
 **התזכורת:**
 - `session-start.py` מציג את המשימות הפתוחות בתחילת כל שיחה.
 - המפקח (`supervisor.py`) חוסם סיכום של משימה שמוזגה כשיש משימה פתוחה כאן ואין בסיכום שורה "🌐 לכרום".
@@ -104,6 +106,21 @@
   בסוף: דוח קצר, האם שני החלקים עברו.
   ```
   אחרי הביצוע: Claude מוודא ב-API של Cloudflare שהשם קיים, מזג כלשהו ל-main (פריסה), ואז `routine-db.sh '{"op":"relay_fire","agent":"dev","expect_session":"session_01JT8Fct6Z6Qv2GbaBBqxtQT"}'`: מצופה `fired: true` ו-`landed: true`, ואירוע חדש בשיחה של הדוור (`list_events`). רק אז C27 נסגר.
+
+- [ ] **C28. Power Automate: טיוטה כתשובה בתוך שרשור, בזרימה "טיוטות מהעוזר"** (20/10/2026, מיכאל: "זה דוגמה למייל שרשור, אז צריך לשלוח בשרשור של המיילים"). השרת כבר שולח בבקשת הטיוטה `reply_to` (המזהה של המייל האחרון בשרשור) ו-`reply_body` (גוף מוכן לבקשת createReply). עד שזה נעשה הזרימה מתעלמת מהם ויוצרת מייל חדש, כמו היום. טקסט להדבקה בכרום:
+  ```
+  אתה מעדכן זרימה קיימת ב-Power Automate. עבור על השלבים ברצף, עצור רק אם משהו לא תואם, ותאר מה אתה רואה. אל תוסיף שום פעולה ששולחת מייל (לא Send, לא Reply), ואל תשנה את הטריגר או את מה שכבר עובד בענף של מייל חדש.
+  1. פתח https://make.powerautomate.com > My flows > "טיוטות מהעוזר" > Edit.
+  2. אחרי הלולאה הקיימת (Apply to each שבונה את המשתנה att) ולפני "Draft an email message": New step > Control "Condition". שמאל, בלשונית Expression: empty(outputs('Compose')?['reply_to']) . אופרטור: is equal to. ימין, בלשונית Expression: true
+  3. גרור את הפעולה הקיימת "Draft an email message" לתוך הענף If yes. בענף הזה לא משנים כלום.
+  4. בענף If no: Office 365 Outlook "Send an HTTP request". Method: POST. URI (טקסט עם ביטוי במקום המסומן): https://graph.microsoft.com/v1.0/me/messages/<Expression: encodeUriComponent(outputs('Compose')?['reply_to'])>/createReply . Content-Type: application/json. Body, בלשונית Expression: outputs('Compose')?['reply_body']
+  5. בענף If no, אחריה: Control "Apply to each", Select an output, Expression: variables('att') . בתוכה: Office 365 Outlook "Send an HTTP request". Method: POST. URI: https://graph.microsoft.com/v1.0/me/messages/<Expression: body('Send_an_HTTP_request')?['id']>/attachments . Content-Type: application/json. Body (טקסט עם שלושה ביטויים):
+     {"@odata.type": "#microsoft.graph.fileAttachment", "name": "<Expression: items('Apply_to_each_2')?['Name']>", "contentBytes": "<Expression: items('Apply_to_each_2')?['ContentBytes']?['$content']>"}
+     (אם השמות של הפעולות אצלך שונים, למשל Send_an_HTTP_request_2 או Apply_to_each_3, להשתמש בשמות האמיתיים.)
+  6. Save. בדוק שה-Flow checker מראה 0 שגיאות. אל תריץ בדיקה ידנית.
+  בסוף: דוח קצר: האם כל ששת השלבים עברו, מה ה-Flow checker הראה, ומה השמות האמיתיים של הפעולות שהוספת.
+  ```
+  אחרי הביצוע: Claude שולח `mail_draft` לבדיקה למיכאל עצמו עם `reply_to` של מייל שלו ועם קובץ מצורף אחד, ובודק ב-`outlook_email_search` (Drafts) שהטיוטה בשרשור (נושא "RE:"), שהטקסט מעל המייל המצוטט, ושהקובץ נפתח. רק אז C28 נסגר.
 
 ## בוצע
 

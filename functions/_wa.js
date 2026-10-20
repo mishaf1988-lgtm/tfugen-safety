@@ -166,7 +166,7 @@ export async function noteLastOut(env, sbUrl, text, ref) {
   try {
     await fetch(sbUrl + '/rest/v1/server_state?on_conflict=key', { method: 'POST', signal: tmo(SB_TIMEOUT_MS),
       headers: { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify([{ key: LAST_OUT_KEY, value: { at: new Date().toISOString(), text: String(text || '').slice(0, 1500), ref: ref ? String(ref).slice(0, 120) : null }, updated_at: new Date().toISOString() }]) });
+      body: JSON.stringify([{ key: LAST_OUT_KEY, value: { at: new Date().toISOString(), text: String(text || '').slice(0, 4000), ref: ref ? String(ref).slice(0, 120) : null }, updated_at: new Date().toISOString() }]) });
   } catch (e) { /* a missing note only costs the context of one answer */ }
 }
 export async function lastOut(env, sbUrl, nowMs) {

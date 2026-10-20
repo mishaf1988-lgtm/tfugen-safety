@@ -95,7 +95,9 @@ import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZ
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last'];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out'];
+// wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
+// again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
 // One run report, cleaned: a short agent name and three short texts.
 export function agentEntry(b, nowIso) {
@@ -266,10 +268,11 @@ export const OD_REQ = '_\u05d1\u05e7\u05e9\u05d5\u05ea \u05de\u05d4\u05de\u05d9\
 export const OD_DRAFT = '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d9\u05d9\u05dc';
 export const DRAFT_TO = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$/;
 export function draftRequest(b) {
-  // Up to 3 recipients, "a@x; b@y" (20/10/2026: one mail to the two people in charge of the ammonia
+  // Up to 5 recipients, "a@x; b@y" (20/10/2026: one mail to the two people in charge of the ammonia
   // equipment); the flow's To field takes them separated by ";".
   const list = String(b.to || '').split(/[;,]/).map((x) => x.trim()).filter(Boolean);
-  if (!list.length || list.length > 3 || !list.every((x) => DRAFT_TO.test(x))) return { error: 'bad to' };
+  // 5 since 20/10/2026 (Michael: "Geny was in it too"): a reply in a thread keeps everyone already on it.
+  if (!list.length || list.length > 5 || !list.every((x) => DRAFT_TO.test(x))) return { error: 'bad to' };
   const to = list.join(';'), subject = String(b.subject || '').replace(/\s+/g, ' ').trim(), text = String(b.body || '').replace(/\r\n/g, '\n').trim();
   if (!subject || subject.length > 200) return { error: 'subject 1-200 characters' };
   if (!text || text.length > 5000) return { error: 'body 1-5000 characters' };
@@ -292,6 +295,16 @@ export function draftRequest(b) {
   if (at.error) return { error: at.error };
   const req = { to, subject, body: kept, html: '<div dir="rtl">' + html + SITE.signature + '</div>' };
   if (at.attach.length) req.attachments = at.attach.map((a) => ({ path: a.path, name: a.name }));
+  // 20/10/2026 (Michael: "this is a mail in a thread, so it must go in the thread of the mails"): reply_to =
+  // the id of the last mail in the thread (outlook_email_search "id"). The flow then makes the draft with
+  // Graph createReply on it: Outlook keeps the thread and the quoted mails, our text goes above them, and the
+  // recipients are ours. reply_body is that request's body, ready to send as is.
+  if (b.reply_to !== undefined && b.reply_to !== null && b.reply_to !== '') {
+    const id = String(b.reply_to).trim();
+    if (!MAIL_REQ_ID.test(id)) return { error: 'bad reply_to' };
+    req.reply_to = id;
+    req.reply_body = JSON.stringify({ message: { toRecipients: list.map((a) => ({ emailAddress: { address: a } })) }, comment: req.html });
+  }
   return { file: JSON.stringify(req), attach: at.attach };
 }
 // A passport number never goes out on WhatsApp (20/10/2026: the assistant's answer about the forklift
@@ -648,7 +661,7 @@ export async function onRequest(context) {
       return jsonResp({ ok: true, file: OD_REQ + '/' + name, size: f.size || null }, 200, {});
     }
     if (body.op === 'mail_draft') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'subject', 'body', 'attach'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'subject', 'body', 'attach', 'reply_to'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
       if (String(body.why || '').trim().length < 5) return jsonResp({ ok: false, error: 'why required' }, 400, {});
       const d = draftRequest(body);
