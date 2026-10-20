@@ -40,7 +40,7 @@ export async function runDeck(env, force, s3Now, opt) {
   // The deck lives next to the year's file and moves with it (upgrade review 24).
   const FOLDER = folderFor(ilYear((opt && opt.now) || Date.now()));
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-  const st = await stateGet(env, ['deck_sig', 'deck_ctag', 'deck_week', 'deck_meeting_date', 'deck_s3_month', 'deck_ver']).catch(() => ({}));
+  const st = await stateGet(env, ['deck_sig', 'deck_ctag', 'deck_week', 'deck_meeting_date', 'deck_s3_month', 'deck_ver', 'deck_err_kind']).catch(() => ({}));
   const val = (k) => (st[k] && st[k].value) || '';
   const date = meetingDate(today, val('deck_meeting_date'));
   const [hazards, reports, tasks, inc, nearMiss] = await Promise.all([
@@ -72,7 +72,10 @@ export async function runDeck(env, force, s3Now, opt) {
     if (mr.status === 404) throw Object.assign(new Error('the deck is not in the folder: ' + FOLDER + '/' + DECK.name), { status: 404 });
     if (!mr.ok) throw Object.assign(new Error('onedrive ' + mr.status), { status: mr.status });
     const meta = await mr.json();
-    if (!force && val('deck_sig') === sig && val('deck_ctag') === meta.cTag) return { ok: true, pushed: false, reason: 'unchanged', date };
+    // A run that failed (timeout, 423) leaves deck_err; the next run that finds nothing to do is a success and clears it.
+    // A chart error (deck_err_kind 'chart') is a state of the deck itself and stays until a run writes the deck again (retro 20/10/2026).
+    const clearRunErr = () => (val('deck_err_kind') === 'run' ? stateSet(env, { deck_err: '', deck_err_kind: '' }).catch(() => {}) : null);
+    if (!force && val('deck_sig') === sig && val('deck_ctag') === meta.cTag) { await clearRunErr(); return { ok: true, pushed: false, reason: 'unchanged', date }; }
     const dl = await fetch(meta['@microsoft.graph.downloadUrl'], { signal: AbortSignal.timeout(FILE_MS) });   // 14.5
     if (!dl.ok) throw new Error('download failed (' + dl.status + ')');
     const orig = new Uint8Array(await dl.arrayBuffer());
@@ -82,6 +85,7 @@ export async function runDeck(env, force, s3Now, opt) {
     // cTag, write nothing, or this would rewrite the deck every 15 minutes.
     if (!changed.length && !force) {
       await stateSet(env, { deck_sig: sig, deck_ctag: meta.cTag || '', deck_week: date, ...(s3Month && !s3Now ? { deck_s3_month: s3Month } : {}) });
+      await clearRunErr();
       return { ok: true, pushed: false, reason: 'already up to date', date, report };
     }
     let kept = null;
@@ -96,7 +100,7 @@ export async function runDeck(env, force, s3Now, opt) {
     const unmatched = report.filter((x) => /^chart category not matched: /.test(x)).map((x) => x.replace(/^chart category not matched: [^/]*\//, ''));
     const chartErr = unmatched.length ? '\u05d1\u05ea\u05e8\u05e9\u05d9\u05dd \u05d1\u05de\u05e6\u05d2\u05ea \u05d9\u05e9 \u05de\u05d7\u05dc\u05e7\u05d4 \u05e9\u05dc\u05d0 \u05d6\u05d5\u05d4\u05ea\u05d4, \u05d5\u05d4\u05e2\u05de\u05d5\u05d3\u05d4 \u05e9\u05dc\u05d4 \u05e0\u05db\u05ea\u05d1\u05d4 0: ' + [...new Set(unmatched)].join(', ') : '';
     const put = await graphPut(token, FOLDER, DECK.name, bytes, DECK.type);
-    await stateSet(env, { deck_sig: sig, deck_ctag: put.cTag || '', deck_week: date, deck_ver: String(DECK_VERSION), deck_at: now, ...(s3Month && !s3Now ? { deck_s3_month: s3Month } : {}), deck_err: chartErr, ...(chartErr ? { deck_err_at: now } : {}), deck_report: report.join('; '), deck_url: put.webUrl || meta.webUrl || '' });
+    await stateSet(env, { deck_sig: sig, deck_ctag: put.cTag || '', deck_week: date, deck_ver: String(DECK_VERSION), deck_at: now, ...(s3Month && !s3Now ? { deck_s3_month: s3Month } : {}), deck_err: chartErr, deck_err_kind: chartErr ? 'chart' : '', ...(chartErr ? { deck_err_at: now } : {}), deck_report: report.join('; '), deck_url: put.webUrl || meta.webUrl || '' });
     return { ok: true, pushed: true, date, kept, report, webUrl: put.webUrl || null };
   } catch (e) {
     const msg = e && e.code === 'not_connected' ? 'not connected'
@@ -105,7 +109,7 @@ export async function runDeck(env, force, s3Now, opt) {
     // 409 = a parallel run (trigger + cron) wrote the file a moment ago: not
     // an error, the next run compares again (29/09, left a false error behind).
     if (e && e.status === 409) return { ok: false, pushed: false, retry: true, error: 'conflict', date };
-    await stateSet(env, { deck_err: msg, deck_err_at: now }).catch(() => {});
+    await stateSet(env, { deck_err: msg, deck_err_kind: 'run', deck_err_at: now }).catch(() => {});
     return { ok: false, pushed: false, error: msg, locked: !!(e && e.status === 423), date };
   }
 }

@@ -288,6 +288,13 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   w = world({ file: written, state: s1st, cTag: 'c-ours-2' });
   r = await runDeck(ENV, false);
   check('nothing changed since: one metadata read, nothing written', !r.pushed && r.reason === 'unchanged' && !w.puts.length, r);
+  // retro 20/10/2026: a failed run's error is cleared by the next run that finds nothing to do; a chart error is not
+  w = world({ file: written, state: Object.assign({}, s1st, { deck_err: 'timeout', deck_err_kind: 'run', deck_err_at: '2026-10-20T01:00:00Z' }), cTag: 'c-ours-2' });
+  r = await runDeck(ENV, false);
+  check('a failed run, then a run with nothing to do: deck_err is cleared', r.reason === 'unchanged' && !w.state.deck_err, w.state);
+  w = world({ file: written, state: Object.assign({}, s1st, { deck_err: 'chart error', deck_err_kind: 'chart', deck_err_at: '2026-10-20T01:00:00Z' }), cTag: 'c-ours-2' });
+  r = await runDeck(ENV, false);
+  check('a chart error stays through a run with nothing to do', r.reason === 'unchanged' && w.state.deck_err === 'chart error', w.state);
   w = world({ file: written, state: s1st, cTag: 'bumped-by-onedrive' });
   r = await runDeck(ENV, false);
   check('cTag bumped, the file already up to date: nothing written, cTag remembered (no loop)', !r.pushed && r.reason === 'already up to date' && !w.puts.length && w.state.deck_ctag === 'bumped-by-onedrive', r);
