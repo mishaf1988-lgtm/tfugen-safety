@@ -634,7 +634,7 @@ export function signRequestCheck(b) {
   const name = parts.pop() || '';
   const c = odMkdirCheck({ agent: b.agent, why: b.why, parent: parts.join('/'), name });
   if (c.error) return { error: c.error === 'bad parent' || c.error === 'bad name' ? 'bad path' : c.error };
-  if (parts[0] === OD_DRAFT || !/\.pdf$/i.test(name) || /\s-\sחתום\.pdf$/i.test(name)) return { error: 'bad path' };
+  if (parts[0] === OD_DRAFT || !/\.pdf$/i.test(name) || /\s-\s\u05d7\u05ea\u05d5\u05dd\.pdf$/i.test(name)) return { error: 'bad path' };
   const num = (v, lo, hi) => v === undefined || v === null ? undefined : (Number.isFinite(v) && v >= lo && v <= hi ? v : NaN);
   const page = num(b.page, 1, 200), x = num(b.x, 0, 2000), y = num(b.y, 0, 2000);
   if ([page, x, y].some((v) => Number.isNaN(v)) || (page !== undefined && !Number.isInteger(page))) return { error: 'bad page / x / y' };
