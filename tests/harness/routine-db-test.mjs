@@ -135,6 +135,10 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     let raw = JSON.stringify([{ id: 'o', status: 'open' }].concat(Array.from({ length: DEV_INBOX_MAX }, (_, i) => ({ id: 'd' + i, status: 'done' }))));
     const full = devInboxAdd(raw, { agent: 'dev', text: 'x'.repeat(20) }, '2026-10-20T20:00:00Z');
     check('at most ' + DEV_INBOX_MAX + ': the oldest done one goes, an open one stays', full.list.length === DEV_INBOX_MAX && full.list[0].id === 'o' && !full.list.some((x) => x.id === 'd0'), full.list.length);
+    const dup = devInboxAdd(JSON.stringify([{ id: 'o1', agent: 'dev', text: 'x'.repeat(20), status: 'open' }]), { agent: 'dev', text: 'x'.repeat(20) }, '2026-10-21T05:00:00Z');
+    check('the same open request again: the same id, not a second row (21/10/2026 retro)', dup.id === 'o1' && dup.list.length === 1, dup);
+    const allOpen = devInboxAdd(JSON.stringify(Array.from({ length: DEV_INBOX_MAX }, (_, i) => ({ id: 'p' + i, agent: 'dev', text: 'q' + i + 'x'.repeat(20), status: 'open' }))), { agent: 'dev', text: 'new ' + 'y'.repeat(20) }, '2026-10-21T05:00:00Z');
+    check('all open and full: refused, the oldest open one is not dropped', allOpen.error === 'inbox full' && !allOpen.list, allOpen);
   }
   check('wa_last_out (the assistant\'s last answer, 20/10/2026) is readable, not writable', (await call({ op: 'state_get', keys: ['wa_last_out'] })).json.rows.length === 1 && (await call({ op: 'state_set', key: 'wa_last_out', value: '{}' })).status === 400);
   check('agent_log is readable through state_get, not writable through state_set', (await call({ op: 'state_get', keys: ['agent_log'] })).json.rows.length === 1 && (await call({ op: 'state_set', key: 'agent_log', value: '[]' })).status === 400);

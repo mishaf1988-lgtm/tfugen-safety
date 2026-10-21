@@ -32,10 +32,10 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 ## כשמשהו נכשל
 
 **110. hook שחסם פקודה מורכבת עצר גם את מה שלפניו (17/10/2026, #1619).**
-מה קרה: עריכה שישבה בפקודה שנחסמה לא נכנסה, וה-PR טען שכן.
-הכלל: hook חוסם את כל הפקודה. מריצים מחדש את כולה, ובודקים ב-`git diff --stat` ו-`git branch --show-current` שהכל קרה.
+מה קרה: עריכה בפקודה שנחסמה לא נכנסה, וה-PR טען שכן.
+הכלל: hook חוסם את כל הפקודה: מריצים שוב את כולה ובודקים ב-`git diff --stat` ו-`git branch --show-current`.
 נאכף: `lessons-gate.py` (skill בשורה = קובץ skill שהשתנה); `push-gate.py` חוסם commit על main בלי branch באותה פקודה (18/10/2026).
-חזר: 1 (18/10/2026: guard-sql חסם פקודה עם `checkout -B`, וה-commit נכנס ל-main המקומי; נתפס לפני push).
+חזר: 2 (18/10: guard-sql חסם פקודה עם `checkout -B`, ה-commit נכנס ל-main; נתפס לפני push. 21/10: push-gate בודק את ענף תיקיית העבודה ולא את ה-repo של ה-commit: ב-michael-skills נחסם עד שנפתח ענף גם ב-tfugen-safety).
 
 **39. הרגתי תהליך רקע כדי "להפעיל מחדש" (02/10/2026, PR זה).**
 מה קרה: kill בלי לקרוא מה רץ. 05/10: `pkill -f run.sh` תפס גם את ה-shell שלי (exit 144).
@@ -70,11 +70,17 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 חזר: 2 (14/10: התיקייה עברה ל-/home/user באמצע שיחה, ה-hooks כבו בשקט).
 
 
+**141. תיקון בשתי שכבות נבדק בשכבה אחת (21/10/2026, רטרו).**
+מה קרה: יומן הציוד כתב תורים גם לציוד של אחרים (`resp_area`); תיקנתי סינון בפונקציה, והבדיקה הוכיחה רק אותה: ה-mock החזיר אותן שורות בלי להתחשב ב-URL. אותה החלטה חיה עוד ב-`_eqiAutoTasksRun`.
+הכלל: ה-mock שומר את ה-URL והבדיקה בודקת אותו. אחרי תיקון של החלטה: `grep` על הטבלה בכל `functions/` וב-`index.html`.
+נאכף: `wa-morning-test.mjs` (נכשל בשבירה מכוונת); ה-grep: טקסט (אין דרך בקוד: אתר לא ניתן לזיהוי).
+חזר: 0
+
 ## לפני כתיבה למקום משותף
 
 **74. קבצים שאבדו עם השיחה (11/10/2026, PR זה).**
-מה קרה: קבצים שמיכאל העלה נשארו רק בשיחה שנסגרה. 16/10: טיוטת נהלי האמוניה (Word) נבנתה בקונטיינר ונשלחה למיכאל, והשיחה עברה לארכיון; כשביקש להפוך אותה למסמך רשמי, היא לא הייתה בשום מקום.
-הכלל: קובץ שמיכאל העלה = asset בארטיפקט הפרטי מיד. קובץ ש-Claude בונה = הבונה והתוכן ב-repo (`project-files/<נושא>/`), באותו PR, כדי שאפשר לבנות שוב. כתיבה ל-OneDrive: `project-files/cowork-queue.md`.
+מה קרה: קבצים שהועלו נשארו רק בשיחה שנסגרה. 16/10: טיוטת נהלי האמוניה (Word) נבנתה בקונטיינר והשיחה עברה לארכיון; כשביקש מסמך רשמי, היא לא הייתה בשום מקום.
+הכלל: קובץ שמיכאל העלה = asset בארטיפקט הפרטי מיד. קובץ ש-Claude בונה = הבונה והתוכן ב-repo (`project-files/<נושא>/`), באותו PR, כדי שאפשר לבנות שוב. OneDrive: `cowork-queue.md`.
 נאכף: טקסט (אין דרך בקוד: hook לא רואה קבצים שנשלחו).
 חזר: 1 (16/10: טיוטת 26.03/26.04; נבנתה מחדש ב-`project-files/nh3-procedures/`).
 
@@ -82,7 +88,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: PR אחרי 31 commits, עוגנים ישנים, "ממצא" סגור.
 הכלל: `fetch` + `reset` לפני עריכה; `grep` ב-STATUS לפני ממצא ובקוד לפני "פתוח"; משימה מ-handoff וכל שאלה למיכאל: `grep` ב-DECISIONS קודם.
 נאכף: `fresh-main.py`; handoff אחד: `handoff-root-test.py`; פריט לשיחה: `claim.sh`; שאלה שהוכרעה: `live-check.py`.
-חזר: 10 (אחרון 17/10/2026: שאלתי בשאלון אם להפוך את ה-repo לפרטי, כשזה הוכרע באותו בוקר, DECISIONS "ה-repo נשאר ציבורי"). לפני קוד מ-handoff: `get_session` על כותבת ה-handoff, פעילה = `send_message` ולא לבנות; תפיסה במספר ה-BACKLOG; `list_migrations` לפני "קיים".
+חזר: 10 (אחרון 17/10/2026: שאלה בשאלון על repo פרטי שהוכרע באותו בוקר, DECISIONS). לפני קוד מ-handoff: `get_session` על כותבת ה-handoff, פעילה = `send_message`; תפיסה במספר ה-BACKLOG; `list_migrations` לפני "קיים".
 
 **8. תיקייה חדשה ב-OneDrive בלי לבדוק מי מנקה שם (01/10/2026, #1002).**
 מה קרה: הניקוי בדפדפן דילג על רשימת שמות; `talks` (#1138) לא נכנסה אליה.
@@ -108,7 +114,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: קישור `/public/` לתמונה בוואטסאפ, וה-bucket פרטי מ-21/04: "Bucket not found".
 הכלל: הנחה על דבר חי (bucket, RLS, הרשאה, צורת תשובה של API) נבדקת מול האמיתי לפני קוד; מוק נבנה מתשובה אמיתית. קישור שיוצא נבדק בלי התחברות.
 נאכף: hook `live-check.py` (שאלון עם "הקיים"/"כבר עובד" נעצר פעם אחת לבדיקה); `trustee-route-test.js` (אין `/object/public/`), `od-pick-test.mjs` (חיפוש בלי path, כמו האמיתי).
-חזר: 5 (10/10: הצעתי לבנות 2FA שפעיל מ-25/09. 08/10: תכנית על "סריקת המייל הקיימת", מושבתת מ-27/09; נתפס לפני קוד. 07/10: מוק Graph עם `parentReference.path`. 07/10: "אין repo ל-skills" בלי `list_repos`. 08/10: Routine עם `persistent_session_id` של שיחה אחרת נבדק רק בהודעה לשיחה, לא בהפעלה; ההפעלה נפתחה בשיחה ריקה. `tfugen-db` 7). משימה מתוזמנת ו-repo פרטי: `tfugen-ref`.
+חזר: 5 (10/10: הצעתי 2FA שפעיל מ-25/09. 08/10: תכנית על סריקת מייל שמושבתת מ-27/09. 07/10: מוק Graph עם `parentReference.path`; "אין repo" בלי `list_repos`. 08/10: Routine בשיחה אחרת נבדק רק בהודעה, לא בהפעלה. `tfugen-db` 7). משימה מתוזמנת ו-repo פרטי: `tfugen-ref`.
 
 **60. אי-התאמה שראיתי נשארה בפתק (06/10/2026, PR זה).**
 מה קרה: בסקיצות כתבתי "הכרטיס 13, העמודות 12" ולא תיקנתי; מיכאל מצא את זה שוב בישיבה.
@@ -119,8 +125,8 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 **15. סעיף ישן ב-STATUS אמר "אין משימה פתוחה" (21/09 עד 01/10/2026, #1011).**
 מה קרה: סעיף ישן נשאר באמצע STATUS של 393KB.
 הכלל: ב-STATUS רק מה שפתוח; פריט שנסגר עובר ל-`project-files/STATUS-archive.md` באותו PR. לפני שאלה למיכאל על פריט פתוח: להריץ את הבדיקה שלו או `grep`, אולי כבר בוצע.
-נאכף: `status-dup-test.py` (`[ ]` ב-STATUS שהוא `[x]` בארכיון = אדום); `session-start.py` מציג "אולי כבר בוצעו" (בדיקה שעודכנה אחרי הפריט; "נבדק DD/MM/YYYY" משתיק); השאר טקסט.
-חזר: 4 (02/10: Vitre; "נתיב hazard" בכותרת אחרת בארכיון. 14/10: "שאר תווי המקלדת", שאלתי לפני `keyboard-only-test.js`. 16/10: `received_at`, לפי שורה ישנה ב-BACKLOG; מאז `live-check.py`).
+נאכף: `status-dup-test.py` (`[ ]` ב-STATUS שהוא `[x]` בארכיון = אדום); `session-start.py` מציג "אולי כבר בוצעו" ("נבדק DD/MM/YYYY" משתיק); השאר טקסט.
+חזר: 4 (02/10: Vitre. 14/10: "שאר תווי המקלדת", שאלתי לפני `keyboard-only-test.js`. 16/10: `received_at`, לפי שורה ישנה ב-BACKLOG; מאז `live-check.py`).
 
 **18. תוכנית הוצגה לפני מבט בנתונים (01/10/2026, #1016).**
 מה קרה: "מפגע חוזר = אותו מיקום"; ב-DB 48 מיקומים ל-53 מפגעים.

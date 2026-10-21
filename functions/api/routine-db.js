@@ -126,6 +126,11 @@ export function devInboxAdd(raw, b, nowIso) {
   let list = [];
   try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
   if (!Array.isArray(list)) list = [];
+  // 21/10/2026 (retro): the same open request again (a stuck assistant asks every run) is not a new one, and a
+  // full inbox of open ones refuses instead of silently dropping the oldest.
+  const same = list.find((x) => x && x.status === 'open' && x.agent === agent && x.text === text);
+  if (same) return { list, id: same.id };
+  if (list.length >= DEV_INBOX_MAX && !list.some((x) => x && x.status !== 'open')) return { error: 'inbox full' };
   const id = 'dev-' + nowIso.replace(/\D/g, '').slice(0, 14) + '-' + Math.random().toString(36).slice(2, 6);
   list.push({ id, at: nowIso, agent, text, status: 'open' });
   // the oldest done ones go first; open ones stay

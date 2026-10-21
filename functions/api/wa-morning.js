@@ -175,10 +175,10 @@ export function eventDay(e, today) {
   const w = new Date(d + 'T00:00:00Z').getUTCDay();
   return w === 5 ? addDays(d, 2) : w === 6 ? addDays(d, 1) : d;
 }
-// Pure. rows = [{t, id, n, e, vendor, loc}], sent = {key: 1}. Returns the files to write, in e order,
+// Pure. rows = [{t, id, n, e, vendor, loc, resp_area}] (a row with resp_area is another area's, no calendar entry), sent = {key: 1}. Returns the files to write, in e order,
 // and the sent map pruned to what is still in the window (a renewed or deleted item leaves it).
 export function calendarPlan(rows, sent, today) {
-  const ok = rows.filter((r) => r && r.id != null && r.n && /^\d{4}-\d{2}-\d{2}$/.test(String(r.e || '').slice(0, 10)))
+  const ok = rows.filter((r) => r && !r.resp_area && r.id != null && r.n && /^\d{4}-\d{2}-\d{2}$/.test(String(r.e || '').slice(0, 10)))
     .map((r) => Object.assign({}, r, { e: String(r.e).slice(0, 10), key: r.t + ':' + r.id + ':' + String(r.e).slice(0, 10) }))
     .sort((a, b) => a.e.localeCompare(b.e));
   const keep = {};
@@ -200,8 +200,8 @@ export function calendarPlan(rows, sent, today) {
 export async function calendarStep(env, now, dry) {
   if (!odConfigured(env)) return { skipped: 'onedrive not configured' };
   const today = ilDay(now), until = addDays(today, CAL_DAYS);
-  const q = (t, cols) => sb(env, t + '?select=' + cols + '&e=not.is.null&e=lte.' + until + '&order=e.asc&limit=100');
-  const [docs, equip] = await Promise.all([q('docs', 'id,n,e'), q('equip_inspections', 'id,n,loc,vendor,e')]);
+  const q = (t, cols) => sb(env, t + '?select=' + cols + '&e=not.is.null&e=lte.' + until + (t === 'equip_inspections' ? '&resp_area=is.null' : '') + '&order=e.asc&limit=100');
+  const [docs, equip] = await Promise.all([q('docs', 'id,n,e'), q('equip_inspections', 'id,n,loc,vendor,resp_area,e')]);
   const rows = [].concat((docs || []).map((x) => Object.assign({ t: 'docs' }, x)), (equip || []).map((x) => Object.assign({ t: 'equip' }, x)));
   let sent = {};
   try { sent = JSON.parse((await stateGet(env, CAL_KEY)) || '{}') || {}; } catch (e) { sent = {}; }
