@@ -286,11 +286,27 @@ export async function lastOut(env, sbUrl, nowMs) {
   } catch (e) { return null; }
 }
 
+// UTC times in a text to Michael become Israel time (21/10/2026, his test 3: "13:50Z" reached WhatsApp).
+// A full ISO stamp becomes DD/MM/YYYY HH:MM; a bare HH:MMZ is read as today (UTC) and becomes HH:MM.
+const IL_FMT = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+function ilParts(ms) { const o = {}; for (const x of IL_FMT.formatToParts(new Date(ms))) o[x.type] = x.value; return o; }
+export function ilTimes(t, nowMs) {
+  return String(t || '')
+    .replace(/\b(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?(?:Z|\+00:00)(?![A-Za-z0-9])/g, (m, d, hh, mm) => {
+      const ms = Date.parse(d + 'T' + hh + ':' + mm + ':00Z'); if (isNaN(ms)) return m;
+      const p = ilParts(ms); return p.day + '/' + p.month + '/' + p.year + ' ' + p.hour + ':' + p.minute;
+    })
+    .replace(/\b([01]?\d|2[0-3]):([0-5]\d)\s?(?:Z|UTC)(?![A-Za-z0-9])/g, (m, hh, mm) => {
+      const d = new Date(nowMs || Date.now()); d.setUTCHours(Number(hh), Number(mm), 0, 0);
+      const p = ilParts(d.getTime()); return p.hour + ':' + p.minute;
+    });
+}
+
 // Free text inside the window (opts.windowOpen true); outside it the template (one line, 1000 chars).
 // A closed window that Meta still reports at once (131047) also falls back to the template.
 export async function sendToOwner(env, to, text, opts) {
   const o = opts || {};
-  const body = String(text || '').trim().slice(0, 4096);
+  const body = ilTimes(String(text || '').trim()).slice(0, 4096);
   if (!body) return { ok: false, error: 'empty text' };
   const id = (r) => r.parsed && r.parsed.messages && r.parsed.messages[0] && r.parsed.messages[0].id || null;
   if (o.windowOpen !== false) {
