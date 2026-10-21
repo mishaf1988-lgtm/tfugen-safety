@@ -74,6 +74,25 @@ export function stripInternalIds(t) {
   return String(t || '').replace(new RegExp(INTERNAL_ID.source, 'g'), '$1').replace(/\(\s*[,;:]?\s*\)/g, '')
     .replace(/\s+([.,;:)])/g, '$1').replace(/([,;:])(?=[.,;:])/g, '').replace(/\s{2,}/g, ' ').trim();
 }
+// The assistant's notebook (21/10/2026, Michael: "during the conversations with my assistant it should learn
+// things and always renew knowledge and expertise"): every WhatsApp message starts a new run that remembers
+// nothing, so what Michael corrected, asked to keep, or a source the assistant verified is written at once
+// (routine-db learn) and the server puts the open entries into every next fire. The daily retro folds them
+// into the assistant's rules and knowledge (learn_done), and they leave the fire text.
+export const LEARN_KEY = 'assistant_learned', LEARN_KINDS = ['correction', 'preference', 'fact', 'source'];
+export function learnedLine(raw, max) {
+  let list = [];
+  try { list = typeof raw === 'string' ? JSON.parse(raw || '[]') : (raw || []); } catch (e) { list = []; }
+  if (!Array.isArray(list)) return '';
+  const out = [];
+  let n = 0;
+  list.filter((x) => x && x.status === 'new' && x.text).sort((a, b) => String(b.at).localeCompare(String(a.at))).forEach((x) => {
+    const t = String(x.at || '').slice(0, 10) + ' ' + x.kind + ': ' + String(x.text).replace(/\s+/g, ' ') + (x.source ? ' (' + String(x.source).replace(/\s+/g, ' ') + ')' : '');
+    if (n + t.length + 3 > (max || 1200)) return;
+    out.push(t); n += t.length + 3;
+  });
+  return out.join(' / ');
+}
 export const HAZARD_NOTE_TABLE = { trustee_hazard: ['trustee_reports', 'mgr_note'], near_miss: ['near_miss', 'notes'] };
 export function hazardChoiceNote(prev, choice, today) {
   const n = Number(choice);

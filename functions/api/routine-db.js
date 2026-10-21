@@ -73,6 +73,9 @@
 //              replaces a file, never into the protected folders. odPutPdfCheck.
 //   dev_request / dev_done  (20/10/2026) {agent, text} a request to development, kept in server_state.dev_inbox;
 //              {id, note} closes one. devInboxAdd / devInboxDone.
+//   learn / learn_done  (21/10/2026) {agent, kind: correction|preference|fact|source, text, source?} a line in the
+//              assistant's notebook (server_state.assistant_learned); {id, where} marks it folded into the rules
+//              or the knowledge. learnAdd / learnDone.
 //   od_archive  (20/10/2026) {agent, why, path, replaced_by}: the old version of a form moves to "_גרסאות קודמות" in its
 //              folder (created if missing), only when the new file sits beside it. odArchiveCheck.
 //   mail_request  (11/10/2026, Michael: "בצע: זרימה שנייה") ask the second Power Automate
@@ -93,11 +96,11 @@
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
-import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, hazardChoiceNote, assistantFire, fireUrlOf, sameSession } from '../_wa.js';
+import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, LEARN_KEY, LEARN_KINDS, hazardChoiceNote, assistantFire, fireUrlOf, sameSession } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox'];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', LEARN_KEY];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -143,6 +146,38 @@ export function devInboxDone(raw, id, note, nowIso) {
   const x = Array.isArray(list) && list.find((y) => y && y.id === id);
   if (!x) return { error: 'no such request' };
   x.status = 'done'; x.done_at = nowIso; x.note = String(note || '').slice(0, 300);
+  return { list };
+}
+// The assistant's notebook (21/10/2026, _wa.js LEARN_KEY). A new line is kept until the retro folds it; the
+// same open text again is the same line; a full notebook of open lines refuses instead of dropping one.
+export const LEARN_MAX = 80;
+export function learnAdd(raw, b, nowIso) {
+  const agent = String(b.agent || ''), kind = String(b.kind || '');
+  const text = String(b.text || '').replace(/\s+/g, ' ').trim(), source = String(b.source || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+  if (!/^[a-z0-9-]{2,40}$/.test(agent)) return { error: 'bad agent name' };
+  if (LEARN_KINDS.indexOf(kind) < 0) return { error: 'kind: ' + LEARN_KINDS.join(' | ') };
+  if (text.length < 10 || text.length > 400) return { error: 'text 10-400 characters' };
+  if (hasInternalId(text + ' ' + source) || hasPassport(text + ' ' + source)) return { error: 'no internal ids or passport numbers in the notebook' };
+  let list = [];
+  try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
+  if (!Array.isArray(list)) list = [];
+  const same = list.find((x) => x && x.status === 'new' && x.text === text);
+  if (same) return { list, id: same.id };
+  if (list.length >= LEARN_MAX && !list.some((x) => x && x.status !== 'new')) return { error: 'notebook full: the retro has not folded it' };
+  const id = 'l-' + nowIso.replace(/\D/g, '').slice(0, 14) + '-' + Math.random().toString(36).slice(2, 6);
+  const e = { id, at: nowIso, agent, kind, text, status: 'new' };
+  if (source) e.source = source;
+  list.push(e);
+  while (list.length > LEARN_MAX) { const i = list.findIndex((x) => x.status !== 'new'); list.splice(i >= 0 ? i : 0, 1); }
+  return { list, id };
+}
+export function learnDone(raw, id, where, nowIso) {
+  let list = [];
+  try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
+  const x = Array.isArray(list) && list.find((y) => y && y.id === id);
+  if (!x) return { error: 'no such line' };
+  if (!String(where || '').trim()) return { error: 'where: the file it went into, or "dropped: <why>"' };
+  x.status = 'folded'; x.folded_at = nowIso; x.where = String(where).slice(0, 200);
   return { list };
 }
 // Michael's choice on a hazard, as a note (hazard_choice): moved to _wa.js on 20/10/2026, where the
@@ -632,6 +667,19 @@ export async function onRequest(context) {
         } catch (x) { /* the close is written; Michael sees it in the office */ }
       }
       return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length }, 200, {});
+    }
+    if (body.op === 'learn' || body.op === 'learn_done') {
+      const now = new Date().toISOString();
+      const rows = await stateRead([LEARN_KEY]);
+      const raw = rows && rows[0] && rows[0].value;
+      const r = body.op === 'learn' ? learnAdd(raw, body, now) : learnDone(raw, String(body.id || ''), body.where, now);
+      if (r.error) return jsonResp({ ok: false, error: r.error }, 400, {});
+      const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', {
+        method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify([{ key: LEARN_KEY, value: JSON.stringify(r.list), updated_at: now }]), signal: tmo(SB_MS),
+      });
+      if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status }, 200, {});
+      return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'new').length }, 200, {});
     }
     if (body.op === 'agent_report') {
       const e = agentEntry(body, new Date().toISOString());

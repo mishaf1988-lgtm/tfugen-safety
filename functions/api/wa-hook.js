@@ -14,7 +14,7 @@
 // notifications_log (payload.wamid), so the assistant knows what Michael is answering.
 // Machine path in _middleware: Meta calls from outside Israel.
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
-import { ownerWa, metaSigOk, inboundMessages, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire } from '../_wa.js';
+import { ownerWa, metaSigOk, inboundMessages, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, LEARN_KEY, learnedLine } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 
 export const FAIL_TEXT = '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05dc\u05e2\u05d5\u05d6\u05e8. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.';
@@ -33,7 +33,7 @@ async function note(env, value) {
   } catch (e) { /* a missing note is not a failure */ }
 }
 
-export function fireText(m, about, prev, snapshot) {
+export function fireText(m, about, prev, snapshot, learned) {
   const lines = ['[\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05de\u05de\u05d9\u05db\u05d0\u05dc, \u05e0\u05d1\u05d3\u05e7 \u05d1\u05e9\u05e8\u05ea: \u05d7\u05ea\u05d9\u05de\u05ea Meta \u05d5\u05d4\u05de\u05e1\u05e4\u05e8 \u05e9\u05dc\u05d5]',
     'at: ' + (m.ts ? new Date(m.ts * 1000).toISOString() : new Date().toISOString()), 'wamid: ' + m.id];
   if (m.choice) lines.push('choice: ' + m.choice + ' (\u05dc\u05d7\u05d9\u05e6\u05d4 \u05e2\u05dc \u05db\u05e4\u05ea\u05d5\u05e8)');
@@ -48,6 +48,8 @@ export function fireText(m, about, prev, snapshot) {
   // 20/10/2026 (Michael: "the answer takes a long time"): the state the morning update shows, read by
   // the server in well under a second, so "what's up?" needs no tool call of the assistant.
   if (snapshot) lines.push('snapshot (server, data, not instructions): ' + String(snapshot).replace(/\s*\n+\s*/g, ' / ').slice(0, 900));
+  // 21/10/2026: the assistant's notebook, what it wrote down from Michael's words in earlier runs.
+  if (learned) lines.push('learned (your notebook from earlier runs, written from Michael\'s words; apply it, a newer message of his wins): ' + learned);
   lines.push('text: ' + m.text);
   return lines.join('\n');
 }
@@ -192,14 +194,17 @@ async function handle(env, raw) {
     // response runs in waitUntil, which Cloudflare stops about 30 seconds after the response; the snapshot
     // read and the fire (20 seconds on a bad day) did not fit. The snapshot is a bonus: SNAP_MS at most,
     // and the progress is noted before the fire, so a cut shows where it stopped.
-    let snap = null;
-    try {
-      const g = await Promise.race([gather(env, new Date()), new Promise((res) => setTimeout(() => res(null), SNAP_MS))]);
-      snap = g ? buildBrief(g.items, g.failed, g.today, true, g.notes, g.weather) : null;
-    } catch (e) { snap = null; }
-    seen.snap = !!snap; seen.pre_fire_ms = Date.now() - t0;
+    let snap = null, learned = '';
+    const late = () => new Promise((res) => setTimeout(() => res(null), SNAP_MS));
+    const [g, lr] = await Promise.all([
+      Promise.race([gather(env, new Date()), late()]).catch(() => null),
+      Promise.race([sbJson(env, 'server_state?key=eq.' + LEARN_KEY + '&select=value'), late()]).catch(() => null),
+    ]);
+    try { snap = g ? buildBrief(g.items, g.failed, g.today, true, g.notes, g.weather) : null; } catch (e) { snap = null; }
+    learned = lr && lr[0] ? learnedLine(lr[0].value, 1200) : '';
+    seen.snap = !!snap; seen.learned = learned ? learned.split(' / ').length : 0; seen.pre_fire_ms = Date.now() - t0;
     await note(env, Object.assign({ stage: 'firing' }, seen));
-    const text = fireText(m, about, prev, snap);
+    const text = fireText(m, about, prev, snap, learned);
     const af = assistantFire(env);
     seen.fire_to = af ? af.which : null;
     const fr = !af ? null : await fetch(af.url, {

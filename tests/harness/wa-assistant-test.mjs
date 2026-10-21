@@ -19,6 +19,8 @@ globalThis.fetch = async (url, opt = {}) => {
   if (url.startsWith(SB + '/rest/v1/notification_prefs')) return new Response(JSON.stringify(owner ? [{ prefs: { trustee_hazard: { whatsapp_to: '+' + owner } } }] : []), { status: 200 });
   if (url.startsWith(SB + '/rest/v1/server_state')) {
     if (m === 'POST') { JSON.parse(opt.body).forEach((r) => { state[r.key] = r.value; }); return new Response('', { status: 201 }); }
+    const ks = /key=in\.\(([^)]*)\)/.exec(url);
+    if (ks) return new Response(JSON.stringify(ks[1].split(',').map(decodeURIComponent).filter((k) => k in state).map((k) => ({ key: k, value: state[k] }))), { status: 200 });
     const k = /key=eq\.([^&]*)/.exec(url)[1];
     return new Response(JSON.stringify(k in state ? [{ value: state[k] }] : []), { status: 200 });
   }
@@ -233,6 +235,28 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   await post(rep3, await sign(rep3, ENV.META_APP_SECRET));
   check('words in reply to a known alert: reply_to to the assistant, not the last question', /reply_to/.test(fires[fires.length - 1].body.text) && !/prev_assistant_message/.test(fires[fires.length - 1].body.text));
 
+  console.log('\n3e. the notebook (21/10/2026, Michael: "it should learn things and always renew knowledge")');
+  {
+    const L = (b) => call(Object.assign({ op: 'learn', agent: 'routine-wa-assistant' }, b));
+    const a1 = await L({ kind: 'preference', text: '\u05ea\u05de\u05d9\u05d3 \u05dc\u05e2\u05e0\u05d5\u05ea \u05e2\u05dd \u05de\u05e7\u05d5\u05e8 \u05dc\u05d7\u05d5\u05e7' });
+    check('learn: a line is kept, with an id', a1.ok && /^l-\d{14}-/.test(a1.id) && JSON.parse(state.assistant_learned).length === 1, a1);
+    const a2 = await L({ kind: 'preference', text: '\u05ea\u05de\u05d9\u05d3 \u05dc\u05e2\u05e0\u05d5\u05ea \u05e2\u05dd \u05de\u05e7\u05d5\u05e8 \u05dc\u05d7\u05d5\u05e7' });
+    check('learn: the same open line again is the same line', a2.ok && a2.id === a1.id && JSON.parse(state.assistant_learned).length === 1, a2);
+    const bad = await Promise.all([L({ kind: 'gossip', text: 'something long enough' }), L({ kind: 'fact', text: 'short' }), L({ kind: 'fact', text: 'passed to dev-20261021053745-tqu3 today' })]);
+    check('learn: a bad kind, a short text or an internal id is refused', bad.every((x) => x.ok === false), bad);
+    const s1 = await L({ kind: 'source', text: 'NH3 detector check every 6 months', source: 'reg 7(b)' });
+    let raw = msgBody(OWNER, 'wamid.L1', 'q1'); const nf = fires.length;
+    await post(raw, await sign(raw, ENV.META_APP_SECRET));
+    const ft = fires.length > nf ? fires[fires.length - 1].body.text : '';
+    check('the next fire carries the notebook, newest first, with the source', /\nlearned \(/.test(ft) && ft.indexOf('NH3 detector') < ft.indexOf('\u05ea\u05de\u05d9\u05d3') && /\(reg 7\(b\)\)/.test(ft), ft);
+    check('learn_done needs where', (await call({ op: 'learn_done', id: s1.id })).ok === false);
+    await call({ op: 'learn_done', id: s1.id, where: 'michael-skills law.md' });
+    await call({ op: 'learn_done', id: a1.id, where: 'routine-wa-assistant.md 2' });
+    raw = msgBody(OWNER, 'wamid.L2', 'q2');
+    await post(raw, await sign(raw, ENV.META_APP_SECRET));
+    const ft2 = fires[fires.length - 1].body.text;
+    check('a folded line leaves the fire text', /wamid\.L2/.test(ft2) && !/\nlearned/.test(ft2), ft2);
+  }
   console.log('\n4. the front door');
   const mw = fs.readFileSync(new URL('../../functions/_middleware.js', import.meta.url), 'utf8');
   check('wa-hook is a machine path (Meta calls from abroad)', /'\/api\/wa-hook'/.test(mw));
