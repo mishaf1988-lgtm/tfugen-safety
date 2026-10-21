@@ -1,7 +1,7 @@
 // The server's fast lane (20/10/2026, Michael in the questionnaire: "do it: a fast lane in the server").
 // A number 1-4 that answers a hazard alert, and "what is urgent" / "expiries", are answered by wa-hook
 // itself by rules; everything else, and anything unclear, still goes to the assistant.
-import { fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, rateAdd, RATE_MAX } from './_build/wa-hook.mjs';
+import { fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX } from './_build/wa-hook.mjs';
 import { HAZARD_OPTIONS, hazardAsk, assistantFire, fireUrlOf } from './_build/_wa.mjs';
 
 let pass = 0, fail = 0;
@@ -43,6 +43,7 @@ check('typed "accurate" works too', rateOf(m('\u05de\u05d3\u05d5\u05d9\u05e7'), 
 check('"not accurate": noted, but goes on to the assistant', rateOf(m('2. \u05dc\u05d0 \u05de\u05d3\u05d5\u05d9\u05e7', 2), '', pro).good === false && fastRoute(m('2. \u05dc\u05d0 \u05de\u05d3\u05d5\u05d9\u05e7', 2), '', pro) === null);
 check('not after another kind of message (a hazard alert, a question)', rateOf(m('1', 1), '', prevAlert) === null && rateOf(m('\u05de\u05d3\u05d5\u05d9\u05e7'), '', { text: 'x', ref: 'brief' }) === null && rateOf(m('\u05de\u05d3\u05d5\u05d9\u05e7'), ALERT, pro) === null);
 check('a hazard "1" still goes to the hazard, not to the rating', fastRoute(m('1', 1), '', prevAlert).kind === 'hazard');
+check('a tap carries the answer as its context ("assistant | ..."): still a rating (21/10/2026, Michael\'s real tap)', rateOf(m('1. \u05de\u05d3\u05d5\u05d9\u05e7', 1), 'assistant | answer | 2026-10-21', pro).good === true && JSON.stringify(fastRoute(m('1. \u05de\u05d3\u05d5\u05d9\u05e7', 1), 'assistant | answer | 2026-10-21', pro)) === '{"kind":"rate"}');
 const rl = rateAdd(JSON.stringify(Array.from({ length: RATE_MAX }, () => ({ good: true }))), false, 'q '.repeat(300), '2026-10-21T08:00:00Z');
 check('ratings: the newest kept, at most ' + RATE_MAX + ', question cut to 200', rl.length === RATE_MAX && rl[rl.length - 1].good === false && rl[rl.length - 1].q.length === 200);
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
