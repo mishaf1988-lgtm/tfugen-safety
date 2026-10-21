@@ -43,6 +43,12 @@ export const AGENT_NAMES = { 'routine-coa': '\u05e1\u05d9\u05d3\u05d5\u05e8 \u05
   'routine-researcher': '\u05d7\u05d5\u05e7\u05e8 \u05d4\u05e2\u05d5\u05d6\u05e8', 'routine-talk-field': '\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9\u05ea', 'routine-validity': '\u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3', 'routine-wa-assistant': '\u05d4\u05e2\u05d5\u05d6\u05e8 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4', 'dev': '\u05e4\u05d9\u05ea\u05d5\u05d7' };
 export const agentName = (a) => AGENT_NAMES[a] || String(a || '').replace(/^routine-/, '');
 
+// Equipment of another area (equip_inspections.resp_area, 20/10/2026): the update names the role, not the
+// person (Michael: "do it: no calendar entry, just a mark"); who holds the role sits in SITE.equipAreas.
+export const AREA_ROLE = { '\u05ea\u05e9\u05ea\u05d9\u05d5\u05ea': '\u05d0\u05d7\u05e8\u05d0\u05d9 \u05d4\u05ea\u05e9\u05ea\u05d9\u05d5\u05ea', '\u05e7\u05d9\u05e8\u05d5\u05e8 \u05d5\u05d0\u05de\u05d5\u05e0\u05d9\u05d4': '\u05d0\u05d7\u05e8\u05d0\u05d9 \u05d4\u05e7\u05d9\u05e8\u05d5\u05e8' };
+export const areaRole = (a) => { a = String(a || '').trim(); return a ? (AREA_ROLE[a] || '\u05d0\u05d7\u05e8\u05d0\u05d9 ' + a) : ''; };
+const due = (x, today) => (x.e < today ? ' (\u05e4\u05d2 ' : ' (\u05e2\u05d3 ') + dmy(x.e) + (x.area ? ', ' + areaRole(x.area) : '') + ')';
+
 // One weather line from server_state.weather_tomorrow (/api/weather writes it at 17:07 for the next day),
 // only when it is for today and has the summary (20/10/2026, Michael on WhatsApp: "add the weather").
 const WX_KIND = { heat: '\u05e2\u05d5\u05de\u05e1 \u05d7\u05d5\u05dd', gust: '\u05de\u05e9\u05d1\u05d9\u05dd \u05d7\u05d6\u05e7\u05d9\u05dd', rain: '\u05d2\u05e9\u05dd' };
@@ -73,7 +79,7 @@ export function buildBrief(items, failed, today, compact, notes, weather) {
     const parts = [];
     if (wx) parts.push(wx);
     if (notes.length) parts.push('\u05de\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd: ' + notes.map((x) => agentName(x.agent) + ': ' + clip(x.text, 160)).join('; ') + '.');
-    if (items.length) parts.push('\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea: ' + items.slice(0, 3).map((x) => clip(x.n, 50) + (x.e < today ? ' (\u05e4\u05d2 ' : ' (\u05e2\u05d3 ') + dmy(x.e) + ')').join('; ')
+    if (items.length) parts.push('\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea: ' + items.slice(0, 3).map((x) => clip(x.n, 50) + due(x, today)).join('; ')
       + (items.length > 3 ? '; \u05d5\u05e2\u05d5\u05d3 ' + (items.length - 3) : '') + '.');
     if (failed.length) parts.push('\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc: ' + failed.slice(0, 5).join(', ') + '.');
     if (wx && parts.length === 1) parts.push('\u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.');
@@ -83,7 +89,7 @@ export function buildBrief(items, failed, today, compact, notes, weather) {
   if (wx) lines.push(wx);
   if (items.length) {
     lines.push('\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea:');
-    items.slice(0, 3).forEach((x) => lines.push('- ' + clip(x.n, 60) + (x.e < today ? ' (\u05e4\u05d2 ' : ' (\u05e2\u05d3 ') + dmy(x.e) + ')'));
+    items.slice(0, 3).forEach((x) => lines.push('- ' + clip(x.n, 60) + due(x, today)));
     if (items.length > 3) lines.push('\u05d5\u05e2\u05d5\u05d3 ' + (items.length - 3) + ' \u05d1\u05de\u05e1\u05da \u05d4\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea.');
   }
   if (notes.length) {
@@ -119,9 +125,9 @@ export async function gather(env, now) {
   const today = ilDay(now);
   const week = ilDay(new Date(now.getTime() + 7 * 86400000));
   const q = (t, cols) => sb(env, t + '?select=' + cols + '&e=not.is.null&e=lte.' + week + '&order=e.asc&limit=20').catch(() => []);
-  const [docs, equip] = await Promise.all([q('docs', 'n,e'), q('equip_inspections', 'n,loc,e')]);
+  const [docs, equip] = await Promise.all([q('docs', 'n,e'), q('equip_inspections', 'n,loc,e,resp_area')]);
   const items = [].concat((docs || []).map((x) => ({ n: x.n, e: x.e })),
-    (equip || []).map((x) => ({ n: x.loc ? x.n + ', ' + x.loc : x.n, e: x.e })))
+    (equip || []).map((x) => ({ n: x.loc ? x.n + ', ' + x.loc : x.n, e: x.e, area: x.resp_area || '' })))
     .filter((x) => x.n && /^\d{4}-\d{2}-\d{2}/.test(String(x.e))).sort((a, b) => String(a.e).localeCompare(String(b.e)));
   let log = [];
   try { log = JSON.parse((await stateGet(env, 'agent_log')) || '[]'); } catch (e) { log = []; }
