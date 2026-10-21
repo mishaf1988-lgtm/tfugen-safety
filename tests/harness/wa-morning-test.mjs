@@ -149,6 +149,20 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     globalThis.fetch = f0; state = {}; logs = []; metas = [];
   }
 
+  // 21/10/2026 (Michael on WhatsApp): the last line counts the development requests closed yesterday
+  {
+    const { devClosedYesterday } = await import('./_build/wa-morning.mjs');
+    const L = [{ status: 'done', done_at: '2026-10-21T13:25:16Z' }, { status: 'done', done_at: '2026-10-21T21:30:00Z' }, { status: 'done', done_at: '2026-10-20T10:00:00Z' }, { status: 'open' }];
+    check('dev count: done on the Israel day before today only (21:30 UTC is the next day in Israel)', devClosedYesterday(L, '2026-10-22') === 1 && devClosedYesterday(L, '2026-10-21') === 1 && devClosedYesterday('x', '2026-10-22') === null, [devClosedYesterday(L, '2026-10-22'), devClosedYesterday(L, '2026-10-21')]);
+    const full = buildBrief([{ n: 'A', e: '2026-10-21' }], [], '2026-10-22', false, [], null, 2);
+    check('dev count: the last line of the full update', full.split('\n').pop() === 'בקשות פיתוח שנסגרו אתמול: 2.', full);
+    check('dev count: zero is said too; none when not read (null)', /אתמול: 0\.$/.test(buildBrief([], [], '2026-10-22', false, [], null, 0)) && !/בקשות פיתוח/.test(buildBrief([{ n: 'A', e: '2026-10-21' }], [], '2026-10-22', false, [], null, null)));
+    const longB = buildBrief(Array.from({ length: 3 }, (_, i) => ({ n: 'x'.repeat(300) + i, e: '2026-10-21' })), ['a'.repeat(300)], '2026-10-22', false, [{ agent: 'routine-coa', text: 'y'.repeat(300) }], null, 4);
+    check('dev count: stays last when the update is cut to ' + MAX_CHARS, longB.length <= MAX_CHARS && /אתמול: 4\.$/.test(longB), longB.length);
+    const comp = buildBrief(Array.from({ length: 3 }, (_, i) => ({ n: 'x'.repeat(300) + i, e: '2026-10-21' })), [], '2026-10-22', true, [], null, 1);
+    check('dev count: compact keeps it at the end within ' + MAX_CHARS, comp.length <= MAX_CHARS && /אתמול: 1\.$/.test(comp), comp.length);
+  }
+
   // 20/10/2026: the watchdog for a stuck run
   {
     const T = Date.parse('2026-10-20T18:00:00Z'), last = { ts: '2026-10-20T18:00:00Z', payload: { wamid: 'w1' } };
