@@ -54,7 +54,8 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
 .desk .tasks li .tm{flex:none;font-family:var(--f-data);font-size:10px;font-variant-numeric:tabular-nums;color:var(--ink-2)}
 .inbox{flex:none;display:flex;align-items:center;gap:6px;min-width:0;width:100%;box-sizing:border-box;text-align:start;
   background:var(--desk);border:1px solid var(--lamp-wait);border-radius:8px;padding:4px 8px;font:inherit;font-size:12px;color:inherit;cursor:pointer}
-.inbox span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inbox>span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inbox .it+.it::before{content:" | "}
 .inbox:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .floor{flex:1;min-height:0;position:relative}
 .empty{background:var(--desk);border:1px dashed var(--ink-2);border-radius:8px;padding:18px;color:var(--ink-2)}
@@ -184,7 +185,14 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
   .desk .nx{grid-row:2;grid-column:2;font-size:13px;white-space:normal}
   .desk .say{grid-row:3;grid-column:2;position:static;white-space:normal;font-size:14px;padding:6px 10px;box-shadow:none}
   .detail{position:fixed;inset:8px}
-  .inbox span{white-space:normal}
+  /* 21/10/2026 (Michael's phone screenshot: six waiting items in one paragraph): one line per item,
+     each up to three lines, and a tap opens the worker of the item tapped. */
+  .inbox{align-items:flex-start}
+  .inbox .dot{margin-top:5px}
+  .inbox>span{white-space:normal;display:flex;flex-direction:column;gap:6px}
+  .inbox .it{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .inbox .it+.it::before{content:none}
+  .inbox .it+.it{border-top:1px solid var(--line);padding-top:6px}
 }
 </style>
 
@@ -265,6 +273,9 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     if(a.cron){var n=cronNext(a.cron,now);if(n)return n;}
     return a.next_run&&tms(a.next_run)>now?a.next_run:null;
   }
+  // 21/10/2026 (Michael's phone screenshot: a bubble cut at "סיורי המפגעי"): cut at a word and say so.
+  function phone(){return !!(window.matchMedia&&window.matchMedia('(max-width:600px)').matches);}
+  function clipWords(t,n){t=String(t||'').replace(/\s+/g,' ').trim();if(t.length<=n)return t;var c=t.slice(0,n),sp=c.lastIndexOf(' ');return (sp>n*0.6?c.slice(0,sp):c).replace(/[\s,.;:]+$/,'')+'...';}
   function byNext(x,y){return String(x.next_run||'~').localeCompare(String(y.next_run||'~'));}
   // A workstation: wall, desk, monitor (screen colour = state), and a person in a chair. A desk that
   // never ran has an empty chair; a waiting one has a question bubble.
@@ -336,10 +347,11 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
       var nx=today.querySelector('.tk:not(.past)');if(nx&&nx.scrollIntoView)try{nx.scrollIntoView({block:'nearest',inline:'center'});}catch(e){}
     }
     var inbox=document.getElementById('inbox');
-    var waiting=agents.filter(function(a){return a.waiting;}).concat(chatDocs.filter(function(m){return m.from==='handoff'&&m.status==='wait';}).map(function(m){return {name:m.by+' > '+m.worker,waiting:m.note||'אישור',worker:m.worker};}));
+    var waiting=agents.filter(function(a){return a.waiting;}).concat(chatDocs.filter(function(m){return m.from==='handoff'&&m.status==='wait';}).map(function(m){return {name:'העברה מ'+m.by+' ל'+m.worker,waiting:m.note||'מחכה לאישור שלך',worker:m.worker};}));
     inbox.hidden=!waiting.length;inbox.textContent='';
-    if(waiting.length){inbox.appendChild(el('i','dot s-wait'));inbox.appendChild(el('span',null,'מחכה לך: '+waiting.map(function(a){return a.name+': '+a.waiting;}).join(' | ')));
-      inbox.onclick=function(){var t=waiting[0];open=t.worker||t.room||'מנהל התפעול';if(open==='המחשב שלך')open='העוזר שלך';sel=open;render();};}
+    if(waiting.length){inbox.appendChild(el('i','dot s-wait'));var lst=el('span');waiting.forEach(function(a,i){var it=el('span','it');it.setAttribute('data-i',String(i));it.appendChild(el('b',null,a.name+': '));it.appendChild(document.createTextNode(a.waiting));lst.appendChild(it);});
+      inbox.appendChild(lst);inbox.setAttribute('aria-label','מחכה לך: '+waiting.length);
+      inbox.onclick=function(e){var it=e&&e.target&&e.target.closest?e.target.closest('.it'):null,t=waiting[it?+it.getAttribute('data-i'):0]||waiting[0];open=t.worker||t.room||'מנהל התפעול';if(open==='המחשב שלך')open='העוזר שלך';sel=open;render();};}
     if(!agents.length){floor.appendChild(el('div','empty','המשרד ריק עדיין. כל בוקר ב-07:38 סוכן קטן עובר על כל הסוכנים ושם כל אחד בשולחן שלו.'));return;}
     // 18/10/2026 (Michael: "one agent can do several jobs... so the screen is not crowded"): one desk per
     // worker, that is per working session; its tasks are listed on the desk. Tasks of one worker run one
@@ -363,7 +375,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
       b.title=w+': '+tasks.length+' משימות';
       b.appendChild(scene(s));
       var rp=lastReply(w);
-      if(rp&&!seen[seenKey(rp)]){var say=el('span','say',String(rp.text||'').replace(/\s+/g,' ').slice(0,90));say.title='תשובה חדשה. לחיצה פותחת';b.appendChild(say);b.title=w+': תשובה חדשה';}
+      if(rp&&!seen[seenKey(rp)]){var say=el('span','say',clipWords(rp.text,phone()?220:90));say.title='תשובה חדשה. לחיצה פותחת';b.appendChild(say);b.title=w+': תשובה חדשה';}
       b.appendChild(el('span','nm',w));
       var nxt=tasks.filter(function(t){return t.next_run;}).sort(byNext)[0];
       if(nxt)b.appendChild(el('span','nx','הבא: '+hm(nxt.next_run)+' '+nxt.name));

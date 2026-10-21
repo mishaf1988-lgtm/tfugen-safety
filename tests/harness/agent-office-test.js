@@ -15,11 +15,14 @@ const check = (label, cond, detail) => {
 
 const FAKE = `
 window.claude = { use: (name) => Promise.resolve(name !== 'db' ? null : {
-  collection: () => ({ onSnapshot: (fn) => { setTimeout(() => fn(Object.freeze({ docs: [
+  collection: (n) => ({ onSnapshot: (fn) => { setTimeout(() => fn(Object.freeze({ docs: (n === 'chat' ? [
+    ['c1', { from: 'worker', worker: 'W2', at: '2026-10-21T06:00:00Z', text: 'word '.repeat(80) + 'END' }],
+    ['c2', { from: 'handoff', by: 'W1', worker: 'W2', status: 'wait', at: '2026-10-21T06:01:00Z', text: 't' }],
+  ] : [
     ['trig_A1', { name: 'one', worker: 'W1', order: 1, status: 'done', last_run: '2026-10-17T19:44:49Z' }],
     ['trig_B2', { name: 'two', worker: 'W1', order: 2, status: 'done', waiting: 'x' }],
-    ['trig_C3', { name: 'three', worker: 'W2', status: 'fail' }],
-  ].map(([id, body]) => { const b = Object.freeze(body); return Object.freeze({ id, exists: true, data: () => b }); }) })), 0); return () => {}; } }),
+    ['trig_C3', { name: 'three', worker: 'W2', status: 'fail', waiting: 'long '.repeat(60) }],
+  ]).map(([id, body]) => { const b = Object.freeze(body); return Object.freeze({ id, exists: true, data: () => b }); }) })), 0); return () => {}; } }),
   doc: () => ({ onSnapshot: () => () => {} }),
 }) };`;
 
@@ -55,7 +58,18 @@ window.claude = { use: (name) => Promise.resolve(name !== 'db' ? null : {
     return { w: Math.round(r.width), nm: parseFloat(getComputedStyle(nm).fontSize), scene: getComputedStyle(b.querySelector('.scene')).display, lamp: getComputedStyle(b, '::before').backgroundColor }; }));
   check('phone: one full-width row per worker, name in 16px, no scene, a coloured lamp', rows.length === 2 && rows.every((r) => r.w > 330 && r.nm >= 16 && r.scene === 'none' && r.lamp !== 'rgba(0, 0, 0, 0)'), rows);
   check('phone: the page scrolls instead of squeezing', await phone.evaluate(() => getComputedStyle(document.body).overflow !== 'hidden'));
+  // 21/10/2026 (Michael's phone screenshot): what waits is one line per item, a handoff says what it is,
+  // a tap opens the worker of the item tapped, and a long answer is cut at a word with "...".
+  await phone.waitForSelector('#inbox .it');
+  const its = await phone.$$eval('#inbox .it', (xs) => xs.map((x) => ({ top: Math.round(x.getBoundingClientRect().top), t: x.textContent })));
+  check('phone: what waits, one line per item', its.length === 3 && new Set(its.map((x) => x.top)).size === 3, its);
+  check('phone: a handoff says who handed to whom', its.some((x) => /^\u05d4\u05e2\u05d1\u05e8\u05d4 \u05deW1 \u05dcW2: /.test(x.t)), its.map((x) => x.t));
+  const say = await phone.$eval('button.desk[data-worker="W2"] .say', (x) => x.textContent);
+  check('phone: a long answer is cut at a word, with "..."', /word\.\.\.$/.test(say) && say.length > 150 && say.length <= 224, say);
   if (process.env.SHOT) await phone.screenshot({ path: process.env.SHOT, fullPage: true });
+  await phone.click('#inbox .it[data-i="1"]');
+  const opened = await phone.$eval('.detail', (d) => d.getAttribute('aria-label')).catch(() => null);
+  check('phone: a tap on an item opens that worker', opened === 'W2', opened);
   const desk = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await desk.setContent(html, { waitUntil: 'load' });
   await desk.waitForSelector('button.desk');
