@@ -1,7 +1,7 @@
 // Michael's own "sign in my name on <file>" read by the server (21/10/2026, wa-hook signAskOf / signPick /
 // fastRoute): the assistant's sign_request was stopped by the cloud permission check, so the server finds the PDF
 // in the safety folder and asks him itself. Pure parts only; the search and routine-db are covered elsewhere.
-import { signAskOf, signPick, signAskManyText, fastRoute, recentPdfs, signPickOf, signPickChoices, signPickText, graphSearch, signWords } from './_build/wa-hook.mjs';
+import { signAskOf, signPick, signAskManyText, fastRoute, recentPdfs, signPickOf, signPickChoices, signPickText, graphSearch, signWords, signMailOf, signMailBody, SIGN_MAIL_LABEL } from './_build/wa-hook.mjs';
 import { OD_ROOT } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
@@ -49,5 +49,12 @@ await (async () => {
 })();
 { const w = signWords('\u05d4\u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05e9\u05d4\u05d2\u05d9\u05e2 \u05de\u05d9\u05e2\u05dc \u05dc\u05d4\u05e9\u05db\u05e8\u05d4');
   check('free sentence: the words worth searching (glue words out, both forms of a prefix)', ['\u05d4\u05e6\u05e2\u05ea', '\u05de\u05d7\u05d9\u05e8', '\u05d9\u05e2\u05dc'].every((x) => w.indexOf(x) >= 0) && w.indexOf('\u05e9\u05d4\u05d2\u05d9\u05e2') < 0 && w.length <= 6, w); }
+// the "mail it to me" button after signing (21/10/2026, Michael in the questionnaire)
+check('the mail button: a tap, "1", or a short line with "mail" as a reply to the signed answer', signMailOf({ choice: 1 }, { ref: 'signmail' }) && signMailOf({ text: '1' }, { ref: 'signmail' }) && signMailOf({ text: 'צרף לשליחה אלי את המסמך החתום למייל' }, { ref: 'signmail' }));
+check('the same words after any other message are not the button', signMailOf({ text: '1' }, { ref: 'brief' }) === null && signMailOf({ text: 'מייל' }, null) === null && signMailOf({ text: 'לא' }, { ref: 'signmail' }) === null);
+check('fastRoute routes the tap as sign_mail', (fastRoute({ choice: 1 }, '', { ref: 'signmail' }) || {}).kind === 'sign_mail');
+{ const b = signMailBody({ rel: '_x/a - חתום.pdf', name: 'a - חתום.pdf' });
+  check('the draft: to Michael, the signed file attached, subject = its name, only a draft (mail_draft)', b.op === 'mail_draft' && b.to === 'sviva@tapugan.co.il' && b.attach.length === 1 && b.attach[0] === '_x/a - חתום.pdf' && b.subject === 'a - חתום', b); }
+check('the button title fits WhatsApp (20)', SIGN_MAIL_LABEL.length <= 20);
 console.log('\nsign-ask-test: ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
