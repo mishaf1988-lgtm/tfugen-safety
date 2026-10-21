@@ -271,6 +271,35 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
     const r2 = JSON.parse(state.assistant_ratings || '[]');
     check('"not accurate": noted and the assistant fired with the answer it rates', r2.length === 2 && r2[1].good === false && fires.length === nf + 1 && /another answer/.test(fires[fires.length - 1].body.text), { r2, hook: state.wa_hook_last, f: fires.length - nf });
   }
+  console.log('\n3g. a closed dev request reaches Michael now (21/10/2026: "said it would come back to me and did not")');
+  {
+    const d = await call({ op: 'dev_request', agent: 'routine-wa-assistant', text: 'fix the label on six inspections please' });
+    const nm = metas.length;
+    const c = await call({ op: 'dev_done', id: d.id, note: 'the six are lifting machines now (dev-20261021075805-mq3v)' });
+    const last = metas[metas.length - 1] || {};
+    const body = JSON.stringify(last);
+    check('dev_done with a note: one WhatsApp to Michael, "fixed:" first, no internal id', c.ok && c.wa && metas.length === nm + 1 && /\u05ea\u05d5\u05e7\u05df: the six/.test(body) && !/dev-2026/.test(body), { c, body });
+    const nm2 = metas.length;
+    await call({ op: 'dev_done', id: 'dev-none' });
+    check('dev_done of an unknown request: no WhatsApp', metas.length === nm2);
+  }
+  console.log('\n3h. promises to Michael (21/10/2026: "the assistant reports what was done after the task")');
+  {
+    const P = () => JSON.parse(state.promises || '[]');
+    const p1 = await call({ op: 'promise', agent: 'routine-wa-assistant', text: '\u05d4\u05e1\u05de\u05db\u05d5\u05ea \u05de\u05e4\u05e2\u05d9\u05dc\u05d9 \u05d4\u05d3\u05d5\u05d3 \u05d1\u05e7\u05d5\u05d1\u05e5 \u05d0\u05d7\u05d3', who: '\u05e8\u05db\u05d6 \u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd', ref: 'h-20261021-0900-wa' });
+    check('promise: kept open with who and ref', p1.ok && P().some((x) => x.id === p1.id && x.status === 'open' && x.ref === 'h-20261021-0900-wa'), p1);
+    check('promise_done for nothing open: refused', (await call({ op: 'promise_done', ref: 'nope' })).ok === false);
+    const nm = metas.length;
+    const d1 = await call({ op: 'promise_done', ref: 'h-20261021-0900-wa', note: '\u05d4\u05e7\u05d5\u05d1\u05e5 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 07' });
+    const sent = JSON.stringify(metas[metas.length - 1] || {});
+    check('promise_done: closed, and Michael gets "done: <what was promised>. <note>" at once', d1.ok && metas.length === nm + 1 && /\u05d1\u05d5\u05e6\u05e2: \u05d4\u05e1\u05de\u05db\u05d5\u05ea/.test(sent) && /\u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 07/.test(sent) && P().find((x) => x.id === p1.id).status === 'done', { d1, sent });
+    const dr = await call({ op: 'dev_request', agent: 'routine-wa-assistant', text: 'change the label on the six', promise: '\u05ea\u05d9\u05e7\u05d5\u05df \u05d4\u05ea\u05d5\u05d5\u05d9\u05ea \u05d1-6 \u05d4\u05ea\u05e1\u05e7\u05d9\u05e8\u05d9\u05dd' });
+    check('dev_request: makes a promise with its own words and who = development', P().some((x) => x.ref === dr.id && x.status === 'open' && /\u05d4\u05ea\u05d5\u05d5\u05d9\u05ea/.test(x.text)), P());
+    const nm2 = metas.length;
+    await call({ op: 'dev_done', id: dr.id });
+    const sent2 = JSON.stringify(metas[metas.length - 1] || {});
+    check('dev_done without a note: the promise closes and Michael gets "done: <the promise>"', metas.length === nm2 + 1 && /\u05d1\u05d5\u05e6\u05e2: \u05ea\u05d9\u05e7\u05d5\u05df \u05d4\u05ea\u05d5\u05d5\u05d9\u05ea/.test(sent2) && P().find((x) => x.ref === dr.id).status === 'done', sent2);
+  }
   console.log('\n4. the front door');
   const mw = fs.readFileSync(new URL('../../functions/_middleware.js', import.meta.url), 'utf8');
   check('wa-hook is a machine path (Meta calls from abroad)', /'\/api\/wa-hook'/.test(mw));

@@ -93,6 +93,52 @@ export function learnedLine(raw, max) {
   });
   return out.join(' / ');
 }
+// Promises to Michael (21/10/2026, Michael: "why did it not get back to me as it said"; "the goal is that the
+// assistant reports to me what was done after the task, so I know things were done"). Every "I will get back
+// to you" is written here (routine-db promise; a dev request writes one by itself). Whoever finishes the task
+// closes it (promise_done, dev_done) and Michael gets "done: ..." on WhatsApp at once. One still open after
+// PROMISE_REMIND_H hours gets one reminder, in daytime only (wa-morning watch, every 5 minutes).
+export const PROMISE_KEY = 'promises', PROMISE_MAX = 100, PROMISE_REMIND_H = 24;
+const ptext = (x, n) => stripInternalIds(String(x || '')).replace(/[\u2013\u2014\u05be]/g, '-').replace(/\s+/g, ' ').trim().slice(0, n);
+const plist = (raw) => { let l = []; try { l = typeof raw === 'string' ? JSON.parse(raw || '[]') : (raw || []); } catch (e) { l = []; } return Array.isArray(l) ? l : []; };
+export function promiseAdd(raw, b, nowIso) {
+  const agent = String(b.agent || ''), text = ptext(b.text, 200), who = ptext(b.who, 60), ref = String(b.ref || '').slice(0, 80);
+  if (!/^[a-z0-9-]{2,40}$/.test(agent)) return { error: 'bad agent name' };
+  if (text.length < 5) return { error: 'text: what Michael was promised, 5-200 characters' };
+  if (ref && !/^[A-Za-z0-9_.:-]{1,80}$/.test(ref)) return { error: 'bad ref' };
+  const list = plist(raw);
+  const same = list.find((x) => x && x.status === 'open' && (ref ? x.ref === ref : x.text === text));
+  if (same) return { list, id: same.id };
+  if (list.length >= PROMISE_MAX && !list.some((x) => x && x.status !== 'open')) return { error: 'too many open promises' };
+  const id = 'p-' + nowIso.replace(/\D/g, '').slice(0, 14) + '-' + Math.random().toString(36).slice(2, 6);
+  const e = { id, at: nowIso, agent, text, status: 'open' };
+  if (who) e.who = who;
+  if (ref) e.ref = ref;
+  list.push(e);
+  while (list.length > PROMISE_MAX) { const i = list.findIndex((x) => x.status !== 'open'); list.splice(i >= 0 ? i : 0, 1); }
+  return { list, id };
+}
+// Closes the open promise with this id, or every open one with this ref. closed = the promises closed now.
+export function promiseDone(raw, key, note, nowIso) {
+  const list = plist(raw), id = String((key && key.id) || ''), ref = String((key && key.ref) || '');
+  if (!id && !ref) return { error: 'id or ref' };
+  const closed = list.filter((x) => x && x.status === 'open' && (id ? x.id === id : x.ref === ref));
+  closed.forEach((x) => { x.status = 'done'; x.done_at = nowIso; if (note) x.note = ptext(note, 300); });
+  return { list, closed };
+}
+export function promiseDoneText(closed, note) {
+  const n = ptext(note, 400);
+  if (!closed.length) return n ? '\u05d1\u05d5\u05e6\u05e2: ' + n : '';
+  return '\u05d1\u05d5\u05e6\u05e2: ' + closed.map((x) => x.text).join('; ') + (n ? '. ' + n : '.');
+}
+// The ones to remind about now: open, never reminded, older than PROMISE_REMIND_H, between 08:00 and 19:59 in Israel.
+export function promiseDue(raw, nowMs, hourIL) {
+  if (!(hourIL >= 8 && hourIL < 20)) return [];
+  return plist(raw).filter((x) => x && x.status === 'open' && !x.reminded_at && nowMs - Date.parse(x.at) >= PROMISE_REMIND_H * 3600e3).slice(0, 3);
+}
+export function promiseRemindText(due) {
+  return '\u05e2\u05d5\u05d3 \u05e4\u05ea\u05d5\u05d7, \u05dc\u05d0 \u05e9\u05db\u05d7\u05ea\u05d9: ' + due.map((x) => x.text + (x.who ? ' (\u05de\u05d7\u05db\u05d4 \u05dc' + x.who + ')' : '')).join('; ') + '.';
+}
 export const HAZARD_NOTE_TABLE = { trustee_hazard: ['trustee_reports', 'mgr_note'], near_miss: ['near_miss', 'notes'] };
 export function hazardChoiceNote(prev, choice, today) {
   const n = Number(choice);

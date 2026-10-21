@@ -19,7 +19,7 @@
 //   body {watch: true}  the watchdog for a stuck run, every 5 minutes (watchVerdict)
 // The same run writes calendar requests for upcoming expiries (calendarStep, below).
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
-import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds } from '../_wa.js';
+import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, PROMISE_KEY, promiseDue, promiseRemindText } from '../_wa.js';
 import { odConfigured, accessToken, putFile } from '../_onedrive.js';
 
 export const LAST_KEY = 'wa_morning_last';
@@ -243,7 +243,30 @@ export function watchVerdict(last, outs, nowMs, warned) {
   return { wamid, text: '\u05e2\u05d3\u05d9\u05d9\u05df \u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc\u05d4\u05d5\u05d3\u05e2\u05d4 \u05de-' + hm
     + '. \u05d9\u05d9\u05ea\u05db\u05df \u05e9\u05d4\u05e8\u05d9\u05e6\u05d4 \u05e0\u05ea\u05e7\u05e2\u05d4. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05e9\u05d5\u05d1, \u05d0\u05d5 \u05dc\u05d7\u05db\u05d5\u05ea \u05e2\u05d5\u05d3 \u05db\u05de\u05d4 \u05d3\u05e7\u05d5\u05ea.' };
 }
+// 21/10/2026: a promise to Michael still open after a day: one reminder (_wa.js promiseDue).
+async function promiseRemind(env, now) {
+  const raw = await stateGet(env, PROMISE_KEY);
+  const due = promiseDue(raw, now.getTime(), ilHour(now));
+  if (!due.length || !env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return null;
+  const to = await ownerWa(env, sbFrom(env));
+  if (!to) return null;
+  let list = []; try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
+  const ids = due.map((x) => x.id);
+  list.forEach((x) => { if (x && ids.indexOf(x.id) >= 0) x.reminded_at = now.toISOString(); });
+  await stateSet(env, PROMISE_KEY, JSON.stringify(list));
+  const text = promiseRemindText(due);
+  const r = await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, sbFrom(env)) });
+  await sb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify([{ id: 'wp' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
+      event_type: 'promise', channel: r.ok ? 'whatsapp' : 'whatsapp_error', payload: { title: clip(text, 120), kind: 'promise', detail: r.error || null } }]) }).catch(() => {});
+  return { reminded: ids.length, sent: r.ok };
+}
 export async function watch(env, now) {
+  const pr = await promiseRemind(env, now).catch(() => null);
+  const r = await watchReply(env, now);
+  return pr ? Object.assign({}, r, { promises: pr }) : r;
+}
+async function watchReply(env, now) {
   const rows = await sb(env, 'notifications_log?select=ts,payload&event_type=eq.owner_in&order=ts.desc&limit=1').catch(() => []);
   const last = Array.isArray(rows) && rows[0];
   if (!last) return { ok: true, sent: false, reason: 'no message' };

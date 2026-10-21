@@ -73,6 +73,8 @@
 //              replaces a file, never into the protected folders. odPutPdfCheck.
 //   dev_request / dev_done  (20/10/2026) {agent, text} a request to development, kept in server_state.dev_inbox;
 //              {id, note} closes one. devInboxAdd / devInboxDone.
+//   promise / promise_done  (21/10/2026) {agent, text, who?, ref?} "I will get back to you" kept in server_state.promises;
+//              {id | ref, note?} closes it and tells Michael on WhatsApp now. dev_request writes one, dev_done closes it.
 //   learn / learn_done  (21/10/2026) {agent, kind: correction|preference|fact|source, text, source?} a line in the
 //              assistant's notebook (server_state.assistant_learned); {id, where} marks it folded into the rules
 //              or the knowledge. learnAdd / learnDone.
@@ -96,11 +98,11 @@
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
-import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, LEARN_KEY, LEARN_KINDS, hazardChoiceNote, assistantFire, fireUrlOf, sameSession } from '../_wa.js';
+import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, stripInternalIds, LEARN_KEY, LEARN_KINDS, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, fireUrlOf, sameSession } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', LEARN_KEY, 'assistant_ratings'];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', LEARN_KEY, 'assistant_ratings', PROMISE_KEY];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -672,7 +674,58 @@ export async function onRequest(context) {
             body: JSON.stringify([{ key: 'agent_log', value: JSON.stringify(log.slice(-AGENT_LOG_MAX)), updated_at: now }]), signal: tmo(SB_MS) });
         } catch (x) { /* the close is written; Michael sees it in the office */ }
       }
-      return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length }, 200, {});
+      // 21/10/2026 (Michael: "the assistant did a task, said it would come back to me and did not"): the
+      // assistant tells him "you will get a message when it is fixed", so the close goes to his WhatsApp now,
+      // not only to the next morning update. Ids are cut out; a failed send does not undo the close.
+      // 21/10/2026: the promise a dev request made (below) is kept or closed with it.
+      let closed = [];
+      try {
+        const pr = await stateRead([PROMISE_KEY]);
+        const praw = pr && pr[0] && pr[0].value;
+        const p = body.op === 'dev_request'
+          ? promiseAdd(praw, { agent: body.agent, text: body.promise || ('\u05d1\u05e7\u05e9\u05ea \u05e4\u05d9\u05ea\u05d5\u05d7: ' + String(body.text || '').slice(0, 120)), who: '\u05e4\u05d9\u05ea\u05d5\u05d7', ref: r.id }, now)
+          : promiseDone(praw, { ref: String(body.id || '') }, body.note, now);
+        if (!p.error) {
+          closed = p.closed || [];
+          await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+            body: JSON.stringify([{ key: PROMISE_KEY, value: JSON.stringify(p.list), updated_at: now }]), signal: tmo(SB_MS) });
+        }
+      } catch (x) { /* the request itself is written */ }
+      let wa = null;
+      const waText = body.op !== 'dev_done' ? '' : String(body.note || '').trim() ? '\u05ea\u05d5\u05e7\u05df: ' + stripInternalIds(body.note) : promiseDoneText(closed, '');
+      if (waText && env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN) {
+        try {
+          const to = await ownerWa(env, url);
+          const text = waText;
+          const s = to ? await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
+          if (s.ok) await noteLastOut(env, url, text, 'dev');
+          wa = s.ok ? (s.via || 'sent') : (s.error || 'failed');
+        } catch (x) { wa = 'failed'; }
+      }
+      return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length, wa }, 200, {});
+    }
+    if (body.op === 'promise' || body.op === 'promise_done') {
+      const now = new Date().toISOString();
+      const rows = await stateRead([PROMISE_KEY]);
+      const raw = rows && rows[0] && rows[0].value;
+      const r = body.op === 'promise' ? promiseAdd(raw, body, now) : promiseDone(raw, { id: body.id, ref: body.ref }, body.note, now);
+      if (r.error) return jsonResp({ ok: false, error: r.error }, 400, {});
+      if (body.op === 'promise_done' && !r.closed.length) return jsonResp({ ok: false, error: 'no open promise with this id or ref' }, 400, {});
+      const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', {
+        method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify([{ key: PROMISE_KEY, value: JSON.stringify(r.list), updated_at: now }]), signal: tmo(SB_MS),
+      });
+      if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status }, 200, {});
+      let wa = null;
+      if (body.op === 'promise_done' && env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN) {
+        try {
+          const to = await ownerWa(env, url), text = promiseDoneText(r.closed, body.note);
+          const s = to ? await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
+          if (s.ok) await noteLastOut(env, url, text, 'promise');
+          wa = s.ok ? (s.via || 'sent') : (s.error || 'failed');
+        } catch (x) { wa = 'failed'; }
+      }
+      return jsonResp({ ok: true, id: r.id || (r.closed && r.closed.map((x) => x.id).join(',')), open: r.list.filter((x) => x.status === 'open').length, wa }, 200, {});
     }
     if (body.op === 'learn' || body.op === 'learn_done') {
       const now = new Date().toISOString();
