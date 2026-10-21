@@ -65,6 +65,15 @@ export function choicesPayload(to, text, choices) {
 }
 
 // Michael's choice on a hazard, as a note (routine-db hazard_choice, and the fast lane in wa-hook.js). Pure, tested. The same choice twice = no change.
+// Internal ids (a dev request, a trigger, a session, an office chat row) mean nothing to Michael
+// (21/10/2026). routine-db wa_me refuses a text with one; the morning update cuts them out, because a
+// worker's for_michael note is not rewritten by anyone before it goes out.
+export const INTERNAL_ID = /(^|[^A-Za-z0-9])(dev-\d{14}-[a-z0-9]{4}|trig_[A-Za-z0-9]{6,}|session_[A-Za-z0-9]{6,}|cse_[A-Za-z0-9]{6,}|h-\d{8}-\d{4})/;
+export function hasInternalId(t) { return INTERNAL_ID.test(String(t || '')); }
+export function stripInternalIds(t) {
+  return String(t || '').replace(new RegExp(INTERNAL_ID.source, 'g'), '$1').replace(/\(\s*[,;:]?\s*\)/g, '')
+    .replace(/\s+([.,;:)])/g, '$1').replace(/([,;:])(?=[.,;:])/g, '').replace(/\s{2,}/g, ' ').trim();
+}
 export const HAZARD_NOTE_TABLE = { trustee_hazard: ['trustee_reports', 'mgr_note'], near_miss: ['near_miss', 'notes'] };
 export function hazardChoiceNote(prev, choice, today) {
   const n = Number(choice);

@@ -93,7 +93,7 @@
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
-import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, fireUrlOf, sameSession } from '../_wa.js';
+import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, hazardChoiceNote, assistantFire, fireUrlOf, sameSession } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks'];
@@ -369,7 +369,7 @@ export function draftRequest(b) {
 // course carried personal details). Names cannot be told apart from words; a passport number can.
 // 21/10/2026 (Michael's screenshot: "dev-20261021053745-tqu3" in a WhatsApp answer): internal ids (a dev
 // request, a trigger, a session, an office chat row) mean nothing to him; the message says what was done.
-export function hasInternalId(t) { return /(^|[^A-Za-z0-9])(dev-\d{14}-[a-z0-9]{4}|trig_[A-Za-z0-9]{6,}|session_[A-Za-z0-9]{6,}|cse_[A-Za-z0-9]{6,}|h-\d{8}-\d{4})/.test(String(t || '')); }
+export { hasInternalId };
 export function hasPassport(t) { return /(^|[^A-Za-z0-9])[A-Z]{1,2}[0-9]{6,8}(?![A-Za-z0-9])/.test(String(t || '')); }
 export const MAIL_REQ_ID = /^[A-Za-z0-9_=+\/-]{40,400}$/;
 const OD_NO_DIR = /(^|\/)(_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea|\u05dc\u05de\u05d7\u05d9\u05e7\u05d4|ARCHIVE)(\/|$)/i;

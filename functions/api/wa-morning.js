@@ -19,7 +19,7 @@
 //   body {watch: true}  the watchdog for a stuck run, every 5 minutes (watchVerdict)
 // The same run writes calendar requests for upcoming expiries (calendarStep, below).
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
-import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut } from '../_wa.js';
+import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds } from '../_wa.js';
 import { odConfigured, accessToken, putFile } from '../_onedrive.js';
 
 export const LAST_KEY = 'wa_morning_last';
@@ -71,7 +71,8 @@ export function weatherLine(w, today) {
 export function buildBrief(items, failed, today, compact, notes, weather) {
   const wx = weatherLine(weather, today);
   failed = failed.map(agentName);
-  notes = (notes || []).slice(0, 3);
+  // A worker's note goes out as written, so an internal id is cut out here (21/10/2026, hasInternalId).
+  notes = (notes || []).map((x) => ({ agent: x.agent, text: stripInternalIds(x.text) })).filter((x) => x.text).slice(0, 3);
   // compact (20/10/2026, Michael's screenshot): outside the 24 hour window the template carries one
   // line between its own "update from the assistant:" and "to answer, write here", so no heading, no
   // closing line, and items joined by "; " instead of new lines that would turn into " | ".
