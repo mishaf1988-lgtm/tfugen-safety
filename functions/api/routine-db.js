@@ -73,6 +73,8 @@
 //              replaces a file, never into the protected folders. odPutPdfCheck.
 //   dev_request / dev_done  (20/10/2026) {agent, text} a request to development, kept in server_state.dev_inbox;
 //              {id, note} closes one. devInboxAdd / devInboxDone.
+//   source_read  (21/10/2026) {url} the text of one page of nevo.co.il or gov.il, read from the server (both refuse
+//              the cloud the assistant runs in). Text only, up to SOURCE_MAX characters. sourceUrl, htmlText.
 //   wa_media  (21/10/2026) {id} a photo or a document Michael sent on WhatsApp (the media id in the fire text):
 //              {ok, mime, name?, bytes, b64}. Images and PDF only, up to WA_MEDIA_MAX. Kept nowhere.
 //   skill_read  (21/10/2026) {path: "SKILL.md" | "references/<name>.md"} one file of the assistant's knowledge in the
@@ -189,6 +191,19 @@ export function learnDone(raw, id, where, nowIso) {
 // skill_read (21/10/2026, a forklift question from Michael: the WhatsApp assistant's professional agent could not
 // clone the private michael-skills repo and answered without law.md and cases.md). The server reads it with the
 // token the weekly mail already uses. Only the assistant's own files, .md, and never the monthly exam.
+// source_read (21/10/2026, the assistant's own list to Michael, "1. everything to development": gov.il refuses the
+// cloud and Nevo gives it only a summary). Only these two sites, https, no credentials sent.
+export const SOURCE_MAX = 200000;
+export function sourceUrl(u) {
+  let x; try { x = new URL(String(u || '')); } catch (e) { return null; }
+  if (x.protocol !== 'https:' || x.username || x.password || x.port) return null;
+  return /^(www\.)?(nevo\.co\.il|gov\.il)$/.test(x.hostname) ? x.toString() : null;
+}
+export function htmlText(html) {
+  return String(html || '').replace(/<(script|style|noscript)[\s\S]*?<\/\1>/gi, ' ').replace(/<br\s*\/?>|<\/(p|div|tr|li|h[1-6])>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+    .replace(/[ \t]+/g, ' ').replace(/ ?\n ?/g, '\n').replace(/\n{2,}/g, '\n').trim();
+}
 export const WA_MEDIA_MAX = 8 * 1024 * 1024;
 export const waMediaMimeOk = (m) => /^(image\/(jpeg|png|webp)|application\/pdf)$/.test(String(m || ''));
 export const SKILL_BASE = String(SITE.assistantQueue || '').replace(/references\/research-queue\.md$/, '');
@@ -719,6 +734,22 @@ export async function onRequest(context) {
         } catch (x) { wa = 'failed'; }
       }
       return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length, wa }, 200, {});
+    }
+    if (body.op === 'source_read') {
+      const u = sourceUrl(body.url);
+      if (!u) return jsonResp({ ok: false, error: 'only https pages of nevo.co.il or gov.il' }, 400, {});
+      const r = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ' + SITE.slug + '/1.0)', Accept: 'text/html,application/xhtml+xml' }, redirect: 'follow', signal: tmo(GRAPH_MS) });
+      if (!r.ok) return jsonResp({ ok: false, error: 'page ' + r.status, url: u }, 200, {});
+      if (!sourceUrl(r.url || u)) return jsonResp({ ok: false, error: 'redirected off the allowed sites' }, 200, {});
+      const ct = String(r.headers.get('content-type') || '');
+      if (!/text\/html|text\/plain|xhtml/.test(ct)) return jsonResp({ ok: false, error: 'not a page: ' + ct }, 200, {});
+      let raw = '';
+      // Nevo's law pages are windows-1255
+      const buf = await r.arrayBuffer();
+      const cs = (/charset=([\w-]+)/i.exec(ct) || [])[1] || (/<meta[^>]+charset=["']?([\w-]+)/i.exec(new TextDecoder('latin1').decode(buf.slice(0, 4000))) || [])[1] || 'utf-8';
+      try { raw = new TextDecoder(cs.toLowerCase()).decode(buf); } catch (e) { raw = new TextDecoder('utf-8').decode(buf); }
+      const text = htmlText(raw);
+      return jsonResp({ ok: true, url: u, chars: text.length, cut: text.length > SOURCE_MAX, text: text.slice(0, SOURCE_MAX) }, 200, {});
     }
     if (body.op === 'wa_media') {
       const id = String(body.id || '');
