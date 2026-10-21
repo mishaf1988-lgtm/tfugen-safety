@@ -383,6 +383,12 @@ export const OD_REQ = '_\u05d1\u05e7\u05e9\u05d5\u05ea \u05de\u05d4\u05de\u05d9\
 // Never sent: the flow has no send step, and Michael sends from Outlook.
 export const OD_DRAFT = '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d9\u05d9\u05dc';
 export const DRAFT_TO = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$/;
+// 21/10/2026 (Michael at 11:57: "do not write good morning, it is already noon", after the rule was
+// written that morning): a draft opening "good morning" from 11:00 Israel time opens "hi" instead.
+export function greetByHour(text, nowMs) {
+  const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', hour12: false }).format(new Date(nowMs || Date.now())));
+  return h >= 11 && h < 24 ? String(text).replace(/^\u05d1\u05d5\u05e7\u05e8 \u05d8\u05d5\u05d1(?=[\s,!.])/, '\u05d4\u05d9\u05d9') : String(text);
+}
 export function draftRequest(b) {
   // Up to 5 recipients, "a@x; b@y" (20/10/2026: one mail to the two people in charge of the ammonia
   // equipment); the flow's To field takes them separated by ";".
@@ -393,7 +399,7 @@ export function draftRequest(b) {
   // up to 5, the same rules as to; the flow's CC field takes them separated by ";".
   const ccList = String(b.cc || '').split(/[;,]/).map((x) => x.trim()).filter(Boolean);
   if (ccList.length > 5 || !ccList.every((x) => DRAFT_TO.test(x))) return { error: 'bad cc' };
-  const to = list.join(';'), subject = String(b.subject || '').replace(/\s+/g, ' ').trim(), text = String(b.body || '').replace(/\r\n/g, '\n').trim();
+  const to = list.join(';'), subject = String(b.subject || '').replace(/\s+/g, ' ').trim(), text = greetByHour(String(b.body || '').replace(/\r\n/g, '\n').trim(), b._now);
   if (!subject || subject.length > 200) return { error: 'subject 1-200 characters' };
   if (!text || text.length > 5000) return { error: 'body 1-5000 characters' };
   // 20/10/2026 (Michael: "instead of my name, attach the signature I have in the mail"): a draft made
