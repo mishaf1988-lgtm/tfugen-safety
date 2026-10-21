@@ -271,6 +271,19 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
     const r2 = JSON.parse(state.assistant_ratings || '[]');
     check('"not accurate": noted and the assistant fired with the answer it rates', r2.length === 2 && r2[1].good === false && fires.length === nf + 1 && /another answer/.test(fires[fires.length - 1].body.text), { r2, hook: state.wa_hook_last, f: fires.length - nf });
   }
+  console.log('\n3g. a closed dev request reaches Michael now (21/10/2026: "said it would come back to me and did not")');
+  {
+    const d = await call({ op: 'dev_request', agent: 'routine-wa-assistant', text: 'fix the label on six inspections please' });
+    const nm = metas.length;
+    const c = await call({ op: 'dev_done', id: d.id, note: 'the six are lifting machines now (dev-20261021075805-mq3v)' });
+    const last = metas[metas.length - 1] || {};
+    const body = JSON.stringify(last);
+    check('dev_done with a note: one WhatsApp to Michael, "fixed:" first, no internal id', c.ok && c.wa && metas.length === nm + 1 && /\u05ea\u05d5\u05e7\u05df: the six/.test(body) && !/dev-2026/.test(body), { c, body });
+    const nm2 = metas.length;
+    const d2 = await call({ op: 'dev_request', agent: 'routine-wa-assistant', text: 'another request without a note' });
+    await call({ op: 'dev_done', id: d2.id });
+    check('dev_done without a note: no WhatsApp', metas.length === nm2);
+  }
   console.log('\n4. the front door');
   const mw = fs.readFileSync(new URL('../../functions/_middleware.js', import.meta.url), 'utf8');
   check('wa-hook is a machine path (Meta calls from abroad)', /'\/api\/wa-hook'/.test(mw));

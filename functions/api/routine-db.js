@@ -96,7 +96,7 @@
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
-import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, LEARN_KEY, LEARN_KINDS, hazardChoiceNote, assistantFire, fireUrlOf, sameSession } from '../_wa.js';
+import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, stripInternalIds, LEARN_KEY, LEARN_KINDS, hazardChoiceNote, assistantFire, fireUrlOf, sameSession } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks'];
@@ -672,7 +672,21 @@ export async function onRequest(context) {
             body: JSON.stringify([{ key: 'agent_log', value: JSON.stringify(log.slice(-AGENT_LOG_MAX)), updated_at: now }]), signal: tmo(SB_MS) });
         } catch (x) { /* the close is written; Michael sees it in the office */ }
       }
-      return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length }, 200, {});
+      // 21/10/2026 (Michael: "the assistant did a task, said it would come back to me and did not"): the
+      // assistant tells him "you will get a message when it is fixed", so the close goes to his WhatsApp now,
+      // not only to the next morning update. Ids are cut out; a failed send does not undo the close.
+      let wa = null;
+      const waText = body.op === 'dev_done' ? stripInternalIds(body.note) : '';
+      if (waText && env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN) {
+        try {
+          const to = await ownerWa(env, url);
+          const text = '\u05ea\u05d5\u05e7\u05df: ' + waText;
+          const s = to ? await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
+          if (s.ok) await noteLastOut(env, url, text, 'dev');
+          wa = s.ok ? (s.via || 'sent') : (s.error || 'failed');
+        } catch (x) { wa = 'failed'; }
+      }
+      return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length, wa }, 200, {});
     }
     if (body.op === 'learn' || body.op === 'learn_done') {
       const now = new Date().toISOString();
