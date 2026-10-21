@@ -133,6 +133,22 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     globalThis.fetch = f0; state = {}; logs = [];
   }
 
+  // 21/10/2026: a failed read of the answers never alerts (the first alert ever was a false one)
+  {
+    const f0 = globalThis.fetch, sent = [];
+    const T = Date.parse('2026-10-21T13:19:44.804Z');
+    globalThis.fetch = async (url, opt = {}) => {
+      const u = String(url);
+      if (u.indexOf('event_type=eq.owner_in') >= 0) return new Response(JSON.stringify([{ ts: '2026-10-21T13:19:44.804+00:00', payload: { wamid: 'wF' } }]), { status: 200 });
+      if (u.indexOf('event_type=eq.assistant') >= 0) return new Response('{"message":"timeout"}', { status: 503 });
+      if (u.startsWith('https://graph.facebook.com/')) { sent.push(u); }
+      return f0(url, opt);
+    };
+    const w = await run(ENV, new Date(T + 15 * 60e3), { watch: true });
+    check('watch: the answers could not be read: no alert, says why', sent.length === 0 && w.sent === false && /could not read/.test(w.error || ''), { w, sent });
+    globalThis.fetch = f0; state = {}; logs = []; metas = [];
+  }
+
   // 20/10/2026: the watchdog for a stuck run
   {
     const T = Date.parse('2026-10-20T18:00:00Z'), last = { ts: '2026-10-20T18:00:00Z', payload: { wamid: 'w1' } };
