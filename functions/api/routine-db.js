@@ -854,6 +854,11 @@ export async function onRequest(context) {
           const s = to ? await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
           if (s.ok) await noteLastOut(env, url, text, 'worker');
           wa = s.ok ? (s.via || 'sent') : (s.error || 'failed');
+          // logged like wa_me, so wa_review and the weekly retro (7a) see the worker's answer too
+          await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
+            body: JSON.stringify([{ id: 'wk' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now,
+              event_type: 'assistant', channel: s.ok ? 'whatsapp' : 'whatsapp_error',
+              payload: { title: text.replace(/\s+/g, ' ').slice(0, 120), text: text.slice(0, 1500), via: s.via || null, ref: 'worker', detail: s.error || null } }]) }).catch(() => null);
         } catch (x) { wa = 'failed'; }
       }
       return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length, fired, wa, configured: !!env.WORKER_FIRE_TOKEN }, 200, {});
