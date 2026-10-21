@@ -147,7 +147,7 @@ export function promiseRemindText(due) {
 // assistant at that time with a server line (promiseCheckFireText), and that run checks, closes the promise
 // (promise_done, "done" on WhatsApp) or sets the next check. Daytime only, at most PROMISE_CHECKS_MAX per promise.
 export const PROMISE_CHECK_MIN = 10, PROMISE_CHECK_MAX_MIN = 2880, PROMISE_CHECKS_MAX = 6;
-export const PROMISE_CHECK_HEAD = '[בדיקה חוזרת שתזמנת, נבדק בשרת]';
+export const PROMISE_CHECK_HEAD = '[\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea \u05e9\u05ea\u05d6\u05de\u05e0\u05ea, \u05e0\u05d1\u05d3\u05e7 \u05d1\u05e9\u05e8\u05ea]';
 export function promiseCheckSet(p, b, nowIso) {
   if (b.check_in_min == null || b.check_in_min === '') return {};
   const m = Number(b.check_in_min);
