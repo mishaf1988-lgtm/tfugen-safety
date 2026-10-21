@@ -54,5 +54,8 @@ check('checkout -B then commit, while still on main: passes', B('git checkout -q
 check('checkout -b chained with && then commit: passes', B('git checkout -q -b routine/x && git commit -qm x', 'main') == {})
 check('checkout -b then ; commit (the -b can fail on an existing branch): denied', 'deny' in json.dumps(B('git checkout -b routine/x 2>/dev/null; git commit -qm x', 'main')))
 check('commit only inside a heredoc body on main: passes', B("cat > t <<'EOF'\ngit commit -m x\nEOF\nls", 'main') == {})
+env = dict(os.environ, PUSH_GATE_CHANGED='functions/_wa.js'); env.pop('PUSH_GATE_TEST', None)
+r = subprocess.run([sys.executable, HOOK], input=json.dumps({'tool_name': 'Bash', 'tool_input': {'command': 'git push origin x'}}), capture_output=True, text=True, timeout=120, env=env)
+check('21/10/2026: a functions/ change runs the real rule1-hebrew test (node) and it is green on this tree', r.returncode == 0 and json.loads(r.stdout or '{}') == {}, r.stdout[-300:] + r.stderr[-300:])
 print('\n%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)
