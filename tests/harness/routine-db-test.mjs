@@ -588,6 +588,17 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   }
   check('/api/routine-db is a machine path', /const MACHINE_PATHS = \[[^\]]*'\/api\/routine-db'/.test(mw));
 
+  console.log('\nsign_offer (21/10/2026: the assistant offers PDFs as buttons, signs nothing)');
+  { const E = { ...ENV, META_PHONE_NUMBER_ID: 'P', META_ACCESS_TOKEN: 'm' };
+    const six = await call({ op: 'sign_offer', agent: 'routine-wa-assistant', why: 'test offer', paths: ['a/1.pdf', 'a/2.pdf', 'a/3.pdf', 'a/4.pdf', 'a/5.pdf', 'a/6.pdf'] }, 'k-123', 'POST', E);
+    check('sign_offer: more than 5 = refused', six.status === 400 && /1-5/.test(six.json.error), six);
+    const prot = await call({ op: 'sign_offer', agent: 'routine-wa-assistant', why: 'test offer', paths: ['a/1.pdf', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d9\u05d9\u05dc/2.pdf'] }, 'k-123', 'POST', E);
+    check('sign_offer: a protected folder = refused, by its number', prot.status === 400 && /^path 2:/.test(prot.json.error), prot);
+    const extra = await call({ op: 'sign_offer', agent: 'routine-wa-assistant', why: 'test offer', paths: ['a/1.pdf'], page: 2 }, 'k-123', 'POST', E);
+    check('sign_offer: no page / x / y (the place is found at the request)', extra.status === 400 && /field not allowed/.test(extra.json.error), extra);
+    delete state.sign_pick;
+    const noOwner = await call({ op: 'sign_offer', agent: 'routine-wa-assistant', why: 'test offer', paths: ['a/1.pdf', '_\u05e0\u05db\u05e0\u05e1 \u05de\u05d4\u05de\u05d9\u05d9\u05dc/q.pdf'] }, 'k-123', 'POST', E);
+    check('sign_offer: valid paths (the mail inbox too) pass the checks; no owner number = nothing saved', noOwner.json.ok === false && /owner/.test(noOwner.json.error) && !('sign_pick' in state), noOwner); }
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.log('HARNESS ERROR: ' + (e && e.stack || e)); process.exit(1); });

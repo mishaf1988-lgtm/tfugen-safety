@@ -26,7 +26,10 @@ const ok = { agent: 'wa-assistant', why: 'Michael asked to sign', path: 'מינ�
 const c = signRequestCheck(ok);
 check('a PDF in the safety folder: the full path under the root', c.path === OD_ROOT + 'מינויים/מכתב מינוי.pdf' && c.name === 'מכתב מינוי.pdf' && c.folder === 'מינויים', c);
 check('not a PDF = refused', signRequestCheck({ ...ok, path: 'מינויים/x.docx' }).error === 'bad path');
-check('the protected folders = refused', ['_גרסאות קודמות/a.pdf', 'למחיקה/a.pdf', 'x/ARCHIVE/a.pdf', '_נכנס מהמייל/a.pdf', '_בקשות מהמייל/a.pdf', '_טיוטות למייל/a.pdf'].every((p) => signRequestCheck({ ...ok, path: p }).error === 'bad path'));
+check('the protected folders = refused', ['_גרסאות קודמות/a.pdf', 'למחיקה/a.pdf', 'x/ARCHIVE/a.pdf', '_בקשות מהמייל/a.pdf', '_טיוטות למייל/a.pdf'].every((p) => signRequestCheck({ ...ok, path: p }).error === 'bad path'));
+// 21/10/2026: a quote that came by mail sits in the inbox; it is signed there (Michael tapped one at 21:44).
+const ib = signRequestCheck({ ...ok, path: '_נכנס מהמייל/q.pdf' });
+check('the mail inbox: allowed, the full path keeps the inbox', !ib.error && ib.path === OD_ROOT + '_נכנס מהמייל/q.pdf' && ib.folder === '_נכנס מהמייל', ib);
 check('.. and a file at the root alone = refused', signRequestCheck({ ...ok, path: '../a.pdf' }).error && signRequestCheck({ ...ok, path: 'a.pdf' }).error);
 check('a signed copy is not signed again', signRequestCheck({ ...ok, path: 'מינויים/מכתב מינוי - חתום.pdf' }).error === 'bad path');
 check('no agent / no why = refused', signRequestCheck({ ...ok, agent: 'X Y' }).error === 'bad agent name' && signRequestCheck({ ...ok, why: '' }).error === 'why required');

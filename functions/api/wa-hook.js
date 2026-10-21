@@ -17,7 +17,7 @@ import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
 import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, LEARN_KEY, learnedLine } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 import { accessToken } from '../_onedrive.js';
-import { onRequest as routineDb, OD_ROOT } from './routine-db.js';
+import { onRequest as routineDb, OD_ROOT, OD_REQ, OD_DRAFT } from './routine-db.js';
 import { SIGN_KEY, signRefOf, signAnswer, signTake, signMark, signRun, signDoneText, SIGN_CANCEL_TEXT, SIGN_EXPIRED_TEXT, SIGN_DONE_TEXT } from '../_sign.js';
 
 export const FAIL_TEXT = '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05dc\u05e2\u05d5\u05d6\u05e8. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.';
@@ -192,7 +192,7 @@ export function signPick(items, q) {
   const list = (items || []).filter((x) => x && x.file && /\.pdf$/i.test(x.name || '') && !/\s-\s\u05d7\u05ea\u05d5\u05dd\.pdf$/i.test(x.name || ''))
     .map((x) => { let p = ''; try { p = decodeURIComponent(String((x.parentReference && x.parentReference.path) || '')); } catch (e) { p = ''; }
       const dir = p.indexOf(root) === 0 ? p.slice(root.length).split('/').filter(Boolean) : null;
-      return dir && dir.length ? { name: x.name, path: dir.concat([x.name]).join('/') } : null; })
+      return dir && dir.length && dir[0] !== OD_REQ && dir[0] !== OD_DRAFT ? { name: x.name, path: dir.concat([x.name]).join('/') } : null; })
     .filter(Boolean);
   const exact = list.filter((x) => norm(x.name) === norm(q));
   return exact.length === 1 ? [exact[0]] : list.slice(0, 5);
@@ -403,8 +403,10 @@ async function handle(env, raw) {
           const rows = await sbJson(env, 'server_state?key=eq.' + SIGN_PICK_KEY + '&select=value');
           let st = null; try { st = JSON.parse(rows && rows[0] ? rows[0].value : 'null'); } catch (x) { st = null; }
           const path = st && Date.now() - Date.parse(st.at) < SIGN_PICK_MS && st.paths[fr0.n - 1];
-          if (path) { const sa = await signAskPath(env, path); if (sa.sent) { seen.fast = 'sign_pick'; continue; } }
-          ans = null;
+          if (path) { const sa = await signAskPath(env, path); if (sa.sent) { seen.fast = 'sign_pick'; continue; } seen.sign_pick_error = String(sa.error || ''); }
+          // 21/10/2026: a failed pick says so, instead of falling silently to the assistant
+          ans = path ? '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05d0\u05ea \u05d1\u05e7\u05e9\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d6\u05d4 (' + (seen.sign_pick_error || '?') + '). \u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1, \u05d0\u05d5 \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05de\u05d4 \u05dc\u05d7\u05ea\u05d5\u05dd.' : null;
+          ref = 'sign-pick-fail';
         }
         else if (fr0.kind === 'sign') { ans = await fastSign(env, fr0, m.id); ref = 'sign-done'; }
         else if (fr0.kind === 'rate') { ans = RATE_THANKS; ref = 'rate'; }
