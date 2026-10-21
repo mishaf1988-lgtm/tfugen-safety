@@ -114,7 +114,9 @@
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
-import { SIGN_KEY, SIGN_CHOICES, signAdd, signAskText } from '../_sign.js';
+import { SIGN_KEY, SIGN_CHOICES, signAdd, signAskText, signPlace } from '../_sign.js';
+import { findSignSpot } from '../_pdftext.js';
+import { PDFDocument } from '../_pdflib.js';
 import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, fireUrlOf, sameSession } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
@@ -1130,22 +1132,27 @@ export async function onRequest(context) {
       const f = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(c.path) + '?select=id,file', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) });
       if (!f.ok) return jsonResp({ ok: false, error: f.status === 404 ? 'file not found' : 'file ' + f.status }, 200, {});
       if (!(await f.json().catch(() => ({}))).file) return jsonResp({ ok: false, error: 'not a file' }, 200, {});
+      // 21/10/2026 (Michael: "a document with a place for a signature"): the file is read once, here: to find its
+      // signature line (when the request gives no page / x / y) and to send it to Michael. Not found = the corner.
+      let pdfBytes = null, spot = null;
+      try {
+        const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(c.path) + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) });
+        pdfBytes = d.ok ? new Uint8Array(await d.arrayBuffer()) : null;
+        if (pdfBytes && c.page === undefined && c.x === undefined && c.y === undefined) spot = signPlace(findSignSpot(await PDFDocument.load(pdfBytes, { ignoreEncryption: true })));
+      } catch (x) { spot = null; }
       const rows = await stateRead([SIGN_KEY]);
       const now = new Date().toISOString();
-      const r = signAdd(rows[0] ? rows[0].value : '[]', { agent: body.agent, path: c.path, name: c.name, page: c.page, x: c.x, y: c.y }, now);
+      const r = signAdd(rows[0] ? rows[0].value : '[]', { agent: body.agent, path: c.path, name: c.name, page: spot ? spot.page : c.page, x: spot ? spot.x : c.x, y: spot ? spot.y : c.y, w: spot && spot.w ? spot.w : undefined }, now);
       if (!r.created) return jsonResp({ ok: true, id: r.id, created: false, note: 'already waiting for Michael on this file' }, 200, {});
       const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
         body: JSON.stringify([{ key: SIGN_KEY, value: JSON.stringify(r.list), updated_at: now }]), signal: tmo(SB_MS) });
       if (!w.ok) return jsonResp({ ok: false, error: 'save ' + w.status }, 200, {});
-      const text = signAskText(c.name, c.folder), ref = 'sign:' + r.id;
+      const text = signAskText(c.name, c.folder, spot), ref = 'sign:' + r.id;
       const win = await ownerWindowOpen(env, url);
       // 21/10/2026 (Michael: "with the request, the form itself"): the document goes first, so the question with
       // the buttons stays his last message (its ref is what "1" answers). A failed document leaves the question as is.
       let doc = null;
-      try {
-        const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(c.path) + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) });
-        doc = d.ok ? await sendDocToOwner(env, to, new Uint8Array(await d.arrayBuffer()), c.name, '', win) : { ok: false, error: 'read ' + d.status };
-      } catch (x) { doc = { ok: false, error: 'document' }; }
+      try { doc = pdfBytes ? await sendDocToOwner(env, to, pdfBytes, c.name, '', win) : { ok: false, error: 'read' }; } catch (x) { doc = { ok: false, error: 'document' }; }
       const s = await sendToOwner(env, to, text, { windowOpen: win, choices: SIGN_CHOICES });
       if (s.ok) await noteLastOut(env, url, text, ref);
       try {
@@ -1154,7 +1161,7 @@ export async function onRequest(context) {
             event_type: 'assistant', channel: s.ok ? 'whatsapp' : 'whatsapp_error',
             payload: { title: text.replace(/\s+/g, ' ').slice(0, 120), text, via: s.via || null, wamid: s.wamid || null, ref, detail: s.error || null } }]) });
       } catch (e) { /* the question went out; a missing log line is not a failure */ }
-      return jsonResp({ ok: s.ok, id: r.id, created: true, sent: s.ok, via: s.via || null, doc: doc && doc.ok ? 'sent' : (doc && doc.error) || null, error: s.error || undefined }, 200, {});
+      return jsonResp({ ok: s.ok, id: r.id, created: true, sent: s.ok, via: s.via || null, doc: doc && doc.ok ? 'sent' : (doc && doc.error) || null, spot: spot || null, error: s.error || undefined }, 200, {});
     }
     if (body.op === 'od_mkdir') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'parent', 'name'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
