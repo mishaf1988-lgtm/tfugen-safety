@@ -71,6 +71,10 @@
 //              needs POSTMAN_FIRE_TOKEN. {agent, expect_session?} -> {fired, status, session, landed?}.
 //   od_put_pdf  (20/10/2026) ONE new PDF {agent, why, dir, name, b64} into an existing folder of the safety folder; never
 //              replaces a file, never into the protected folders. odPutPdfCheck.
+//   sign_request  (21/10/2026, Michael: "sign in my name" only after his "do it") {agent, why, path, page?, x?, y?}: one PDF
+//              in the safety folder that Michael is asked to sign. The request waits in server_state (sign_requests) and
+//              Michael gets a WhatsApp message with the buttons "do it" / "no" and ref sign:<id>. Nothing is signed here:
+//              only his answer, in wa-hook's fast lane, signs (functions/_sign.js). signRequestCheck.
 //   dev_request / dev_done  (20/10/2026) {agent, text} a request to development, kept in server_state.dev_inbox;
 //              a new one fires the Routine DEV_TRIGGER at once when DEV_FIRE_TOKEN is set (21/10/2026, devFireText);
 //              {id, note} closes one. devInboxAdd / devInboxDone.
@@ -110,6 +114,7 @@
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
+import { SIGN_KEY, SIGN_CHOICES, signAdd, signAskText } from '../_sign.js';
 import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, fireUrlOf, sameSession } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
@@ -621,6 +626,20 @@ export function odPutPdfCheck(b) {
   if (String.fromCharCode(...bytes.slice(0, 5)) !== '%PDF-') return { error: 'not a pdf' };
   return { dir: c.parent, name: c.name, bytes };
 }
+// sign_request (21/10/2026): {path} = a PDF inside the safety folder, the same folders od_put_pdf may write to
+// (not the protected ones, not the inbox, the requests or the drafts folder), not a file that is already a
+// signed copy. page 1-200, x / y 0-2000 points, all optional. Pure.
+export function signRequestCheck(b) {
+  const parts = String(b.path || '').split('/').filter(Boolean);
+  const name = parts.pop() || '';
+  const c = odMkdirCheck({ agent: b.agent, why: b.why, parent: parts.join('/'), name });
+  if (c.error) return { error: c.error === 'bad parent' || c.error === 'bad name' ? 'bad path' : c.error };
+  if (parts[0] === OD_DRAFT || !/\.pdf$/i.test(name) || /\s-\s\u05d7\u05ea\u05d5\u05dd\.pdf$/i.test(name)) return { error: 'bad path' };
+  const num = (v, lo, hi) => v === undefined || v === null ? undefined : (Number.isFinite(v) && v >= lo && v <= hi ? v : NaN);
+  const page = num(b.page, 1, 200), x = num(b.x, 0, 2000), y = num(b.y, 0, 2000);
+  if ([page, x, y].some((v) => Number.isNaN(v)) || (page !== undefined && !Number.isInteger(page))) return { error: 'bad page / x / y' };
+  return { path: c.parent + '/' + name, folder: parts.join('/'), name, page, x, y };
+}
 // 12/10/2026 (retro, Michael: "בצע"): OneDrive keeps createdDateTime on a move, so a file that waited a
 // month in the inbox and was then moved to "לא לתיוק" was deleted the next night. Every move there is
 // recorded here {itemId: ISO time}; backup-od counts the 30 days from the later of the two. Entries
@@ -1098,6 +1117,36 @@ export async function onRequest(context) {
       const uj = await up.json().catch(() => ({}));
       if (!up.ok) return jsonResp({ ok: false, error: 'put ' + up.status }, 200, {});
       return jsonResp({ ok: true, path: c.dir.slice(OD_ROOT.length) + '/' + c.name, size: uj.size || null, webUrl: uj.webUrl || null }, 200, {});
+    }
+    if (body.op === 'sign_request') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path', 'page', 'x', 'y'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const c = signRequestCheck(body);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
+      const to = await ownerWa(env, url);
+      if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
+      const at = await accessToken(env);
+      const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+      const f = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(c.path) + '?select=id,file', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) });
+      if (!f.ok) return jsonResp({ ok: false, error: f.status === 404 ? 'file not found' : 'file ' + f.status }, 200, {});
+      if (!(await f.json().catch(() => ({}))).file) return jsonResp({ ok: false, error: 'not a file' }, 200, {});
+      const rows = await stateRead([SIGN_KEY]);
+      const now = new Date().toISOString();
+      const r = signAdd(rows[0] ? rows[0].value : '[]', { agent: body.agent, path: c.path, name: c.name, page: c.page, x: c.x, y: c.y }, now);
+      if (!r.created) return jsonResp({ ok: true, id: r.id, created: false, note: 'already waiting for Michael on this file' }, 200, {});
+      const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify([{ key: SIGN_KEY, value: JSON.stringify(r.list), updated_at: now }]), signal: tmo(SB_MS) });
+      if (!w.ok) return jsonResp({ ok: false, error: 'save ' + w.status }, 200, {});
+      const text = signAskText(c.name, c.folder), ref = 'sign:' + r.id;
+      const s = await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, url), choices: SIGN_CHOICES });
+      if (s.ok) await noteLastOut(env, url, text, ref);
+      try {
+        await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
+          body: JSON.stringify([{ id: 'wa' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
+            event_type: 'assistant', channel: s.ok ? 'whatsapp' : 'whatsapp_error',
+            payload: { title: text.replace(/\s+/g, ' ').slice(0, 120), text, via: s.via || null, wamid: s.wamid || null, ref, detail: s.error || null } }]) });
+      } catch (e) { /* the question went out; a missing log line is not a failure */ }
+      return jsonResp({ ok: s.ok, id: r.id, created: true, sent: s.ok, via: s.via || null, error: s.error || undefined }, 200, {});
     }
     if (body.op === 'od_mkdir') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'parent', 'name'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});

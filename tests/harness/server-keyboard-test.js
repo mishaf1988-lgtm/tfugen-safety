@@ -4,7 +4,10 @@
 // functions/*.js (email subjects and bodies, WhatsApp text, meeting and deck
 // text, error and status messages, HTML the server returns). sw.js.js is left
 // out: its one big template is service-worker source, and the hits there are
-// that source's own // comments, which no person reads.
+// that source's own // comments, which no person reads. _pdflib.js (21/10/2026)
+// is left out too: pdf-lib 1.17.1 byte for byte (sign-test checks its sha256), and
+// its hits are the font encoding tables (WinAnsi names for dashes and quotes), never
+// shown to anyone. The text the signing shows is in _sign.js, which is checked.
 // Comments are skipped, they are never shown to anyone. The middle dot is
 // still allowed, pending Michael's answer.
 // Checks: long dash, en dash, Hebrew maqaf, guillemets, curly quotes, arrows,
@@ -12,7 +15,7 @@
 const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '../../functions');
-const SKIP = new Set(['sw.js.js']);
+const SKIP = new Set(['sw.js.js', '_pdflib.js']);
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ok ' + l); } else { fail++; console.log('  FAIL ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
 
