@@ -16,6 +16,8 @@
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
 import { ownerWa, metaSigOk, inboundMessages, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, LEARN_KEY, learnedLine } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
+import { accessToken } from '../_onedrive.js';
+import { SIGN_KEY, signRefOf, signAnswer, signTake, signMark, signRun, signDoneText, SIGN_CANCEL_TEXT, SIGN_EXPIRED_TEXT, SIGN_DONE_TEXT } from '../_sign.js';
 
 export const FAIL_TEXT = '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05dc\u05e2\u05d5\u05d6\u05e8. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.';
 export const ACK_TEXT = '\u05e7\u05d9\u05d1\u05dc\u05ea\u05d9, \u05d1\u05d5\u05d3\u05e7 \u05d5\u05e2\u05d5\u05e0\u05d4 \u05e2\u05d5\u05d3 \u05e8\u05d2\u05e2.';
@@ -168,6 +170,10 @@ async function rateNote(env, good, q) {
 export function fastRoute(m, about, prev) {
   const raw = String((m && m.text) || '').trim();
   if (!raw || raw.length > 40) return null;
+  // 21/10/2026: an answer to "sign in your name on <file>?" (routine-db sign_request). Only the server signs, and
+  // only here, on Michael's own "1" / "do it" to that very request; any other word goes to the assistant.
+  const sid = signRefOf(about, prev);
+  if (sid) { const yes = signAnswer(m); if (yes !== null) return { kind: 'sign', id: sid, yes }; }
   const rt = rateOf(m, about, prev);
   if (rt) return rt.good ? { kind: 'rate' } : null;
   const hz = hazardRef(about, prev);
@@ -192,6 +198,37 @@ async function fastHazard(env, r) {
     if (!Array.isArray(after) || after.length !== 1) return null;
   }
   return fastHazardText(r.choice, c.changed);
+}
+// Michael's answer to a signature request (21/10/2026): take it (pending, under 24 hours), sign on yes, and log
+// every outcome in notifications_log (owner_sign: what, where, when, and the wamid of the message that approved).
+async function signLog(env, title, payload) {
+  try {
+    await sbJson(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify([{ id: 'sg' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
+        event_type: 'owner_sign', channel: 'server', payload: Object.assign({ title: String(title).slice(0, 120) }, payload) }]) });
+  } catch (e) { /* the state in server_state still shows it */ }
+}
+async function signSave(env, list) {
+  await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify([{ key: SIGN_KEY, value: JSON.stringify(list), updated_at: new Date().toISOString() }]) });
+}
+export async function fastSign(env, r, wamid) {
+  const rows = await sbJson(env, 'server_state?key=eq.' + SIGN_KEY + '&select=value');
+  const now = new Date();
+  const t = signTake(rows && rows[0] ? rows[0].value : '[]', r.id, r.yes, now.toISOString(), wamid);
+  if (t.error === 'unknown') return null; // not ours: the assistant answers
+  await signSave(env, t.list); // approved / cancelled / expired is written before the signing starts: never twice
+  if (t.error === 'expired') return SIGN_EXPIRED_TEXT;
+  if (t.error) return SIGN_DONE_TEXT;
+  const base = { id: r.id, path: t.req.path, agent: t.req.agent, wamid };
+  if (!r.yes) { await signLog(env, 'cancelled: ' + t.req.name, Object.assign({ result: 'cancelled' }, base)); return SIGN_CANCEL_TEXT; }
+  let res;
+  try { const at = await accessToken(env); res = await signRun(env, sbFrom(env), at.token, t.req, now.getTime()); }
+  catch (e) { res = { ok: false, error: String(e && e.message || e).slice(0, 120) }; }
+  const after = await sbJson(env, 'server_state?key=eq.' + SIGN_KEY + '&select=value').catch(() => null);
+  await signSave(env, signMark(after && after[0] ? after[0].value : t.list, r.id, res.ok ? 'signed' : 'failed', res.ok ? { signed: res.name } : { error: res.error })).catch(() => {});
+  await signLog(env, (res.ok ? 'signed: ' + res.name : 'sign failed: ' + t.req.name), Object.assign({ result: res.ok ? 'signed' : 'failed', signed: res.name || null, webUrl: res.webUrl || null, error: res.error || null }, base));
+  return signDoneText(res, t.req);
 }
 // Michael's own message, for the weekly quality review of the assistant's answers (20/10/2026, Michael:
 // "not only time, also wisdom, quality and expertise"; retro-prompt.md 7a). His own words to his own
@@ -240,7 +277,8 @@ async function handle(env, raw) {
     if (fr0) {
       let ans = null, ref = null;
       try {
-        if (fr0.kind === 'rate') { ans = RATE_THANKS; ref = 'rate'; }
+        if (fr0.kind === 'sign') { ans = await fastSign(env, fr0, m.id); ref = 'sign-done'; }
+        else if (fr0.kind === 'rate') { ans = RATE_THANKS; ref = 'rate'; }
         else if (fr0.kind === 'hazard') { ans = await fastHazard(env, fr0); ref = fr0.src + ' ' + fr0.id; }
         else { const g = await gather(env, new Date()); ans = buildBrief(g.items, g.failed, g.today, false, g.notes, g.weather); ref = 'brief'; }
       } catch (e) { ans = null; }
