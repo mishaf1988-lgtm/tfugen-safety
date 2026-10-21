@@ -11,8 +11,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const ENV = { ROUTINE_KEY: 'k-123', SUPABASE_SERVICE_ROLE_KEY: 'srv' };
 let calls = [], state = {}, fires = [], fireSession = 'cse_01POSTMAN';
-let ghCalls = [];
+let ghCalls = [], mediaMeta = null;
 globalThis.fetch = async (url, opt = {}) => {
+  if (String(url).startsWith('https://graph.facebook.com/v25.0/90000001')) return new Response(JSON.stringify(mediaMeta), { status: 200 });
+  if (String(url).startsWith('https://lookaside.fbsbx.com/') || String(url).startsWith('https://evil.example/')) return new Response(new Uint8Array([0xff, 0xd8, 0xff, 0x01]), { status: 200 });
   if (String(url).startsWith('https://api.github.com/repos/mishaf1988-lgtm/michael-skills/contents/')) { ghCalls.push({ url: String(url), auth: (opt.headers || {}).Authorization }); return new Response('# law\nsection 81: 14 months', { status: 200 }); }
   calls.push({ url, method: opt.method || 'GET', body: opt.body });
   if (url.startsWith(SB + '/rest/v1/server_state')) {
@@ -529,6 +531,23 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('skill_read: the exam is refused, nothing fetched', x.status === 400 && ghCalls.length === 1);
     x = await call({ op: 'skill_read', path: 'SKILL.md' });
     check('skill_read without the token: a clear error', x.json.ok === false && /GH_SKILLS_TOKEN/.test(x.json.error));
+  }
+  // 21/10/2026: a photo Michael sent on WhatsApp reaches the assistant
+  {
+    const E = { ...ENV, META_ACCESS_TOKEN: 'mt' };
+    mediaMeta = { url: 'https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=1', mime_type: 'image/jpeg', file_size: 4 };
+    let x = await call({ op: 'wa_media', id: '90000001' }, 'k-123', 'POST', E);
+    check('wa_media: the image as base64 with its type', x.json.ok && x.json.mime === 'image/jpeg' && x.json.bytes === 4 && x.json.b64 === '/9j/AQ==', x.json);
+    mediaMeta = { url: 'https://lookaside.fbsbx.com/x', mime_type: 'video/mp4', file_size: 4 };
+    x = await call({ op: 'wa_media', id: '90000001' }, 'k-123', 'POST', E);
+    check('wa_media: a video is not read', x.json.ok === false && /type not read/.test(x.json.error));
+    mediaMeta = { url: 'https://evil.example/a', mime_type: 'image/png', file_size: 4 };
+    x = await call({ op: 'wa_media', id: '90000001' }, 'k-123', 'POST', E);
+    check('wa_media: a download host that is not Meta is refused (the token is not sent there)', x.json.ok === false && /host/.test(x.json.error));
+    mediaMeta = { url: 'https://lookaside.fbsbx.com/x', mime_type: 'application/pdf', file_size: 99999999 };
+    x = await call({ op: 'wa_media', id: '90000001' }, 'k-123', 'POST', E);
+    check('wa_media: too big is refused before download', x.json.ok === false && /too big/.test(x.json.error));
+    check('wa_media: an id with a path in it is refused', (await call({ op: 'wa_media', id: '1/../me' }, 'k-123', 'POST', E)).status === 400);
   }
   check('/api/routine-db is a machine path', /const MACHINE_PATHS = \[[^\]]*'\/api\/routine-db'/.test(mw));
 

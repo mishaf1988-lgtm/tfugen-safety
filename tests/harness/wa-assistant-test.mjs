@@ -67,6 +67,13 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   check('the template line has no newline', waOneLine('a\n\nb   c') === 'a | b c');
   check('the assistant template is a utility template with one parameter', ASSISTANT_TEMPLATE.category === 'UTILITY' && /\{\{1\}\}/.test(ASSISTANT_TEMPLATE.components[0].text) && !/\{\{2\}\}/.test(ASSISTANT_TEMPLATE.components[0].text));
 
+  // 21/10/2026: a photo or a document keeps its media id; the caption is the text; the fire text says how to read it
+  const im = inboundMessages({ entry: [{ changes: [{ value: { messages: [{ from: '972-50', id: 'wamid.IMG', timestamp: '1', type: 'image', image: { id: '1234567890', mime_type: 'image/jpeg', caption: 'the gov page' } }, { from: '972-50', id: 'wamid.DOC', timestamp: '1', type: 'document', document: { id: '9876543210', mime_type: 'application/pdf', filename: 'nohal.pdf' } }] } }] }] });
+  check('an image: media id and type kept, caption as text', im[0].media && im[0].media.id === '1234567890' && im[0].media.mime === 'image/jpeg' && im[0].text === 'the gov page', im[0]);
+  check('a document: media id and file name kept', im[1].media && im[1].media.name === 'nohal.pdf' && im[1].text === '', im[1]);
+  const ftm = fireText(im[1], '');
+  check('the fire text tells the assistant to read it with wa_media, no "not text" line', /media: document id 9876543210 \(application\/pdf, nohal\.pdf\)/.test(ftm) && /"op":"wa_media","id":"9876543210"/.test(ftm) && !/type: document/.test(ftm), ftm);
+
   console.log('\n2. the webhook');
   const g = await hook({ request: new Request('https://x/api/wa-hook?hub.mode=subscribe&hub.verify_token=vt-1&hub.challenge=42'), env: ENV });
   check('GET with the verify token returns the challenge', g.status === 200 && (await g.text()) === '42');
