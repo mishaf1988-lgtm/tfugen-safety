@@ -107,7 +107,7 @@
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
-import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, stripInternalIds, LEARN_KEY, LEARN_KINDS, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, fireUrlOf, sameSession } from '../_wa.js';
+import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, fireUrlOf, sameSession } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks'];
@@ -1104,6 +1104,7 @@ export async function onRequest(context) {
     }
     if (body.op === 'wa_me') {
       if (hasPassport(body.text)) return jsonResp({ ok: false, error: 'passport number in text: write "4 workers from the list", no ids (20/10/2026)' }, 400, {});
+      if (asksRepoSetup(body.text)) return jsonResp({ ok: false, error: 'asks Michael to add a repository or edit a Routine: no such choice (C32); say the dev runner builds it at its next wake (07:17-19:17 every 2 hours) (21/10/2026)' }, 400, {});
       if (hasInternalId(body.text)) return jsonResp({ ok: false, error: 'internal id in text (dev-..., trig_, session_, cse_, h-...): say what was done, not its id (21/10/2026)' }, 400, {});
       if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
       const to = await ownerWa(env, url);
