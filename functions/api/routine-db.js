@@ -389,6 +389,21 @@ export function greetByHour(text, nowMs) {
   const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', hour12: false }).format(new Date(nowMs || Date.now())));
   return h >= 11 && h < 24 ? String(text).replace(/^\u05d1\u05d5\u05e7\u05e8 \u05d8\u05d5\u05d1(?=[\s,!.])/, '\u05d4\u05d9\u05d9') : String(text);
 }
+// 21/10/2026 (Michael approved): reading the log by "the first answer after each message" gave four
+// messages sent in one minute the same answer. A turn = Michael's messages in a row and every answer
+// until his next message; answers inside a turn are not split between its messages (the runs overlap).
+export function waTurns(rows) {
+  const turns = [];
+  let cur = null;
+  for (const r of rows || []) {
+    if (r.who === 'michael') {
+      if (!cur || cur.answers.length || cur.alerts.length) { cur = { at: r.ts, michael: [], answers: [], alerts: [] }; turns.push(cur); }
+      cur.michael.push(r.text);
+    } else if (cur) (r.who === 'watch' ? cur.alerts : cur.answers).push(r.text);
+  }
+  turns.forEach((t) => { t.answered = t.answers.length > 0; });
+  return turns;
+}
 export function draftRequest(b) {
   // Up to 5 recipients, "a@x; b@y" (20/10/2026: one mail to the two people in charge of the ammonia
   // equipment); the flow's To field takes them separated by ";".
@@ -1129,7 +1144,7 @@ export async function onRequest(context) {
         + '&event_type=in.(owner_in,assistant,watch)&channel=eq.whatsapp&ts=gte.' + encodeURIComponent(since) + '&order=ts.asc&limit=300', { headers: h, signal: tmo(SB_MS) });
       if (!r.ok) return jsonResp({ ok: false, error: 'read ' + r.status }, 200, {});
       const rows = (await r.json()).map((x) => ({ ts: x.ts, who: x.event_type === 'owner_in' ? 'michael' : x.event_type === 'watch' ? 'watch' : 'assistant', text: x.text || x.title || '', fast: x.fast === 'true', via: x.via || null }));
-      return jsonResp({ ok: true, days, rows }, 200, {});
+      return jsonResp({ ok: true, days, rows, turns: waTurns(rows) }, 200, {});
     }
     if (body.op === 'wa_check') {
       if (!env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
