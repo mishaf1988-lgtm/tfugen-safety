@@ -128,6 +128,15 @@
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/cowork-gate.py"
           }
         ]
+      },
+      {
+        "matcher": "mcp__.*__send_message",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/trigger-prompt-gate.py"
+          }
+        ]
       }
     ],
     "PostToolUse": [
