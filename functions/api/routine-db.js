@@ -738,7 +738,7 @@ export async function onRequest(context) {
     if (body.op === 'source_read') {
       const u = sourceUrl(body.url);
       if (!u) return jsonResp({ ok: false, error: 'only https pages of nevo.co.il or gov.il' }, 400, {});
-      const r = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; tapugan-safety/1.0)', Accept: 'text/html,application/xhtml+xml' }, redirect: 'follow', signal: tmo(GRAPH_MS) });
+      const r = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ' + SITE.slug + '/1.0)', Accept: 'text/html,application/xhtml+xml' }, redirect: 'follow', signal: tmo(GRAPH_MS) });
       if (!r.ok) return jsonResp({ ok: false, error: 'page ' + r.status, url: u }, 200, {});
       if (!sourceUrl(r.url || u)) return jsonResp({ ok: false, error: 'redirected off the allowed sites' }, 200, {});
       const ct = String(r.headers.get('content-type') || '');
