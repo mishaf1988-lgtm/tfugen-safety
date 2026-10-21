@@ -171,12 +171,19 @@ async function rateNote(env, good, q) {
 // 21/10/2026 (dev request from the assistant: the cloud permission check stopped its sign_request as a "real-world
 // transaction"): Michael's own "\u05ea\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9 \u05e2\u05dc <file>" is read here, by the server, which finds the PDF and asks him
 // itself, through routine-db sign_request. Only his own Meta-signed message reaches this point. Pure.
-const SIGN_ASK_RE = /^(?:\u05ea\u05d7\u05ea\u05d5\u05dd|\u05dc\u05d7\u05ea\u05d5\u05dd|\u05ea\u05d7\u05ea\u05de\u05d9)\s+\u05d1\u05e9\u05de\u05d9\s+\u05e2\u05dc\s+(.{2,120})$/;
+// 21/10/2026 (Michael: "no need for exact words"): the verb opens the message, the rest is free. Filler words
+// ("in my name", "on", "some document") are dropped, and "and send it to me here" at the end too (the file is
+// always sent). An empty remainder = no name: the newest PDFs as buttons. null = not a request. Pure.
+const SIGN_ASK_RE = /^(?:\u05ea\u05d7\u05ea\u05d5\u05dd|\u05d7\u05ea\u05d5\u05dd|\u05dc\u05d7\u05ea\u05d5\u05dd|\u05ea\u05d7\u05ea\u05de\u05d9|\u05ea\u05d7\u05ea\u05d9\u05dd)(?=\s|$)(.*)$/;
+const SIGN_FILL_RE = /^(?:\u05d1\u05e9\u05de\u05d9|\u05d1\u05e9\u05d1\u05d9\u05dc\u05d9|\u05dc\u05d9|\u05e2\u05dc|\u05d0\u05ea|\u05db\u05dc|\u05d0\u05d9\u05d6\u05d4|\u05de\u05e1\u05de\u05da|\u05e7\u05d5\u05d1\u05e5|pdf|PDF)(?=\s|$)\s*/i;
+const SIGN_TAIL_RE = /\s+(?:\u05d5\u05e9\u05dc\u05d7|\u05ea\u05e9\u05dc\u05d7|\u05e9\u05dc\u05d7|\u05d5\u05ea\u05e9\u05dc\u05d7)(?:\s.*)?$/;
 export function signAskOf(raw) {
   const m = SIGN_ASK_RE.exec(String(raw || '').trim());
   if (!m) return null;
-  const q = m[1].replace(/["'<>]/g, ' ').replace(/\s+/g, ' ').trim().replace(/\.pdf$/i, '').trim();
-  return q.length >= 2 ? q : null;
+  let q = m[1].replace(/["'<>?!]/g, ' ').replace(/\s+/g, ' ').trim().replace(SIGN_TAIL_RE, '').trim();
+  for (let i = 0; i < 6; i++) { const n = q.replace(SIGN_FILL_RE, ''); if (n === q) break; q = n.trim(); }
+  q = q.replace(/\.pdf$/i, '').trim();
+  return q.length > 120 ? q.slice(0, 120) : q;
 }
 // The PDFs a search found, best first: the exact name, then the rest; never a signed copy. Pure.
 export function signPick(items, q) {
@@ -197,26 +204,76 @@ export function signAskManyText(list) {
 }
 // Search the safety folder, then ask through routine-db sign_request (its own checks: folder, PDF, not protected).
 // Returns { sent } when the document and the question went out, or { text } to answer instead.
-export async function fastSignAsk(env, q) {
-  const at = await accessToken(env);
+export const SIGN_PICK_KEY = 'sign_pick', SIGN_PICK_MS = 3600e3;
+// The candidates go out as buttons; a tap ("1") on that very message asks for the one picked (sign_pick, 1 hour).
+export function signPickText(list, none) {
+  return (none ? '\u05dc\u05d0 \u05de\u05e6\u05d0\u05ea\u05d9 \u05d1\u05e9\u05dd \u05d4\u05d6\u05d4. \u05d4-PDF \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea:\n' : '\u05de\u05e6\u05d0\u05ea\u05d9 \u05db\u05de\u05d4 \u05e7\u05d1\u05e6\u05d9\u05dd:\n')
+    + list.map((x, i) => (i + 1) + '. ' + x.path).join('\n') + '\n\u05e2\u05dc \u05d0\u05d9\u05d6\u05d4 \u05dc\u05d7\u05ea\u05d5\u05dd? \u05dc\u05dc\u05d7\u05d5\u05e5 \u05e2\u05dc \u05d4\u05de\u05e1\u05e4\u05e8.';
+}
+// choicesPayload numbers them itself ("1. "), and a button title is at most 20 characters.
+export function signPickChoices(list) { return list.map((x) => String(x.name).replace(/\.pdf$/i, '').slice(0, 16)); }
+// Which candidate a tap picked: a reply to the "signpick" message, "1"-"5" or the button. Pure.
+export function signPickOf(m, prev) {
+  if (!prev || prev.ref !== 'signpick') return null;
+  const c = m && m.choice !== undefined && m.choice !== null ? String(m.choice) : '';
+  const t = String((m && m.text) || '').trim();
+  const n = /^[1-5]$/.test(c) ? +c : (/^([1-5])(\.|\s|$)/.exec(t) || [])[1];
+  return n ? +n : null;
+}
+export async function graphSearch(env, token, q) {
   const enc = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
-  const r = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(OD_ROOT) + ":/search(q='" + encodeURIComponent(q.replace(/'/g, "''")) + "')?$select=name,file,parentReference&$top=50",
-    { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(20000) });
-  if (!r.ok) return { text: null };
-  const list = signPick(((await r.json().catch(() => ({}))).value) || [], q);
-  if (!list.length) return { text: SIGN_ASK_NONE };
-  if (list.length > 1) return { text: signAskManyText(list) };
+  const gh = { Authorization: 'Bearer ' + token };
+  const r = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(OD_ROOT) + ":/search(q='" + encodeURIComponent(q.replace(/'/g, "''")) + "')?$select=id,name,file,parentReference,lastModifiedDateTime&$top=100",
+    { headers: gh, signal: tmo(20000) });
+  if (!r.ok) return null;
+  const items = ((await r.json().catch(() => ({}))).value) || [];
+  // 21/10/2026 (Michael: "\u05ea\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9 \u05e2\u05dc Safetecs" -> "not found", the file is there): OneDrive for Business search
+  // results carry parentReference without "path", so every hit was dropped. The path is read per PDF (at most 20).
+  const pdfs = items.filter((x) => x && x.file && /\.pdf$/i.test(x.name || '')).slice(0, 20);
+  await Promise.all(pdfs.filter((x) => !(x.parentReference && x.parentReference.path) && x.id).map(async (x) => {
+    const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(x.id) + '?$select=parentReference', { headers: gh, signal: tmo(10000) }).catch(() => null);
+    const j = d && d.ok ? await d.json().catch(() => null) : null;
+    if (j && j.parentReference && j.parentReference.path) x.parentReference = j.parentReference;
+  }));
+  return pdfs;
+}
+// The newest PDFs of the safety folder, for a name that matched nothing. Pure (on the search result).
+export function recentPdfs(items, n) {
+  const t = (x) => Date.parse(x.lastModifiedDateTime || '') || 0;
+  return signPick((items || []).slice().sort((a, b) => t(b) - t(a)), '\u0000').slice(0, n || 3);
+}
+export async function signAskPath(env, path) {
   const res = await routineDb({ env, request: new Request('https://internal/api/routine-db', { method: 'POST',
     headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ op: 'sign_request', agent: 'wa-hook-sign', why: '\u05de\u05d9\u05db\u05d0\u05dc \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4: \u05ea\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9', path: list[0].path }) }) });
+    body: JSON.stringify({ op: 'sign_request', agent: 'wa-hook-sign', why: '\u05de\u05d9\u05db\u05d0\u05dc \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4: \u05ea\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9', path }) }) });
   const j = await res.json().catch(() => ({}));
   if (j.ok && (j.sent || j.created === false)) return { sent: true, id: j.id };
   return { text: null, error: j.error || res.status };
 }
+// Search the safety folder, then ask through routine-db sign_request (its own checks: folder, PDF, not protected).
+// Returns { sent } when the document and the question went out, { pick, none } for buttons, or { text }.
+export async function fastSignAsk(env, q) {
+  const at = await accessToken(env);
+  if (q.length >= 2) {
+    const found = await graphSearch(env, at.token, q);
+    if (!found) return { text: null };
+    const list = signPick(found, q);
+    if (list.length === 1) return signAskPath(env, list[0].path);
+    if (list.length > 1) return { pick: list };
+  }
+  const all = await graphSearch(env, at.token, 'pdf');
+  const recent = all ? recentPdfs(all, 3) : [];
+  return recent.length ? { pick: recent, none: true } : { text: SIGN_ASK_NONE };
+}
 export function fastRoute(m, about, prev) {
   const raw = String((m && m.text) || '').trim();
+  // an answer to the signature question first: "\u05ea\u05d7\u05ea\u05d5\u05dd" there is a yes, not a new request
+  const sid0 = signRefOf(about, prev);
+  if (sid0) { const yes = signAnswer(m); if (yes !== null) return { kind: 'sign', id: sid0, yes }; }
   const ask = signAskOf(raw);
-  if (ask) return { kind: 'sign_ask', q: ask };
+  if (ask !== null) return { kind: 'sign_ask', q: ask };
+  const pk = signPickOf(m, prev);
+  if (pk) return { kind: 'sign_pick', n: pk };
   if (!raw || raw.length > 40) return null;
   // 21/10/2026: an answer to "sign in your name on <file>?" (routine-db sign_request). Only the server signs, and
   // only here, on Michael's own "1" / "do it" to that very request; any other word goes to the assistant.
@@ -332,8 +389,22 @@ async function handle(env, raw) {
         if (fr0.kind === 'sign_ask') {
           const sa = await fastSignAsk(env, fr0.q);
           if (sa.sent) { seen.fast = 'sign_ask'; continue; }
+          if (sa.pick) {
+            await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+              body: JSON.stringify([{ key: SIGN_PICK_KEY, value: JSON.stringify({ at: new Date().toISOString(), paths: sa.pick.map((x) => x.path) }), updated_at: new Date().toISOString() }]) });
+            const pt = signPickText(sa.pick, sa.none);
+            const ps = await sendToOwner(env, owner, pt, { windowOpen: true, noTemplate: true, choices: signPickChoices(sa.pick) }).catch(() => null);
+            if (ps && ps.ok) { seen.fast = 'sign_pick_list'; await noteLastOut(env, sbFrom(env), pt, 'signpick'); await logOut(env, pt, ps); continue; }
+          }
           ans = sa.text; ref = 'sign-ask';
           if (!ans) seen.sign_ask_error = String(sa.error || 'search');
+        }
+        else if (fr0.kind === 'sign_pick') {
+          const rows = await sbJson(env, 'server_state?key=eq.' + SIGN_PICK_KEY + '&select=value');
+          let st = null; try { st = JSON.parse(rows && rows[0] ? rows[0].value : 'null'); } catch (x) { st = null; }
+          const path = st && Date.now() - Date.parse(st.at) < SIGN_PICK_MS && st.paths[fr0.n - 1];
+          if (path) { const sa = await signAskPath(env, path); if (sa.sent) { seen.fast = 'sign_pick'; continue; } }
+          ans = null;
         }
         else if (fr0.kind === 'sign') { ans = await fastSign(env, fr0, m.id); ref = 'sign-done'; }
         else if (fr0.kind === 'rate') { ans = RATE_THANKS; ref = 'rate'; }

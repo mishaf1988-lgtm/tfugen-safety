@@ -27,6 +27,8 @@ description: How to connect an outside service (Cloudflare, Supabase management,
 
 - **פריסה ב-API של Cloudflare Pages** (21/10/2026, #1851 ו-#1852 לא נפרסו לבד): `POST .../deployments/<id>/retry` מפרסם מחדש את הפריסה האחרונה, ואם היא של branch אחר זו גרסת תצוגה, לא האתר. פריסה של האתר: `POST .../pages/projects/tapugan-safety/deployments` עם `-F branch=main`. סוד חדש (`WORKER_FIRE_TOKEN` וכו') נכנס לפעולה רק בפריסה חדשה. לפני שמסיקים שקוד שבור ("unknown op"): `bash project-files/routine-db.sh '{"op":"live"}'` מראה איזה commit רץ.
 
+- **חיפוש ב-OneDrive for Business (`/search(q=)` ב-Graph) מחזיר `parentReference` בלי `path`** (21/10/2026, "תחתום בשמי על Safetecs" ענה "לא מצאתי" והקובץ היה שם). קוד שבונה נתיב מתוצאת חיפוש קורא את הפריט לפי `id` (`/me/drive/items/<id>?$select=parentReference`). בדיקה עם mock שמחזיר חיפוש בלי `path` (`sign-ask-test.mjs`).
+
 ## מה מחובר היום
 
 | שירות | Host | הרשאה | נרשם |
