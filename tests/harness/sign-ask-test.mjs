@@ -1,7 +1,7 @@
 // Michael's own "sign in my name on <file>" read by the server (21/10/2026, wa-hook signAskOf / signPick /
 // fastRoute): the assistant's sign_request was stopped by the cloud permission check, so the server finds the PDF
 // in the safety folder and asks him itself. Pure parts only; the search and routine-db are covered elsewhere.
-import { signAskOf, signPick, signAskManyText, fastRoute, recentPdfs, signPickOf, signPickChoices, signPickText } from './_build/wa-hook.mjs';
+import { signAskOf, signPick, signAskManyText, fastRoute, recentPdfs, signPickOf, signPickChoices, signPickText, graphSearch } from './_build/wa-hook.mjs';
 import { OD_ROOT } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
@@ -31,5 +31,18 @@ check('buttons: the names without .pdf, short (choicesPayload adds the numbers)'
 check('a tap on the pick message picks (button or typed digit)', signPickOf({ choice: 2 }, { ref: 'signpick' }) === 2 && signPickOf({ text: '3. mid' }, { ref: 'signpick' }) === 3);
 check('the same digit after any other message is not a pick', signPickOf({ text: '1' }, { ref: 'brief' }) === null && signPickOf({ text: '1' }, null) === null);
 check('fastRoute routes the tap as sign_pick', (fastRoute({ text: '1' }, '', { ref: 'signpick' }) || {}).kind === 'sign_pick');
+// OneDrive for Business search: hits without parentReference.path (the 21:08 "not found" on Safetecs). The path is
+// read per PDF, then signPick keeps it.
+await (async () => {
+  const real = globalThis.fetch; const seen = [];
+  globalThis.fetch = async (u) => { seen.push(u);
+    if (u.includes('/search(')) return new Response(JSON.stringify({ value: [{ id: 'I1', name: 'x - Safetecs.pdf', file: {}, parentReference: { driveId: 'd' } }, { id: 'I2', name: 'n.docx', file: {}, parentReference: {} }] }));
+    if (u.includes('/items/I1')) return new Response(JSON.stringify({ parentReference: { path: '/drive/root:/' + OD_ROOT + '99_\u05e9\u05d5\u05e0\u05d5\u05ea' } }));
+    return new Response('{}', { status: 404 }); };
+  const items = await graphSearch({}, 't', 'Safetecs');
+  globalThis.fetch = real;
+  const p = signPick(items, 'Safetecs');
+  check('a hit without a path gets it, and is offered (the Safetecs miss)', p.length === 1 && p[0].path === '99_\u05e9\u05d5\u05e0\u05d5\u05ea/x - Safetecs.pdf' && !seen.some((u) => u.includes('/items/I2')), { p, seen });
+})();
 console.log('\nsign-ask-test: ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

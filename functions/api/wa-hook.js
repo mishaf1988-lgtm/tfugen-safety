@@ -213,11 +213,22 @@ export function signPickOf(m, prev) {
   const n = /^[1-5]$/.test(c) ? +c : (/^([1-5])(\.|\s|$)/.exec(t) || [])[1];
   return n ? +n : null;
 }
-async function graphSearch(env, token, q) {
+export async function graphSearch(env, token, q) {
   const enc = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
-  const r = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(OD_ROOT) + ":/search(q='" + encodeURIComponent(q.replace(/'/g, "''")) + "')?$select=name,file,parentReference,lastModifiedDateTime&$top=100",
-    { headers: { Authorization: 'Bearer ' + token }, signal: tmo(20000) });
-  return r.ok ? (((await r.json().catch(() => ({}))).value) || []) : null;
+  const gh = { Authorization: 'Bearer ' + token };
+  const r = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(OD_ROOT) + ":/search(q='" + encodeURIComponent(q.replace(/'/g, "''")) + "')?$select=id,name,file,parentReference,lastModifiedDateTime&$top=100",
+    { headers: gh, signal: tmo(20000) });
+  if (!r.ok) return null;
+  const items = ((await r.json().catch(() => ({}))).value) || [];
+  // 21/10/2026 (Michael: "\u05ea\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9 \u05e2\u05dc Safetecs" -> "not found", the file is there): OneDrive for Business search
+  // results carry parentReference without "path", so every hit was dropped. The path is read per PDF (at most 20).
+  const pdfs = items.filter((x) => x && x.file && /\.pdf$/i.test(x.name || '')).slice(0, 20);
+  await Promise.all(pdfs.filter((x) => !(x.parentReference && x.parentReference.path) && x.id).map(async (x) => {
+    const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(x.id) + '?$select=parentReference', { headers: gh, signal: tmo(10000) }).catch(() => null);
+    const j = d && d.ok ? await d.json().catch(() => null) : null;
+    if (j && j.parentReference && j.parentReference.path) x.parentReference = j.parentReference;
+  }));
+  return pdfs;
 }
 // The newest PDFs of the safety folder, for a name that matched nothing. Pure (on the search result).
 export function recentPdfs(items, n) {
