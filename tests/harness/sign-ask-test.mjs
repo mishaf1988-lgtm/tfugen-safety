@@ -1,7 +1,7 @@
 // Michael's own "sign in my name on <file>" read by the server (21/10/2026, wa-hook signAskOf / signPick /
 // fastRoute): the assistant's sign_request was stopped by the cloud permission check, so the server finds the PDF
 // in the safety folder and asks him itself. Pure parts only; the search and routine-db are covered elsewhere.
-import { signAskOf, signPick, signAskManyText, fastRoute, recentPdfs, signPickOf, signPickChoices, signPickText, graphSearch } from './_build/wa-hook.mjs';
+import { signAskOf, signPick, signAskManyText, fastRoute, recentPdfs, signPickOf, signPickChoices, signPickText, graphSearch, signWords } from './_build/wa-hook.mjs';
 import { OD_ROOT } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
@@ -47,5 +47,7 @@ await (async () => {
   const p = signPick(items, 'Safetecs');
   check('a hit without a path gets it, and is offered (the Safetecs miss)', p.length === 1 && p[0].path === '99_\u05e9\u05d5\u05e0\u05d5\u05ea/x - Safetecs.pdf' && !seen.some((u) => u.includes('/items/I2')), { p, seen });
 })();
+{ const w = signWords('\u05d4\u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05e9\u05d4\u05d2\u05d9\u05e2 \u05de\u05d9\u05e2\u05dc \u05dc\u05d4\u05e9\u05db\u05e8\u05d4');
+  check('free sentence: the words worth searching (glue words out, both forms of a prefix)', ['\u05d4\u05e6\u05e2\u05ea', '\u05de\u05d7\u05d9\u05e8', '\u05d9\u05e2\u05dc'].every((x) => w.indexOf(x) >= 0) && w.indexOf('\u05e9\u05d4\u05d2\u05d9\u05e2') < 0 && w.length <= 6, w); }
 console.log('\nsign-ask-test: ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
