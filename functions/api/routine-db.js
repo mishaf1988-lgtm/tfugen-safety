@@ -325,7 +325,18 @@ export function draftRequest(b) {
   // before it, which the signature opens with) is dropped so it does not appear twice.
   const lines = text.split('\n');
   let cut = -1;
-  for (let i = Math.max(0, lines.length - 4); i < lines.length; i++) if (lines[i].trim().indexOf(SITE.owner) === 0) { cut = i; break; }
+  // 21/10/2026 (Michael: "Michael twice"): the assistant signed "\u05ea\u05d5\u05d3\u05d4, <first name>." at the end of the last
+  // sentence, and the check knew only the full name opening a line. The first name alone counts too, and an
+  // inline sign-off at the end of the last line is cut from that line.
+  const first = SITE.owner.split(' ')[0];
+  const nameLine = (x) => { x = x.trim().replace(/[.!]$/, ''); return x.indexOf(SITE.owner) === 0 || x === first; };
+  for (let i = Math.max(0, lines.length - 4); i < lines.length; i++) if (nameLine(lines[i])) { cut = i; break; }
+  if (cut < 0 && lines.length) {
+    const tail = new RegExp('\\s*(?:(?:\u05ea\u05d5\u05d3\u05d4|\u05d1\u05d1\u05e8\u05db\u05d4)[,.!]?\\s*)?' + first + '(?: ' + SITE.owner.split(' ').slice(1).join(' ') + ')?[.!]?$');
+    const li = lines.length - 1, before = lines[li];
+    lines[li] = before.replace(tail, '');
+    if (lines[li] !== before && !lines[li].trim()) lines.pop();
+  }
   if (cut >= 0) { if (cut > 0 && /^\u05d1\u05d1\u05e8\u05db\u05d4,?$/.test(lines[cut - 1].trim())) cut--; lines.length = cut; }
   // 20/10/2026 (Michael: "approve removing the thanks"): a closing "thanks," or "regards," as the last line
   // goes too, since the signature opens with "regards,".
@@ -622,6 +633,9 @@ export async function onRequest(context) {
     if (body.op === 'agent_report') {
       const e = agentEntry(body, new Date().toISOString());
       if (!e) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
+      // 21/10/2026: the WhatsApp assistant sent {status, did} three times; each became an empty ok:false row,
+      // and a later run read them as "runs that fell midway". A report with nothing in it is refused.
+      if (!e.line && !e.for_michael) return jsonResp({ ok: false, error: 'line required (fields: ok, line, learned, for_michael)' }, 400, {});
       const rows = await stateRead(['agent_log']);
       let log = [];
       try { log = JSON.parse(rows && rows[0] && rows[0].value || '[]'); } catch (x) { log = []; }

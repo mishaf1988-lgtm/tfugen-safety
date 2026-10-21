@@ -114,14 +114,16 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   await call({ op: 'agent_report', agent: 'retro', ok: false, line: 'push נדחה', learned: 'x'.repeat(500) });
   let lg = JSON.parse(state.agent_log);
   check('second report: appended, not replacing; ok false kept; text cut to 300', lg.length === 2 && lg[0].agent === 'routine-quotes' && lg[1].ok === false && lg[1].learned.length === 300, lg);
-  check('ok that is not exactly true counts as a failure', (await call({ op: 'agent_report', agent: 'retro', ok: 'yes' })).json.entry.ok === false);
+  check('ok that is not exactly true counts as a failure', (await call({ op: 'agent_report', agent: 'retro', ok: 'yes', line: 'x' })).json.entry.ok === false);
+  // 21/10/2026: {status, did} instead of {ok, line} left empty ok:false rows that read as failed runs.
+  check('an empty report (no line, no for_michael): refused, log untouched', (await call({ op: 'agent_report', agent: 'routine-wa-assistant', status: 'done', did: 'x' })).status === 400 && JSON.parse(state.agent_log).length === 3);
   check('a bad agent name: refused, log untouched', (await call({ op: 'agent_report', agent: 'Bad Name; drop' })).status === 400 && JSON.parse(state.agent_log).length === 3);
   state.agent_log = JSON.stringify(Array.from({ length: AGENT_LOG_MAX }, (_, i) => ({ agent: 'a', at: String(i) })));
-  await call({ op: 'agent_report', agent: 'retro', ok: true });
+  await call({ op: 'agent_report', agent: 'retro', ok: true, line: 'x' });
   lg = JSON.parse(state.agent_log);
   check('the log keeps the last ' + AGENT_LOG_MAX, lg.length === AGENT_LOG_MAX && lg[0].at === '1' && lg[lg.length - 1].agent === 'retro');
   state.wa_last_out = JSON.stringify({ at: '2026-10-20T18:00:00Z', text: 'x'.repeat(3000) });
-  check('agent_report for_michael: kept (cut to 300), absent when empty', (await call({ op: 'agent_report', agent: 'routine-coa', ok: true, for_michael: 'z'.repeat(400) })).json.entry.for_michael.length === 300 && !('for_michael' in (await call({ op: 'agent_report', agent: 'routine-coa', ok: true })).json.entry));
+  check('agent_report for_michael: kept (cut to 300), absent when empty', (await call({ op: 'agent_report', agent: 'routine-coa', ok: true, for_michael: 'z'.repeat(400) })).json.entry.for_michael.length === 300 && !('for_michael' in (await call({ op: 'agent_report', agent: 'routine-coa', ok: true, line: 'x' })).json.entry));
   // 20/10/2026: dev_inbox, requests to development (the office board refused the assistant's write)
   {
     let r = await call({ op: 'dev_request', agent: 'routine-wa-assistant', text: 'צריך צעד חודשי חדש לדוח המים' });
@@ -347,6 +349,19 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     await call({ ...D, body: 'שלום,\nנא לתאם.\nבברכה,\n' + SITE.owner });
     const g2 = puts[0] ? JSON.parse(puts[0].body) : {};
     check('a "regards" line before his name goes too (the signature opens with it)', g2.body === 'שלום,\nנא לתאם.', g2.body);
+    // 21/10/2026, the form 16 draft to the maintenance coordinator: "...? תודה, מיכאל." on the last line, then the signature.
+    puts = [];
+    await call({ ...D, body: 'היי,\nאפשר לתאם איתם מועד? תודה, מיכאל.' });
+    const sg1 = puts[0] ? JSON.parse(puts[0].body) : {};
+    check('an inline "thanks, <first name>." at the end of the last line is cut', sg1.body === 'היי,\nאפשר לתאם איתם מועד?', sg1.body);
+    puts = [];
+    await call({ ...D, body: 'שלום,\nנא לתאם.\nתודה,\nמיכאל' });
+    const sg2 = puts[0] ? JSON.parse(puts[0].body) : {};
+    check('the first name alone on its own line goes too', sg2.body === 'שלום,\nנא לתאם.', sg2.body);
+    puts = [];
+    await call({ ...D, body: 'שלום,\nמיכאל מהבטיחות ביקש תעודה.' });
+    const sg3 = puts[0] ? JSON.parse(puts[0].body) : {};
+    check('his name inside a sentence stays', sg3.body === 'שלום,\nמיכאל מהבטיחות ביקש תעודה.', sg3.body);
     puts = [];
     await call({ ...D, body: SITE.owner + ' ביקש לבדוק את הבקר.\nשורה 2\nשורה 3\nשורה 4\nשורה 5' });
     const g3 = puts[0] ? JSON.parse(puts[0].body) : {};
