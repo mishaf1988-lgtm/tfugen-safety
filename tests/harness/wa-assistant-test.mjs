@@ -4,7 +4,7 @@
 // routine-db op wa_me answers only to that number, falling back to the template outside the window.
 import { onRequest as hook, fireText, ACK_TEXT, FAIL_TEXT } from './_build/wa-hook.mjs';
 import { onRequest as rdb, hazardChoiceNote, hasPassport, hasInternalId } from './_build/routine-db.mjs';
-import { metaSigOk, inboundMessages, waOneLine, ASSISTANT_TEMPLATE, sameSession, ilTimes } from './_build/_wa.mjs';
+import { metaSigOk, inboundMessages, waOneLine, ASSISTANT_TEMPLATE, sameSession, ilTimes, asksRepoSetup } from './_build/_wa.mjs';
 import fs from 'fs';
 
 let pass = 0, fail = 0;
@@ -329,6 +329,8 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   // 21/10/2026, Michael's screenshot: "\u05d4\u05d5\u05e2\u05d1\u05e8 \u05dc\u05e4\u05d9\u05ea\u05d5\u05d7 dev-20261021053745-tqu3" in an answer.
   check('internal ids: refused (dev request, trigger, session, office row)', hasInternalId('\u05d4\u05d5\u05e2\u05d1\u05e8 \u05dc\u05e4\u05d9\u05ea\u05d5\u05d7 dev-20261021053745-tqu3.') && hasInternalId('trig_01TofqtqNWtrXMnqiNjHq1nZ') && hasInternalId('session_01McD38xyz') && hasInternalId('cse_01TuRyeMrE8W') && hasInternalId('chat h-20261020-2036'));
   check('dates, form numbers, phone, ISO: pass', !hasInternalId('21/10/2026 \u05d8\u05d5\u05e4\u05e1 16 054-7940073 ISO 45001 C27 #1802 dev team'));
+  check('repo setup ask: refused (the 18:02 message)', asksRepoSetup('3. \u05d1\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05de\u05d0\u05d2\u05e8\u05d9\u05dd (Repositories) \u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05d0\u05ea tfugen-safety') && asksRepoSetup('\u05e2\u05d3 \u05e9\u05ea\u05d5\u05e1\u05d9\u05e3 \u05d0\u05ea \u05d4\u05de\u05d0\u05d2\u05e8 tfugen-safety'));
+  check('repo setup ask: an ordinary answer passes', !asksRepoSetup('\u05d4\u05d1\u05e7\u05e9\u05d4 \u05d1\u05ea\u05d5\u05e8, \u05d4\u05de\u05e4\u05ea\u05d7 \u05d4\u05ea\u05d5\u05e8\u05df \u05d1\u05d5\u05e0\u05d4 \u05d0\u05d5\u05ea\u05d4 \u05d1-19:17. \u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05d0\u05ea \u05d4\u05e4\u05e1\u05d5\u05dc\u05ea\u05d5\u05df \u05dc\u05d8\u05d9\u05d5\u05d8\u05d4'));
   { const now = Date.parse('2026-10-21T15:00:00Z');
     check('UTC times become Israel time (13:50Z, ISO stamp)', ilTimes('\u05e0\u05d1\u05d3\u05e7 13:50Z, \u05e9\u05d5\u05d1 \u05d1-2026-10-22T04:05:00.000Z', now) === '\u05e0\u05d1\u05d3\u05e7 16:50, \u05e9\u05d5\u05d1 \u05d1-22/10/2026 07:05', ilTimes('\u05e0\u05d1\u05d3\u05e7 13:50Z, \u05e9\u05d5\u05d1 \u05d1-2026-10-22T04:05:00.000Z', now));
     check('Israel times, dates and ISO 45001: unchanged', ilTimes('21/10/2026 18:02 ISO 45001 07:47', now) === '21/10/2026 18:02 ISO 45001 07:47'); }

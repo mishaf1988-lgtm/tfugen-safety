@@ -70,6 +70,11 @@ export function choicesPayload(to, text, choices) {
 // worker's for_michael note is not rewritten by anyone before it goes out.
 export const INTERNAL_ID = /(^|[^A-Za-z0-9])(dev-\d{14}-[a-z0-9]{4}|trig_[A-Za-z0-9]{6,}|session_[A-Za-z0-9]{6,}|cse_[A-Za-z0-9]{6,}|h-\d{8}-\d{4})/;
 export function hasInternalId(t) { return INTERNAL_ID.test(String(t || '')); }
+// 21/10/2026 (Michael's screenshot, 18:02): the assistant sent him steps to add a repository on the Routine
+// page, which has no repository choice (C32), while the dev runner builds the request anyway. wa_me refuses
+// a text that asks him to add a repository or to edit a Routine.
+export const REPO_ASK = /(\u05dc\u05d4\u05d5\u05e1\u05d9\u05e3|\u05d4\u05d5\u05e1\u05e3|\u05ea\u05d5\u05e1\u05d9\u05e3|\u05e9\u05ea\u05d5\u05e1\u05d9\u05e3)[^\n]{0,60}(\u05de\u05d0\u05d2\u05e8|repositor)|\brepositories\b|Routines?[^\n]{0,60}\u05e2\u05e8\u05d9\u05db\u05d4/i;
+export function asksRepoSetup(t) { return REPO_ASK.test(String(t || '')); }
 export function stripInternalIds(t) {
   return String(t || '').replace(new RegExp(INTERNAL_ID.source, 'g'), '$1').replace(/\(\s*[,;:]?\s*\)/g, '')
     .replace(/\s+([.,;:)])/g, '$1').replace(/([,;:])(?=[.,;:])/g, '').replace(/\s{2,}/g, ' ').trim();
