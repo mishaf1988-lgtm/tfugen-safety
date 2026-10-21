@@ -33,6 +33,7 @@ globalThis.fetch = async (url, opt = {}) => {
   }
   if (url.startsWith(SB + '/rest/v1/notifications_log')) {
     if (m === 'POST') { logs.push(...JSON.parse(opt.body)); return new Response('', { status: 201 }); }
+    if (/event_type=in\.\(owner_in,assistant\)&/.test(url)) return new Response(JSON.stringify(logs.filter((x) => x.event_type === 'owner_in' || x.event_type === 'assistant').slice().reverse()), { status: 200 });
     if (/event_type=in\.\(owner_in,assistant,watch\)/.test(url)) { reviewUrls.push(url); return new Response(JSON.stringify([{ ts: 't1', event_type: 'owner_in', text: 'mah hachok', title: null, fast: null, via: null }, { ts: 't2', event_type: 'assistant', text: null, title: 'answer', fast: 'true', via: 'text' }, { ts: 't3', event_type: 'watch', text: null, title: 'no answer yet', fast: null, via: null }]), { status: 200 }); }
     if (/wamid=eq\.wamid\.OUTPRO/.test(url)) return new Response(JSON.stringify([{ event_type: 'assistant', payload: { title: 'answer with a source', wamid: 'wamid.OUTPRO', ref: 'pro' }, ts: 't' }]), { status: 200 });
     return new Response(JSON.stringify(/wamid=eq\.wamid\.ALERT/.test(url) ? [{ event_type: 'trustee_hazard', payload: { title: 'X - leak', id: 'r9' }, ts: 't' }] : []), { status: 200 });
@@ -307,6 +308,15 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
     await call({ op: 'dev_done', id: dr.id });
     const sent2 = JSON.stringify(metas[metas.length - 1] || {});
     check('dev_done without a note: the promise closes and Michael gets "done: <the promise>"', metas.length === nm2 + 1 && /\u05d1\u05d5\u05e6\u05e2: \u05ea\u05d9\u05e7\u05d5\u05df \u05d4\u05ea\u05d5\u05d5\u05d9\u05ea/.test(sent2) && P().find((x) => x.ref === dr.id).status === 'done', sent2);
+  }
+  console.log('\n3i. the conversation so far goes with every message (21/10/2026, the assistant: "every message starts from zero")');
+  {
+    let raw = msgBody(OWNER, 'wamid.CONV1', 'who may instruct maintenance workers');
+    await post(raw, await sign(raw, ENV.META_APP_SECRET));
+    raw = msgBody(OWNER, 'wamid.CONV2', 'and why learn a course then');
+    await post(raw, await sign(raw, ENV.META_APP_SECRET));
+    const ft = fires[fires.length - 1].body.text;
+    check('the second message carries the first one in "recent", not itself', /\nrecent \(/.test(ft) && /who may instruct maintenance workers/.test(ft.split('\ntext:')[0]) && !/recent[^\n]*and why learn a course then/.test(ft), ft.slice(0, 900));
   }
   console.log('\n4. the front door');
   const mw = fs.readFileSync(new URL('../../functions/_middleware.js', import.meta.url), 'utf8');
