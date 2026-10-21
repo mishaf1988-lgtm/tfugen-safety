@@ -34,6 +34,7 @@ globalThis.fetch = async (url, opt = {}) => {
   if (url.startsWith(SB + '/rest/v1/notifications_log')) {
     if (m === 'POST') { logs.push(...JSON.parse(opt.body)); return new Response('', { status: 201 }); }
     if (/event_type=in\.\(owner_in,assistant,watch\)/.test(url)) { reviewUrls.push(url); return new Response(JSON.stringify([{ ts: 't1', event_type: 'owner_in', text: 'mah hachok', title: null, fast: null, via: null }, { ts: 't2', event_type: 'assistant', text: null, title: 'answer', fast: 'true', via: 'text' }, { ts: 't3', event_type: 'watch', text: null, title: 'no answer yet', fast: null, via: null }]), { status: 200 }); }
+    if (/wamid=eq\.wamid\.OUTPRO/.test(url)) return new Response(JSON.stringify([{ event_type: 'assistant', payload: { title: 'answer with a source', wamid: 'wamid.OUTPRO' }, ts: 't' }]), { status: 200 });
     return new Response(JSON.stringify(/wamid=eq\.wamid\.ALERT/.test(url) ? [{ event_type: 'trustee_hazard', payload: { title: 'X - leak', id: 'r9' }, ts: 't' }] : []), { status: 200 });
   }
   if (url === ENV.ASSISTANT_FIRE_URL) order.push('fire');
@@ -261,7 +262,7 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   {
     state.wa_last_out = JSON.stringify({ at: new Date().toISOString(), text: 'answer with a source', ref: 'pro' });
     const nf = fires.length, nm = metas.length;
-    let raw = JSON.stringify({ entry: [{ changes: [{ value: { messages: [{ from: OWNER, id: 'wamid.RATE1', timestamp: '1792400000', type: 'interactive', interactive: { type: 'button_reply', button_reply: { id: 'c1', title: '1. \u05de\u05d3\u05d5\u05d9\u05e7' } } }] } }] }] });
+    let raw = JSON.stringify({ entry: [{ changes: [{ value: { messages: [{ from: OWNER, id: 'wamid.RATE1', timestamp: '1792400000', type: 'interactive', context: { id: 'wamid.OUTPRO' }, interactive: { type: 'button_reply', button_reply: { id: 'c1', title: '1. \u05de\u05d3\u05d5\u05d9\u05e7' } } }] } }] }] });
     await post(raw, await sign(raw, ENV.META_APP_SECRET));
     const r1 = JSON.parse(state.assistant_ratings || '[]');
     check('"accurate": noted, thanked by the server, the assistant not fired', fires.length === nf && metas.length === nm + 1 && r1.length === 1 && r1[0].good === true && /answer with a source/.test(r1[0].q), { f: fires.length - nf, r1 });

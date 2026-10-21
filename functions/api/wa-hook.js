@@ -118,8 +118,12 @@ export function hazardRef(about, prev) {
 export const RATE_REF = 'pro', RATE_CHOICES = ['\u05de\u05d3\u05d5\u05d9\u05e7', '\u05dc\u05d0 \u05de\u05d3\u05d5\u05d9\u05e7'];
 export const RATE_KEY = 'assistant_ratings', RATE_MAX = 200;
 export const RATE_THANKS = '\u05ea\u05d5\u05d3\u05d4, \u05e0\u05e8\u05e9\u05dd \u05e9\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05de\u05d3\u05d5\u05d9\u05e7\u05ea.';
+// 21/10/2026 (Michael tapped "1. accurate" and it went to the assistant): a tap carries the answer's wamid as its
+// context, and that answer is in the log as event_type assistant, so "about" is set. A reply to the assistant's own
+// message is still a rating; only an alert (or anything else) is not.
+export const ownAnswer = (about) => /^assistant \|/.test(String(about || ''));
 export function rateOf(m, about, prev) {
-  if (about || !prev || prev.ref !== RATE_REF) return null;
+  if ((about && !ownAnswer(about)) || !prev || prev.ref !== RATE_REF) return null;
   const raw = String((m && m.text) || '').trim().replace(/^[12]\. */, '').replace(/[.!]/g, '').trim();
   if (m && (m.choice === 1 || m.choice === '1') || raw === RATE_CHOICES[0]) return { good: true };
   if (m && (m.choice === 2 || m.choice === '2') || raw === RATE_CHOICES[1]) return { good: false };
@@ -206,7 +210,7 @@ async function handle(env, raw) {
     // the last question (wa_last_out): the assistant's answer is. A fire that fails says so.
     const wa = env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN;
     const about = await aboutAlert(env, m.context);
-    const prev = about ? null : await lastOut(env, sbFrom(env));
+    const prev = about && !ownAnswer(about) ? null : await lastOut(env, sbFrom(env));
     // The fast lane first: an answer here means no "got it", no Routine. A failure on the way (read, write,
     // send) falls through to the assistant, so a message is never lost to the fast lane.
     const rt = rateOf(m, about, prev);
