@@ -149,6 +149,15 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   }
   // 21/10/2026: a new request fires the immediate-development Routine, once, only with the token
   {
+    { const { workerJobAdd, workerJobDone, workerFireText, WORKERS, WORKER_FIRE_HEAD } = await import('./_build/routine-db.mjs');
+      const now = '2026-10-21T16:00:00.000Z', task = '\u05dc\u05d1\u05d3\u05d5\u05e7 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05de\u05d0\u05dc\u05e2\u05d3';
+      const a = workerJobAdd('[]', { agent: 'routine-wa-assistant', worker: WORKERS[2], task }, now);
+      check('worker_now: a job for a known worker is created', a.created && a.list.length === 1 && a.list[0].status === 'open' && /^job-\d{14}-/.test(a.id), a);
+      check('worker_now: the same open task again is the same job', workerJobAdd(JSON.stringify(a.list), { agent: 'routine-wa-assistant', worker: WORKERS[2], task }, now).created !== true);
+      check('worker_now: an unknown worker is refused', !!workerJobAdd('[]', { agent: 'routine-wa-assistant', worker: 'x', task }, now).error);
+      const d = workerJobDone(JSON.stringify(a.list), a.id, '\u05e0\u05d1\u05d3\u05e7, \u05d4\u05d4\u05e6\u05e2\u05d4 \u05d1\u05ea\u05d5\u05e7\u05e3', now);
+      check('worker_done: closes once, with the note; a second close is refused', d.job && d.job.status === 'done' && !!workerJobDone(JSON.stringify(d.list), a.id, '\u05e9\u05d5\u05d1 \u05e9\u05d5\u05d1', now).error, d);
+      check('worker fire text: the exact head line, then id and worker', workerFireText(a.list[0]).split('\n')[0] === WORKER_FIRE_HEAD && workerFireText(a.list[0]).indexOf('worker: ' + WORKERS[2]) > 0); }
     { const { greetByHour } = await import('./_build/routine-db.mjs');
       const gm = '\u05d1\u05d5\u05e7\u05e8 \u05d8\u05d5\u05d1 \u05d0\u05dc\u05d9\u05e0\u05d4,\n\u05e9\u05dc\u05d5\u05dd';
       check('greeting: good morning kept at 10:30 Israel', greetByHour(gm, Date.parse('2026-10-21T07:30:00Z')) === gm);

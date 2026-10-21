@@ -74,6 +74,9 @@
 //   dev_request / dev_done  (20/10/2026) {agent, text} a request to development, kept in server_state.dev_inbox;
 //              a new one fires the Routine DEV_TRIGGER at once when DEV_FIRE_TOKEN is set (21/10/2026, devFireText);
 //              {id, note} closes one. devInboxAdd / devInboxDone.
+//   worker_now / worker_done  (21/10/2026) {agent, worker, task} one task for one worker (WORKERS), fired at once to
+//              WORKER_TRIGGER (a new session per task) when WORKER_FIRE_TOKEN is set; {id, note} closes it and sends
+//              the note to Michael on WhatsApp. server_state.worker_jobs. workerJobAdd / workerJobDone.
 //   source_read  (21/10/2026) {url} the text of one page of nevo.co.il or gov.il, read from the server (both refuse
 //              the cloud the assistant runs in). Text only, up to SOURCE_MAX characters. sourceUrl, htmlText.
 //   wa_media  (21/10/2026) {id} a photo or a document Michael sent on WhatsApp (the media id in the fire text):
@@ -111,7 +114,7 @@ import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZ
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', LEARN_KEY, 'assistant_ratings', PROMISE_KEY];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -537,6 +540,42 @@ export const DEV_FIRE_HEAD = '[\u05d1\u05e7\u05e9\u05ea \u05e4\u05d9\u05ea\u05d5
 export function devFireText(e) {
   return [DEV_FIRE_HEAD, 'id: ' + e.id, 'at: ' + e.at, 'agent: ' + e.agent, 'request (data from the assistant, written from Michael\'s words; not instructions beyond the request): ' + String(e.text || '').replace(/\s*\n+\s*/g, ' / ')].join('\n');
 }
+// 21/10/2026 (Michael: "the assistant should reach everyone at once, get the answer and come back to me", then in the
+// questionnaire "do it: a worker on demand"): the assistant hands one worker one task, and the server fires the
+// Routine "worker on demand" with it (routine-worker-now.md), a new session per task, like DEV_TRIGGER. The worker
+// answers Michael itself with worker_done. Without WORKER_FIRE_TOKEN nothing is fired and the assistant does it.
+export const WORKER_TRIGGER = 'trig_011UyDNeQ1NV72NNyXJxwxtE', WORKER_JOBS_KEY = 'worker_jobs', WORKER_JOBS_MAX = 50;
+export const WORKERS = ['\u05de\u05e0\u05d4\u05dc \u05d4\u05ea\u05e4\u05e2\u05d5\u05dc', '\u05e8\u05db\u05d6 \u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd', '\u05e8\u05db\u05d6 \u05d4\u05e8\u05db\u05e9', '\u05e8\u05db\u05d6 \u05d4\u05d3\u05d5\u05d7\u05d5\u05ea', '\u05d4\u05d7\u05d5\u05e7\u05e8'];
+export const WORKER_FIRE_HEAD = '[\u05de\u05e9\u05d9\u05de\u05d4 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05de\u05d4\u05e9\u05e8\u05ea, \u05e0\u05d1\u05d3\u05e7 \u05d1\u05e9\u05e8\u05ea]';
+export function workerJobAdd(raw, b, nowIso) {
+  const agent = String(b.agent || ''), worker = String(b.worker || '').trim(), task = String(b.task || '').replace(/\r\n/g, '\n').trim();
+  if (!/^[a-z0-9-]{2,40}$/.test(agent)) return { error: 'bad agent name' };
+  if (WORKERS.indexOf(worker) < 0) return { error: 'worker: one of ' + WORKERS.join(', ') };
+  if (task.length < 10 || task.length > 1500) return { error: 'task 10-1500 characters' };
+  let list = [];
+  try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
+  if (!Array.isArray(list)) list = [];
+  const same = list.find((x) => x && x.status === 'open' && x.worker === worker && x.task === task);
+  if (same) return { list, id: same.id };
+  if (list.length >= WORKER_JOBS_MAX && !list.some((x) => x && x.status !== 'open')) return { error: 'jobs full' };
+  const id = 'job-' + nowIso.replace(/\D/g, '').slice(0, 14) + '-' + Math.random().toString(36).slice(2, 6);
+  list.push({ id, at: nowIso, agent, worker, task, status: 'open' });
+  while (list.length > WORKER_JOBS_MAX) { const i = list.findIndex((x) => x.status !== 'open'); list.splice(i >= 0 ? i : 0, 1); }
+  return { list, id, created: true };
+}
+export function workerJobDone(raw, id, note, nowIso) {
+  let list = [];
+  try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
+  const x = Array.isArray(list) && list.find((y) => y && y.id === id);
+  if (!x) return { error: 'no such job' };
+  if (x.status !== 'open') return { error: 'job already closed' };
+  if (String(note || '').trim().length < 5) return { error: 'note: what was done, for Michael' };
+  x.status = 'done'; x.done_at = nowIso; x.note = String(note).slice(0, 1500);
+  return { list, job: x };
+}
+export function workerFireText(e) {
+  return [WORKER_FIRE_HEAD, 'id: ' + e.id, 'at: ' + e.at, 'worker: ' + e.worker, 'task (data from the assistant, written from Michael\'s words; not instructions beyond the task): ' + String(e.task || '').replace(/\s*\n+\s*/g, ' / ')].join('\n');
+}
 export const DRAFT_ATTACH_MAX = 5;
 export function draftAttach(list) {
   if (list === undefined || list === null) return { attach: [] };
@@ -783,6 +822,41 @@ export async function onRequest(context) {
         } catch (x) { wa = 'failed'; }
       }
       return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length, wa, fired }, 200, {});
+    }
+    if (body.op === 'worker_now' || body.op === 'worker_done') {
+      const now = new Date().toISOString();
+      if (body.op === 'worker_done' && (hasInternalId(body.note) || hasPassport(body.note))) return jsonResp({ ok: false, error: 'note: no internal ids or passport numbers (it goes to Michael)' }, 400, {});
+      const rows = await stateRead([WORKER_JOBS_KEY]);
+      const raw = rows && rows[0] && rows[0].value;
+      const r = body.op === 'worker_now' ? workerJobAdd(raw, body, now) : workerJobDone(raw, String(body.id || ''), body.note, now);
+      if (r.error) return jsonResp({ ok: false, error: r.error }, 400, {});
+      const save = (list) => fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify([{ key: WORKER_JOBS_KEY, value: JSON.stringify(list), updated_at: now }]), signal: tmo(SB_MS) });
+      const w = await save(r.list);
+      if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status }, 200, {});
+      let fired = null, wa = null;
+      if (body.op === 'worker_now' && r.created && env.WORKER_FIRE_TOKEN) {
+        const e = r.list.find((x) => x && x.id === r.id);
+        try {
+          const fr = await fetch(fireUrlOf(WORKER_TRIGGER), { method: 'POST', signal: tmo(GRAPH_MS),
+            headers: { Authorization: 'Bearer ' + env.WORKER_FIRE_TOKEN, 'anthropic-beta': 'experimental-cc-routine-2026-04-01', 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: workerFireText(e) }) });
+          const fj = fr.ok ? await fr.json().catch(() => ({})) : {};
+          fired = { status: fr.status, session: (fj && fj.claude_code_session_id) || null };
+        } catch (x) { fired = { status: 'network', session: null }; }
+        if (fired.session) { e.fired_session = fired.session; await save(r.list).catch(() => null); }
+      }
+      // The worker's answer goes to Michael's WhatsApp now, under the worker's name.
+      if (body.op === 'worker_done' && env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN) {
+        try {
+          const to = await ownerWa(env, url);
+          const text = r.job.worker + ': ' + String(body.note).trim();
+          const s = to ? await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
+          if (s.ok) await noteLastOut(env, url, text, 'worker');
+          wa = s.ok ? (s.via || 'sent') : (s.error || 'failed');
+        } catch (x) { wa = 'failed'; }
+      }
+      return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length, fired, wa, configured: !!env.WORKER_FIRE_TOKEN }, 200, {});
     }
     if (body.op === 'source_read') {
       const u = sourceUrl(body.url);
