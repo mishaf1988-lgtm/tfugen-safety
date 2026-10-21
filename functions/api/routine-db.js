@@ -73,6 +73,8 @@
 //              replaces a file, never into the protected folders. odPutPdfCheck.
 //   dev_request / dev_done  (20/10/2026) {agent, text} a request to development, kept in server_state.dev_inbox;
 //              {id, note} closes one. devInboxAdd / devInboxDone.
+//   wa_media  (21/10/2026) {id} a photo or a document Michael sent on WhatsApp (the media id in the fire text):
+//              {ok, mime, name?, bytes, b64}. Images and PDF only, up to WA_MEDIA_MAX. Kept nowhere.
 //   skill_read  (21/10/2026) {path: "SKILL.md" | "references/<name>.md"} one file of the assistant's knowledge in the
 //              private michael-skills repo, read with GH_SKILLS_TOKEN. exam.md never (it is the exam). skillPath.
 //   promise / promise_done  (21/10/2026) {agent, text, who?, ref?} "I will get back to you" kept in server_state.promises;
@@ -187,6 +189,8 @@ export function learnDone(raw, id, where, nowIso) {
 // skill_read (21/10/2026, a forklift question from Michael: the WhatsApp assistant's professional agent could not
 // clone the private michael-skills repo and answered without law.md and cases.md). The server reads it with the
 // token the weekly mail already uses. Only the assistant's own files, .md, and never the monthly exam.
+export const WA_MEDIA_MAX = 8 * 1024 * 1024;
+export const waMediaMimeOk = (m) => /^(image\/(jpeg|png|webp)|application\/pdf)$/.test(String(m || ''));
 export const SKILL_BASE = String(SITE.assistantQueue || '').replace(/references\/research-queue\.md$/, '');
 export function skillPath(p) {
   const v = String(p || '').trim();
@@ -715,6 +719,25 @@ export async function onRequest(context) {
         } catch (x) { wa = 'failed'; }
       }
       return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length, wa }, 200, {});
+    }
+    if (body.op === 'wa_media') {
+      const id = String(body.id || '');
+      if (!/^[0-9]{5,30}$/.test(id)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
+      if (!env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
+      const auth = { Authorization: 'Bearer ' + env.META_ACCESS_TOKEN };
+      const mr = await fetch('https://graph.facebook.com/v25.0/' + id, { headers: auth, signal: tmo(GRAPH_MS) });
+      const meta = await mr.json().catch(() => null);
+      if (!mr.ok || !meta || !meta.url) return jsonResp({ ok: false, error: 'media ' + mr.status }, 200, {});
+      if (!waMediaMimeOk(meta.mime_type)) return jsonResp({ ok: false, error: 'type not read: ' + meta.mime_type }, 200, {});
+      if (Number(meta.file_size) > WA_MEDIA_MAX) return jsonResp({ ok: false, error: 'too big: ' + meta.file_size }, 200, {});
+      // the download url is Meta's own; only lookaside / fbcdn hosts are fetched with the token
+      if (!/^https:\/\/[a-z0-9.-]+\.(fbsbx|fbcdn|whatsapp)\.(com|net)\//.test(String(meta.url))) return jsonResp({ ok: false, error: 'unexpected media host' }, 200, {});
+      const fr = await fetch(meta.url, { headers: auth, signal: tmo(GRAPH_MS) });
+      if (!fr.ok) return jsonResp({ ok: false, error: 'download ' + fr.status }, 200, {});
+      const buf = new Uint8Array(await fr.arrayBuffer());
+      if (buf.length > WA_MEDIA_MAX) return jsonResp({ ok: false, error: 'too big' }, 200, {});
+      let bin = ''; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+      return jsonResp({ ok: true, mime: meta.mime_type, bytes: buf.length, b64: btoa(bin) }, 200, {});
     }
     if (body.op === 'skill_read') {
       const p = skillPath(body.path);

@@ -306,12 +306,17 @@ export function inboundMessages(body) {
     const v = c && c.value;
     ((v && v.messages) || []).forEach((m) => {
       if (!m || !m.id || !m.from) return;
+      // 21/10/2026 (Michael sent a screenshot of a gov.il page and the assistant saw only "an image"): a photo or a
+      // document keeps its media id, type and file name, and its caption is the text. routine-db wa_media reads it.
+      const md = (m.type === 'image' || m.type === 'document') ? m[m.type] : null;
       const text = m.type === 'text' ? (m.text && m.text.body) : m.type === 'button' ? (m.button && m.button.text)
-        : m.type === 'interactive' ? (m.interactive && (m.interactive.button_reply || m.interactive.list_reply || {}).title) : '';
+        : m.type === 'interactive' ? (m.interactive && (m.interactive.button_reply || m.interactive.list_reply || {}).title)
+        : md ? (md.caption || '') : '';
       const pick = m.type === 'interactive' && m.interactive ? (m.interactive.button_reply || m.interactive.list_reply || {}).id : '';
       out.push({ id: String(m.id).slice(0, 120), from: digits(m.from), ts: Number(m.timestamp) || 0, type: String(m.type || ''),
         choice: /^c([1-9]|10)$/.test(String(pick || '')) ? Number(String(pick).slice(1)) : null,
-        text: String(text || '').slice(0, 3000), context: m.context && m.context.id ? String(m.context.id).slice(0, 120) : '' });
+        text: String(text || '').slice(0, 3000), context: m.context && m.context.id ? String(m.context.id).slice(0, 120) : '',
+        media: md && /^[0-9]{5,30}$/.test(String(md.id || '')) ? { id: String(md.id), mime: String(md.mime_type || '').slice(0, 80), name: String(md.filename || '').slice(0, 120) } : null });
     });
   }));
   return out;
