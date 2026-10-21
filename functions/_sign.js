@@ -37,7 +37,7 @@ export function signAdd(raw, req, nowIso, rnd) {
   const open = list.find((x) => x && x.status === 'pending' && x.path === req.path && now - Date.parse(x.at) < SIGN_TTL_MS);
   if (open) return { id: open.id, created: false, list };
   const id = 's' + now.toString(36) + String(rnd || Math.random().toString(36).slice(2, 6)).replace(/[^a-z0-9]/g, '').slice(0, 4);
-  const e = { id, at: nowIso, status: 'pending', agent: String(req.agent || ''), path: req.path, name: req.name, page: req.page || null, x: req.x === undefined ? null : req.x, y: req.y === undefined ? null : req.y };
+  const e = { id, at: nowIso, status: 'pending', agent: String(req.agent || ''), path: req.path, name: req.name, page: req.page || null, x: req.x === undefined ? null : req.x, y: req.y === undefined ? null : req.y, w: typeof req.w === 'number' ? req.w : null };
   return { id, created: true, list: list.concat([e]).slice(-SIGN_MAX) };
 }
 
@@ -83,9 +83,28 @@ export function signAnswer(m) {
 }
 
 export function signedName(name) { return String(name).replace(/\.pdf$/i, '') + SIGN_SUFFIX + '.pdf'; }
-export function signAskText(name, folder) {
+// Where it goes, in words. spot = { page } when the document's signature line was found (signPlace).
+export function signAskText(name, folder, spot) {
+  const where = spot && spot.page ? '\u05e2\u05dc \u05e9\u05d5\u05e8\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05d1\u05e2\u05de\u05d5\u05d3 ' + spot.page
+    : '\u05d1\u05e2\u05de\u05d5\u05d3 \u05d4\u05d0\u05d7\u05e8\u05d5\u05df \u05dc\u05de\u05d8\u05d4 \u05de\u05d9\u05de\u05d9\u05df (\u05dc\u05d0 \u05de\u05e6\u05d0\u05ea\u05d9 \u05de\u05e7\u05d5\u05dd \u05d7\u05ea\u05d9\u05de\u05d4 \u05d1\u05de\u05e1\u05de\u05da)';
   return '\u05dc\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05da \u05e2\u05dc ' + name + '?\n(' + folder + ')\n'
-    + '\u05d4\u05d7\u05ea\u05d9\u05de\u05d4, "' + SITE.company + '" \u05d5\u05d4\u05ea\u05d0\u05e8\u05d9\u05da, \u05d1\u05e2\u05de\u05d5\u05d3 \u05d4\u05d0\u05d7\u05e8\u05d5\u05df \u05dc\u05de\u05d8\u05d4 \u05de\u05d9\u05de\u05d9\u05df. \u05e0\u05e9\u05de\u05e8 \u05db\u05e7\u05d5\u05d1\u05e5 \u05d7\u05d3\u05e9 \u05d1\u05e9\u05dd "' + signedName(name) + '", \u05d4\u05de\u05e7\u05d5\u05e8 \u05dc\u05d0 \u05de\u05e9\u05ea\u05e0\u05d4. \u05d4\u05d1\u05e7\u05e9\u05d4 \u05d1\u05ea\u05d5\u05e7\u05e3 24 \u05e9\u05e2\u05d5\u05ea.';
+    + '\u05d4\u05d7\u05ea\u05d9\u05de\u05d4, "' + SITE.company + '" \u05d5\u05d4\u05ea\u05d0\u05e8\u05d9\u05da, ' + where + '. \u05e0\u05e9\u05de\u05e8 \u05db\u05e7\u05d5\u05d1\u05e5 \u05d7\u05d3\u05e9 \u05d1\u05e9\u05dd "' + signedName(name) + '", \u05d4\u05de\u05e7\u05d5\u05e8 \u05dc\u05d0 \u05de\u05e9\u05ea\u05e0\u05d4. \u05d4\u05d1\u05e7\u05e9\u05d4 \u05d1\u05ea\u05d5\u05e7\u05e3 24 \u05e9\u05e2\u05d5\u05ea.';
+}
+// The signature's place from the label findSignSpot found ({page, x, y, text}): a line in the same string
+// ("____ :\u05d7\u05ea\u05d9\u05de\u05d4") = on the line, from its left end; a label alone = left of it (Hebrew forms put the line
+// before the label). x / y = the signature's bottom left, as stampPdf takes them. Pure.
+export function signPlace(spot) {
+  if (!spot || !spot.page) return null;
+  const text = String(spot.text || ''), size = spot.size > 2 && spot.size < 40 ? spot.size : 12;
+  const m = /_{3,}/.exec(text);
+  // An underscore is about half the font size wide; the line's width from their count. A line first in the string
+  // (the visual order of a Hebrew form) starts at x; after the label, it starts past the label's letters.
+  if (m) {
+    const lineX = spot.x + (m.index ? m.index * size * 0.55 : 0), lineW = m[0].length * size * 0.5;
+    const w = Math.max(70, Math.min(SIG_W, lineW - 4));
+    return { page: spot.page, x: Math.round(lineX + (lineW - w) / 2), y: Math.round(spot.y - 2), w: Math.round(w) };
+  }
+  return { page: spot.page, x: Math.round(Math.max(MARGIN / 2, spot.x - 6 - SIG_W)), y: Math.round(spot.y - 2) };
 }
 export function ilDate(nowMs) {
   const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(nowMs));
@@ -111,10 +130,11 @@ export async function stampPdf(pdfBytes, sigBytes, dateText, opts) {
   if (!sig) throw new Error('signature is not png or jpg');
   const cap = await doc.embedPng(b64bytes(CAPTION_PNG_B64));
   const font = await doc.embedFont(StandardFonts.Helvetica);
-  const sh = sig.height * SIG_W / sig.width, ch = cap.height * CAP_W / cap.width;
-  const right = (typeof o.x === 'number' ? o.x : width - MARGIN - SIG_W) + SIG_W;
+  const W = typeof o.w === 'number' && o.w >= 40 && o.w <= SIG_W ? o.w : SIG_W;
+  const sh = sig.height * W / sig.width, ch = cap.height * CAP_W / cap.width;
+  const right = (typeof o.x === 'number' ? o.x : width - MARGIN - W) + W;
   const y = typeof o.y === 'number' ? o.y : MARGIN + DATE_SIZE + 4 + ch + 2;
-  pg.drawImage(sig, { x: right - SIG_W, y, width: SIG_W, height: sh });
+  pg.drawImage(sig, { x: right - W, y, width: W, height: sh });
   pg.drawImage(cap, { x: right - CAP_W, y: y - ch - 2, width: CAP_W, height: ch });
   const dw = font.widthOfTextAtSize(dateText, DATE_SIZE);
   pg.drawText(dateText, { x: right - dw, y: y - ch - 2 - DATE_SIZE - 2, size: DATE_SIZE, font, color: rgb(0.1, 0.1, 0.1) });
@@ -141,7 +161,7 @@ export async function signRun(env, sbUrl, token, req, nowMs) {
   if (!s.ok) return { ok: false, error: s.status === 400 || s.status === 404 ? 'no signature image' : 'signature ' + s.status };
   const sig = new Uint8Array(await s.arrayBuffer());
   let signed;
-  try { signed = await stampPdf(pdf, sig, ilDate(nowMs), { page: req.page, x: req.x, y: req.y }); } catch (e) { return { ok: false, error: 'stamp: ' + String(e && e.message || e).slice(0, 120) }; }
+  try { signed = await stampPdf(pdf, sig, ilDate(nowMs), { page: req.page, x: req.x, y: req.y, w: req.w }); } catch (e) { return { ok: false, error: 'stamp: ' + String(e && e.message || e).slice(0, 120) }; }
   const up = await fetch(G + enc(dir + '/' + out) + ':/content?@microsoft.graph.conflictBehavior=fail', { method: 'PUT', headers: { ...gh, 'Content-Type': 'application/pdf' }, body: signed, signal: tmo(FILE_MS) });
   const uj = await up.json().catch(() => ({}));
   if (!up.ok) return { ok: false, error: 'put ' + up.status };
