@@ -17,6 +17,7 @@ import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
 import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, LEARN_KEY, learnedLine } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 import { accessToken } from '../_onedrive.js';
+import { onRequest as routineDb, OD_ROOT } from './routine-db.js';
 import { SIGN_KEY, signRefOf, signAnswer, signTake, signMark, signRun, signDoneText, SIGN_CANCEL_TEXT, SIGN_EXPIRED_TEXT, SIGN_DONE_TEXT } from '../_sign.js';
 
 export const FAIL_TEXT = '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05dc\u05e2\u05d5\u05d6\u05e8. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.';
@@ -167,8 +168,55 @@ async function rateNote(env, good, q) {
       body: JSON.stringify([{ key: RATE_KEY, value: JSON.stringify(list), updated_at: new Date().toISOString() }]) });
   } catch (e) { /* a lost rating is not a lost message */ }
 }
+// 21/10/2026 (dev request from the assistant: the cloud permission check stopped its sign_request as a "real-world
+// transaction"): Michael's own "\u05ea\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9 \u05e2\u05dc <file>" is read here, by the server, which finds the PDF and asks him
+// itself, through routine-db sign_request. Only his own Meta-signed message reaches this point. Pure.
+const SIGN_ASK_RE = /^(?:\u05ea\u05d7\u05ea\u05d5\u05dd|\u05dc\u05d7\u05ea\u05d5\u05dd|\u05ea\u05d7\u05ea\u05de\u05d9)\s+\u05d1\u05e9\u05de\u05d9\s+\u05e2\u05dc\s+(.{2,120})$/;
+export function signAskOf(raw) {
+  const m = SIGN_ASK_RE.exec(String(raw || '').trim());
+  if (!m) return null;
+  const q = m[1].replace(/["'<>]/g, ' ').replace(/\s+/g, ' ').trim().replace(/\.pdf$/i, '').trim();
+  return q.length >= 2 ? q : null;
+}
+// The PDFs a search found, best first: the exact name, then the rest; never a signed copy. Pure.
+export function signPick(items, q) {
+  const root = '/drive/root:/' + OD_ROOT;
+  const norm = (x) => String(x).replace(/\.pdf$/i, '').trim().toLowerCase();
+  const list = (items || []).filter((x) => x && x.file && /\.pdf$/i.test(x.name || '') && !/\s-\s\u05d7\u05ea\u05d5\u05dd\.pdf$/i.test(x.name || ''))
+    .map((x) => { let p = ''; try { p = decodeURIComponent(String((x.parentReference && x.parentReference.path) || '')); } catch (e) { p = ''; }
+      const dir = p.indexOf(root) === 0 ? p.slice(root.length).split('/').filter(Boolean) : null;
+      return dir && dir.length ? { name: x.name, path: dir.concat([x.name]).join('/') } : null; })
+    .filter(Boolean);
+  const exact = list.filter((x) => norm(x.name) === norm(q));
+  return exact.length === 1 ? [exact[0]] : list.slice(0, 5);
+}
+export const SIGN_ASK_NONE = '\u05dc\u05d0 \u05de\u05e6\u05d0\u05ea\u05d9 PDF \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e9\u05dd \u05d4\u05d6\u05d4. \u05dc\u05e9\u05dc\u05d5\u05d7 \u05e9\u05d5\u05d1 \u05e2\u05dd \u05d7\u05dc\u05e7 \u05de\u05e9\u05dd \u05d4\u05e7\u05d5\u05d1\u05e5.';
+export function signAskManyText(list) {
+  return '\u05de\u05e6\u05d0\u05ea\u05d9 \u05db\u05de\u05d4 \u05e7\u05d1\u05e6\u05d9\u05dd:\n' + list.map((x, i) => (i + 1) + '. ' + x.path).join('\n')
+    + '\n\u05dc\u05e9\u05dc\u05d5\u05d7 "\u05ea\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9 \u05e2\u05dc" \u05e2\u05dd \u05d4\u05e9\u05dd \u05d4\u05de\u05d3\u05d5\u05d9\u05e7.';
+}
+// Search the safety folder, then ask through routine-db sign_request (its own checks: folder, PDF, not protected).
+// Returns { sent } when the document and the question went out, or { text } to answer instead.
+export async function fastSignAsk(env, q) {
+  const at = await accessToken(env);
+  const enc = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
+  const r = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(OD_ROOT) + ":/search(q='" + encodeURIComponent(q.replace(/'/g, "''")) + "')?$select=name,file,parentReference&$top=50",
+    { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(20000) });
+  if (!r.ok) return { text: null };
+  const list = signPick(((await r.json().catch(() => ({}))).value) || [], q);
+  if (!list.length) return { text: SIGN_ASK_NONE };
+  if (list.length > 1) return { text: signAskManyText(list) };
+  const res = await routineDb({ env, request: new Request('https://internal/api/routine-db', { method: 'POST',
+    headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op: 'sign_request', agent: 'wa-hook-sign', why: '\u05de\u05d9\u05db\u05d0\u05dc \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4: \u05ea\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9', path: list[0].path }) }) });
+  const j = await res.json().catch(() => ({}));
+  if (j.ok && (j.sent || j.created === false)) return { sent: true, id: j.id };
+  return { text: null, error: j.error || res.status };
+}
 export function fastRoute(m, about, prev) {
   const raw = String((m && m.text) || '').trim();
+  const ask = signAskOf(raw);
+  if (ask) return { kind: 'sign_ask', q: ask };
   if (!raw || raw.length > 40) return null;
   // 21/10/2026: an answer to "sign in your name on <file>?" (routine-db sign_request). Only the server signs, and
   // only here, on Michael's own "1" / "do it" to that very request; any other word goes to the assistant.
@@ -281,7 +329,13 @@ async function handle(env, raw) {
     if (fr0) {
       let ans = null, ref = null;
       try {
-        if (fr0.kind === 'sign') { ans = await fastSign(env, fr0, m.id); ref = 'sign-done'; }
+        if (fr0.kind === 'sign_ask') {
+          const sa = await fastSignAsk(env, fr0.q);
+          if (sa.sent) { seen.fast = 'sign_ask'; continue; }
+          ans = sa.text; ref = 'sign-ask';
+          if (!ans) seen.sign_ask_error = String(sa.error || 'search');
+        }
+        else if (fr0.kind === 'sign') { ans = await fastSign(env, fr0, m.id); ref = 'sign-done'; }
         else if (fr0.kind === 'rate') { ans = RATE_THANKS; ref = 'rate'; }
         else if (fr0.kind === 'hazard') { ans = await fastHazard(env, fr0); ref = fr0.src + ' ' + fr0.id; }
         else { const g = await gather(env, new Date()); ans = buildBrief(g.items, g.failed, g.today, false, g.notes, g.weather); ref = 'brief'; }
