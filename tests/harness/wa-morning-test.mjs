@@ -1,6 +1,6 @@
 // The morning update on WhatsApp from the server (20/10/2026): pg_cron calls /api/wa-morning twice,
 // only the call on 07:xx in Israel on Sunday-Thursday sends, once a day, to Michael's number only.
-import { watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX } from './_build/wa-morning.mjs';
+import { areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX } from './_build/wa-morning.mjs';
 import { OD_ROOT } from './_build/routine-db.mjs';
 import fs from 'fs';
 
@@ -52,6 +52,11 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   const long = buildBrief([{ n: 'x'.repeat(500), e: '2026-10-01' }, { n: 'y'.repeat(500), e: '2026-10-02' }], ['a'.repeat(300)], '2026-10-20');
   check('never over ' + MAX_CHARS + ' characters', long.length <= MAX_CHARS, long.length);
   check('keyboard characters only (no long dash, no curly quotes)', !/[—–“”…־]/.test(t + long));
+  // 21/10/2026 (handoff, Michael: "בצע: בלי תור, רק סימון"): equipment of another area names the role, never a person.
+  const ar = buildBrief([{ n: 'Boiler', e: '2026-10-22', area: 'תשתיות' }, { n: 'NH3 detector', e: '2026-10-01', area: 'קירור ואמוניה' }, { n: 'Hoist', e: '2026-10-23' }], [], '2026-10-20');
+  check('area: "אחראי התשתיות" / "אחראי הקירור" in the bracket, none on the safety manager\'s own', /- Boiler \(עד 22\/10\/2026, אחראי התשתיות\)/.test(ar) && /- NH3 detector \(פג 01\/10\/2026, אחראי הקירור\)/.test(ar) && /- Hoist \(עד 23\/10\/2026\)$/m.test(ar), ar);
+  check('area: no first names in the update (שלומי, יורי)', !/שלומי|יורי/.test(ar + buildBrief([{ n: 'Boiler', e: '2026-10-22', area: 'תשתיות' }], [], '2026-10-20', true)));
+  check('area: a new area still reads as a role', areaRole('מעבדה') === 'אחראי מעבדה' && areaRole('') === '' && areaRole(null) === '');
   // 20/10/2026, Michael on WhatsApp: "add the weather to the morning update" (dev_inbox).
   const wx = { ok: true, day: '2026-10-20', alerts: [{ kind: 'gust' }], sum: { tmin: 17, tmax: 26, rain: 0, gust: 55 } };
   const tw = buildBrief(four, [], '2026-10-20', false, [], wx);
