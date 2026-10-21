@@ -9,6 +9,6 @@
 | הצעות לעוזר (מ-07/10/2026 מיזוג מיידי, בלי משימה יומית ובלי אישור) | `proposals/` (הכללים ב-`proposals/README.md`) |
 | `michael-work-lessons`, `ncr-capa-writing` (העוזר החליף אותם) | `archive/`, מחוץ ל-plugin |
 
-- **הגעה לחשבון:** סנכרון plugin, לבד, בכל push ל-main שם. אין zip ואין העלאה ידנית.
+- **הגעה לחשבון:** סנכרון plugin, לבד, בכל push ל-main שם. אין zip ואין העלאה ידנית. **לא תמיד מיד** (21/10/2026: v74 לא הגיעה שעה אחרי הדחיפה, למרות Sync automatically דלוק). בודקים ב-Customize > Plugins > Add > Add marketplace (אותו repo, "already added") את "Synced commit" מול main; לא תואם = Sync שם, ואם לא עזר Remove והוספה מחדש. הפירוט: "איך עדכון מגיע לחשבון" בעוזר (michael-skills v75).
 - **בדיקות:** `checks` שם (מספר גרסה גבוה מ-main, מונה הכללים, כללי 365 זהים בשני ה-skills). פה נשאר רק ה-hook `guard-365.py`, שאוכף את כללי 365 בקוד בכל שיחת Claude Code על ה-repo הזה.
 - **שיחת Code פה שצריכה את העוזר או את m365.md:** `add_repo` (owner `mishaf1988-lgtm`, repo `michael-skills`), או `git clone https://github.com/mishaf1988-lgtm/michael-skills`. שינוי בעוזר = PR שם, ובתיאור ה-PR פה `skill: ... michael-skills#N`.
