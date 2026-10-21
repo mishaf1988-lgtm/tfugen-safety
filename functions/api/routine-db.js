@@ -71,6 +71,8 @@
 //              needs POSTMAN_FIRE_TOKEN. {agent, expect_session?} -> {fired, status, session, landed?}.
 //   od_put_pdf  (20/10/2026) ONE new PDF {agent, why, dir, name, b64} into an existing folder of the safety folder; never
 //              replaces a file, never into the protected folders. odPutPdfCheck.
+//   sign_offer  (21/10/2026) {agent, why, paths[1-5], text?} PDFs offered to Michael as buttons (sign_pick); a tap asks
+//              through sign_request. Offering signs nothing.
 //   sign_request  (21/10/2026, Michael: "sign in my name" only after his "do it") {agent, why, path, page?, x?, y?}: one PDF
 //              in the safety folder that Michael is asked to sign. The request waits in server_state (sign_requests) and
 //              Michael gets a WhatsApp message with the buttons "do it" / "no" and ref sign:<id>. Nothing is signed here:
@@ -634,8 +636,12 @@ export function odPutPdfCheck(b) {
 export function signRequestCheck(b) {
   const parts = String(b.path || '').split('/').filter(Boolean);
   const name = parts.pop() || '';
-  const c = odMkdirCheck({ agent: b.agent, why: b.why, parent: parts.join('/'), name });
+  // 21/10/2026 (Michael tapped a quote from the mail inbox, and the request failed): a PDF that came by mail can be
+  // signed where it is; the signed copy lands beside it, and the filing routine files both.
+  const inbox = parts[0] === OD_INBOX;
+  const c = odMkdirCheck({ agent: b.agent, why: b.why, parent: (inbox ? ['x'].concat(parts.slice(1)) : parts).join('/'), name });
   if (c.error) return { error: c.error === 'bad parent' || c.error === 'bad name' ? 'bad path' : c.error };
+  if (inbox) c.parent = OD_ROOT + OD_INBOX + c.parent.slice((OD_ROOT + 'x').length);
   if (parts[0] === OD_DRAFT || !/\.pdf$/i.test(name) || /\s-\s\u05d7\u05ea\u05d5\u05dd\.pdf$/i.test(name)) return { error: 'bad path' };
   const num = (v, lo, hi) => v === undefined || v === null ? undefined : (Number.isFinite(v) && v >= lo && v <= hi ? v : NaN);
   const page = num(b.page, 1, 200), x = num(b.x, 0, 2000), y = num(b.y, 0, 2000);
@@ -1119,6 +1125,30 @@ export async function onRequest(context) {
       const uj = await up.json().catch(() => ({}));
       if (!up.ok) return jsonResp({ ok: false, error: 'put ' + up.status }, 200, {});
       return jsonResp({ ok: true, path: c.dir.slice(OD_ROOT.length) + '/' + c.name, size: uj.size || null, webUrl: uj.webUrl || null }, 200, {});
+    }
+    // sign_offer (21/10/2026, Michael: "the assistant gets tangled", it kept asking him to type exact words): the
+    // assistant offers 1-5 PDFs as buttons; a tap reaches wa-hook's sign_pick, and only then the server asks
+    // "sign in your name?" (sign_request) and signs after his yes. Offering signs nothing.
+    if (body.op === 'sign_offer') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths', 'text'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      if (!Array.isArray(body.paths) || !body.paths.length || body.paths.length > 5) return jsonResp({ ok: false, error: 'paths: 1-5' }, 400, {});
+      const checked = body.paths.map((p) => signRequestCheck({ agent: body.agent, why: body.why, path: p }));
+      const bad = checked.findIndex((x) => x.error);
+      if (bad >= 0) return jsonResp({ ok: false, error: 'path ' + (bad + 1) + ': ' + checked[bad].error }, 400, {});
+      if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
+      const to = await ownerWa(env, url);
+      if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
+      const now = new Date().toISOString();
+      const rel = checked.map((x) => x.path.slice(OD_ROOT.length));
+      const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify([{ key: 'sign_pick', value: JSON.stringify({ at: now, paths: rel }), updated_at: now }]), signal: tmo(SB_MS) });
+      if (!w.ok) return jsonResp({ ok: false, error: 'save ' + w.status }, 200, {});
+      const head = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 300);
+      const text = (head ? head + '\n' : '') + rel.map((p, i) => (i + 1) + '. ' + p).join('\n') + '\n\u05e2\u05dc \u05d0\u05d9\u05d6\u05d4 \u05dc\u05d7\u05ea\u05d5\u05dd? \u05dc\u05dc\u05d7\u05d5\u05e5 \u05e2\u05dc \u05d4\u05de\u05e1\u05e4\u05e8.';
+      const choices = checked.map((x) => x.name.replace(/\.pdf$/i, '').slice(0, 16));
+      const s = await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, url), choices });
+      if (s.ok) await noteLastOut(env, url, text, 'signpick');
+      return jsonResp({ ok: s.ok, sent: s.ok, offered: rel.length, error: s.error || undefined }, 200, {});
     }
     if (body.op === 'sign_request') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path', 'page', 'x', 'y'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
