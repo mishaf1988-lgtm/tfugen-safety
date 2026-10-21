@@ -149,6 +149,10 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   }
   // 21/10/2026: a new request fires the immediate-development Routine, once, only with the token
   {
+    { const { greetByHour } = await import('./_build/routine-db.mjs');
+      const gm = '\u05d1\u05d5\u05e7\u05e8 \u05d8\u05d5\u05d1 \u05d0\u05dc\u05d9\u05e0\u05d4,\n\u05e9\u05dc\u05d5\u05dd';
+      check('greeting: good morning kept at 10:30 Israel', greetByHour(gm, Date.parse('2026-10-21T07:30:00Z')) === gm);
+      check('greeting: good morning becomes hi at 11:57 Israel', greetByHour(gm, Date.parse('2026-10-21T08:57:00Z')) === '\u05d4\u05d9\u05d9 \u05d0\u05dc\u05d9\u05e0\u05d4,\n\u05e9\u05dc\u05d5\u05dd', greetByHour(gm, Date.parse('2026-10-21T08:57:00Z'))); }
     const { DEV_TRIGGER, DEV_FIRE_HEAD } = await import('./_build/routine-db.mjs');
     state.dev_inbox = '[]'; const f0 = fires.length;
     let r = await call({ op: 'dev_request', agent: 'routine-wa-assistant', text: 'בלי טוקן לא מפעילים כלום' });
