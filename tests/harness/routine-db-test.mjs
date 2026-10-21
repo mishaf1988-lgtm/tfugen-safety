@@ -147,6 +147,21 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     const allOpen = devInboxAdd(JSON.stringify(Array.from({ length: DEV_INBOX_MAX }, (_, i) => ({ id: 'p' + i, agent: 'dev', text: 'q' + i + 'x'.repeat(20), status: 'open' }))), { agent: 'dev', text: 'new ' + 'y'.repeat(20) }, '2026-10-21T05:00:00Z');
     check('all open and full: refused, the oldest open one is not dropped', allOpen.error === 'inbox full' && !allOpen.list, allOpen);
   }
+  // 21/10/2026: a new request fires the immediate-development Routine, once, only with the token
+  {
+    const { DEV_TRIGGER, DEV_FIRE_HEAD } = await import('./_build/routine-db.mjs');
+    state.dev_inbox = '[]'; const f0 = fires.length;
+    let r = await call({ op: 'dev_request', agent: 'routine-wa-assistant', text: 'בלי טוקן לא מפעילים כלום' });
+    check('dev fire: no DEV_FIRE_TOKEN, no fire', r.json.ok && fires.length === f0 && r.json.fired === null, r.json);
+    const E = Object.assign({}, ENV, { DEV_FIRE_TOKEN: 'dt' });
+    r = await call({ op: 'dev_request', agent: 'routine-wa-assistant', text: 'בקשה חדשה עם טוקן: לבנות משהו' }, 'k-123', 'POST', E);
+    const last = fires[fires.length - 1];
+    check('dev fire: a new request fires the dev Routine with its id and text, the server line first', fires.length === f0 + 1 && last.url.indexOf(DEV_TRIGGER) > 0 && last.auth === 'Bearer dt' && last.body.text.split('\n')[0] === DEV_FIRE_HEAD && last.body.text.indexOf('id: ' + r.json.id) >= 0 && last.body.text.indexOf('לבנות משהו') > 0, last);
+    check('dev fire: the session is kept on the request (the postman skips it)', JSON.parse(state.dev_inbox).find((x) => x.id === r.json.id).fired_session === r.json.fired.session && !!r.json.fired.session, state.dev_inbox);
+    await call({ op: 'dev_request', agent: 'routine-wa-assistant', text: 'בקשה חדשה עם טוקן: לבנות משהו' }, 'k-123', 'POST', E);
+    check('dev fire: the same open request again does not fire twice', fires.length === f0 + 1);
+    state.dev_inbox = '[]'; fires.length = f0;
+  }
   check('wa_last_out (the assistant\'s last answer, 20/10/2026) is readable, not writable', (await call({ op: 'state_get', keys: ['wa_last_out'] })).json.rows.length === 1 && (await call({ op: 'state_set', key: 'wa_last_out', value: '{}' })).status === 400);
   check('agent_log is readable through state_get, not writable through state_set', (await call({ op: 'state_get', keys: ['agent_log'] })).json.rows.length === 1 && (await call({ op: 'state_set', key: 'agent_log', value: '[]' })).status === 400);
 

@@ -13,7 +13,8 @@ import glob, os, re, sys
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
 ok = bad = 0
-NOT_RECURRING = {'routine-night': 'one night run (10/10/2026), no schedule'}
+NOT_RECURRING = {'routine-night': 'one night run (10/10/2026), no schedule',
+                 'dev-fire': 'fired by the server per dev request (21/10/2026), silence is normal'}
 
 
 def check(label, cond, detail=None):

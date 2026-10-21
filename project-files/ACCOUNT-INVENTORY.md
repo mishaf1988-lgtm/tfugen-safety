@@ -43,6 +43,7 @@
 | `trig_01AVa8RiuYtaeXLrtkUsZqKH` | בדיקת הניסוי השבועית | ד' 06:29 | `routine-staging-e2e.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
 | `trig_01Fm5346rt5BNgeF49DqGbyz` | המגייס: החלפה שבועית | ו' 13:07 (ראשונה 23/10/2026) | `routine-rotation.md` | `session_01Q3LMWMr65icNtoe5zLifqr` (המגייס, נפתחה ביד על ידי מיכאל, דור 1) |
 | `trig_01Py8YXifD3HtnQUmFgoTRft` | הדוור של הצ'אט במשרד | א'-ה' 08:11, 12:11, 16:11 | `routine-chat-relay.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
+| `trig_0114iVUybrBb6vRqZt1EyoyL` | פיתוח מיידי: בקשה מהעוזר | בלי תזמון: השרת מפעיל לכל `dev_request` חדש (`DEV_FIRE_TOKEN`), שיחה חדשה בכל הפעלה | `routine-dev-fire.md` | אין (שיחה חדשה כל פעם) |
 | `trig_01Wm6Nzy3sYFXusWuA6H3VYJ` | בדיקת זמני Supabase ועלויות הסוכנים (חד-פעמי) | 22/10/2026 17:30 | הפרומפט בטריגר | `session_01FXKjCZExakD2sbqi9eZVin` (רכז הדוחות; מיכאל 18/10/2026: "בדיקה של עלויות יכולה להיות תחת סוכן אחד"; הקודם `trig_01TFsrFwbqQM9fAoT8GfiobF` כובה) |
 | `trig_01FKenmRrWQ22S1566BReYri` | מנהל השיווק: פעמיים בשבוע (קו העסק) | א' ו-ד' 08:53 (ראשונה 21/10/2026) | `marketing/routine-marketing.md` ב-safety-platform | `session_01DRrGQfp26adBiipx3PkZdA` |
 | `trig_01TofqtqNWtrXMnqiNjHq1nZ` | העוזר בוואטסאפ (מודל Opus להודעות; מחבר Microsoft 365 מ-20/10/2026) | א'-ה' 07:47 (עדכון בוקר) + מפעיל API (הודעה ממיכאל דרך `/api/wa-hook`) | `routine-wa-assistant.md` | `session_01ANNSTD9gftqbzoeDj9Fkmv` (Sonnet) |
@@ -118,7 +119,7 @@ Client ID ו-Tenant: ב-`project-files/ONEDRIVE-SERVER-SETUP.md`. הרשאות d
 | `GH_SKILLS_TOKEN` | המייל השבועי קורא את תור העוזר ב-michael-skills; `backup-od` מוריד איתו את ה-zip השבועי של michael-skills (17/10/2026) |
 | `GEMINI_API_KEY`, `GEMINI_MODEL`, `TTS_MODEL`, `TTS_VOICE` | הקראה בקול |
 | `META_ACCESS_TOKEN`, `META_PHONE_NUMBER_ID`, `META_WABA_ID` | וואטסאפ |
-| `META_APP_SECRET`, `WA_VERIFY_TOKEN`, `ASSISTANT_FIRE_URL`, `ASSISTANT_FIRE_TOKEN`, `POSTMAN_FIRE_TOKEN` (מ-C27: הטוקן של הדוור `trig_01Py8YXifD3HtnQUmFgoTRft`, ל-`relay_fire`) | העוזר בוואטסאפ (19/10/2026): חתימת ה-webhook של Meta, אימות ה-webhook, וה-API trigger של `trig_01TofqtqNWtrXMnqiNjHq1nZ`. `WA_VERIFY_TOKEN` ו-`ASSISTANT_FIRE_URL` נכתבו דרך ה-API; השניים האחרים רק מיכאל (ערכים ש-Meta ו-claude.ai מראים פעם אחת) |
+| `META_APP_SECRET`, `WA_VERIFY_TOKEN`, `ASSISTANT_FIRE_URL`, `ASSISTANT_FIRE_TOKEN`, `POSTMAN_FIRE_TOKEN` (מ-C27: הטוקן של הדוור `trig_01Py8YXifD3HtnQUmFgoTRft`, ל-`relay_fire`), `DEV_FIRE_TOKEN` (מ-C31: הטוקן של "פיתוח מיידי" `trig_0114iVUybrBb6vRqZt1EyoyL`, ל-`dev_request`) | העוזר בוואטסאפ (19/10/2026): חתימת ה-webhook של Meta, אימות ה-webhook, וה-API trigger של `trig_01TofqtqNWtrXMnqiNjHq1nZ`. `WA_VERIFY_TOKEN` ו-`ASSISTANT_FIRE_URL` נכתבו דרך ה-API; השניים האחרים רק מיכאל (ערכים ש-Meta ו-claude.ai מראים פעם אחת) |
 | `RESEND_KEY`, `RESEND_FROM` | מייל גיבוי |
 | `VITRE_API_KEY_ID`, `VITRE_API_KEY_SECRET`, `VITRE_NOTIFY_CREATED_BY`, `VITRE_NOTIFY_ENABLED`, `VITRE_PHOTO_KEY`, `VITRE_PHOTO_TEMPLATE` | Vitre |
 | `ALLOWED_COUNTRIES`, `ALLOWED_ORIGINS`, `SUBREQ_LIMIT` | הגבלות |
