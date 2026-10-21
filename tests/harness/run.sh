@@ -37,6 +37,8 @@ export NODE_PATH="${NODE_PATH:-$(npm root -g 2>/dev/null)}"
 mkdir -p _build
 cp ../../functions/_shared.js _build/_shared.mjs
 sed "s#'../_shared.js'#'./_shared.mjs'#" ../../functions/api/wa-templates.js > _build/wa-templates.mjs
+# owner-sig (21/10/2026): the owner's signature screen
+sed "s#'../_shared.js'#'./_shared.mjs'#" ../../functions/api/owner-sig.js > _build/owner-sig.mjs
 sed -e "s#'../_shared.js'#'./_shared.mjs'#" -e "s#'../_onedrive.js'#'./_onedrive.mjs'#" ../../functions/api/vitre.js > _build/vitre.mjs
 sed "s#'../_shared.js'#'./_shared.mjs'#" ../../functions/api/wa-send.js > _build/wa-send.mjs
 sed "s#'../_shared.js'#'./_shared.mjs'#" ../../functions/api/wa-status.js > _build/wa-status.mjs
