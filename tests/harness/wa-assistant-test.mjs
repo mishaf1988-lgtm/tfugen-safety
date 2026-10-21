@@ -166,6 +166,10 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   const rv = await call({ op: 'wa_review', days: 30 });
   check('wa_review: owner_in, assistant and watch on WhatsApp, at most 7 days, as who/text', rv.ok && rv.days === 7 && reviewUrls.length === 1 && /channel=eq\.whatsapp/.test(reviewUrls[0]) && rv.rows.length === 3 && rv.rows[0].who === 'michael' && rv.rows[1].who === 'assistant' && rv.rows[1].text === 'answer' && rv.rows[1].fast === true, { rv, reviewUrls });
   check('wa_review: the watchdog alerts too (event_type watch, retro 7a counts them)', /event_type=in\.\(owner_in,assistant,watch\)/.test(reviewUrls[0]) && rv.rows[2].who === 'watch', reviewUrls);
+  { const { waTurns } = await import('./_build/routine-db.mjs');
+    const t = waTurns([{ who: 'michael', ts: 'a', text: 'q1' }, { who: 'michael', ts: 'b', text: 'q2' }, { who: 'assistant', text: 'r2' }, { who: 'assistant', text: 'r1' }, { who: 'michael', ts: 'c', text: 'q3' }, { who: 'watch', text: 'w' }]);
+    check('wa_review turns: messages in a row share their answers; a turn with only an alert is unanswered', t.length === 2 && t[0].michael.join() === 'q1,q2' && t[0].answers.join() === 'r2,r1' && t[0].answered && !t[1].answered && t[1].alerts.length === 1, t);
+    check('wa_review returns turns', Array.isArray(rv.turns) && rv.turns.length === 1 && rv.turns[0].answered, rv.turns); }
   const pr = await call({ op: 'wa_check', fire_probe_trigger: 'trig_011XSXRjssx2uPNu1rk4P9L2' });
   check('a probe of a new trigger with no new token: reported, nothing fired (lesson 133)', pr.probe2_status === 'no new token' && pr.fire_to === 'old', pr);
   let c = await call({ op: 'wa_check' });
