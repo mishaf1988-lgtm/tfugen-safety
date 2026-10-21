@@ -1,5 +1,7 @@
 # Routine חודשי: מגמות מנתוני המפעל > `factory.md`
 
+**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_012v3HyJ1xpKcKE177emqtji` (שיחה `session_01FXKjCZExakD2sbqi9eZVin`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
+
 מיכאל אישר ב-07/10/2026 (שאלון, "בצע"). פעם בחודש: מה חוזר (מחלקה, מיקום, סוג), מה נסגר באיחור, ומגמה, מתוך `tour_hazards`, `inc`, `near_miss`, `trustee_reports`, `ncr`. הממצאים, עם תאריך המדידה והספירות, נכנסים לעוזר (`factory.md`, "מגמות מהאפליקציה") דרך שיחה-בת עם `source_url` של michael-skills. באפליקציה כבר יש כרטיס "מפגעים חוזרים" (`_thzRecurring`, `_thzRepPlaces`: אותו סוג 3 פעמים ב-90 יום, אותו מקום פעמיים בשנה); ה-Routine משתמש באותם סוגים (`_THZ_KINDS`) כדי שהמספרים יתאימו למסך, ומוסיף את מה שאין שם: חמש הטבלאות יחד, איחורים, ומגמה בין רבעונים.
 
 **הוקם 07/10/2026 מהענן, בלי תלות במיכאל:** `trig_01AXicpR2Gn4DgterKACQ56A`. **מ-09/10/2026 מופעל לתוך `session_01JT8Fct6Z6Qv2GbaBBqxtQT`** ("Routines חודשיים בלי לחיצה", לא לארכב), עם פרומפט קצר שקורא את הקובץ הזה (נבדק ב-`list_triggers` 09/10/2026; קודם: `session_017Y8t6gZc26ysueKySAi7zV`). Routine רגיל שנוצר מהענן לא מקבל connectors ולא את כלי השיחות (נבדק בהפעלת ניסיון, והראשון `trig_01XtM9oNmrkLjwpmiDrB8yGu` נמחק); Routine שמופעל לתוך שיחה קיימת משתמש בכלים שלה, ולשיחה הזו יש Supabase, `list_triggers` ו-`create_session` (נבדק: `count(*)` על `leg` = 39). הפרומפט בטריגר מתחיל ב"ריצה חדשה... git fetch + reset" כי השיחה נשמרת בין ריצות. ההגדרות למטה הן לתיעוד; אין מה להוסיף ביד.

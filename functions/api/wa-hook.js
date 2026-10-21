@@ -181,7 +181,7 @@ async function handle(env, raw) {
       let ans = null, ref = null;
       try {
         if (fr0.kind === 'hazard') { ans = await fastHazard(env, fr0); ref = fr0.src + ' ' + fr0.id; }
-        else { const g = await gather(env, new Date()); ans = buildBrief(g.items, g.failed, g.today, false); ref = 'brief'; }
+        else { const g = await gather(env, new Date()); ans = buildBrief(g.items, g.failed, g.today, false, g.notes, g.weather); ref = 'brief'; }
       } catch (e) { ans = null; }
       const sr = ans ? await sendToOwner(env, owner, ans, { windowOpen: true, noTemplate: true }).catch(() => null) : null;
       if (sr && sr.ok) { seen.fast = fr0.kind; await noteLastOut(env, sbFrom(env), ans, ref); await logOut(env, ans, sr); continue; }
@@ -195,7 +195,7 @@ async function handle(env, raw) {
     let snap = null;
     try {
       const g = await Promise.race([gather(env, new Date()), new Promise((res) => setTimeout(() => res(null), SNAP_MS))]);
-      snap = g ? buildBrief(g.items, g.failed, g.today, true, g.notes) : null;
+      snap = g ? buildBrief(g.items, g.failed, g.today, true, g.notes, g.weather) : null;
     } catch (e) { snap = null; }
     seen.snap = !!snap; seen.pre_fire_ms = Date.now() - t0;
     await note(env, Object.assign({ stage: 'firing' }, seen));

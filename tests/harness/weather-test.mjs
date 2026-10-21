@@ -3,7 +3,7 @@
 // km/h and rain chance >= 60%, stored in server_state.weather_tomorrow, and the home-screen
 // line in index.html (_wxLine). The forecasts below are made up; fetch is mocked.
 import fs from 'fs';
-import { onRequest, assess, tomorrowIL, ilDate, runCheck, STATE_KEY, IMS_URL, HEAT_LEVEL, GUST_KMH, RAIN_PCT } from './_build/weather.mjs';
+import { onRequest, assess, daySummary, tomorrowIL, ilDate, runCheck, STATE_KEY, IMS_URL, HEAT_LEVEL, GUST_KMH, RAIN_PCT } from './_build/weather.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -50,6 +50,15 @@ function day(date, over) {
   a = one({ '06': { gust_speed: '60' }, 18: { gust_speed: '55' } });
   check('06:00 and 18:00 count', a.length === 1 && a[0].hours.join() === '06:00,18:00', a);
   check('another day in the data does not count', assess({ '2026-10-15': day('2026-10-15', { 12: { heat_stress_level: '3' } }), [D]: day(D) }, D).length === 0);
+  // 20/10/2026, the morning update on WhatsApp: low/high from "daily", rain and gusts from working hours only.
+  const sd = day(D, { 3: { gust_speed: '80', rain_chance: '90' }, 12: { gust_speed: '30', rain_chance: '40' } });
+  sd.daily = { minimum_temperature: '17', maximum_temperature: '26' };
+  const sm = daySummary({ [D]: sd }, D);
+  check('summary: daily low/high, the 03:00 gust and rain do not count', sm && sm.tmin === 17 && sm.tmax === 26 && sm.gust === 30 && sm.rain === 40, sm);
+  const nd = day(D, { 8: { temperature: '12' }, 14: { temperature: '29' } });
+  const sm2 = daySummary({ [D]: nd }, D);
+  check('summary without "daily": low/high from the hours', sm2 && sm2.tmin <= 12 && sm2.tmax >= 29, sm2);
+  check('summary of a missing day: null, no throw', daySummary({}, D) === null && daySummary(null, D) === null);
   let threw = ''; try { assess({ '2026-10-15': day('2026-10-15') }, D); } catch (e) { threw = e.message; }
   check('tomorrow missing from the forecast: an error', /no forecast for 2026-10-16/.test(threw), threw);
 

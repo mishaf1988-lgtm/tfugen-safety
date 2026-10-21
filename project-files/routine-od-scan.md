@@ -1,5 +1,7 @@
 # Routine חודשי: מסמכים חדשים בתיקיית הבטיחות > `factory.md`
 
+**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_015cu3tQjAe6oJsGziXAfZJN` (שיחה `session_01HK2YJUpeGksTy3KHZ2sGCm`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
+
 מיכאל אישר ב-04/10/2026 ("מאשר הכל"). רשימת הקבצים החדשים נבנית בלי Claude: `/api/od-scan` כל לילה (cron `od-scan`, `migrations/2026-10-04_od_scan_cron.sql`) שומר אותה ב-`server_state.od_scan`, והמייל של יום ראשון מציג את הקבצים של השבוע. ה-Routine נחוץ רק לקריאת המסמך עצמו ולעדכון העוזר.
 
 **מ-09/10/2026:** הטריגר יורה לתוך `session_01JT8Fct6Z6Qv2GbaBBqxtQT` ("Routines חודשיים בלי לחיצה", לא לארכב) עם פרומפט קצר שקורא את הפרומפט שבין הקווים בקובץ הזה (נבדק ב-`list_triggers` 09/10/2026). מה שכתוב למטה על 04/10 ו-07/10 הוא היסטוריה: אין מה להדביק ביד.

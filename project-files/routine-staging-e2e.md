@@ -1,5 +1,7 @@
 # Routine שבועי: בדיקת הניסוי מול גרסת התצוגה האחרונה
 
+**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_01AVa8RiuYtaeXLrtkUsZqKH` (שיחה `session_01JT8Fct6Z6Qv2GbaBBqxtQT`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
+
 מיכאל, 18/10/2026, בשאלון: "בצע: בדיקת הניסוי שבועית". `tests/staging/e2e.js` עם `PREVIEW_URL` (31 בדיקות, #1666) רץ רק כשמישהו מפעיל אותו. כאן הוא רץ פעם בשבוע ומדווח רק כשמשהו נשבר.
 
 **ה-Routine:** ייפתח מהשיחה הבאה. ד' 06:29 (`CRON_TZ=Asia/Jerusalem 29 6 * * 3`). שם הסוכן: `staging-e2e`.
