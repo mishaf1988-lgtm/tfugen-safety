@@ -23,11 +23,12 @@ globalThis.fetch = async (url, opt = {}) => {
     return new Response(JSON.stringify(k in state ? [{ value: state[k] }] : []), { status: 200 });
   }
   if (url.startsWith(SB + '/rest/v1/docs')) return new Response(JSON.stringify(docs), { status: 200 });
-  if (url.startsWith(SB + '/rest/v1/equip_inspections')) return new Response(JSON.stringify(equip), { status: 200 });
+  if (url.startsWith(SB + '/rest/v1/equip_inspections')) { equipUrls.push(url); return new Response(JSON.stringify(equip), { status: 200 }); }
   if (url.startsWith(SB + '/rest/v1/notifications_log')) { logs.push(...JSON.parse(opt.body)); return new Response('', { status: 201 }); }
   if (url.startsWith('https://graph.facebook.com/')) { metas.push(JSON.parse(opt.body)); return new Response(JSON.stringify({ messages: [{ id: 'wamid.M' }] }), { status: 200 }); }
   return new Response('[]', { status: 200 });
 };
+const equipUrls = [];
 const call = async (body, secret) => (await onRequest({ request: new Request('https://x/api/wa-morning', { method: 'POST', headers: secret === null ? {} : { 'x-notify-secret': secret || 'sec' }, body: JSON.stringify(body || {}) }), env: ENV })).json();
 
 (async () => {
@@ -135,6 +136,7 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   const rows = [{ t: 'equip', id: 7, n: 'Crane \u2014 hall', loc: 'A', vendor: 'V<x>', e: '2026-11-30' }, { t: 'docs', id: 3, n: 'Permit', e: '2026-09-01' }, { t: 'docs', id: 4, n: '', e: '2026-11-01' }, { t: 'docs', id: 5, n: 'Bad', e: '' }];
   let p = calendarPlan(rows, { 'docs:9:2026-11-01': 1, 'docs:3:2026-09-01': 1 }, '2026-10-20');
   check('already written: not again; nameless or dateless rows: skipped', p.todo.length === 1 && p.todo[0].key === 'equip:7:2026-11-30', p.todo);
+  check('equipment of another area (resp_area): no calendar entry (21/10/2026 retro)', calendarPlan([{ t: 'equip', id: 11, n: 'NH3 valve', e: '2026-11-30', resp_area: '\u05e7\u05d9\u05e8\u05d5\u05e8 \u05d5\u05d0\u05de\u05d5\u05e0\u05d9\u05d4' }, { t: 'equip', id: 12, n: 'Crane', e: '2026-11-30', resp_area: null }], {}, '2026-10-20').todo.map((x) => x.key).join() === 'equip:12:2026-11-30');
   check('the sent map keeps only what is still in the window', JSON.stringify(p.keep) === JSON.stringify({ 'docs:3:2026-09-01': 1 }), p.keep);
   const f = JSON.parse(p.todo[0].file);
   check('the event: subject, 09:00-09:30 on the day, Israel time', f.subject === '\u05dc\u05ea\u05d0\u05dd: Crane - hall, A (\u05e2\u05d3 30/11/2026)' && f.start === '2026-11-09T09:00:00' && f.end === '2026-11-09T09:30:00' && f.tz === 'Israel Standard Time', f);
@@ -162,6 +164,11 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   equip = [{ id: 8, n: 'Hoist', e: '2026-11-20' }]; docs = [];
   j = await run(OD, new Date('2026-10-20T12:00:00Z'), { calendar: true });
   check('calendar only: any hour, the file written, no WhatsApp', j.cal.written === 1 && puts.length === 1 && metas.length === n, [j, metas.length - n]);
+
+  equipUrls.length = 0; puts = [];
+  equip = [{ id: 21, n: 'NH3 valve', e: '2026-11-20', resp_area: '\u05e7\u05d9\u05e8\u05d5\u05e8 \u05d5\u05d0\u05de\u05d5\u05e0\u05d9\u05d4' }]; docs = [];
+  j = await run(OD, new Date('2026-10-20T12:00:00Z'), { calendar: true });
+  check('calendar: the query leaves other areas out (resp_area=is.null), and a row that got through is not written (21/10/2026 retro)', equipUrls.length === 1 && /resp_area=is\.null/.test(equipUrls[0]) && j.cal.written === 0 && !puts.length, [equipUrls, j.cal]);
 
   console.log('\nwa-morning-test: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
