@@ -367,6 +367,9 @@ export function draftRequest(b) {
 }
 // A passport number never goes out on WhatsApp (20/10/2026: the assistant's answer about the forklift
 // course carried personal details). Names cannot be told apart from words; a passport number can.
+// 21/10/2026 (Michael's screenshot: "dev-20261021053745-tqu3" in a WhatsApp answer): internal ids (a dev
+// request, a trigger, a session, an office chat row) mean nothing to him; the message says what was done.
+export function hasInternalId(t) { return /(^|[^A-Za-z0-9])(dev-\d{14}-[a-z0-9]{4}|trig_[A-Za-z0-9]{6,}|session_[A-Za-z0-9]{6,}|cse_[A-Za-z0-9]{6,}|h-\d{8}-\d{4})/.test(String(t || '')); }
 export function hasPassport(t) { return /(^|[^A-Za-z0-9])[A-Z]{1,2}[0-9]{6,8}(?![A-Za-z0-9])/.test(String(t || '')); }
 export const MAIL_REQ_ID = /^[A-Za-z0-9_=+\/-]{40,400}$/;
 const OD_NO_DIR = /(^|\/)(_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea|\u05dc\u05de\u05d7\u05d9\u05e7\u05d4|ARCHIVE)(\/|$)/i;
@@ -885,6 +888,7 @@ export async function onRequest(context) {
     }
     if (body.op === 'wa_me') {
       if (hasPassport(body.text)) return jsonResp({ ok: false, error: 'passport number in text: write "4 workers from the list", no ids (20/10/2026)' }, 400, {});
+      if (hasInternalId(body.text)) return jsonResp({ ok: false, error: 'internal id in text (dev-..., trig_, session_, cse_, h-...): say what was done, not its id (21/10/2026)' }, 400, {});
       if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
       const to = await ownerWa(env, url);
       if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
