@@ -150,6 +150,8 @@ Worker נפרד: `tapugan-backup-cron` (`workers/backup-cron.js`), גיבוי י
 
 ה-jobs קוראים לשרת עם `TRUSTEE_NOTIFY_SECRET` (שמור ב-Supabase Vault / בגוף ה-job). להעברה: להריץ את ה-migrations שיוצרים אותם (`grep -l "cron.schedule" migrations/`).
 
+**קבצים בדלי `backups` שהשרת תלוי בהם** (לא ב-repo; 21/10/2026): `owner-signature/sig.png` = החתימה של מיכאל לחתימה על PDF (`functions/_sign.js`, `SIGN_OBJ`). בלעדיה כל "בצע" על בקשת חתימה עונה "תמונת החתימה עוד לא נשמרה בשרת". בהעברה: להעתיק את הקובץ לאותו נתיב (Storage > backups). `induction-docs/` של שיחת הבטיחות (`talk.js`, `DOCS_DIR`).
+
 ### מחשב העבודה ב-Azure (חשבון פרטי של מיכאל, לא של תפוגן)
 - **חשבון:** חשבון Microsoft פרטי על ה-Gmail של מיכאל, Default Directory, "Azure subscription 1" (ניסיון, 13/10/2026; הקרדיט נגמר בערך 12/11/2026). מנהלים מפרופיל הכרום "Azure פרטי".
 - **משאבים** ב-`tapugan-claude-rg`, Israel Central: המחשב `tapugan-claude` (Standard_B2als_v2, Windows Server 2022 Azure Edition smalldisk, משתמש `michael-vm`), דיסק 64GB, IP ציבורי קבוע `tapugan-claude-ip`, `tapugan-claude-nsg` (RDP רק מהכתובת של מיכאל), VNet `vnet-israelcentral-1`. תקציב `tapugan-claude-budget`, 15 דולר.
