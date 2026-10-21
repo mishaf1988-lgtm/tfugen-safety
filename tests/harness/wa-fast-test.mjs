@@ -1,7 +1,7 @@
 // The server's fast lane (20/10/2026, Michael in the questionnaire: "do it: a fast lane in the server").
 // A number 1-4 that answers a hazard alert, and "what is urgent" / "expiries", are answered by wa-hook
 // itself by rules; everything else, and anything unclear, still goes to the assistant.
-import { fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX } from './_build/wa-hook.mjs';
+import { recentLine, RECENT_MAX, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX } from './_build/wa-hook.mjs';
 import { HAZARD_OPTIONS, hazardAsk, assistantFire, fireUrlOf } from './_build/_wa.mjs';
 
 let pass = 0, fail = 0;
@@ -49,5 +49,15 @@ check('a tap on a non-professional message of the assistant: not a rating', rate
 check('an answer logged before the ref was kept: the last answer decides', rateOf(m('1. \u05de\u05d3\u05d5\u05d9\u05e7', 1), 'assistant | answer | t', pro).good === true && rateOf(m('1', 1), 'assistant | answer | t', { text: 'x', ref: 'dev' }) === null);
 const rl = rateAdd(JSON.stringify(Array.from({ length: RATE_MAX }, () => ({ good: true }))), false, 'q '.repeat(300), '2026-10-21T08:00:00Z');
 check('ratings: the newest kept, at most ' + RATE_MAX + ', question cut to 200', rl.length === RATE_MAX && rl[rl.length - 1].good === false && rl[rl.length - 1].q.length === 200);
+console.log('\n5. the conversation so far (recentLine)');
+{
+  const N = Date.parse('2026-10-21T10:30:00Z');
+  const row = (min, who, text, w) => ({ ts: new Date(N - min * 60000).toISOString(), event_type: who, payload: { text, wamid: w || ('w' + min) } });
+  const rows = [row(1, 'owner_in', 'now', 'CUR'), row(2, 'assistant', 'answer B'), row(3, 'owner_in', 'question B'), row(200, 'owner_in', 'too old'), row(5, 'watch', 'alert')];
+  const r = recentLine(rows, 'CUR', N);
+  check('oldest first, both sides, Israel time, without the message answered now, without old or other kinds', r === '13:27 \u05de\u05d9\u05db\u05d0\u05dc: question B || 13:28 \u05d4\u05e2\u05d5\u05d6\u05e8: answer B', r);
+  const many = Array.from({ length: 30 }, (_, i) => row(i + 2, 'assistant', 'x'.repeat(300)));
+  check('at most 8 lines and ' + RECENT_MAX + ' characters', recentLine(many, '', N).split(' || ').length <= 8 && recentLine(many, '', N).length <= RECENT_MAX);
+}
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
