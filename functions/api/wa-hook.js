@@ -13,7 +13,7 @@
 // /api/routine-db op wa_me. A reply to a trustee alert carries what that alert was, from
 // notifications_log (payload.wamid), so the assistant knows what Michael is answering.
 // Machine path in _middleware: Meta calls from outside Israel.
-import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
+import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo, SITE } from '../_shared.js';
 import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, LEARN_KEY, learnedLine } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 import { accessToken } from '../_onedrive.js';
@@ -297,6 +297,25 @@ export async function fastSignAsk(env, q) {
   const recent = all ? recentPdfs(all, 3) : [];
   return recent.length ? { pick: recent, none: q.length >= 2 ? true : 'recent' } : { text: SIGN_ASK_NONE };
 }
+// 21/10/2026 (Michael: "attach the signed document to a mail to me", and in the questionnaire "do it: a 'mail it to
+// me' button"): the answer after signing carries one button; a tap (or "1", or any short line with "mail" in it,
+// as a reply to that very answer) makes a draft to him with the signed copy attached (routine-db mail_draft, which
+// only ever drafts). The signed file's path is kept 24 hours in server_state sign_mail.
+export const SIGN_MAIL_KEY = 'sign_mail', SIGN_MAIL_MS = 24 * 3600e3;
+export const SIGN_MAIL_LABEL = '\u05e9\u05dc\u05d7 \u05dc\u05d9 \u05d1\u05de\u05d9\u05d9\u05dc';
+export function signMailOf(m, prev) {
+  if (!prev || prev.ref !== 'signmail') return null;
+  const c = m && m.choice !== undefined && m.choice !== null ? String(m.choice) : '';
+  const t = String((m && m.text) || '').trim();
+  return c === '1' || /^1(\.|\s|$)/.test(t) || (t.length <= 60 && /\u05de\u05d9\u05d9\u05dc/.test(t)) ? true : null;
+}
+// the draft request for routine-db mail_draft: to Michael, the signed file attached. Pure.
+export function signMailBody(st) {
+  return { op: 'mail_draft', agent: 'wa-hook-sign', why: '\u05de\u05d9\u05db\u05d0\u05dc \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4: \u05e9\u05dc\u05d7 \u05dc\u05d9 \u05d1\u05de\u05d9\u05d9\u05dc \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05da \u05d4\u05d7\u05ea\u05d5\u05dd', to: SITE.managerEmail,
+    subject: String(st.name).replace(/\.pdf$/i, ''), body: '\u05de\u05e6\u05d5\u05e8\u05e3 \u05d4\u05de\u05e1\u05de\u05da \u05d4\u05d7\u05ea\u05d5\u05dd.', attach: [st.rel] };
+}
+export const SIGN_MAIL_DONE = '\u05d4\u05d8\u05d9\u05d5\u05d8\u05d4 \u05d0\u05dc\u05d9\u05da \u05e2\u05dd \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d7\u05ea\u05d5\u05dd \u05de\u05e6\u05d5\u05e8\u05e3 \u05ea\u05d5\u05e4\u05d9\u05e2 \u05d1-Drafts \u05e9\u05dc Outlook \u05ea\u05d5\u05da \u05d3\u05e7\u05d4. \u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05de\u05de\u05da.';
+export const SIGN_MAIL_GONE = '\u05dc\u05d0 \u05de\u05e6\u05d0\u05ea\u05d9 \u05de\u05e1\u05de\u05da \u05d7\u05ea\u05d5\u05dd \u05de-24 \u05d4\u05e9\u05e2\u05d5\u05ea \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d5\u05ea \u05dc\u05e6\u05e8\u05e3. \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05d0\u05d9\u05d6\u05d4 \u05e7\u05d5\u05d1\u05e5.';
 export function fastRoute(m, about, prev) {
   const raw = String((m && m.text) || '').trim();
   // an answer to the signature question first: "\u05ea\u05d7\u05ea\u05d5\u05dd" there is a yes, not a new request
@@ -306,6 +325,7 @@ export function fastRoute(m, about, prev) {
   if (ask !== null) return { kind: 'sign_ask', q: ask };
   const pk = signPickOf(m, prev);
   if (pk) return { kind: 'sign_pick', n: pk };
+  if (signMailOf(m, prev)) return { kind: 'sign_mail' };
   if (!raw || raw.length > 40) return null;
   // 21/10/2026: an answer to "sign in your name on <file>?" (routine-db sign_request). Only the server signs, and
   // only here, on Michael's own "1" / "do it" to that very request; any other word goes to the assistant.
@@ -369,6 +389,15 @@ export async function fastSign(env, r, wamid) {
   if (res.ok && res.bytes) {
     try { const to = await ownerWa(env, sbFrom(env)); if (to) await sendDocToOwner(env, to, res.bytes, res.name, '', true); } catch (e) { /* the file is in the folder */ }
   }
+  if (res.ok) {
+    const dir = t.req.path.split('/').slice(0, -1).join('/');
+    const rel = dir.slice(OD_ROOT.length) + '/' + res.name;
+    try {
+      await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify([{ key: SIGN_MAIL_KEY, value: JSON.stringify({ at: now.toISOString(), rel, name: res.name }), updated_at: now.toISOString() }]) });
+      return { text: signDoneText(res, t.req), mail: rel };
+    } catch (e) { /* no button: the answer still goes out */ }
+  }
   return signDoneText(res, t.req);
 }
 // Michael's own message, for the weekly quality review of the assistant's answers (20/10/2026, Michael:
@@ -416,7 +445,7 @@ async function handle(env, raw) {
     if (rt) { await rateNote(env, rt.good, about ? about.split(' | ')[1] : prev && prev.text); seen.rate = rt.good ? 'good' : 'bad'; }
     const fr0 = wa ? fastRoute(m, about, prev) : null;
     if (fr0) {
-      let ans = null, ref = null;
+      let ans = null, ref = null, choices = null;
       try {
         if (fr0.kind === 'sign_ask') {
           const sa = await fastSignAsk(env, fr0.q);
@@ -440,12 +469,26 @@ async function handle(env, raw) {
           ans = path ? '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05d0\u05ea \u05d1\u05e7\u05e9\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d6\u05d4 (' + (seen.sign_pick_error || '?') + '). \u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1, \u05d0\u05d5 \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05de\u05d4 \u05dc\u05d7\u05ea\u05d5\u05dd.' : null;
           ref = 'sign-pick-fail';
         }
-        else if (fr0.kind === 'sign') { ans = await fastSign(env, fr0, m.id); ref = 'sign-done'; }
+        else if (fr0.kind === 'sign') {
+          const fs = await fastSign(env, fr0, m.id);
+          if (fs && fs.mail) { ans = fs.text; choices = [SIGN_MAIL_LABEL]; ref = 'signmail'; } else { ans = fs; ref = 'sign-done'; }
+        }
+        else if (fr0.kind === 'sign_mail') {
+          const rows = await sbJson(env, 'server_state?key=eq.' + SIGN_MAIL_KEY + '&select=value');
+          let st = null; try { st = JSON.parse(rows && rows[0] ? rows[0].value : 'null'); } catch (x) { st = null; }
+          if (st && st.rel && Date.now() - Date.parse(st.at) < SIGN_MAIL_MS) {
+            const res = await routineDb({ env, request: new Request('https://internal/api/routine-db', { method: 'POST',
+              headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' }, body: JSON.stringify(signMailBody(st)) }) });
+            const j = await res.json().catch(() => ({}));
+            ans = j.ok ? SIGN_MAIL_DONE : null; seen.sign_mail_error = j.ok ? undefined : String(j.error || res.status);
+          } else ans = SIGN_MAIL_GONE;
+          ref = 'sign-mail';
+        }
         else if (fr0.kind === 'rate') { ans = RATE_THANKS; ref = 'rate'; }
         else if (fr0.kind === 'hazard') { ans = await fastHazard(env, fr0); ref = fr0.src + ' ' + fr0.id; }
         else { const g = await gather(env, new Date()); ans = buildBrief(g.items, g.failed, g.today, false, g.notes, g.weather); ref = 'brief'; }
       } catch (e) { ans = null; }
-      const sr = ans ? await sendToOwner(env, owner, ans, { windowOpen: true, noTemplate: true }).catch(() => null) : null;
+      const sr = ans ? await sendToOwner(env, owner, ans, Object.assign({ windowOpen: true, noTemplate: true }, choices ? { choices } : {})).catch(() => null) : null;
       if (sr && sr.ok) { seen.fast = fr0.kind; await noteLastOut(env, sbFrom(env), ans, ref); await logOut(env, ans, sr); continue; }
       seen.fast_fail = fr0.kind;
     }
