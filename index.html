@@ -1464,6 +1464,13 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
     <div style="font-size:12px;color:var(--t2);margin:2px 0 8px">&#1499;&#1500; &#1492;&#1505;&#1497;&#1505;&#1502;&#1488;&#1493;&#1514; &#1513;&#1500; &#1492;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492; &#1489;&#1502;&#1511;&#1493;&#1501; &#1488;&#1495;&#1491;. &#1504;&#1513;&#1502;&#1512;&#1493;&#1514; &#1489;&#1513;&#1512;&#1514;, &#1493;&#1499;&#1500; &#1492;&#1495;&#1500;&#1508;&#1492; &#1504;&#1512;&#1513;&#1502;&#1514; &#1489;&#1497;&#1493;&#1502;&#1503; (&#1502;&#1497; &#1493;&#1502;&#1514;&#1497;, &#1489;&#1500;&#1497; &#1492;&#1505;&#1497;&#1505;&#1502;&#1492;). &#1488;&#1495;&#1512;&#1497; &#1492;&#1495;&#1500;&#1508;&#1492;, &#1502;&#1497; &#1513;&#1502;&#1513;&#1514;&#1502;&#1513; &#1489;&#1505;&#1497;&#1505;&#1502;&#1492; &#1497;&#1510;&#1496;&#1512;&#1498; &#1500;&#1492;&#1511;&#1500;&#1497;&#1491; &#1488;&#1514; &#1492;&#1495;&#1491;&#1513;&#1492;.</div>
     <div id="codes-body">&#1496;&#1493;&#1506;&#1503;...</div>
   </div>
+  <div class="card" id="osig-card" style="display:none;padding:12px 14px;margin-bottom:12px">
+    <div style="font-weight:700;font-size:15px">&#9997;&#65039; &#1492;&#1495;&#1514;&#1497;&#1502;&#1492; &#1513;&#1500;&#1497;</div>
+    <div style="font-size:12px;color:var(--t2);margin:2px 0 8px">&#1492;&#1495;&#1514;&#1497;&#1502;&#1492; &#1513;&#1492;&#1513;&#1512;&#1514; &#1513;&#1501; &#1506;&#1500; &#1502;&#1505;&#1502;&#1498; &#1513;&#1488;&#1514;&#1492; &#1502;&#1489;&#1511;&#1513; &#1500;&#1495;&#1514;&#1493;&#1501; &#1489;&#1513;&#1502;&#1498;, &#1512;&#1511; &#1488;&#1495;&#1512;&#1497; "&#1489;&#1510;&#1506;" &#1513;&#1500;&#1498; &#1489;&#1493;&#1493;&#1488;&#1496;&#1505;&#1488;&#1508;. &#1504;&#1513;&#1502;&#1512;&#1514; &#1489;&#1502;&#1511;&#1493;&#1501; &#1508;&#1512;&#1496;&#1497;, &#1512;&#1511; &#1500;&#1495;&#1513;&#1489;&#1493;&#1503; &#1513;&#1500;&#1498;. &#1492;&#1505;&#1493;&#1499;&#1504;&#1497;&#1501; &#1500;&#1488; &#1512;&#1493;&#1488;&#1497;&#1501; &#1488;&#1493;&#1514;&#1492;.</div>
+    <div id="osig-st" style="font-size:13px;margin-bottom:6px"></div>
+    <canvas id="osig-pad" style="width:100%;height:160px;border:2px dashed var(--bd,#9ca3af);border-radius:8px;touch-action:none;background:var(--c-white,#fff)"></canvas>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn btn-s btn-sm" onclick="_osigClear()">&#1504;&#1511;&#1492;</button><button type="button" class="btn btn-sm" onclick="_osigSave()">&#1513;&#1502;&#1493;&#1512; &#1495;&#1514;&#1497;&#1502;&#1492;</button></div>
+  </div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
     <th scope="col">&#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513;</th>
     <th scope="col">&#1513;&#1501; &#1502;&#1500;&#1488;</th>
@@ -13987,6 +13994,7 @@ function _collectVirtualTasks(){
 function rUsers(){
   var tb=g('tb-users'); if(!tb)return;
   _codesLoad();
+  _osigLoad();
   var users=(DB.app_users||[]).slice().sort(function(a,b){return String(a.username||'').localeCompare(String(b.username||''),undefined,{numeric:true,sensitivity:'base'});});
   if(!users.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">\u05d0\u05d9\u05df \u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd. \u05d4\u05e8\u05e5 \u05d0\u05ea \u05d4-migration \u05e9\u05dc app_users.</td></tr>';return;}
   tb.innerHTML = users.map(function(u){
@@ -14087,6 +14095,40 @@ function _codesLoad(force){
   });
 }
 var _codesRetried=false;
+// The owner's signature (21/10/2026, Michael: "I sign interactively"): drawn here, saved by /api/owner-sig in the
+// private bucket; the server signs a PDF with it only after his "do it" on WhatsApp. The owner account only.
+var _osigDrawn=false;
+function _osigIsOwner(){var e=(g('user-email')&&g('user-email').textContent)||'';return String(e).toLowerCase()===String(ADMIN_EMAIL||'').toLowerCase();}
+function _osigCall(method,op,body){
+  return fetch('/api/owner-sig?op='+op,{method:method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:body?JSON.stringify(body):undefined})
+    .then(function(r){return r.json().then(function(j){return {ok:r.ok,st:r.status,j:j};},function(){return {ok:false,st:r.status,j:null};});});
+}
+function _osigLoad(){
+  var card=g('osig-card');if(!card)return;
+  if(!_osigIsOwner()){card.style.display='none';return;}
+  card.style.display='';_osigInit();
+  var st=g('osig-st');st.textContent='\u05d1\u05d5\u05d3\u05e7...';
+  _osigCall('GET','status').then(function(x){
+    if(!x.ok||!x.j){st.textContent='\u26a0\ufe0f '+'\u05dc\u05d0 \u05e0\u05d8\u05e2\u05df ('+x.st+')';return;}
+    st.textContent=x.j.set?'\u2705 '+'\u05d7\u05ea\u05d9\u05de\u05d4 \u05e9\u05de\u05d5\u05e8\u05d4'+(x.j.at?' '+fd(String(x.j.at).substring(0,10)):'')+'. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d7\u05ea\u05d5\u05dd \u05de\u05d7\u05d3\u05e9 \u05d5\u05dc\u05e9\u05de\u05d5\u05e8.':'\u05e2\u05d5\u05d3 \u05d0\u05d9\u05df \u05d7\u05ea\u05d9\u05de\u05d4. \u05d7\u05ea\u05d5\u05dd \u05d1\u05d0\u05e6\u05d1\u05e2 \u05d1\u05de\u05e1\u05d2\u05e8\u05ea \u05d5\u05dc\u05d7\u05e5 "\u05e9\u05de\u05d5\u05e8 \u05d7\u05ea\u05d9\u05de\u05d4".';
+  },function(){st.textContent='\u26a0\ufe0f '+'\u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05e9\u05e8\u05ea';});
+}
+function _osigInit(){var c=g('osig-pad');if(!c||c._init)return;c._init=1;var x=c.getContext('2d'),down=false;
+  var fit=function(){var r=c.getBoundingClientRect();if(!r.width)return;c.width=Math.round(r.width*2);c.height=320;x.lineWidth=5;x.lineCap='round';x.lineJoin='round';x.strokeStyle='#0b1f6b';};
+  var pt=function(e){var r=c.getBoundingClientRect();return {x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height};};
+  c.addEventListener('pointerdown',function(e){if(!c.width||c.width===300)fit();down=true;var p=pt(e);x.beginPath();x.moveTo(p.x,p.y);e.preventDefault();});
+  c.addEventListener('pointermove',function(e){if(!down)return;var p=pt(e);x.lineTo(p.x,p.y);x.stroke();_osigDrawn=true;e.preventDefault();});
+  ['pointerup','pointerleave','pointercancel'].forEach(function(n){c.addEventListener(n,function(){down=false;});});
+  setTimeout(fit,50);}
+function _osigClear(){var c=g('osig-pad');if(c){var x=c.getContext('2d');x.clearRect(0,0,c.width,c.height);}_osigDrawn=false;}
+function _osigSave(){
+  if(!_osigDrawn){toast('\u05e7\u05d5\u05d3\u05dd \u05dc\u05d7\u05ea\u05d5\u05dd \u05d1\u05de\u05e1\u05d2\u05e8\u05ea');return;}
+  var png=g('osig-pad').toDataURL('image/png');
+  _osigCall('POST','set',{png:png}).then(function(x){
+    if(x.ok&&x.j&&x.j.ok){toast('\u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 \u2713');_osigClear();_osigLoad();}
+    else toast('\u26a0\ufe0f '+'\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8\u05d4 ('+((x.j&&x.j.error)||x.st)+')');
+  },function(){toast('\u26a0\ufe0f '+'\u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05e9\u05e8\u05ea');});
+}
 // Old entry points (the dialog of 10/10/2026, the delete dialog's hint): the users page.
 // One module for users and passwords (10/10/2026, Michael: "\u05d4\u05db\u05d5\u05d5\u05e0\u05d4 \u05d4\u05db\u05dc \u05e6\u05e8\u05d9\u05da \u05dc\u05e9\u05d1\u05ea \u05ea\u05d7\u05ea \u05de\u05d5\u05d3\u05dc \u05d0\u05d7\u05d3").
 // The sheet had three entries (users, change password, two-step); now one. Admin: the users page,
