@@ -11,7 +11,9 @@ const item = (dir, name) => ({ name, file: {}, parentReference: { path: '/drive/
 
 check('the request is read, quotes and .pdf dropped', signAskOf(T + '"טופס 16.pdf"') === 'טופס 16', signAskOf(T + '"טופס 16.pdf"'));
 check('the placeholder text of 20:48 becomes a search, not a crash', typeof signAskOf(T + '<שם של PDF>') === 'string');
-check('other messages are not a request', signAskOf('מה המצב') === null && signAskOf('1') === null && signAskOf(T) === null);
+check('other messages are not a request', signAskOf('מה המצב') === null && signAskOf('1') === null && signAskOf('מי חתם על ההדרכה') === null && signAskOf('חתימה') === null);
+check('free words: no file name = empty (the newest PDFs as buttons)', signAskOf(T) === '' && signAskOf('תחתום לי על איזה מסמך') === '' && signAskOf('תחתום בשמי על כל מסמך ושלח לי אותו פה') === '');
+check('free words: the name stays, the filler goes', signAskOf('חתום לי את Safetecs ותשלח לי') === 'Safetecs' && signAskOf('לחתום על טופס 16') === 'טופס 16');
 check('fastRoute: a long request still routes (before the 40-character limit)', (fastRoute({ text: T + 'מערכת שמתאימה את הפעולות בארגון' }, '', null) || {}).kind === 'sign_ask');
 
 const one = signPick([item('99_שונות', 'a.pdf')], 'a');

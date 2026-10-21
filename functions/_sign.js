@@ -69,11 +69,16 @@ export function signRefOf(about, prev) {
   return r ? r[1] : null;
 }
 // "1" / "\u05d1\u05e6\u05e2" (a tap or typed) = yes, "2" / "\u05dc\u05d0" = no, anything else = not an answer (goes to the assistant). Pure.
+// 21/10/2026 (Michael: "no need for exact words for the approval"): a tap, "1" / "2", or a plain yes / no word,
+// alone or with "1." / "2." before it. Anything longer or mixed goes to the assistant, so a question is never read
+// as a yes. Pure.
+const SIGN_YES_RE = /^(?:1\s*)?(?:\u05d1\u05e6\u05e2|\u05db\u05df|\u05de\u05d0\u05e9\u05e8|\u05de\u05d0\u05e9\u05e8\u05ea|\u05d0\u05e9\u05e8|\u05d0\u05d9\u05e9\u05d5\u05e8|\u05e1\u05d1\u05d1\u05d4|\u05d0\u05d5\u05e7\u05d9|\u05d0\u05d5\u05e7\u05d9\u05d9|\u05d1\u05e1\u05d3\u05e8|\u05d9\u05d0\u05dc\u05dc\u05d4|\u05d7\u05ea\u05d5\u05dd|\u05ea\u05d7\u05ea\u05d5\u05dd|ok|okay|yes|\ud83d\udc4d)(?:\s+(?:\u05d1\u05e6\u05e2|\u05db\u05df|\u05de\u05d0\u05e9\u05e8|\u05de\u05d0\u05e9\u05e8\u05ea|\u05d0\u05e9\u05e8|\u05d0\u05d9\u05e9\u05d5\u05e8|\u05e1\u05d1\u05d1\u05d4|\u05d0\u05d5\u05e7\u05d9|\u05d1\u05e1\u05d3\u05e8|\u05d9\u05d0\u05dc\u05dc\u05d4|\u05d7\u05ea\u05d5\u05dd|\u05ea\u05d7\u05ea\u05d5\u05dd|ok|okay|yes|\ud83d\udc4d))?$/i;
+const SIGN_NO_RE = /^(?:2\s*)?(?:\u05dc\u05d0|\u05d1\u05d8\u05dc|\u05d1\u05d9\u05d8\u05d5\u05dc|\u05e2\u05d6\u05d5\u05d1|\u05d0\u05dc \u05ea\u05d7\u05ea\u05d5\u05dd|no)$/i;
 export function signAnswer(m) {
-  const raw = String((m && m.text) || '').trim().replace(/[.!]/g, ' ').replace(/\s+/g, ' ').trim();
+  const raw = String((m && m.text) || '').trim().replace(/[.!,]/g, ' ').replace(/\s+/g, ' ').trim();
   const c = m && m.choice !== undefined && m.choice !== null ? String(m.choice) : '';
-  if (c === '1' || /^(1 )?\u05d1\u05e6\u05e2$/.test(raw) || raw === '1') return true;
-  if (c === '2' || /^(2 )?\u05dc\u05d0$/.test(raw) || raw === '2') return false;
+  if (c === '1' || raw === '1' || SIGN_YES_RE.test(raw)) return true;
+  if (c === '2' || raw === '2' || SIGN_NO_RE.test(raw)) return false;
   return null;
 }
 

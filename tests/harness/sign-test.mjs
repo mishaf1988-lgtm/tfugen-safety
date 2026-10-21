@@ -56,7 +56,10 @@ check('"בצע" right after the question = sign yes', JSON.stringify(fastRoute(m
 check('a tap on button 1 / "1" / "1. בצע" = yes', fastRoute(m('בצע', 1), about, prev).yes === true && fastRoute(m('1'), '', prev).yes === true && fastRoute(m('1. בצע'), '', prev).yes === true);
 check('"לא" / "2" = no', fastRoute(m('לא'), '', prev).yes === false && fastRoute(m('2', 2), about, prev).yes === false);
 check('a reply to the question itself = that request', fastRoute(m('בצע'), about, null).id === a.id);
-['כן', 'אוקיי', 'תחתום', 'בצע אבל רק בעמוד 2', 'מה המצב?'].forEach((w) => check('"' + w + '" = not an approval, to the assistant', !fastRoute(m(w), '', prev) || fastRoute(m(w), '', prev).kind !== 'sign'));
+// 21/10/2026 (Michael: "no need for exact words for the approval"): a plain yes word is a yes; a sentence is not.
+['כן', 'אוקיי', 'תחתום', 'מאשר', '👍'].forEach((w) => check('"' + w + '" = approval', (fastRoute(m(w), '', prev) || {}).kind === 'sign' && fastRoute(m(w), '', prev).yes === true));
+['בצע אבל רק בעמוד 2', 'מה המצב?', 'כן אבל לא בעמוד הזה'].forEach((w) => check('"' + w + '" = not an approval, to the assistant', !fastRoute(m(w), '', prev) || fastRoute(m(w), '', prev).kind !== 'sign'));
+['בטל', 'עזוב'].forEach((w) => check('"' + w + '" = cancel', (fastRoute(m(w), '', prev) || {}).yes === false));
 check('"בצע" with no signature question before it = not a signature', !fastRoute(m('בצע'), '', { text: 'x', ref: 'pro' }) || fastRoute(m('בצע'), '', { text: 'x', ref: 'pro' }).kind !== 'sign');
 check('"בצע" in reply to ANOTHER message (an alert) = not a signature, even if the last question was one', !fastRoute(m('בצע'), 'trustee_hazard | x | id r9 | t', prev) || fastRoute(m('בצע'), 'trustee_hazard | x | id r9 | t', prev).kind !== 'sign');
 check('"בצע" in reply to another answer of the assistant (ref pro) = not a signature', signRefOf('assistant | y | ref pro | t', prev) === null);
