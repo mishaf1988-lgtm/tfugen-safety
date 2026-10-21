@@ -1026,7 +1026,7 @@ export async function onRequest(context) {
         await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
           body: JSON.stringify([{ id: 'wa' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
             event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error',
-            payload: { title: String(body.text || '').replace(/\s+/g, ' ').slice(0, 120), text: String(body.text || '').slice(0, 1500), via: r.via || null, wamid: r.wamid || null, detail: r.error || null } }]) });
+            payload: { title: String(body.text || '').replace(/\s+/g, ' ').slice(0, 120), text: String(body.text || '').slice(0, 1500), via: r.via || null, wamid: r.wamid || null, ref: body.ref ? String(body.ref).slice(0, 40) : 'none', detail: r.error || null } }]) });
       } catch (e) { /* the message went out; a missing log line is not a failure */ }
       return jsonResp(r, 200, {});
     }

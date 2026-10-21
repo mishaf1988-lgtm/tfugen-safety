@@ -34,7 +34,7 @@ globalThis.fetch = async (url, opt = {}) => {
   if (url.startsWith(SB + '/rest/v1/notifications_log')) {
     if (m === 'POST') { logs.push(...JSON.parse(opt.body)); return new Response('', { status: 201 }); }
     if (/event_type=in\.\(owner_in,assistant,watch\)/.test(url)) { reviewUrls.push(url); return new Response(JSON.stringify([{ ts: 't1', event_type: 'owner_in', text: 'mah hachok', title: null, fast: null, via: null }, { ts: 't2', event_type: 'assistant', text: null, title: 'answer', fast: 'true', via: 'text' }, { ts: 't3', event_type: 'watch', text: null, title: 'no answer yet', fast: null, via: null }]), { status: 200 }); }
-    if (/wamid=eq\.wamid\.OUTPRO/.test(url)) return new Response(JSON.stringify([{ event_type: 'assistant', payload: { title: 'answer with a source', wamid: 'wamid.OUTPRO' }, ts: 't' }]), { status: 200 });
+    if (/wamid=eq\.wamid\.OUTPRO/.test(url)) return new Response(JSON.stringify([{ event_type: 'assistant', payload: { title: 'answer with a source', wamid: 'wamid.OUTPRO', ref: 'pro' }, ts: 't' }]), { status: 200 });
     return new Response(JSON.stringify(/wamid=eq\.wamid\.ALERT/.test(url) ? [{ event_type: 'trustee_hazard', payload: { title: 'X - leak', id: 'r9' }, ts: 't' }] : []), { status: 200 });
   }
   if (url === ENV.ASSISTANT_FIRE_URL) order.push('fire');
@@ -260,7 +260,7 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   }
   console.log('\n3f. rating a professional answer, end to end (21/10/2026)');
   {
-    state.wa_last_out = JSON.stringify({ at: new Date().toISOString(), text: 'answer with a source', ref: 'pro' });
+    state.wa_last_out = JSON.stringify({ at: new Date().toISOString(), text: 'tikun: something else went out after the answer', ref: 'dev' });
     const nf = fires.length, nm = metas.length;
     let raw = JSON.stringify({ entry: [{ changes: [{ value: { messages: [{ from: OWNER, id: 'wamid.RATE1', timestamp: '1792400000', type: 'interactive', context: { id: 'wamid.OUTPRO' }, interactive: { type: 'button_reply', button_reply: { id: 'c1', title: '1. \u05de\u05d3\u05d5\u05d9\u05e7' } } }] } }] }] });
     await post(raw, await sign(raw, ENV.META_APP_SECRET));

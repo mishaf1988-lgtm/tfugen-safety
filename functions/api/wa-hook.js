@@ -90,7 +90,7 @@ async function aboutAlert(env, wamid) {
     const r = rows && rows[0];
     if (!r) return '';
     const p = r.payload || {};
-    return String(r.event_type || '') + ' | ' + String(p.title || '').slice(0, 200) + (p.id ? ' | id ' + String(p.id).slice(0, 64) : '') + ' | ' + String(r.ts || '');
+    return String(r.event_type || '') + ' | ' + String(p.title || '').slice(0, 200) + (p.id ? ' | id ' + String(p.id).slice(0, 64) : '') + (p.ref ? ' | ref ' + String(p.ref).slice(0, 40) : '') + ' | ' + String(r.ts || '');
   } catch (e) { return ''; }
 }
 
@@ -122,8 +122,13 @@ export const RATE_THANKS = '\u05ea\u05d5\u05d3\u05d4, \u05e0\u05e8\u05e9\u05dd \
 // context, and that answer is in the log as event_type assistant, so "about" is set. A reply to the assistant's own
 // message is still a rating; only an alert (or anything else) is not.
 export const ownAnswer = (about) => /^assistant \|/.test(String(about || ''));
+// 21/10/2026 (a "done" message after an answer would have made a later tap on that answer's buttons a plain
+// message): a tap is rated by the answer it carries as context (logged with ref pro), not by whatever went out last.
+export const proAnswer = (about) => ownAnswer(about) && /\| ref pro \|/.test(String(about || ''));
 export function rateOf(m, about, prev) {
-  if ((about && !ownAnswer(about)) || !prev || prev.ref !== RATE_REF) return null;
+  // An answer logged before 21/10/2026 has no ref in the log: then the last answer decides, as before.
+  const oldLog = ownAnswer(about) && !/\| ref /.test(String(about || ''));
+  if (about && !oldLog ? !proAnswer(about) : (!prev || prev.ref !== RATE_REF)) return null;
   const raw = String((m && m.text) || '').trim().replace(/^[12]\. */, '').replace(/[.!]/g, '').trim();
   if (m && (m.choice === 1 || m.choice === '1') || raw === RATE_CHOICES[0]) return { good: true };
   if (m && (m.choice === 2 || m.choice === '2') || raw === RATE_CHOICES[1]) return { good: false };
@@ -214,7 +219,7 @@ async function handle(env, raw) {
     // The fast lane first: an answer here means no "got it", no Routine. A failure on the way (read, write,
     // send) falls through to the assistant, so a message is never lost to the fast lane.
     const rt = rateOf(m, about, prev);
-    if (rt) { await rateNote(env, rt.good, prev && prev.text); seen.rate = rt.good ? 'good' : 'bad'; }
+    if (rt) { await rateNote(env, rt.good, about ? about.split(' | ')[1] : prev && prev.text); seen.rate = rt.good ? 'good' : 'bad'; }
     const fr0 = wa ? fastRoute(m, about, prev) : null;
     if (fr0) {
       let ans = null, ref = null;
