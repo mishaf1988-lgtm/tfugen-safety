@@ -81,6 +81,8 @@
 //              private michael-skills repo, read with GH_SKILLS_TOKEN. exam.md never (it is the exam). skillPath.
 //   promise / promise_done  (21/10/2026) {agent, text, who?, ref?} "I will get back to you" kept in server_state.promises;
 //              {id | ref, note?} closes it and tells Michael on WhatsApp now. dev_request writes one, dev_done closes it.
+//              check_in_min (10-2880) + check?: the server wakes the assistant then to check (wa-morning promiseCheck);
+//              promise with the same ref (or text) and a new check_in_min sets the next check.
 //   learn / learn_done  (21/10/2026) {agent, kind: correction|preference|fact|source, text, source?} a line in the
 //              assistant's notebook (server_state.assistant_learned); {id, where} marks it folded into the rules
 //              or the knowledge. learnAdd / learnDone.
@@ -800,7 +802,7 @@ export async function onRequest(context) {
           wa = s.ok ? (s.via || 'sent') : (s.error || 'failed');
         } catch (x) { wa = 'failed'; }
       }
-      return jsonResp({ ok: true, id: r.id || (r.closed && r.closed.map((x) => x.id).join(',')), open: r.list.filter((x) => x.status === 'open').length, wa }, 200, {});
+      return jsonResp({ ok: true, id: r.id || (r.closed && r.closed.map((x) => x.id).join(',')), open: r.list.filter((x) => x.status === 'open').length, wa, check_at: r.check_at || null }, 200, {});
     }
     if (body.op === 'learn' || body.op === 'learn_done') {
       const now = new Date().toISOString();
