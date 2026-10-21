@@ -73,6 +73,8 @@
 //              replaces a file, never into the protected folders. odPutPdfCheck.
 //   dev_request / dev_done  (20/10/2026) {agent, text} a request to development, kept in server_state.dev_inbox;
 //              {id, note} closes one. devInboxAdd / devInboxDone.
+//   skill_read  (21/10/2026) {path: "SKILL.md" | "references/<name>.md"} one file of the assistant's knowledge in the
+//              private michael-skills repo, read with GH_SKILLS_TOKEN. exam.md never (it is the exam). skillPath.
 //   promise / promise_done  (21/10/2026) {agent, text, who?, ref?} "I will get back to you" kept in server_state.promises;
 //              {id | ref, note?} closes it and tells Michael on WhatsApp now. dev_request writes one, dev_done closes it.
 //   learn / learn_done  (21/10/2026) {agent, kind: correction|preference|fact|source, text, source?} a line in the
@@ -181,6 +183,16 @@ export function learnDone(raw, id, where, nowIso) {
   if (!String(where || '').trim()) return { error: 'where: the file it went into, or "dropped: <why>"' };
   x.status = 'folded'; x.folded_at = nowIso; x.where = String(where).slice(0, 200);
   return { list };
+}
+// skill_read (21/10/2026, a forklift question from Michael: the WhatsApp assistant's professional agent could not
+// clone the private michael-skills repo and answered without law.md and cases.md). The server reads it with the
+// token the weekly mail already uses. Only the assistant's own files, .md, and never the monthly exam.
+export const SKILL_BASE = String(SITE.assistantQueue || '').replace(/references\/research-queue\.md$/, '');
+export function skillPath(p) {
+  const v = String(p || '').trim();
+  if (!/^(SKILL\.md|references\/[a-z0-9-]{1,40}\.md)$/.test(v)) return null;
+  if (v === 'references/exam.md') return null;
+  return v;
 }
 // Michael's choice on a hazard, as a note (hazard_choice): moved to _wa.js on 20/10/2026, where the
 // server's fast lane (wa-hook.js) writes the same note.
@@ -703,6 +715,15 @@ export async function onRequest(context) {
         } catch (x) { wa = 'failed'; }
       }
       return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length, wa }, 200, {});
+    }
+    if (body.op === 'skill_read') {
+      const p = skillPath(body.path);
+      if (!p) return jsonResp({ ok: false, error: 'path: SKILL.md or references/<name>.md (not exam.md)' }, 400, {});
+      if (!env.GH_SKILLS_TOKEN || !SKILL_BASE) return jsonResp({ ok: false, error: 'no GH_SKILLS_TOKEN' }, 200, {});
+      const r = await fetch(SKILL_BASE + p, { headers: { Authorization: 'Bearer ' + env.GH_SKILLS_TOKEN, Accept: 'application/vnd.github.raw', 'User-Agent': 'routine-db' }, signal: tmo(GRAPH_MS) });
+      if (!r.ok) return jsonResp({ ok: false, error: 'github ' + r.status }, 200, {});
+      const text = await r.text();
+      return jsonResp({ ok: true, path: p, chars: text.length, text: text.slice(0, 120000) }, 200, {});
     }
     if (body.op === 'promise' || body.op === 'promise_done') {
       const now = new Date().toISOString();

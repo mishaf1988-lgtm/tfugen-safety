@@ -4,14 +4,16 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession } from './_build/routine-db.mjs';
+import { skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const ENV = { ROUTINE_KEY: 'k-123', SUPABASE_SERVICE_ROLE_KEY: 'srv' };
 let calls = [], state = {}, fires = [], fireSession = 'cse_01POSTMAN';
+let ghCalls = [];
 globalThis.fetch = async (url, opt = {}) => {
+  if (String(url).startsWith('https://api.github.com/repos/mishaf1988-lgtm/michael-skills/contents/')) { ghCalls.push({ url: String(url), auth: (opt.headers || {}).Authorization }); return new Response('# law\nsection 81: 14 months', { status: 200 }); }
   calls.push({ url, method: opt.method || 'GET', body: opt.body });
   if (url.startsWith(SB + '/rest/v1/server_state')) {
     if ((opt.method || 'GET') === 'POST') { JSON.parse(opt.body).forEach((r) => { state[r.key] = r.value; }); return new Response('', { status: 201 }); }
@@ -518,6 +520,16 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
 
   console.log('\n5. the country gate lets it through (the cloud is not in Israel)');
   const mw = fs.readFileSync(new URL('../../functions/_middleware.js', import.meta.url), 'utf8');
+  // 21/10/2026: the WhatsApp assistant reads its knowledge through the server (the private repo is closed to it)
+  {
+    check('skill_read: only SKILL.md and references/*.md, never the exam or a path out', skillPath('SKILL.md') === 'SKILL.md' && skillPath('references/law.md') === 'references/law.md' && !skillPath('references/exam.md') && !skillPath('../../README.md') && !skillPath('references/x.json') && !skillPath('archive/old.md'));
+    let x = await call({ op: 'skill_read', path: 'references/law.md' }, 'k-123', 'POST', { ...ENV, GH_SKILLS_TOKEN: 'gh-t' });
+    check('skill_read: the file text, read with the skills token', x.json.ok && /section 81/.test(x.json.text) && ghCalls.length === 1 && ghCalls[0].auth === 'Bearer gh-t' && ghCalls[0].url === SKILL_BASE + 'references/law.md', { j: x.json, ghCalls });
+    x = await call({ op: 'skill_read', path: 'references/exam.md' }, 'k-123', 'POST', { ...ENV, GH_SKILLS_TOKEN: 'gh-t' });
+    check('skill_read: the exam is refused, nothing fetched', x.status === 400 && ghCalls.length === 1);
+    x = await call({ op: 'skill_read', path: 'SKILL.md' });
+    check('skill_read without the token: a clear error', x.json.ok === false && /GH_SKILLS_TOKEN/.test(x.json.error));
+  }
   check('/api/routine-db is a machine path', /const MACHINE_PATHS = \[[^\]]*'\/api\/routine-db'/.test(mw));
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
