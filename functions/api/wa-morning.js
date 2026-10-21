@@ -68,7 +68,8 @@ export function weatherLine(w, today) {
 // failed = agent names that reported ok:false in the last 24 hours.
 // notes = [{agent, text}]: agent_report for_michael lines since the last update (20/10/2026).
 // weather = the weather_tomorrow record (weatherLine), first in the text.
-export function buildBrief(items, failed, today, compact, notes, weather) {
+// devDone = development requests closed yesterday (devClosedYesterday), the last line; null = not read, no line.
+export function buildBrief(items, failed, today, compact, notes, weather, devDone) {
   const wx = weatherLine(weather, today);
   failed = failed.map(agentName);
   // A worker's note goes out as written, so an internal id is cut out here (21/10/2026, hasInternalId).
@@ -76,6 +77,8 @@ export function buildBrief(items, failed, today, compact, notes, weather) {
   // compact (20/10/2026, Michael's screenshot): outside the 24 hour window the template carries one
   // line between its own "update from the assistant:" and "to answer, write here", so no heading, no
   // closing line, and items joined by "; " instead of new lines that would turn into " | ".
+  // 21/10/2026 (Michael on WhatsApp: "add at the end a line with the number of development requests closed yesterday")
+  const dev = Number.isInteger(devDone) ? '\u05d1\u05e7\u05e9\u05d5\u05ea \u05e4\u05d9\u05ea\u05d5\u05d7 \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 \u05d0\u05ea\u05de\u05d5\u05dc: ' + devDone + '.' : '';
   if (compact) {
     const parts = [];
     if (wx) parts.push(wx);
@@ -84,7 +87,8 @@ export function buildBrief(items, failed, today, compact, notes, weather) {
       + (items.length > 3 ? '; \u05d5\u05e2\u05d5\u05d3 ' + (items.length - 3) : '') + '.');
     if (failed.length) parts.push('\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc: ' + failed.slice(0, 5).join(', ') + '.');
     if (wx && parts.length === 1) parts.push('\u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.');
-    return (parts.length ? parts.join(' ') : '\u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.').slice(0, MAX_CHARS);
+    const body = parts.length ? parts.join(' ') : '\u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.';
+    return dev ? body.slice(0, MAX_CHARS - dev.length - 1) + ' ' + dev : body.slice(0, MAX_CHARS);
   }
   const lines = [];
   if (wx) lines.push(wx);
@@ -98,11 +102,12 @@ export function buildBrief(items, failed, today, compact, notes, weather) {
     notes.forEach((x) => lines.push('- ' + agentName(x.agent) + ': ' + clip(x.text, 160)));
   }
   if (failed.length) lines.push('\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc \u05d1-24 \u05d4\u05e9\u05e2\u05d5\u05ea \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d5\u05ea: ' + failed.slice(0, 5).join(', ') + '.');
-  if (!lines.length) return '\u05d1\u05d5\u05e7\u05e8 \u05d8\u05d5\u05d1, \u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.';
+  if (!lines.length) return '\u05d1\u05d5\u05e7\u05e8 \u05d8\u05d5\u05d1, \u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.' + (dev ? '\n' + dev : '');
   const head = '\u05d1\u05d5\u05e7\u05e8 \u05d8\u05d5\u05d1. \u05e2\u05d3\u05db\u05d5\u05df ' + dmy(today) + ':';
   const tail = '\u05de\u05d4 \u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d1\u05de\u05e9\u05e8\u05d3: \u05db\u05ea\u05d1\u05d5 \u05dc\u05d9 "\u05de\u05d4 \u05d4\u05de\u05e6\u05d1?".';
-  let text = [head].concat(lines, [tail]).join('\n');
-  while (text.length > MAX_CHARS && lines.length > 1) { lines.pop(); text = [head].concat(lines, [tail]).join('\n'); }
+  const end = dev ? [tail, dev] : [tail];
+  let text = [head].concat(lines, end).join('\n');
+  while (text.length > MAX_CHARS && lines.length > 1) { lines.pop(); text = [head].concat(lines, end).join('\n'); }
   return text.slice(0, MAX_CHARS);
 }
 
@@ -145,7 +150,15 @@ export async function gather(env, now) {
     .sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).map((x) => ({ agent: x.agent, text: x.for_michael }));
   let weather = null;
   try { weather = JSON.parse((await stateGet(env, 'weather_tomorrow')) || 'null'); } catch (e) { weather = null; }
-  return { today, items, failed, notes, weather };
+  let devDone = null;
+  try { devDone = devClosedYesterday(JSON.parse((await stateGet(env, 'dev_inbox')) || '[]'), today); } catch (e) { devDone = null; }
+  return { today, items, failed, notes, weather, devDone };
+}
+// Pure: requests in dev_inbox closed (done_at) on the Israel day before today. A Sunday counts Saturday only.
+export function devClosedYesterday(list, today) {
+  if (!Array.isArray(list)) return null;
+  const y = ilDay(new Date(Date.parse(today + 'T12:00:00Z') - 86400000));
+  return list.filter((x) => x && x.status === 'done' && x.done_at && ilDay(new Date(x.done_at)) === y).length;
 }
 
 export async function onRequest(context) {
@@ -324,7 +337,7 @@ export async function run(env, now, body) {
   const cal = await calendarStep(env, now, !!body.dry).catch((e) => ({ error: String(e.message || e).slice(0, 200) }));
   const g = await gather(env, now);
   const open = await ownerWindowOpen(env, sbFrom(env), now.getTime());
-  const text = buildBrief(g.items, g.failed, g.today, !open, g.notes, g.weather);
+  const text = buildBrief(g.items, g.failed, g.today, !open, g.notes, g.weather, g.devDone);
   if (body.dry) return { ok: true, sent: false, dry: true, text, cal };
   if (!body.force && (await stateGet(env, LAST_KEY).catch(() => null)) === g.today) return { ok: true, sent: false, reason: 'already sent today', cal };
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };
