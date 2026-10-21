@@ -1,5 +1,7 @@
 # Routine יומי: משרד הסוכנים
 
+**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_016Cc2xKxQ9W5AEf75yLhmtA` (שיחה `session_01JT8Fct6Z6Qv2GbaBBqxtQT`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
+
 מיכאל, 16/10/2026: "הייתי רוצה מוד בטלפון שאני רואה משרד עם הסוכנים שלי בלחיצה בכפתור". בשאלון: "בצע: עמוד ב-Claude, מוצמד", "בצע: כל בוקר אוטומטית", ועל כל שולחן: מצב, מה עשה ומה למד, מה מחכה לו, עלות לריצה.
 
 **העמוד:** ארטיפקט פרטי `https://claude.ai/artifact/AmxFowGHYDqyhd1sE9qphi` ("משרד הסוכנים", מוצמד בסרגל של claude.ai). העמוד רק קורא; הנתונים במסד של הארטיפקט (capability `db`): אוסף `agents` (מסמך לכל טריגר, המזהה = מזהה הטריגר) ומסמך `meta/office` (`updated_at`). מקור העמוד: `project-files/agent-office-page.txt` (טקסט ולא `.html`, חוק 5 ב-CLAUDE.md; לפרסום מחדש: להעתיק לקובץ `.html` בסקראץ' ולפרסם עם ה-url).

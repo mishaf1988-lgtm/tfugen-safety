@@ -43,10 +43,27 @@ export const AGENT_NAMES = { 'routine-coa': '\u05e1\u05d9\u05d3\u05d5\u05e8 \u05
   'routine-researcher': '\u05d7\u05d5\u05e7\u05e8 \u05d4\u05e2\u05d5\u05d6\u05e8', 'routine-talk-field': '\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9\u05ea', 'routine-validity': '\u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3', 'routine-wa-assistant': '\u05d4\u05e2\u05d5\u05d6\u05e8 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4', 'dev': '\u05e4\u05d9\u05ea\u05d5\u05d7' };
 export const agentName = (a) => AGENT_NAMES[a] || String(a || '').replace(/^routine-/, '');
 
+// One weather line from server_state.weather_tomorrow (/api/weather writes it at 17:07 for the next day),
+// only when it is for today and has the summary (20/10/2026, Michael on WhatsApp: "add the weather").
+const WX_KIND = { heat: '\u05e2\u05d5\u05de\u05e1 \u05d7\u05d5\u05dd', gust: '\u05de\u05e9\u05d1\u05d9\u05dd \u05d7\u05d6\u05e7\u05d9\u05dd', rain: '\u05d2\u05e9\u05dd' };
+export function weatherLine(w, today) {
+  const s = w && w.ok && w.day === today && w.sum;
+  if (!s) return '';
+  const parts = [];
+  if (s.tmin !== null && s.tmax !== null) parts.push(s.tmin + '-' + s.tmax + ' \u05de\u05e2\u05dc\u05d5\u05ea');
+  if (s.rain !== null && s.rain > 0) parts.push('\u05e1\u05d9\u05db\u05d5\u05d9 \u05dc\u05d2\u05e9\u05dd \u05e2\u05d3 ' + s.rain + '%');
+  if (s.gust !== null) parts.push('\u05de\u05e9\u05d1\u05d9\u05dd \u05e2\u05d3 ' + s.gust + ' \u05e7\u05de"\u05e9');
+  if (!parts.length) return '';
+  const al = (w.alerts || []).map((a) => WX_KIND[a.kind]).filter(Boolean);
+  return '\u05de\u05d6\u05d2 \u05d4\u05d0\u05d5\u05d5\u05d9\u05e8: ' + parts.join(', ') + '.' + (al.length ? ' \u05d6\u05d4\u05d9\u05e8\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d7\u05d5\u05e5: ' + al.join(', ') + '.' : '');
+}
+
 // Pure: the text. items = [{n, e}] already sorted by e, today = 'YYYY-MM-DD',
 // failed = agent names that reported ok:false in the last 24 hours.
 // notes = [{agent, text}]: agent_report for_michael lines since the last update (20/10/2026).
-export function buildBrief(items, failed, today, compact, notes) {
+// weather = the weather_tomorrow record (weatherLine), first in the text.
+export function buildBrief(items, failed, today, compact, notes, weather) {
+  const wx = weatherLine(weather, today);
   failed = failed.map(agentName);
   notes = (notes || []).slice(0, 3);
   // compact (20/10/2026, Michael's screenshot): outside the 24 hour window the template carries one
@@ -54,13 +71,16 @@ export function buildBrief(items, failed, today, compact, notes) {
   // closing line, and items joined by "; " instead of new lines that would turn into " | ".
   if (compact) {
     const parts = [];
+    if (wx) parts.push(wx);
     if (notes.length) parts.push('\u05de\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd: ' + notes.map((x) => agentName(x.agent) + ': ' + clip(x.text, 160)).join('; ') + '.');
     if (items.length) parts.push('\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea: ' + items.slice(0, 3).map((x) => clip(x.n, 50) + (x.e < today ? ' (\u05e4\u05d2 ' : ' (\u05e2\u05d3 ') + dmy(x.e) + ')').join('; ')
       + (items.length > 3 ? '; \u05d5\u05e2\u05d5\u05d3 ' + (items.length - 3) : '') + '.');
     if (failed.length) parts.push('\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc: ' + failed.slice(0, 5).join(', ') + '.');
+    if (wx && parts.length === 1) parts.push('\u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.');
     return (parts.length ? parts.join(' ') : '\u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.').slice(0, MAX_CHARS);
   }
   const lines = [];
+  if (wx) lines.push(wx);
   if (items.length) {
     lines.push('\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea:');
     items.slice(0, 3).forEach((x) => lines.push('- ' + clip(x.n, 60) + (x.e < today ? ' (\u05e4\u05d2 ' : ' (\u05e2\u05d3 ') + dmy(x.e) + ')'));
@@ -116,7 +136,9 @@ export async function gather(env, now) {
   const nsince = now.getTime() - (ilDow(now) === 0 ? 3 : 1) * 86400000;
   const notes = (Array.isArray(log) ? log : []).filter((x) => x && x.agent && x.for_michael && Date.parse(x.at) >= nsince)
     .sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).map((x) => ({ agent: x.agent, text: x.for_michael }));
-  return { today, items, failed, notes };
+  let weather = null;
+  try { weather = JSON.parse((await stateGet(env, 'weather_tomorrow')) || 'null'); } catch (e) { weather = null; }
+  return { today, items, failed, notes, weather };
 }
 
 export async function onRequest(context) {
@@ -226,6 +248,11 @@ export async function watch(env, now) {
   if (!to) return { ok: false, error: 'no owner number in notification_prefs' };
   await stateSet(env, WATCH_KEY, v.wamid);
   const r = await sendToOwner(env, to, v.text, { windowOpen: true, noTemplate: true });
+  // Its own event_type, not 'assistant': the weekly retro (retro-prompt.md 7a) counts these, and an
+  // alert is not an answer to Michael's message.
+  await sb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify([{ id: 'ww' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
+      event_type: 'watch', channel: r.ok ? 'whatsapp' : 'whatsapp_error', payload: { title: clip(v.text, 120), kind: 'watch', wamid: v.wamid, detail: r.error || null } }]) }).catch(() => {});
   return { ok: r.ok, sent: r.ok, error: r.error || null };
 }
 
@@ -241,7 +268,7 @@ export async function run(env, now, body) {
   const cal = await calendarStep(env, now, !!body.dry).catch((e) => ({ error: String(e.message || e).slice(0, 200) }));
   const g = await gather(env, now);
   const open = await ownerWindowOpen(env, sbFrom(env), now.getTime());
-  const text = buildBrief(g.items, g.failed, g.today, !open, g.notes);
+  const text = buildBrief(g.items, g.failed, g.today, !open, g.notes, g.weather);
   if (body.dry) return { ok: true, sent: false, dry: true, text, cal };
   if (!body.force && (await stateGet(env, LAST_KEY).catch(() => null)) === g.today) return { ok: true, sent: false, reason: 'already sent today', cal };
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };

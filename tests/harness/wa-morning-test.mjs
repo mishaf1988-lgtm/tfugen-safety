@@ -52,6 +52,16 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   const long = buildBrief([{ n: 'x'.repeat(500), e: '2026-10-01' }, { n: 'y'.repeat(500), e: '2026-10-02' }], ['a'.repeat(300)], '2026-10-20');
   check('never over ' + MAX_CHARS + ' characters', long.length <= MAX_CHARS, long.length);
   check('keyboard characters only (no long dash, no curly quotes)', !/[—–“”…־]/.test(t + long));
+  // 20/10/2026, Michael on WhatsApp: "add the weather to the morning update" (dev_inbox).
+  const wx = { ok: true, day: '2026-10-20', alerts: [{ kind: 'gust' }], sum: { tmin: 17, tmax: 26, rain: 0, gust: 55 } };
+  const tw = buildBrief(four, [], '2026-10-20', false, [], wx);
+  check('weather: the first line after the heading, no rain at 0%, the alert in words', tw.split('\n')[1] === 'מזג האוויר: 17-26 מעלות, משבים עד 55 קמ"ש. זהירות בעבודה בחוץ: משבים חזקים.', tw);
+  check('weather of another day or a failed run: no line', !/מזג/.test(buildBrief(four, [], '2026-10-21', false, [], wx)) && !/מזג/.test(buildBrief(four, [], '2026-10-20', false, [], Object.assign({}, wx, { ok: false }))));
+  check('weather without the summary (a record from before 20/10/2026): no line', !/מזג/.test(buildBrief(four, [], '2026-10-20', false, [], { ok: true, day: '2026-10-20', alerts: [] })));
+  const cw = buildBrief([], [], '2026-10-20', true, [], wx);
+  check('short version: weather and "nothing waiting"', /^מזג האוויר: 17-26/.test(cw) && /אין שום דבר שמחכה לך היום\.$/.test(cw), cw);
+  check('weather keeps keyboard characters', !/[—–“”…־]/.test(tw + cw));
+
 
   // 20/10/2026, Michael's screenshot: the template showed " | " between lines, "update" twice and routine-wa-assistant.
   const c = buildBrief(four, ['routine-wa-assistant'], '2026-10-20', true);

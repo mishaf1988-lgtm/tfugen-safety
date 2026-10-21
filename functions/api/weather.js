@@ -12,7 +12,7 @@
 //
 //   POST /api/weather?op=check   pg_cron, daily 17:07 Israel (migration 2026-10-15_weather_cron.sql),
 //                                with the Vault secret (x-notify-secret). Writes server_state.weather_tomorrow:
-//                                {at, day, ok, error, alerts: [{kind, hours, value}], src}. A failure is stored
+//                                {at, day, ok, error, alerts: [{kind, hours, value}], sum, src}. A failure is stored
 //                                as ok:false with the reason, never a bare 500.
 //   GET  /api/weather?op=status  a signed-in (not anonymous) user: {last} for the home-screen line.
 //
@@ -71,6 +71,23 @@ export function assess(data, day) {
   return alerts;
 }
 
+// The day in four numbers for the morning update on WhatsApp (20/10/2026, Michael: "add the weather to
+// the morning update"): low and high from IMS "daily" (the hours when it is missing), and the highest
+// rain chance and gust in working hours. Pure; null when the day is missing, never throws.
+export function daySummary(data, day) {
+  const d = data && data[day];
+  if (!d) return null;
+  const daily = d.daily || {};
+  const hourly = Object.values(d.hourly || {}).map((h) => h || {});
+  const work = hourly.filter((h) => { const hr = parseInt(h.hour, 10); return hr >= HOUR_FROM && hr <= HOUR_TO; });
+  const top = (rows, f) => { const v = rows.map((h) => num(h[f])).filter((x) => x !== null); return v.length ? Math.max.apply(null, v) : null; };
+  const low = (rows, f) => { const v = rows.map((h) => num(h[f])).filter((x) => x !== null); return v.length ? Math.min.apply(null, v) : null; };
+  const tmin = num(daily.minimum_temperature) !== null ? num(daily.minimum_temperature) : low(hourly, 'temperature');
+  const tmax = num(daily.maximum_temperature) !== null ? num(daily.maximum_temperature) : top(hourly, 'temperature');
+  if (tmin === null && tmax === null) return null;
+  return { tmin, tmax, rain: top(work, 'rain_chance'), gust: top(work, 'gust_speed') };
+}
+
 export async function runCheck(env, nowMs) {
   const now = nowMs || Date.now();
   const at = new Date(now).toISOString();
@@ -82,7 +99,7 @@ export async function runCheck(env, nowMs) {
     let j;
     try { j = await r.json(); } catch (e) { throw new Error('ims: not JSON'); }
     const alerts = assess(j && j.data, day);
-    rec = { at, day, ok: true, error: '', alerts, src: SRC };
+    rec = { at, day, ok: true, error: '', alerts, sum: daySummary(j && j.data, day), src: SRC };
   } catch (e) {
     rec = { at, day, ok: false, error: String((e && e.message) || e).substring(0, 200), alerts: [], src: SRC };
   }

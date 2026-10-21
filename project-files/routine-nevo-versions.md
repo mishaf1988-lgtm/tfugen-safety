@@ -1,5 +1,7 @@
 # Routine חודשי: מעקב אחרי נוסח החוקים בנבו
 
+**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_019NrPDFDdsfkYrmKcLcABw5` (שיחה `session_01FXKjCZExakD2sbqi9eZVin`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
+
 מיכאל אישר ב-07/10/2026 (שאלון: "בצע: server_state"). לכל חוק במרשם (`public.leg`) עם קישור לנבו, נשמר התאריך "נוסח עדכני נכון ליום" במפתח `server_state.nevo_versions`. העמודה `leg.last_review` היא של סבב הציות של מיכאל, ולא נוגעים בה. תאריך חדש מהשמור = החוק התעדכן: שורה אדומה במייל השבועי (`nevoLine` ב-`weekly-digest.js`) והערה ב-`law.md` של העוזר. Claude נדרש כי רק WebFetch קורא את נבו מהענן (curl מקבל 403, ו-pg_cron לא יכול).
 
 מבנה הערך: `{"at": ISO, "ok": true|false, "error": "...", "v": {"leg-nevo-01": "YYYY-MM-DD"}, "changed": [{"id", "s", "old", "new"}], "failed": ["leg-nevo-..."]}`.

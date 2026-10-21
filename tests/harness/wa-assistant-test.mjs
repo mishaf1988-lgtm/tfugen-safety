@@ -31,7 +31,7 @@ globalThis.fetch = async (url, opt = {}) => {
   }
   if (url.startsWith(SB + '/rest/v1/notifications_log')) {
     if (m === 'POST') { logs.push(...JSON.parse(opt.body)); return new Response('', { status: 201 }); }
-    if (/event_type=in\.\(owner_in,assistant\)/.test(url)) { reviewUrls.push(url); return new Response(JSON.stringify([{ ts: 't1', event_type: 'owner_in', text: 'mah hachok', title: null, fast: null, via: null }, { ts: 't2', event_type: 'assistant', text: null, title: 'answer', fast: 'true', via: 'text' }]), { status: 200 }); }
+    if (/event_type=in\.\(owner_in,assistant,watch\)/.test(url)) { reviewUrls.push(url); return new Response(JSON.stringify([{ ts: 't1', event_type: 'owner_in', text: 'mah hachok', title: null, fast: null, via: null }, { ts: 't2', event_type: 'assistant', text: null, title: 'answer', fast: 'true', via: 'text' }, { ts: 't3', event_type: 'watch', text: null, title: 'no answer yet', fast: null, via: null }]), { status: 200 }); }
     return new Response(JSON.stringify(/wamid=eq\.wamid\.ALERT/.test(url) ? [{ event_type: 'trustee_hazard', payload: { title: 'X - leak', id: 'r9' }, ts: 't' }] : []), { status: 200 });
   }
   if (url === ENV.ASSISTANT_FIRE_URL) order.push('fire');
@@ -153,7 +153,8 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   };
   // wa_review (20/10/2026): the weekly quality review reads Michael's messages and the answers, nothing else.
   const rv = await call({ op: 'wa_review', days: 30 });
-  check('wa_review: only owner_in and assistant on WhatsApp, at most 7 days, as who/text', rv.ok && rv.days === 7 && reviewUrls.length === 1 && /channel=eq\.whatsapp/.test(reviewUrls[0]) && rv.rows.length === 2 && rv.rows[0].who === 'michael' && rv.rows[1].who === 'assistant' && rv.rows[1].text === 'answer' && rv.rows[1].fast === true, { rv, reviewUrls });
+  check('wa_review: owner_in, assistant and watch on WhatsApp, at most 7 days, as who/text', rv.ok && rv.days === 7 && reviewUrls.length === 1 && /channel=eq\.whatsapp/.test(reviewUrls[0]) && rv.rows.length === 3 && rv.rows[0].who === 'michael' && rv.rows[1].who === 'assistant' && rv.rows[1].text === 'answer' && rv.rows[1].fast === true, { rv, reviewUrls });
+  check('wa_review: the watchdog alerts too (event_type watch, retro 7a counts them)', /event_type=in\.\(owner_in,assistant,watch\)/.test(reviewUrls[0]) && rv.rows[2].who === 'watch', reviewUrls);
   const pr = await call({ op: 'wa_check', fire_probe_trigger: 'trig_011XSXRjssx2uPNu1rk4P9L2' });
   check('a probe of a new trigger with no new token: reported, nothing fired (lesson 133)', pr.probe2_status === 'no new token' && pr.fire_to === 'old', pr);
   let c = await call({ op: 'wa_check' });

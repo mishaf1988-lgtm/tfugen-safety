@@ -1,5 +1,7 @@
 # Routine חודשי: דוח הציות מהמסד
 
+**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_01ARtxNGLkCWwQyY1ofKoVfX` (שיחה `session_01FXKjCZExakD2sbqi9eZVin`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
+
 מיכאל אישר ב-08/10/2026 (handoff, "בצע"): הדוח החודשי קורא מהמסד ולא מה-Excel. באותו יום יובאו ללוח הבקרה המרכזי 29 מסמכים, 30 בדיקות ציוד ו-16 משימות (STATUS, "ייבוא ה-Excel"), כך שהמסד מכיל את כל מה שהדוח הקודם קרא משלושת הקבצים. ה-Excel נשאר רק לבדיקת פערים: מה שעודכן שם ולא באפליקציה.
 
 **ה-Routine:** `trig_01Uq6xdHwgr3ymq1xqbMUhca`, ב-1 לחודש 08:03 (`CRON_TZ=Asia/Jerusalem 3 8 1 * *`), לתוך השיחה העובדת `session_01JT8Fct6Z6Qv2GbaBBqxtQT` (מ-09/10/2026, לפי STATUS). פרומפט הטריגר קצר וקורא את הפרומפט מהקובץ הזה. הישן (`trig_01RfrXXyZNz6sLrC7HagnHpP`, שיחה `session_017Y8t6gZc26ysueKySAi7zV`) נמחק.
