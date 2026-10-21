@@ -220,7 +220,7 @@ export function signPickOf(m, prev) {
   const n = /^[1-5]$/.test(c) ? +c : (/^([1-5])(\.|\s|$)/.exec(t) || [])[1];
   return n ? +n : null;
 }
-export async function graphSearch(env, token, q) {
+export async function graphSearch(env, token, q, noPaths) {
   const enc = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
   const gh = { Authorization: 'Bearer ' + token };
   const r = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(OD_ROOT) + ":/search(q='" + encodeURIComponent(q.replace(/'/g, "''")) + "')?$select=id,name,file,parentReference,lastModifiedDateTime&$top=100",
@@ -230,6 +230,7 @@ export async function graphSearch(env, token, q) {
   // 21/10/2026 (Michael: "\u05ea\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9 \u05e2\u05dc Safetecs" -> "not found", the file is there): OneDrive for Business search
   // results carry parentReference without "path", so every hit was dropped. The path is read per PDF (at most 20).
   const pdfs = items.filter((x) => x && x.file && /\.pdf$/i.test(x.name || '')).slice(0, 20);
+  if (noPaths) return pdfs;
   await Promise.all(pdfs.filter((x) => !(x.parentReference && x.parentReference.path) && x.id).map(async (x) => {
     const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(x.id) + '?$select=parentReference', { headers: gh, signal: tmo(10000) }).catch(() => null);
     const j = d && d.ok ? await d.json().catch(() => null) : null;
@@ -241,6 +242,20 @@ export async function graphSearch(env, token, q) {
 export function recentPdfs(items, n) {
   const t = (x) => Date.parse(x.lastModifiedDateTime || '') || 0;
   return signPick((items || []).slice().sort((a, b) => t(b) - t(a)), '\u0000').slice(0, n || 3);
+}
+// The words worth searching for, from a free sentence: 3 letters and up, not the glue words, the Hebrew article
+// and prefixes dropped or tried both ways ("\u05d4\u05d4\u05e6\u05e2\u05ea" -> "\u05d4\u05e6\u05e2\u05ea", "\u05de\u05d9\u05e2\u05dc" -> + "\u05d9\u05e2\u05dc"), at most 6. Pure.
+const SIGN_STOP = new Set('\u05e9\u05d4\u05d2\u05d9\u05e2|\u05e9\u05d4\u05d2\u05d9\u05e2\u05d4|\u05e9\u05e7\u05d9\u05d1\u05dc\u05ea\u05d9|\u05e9\u05e0\u05e9\u05dc\u05d7|\u05de\u05d4\u05de\u05d9\u05d9\u05dc|\u05d1\u05de\u05d9\u05d9\u05dc|\u05dc\u05d4\u05e9\u05db\u05e8\u05d4|\u05dc\u05e8\u05db\u05d9\u05e9\u05d4|\u05e9\u05dc|\u05e2\u05dd|\u05d0\u05ea|\u05e2\u05dc|\u05de\u05d4|\u05d6\u05d4|\u05d4\u05d6\u05d4|\u05d4\u05d6\u05d0\u05ea|\u05d4\u05d9\u05d5\u05dd|\u05d0\u05ea\u05de\u05d5\u05dc'.split('|'));
+export function signWords(q) {
+  const out = [];
+  for (let w of String(q || '').split(/\s+/)) {
+    w = w.replace(/[^\u0590-\u05ffA-Za-z0-9]/g, '');
+    if (SIGN_STOP.has(w)) continue;
+    // the article (\u05d4) and "that" (\u05e9) are dropped; "from / to / in / and" may be part of the word ("\u05de\u05d7\u05d9\u05e8"), so both forms
+    const forms = /^[\u05d4\u05e9][\u0590-\u05ff]{3,}$/.test(w) ? [w.slice(1)] : /^[\u05de\u05dc\u05d1\u05d5][\u0590-\u05ff]{3,}$/.test(w) ? [w, w.slice(1)] : [w];
+    for (const f of forms) if (f.length >= 3 && out.indexOf(f) < 0) out.push(f);
+  }
+  return out.slice(0, 6);
 }
 export async function signAskPath(env, path) {
   const res = await routineDb({ env, request: new Request('https://internal/api/routine-db', { method: 'POST',
@@ -257,7 +272,24 @@ export async function fastSignAsk(env, q) {
   if (q.length >= 2) {
     const found = await graphSearch(env, at.token, q);
     if (!found) return { text: null };
-    const list = signPick(found, q);
+    let list = signPick(found, q);
+    // 21/10/2026 (Michael: "\u05ea\u05d7\u05ea\u05d5\u05dd \u05e2\u05dc \u05d4\u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05e9\u05d4\u05d2\u05d9\u05e2 \u05de\u05d9\u05e2\u05dc \u05dc\u05d4\u05e9\u05db\u05e8\u05d4" found nothing as a whole sentence): no hit for the
+    // sentence = a search per word (signWords), the files that match the most words first.
+    if (!list.length) {
+      // Cloudflare allows 50 sub-requests per call: the word searches skip the path lookup, and only the best 5
+      // files get it (4 searches + 5 lookups, then the request itself).
+      const words = signWords(q).slice(0, 4), score = new Map(), byId = new Map();
+      for (const w of words) for (const h of (await graphSearch(env, at.token, w, true)) || []) { byId.set(h.id, h); score.set(h.id, (score.get(h.id) || 0) + 1); }
+      const top = [...byId.values()].sort((a, b) => score.get(b.id) - score.get(a.id)).slice(0, 5);
+      await Promise.all(top.filter((x) => !(x.parentReference && x.parentReference.path)).map(async (x) => {
+        const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(x.id) + '?$select=parentReference', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(10000) }).catch(() => null);
+        const j = d && d.ok ? await d.json().catch(() => null) : null;
+        if (j && j.parentReference && j.parentReference.path) x.parentReference = j.parentReference;
+      }));
+      list = signPick(top, '\u0000');
+      const sc = (x) => score.get((top.find((t) => t.name === x.name) || {}).id) || 0;
+      if (list.length > 1 && sc(list[0]) > sc(list[1])) list = [list[0]];
+    }
     if (list.length === 1) return signAskPath(env, list[0].path);
     if (list.length > 1) return { pick: list };
   }
