@@ -30,6 +30,7 @@ const at = (dir, name, d) => Object.assign(item(dir, name), { lastModifiedDateTi
 const rec = recentPdfs([at('a', 'old.pdf', '2026-01-01T00:00:00Z'), at('b', 'new.pdf', '2026-10-20T00:00:00Z'), at('c', 'mid.pdf', '2026-05-01T00:00:00Z'), at('d', 'x.docx', '2026-10-21T00:00:00Z'), at('e', 'mid2.pdf', '2026-04-01T00:00:00Z')], 3);
 check('nothing matched: the 3 newest PDFs, newest first, no other files', rec.map((x) => x.name).join() === 'new.pdf,mid.pdf,mid2.pdf', rec);
 check('buttons: the names without .pdf, short (choicesPayload adds the numbers)', signPickChoices(rec).join() === 'new,mid,mid2' && signPickChoices([{ name: 'a'.repeat(40) + '.pdf' }])[0].length <= 16 && /\n1\. b\/new\.pdf/.test(signPickText(rec, true)));
+check('no name given: the list opens with "the newest PDFs", not "not found"', signPickText(rec, 'recent').indexOf('\u05d4-PDF \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd') === 0 && signPickText(rec, true).indexOf('\u05dc\u05d0 \u05de\u05e6\u05d0\u05ea\u05d9') === 0);
 check('a tap on the pick message picks (button or typed digit)', signPickOf({ choice: 2 }, { ref: 'signpick' }) === 2 && signPickOf({ text: '3. mid' }, { ref: 'signpick' }) === 3);
 check('the same digit after any other message is not a pick', signPickOf({ text: '1' }, { ref: 'brief' }) === null && signPickOf({ text: '1' }, null) === null);
 check('fastRoute routes the tap as sign_pick', (fastRoute({ text: '1' }, '', { ref: 'signpick' }) || {}).kind === 'sign_pick');
