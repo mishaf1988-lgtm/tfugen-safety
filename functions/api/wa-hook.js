@@ -207,7 +207,7 @@ export function signAskManyText(list) {
 export const SIGN_PICK_KEY = 'sign_pick', SIGN_PICK_MS = 3600e3;
 // The candidates go out as buttons; a tap ("1") on that very message asks for the one picked (sign_pick, 1 hour).
 export function signPickText(list, none) {
-  return (none ? '\u05dc\u05d0 \u05de\u05e6\u05d0\u05ea\u05d9 \u05d1\u05e9\u05dd \u05d4\u05d6\u05d4. \u05d4-PDF \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea:\n' : '\u05de\u05e6\u05d0\u05ea\u05d9 \u05db\u05de\u05d4 \u05e7\u05d1\u05e6\u05d9\u05dd:\n')
+  return (none === 'recent' ? '\u05d4-PDF \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea:\n' : none ? '\u05dc\u05d0 \u05de\u05e6\u05d0\u05ea\u05d9 \u05d1\u05e9\u05dd \u05d4\u05d6\u05d4. \u05d4-PDF \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea:\n' : '\u05de\u05e6\u05d0\u05ea\u05d9 \u05db\u05de\u05d4 \u05e7\u05d1\u05e6\u05d9\u05dd:\n')
     + list.map((x, i) => (i + 1) + '. ' + x.path).join('\n') + '\n\u05e2\u05dc \u05d0\u05d9\u05d6\u05d4 \u05dc\u05d7\u05ea\u05d5\u05dd? \u05dc\u05dc\u05d7\u05d5\u05e5 \u05e2\u05dc \u05d4\u05de\u05e1\u05e4\u05e8.';
 }
 // choicesPayload numbers them itself ("1. "), and a button title is at most 20 characters.
@@ -263,7 +263,7 @@ export async function fastSignAsk(env, q) {
   }
   const all = await graphSearch(env, at.token, 'pdf');
   const recent = all ? recentPdfs(all, 3) : [];
-  return recent.length ? { pick: recent, none: true } : { text: SIGN_ASK_NONE };
+  return recent.length ? { pick: recent, none: q.length >= 2 ? true : 'recent' } : { text: SIGN_ASK_NONE };
 }
 export function fastRoute(m, about, prev) {
   const raw = String((m && m.text) || '').trim();
