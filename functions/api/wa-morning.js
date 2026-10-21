@@ -293,7 +293,10 @@ async function watchReply(env, now) {
   const rows = await sb(env, 'notifications_log?select=ts,payload&event_type=eq.owner_in&order=ts.desc&limit=1').catch(() => []);
   const last = Array.isArray(rows) && rows[0];
   if (!last) return { ok: true, sent: false, reason: 'no message' };
-  const outs = await sb(env, 'notifications_log?select=ts,payload&event_type=eq.assistant&ts=gt.' + encodeURIComponent(last.ts) + '&limit=20').catch(() => []);
+  // 21/10/2026: a failed read is "unknown", not "no answer": the first alert ever (13:30 UTC) told Michael
+  // a message from 16:19 had no answer, when the answer was logged at 16:20.
+  const outs = await sb(env, 'notifications_log?select=ts,payload&event_type=eq.assistant&ts=gt.' + encodeURIComponent(last.ts) + '&limit=20').catch(() => null);
+  if (!Array.isArray(outs)) return { ok: false, sent: false, error: 'could not read the answers' };
   const v = watchVerdict(last, outs, now.getTime(), await stateGet(env, WATCH_KEY).catch(() => null));
   if (!v) return { ok: true, sent: false };
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };
