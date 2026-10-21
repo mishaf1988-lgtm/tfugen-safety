@@ -25,6 +25,8 @@ description: How to connect an outside service (Cloudflare, Supabase management,
 
 - **Routine שמופעל מהשרת עם `text` רץ בשיחה חדשה בלי מאגר** (21/10/2026, "פיתוח מיידי"): אין `add_repo`, `git push` נחסם ("המאגר לא ברשימת המאגרים שמותרים לריצה"), ובדף ה-Routine אין בחירת מאגר בכלל, גם לא במחשב (C32). קוד שצריך push: Routine בשעון שקשור לשיחה קבועה שנפתחה עם `source_url` (המפתח התורן). לא לבקש ממיכאל "להוסיף מאגר" בדף.
 
+- **פריסה ב-API של Cloudflare Pages** (21/10/2026, #1851 ו-#1852 לא נפרסו לבד): `POST .../deployments/<id>/retry` מפרסם מחדש את הפריסה האחרונה, ואם היא של branch אחר זו גרסת תצוגה, לא האתר. פריסה של האתר: `POST .../pages/projects/tapugan-safety/deployments` עם `-F branch=main`. סוד חדש (`WORKER_FIRE_TOKEN` וכו') נכנס לפעולה רק בפריסה חדשה. לפני שמסיקים שקוד שבור ("unknown op"): `bash project-files/routine-db.sh '{"op":"live"}'` מראה איזה commit רץ.
+
 ## מה מחובר היום
 
 | שירות | Host | הרשאה | נרשם |
