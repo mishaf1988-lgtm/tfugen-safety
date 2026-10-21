@@ -316,6 +316,12 @@ export function expiryPatch(b, row, today) {
     if (t.extra === 'd' && (!isDay(v) || v > today)) return { error: 'bad d' };
     if (v !== row[t.extra]) { patch[t.extra] = v; said.push(t.extra + ' ' + (t.extra === 'd' ? ddmm(v) : v)); }
   }
+  // 21/10/2026 (the assistant's dev request: form 16 got a new e of 01/11/2026 and stayed "expired"): a new e on a
+  // document moves its state between valid and expired by itself, unless the call set s. "needs checking" stays.
+  if (b.table === 'docs' && b.s === undefined && patch.e) {
+    const ns = patch.e >= today ? DOC_STATES[0] : DOC_STATES[1];
+    if ((row.s === DOC_STATES[0] || row.s === DOC_STATES[1] || !row.s) && row.s !== ns) { patch.s = ns; said.push('s ' + ns); }
+  }
   for (const k of Object.keys(b)) {
     if (['op', 'table', 'id', 'agent', 'why', 'doc', 'e', 'file_url', t.extra].concat(outOfTracking ? ['s'] : []).indexOf(k) < 0) return { error: 'field not allowed: ' + k };
   }
