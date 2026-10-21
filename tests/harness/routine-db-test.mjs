@@ -208,6 +208,14 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('docs: e null with s refused', (await call({ ...base, e: null, s: OUT, doc: 'q.txt' })).status === 400);
     x = await call({ ...eq, doc: 'questionnaire 18/10/2026', e: null, s: OUT });
     check('equipment out of tracking: e null, s set, note says so, one row', x.json.ok && x.json.changed && rows.equip_inspections[0].e === null && rows.equip_inspections[0].s === OUT && /Claude \(routine-validity\)/.test(rows.equip_inspections[0].notes) && rows.equip_inspections[0].notes.indexOf('questionnaire 18/10/2026') > 0, x.json);
+    // 21/10/2026 (dev request from the assistant): a new e moves s between valid and expired; s given or "needs checking" wins
+    const VAL = '\u05d1\u05ea\u05d5\u05e7\u05e3', EXP = '\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3', CHK = '\u05d8\u05e2\u05d5\u05df \u05d0\u05d9\u05de\u05d5\u05ea';
+    const sp = (row, extra) => expiryPatch({ ...base, doc: 'form 16.pdf', ...extra }, row, '2026-10-21').patch || {};
+    check('docs: a later e on an expired row makes it valid', sp({ e: '2026-09-01', s: EXP, nt: '' }, { e: '2026-11-01' }).s === VAL);
+    check('docs: an earlier e on a valid row makes it expired', sp({ e: '2026-12-01', s: VAL, nt: '' }, { e: '2026-10-01' }).s === EXP);
+    check('docs: s given in the call wins', sp({ e: '2026-09-01', s: EXP, nt: '' }, { e: '2026-11-01', s: CHK }).s === CHK);
+    check('docs: "needs checking" is not overwritten', sp({ e: '2026-09-01', s: CHK, nt: '' }, { e: '2026-11-01' }).s === undefined);
+    check('docs: the note says the state moved', /\u05d1\u05ea\u05d5\u05e7\u05e3/.test(sp({ e: '2026-09-01', s: EXP, nt: '' }, { e: '2026-11-01' }).nt));
     check('only docs and equip_inspections', Object.keys(EXPIRY_TABLES).join() === 'docs,equip_inspections');
     check('without the key: 403, nothing written', (await call({ ...base, e: '2026-01-01' }, 'nope')).status === 403 && rows.docs[0].e === '2027-01-01');
     rows = {};
