@@ -257,6 +257,20 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
     const ft2 = fires[fires.length - 1].body.text;
     check('a folded line leaves the fire text', /wamid\.L2/.test(ft2) && !/\nlearned/.test(ft2), ft2);
   }
+  console.log('\n3f. rating a professional answer, end to end (21/10/2026)');
+  {
+    state.wa_last_out = JSON.stringify({ at: new Date().toISOString(), text: 'answer with a source', ref: 'pro' });
+    const nf = fires.length, nm = metas.length;
+    let raw = JSON.stringify({ entry: [{ changes: [{ value: { messages: [{ from: OWNER, id: 'wamid.RATE1', timestamp: '1792400000', type: 'interactive', interactive: { type: 'button_reply', button_reply: { id: 'c1', title: '1. \u05de\u05d3\u05d5\u05d9\u05e7' } } }] } }] }] });
+    await post(raw, await sign(raw, ENV.META_APP_SECRET));
+    const r1 = JSON.parse(state.assistant_ratings || '[]');
+    check('"accurate": noted, thanked by the server, the assistant not fired', fires.length === nf && metas.length === nm + 1 && r1.length === 1 && r1[0].good === true && /answer with a source/.test(r1[0].q), { f: fires.length - nf, r1 });
+    state.wa_last_out = JSON.stringify({ at: new Date().toISOString(), text: 'another answer', ref: 'pro' });
+    raw = JSON.stringify({ entry: [{ changes: [{ value: { messages: [{ from: OWNER, id: 'wamid.RATE2', timestamp: '1792400000', type: 'interactive', interactive: { type: 'button_reply', button_reply: { id: 'c2', title: '2. \u05dc\u05d0 \u05de\u05d3\u05d5\u05d9\u05e7' } } }] } }] }] });
+    await post(raw, await sign(raw, ENV.META_APP_SECRET));
+    const r2 = JSON.parse(state.assistant_ratings || '[]');
+    check('"not accurate": noted and the assistant fired with the answer it rates', r2.length === 2 && r2[1].good === false && fires.length === nf + 1 && /another answer/.test(fires[fires.length - 1].body.text), { r2, hook: state.wa_hook_last, f: fires.length - nf });
+  }
   console.log('\n4. the front door');
   const mw = fs.readFileSync(new URL('../../functions/_middleware.js', import.meta.url), 'utf8');
   check('wa-hook is a machine path (Meta calls from abroad)', /'\/api\/wa-hook'/.test(mw));

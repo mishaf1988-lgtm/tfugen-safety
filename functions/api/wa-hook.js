@@ -111,9 +111,40 @@ export function hazardRef(about, prev) {
   const pt = String((prev && prev.text) || '');
   return r && HAZARD_OPTIONS.every((o) => pt.indexOf(o) >= 0) ? { src: r[1], id: r[2] } : null;
 }
+// Rating a professional answer (21/10/2026, Michael in the questionnaire: "do it: accurate / not accurate
+// buttons"). The assistant sends a professional answer with these two choices and ref "pro" (routine-db wa_me).
+// "accurate" is noted and answered here; "not accurate" is noted and goes on to the assistant, which asks what
+// was wrong and writes it in its notebook. Both are kept for the weekly review (retro-prompt.md 7a).
+export const RATE_REF = 'pro', RATE_CHOICES = ['\u05de\u05d3\u05d5\u05d9\u05e7', '\u05dc\u05d0 \u05de\u05d3\u05d5\u05d9\u05e7'];
+export const RATE_KEY = 'assistant_ratings', RATE_MAX = 200;
+export const RATE_THANKS = '\u05ea\u05d5\u05d3\u05d4, \u05e0\u05e8\u05e9\u05dd \u05e9\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05de\u05d3\u05d5\u05d9\u05e7\u05ea.';
+export function rateOf(m, about, prev) {
+  if (about || !prev || prev.ref !== RATE_REF) return null;
+  const raw = String((m && m.text) || '').trim().replace(/^[12]\. */, '').replace(/[.!]/g, '').trim();
+  if (m && (m.choice === 1 || m.choice === '1') || raw === RATE_CHOICES[0]) return { good: true };
+  if (m && (m.choice === 2 || m.choice === '2') || raw === RATE_CHOICES[1]) return { good: false };
+  return null;
+}
+export function rateAdd(raw, good, q, nowIso) {
+  let list = [];
+  try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
+  if (!Array.isArray(list)) list = [];
+  list.push({ at: nowIso, good: !!good, q: String(q || '').replace(/\s+/g, ' ').slice(0, 200) });
+  return list.slice(-RATE_MAX);
+}
+async function rateNote(env, good, q) {
+  try {
+    const rows = await sbJson(env, 'server_state?key=eq.' + RATE_KEY + '&select=value');
+    const list = rateAdd(rows && rows[0] ? rows[0].value : '[]', good, q, new Date().toISOString());
+    await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([{ key: RATE_KEY, value: JSON.stringify(list), updated_at: new Date().toISOString() }]) });
+  } catch (e) { /* a lost rating is not a lost message */ }
+}
 export function fastRoute(m, about, prev) {
   const raw = String((m && m.text) || '').trim();
   if (!raw || raw.length > 40) return null;
+  const rt = rateOf(m, about, prev);
+  if (rt) return rt.good ? { kind: 'rate' } : null;
   const hz = hazardRef(about, prev);
   const n = m.choice || (/^([1-4])(\.|\s|$)/.exec(raw) || [])[1];
   if (hz && n && Number(n) >= 1 && Number(n) <= HAZARD_OPTIONS.length && (m.choice || /^[1-4](\.? *.{0,30})?$/.test(raw))) return { kind: 'hazard', src: hz.src, id: hz.id, choice: Number(n) };
@@ -178,11 +209,14 @@ async function handle(env, raw) {
     const prev = about ? null : await lastOut(env, sbFrom(env));
     // The fast lane first: an answer here means no "got it", no Routine. A failure on the way (read, write,
     // send) falls through to the assistant, so a message is never lost to the fast lane.
+    const rt = rateOf(m, about, prev);
+    if (rt) { await rateNote(env, rt.good, prev && prev.text); seen.rate = rt.good ? 'good' : 'bad'; }
     const fr0 = wa ? fastRoute(m, about, prev) : null;
     if (fr0) {
       let ans = null, ref = null;
       try {
-        if (fr0.kind === 'hazard') { ans = await fastHazard(env, fr0); ref = fr0.src + ' ' + fr0.id; }
+        if (fr0.kind === 'rate') { ans = RATE_THANKS; ref = 'rate'; }
+        else if (fr0.kind === 'hazard') { ans = await fastHazard(env, fr0); ref = fr0.src + ' ' + fr0.id; }
         else { const g = await gather(env, new Date()); ans = buildBrief(g.items, g.failed, g.today, false, g.notes, g.weather); ref = 'brief'; }
       } catch (e) { ans = null; }
       const sr = ans ? await sendToOwner(env, owner, ans, { windowOpen: true, noTemplate: true }).catch(() => null) : null;
