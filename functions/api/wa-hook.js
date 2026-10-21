@@ -14,7 +14,7 @@
 // notifications_log (payload.wamid), so the assistant knows what Michael is answering.
 // Machine path in _middleware: Meta calls from outside Israel.
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
-import { ownerWa, metaSigOk, inboundMessages, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, LEARN_KEY, learnedLine } from '../_wa.js';
+import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, LEARN_KEY, learnedLine } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 import { accessToken } from '../_onedrive.js';
 import { SIGN_KEY, signRefOf, signAnswer, signTake, signMark, signRun, signDoneText, SIGN_CANCEL_TEXT, SIGN_EXPIRED_TEXT, SIGN_DONE_TEXT } from '../_sign.js';
@@ -228,6 +228,10 @@ export async function fastSign(env, r, wamid) {
   const after = await sbJson(env, 'server_state?key=eq.' + SIGN_KEY + '&select=value').catch(() => null);
   await signSave(env, signMark(after && after[0] ? after[0].value : t.list, r.id, res.ok ? 'signed' : 'failed', res.ok ? { signed: res.name } : { error: res.error })).catch(() => {});
   await signLog(env, (res.ok ? 'signed: ' + res.name : 'sign failed: ' + t.req.name), Object.assign({ result: res.ok ? 'signed' : 'failed', signed: res.name || null, webUrl: res.webUrl || null, error: res.error || null }, base));
+  // 21/10/2026: the signed copy itself, as a document, ready to forward (the text answer follows it).
+  if (res.ok && res.bytes) {
+    try { const to = await ownerWa(env, sbFrom(env)); if (to) await sendDocToOwner(env, to, res.bytes, res.name, '', true); } catch (e) { /* the file is in the folder */ }
+  }
   return signDoneText(res, t.req);
 }
 // Michael's own message, for the weekly quality review of the assistant's answers (20/10/2026, Michael:

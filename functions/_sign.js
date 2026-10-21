@@ -140,7 +140,7 @@ export async function signRun(env, sbUrl, token, req, nowMs) {
   const up = await fetch(G + enc(dir + '/' + out) + ':/content?@microsoft.graph.conflictBehavior=fail', { method: 'PUT', headers: { ...gh, 'Content-Type': 'application/pdf' }, body: signed, signal: tmo(FILE_MS) });
   const uj = await up.json().catch(() => ({}));
   if (!up.ok) return { ok: false, error: 'put ' + up.status };
-  return { ok: true, name: out, webUrl: uj.webUrl || null, size: uj.size || null };
+  return { ok: true, name: out, webUrl: uj.webUrl || null, size: uj.size || null, bytes: signed };
 }
 
 // What Michael reads back. Keyboard characters only.
