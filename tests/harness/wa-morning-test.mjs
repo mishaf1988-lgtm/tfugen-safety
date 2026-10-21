@@ -81,6 +81,13 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   const nc = buildBrief([], [], '2026-10-20', true, [{ agent: 'routine-quotes', text: 'x' }, { agent: 'routine-coa', text: 'y' }]);
   check('for_michael compact: one line, both', !/\n/.test(nc) && /: x; /.test(nc) && /: y\./.test(nc), nc);
 
+  // 21/10/2026: an internal id in a worker's note is cut out, the rest of the note stays
+  const ni = buildBrief([], [], '2026-10-21', false, [{ agent: 'routine-coa', text: '\u05d4\u05d5\u05e2\u05d1\u05e8 \u05dc\u05e4\u05d9\u05ea\u05d5\u05d7 dev-20261021053745-tqu3.' }, { agent: 'routine-quotes', text: '\u05d4\u05e6\u05e2\u05d4 \u05d7\u05d3\u05e9\u05d4 (trig_01TofqtqNWtrXMnqiNjHq1nZ), \u05d1\u05e9\u05d9\u05d7\u05d4 session_01McD38xyz' }, { agent: 'routine-od-scan', text: 'cse_01TuRyeMrE8W' }]);
+  check('internal ids: cut out of the notes, text kept', !/dev-2026|trig_|session_|cse_|\(\)/.test(ni) && /\u05dc\u05e4\u05d9\u05ea\u05d5\u05d7\./.test(ni) && /\u05d7\u05d3\u05e9\u05d4, \u05d1\u05e9\u05d9\u05d7\u05d4/.test(ni), ni);
+  check('internal ids: a note that was only an id is dropped', !/\u05e1\u05e8\u05d9\u05e7\u05ea/.test(ni) && (ni.match(/\n- /g) || []).length === 2, ni);
+  const nk = buildBrief([], [], '2026-10-21', true, [{ agent: 'routine-coa', text: '\u05d8\u05d5\u05e4\u05e1 16, 21/10/2026, ISO 45001, #1802' }]);
+  check('internal ids: dates, form numbers, ISO and PR numbers stay', /\u05d8\u05d5\u05e4\u05e1 16, 21\/10\/2026, ISO 45001, #1802/.test(nk), nk);
+
   // 20/10/2026: the watchdog for a stuck run
   {
     const T = Date.parse('2026-10-20T18:00:00Z'), last = { ts: '2026-10-20T18:00:00Z', payload: { wamid: 'w1' } };
