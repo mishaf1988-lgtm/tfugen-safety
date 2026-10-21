@@ -88,6 +88,21 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   const nk = buildBrief([], [], '2026-10-21', true, [{ agent: 'routine-coa', text: '\u05d8\u05d5\u05e4\u05e1 16, 21/10/2026, ISO 45001, #1802' }]);
   check('internal ids: dates, form numbers, ISO and PR numbers stay', /\u05d8\u05d5\u05e4\u05e1 16, 21\/10\/2026, ISO 45001, #1802/.test(nk), nk);
 
+  // 21/10/2026: a promise still open after a day gets one reminder, in daytime
+  {
+    const { promiseDue, promiseRemindText, promiseAdd, promiseDone, promiseDoneText } = await import('./_build/_wa.mjs');
+    const T0 = Date.parse('2026-10-21T08:00:00Z');
+    let l = promiseAdd('[]', { agent: 'routine-wa-assistant', text: 'the six labels', who: 'dev' }, new Date(T0).toISOString()).list;
+    check('promise: not due before 24 hours', promiseDue(JSON.stringify(l), T0 + 23 * 3600e3, 11).length === 0);
+    check('promise: due after 24 hours, in daytime only', promiseDue(JSON.stringify(l), T0 + 25 * 3600e3, 11).length === 1 && promiseDue(JSON.stringify(l), T0 + 25 * 3600e3, 22).length === 0 && promiseDue(JSON.stringify(l), T0 + 25 * 3600e3, 7).length === 0);
+    l[0].reminded_at = 'x';
+    check('promise: reminded once only', promiseDue(JSON.stringify(l), T0 + 48 * 3600e3, 11).length === 0);
+    check('promise: the reminder says what and who it waits on', /the six labels \(\u05de\u05d7\u05db\u05d4 \u05dcdev\)/.test(promiseRemindText(l)));
+    const d = promiseDone(JSON.stringify(l), { id: l[0].id }, 'fixed', 'now');
+    check('promise_done text: done, what, note', promiseDoneText(d.closed, 'fixed') === '\u05d1\u05d5\u05e6\u05e2: the six labels. fixed' && d.list[0].status === 'done');
+    check('promise text: internal ids cut, long dash made keyboard', promiseAdd('[]', { agent: 'a-b', text: 'x \u2014 y dev-20261021075805-mq3v' }, 'now').list[0].text === 'x - y');
+  }
+
   // 20/10/2026: the watchdog for a stuck run
   {
     const T = Date.parse('2026-10-20T18:00:00Z'), last = { ts: '2026-10-20T18:00:00Z', payload: { wamid: 'w1' } };
