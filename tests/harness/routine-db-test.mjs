@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession } from './_build/routine-db.mjs';
+import { sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -13,6 +13,7 @@ const ENV = { ROUTINE_KEY: 'k-123', SUPABASE_SERVICE_ROLE_KEY: 'srv' };
 let calls = [], state = {}, fires = [], fireSession = 'cse_01POSTMAN';
 let ghCalls = [], mediaMeta = null;
 globalThis.fetch = async (url, opt = {}) => {
+  if (String(url).startsWith('https://www.nevo.co.il/law_html/')) { const b = new TextEncoder().encode('<html><head><meta charset="utf-8"><script>x()</script></head><body><p>75. (\u05d0) \u05dc\u05e4\u05d7\u05d5\u05ea \u05d0\u05d7\u05ea \u05dc\u05e9\u05e9\u05d4 \u05d7\u05d3\u05e9\u05d9\u05dd</p></body></html>'); const res = new Response(b, { status: 200, headers: { 'content-type': 'text/html' } }); Object.defineProperty(res, 'url', { value: String(url) }); return res; }
   if (String(url).startsWith('https://graph.facebook.com/v25.0/90000001')) return new Response(JSON.stringify(mediaMeta), { status: 200 });
   if (String(url).startsWith('https://lookaside.fbsbx.com/') || String(url).startsWith('https://evil.example/')) return new Response(new Uint8Array([0xff, 0xd8, 0xff, 0x01]), { status: 200 });
   if (String(url).startsWith('https://api.github.com/repos/mishaf1988-lgtm/michael-skills/contents/')) { ghCalls.push({ url: String(url), auth: (opt.headers || {}).Authorization }); return new Response('# law\nsection 81: 14 months', { status: 200 }); }
@@ -531,6 +532,14 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('skill_read: the exam is refused, nothing fetched', x.status === 400 && ghCalls.length === 1);
     x = await call({ op: 'skill_read', path: 'SKILL.md' });
     check('skill_read without the token: a clear error', x.json.ok === false && /GH_SKILLS_TOKEN/.test(x.json.error));
+  }
+  // 21/10/2026: Nevo and gov.il read from the server for the assistant
+  {
+    check('source_read: only https nevo.co.il / gov.il', !!sourceUrl('https://www.nevo.co.il/law_html/law00/74793.htm') && !!sourceUrl('https://www.gov.il/he/service/x') && !sourceUrl('http://www.nevo.co.il/x') && !sourceUrl('https://nevo.co.il.evil.com/x') && !sourceUrl('https://evil.com/?nevo.co.il') && !sourceUrl('https://user@gov.il/x'));
+    check('htmlText: scripts out, text and lines kept', htmlText('<script>bad()</script><p>a&amp;b</p><p>c</p>') === 'a&b\nc');
+    const x = await call({ op: 'source_read', url: 'https://www.nevo.co.il/law_html/law00/74793.htm' });
+    check('source_read: the page text, word for word', x.json.ok && /75\. \(\u05d0\) \u05dc\u05e4\u05d7\u05d5\u05ea \u05d0\u05d7\u05ea \u05dc\u05e9\u05e9\u05d4/.test(x.json.text) && !/x\(\)/.test(x.json.text), x.json);
+    check('source_read: another site refused', (await call({ op: 'source_read', url: 'https://example.com/' })).status === 400);
   }
   // 21/10/2026: a photo Michael sent on WhatsApp reaches the assistant
   {
