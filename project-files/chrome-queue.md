@@ -31,7 +31,12 @@
 
 - [ ] **C32. להוסיף את ה-repo ל-Routine של הפיתוח המיידי** (21/10/2026, ניסוי 4 של מיכאל: הקוד נבנה, ה-push נחסם כי tfugen-safety לא במקורות של `trig_0114iVUybrBb6vRqZt1EyoyL`). טקסט להדבקה בכרום:
   ```
-  משימה: להוסיף מאגר ל-Routine. לא לשנות שום הגדרה אחרת. https://claude.ai/code/routines/trig_0114iVUybrBb6vRqZt1EyoyL > Edit > Repositories (או Select repository) > להוסיף את mishaf1988-lgtm/tfugen-safety > Save. בסוף: דוח קצר, מה רשום עכשיו תחת Repositories.
+  משימה: לחבר מאגר GitHub ל-Routine "פיתוח מיידי: בקשה מהעוזר". לא לשנות את ההוראות (Instructions), את המודל, את הטריגר או שום הגדרה אחרת. לא למחוק כלום. אם משהו לא נראה כמו שכתוב, לעצור ולתאר מה רואים.
+  1. לפתוח https://claude.ai/code/routines/trig_0114iVUybrBb6vRqZt1EyoyL וללחוץ Edit.
+  2. מתחת לתיבת ההוראות, משמאל ל-Default, ללחוץ "Select a repository". להשאיר את החיפוש ריק ולחכות שהרשימה תיטען.
+  3. לבחור mishaf1988-lgtm/tfugen-safety ולשמור (Save).
+  4. אם הרשימה ריקה ("No repositories found"): לא לשמור. לפתוח בלשונית חדשה https://claude.ai/code, לבדוק אם בבחירת מאגר לשיחה חדשה (בלי לפתוח שיחה) מופיע tfugen-safety, ואם יש שם כפתור לחיבור GitHub, ללחוץ עליו ולאשר. לחזור לצעד 1.
+  5. בסוף: דוח קצר, מה רשום עכשיו ליד "Select a repository" ב-Routine, ואם צעד 4 היה נחוץ, מה ראית שם.
   ```
   אחרי הביצוע: Claude בודק ב-`get_trigger` ש-`sources` מכיל את ה-repo, ובבקשה הבאה ב-`list_events` שה-push עבר ושה-hooks נטענו.
 
