@@ -103,6 +103,36 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     check('promise text: internal ids cut, long dash made keyboard', promiseAdd('[]', { agent: 'a-b', text: 'x \u2014 y dev-20261021075805-mq3v' }, 'now').list[0].text === 'x - y');
   }
 
+  // 21/10/2026 (the assistant's list, item 3): a check it scheduled wakes it at that time, from the watchdog
+  {
+    const { promiseAdd, promiseCheckDue, promiseCheckFireText, PROMISE_CHECK_HEAD, PROMISE_CHECKS_MAX } = await import('./_build/_wa.mjs');
+    const N = '2026-10-21T08:00:00.000Z', NM = Date.parse(N);
+    const a = promiseAdd('[]', { agent: 'routine-wa-assistant', text: 'the merged PDF', who: 'docs', check_in_min: 30, check: 'the chat row has an answer' }, N);
+    check('check: check_at 30 minutes on, what to check kept', a.list[0].check_at === '2026-10-21T08:30:00.000Z' && a.list[0].check === 'the chat row has an answer' && a.check_at === a.list[0].check_at, a);
+    check('check: under 10 minutes or over 2 days refused', !!promiseAdd('[]', { agent: 'a-b', text: 'abcdef', check_in_min: 5 }, N).error && !!promiseAdd('[]', { agent: 'a-b', text: 'abcdef', check_in_min: 3000 }, N).error);
+    check('check: none without check_in_min', !promiseAdd('[]', { agent: 'a-b', text: 'abcdef' }, N).list[0].check_at);
+    const L = JSON.stringify(a.list);
+    check('check: not due before its time, due after, daytime only (07-21 Israel)', !promiseCheckDue(L, NM + 29 * 60e3, 11) && (promiseCheckDue(L, NM + 31 * 60e3, 11) || {}).id === a.id && !promiseCheckDue(L, NM + 31 * 60e3, 22) && !promiseCheckDue(L, NM + 31 * 60e3, 6));
+    const again = promiseAdd(L, { agent: 'routine-wa-assistant', text: 'the merged PDF', check_in_min: 60 }, '2026-10-21T09:00:00.000Z');
+    check('check: the same promise again sets the next check, no second promise', again.list.length === 1 && again.list[0].check_at === '2026-10-21T10:00:00.000Z' && again.id === a.id);
+    const maxed = JSON.parse(L); maxed[0].checks = PROMISE_CHECKS_MAX;
+    check('check: after ' + PROMISE_CHECKS_MAX + ' checks no more (tell Michael instead)', !!promiseAdd(JSON.stringify(maxed), { agent: 'routine-wa-assistant', text: 'the merged PDF', check_in_min: 30 }, N).error);
+    const ft = promiseCheckFireText(Object.assign({}, a.list[0], { checks: 1 }), N);
+    check('check: the fire text opens with the server line, carries the promise, what to check and who', ft.split('\n')[0] === PROMISE_CHECK_HEAD && ft.indexOf('promise: ' + a.id) >= 0 && /waiting_on: docs/.test(ft) && /check \(.*\): the chat row has an answer/.test(ft) && /check_no: 1 of 6/.test(ft), ft);
+    // end to end: watch fires the assistant once, marks it, logs it
+    const fires = [], f0 = globalThis.fetch;
+    globalThis.fetch = async (url, opt = {}) => { if (String(url).startsWith('https://api.anthropic.com/')) { fires.push(JSON.parse(opt.body)); return new Response(JSON.stringify({ claude_code_session_id: 'session_X1' }), { status: 200 }); } return f0(url, opt); };
+    state = { promises: L }; logs = [];
+    const E = Object.assign({}, ENV, { ASSISTANT_FIRE_URL: 'https://api.anthropic.com/v1/claude_code/routines/trig_T/fire', ASSISTANT_FIRE_TOKEN: 't' });
+    const w1 = await run(E, new Date(NM + 31 * 60e3), { watch: true });
+    const st = JSON.parse(state.promises)[0];
+    check('watch: the due check fires the assistant with its text', fires.length === 1 && fires[0].text.split('\n')[0] === PROMISE_CHECK_HEAD && w1.check && w1.check.fired, { fires, w1 });
+    check('watch: marked (checks 1, no check_at), logged as promise_check with the session', st.checks === 1 && !st.check_at && logs.some((l) => l.event_type === 'promise_check' && l.payload.session === 'session_X1'), { st, logs });
+    await run(E, new Date(NM + 36 * 60e3), { watch: true });
+    check('watch: not fired twice', fires.length === 1);
+    globalThis.fetch = f0; state = {}; logs = [];
+  }
+
   // 20/10/2026: the watchdog for a stuck run
   {
     const T = Date.parse('2026-10-20T18:00:00Z'), last = { ts: '2026-10-20T18:00:00Z', payload: { wamid: 'w1' } };

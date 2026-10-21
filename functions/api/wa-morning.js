@@ -19,7 +19,7 @@
 //   body {watch: true}  the watchdog for a stuck run, every 5 minutes (watchVerdict)
 // The same run writes calendar requests for upcoming expiries (calendarStep, below).
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
-import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, PROMISE_KEY, promiseDue, promiseRemindText } from '../_wa.js';
+import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, PROMISE_KEY, promiseDue, promiseRemindText, promiseCheckDue, promiseCheckFireText, assistantFire } from '../_wa.js';
 import { odConfigured, accessToken, putFile } from '../_onedrive.js';
 
 export const LAST_KEY = 'wa_morning_last';
@@ -261,10 +261,33 @@ async function promiseRemind(env, now) {
       event_type: 'promise', channel: r.ok ? 'whatsapp' : 'whatsapp_error', payload: { title: clip(text, 120), kind: 'promise', detail: r.error || null } }]) }).catch(() => {});
   return { reminded: ids.length, sent: r.ok };
 }
+// 21/10/2026: a check the assistant scheduled (promise check_in_min): wake it now, one per call. The mark is
+// written before the fire, so a slow fire is never fired twice; a failed fire is logged and not retried.
+export async function promiseCheck(env, now) {
+  const raw = await stateGet(env, PROMISE_KEY);
+  const p = promiseCheckDue(raw, now.getTime(), ilHour(now));
+  const af = p && assistantFire(env);
+  if (!af) return null;
+  let list = []; try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
+  const e = list.find((x) => x && x.id === p.id);
+  if (!e) return null;
+  e.checks = (e.checks || 0) + 1; e.checked_at = now.toISOString(); delete e.check_at;
+  await stateSet(env, PROMISE_KEY, JSON.stringify(list));
+  const fr = await fetch(af.url, { method: 'POST', signal: tmo(20000),
+    headers: { Authorization: 'Bearer ' + af.token, 'anthropic-beta': 'experimental-cc-routine-2026-04-01', 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: promiseCheckFireText(e, now.toISOString()) }) }).catch(() => null);
+  const fj = fr && fr.ok ? await fr.json().catch(() => null) : null;
+  await sb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify([{ id: 'wc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
+      event_type: 'promise_check', channel: fr && fr.ok ? 'routine' : 'routine_error',
+      payload: { title: clip(e.text, 120), kind: 'promise_check', ref: e.id, check_no: e.checks, status: fr ? fr.status : 'network', session: (fj && fj.claude_code_session_id) || null } }]) }).catch(() => {});
+  return { id: e.id, fired: !!(fr && fr.ok) };
+}
 export async function watch(env, now) {
+  const pc = await promiseCheck(env, now).catch(() => null);
   const pr = await promiseRemind(env, now).catch(() => null);
   const r = await watchReply(env, now);
-  return pr ? Object.assign({}, r, { promises: pr }) : r;
+  return Object.assign({}, r, pr ? { promises: pr } : {}, pc ? { check: pc } : {});
 }
 async function watchReply(env, now) {
   const rows = await sb(env, 'notifications_log?select=ts,payload&event_type=eq.owner_in&order=ts.desc&limit=1').catch(() => []);
