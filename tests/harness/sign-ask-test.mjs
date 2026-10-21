@@ -1,7 +1,7 @@
 // Michael's own "sign in my name on <file>" read by the server (21/10/2026, wa-hook signAskOf / signPick /
 // fastRoute): the assistant's sign_request was stopped by the cloud permission check, so the server finds the PDF
 // in the safety folder and asks him itself. Pure parts only; the search and routine-db are covered elsewhere.
-import { signAskOf, signPick, signAskManyText, fastRoute } from './_build/wa-hook.mjs';
+import { signAskOf, signPick, signAskManyText, fastRoute, recentPdfs, signPickOf, signPickChoices, signPickText } from './_build/wa-hook.mjs';
 import { OD_ROOT } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
@@ -24,5 +24,12 @@ const skip = signPick([item('x', 'f - חתום.pdf'), item('x', 'f.docx'), { nam
 check('a signed copy, a non-PDF and a file outside the safety folder are never offered', skip.length === 0, skip);
 check('a PDF at the root of the safety folder (no subfolder) is not offered (sign_request needs a folder)', signPick([item('', 'r.pdf')], 'r').length === 0);
 
+const at = (dir, name, d) => Object.assign(item(dir, name), { lastModifiedDateTime: d });
+const rec = recentPdfs([at('a', 'old.pdf', '2026-01-01T00:00:00Z'), at('b', 'new.pdf', '2026-10-20T00:00:00Z'), at('c', 'mid.pdf', '2026-05-01T00:00:00Z'), at('d', 'x.docx', '2026-10-21T00:00:00Z'), at('e', 'mid2.pdf', '2026-04-01T00:00:00Z')], 3);
+check('nothing matched: the 3 newest PDFs, newest first, no other files', rec.map((x) => x.name).join() === 'new.pdf,mid.pdf,mid2.pdf', rec);
+check('buttons: the names without .pdf, short (choicesPayload adds the numbers)', signPickChoices(rec).join() === 'new,mid,mid2' && signPickChoices([{ name: 'a'.repeat(40) + '.pdf' }])[0].length <= 16 && /\n1\. b\/new\.pdf/.test(signPickText(rec, true)));
+check('a tap on the pick message picks (button or typed digit)', signPickOf({ choice: 2 }, { ref: 'signpick' }) === 2 && signPickOf({ text: '3. mid' }, { ref: 'signpick' }) === 3);
+check('the same digit after any other message is not a pick', signPickOf({ text: '1' }, { ref: 'brief' }) === null && signPickOf({ text: '1' }, null) === null);
+check('fastRoute routes the tap as sign_pick', (fastRoute({ text: '1' }, '', { ref: 'signpick' }) || {}).kind === 'sign_pick');
 console.log('\nsign-ask-test: ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
