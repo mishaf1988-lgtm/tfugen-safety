@@ -115,7 +115,7 @@ import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SI
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
 import { SIGN_KEY, SIGN_CHOICES, signAdd, signAskText } from '../_sign.js';
-import { ownerWa, sendToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, fireUrlOf, sameSession } from '../_wa.js';
+import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, fireUrlOf, sameSession } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks'];
@@ -1138,7 +1138,15 @@ export async function onRequest(context) {
         body: JSON.stringify([{ key: SIGN_KEY, value: JSON.stringify(r.list), updated_at: now }]), signal: tmo(SB_MS) });
       if (!w.ok) return jsonResp({ ok: false, error: 'save ' + w.status }, 200, {});
       const text = signAskText(c.name, c.folder), ref = 'sign:' + r.id;
-      const s = await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, url), choices: SIGN_CHOICES });
+      const win = await ownerWindowOpen(env, url);
+      // 21/10/2026 (Michael: "with the request, the form itself"): the document goes first, so the question with
+      // the buttons stays his last message (its ref is what "1" answers). A failed document leaves the question as is.
+      let doc = null;
+      try {
+        const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(c.path) + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) });
+        doc = d.ok ? await sendDocToOwner(env, to, new Uint8Array(await d.arrayBuffer()), c.name, '', win) : { ok: false, error: 'read ' + d.status };
+      } catch (x) { doc = { ok: false, error: 'document' }; }
+      const s = await sendToOwner(env, to, text, { windowOpen: win, choices: SIGN_CHOICES });
       if (s.ok) await noteLastOut(env, url, text, ref);
       try {
         await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
@@ -1146,7 +1154,7 @@ export async function onRequest(context) {
             event_type: 'assistant', channel: s.ok ? 'whatsapp' : 'whatsapp_error',
             payload: { title: text.replace(/\s+/g, ' ').slice(0, 120), text, via: s.via || null, wamid: s.wamid || null, ref, detail: s.error || null } }]) });
       } catch (e) { /* the question went out; a missing log line is not a failure */ }
-      return jsonResp({ ok: s.ok, id: r.id, created: true, sent: s.ok, via: s.via || null, error: s.error || undefined }, 200, {});
+      return jsonResp({ ok: s.ok, id: r.id, created: true, sent: s.ok, via: s.via || null, doc: doc && doc.ok ? 'sent' : (doc && doc.error) || null, error: s.error || undefined }, 200, {});
     }
     if (body.op === 'od_mkdir') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'parent', 'name'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});

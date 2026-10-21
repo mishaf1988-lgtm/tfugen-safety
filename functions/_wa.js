@@ -237,6 +237,29 @@ export async function metaPost(env, payload) {
   return { ok: r.ok, status: r.status, parsed };
 }
 
+// 21/10/2026 (Michael, on the signature: "can he also send me the form on WhatsApp with the request?", and in
+// the questionnaire "do it: both"): a PDF to Michael as a WhatsApp document. Meta takes the file as an upload
+// (POST /media) and the message refers to its id. Only inside the 24-hour window (a document is not a template);
+// outside it, nothing is sent and the caller keeps the text. Never to anyone but the owner number.
+export const DOC_MAX = 15 * 1024 * 1024;
+export async function sendDocToOwner(env, to, bytes, filename, caption, windowOpen) {
+  if (windowOpen === false) return { ok: false, error: 'window closed' };
+  if (!bytes || !bytes.length || bytes.length > DOC_MAX) return { ok: false, error: 'size' };
+  const name = String(filename || 'file.pdf').slice(0, 200);
+  const fd = new FormData();
+  fd.append('messaging_product', 'whatsapp');
+  fd.append('type', 'application/pdf');
+  fd.append('file', new Blob([bytes], { type: 'application/pdf' }), name);
+  const up = await fetch(`https://graph.facebook.com/${META_API_VERSION}/${env.META_PHONE_NUMBER_ID}/media`, {
+    method: 'POST', headers: { Authorization: 'Bearer ' + env.META_ACCESS_TOKEN }, body: fd, signal: tmo(30000),
+  }).catch(() => null);
+  const uj = up ? await up.json().catch(() => ({})) : {};
+  if (!up || !up.ok || !uj.id) return { ok: false, error: 'upload ' + (up ? up.status : 'network') };
+  const r = await metaPost(env, { messaging_product: 'whatsapp', to, type: 'document',
+    document: { id: uj.id, filename: name, caption: String(caption || '').slice(0, 1000) || undefined } });
+  return r.ok ? { ok: true, via: 'document' } : { ok: false, error: 'send ' + r.status };
+}
+
 // 20/10/2026 (the first morning update: Meta answered 200 to the free text and dropped it later,
 // since Michael had not written for more than 24 hours; Meta tells that only to the webhook).
 // wa-hook keeps when Michael last wrote, and free text goes out only inside the window.
