@@ -1317,7 +1317,8 @@ export async function onRequest(context) {
       const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
         body: JSON.stringify([{ key: SIGN_KEY, value: JSON.stringify(r.list), updated_at: now }]), signal: tmo(SB_MS) });
       if (!w.ok) return jsonResp({ ok: false, error: 'save ' + w.status }, 200, {});
-      const text = signAskText(c.name, c.folder, spot), ref = 'sign:' + r.id;
+      // 22/10/2026 18:36: a spot Michael approved was used, and the question still said "no signature place found".
+      const text = signAskText(c.name, c.folder, spot || (c.page !== undefined ? { page: c.page, set: true } : null)), ref = 'sign:' + r.id;
       const win = await ownerWindowOpen(env, url);
       // 21/10/2026 (Michael: "with the request, the form itself"): the document goes first, so the question with
       // the buttons stays his last message (its ref is what "1" answers). A failed document leaves the question as is.

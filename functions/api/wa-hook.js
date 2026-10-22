@@ -335,7 +335,7 @@ export function signReplyOf(m, prev) {
   if (!prev || prev.ref !== 'signmail') return null;
   const c = m && m.choice !== undefined && m.choice !== null ? String(m.choice) : '';
   const t = String((m && m.text) || '').trim();
-  return c === '2' || /^2(\.|\s|$)/.test(t) || (t.length <= 60 && /\u05d4\u05e9\u05d1|\u05dc\u05e9\u05d5\u05dc\u05d7|\u05ea\u05e2\u05e0\u05d4|\u05ea\u05e9\u05d9\u05d1/.test(t)) ? true : null;
+  return c === '2' || /^2(\.|\s|$)/.test(t) || (t.length <= 60 && /\u05d4\u05e9\u05d1|\u05dc\u05e9\u05d5\u05dc\u05d7|\u05ea\u05e2\u05e0\u05d4|\u05ea\u05e9\u05d9\u05d1|\u05ea\u05d2\u05d5\u05d1\u05d4|\u05e9\u05e9\u05dc\u05d7|\u05d4\u05e9\u05d5\u05dc\u05d7/.test(t)) ? true : null;
 }
 // the task the assistant gets instead of the tap. Pure.
 export function signReplyTask(st) {
