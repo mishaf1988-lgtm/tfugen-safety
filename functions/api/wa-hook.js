@@ -204,6 +204,7 @@ export function signAskManyText(list) {
 }
 // Search the safety folder, then ask through routine-db sign_request (its own checks: folder, PDF, not protected).
 // Returns { sent } when the document and the question went out, or { text } to answer instead.
+export const LEARNED_MAX = 8000;
 export const SIGN_PICK_KEY = 'sign_pick', SIGN_PICK_MS = 3600e3;
 // The candidates go out as buttons; a tap ("1") on that very message asks for the one picked (sign_pick, 1 hour).
 export function signPickText(list, none) {
@@ -540,7 +541,10 @@ async function handle(env, raw) {
     const recent = rr ? recentLine(rr, m.id, Date.now()) : '';
     seen.recent = recent ? recent.split(' || ').length : 0;
     try { snap = g ? buildBrief(g.items, g.failed, g.today, true, g.notes, g.weather) : null; } catch (e) { snap = null; }
-    learned = lr && lr[0] ? learnedLine(lr[0].value, 1200) : '';
+    // 22/10/2026 (Michael: "there is a mail with the inspection, how did you miss it"): at 1200 characters the 49 open
+    // entries were cut to the newest few, and "the lifting inspection is set for 25/10" (21/10) never reached the
+    // assistant, which then listed it as waiting. LEARNED_MAX keeps the open notebook whole until the retro folds it.
+    learned = lr && lr[0] ? learnedLine(lr[0].value, LEARNED_MAX) : '';
     seen.snap = !!snap; seen.learned = learned ? learned.split(' / ').length : 0; seen.pre_fire_ms = Date.now() - t0;
     await note(env, Object.assign({ stage: 'firing' }, seen));
     const text = fireText(m, about, prev, snap, learned, recent);
