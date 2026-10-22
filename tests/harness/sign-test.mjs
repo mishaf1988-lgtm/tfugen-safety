@@ -98,6 +98,7 @@ function mockFetch(opts) {
     if (method === 'PUT') return new Response(JSON.stringify({ webUrl: 'https://x/y', size: 1 }), { status: 201 });
     if (/:\/content$/.test(s)) return new Response(opts.notPdf ? new Uint8Array([1, 2, 3, 4, 5, 6]) : srcBytes, { status: 200 });
     if (s.indexOf(encodeURIComponent('מכתב מינוי - חתום.pdf') + '?select=id') > 0) return new Response(opts.taken ? '{"id":"1"}' : '{}', { status: opts.taken ? 200 : 404 });
+    if (/%D7%97%D7%AA%D7%95%D7%9D%20[2-5]\.pdf\?select=id/.test(s)) return new Response(opts.takenAll ? '{"id":"1"}' : '{}', { status: opts.takenAll ? 200 : 404 });
     return new Response('{}', { status: 500 });
   };
   return { f, calls };
@@ -111,7 +112,10 @@ check('no write to the original path', !mk.calls.some((x) => x.method !== 'GET' 
 check('no DELETE and no PATCH at all', !mk.calls.some((x) => x.method === 'DELETE' || x.method === 'PATCH'));
 mk = mockFetch({ taken: true }); globalThis.fetch = mk.f;
 r = await signRun(env, 'https://sb', 'tok', req, ms0);
-check('a signed copy already there = not signed, nothing written', !r.ok && r.error === 'signed file exists' && !mk.calls.some((x) => x.method === 'PUT'));
+check('a signed copy already there (22/10/2026): kept, the new one is "- \u05d7\u05ea\u05d5\u05dd 2.pdf"', r.ok && r.name === 'מכתב מינוי - חתום 2.pdf' && mk.calls.filter((x) => x.method === 'PUT').length === 1 && mk.calls.filter((x) => x.method === 'PUT')[0].u.indexOf(encodeURIComponent('מכתב מינוי - חתום 2.pdf') + ':/content?@microsoft.graph.conflictBehavior=fail') > 0, r);
+mk = mockFetch({ taken: true, takenAll: true }); globalThis.fetch = mk.f;
+r = await signRun(env, 'https://sb', 'tok', req, ms0);
+check('five signed copies already there = not signed, nothing written', !r.ok && r.error === 'signed file exists' && !mk.calls.some((x) => x.method === 'PUT'));
 mk = mockFetch({ noSig: true }); globalThis.fetch = mk.f;
 r = await signRun(env, 'https://sb', 'tok', req, ms0);
 check('no signature image in the bucket = not signed, nothing written', !r.ok && r.error === 'no signature image' && !mk.calls.some((x) => x.method === 'PUT'));
