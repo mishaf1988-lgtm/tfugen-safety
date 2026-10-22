@@ -342,6 +342,15 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
     const r = await rdb({ request: new Request('https://x/api/routine-db', { method: 'POST', headers: { 'x-routine-key': 'k-1', 'content-type': 'application/json' }, body: JSON.stringify({ op: 'wa_me', text: 'AD3659758' }) }), env: ENV });
     check('wa_me with a passport number: 400, nothing sent', r.status === 400, r.status);
   }
+  { // 22/10/2026 (lesson 75 recurred): the open notebook reaches the assistant whole, and a "what waits for you" list is checked in mail
+    const { LEARNED_MAX } = await import('./_build/wa-hook.mjs');
+    const { learnedLine } = await import('./_build/_wa.mjs');
+    const many = Array.from({ length: 49 }, (_, i) => ({ id: 'l' + i, at: '2026-10-' + String(10 + (i % 12)).padStart(2, '0') + 'T08:00:00Z', kind: 'fact', status: 'new', text: 'עובדה ' + i + ' ' + 'x'.repeat(100) }));
+    many.push({ id: 'old', at: '2026-10-01T08:00:00Z', kind: 'preference', status: 'new', text: 'אביזרי הרמה מתואמים 25/10' });
+    check('the notebook as on 22/10 (50 open entries) reaches the assistant whole, the oldest included', learnedLine(JSON.stringify(many), LEARNED_MAX).includes('25/10') && LEARNED_MAX >= 6000);
+    const md = fs.readFileSync(new URL('../../project-files/routine-wa-assistant.md', import.meta.url), 'utf8');
+    check('the prompt: a "what waits for you" list is not answered from the snapshot alone (mail first, all folders)', md.includes('חוץ מרשימה של מה שמחכה לו') && md.includes('בכל התיקיות ולא רק Sent Items'));
+  }
   console.log('\nwa-assistant-test: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })();
