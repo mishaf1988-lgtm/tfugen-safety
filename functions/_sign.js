@@ -148,9 +148,17 @@ export async function signRun(env, sbUrl, token, req, nowMs) {
   const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
   const enc = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
   const gh = { Authorization: 'Bearer ' + token };
-  const dir = req.path.split('/').slice(0, -1).join('/'), out = signedName(req.name);
-  const taken = await fetch(G + enc(dir + '/' + out) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
-  if (taken.status !== 404) return { ok: false, error: taken.ok ? 'signed file exists' : 'name check ' + taken.status };
+  const dir = req.path.split('/').slice(0, -1).join('/');
+  // 22/10/2026 (Michael: "the place of the signature is not good", then a second signature at the right line): a
+  // signed copy already there is kept, and the new one gets the next free name ("- \u05d7\u05ea\u05d5\u05dd 2.pdf", up to 5).
+  let out = null;
+  for (let n = 1; n <= 5 && !out; n++) {
+    const name = n === 1 ? signedName(req.name) : signedName(req.name).replace(/\.pdf$/i, ' ' + n + '.pdf');
+    const taken = await fetch(G + enc(dir + '/' + name) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
+    if (taken.status === 404) out = name;
+    else if (!taken.ok) return { ok: false, error: 'name check ' + taken.status };
+  }
+  if (!out) return { ok: false, error: 'signed file exists' };
   const src = await fetch(G + enc(req.path) + ':/content', { headers: gh, signal: tmo(FILE_MS) });
   if (!src.ok) return { ok: false, error: 'read ' + src.status };
   const pdf = new Uint8Array(await src.arrayBuffer());
