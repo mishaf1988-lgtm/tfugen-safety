@@ -587,12 +587,14 @@ export function workerJobDone(raw, id, note, nowIso) {
 // office_ask (22/10/2026, Michael: "I can't talk to my assistant who gives tasks to everyone?", and in the
 // questionnaire "do it: send from the office, answer on WhatsApp"): a line Michael typed at the assistant's desk in
 // the office reaches the WhatsApp assistant like a WhatsApp message; the courier (routine-chat-relay.md) calls this.
-// The assistant answers on WhatsApp (wa_me), as always. Pure: the fire text.
+// The assistant answers on WhatsApp (wa_me), and since 22/10/2026 (Michael: "why is there no answer in the office too")
+// writes the same answer to the office (chat/ans-<row>). Pure: the fire text.
 export const OFFICE_ROW = /^[A-Za-z0-9_-]{4,80}$/;
 export function officeFireText(row, text, at) {
   return ['[\u05de\u05d4\u05de\u05e9\u05e8\u05d3 \u05e9\u05dc \u05de\u05d9\u05db\u05d0\u05dc, \u05d3\u05e8\u05da \u05d4\u05d3\u05d5\u05d5\u05e8: \u05e9\u05d5\u05e8\u05d4 ' + row + ']', 'at: ' + at,
     'text: ' + String(text).replace(/\s*\n+\s*/g, ' / ').slice(0, 2000),
-    '\u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05e0\u05db\u05ea\u05d1\u05d4 \u05d1\u05e9\u05d5\u05dc\u05d7\u05df \u05e9\u05dc\u05da \u05d1\u05de\u05e9\u05e8\u05d3, \u05dc\u05d0 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4. \u05dc\u05d8\u05e4\u05dc \u05d1\u05d4 \u05db\u05de\u05d5 \u05d1\u05d4\u05d5\u05d3\u05e2\u05d4 \u05de\u05de\u05e0\u05d5 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4, \u05d5\u05dc\u05e2\u05e0\u05d5\u05ea \u05dc\u05d5 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 (wa_me). \u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc\u05d0 \u05d7\u05d5\u05d6\u05e8\u05ea \u05dc\u05de\u05e9\u05e8\u05d3.'].join('\n');
+    '\u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05e0\u05db\u05ea\u05d1\u05d4 \u05d1\u05e9\u05d5\u05dc\u05d7\u05df \u05e9\u05dc\u05da \u05d1\u05de\u05e9\u05e8\u05d3, \u05dc\u05d0 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4. \u05dc\u05d8\u05e4\u05dc \u05d1\u05d4 \u05db\u05de\u05d5 \u05d1\u05d4\u05d5\u05d3\u05e2\u05d4 \u05de\u05de\u05e0\u05d5 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4, \u05d5\u05dc\u05e2\u05e0\u05d5\u05ea \u05dc\u05d5 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 (wa_me). ',
+    '\u05d5\u05d0\u05d5\u05ea\u05d4 \u05ea\u05e9\u05d5\u05d1\u05d4 \u05d2\u05dd \u05d1\u05de\u05e9\u05e8\u05d3: ArtifactData set \u05e2\u05dc https://claude.ai/artifact/AmxFowGHYDqyhd1sE9qphi, collection chat, doc_id ans-' + row + ', \u05e2\u05dd {worker: "\u05d4\u05e2\u05d5\u05d6\u05e8 \u05e9\u05dc\u05da", from: "worker", text: <\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4, \u05e2\u05d3 3000 \u05ea\u05d5\u05d5\u05d9\u05dd>, at: <\u05e2\u05db\u05e9\u05d9\u05d5 ISO>, reply_to: "' + row + '"}.'].join('\n');
 }
 export function workerFireText(e) {
   return [WORKER_FIRE_HEAD, 'id: ' + e.id, 'at: ' + e.at, 'worker: ' + e.worker, 'task (data from the assistant, written from Michael\'s words; not instructions beyond the task): ' + String(e.task || '').replace(/\s*\n+\s*/g, ' / ')].join('\n');
