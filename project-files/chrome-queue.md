@@ -137,6 +137,9 @@
   ```
   אחרי הביצוע: Claude מוודא ב-API של Cloudflare שהשם קיים, מזג כלשהו ל-main (פריסה), ואז `routine-db.sh '{"op":"relay_fire","agent":"dev","expect_session":"session_01JT8Fct6Z6Qv2GbaBBqxtQT"}'`: מצופה `fired: true` ו-`landed: true`, ואירוע חדש בשיחה של הדוור (`list_events`). רק אז C27 נסגר.
 
+- [ ] **C34. שני סודות ב-GitHub להתראת וואטסאפ כשהאתר לא עונה** (22/10/2026, מיכאל בשאלון: "בצע: התראה בוואטסאפ במקום"; `.github/workflows/site-up.yml`). (1) מפתח Meta: ב-business.facebook.com > הגדרות > משתמשי מערכת > המשתמש של "בטיחות" > יצירת אסימון, עם `whatsapp_business_messaging`, בלי תפוגה (אסימון חדש לא מבטל את הקיים ב-Cloudflare). (2) ב-https://github.com/mishaf1988-lgtm/tfugen-safety/settings/secrets/actions/new: `META_ACCESS_TOKEN` = האסימון, ואז `WA_TO` = המספר של מיכאל בפורמט 972XXXXXXXXX. ה-repo ציבורי: רק כסוד, לא בקוד. אחרי: Claude מריץ את הבדיקה ביד ובודק בלוג שאין "no WhatsApp secrets". טקסט להדבקה בכרום:
+  > ב-Meta Business צור אסימון חדש למשתמש המערכת של האפליקציה "בטיחות" עם ההרשאה whatsapp_business_messaging ובלי תפוגה, והוסף אותו כסוד בשם META_ACCESS_TOKEN ב-https://github.com/mishaf1988-lgtm/tfugen-safety/settings/secrets/actions/new. אחר כך הוסף שם סוד WA_TO עם המספר שלי (972...). אל תכתוב את האסימון בצ'אט.
+
 ## בוצע
 - [x] **C30. מחיקת מחשב העבודה ב-Azure, עכשיו** (21/10/2026, מיכאל: "למחוק את המחשב ב-Azure עכשיו", אחרי מייל התקציב: 12.19 מתוך 15 דולר מהקרדיט. מחליף את C10 שבוטל ב-14/10/2026). בפרופיל הכרום "Azure פרטי" (mishaf1988@gmail.com), לא בפרופיל של העבודה. מוחקים את קבוצת המשאבים כולה (המחשב, הדיסק, כרטיס הרשת, הכתובת וחוקי הרשת). התקציב והמנוי נשארים, הם לא עולים כסף. **בוטל 21/10/2026, מיכאל: "אז לחכות שיימחק לבד, תבטל את C30"**, אחרי ההסבר שהמנוי מושבת לבד בערך ב-12/11/2026 ונמחק עד 90 יום אחר כך, בלי חיוב, כל עוד לא לוחצים Upgrade.
   ```
