@@ -1,6 +1,6 @@
 // A PDF to Michael as a WhatsApp document (21/10/2026, _wa.js sendDocToOwner; the signature request sends the
 // form first, and the signed copy after "do it"). Meta is mocked: upload to /media, then a document message.
-import { sendDocToOwner, DOC_MAX } from './_build/_wa.mjs';
+import { sendDocToOwner, DOC_MAX, docMime, DOC_MIME } from './_build/_wa.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 300) : '')); } };
@@ -25,6 +25,7 @@ const pdf = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 1, 2, 3]);
   mediaOk = false;
   const f = await sendDocToOwner(ENV, '972501234567', pdf, 'x.pdf', '', true);
   check('a failed upload: no message', f.ok === false && calls.length === 1, { f, calls: calls.length });
-  console.log('\nwa-doc-test: ' + pass + ' passed, ' + fail + ' failed');
+  check('docMime: Word and Excel go out as themselves, anything else as PDF', docMime('a.DOCX') === DOC_MIME.docx && docMime('b.xlsx') === DOC_MIME.xlsx && docMime('c.pdf') === DOC_MIME.pdf && docMime('d') === DOC_MIME.pdf);
+console.log('\nwa-doc-test: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })();

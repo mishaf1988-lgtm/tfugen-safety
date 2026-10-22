@@ -153,6 +153,13 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
       const t = officeFireText('abc123XYZ', 'תבדוק\nמה עם טופס 16', '2026-10-22T05:00:00.000Z');
       check('office_ask: the head names the office and the row, the text is one line, the answer goes to WhatsApp', t.split('\n')[0].indexOf('מהמשרד של מיכאל') >= 0 && t.includes('abc123XYZ') && t.includes('text: תבדוק / מה') && t.includes('wa_me') && t.includes('doc_id ans-abc123XYZ') && t.includes('reply_to: "abc123XYZ"'), t);
       check('office_ask: a row id is a db id, not free text', OFFICE_ROW.test('k9Xz_12-ab') && !OFFICE_ROW.test('a b') && !OFFICE_ROW.test('x')); }
+    // wa_file (22/10/2026): the paths follow draftAttach; nothing is read or sent before they pass
+    { const before = calls.length;
+      check('wa_file: a path out of the safety folder, a .exe, or too many: 400', (await call({ op: 'wa_file', agent: 'routine-wa-assistant', paths: ['../x.pdf'] })).status === 400
+        && (await call({ op: 'wa_file', agent: 'routine-wa-assistant', paths: ['a/b.exe'] })).status === 400
+        && (await call({ op: 'wa_file', agent: 'routine-wa-assistant', paths: ['a/1.pdf', 'a/2.pdf', 'a/3.pdf', 'a/4.pdf', 'a/5.pdf', 'a/6.pdf'] })).status === 400);
+      check('wa_file: an unknown field (a recipient) is refused', (await call({ op: 'wa_file', agent: 'routine-wa-assistant', paths: ['a/b.pdf'], to: '972500000000' })).status === 400);
+      check('wa_file: nothing fetched for a refused call', calls.length === before, calls.slice(before)); }
     { const { workerJobAdd, workerJobDone, workerFireText, WORKERS, WORKER_FIRE_HEAD } = await import('./_build/routine-db.mjs');
       const now = '2026-10-21T16:00:00.000Z', task = '\u05dc\u05d1\u05d3\u05d5\u05e7 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05de\u05d0\u05dc\u05e2\u05d3';
       const a = workerJobAdd('[]', { agent: 'routine-wa-assistant', worker: WORKERS[2], task }, now);

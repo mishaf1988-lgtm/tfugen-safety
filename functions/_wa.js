@@ -242,14 +242,19 @@ export async function metaPost(env, payload) {
 // (POST /media) and the message refers to its id. Only inside the 24-hour window (a document is not a template);
 // outside it, nothing is sent and the caller keeps the text. Never to anyone but the owner number.
 export const DOC_MAX = 15 * 1024 * 1024;
+// mime (22/10/2026, wa_file): a Word or Excel file goes out as itself; the default stays PDF (the signing flow).
+export const DOC_MIME = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
+export function docMime(name) { const m = /\.([a-z0-9]+)$/i.exec(String(name || '')); return (m && DOC_MIME[m[1].toLowerCase()]) || DOC_MIME.pdf; }
 export async function sendDocToOwner(env, to, bytes, filename, caption, windowOpen) {
   if (windowOpen === false) return { ok: false, error: 'window closed' };
   if (!bytes || !bytes.length || bytes.length > DOC_MAX) return { ok: false, error: 'size' };
   const name = String(filename || 'file.pdf').slice(0, 200);
   const fd = new FormData();
   fd.append('messaging_product', 'whatsapp');
-  fd.append('type', 'application/pdf');
-  fd.append('file', new Blob([bytes], { type: 'application/pdf' }), name);
+  const mime = docMime(name);
+  fd.append('type', mime);
+  fd.append('file', new Blob([bytes], { type: mime }), name);
   const up = await fetch(`https://graph.facebook.com/${META_API_VERSION}/${env.META_PHONE_NUMBER_ID}/media`, {
     method: 'POST', headers: { Authorization: 'Bearer ' + env.META_ACCESS_TOKEN }, body: fd, signal: tmo(30000),
   }).catch(() => null);
