@@ -1,0 +1,36 @@
+name: "האתר לא עונה - Tapugan Safety"
+
+# 22/10/2026 (Michael: "and what happens if the site does not work", and in the questionnaire "do it: a check
+# from outside"). The watchdog in _watchdog.js runs inside the site, so a site that is down cannot report itself.
+# This runs on GitHub every 15 minutes. A failed run = GitHub mails the account that owns the schedule
+# (Michael's), with this workflow's name in the subject. No secret: the backup Worker has none that can send,
+# and GitHub's own failure mail needs none.
+#
+# What it calls: the country gate (functions/_middleware.js) refuses GitHub's servers, so only paths it lets
+# through from abroad: GET /api/wa-hook (machine path; without Meta's token the function itself answers 403
+# "forbidden", which proves the Functions run) and GET /logo.jpg (the static files). Three tries a minute apart
+# before failing, so one slow answer does not mail.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Site answers
+        run: |
+          site=https://tapugan-safety.pages.dev
+          for i in 1 2 3; do
+            fn=$(curl -s -m 20 -w ' %{http_code}' "$site/api/wa-hook" || true)
+            st=$(curl -s -o /dev/null -m 20 -w '%{http_code}' "$site/logo.jpg" || true)
+            echo "try $i: functions [$fn], static [$st]"
+            if [ "$fn" = "forbidden 403" ] && [ "$st" = "200" ]; then echo "site OK"; exit 0; fi
+            [ $i -lt 3 ] && sleep 60
+          done
+          echo "::error::tapugan-safety.pages.dev does not answer (functions [$fn], static [$st])"
+          exit 1
