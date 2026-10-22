@@ -1032,7 +1032,8 @@ export async function onRequest(context) {
               { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: btoa(bin) } },
               { type: 'text', text: c.question }] }] }) });
           const j = await r.json().catch(() => null);
-          if (!r.ok || !j) return { name: a.name, ok: false, error: 'claude ' + r.status };
+          // 22/10/2026: a bare 'claude 400' left the assistant guessing; Anthropic's own message says why (model, size, credit)
+          if (!r.ok || !j) return { name: a.name, ok: false, error: ('claude ' + r.status + ' ' + String((j && j.error && j.error.message) || '')).trim().slice(0, 300) };
           const answer = (j.content || []).filter((x) => x.type === 'text').map((x) => x.text).join('\n').trim();
           return { name: a.name, ok: !!answer, answer: answer.slice(0, 3000), error: answer ? undefined : 'empty answer' };
         } catch (x) { return { name: a.name, ok: false, error: 'read' }; }
