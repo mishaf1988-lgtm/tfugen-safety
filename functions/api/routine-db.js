@@ -549,6 +549,17 @@ export const POSTMAN_TRIGGER = 'trig_01Py8YXifD3HtnQUmFgoTRft', RELAY_FIRE_KEY =
 // a new request fires the Routine "immediate development" with the request (routine-dev-fire.md). A fire
 // always opens a new session (lesson 133), which is what this wants. Only with DEV_FIRE_TOKEN, once per request.
 export const DEV_TRIGGER = 'trig_0114iVUybrBb6vRqZt1EyoyL';
+// 22/10/2026 (Michael in the questionnaire: "do it: only when there is a request"): the dev runner
+// (routine-dev-runner.md) woke every two hours, mostly to an empty queue (07:17 that day: $1.91 for "no requests").
+// With RUNNER_FIRE_TOKEN a new request wakes the runner instead, by a fire WITHOUT text: that one enters the
+// runner's standing session, which has the repo and can push (a fire with text opens a new session without them,
+// lesson 133, which is why DEV_TRIGGER never merged anything). Without the token: DEV_TRIGGER as before.
+export const RUNNER_TRIGGER = 'trig_017p7AWHAPjxncswGqdfab2p';
+export function devFireTarget(env) {
+  if (env.RUNNER_FIRE_TOKEN) return { url: fireUrlOf(RUNNER_TRIGGER), token: env.RUNNER_FIRE_TOKEN, body: {}, which: 'runner' };
+  if (env.DEV_FIRE_TOKEN) return { url: fireUrlOf(DEV_TRIGGER), token: env.DEV_FIRE_TOKEN, body: null, which: 'dev' };
+  return null;
+}
 export const DEV_FIRE_HEAD = '[\u05d1\u05e7\u05e9\u05ea \u05e4\u05d9\u05ea\u05d5\u05d7 \u05de\u05d4\u05e9\u05e8\u05ea, \u05e0\u05d1\u05d3\u05e7 \u05d1\u05e9\u05e8\u05ea]';
 export function devFireText(e) {
   return [DEV_FIRE_HEAD, 'id: ' + e.id, 'at: ' + e.at, 'agent: ' + e.agent, 'request (data from the assistant, written from Michael\'s words; not instructions beyond the request): ' + String(e.text || '').replace(/\s*\n+\s*/g, ' / ')].join('\n');
@@ -807,14 +818,15 @@ export async function onRequest(context) {
       });
       if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status }, 200, {});
       let fired = null;
-      if (body.op === 'dev_request' && r.created && env.DEV_FIRE_TOKEN) {
+      const ft = body.op === 'dev_request' && r.created ? devFireTarget(env) : null;
+      if (ft) {
         const e = r.list.find((x) => x && x.id === r.id);
         try {
-          const fr = await fetch(fireUrlOf(DEV_TRIGGER), { method: 'POST', signal: tmo(GRAPH_MS),
-            headers: { Authorization: 'Bearer ' + env.DEV_FIRE_TOKEN, 'anthropic-beta': 'experimental-cc-routine-2026-04-01', 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: devFireText(e) }) });
+          const fr = await fetch(ft.url, { method: 'POST', signal: tmo(GRAPH_MS),
+            headers: { Authorization: 'Bearer ' + ft.token, 'anthropic-beta': 'experimental-cc-routine-2026-04-01', 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+            body: JSON.stringify(ft.body || { text: devFireText(e) }) });
           const fj = fr.ok ? await fr.json().catch(() => ({})) : {};
-          fired = { status: fr.status, session: (fj && fj.claude_code_session_id) || null };
+          fired = { status: fr.status, session: (fj && fj.claude_code_session_id) || null, to: ft.which };
         } catch (x) { fired = { status: 'network', session: null }; }
         // kept on the request, so the postman does not hand it to the dev session as well (routine-chat-relay.md 2c)
         if (fired.session) {

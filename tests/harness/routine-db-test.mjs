@@ -153,6 +153,10 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
       const t = officeFireText('abc123XYZ', 'תבדוק\nמה עם טופס 16', '2026-10-22T05:00:00.000Z');
       check('office_ask: the head names the office and the row, the text is one line, the answer goes to WhatsApp', t.split('\n')[0].indexOf('מהמשרד של מיכאל') >= 0 && t.includes('abc123XYZ') && t.includes('text: תבדוק / מה') && t.includes('wa_me') && t.includes('doc_id ans-abc123XYZ') && t.includes('reply_to: "abc123XYZ"'), t);
       check('office_ask: a row id is a db id, not free text', OFFICE_ROW.test('k9Xz_12-ab') && !OFFICE_ROW.test('a b') && !OFFICE_ROW.test('x')); }
+    { const { devFireTarget, RUNNER_TRIGGER, DEV_TRIGGER } = await import('./_build/routine-db.mjs');
+      const a = devFireTarget({ RUNNER_FIRE_TOKEN: 'r', DEV_FIRE_TOKEN: 'd' }), b = devFireTarget({ DEV_FIRE_TOKEN: 'd' });
+      check('dev_request: with the runner token the runner wakes, with no text (its own session, which can push)', a.which === 'runner' && a.url.includes(RUNNER_TRIGGER) && a.token === 'r' && JSON.stringify(a.body) === '{}', a);
+      check('dev_request: without it, the immediate-development Routine as before; no token at all = no fire', b.which === 'dev' && b.url.includes(DEV_TRIGGER) && b.body === null && devFireTarget({}) === null, b); }
     // wa_file (22/10/2026): the paths follow draftAttach; nothing is read or sent before they pass
     { const before = calls.length;
       check('wa_file: a path out of the safety folder, a .exe, or too many: 400', (await call({ op: 'wa_file', agent: 'routine-wa-assistant', paths: ['../x.pdf'] })).status === 400
