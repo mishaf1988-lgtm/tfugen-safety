@@ -155,7 +155,7 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
       check('office_ask: a row id is a db id, not free text', OFFICE_ROW.test('k9Xz_12-ab') && !OFFICE_ROW.test('a b') && !OFFICE_ROW.test('x')); }
     { const { devFireTarget, RUNNER_TRIGGER, DEV_TRIGGER } = await import('./_build/routine-db.mjs');
       const a = devFireTarget({ RUNNER_FIRE_TOKEN: 'r', DEV_FIRE_TOKEN: 'd' }), b = devFireTarget({ DEV_FIRE_TOKEN: 'd' });
-      check('dev_request: with the runner token the runner wakes, with no text (its own session, which can push)', a.which === 'runner' && a.url.includes(RUNNER_TRIGGER) && a.token === 'r' && JSON.stringify(a.body) === '{}', a);
+      check('dev_request: the runner token does not change the target (an API fire opens a new session, 22/10/2026)', a.which === 'dev' && !a.url.includes(RUNNER_TRIGGER), a);
       check('dev_request: without it, the immediate-development Routine as before; no token at all = no fire', b.which === 'dev' && b.url.includes(DEV_TRIGGER) && b.body === null && devFireTarget({}) === null, b); }
     // wa_file (22/10/2026): the paths follow draftAttach; nothing is read or sent before they pass
     { const before = calls.length;

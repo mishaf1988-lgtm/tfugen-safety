@@ -551,12 +551,13 @@ export const POSTMAN_TRIGGER = 'trig_01Py8YXifD3HtnQUmFgoTRft', RELAY_FIRE_KEY =
 export const DEV_TRIGGER = 'trig_0114iVUybrBb6vRqZt1EyoyL';
 // 22/10/2026 (Michael in the questionnaire: "do it: only when there is a request"): the dev runner
 // (routine-dev-runner.md) woke every two hours, mostly to an empty queue (07:17 that day: $1.91 for "no requests").
-// With RUNNER_FIRE_TOKEN a new request wakes the runner instead, by a fire WITHOUT text: that one enters the
-// runner's standing session, which has the repo and can push (a fire with text opens a new session without them,
-// lesson 133, which is why DEV_TRIGGER never merged anything). Without the token: DEV_TRIGGER as before.
-export const RUNNER_TRIGGER = 'trig_017p7AWHAPjxncswGqdfab2p';
+// It was meant to wake the runner's standing session (repo, push) by an API fire without text. Measured the same day
+// (dev-20261022054056-cxum): the fire opened a NEW session, without the repo, as DECISIONS 20/10/2026 (C27, relay_fire
+// landed: false) had already recorded; an API fire never enters the standing session, with or without text. So the
+// runner path is off (RUNNER_RUNS = false) and the runner keeps its two-hourly clock; DEV_TRIGGER as before.
+export const RUNNER_TRIGGER = 'trig_017p7AWHAPjxncswGqdfab2p', RUNNER_RUNS = false;
 export function devFireTarget(env) {
-  if (env.RUNNER_FIRE_TOKEN) return { url: fireUrlOf(RUNNER_TRIGGER), token: env.RUNNER_FIRE_TOKEN, body: {}, which: 'runner' };
+  if (RUNNER_RUNS && env.RUNNER_FIRE_TOKEN) return { url: fireUrlOf(RUNNER_TRIGGER), token: env.RUNNER_FIRE_TOKEN, body: {}, which: 'runner' };
   if (env.DEV_FIRE_TOKEN) return { url: fireUrlOf(DEV_TRIGGER), token: env.DEV_FIRE_TOKEN, body: null, which: 'dev' };
   return null;
 }
