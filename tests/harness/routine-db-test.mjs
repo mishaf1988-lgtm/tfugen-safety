@@ -149,6 +149,10 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   }
   // 21/10/2026: a new request fires the immediate-development Routine, once, only with the token
   {
+    { const { officeFireText, OFFICE_ROW } = await import('./_build/routine-db.mjs');
+      const t = officeFireText('abc123XYZ', 'תבדוק\nמה עם טופס 16', '2026-10-22T05:00:00.000Z');
+      check('office_ask: the head names the office and the row, the text is one line, the answer goes to WhatsApp', t.split('\n')[0].indexOf('מהמשרד של מיכאל') >= 0 && t.includes('abc123XYZ') && t.includes('text: תבדוק / מה') && t.includes('wa_me'), t);
+      check('office_ask: a row id is a db id, not free text', OFFICE_ROW.test('k9Xz_12-ab') && !OFFICE_ROW.test('a b') && !OFFICE_ROW.test('x')); }
     { const { workerJobAdd, workerJobDone, workerFireText, WORKERS, WORKER_FIRE_HEAD } = await import('./_build/routine-db.mjs');
       const now = '2026-10-21T16:00:00.000Z', task = '\u05dc\u05d1\u05d3\u05d5\u05e7 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05de\u05d0\u05dc\u05e2\u05d3';
       const a = workerJobAdd('[]', { agent: 'routine-wa-assistant', worker: WORKERS[2], task }, now);
