@@ -29,6 +29,8 @@ description: How to connect an outside service (Cloudflare, Supabase management,
 
 - **חיפוש ב-OneDrive for Business (`/search(q=)` ב-Graph) מחזיר `parentReference` בלי `path`** (21/10/2026, "תחתום בשמי על Safetecs" ענה "לא מצאתי" והקובץ היה שם). קוד שבונה נתיב מתוצאת חיפוש קורא את הפריט לפי `id` (`/me/drive/items/<id>?$select=parentReference`). בדיקה עם mock שמחזיר חיפוש בלי `path` (`sign-ask-test.mjs`).
 
+- **לשרת (Pages Functions) אין הרשאת קריאה למייל** (22/10/2026, "השב לשולח" אחרי חתימה): הטוקן של OneDrive ב-`_onedrive.js` בלי `Mail.Read`, כי ה-tenant של תפוגן דורש אישור מנהל (27/09/2026). השרת רק כותב טיוטה דרך הזרימה (`mail_draft`). כל דבר שצריך לקרוא מייל (שולח, שרשור, מזהה ל-`reply_to`) עובר לעוזר, שיש לו מחבר 365, כמשימה מוכנה עם כל מה שהשרת יודע (שם הקובץ, השעה). לבדוק את זה לפני שמתכננים פיצ'ר שתלוי במייל: `hasMailRead` ב-`_onedrive.js`. הדוגמה: `signReplyTask` ב-`wa-hook.js`.
+
 ## מה מחובר היום
 
 | שירות | Host | הרשאה | נרשם |
