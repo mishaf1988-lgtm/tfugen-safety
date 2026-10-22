@@ -143,5 +143,16 @@ st = stateFetch(fresh.list);
 t = await fastSign({ SUPABASE_SERVICE_ROLE_KEY: 'k' }, { id: 'szzzzzzz', yes: true }, 'w11');
 check('an id that is not waiting = back to the assistant (null), nothing written', t === null && !st.calls.some((x) => x.method === 'POST'));
 
+console.log('\n7. a question that did not go out is not left pending (22/10/2026 retro)');
+{
+  const q = signAdd('[]', { agent: 'wa-assistant', path: 'a/b.pdf', name: 'b.pdf' }, T0, 'zz11');
+  check('still pending: a second request on the same file is "already waiting" (the bug)', signAdd(JSON.stringify(q.list), { agent: 'x', path: 'a/b.pdf', name: 'b.pdf' }, iso(1)).created === false);
+  const failed = signMark(JSON.stringify(q.list), q.id, 'failed', { error: 'window' });
+  check('marked failed: the next request creates a new one', signAdd(JSON.stringify(failed), { agent: 'x', path: 'a/b.pdf', name: 'b.pdf' }, iso(1)).created === true);
+  const src = (await import('node:fs')).readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
+  const i = src.indexOf("const s = await sendToOwner(env, to, text, { windowOpen: win, choices: SIGN_CHOICES });");
+  check('sign_request re-reads the state and marks the request failed when the question was not sent (a source check: the handler itself is not run here)', i > 0 && /if \(!s\.ok\)[\s\S]{0,300}stateRead\(\[SIGN_KEY\]\)[\s\S]{0,300}fetch\(url \+ '\/rest\/v1\/server_state[\s\S]{0,400}signMark\(fresh && fresh\[0\] \? fresh\[0\]\.value : JSON\.stringify\(r\.list\), r\.id, 'failed'/.test(src.slice(i, i + 1500)), i);
+}
+
 console.log('\nsign-test: ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

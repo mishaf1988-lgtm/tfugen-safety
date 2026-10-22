@@ -120,7 +120,7 @@
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
-import { SIGN_KEY, SIGN_CHOICES, signAdd, signAskText, signPlace } from '../_sign.js';
+import { SIGN_KEY, SIGN_CHOICES, signAdd, signMark, signAskText, signPlace } from '../_sign.js';
 import { findSignSpot } from '../_pdftext.js';
 import { PDFDocument } from '../_pdflib.js';
 import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, fireUrlOf, sameSession } from '../_wa.js';
@@ -1241,9 +1241,11 @@ export async function onRequest(context) {
       if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
       const at = await accessToken(env);
       const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
-      const f = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(c.path) + '?select=id,file', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) });
+      const f = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(c.path) + '?select=id,file,size', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) });
       if (!f.ok) return jsonResp({ ok: false, error: f.status === 404 ? 'file not found' : 'file ' + f.status }, 200, {});
-      if (!(await f.json().catch(() => ({}))).file) return jsonResp({ ok: false, error: 'not a file' }, 200, {});
+      const fj = await f.json().catch(() => ({}));
+      if (!fj.file) return jsonResp({ ok: false, error: 'not a file' }, 200, {});
+      if (fj.size > 15 * 1024 * 1024) return jsonResp({ ok: false, error: 'file too large (over 15MB)' }, 200, {}); // read into memory below: the same limit as sending it (DOC_MAX)
       // 21/10/2026 (Michael: "a document with a place for a signature"): the file is read once, here: to find its
       // signature line (when the request gives no page / x / y) and to send it to Michael. Not found = the corner.
       let pdfBytes = null, spot = null;
@@ -1266,6 +1268,15 @@ export async function onRequest(context) {
       let doc = null;
       try { doc = pdfBytes ? await sendDocToOwner(env, to, pdfBytes, c.name, '', win) : { ok: false, error: 'read' }; } catch (x) { doc = { ok: false, error: 'document' }; }
       const s = await sendToOwner(env, to, text, { windowOpen: win, choices: SIGN_CHOICES });
+      // 22/10/2026 (retro): a question that did not go out must not stay pending: the next sign_request on the same
+      // file would answer "already waiting" and Michael would never be asked.
+      if (!s.ok) {
+        try {
+          const fresh = await stateRead([SIGN_KEY]); // the document and the question took seconds: another request or Michael's answer may have been saved meanwhile
+          await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+            body: JSON.stringify([{ key: SIGN_KEY, value: JSON.stringify(signMark(fresh && fresh[0] ? fresh[0].value : JSON.stringify(r.list), r.id, 'failed', { error: String(s.error || 'send').slice(0, 100), done_at: new Date().toISOString() })), updated_at: new Date().toISOString() }]), signal: tmo(SB_MS) });
+        } catch (e) { /* the reply below still says it was not sent */ }
+      }
       if (s.ok) await noteLastOut(env, url, text, ref);
       try {
         await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
