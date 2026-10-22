@@ -89,6 +89,9 @@
 //              WhatsApp assistant (assistantFire) with officeFireText; it answers on WhatsApp. Logged as owner_in, channel office.
 //   source_read  (21/10/2026) {url} the text of one page of nevo.co.il or gov.il, read from the server (both refuse
 //              the cloud the assistant runs in). Text only, up to SOURCE_MAX characters. sourceUrl, htmlText.
+//   pdf_read  (22/10/2026) {agent, why, paths[1-5], question} PDFs from the safety folder (draftAttach rules, PDF only,
+//              PDF_READ_MAX each) read by Claude on the server, scans included: {ok, files:[{name, ok, answer}]}, the
+//              answer quoting the document and its main text after "TEXT:". Read-only. pdfReadCheck.
 //   wa_media  (21/10/2026) {id} a photo or a document Michael sent on WhatsApp (the media id in the fire text):
 //              {ok, mime, name?, bytes, b64}. Images and PDF only, up to WA_MEDIA_MAX. Kept nowhere.
 //   skill_read  (21/10/2026) {path: "SKILL.md" | "references/<name>.md"} one file of the assistant's knowledge in the
@@ -627,6 +630,24 @@ export function draftAttach(list) {
   }
   return { attach: out };
 }
+// pdf_read (22/10/2026, the assistant: a scanned PDF has no text for read_resource, and reading the file itself
+// through od-read is blocked in a cloud run as data exfiltration). Up to 5 PDFs from the safety folder (the mail
+// inbox folder too) go, server side, to Claude, which reads the page images and answers one question about each,
+// quoting the document. Read-only. It spends ANTHROPIC_KEY, so: 5 files, 4MB each, one short answer per file.
+export const PDF_READ_MAX = 4 * 1024 * 1024;
+export const PDF_READ_MODEL = 'claude-sonnet-4-6';
+export const PDF_READ_SYSTEM = 'You read a document (often a scanned certificate or form) for a factory safety manager. '
+  + 'Answer the question only from what is written in the document, in the language of the question. '
+  + 'Quote the exact words of the document that answer it. If the document does not say it, answer that it is not written there. '
+  + 'Then a line "TEXT:" and the main text of the document as written (names, dates, what is approved), up to 1200 characters.';
+export function pdfReadCheck(b) {
+  const q = String(b.question || '').trim();
+  if (q.length < 5 || q.length > 500) return { error: 'question: 5-500 characters' };
+  const c = draftAttach(b.paths);
+  if (c.error || !c.attach.length) return { error: (c.error || 'paths: 1-' + DRAFT_ATTACH_MAX).replace('attach', 'paths') };
+  if (c.attach.some((a) => !/\.pdf$/i.test(a.name))) return { error: 'paths: PDF files only' };
+  return { question: q, files: c.attach };
+}
 // od_archive (20/10/2026, Michael: "when the assistant works on a form it must not keep the old form, move it
 // to the archive"): ONE file inside the safety folder moves to "_גרסאות קודמות" in its own folder (created if
 // missing), same name. Only when the file that replaces it (replaced_by) sits in the same folder, so this
@@ -988,6 +1009,35 @@ export async function onRequest(context) {
       try { raw = new TextDecoder(cs.toLowerCase()).decode(buf); } catch (e) { raw = new TextDecoder('utf-8').decode(buf); }
       const text = htmlText(raw);
       return jsonResp({ ok: true, url: u, chars: text.length, cut: text.length > SOURCE_MAX, text: text.slice(0, SOURCE_MAX) }, 200, {});
+    }
+    if (body.op === 'pdf_read') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths', 'question'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
+      const c = pdfReadCheck(body);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      if (!env.ANTHROPIC_KEY) return jsonResp({ ok: false, error: 'ANTHROPIC_KEY not set' }, 200, {});
+      const at = await accessToken(env);
+      const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+      const files = await Promise.all(c.files.map(async (a) => {
+        try {
+          const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(OD_ROOT + a.rel) + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(30000) });
+          if (!d.ok) return { name: a.name, ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status };
+          const buf = new Uint8Array(await d.arrayBuffer());
+          if (buf.length > PDF_READ_MAX) return { name: a.name, ok: false, error: 'too big: ' + buf.length };
+          let bin = '';
+          for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+          const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: tmo(90000),
+            headers: { 'x-api-key': env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: PDF_READ_MODEL, max_tokens: 1200, system: PDF_READ_SYSTEM, messages: [{ role: 'user', content: [
+              { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: btoa(bin) } },
+              { type: 'text', text: c.question }] }] }) });
+          const j = await r.json().catch(() => null);
+          if (!r.ok || !j) return { name: a.name, ok: false, error: 'claude ' + r.status };
+          const answer = (j.content || []).filter((x) => x.type === 'text').map((x) => x.text).join('\n').trim();
+          return { name: a.name, ok: !!answer, answer: answer.slice(0, 3000), error: answer ? undefined : 'empty answer' };
+        } catch (x) { return { name: a.name, ok: false, error: 'read' }; }
+      }));
+      return jsonResp({ ok: files.every((f) => f.ok), files }, 200, {});
     }
     if (body.op === 'wa_media') {
       const id = String(body.id || '');

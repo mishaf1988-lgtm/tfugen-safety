@@ -4,14 +4,14 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession } from './_build/routine-db.mjs';
+import { sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const ENV = { ROUTINE_KEY: 'k-123', SUPABASE_SERVICE_ROLE_KEY: 'srv' };
 let calls = [], state = {}, fires = [], fireSession = 'cse_01POSTMAN';
-let ghCalls = [], mediaMeta = null;
+let ghCalls = [], mediaMeta = null, claudeReads = [];
 globalThis.fetch = async (url, opt = {}) => {
   if (String(url).startsWith('https://www.nevo.co.il/law_html/')) { const b = new TextEncoder().encode('<html><head><meta charset="utf-8"><script>x()</script></head><body><p>75. (\u05d0) \u05dc\u05e4\u05d7\u05d5\u05ea \u05d0\u05d7\u05ea \u05dc\u05e9\u05e9\u05d4 \u05d7\u05d3\u05e9\u05d9\u05dd</p></body></html>'); const res = new Response(b, { status: 200, headers: { 'content-type': 'text/html' } }); Object.defineProperty(res, 'url', { value: String(url) }); return res; }
   if (String(url).startsWith('https://graph.facebook.com/v25.0/90000001')) return new Response(JSON.stringify(mediaMeta), { status: 200 });
@@ -25,6 +25,7 @@ globalThis.fetch = async (url, opt = {}) => {
   }
   if (url.startsWith(SB + '/rest/v1/oauth_tokens')) return new Response(JSON.stringify([{ user_email: 'm', refresh_token: 'r', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite' }]), { status: 200 });
   if (url.startsWith('https://graph.microsoft.com/')) return graph(url, opt);
+  if (url === 'https://api.anthropic.com/v1/messages') { const b = JSON.parse(opt.body); claudeReads.push({ key: opt.headers['x-api-key'], b }); return new Response(JSON.stringify({ content: [{ type: 'text', text: 'not written: only work at height. TEXT: ...' }] }), { status: 200 }); }
   if (url.startsWith('https://api.anthropic.com/')) { fires.push({ url, auth: opt.headers.Authorization, body: JSON.parse(opt.body) }); return new Response(JSON.stringify({ claude_code_session_id: fireSession }), { status: 200 }); }
   // expiry_set: a small docs / equip_inspections table (rows[table] = [...])
   const m = /\/rest\/v1\/(docs|equip_inspections)\?(.*)$/.exec(url);
@@ -583,6 +584,23 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     const x = await call({ op: 'source_read', url: 'https://www.nevo.co.il/law_html/law00/74793.htm' });
     check('source_read: the page text, word for word', x.json.ok && /75\. \(\u05d0\) \u05dc\u05e4\u05d7\u05d5\u05ea \u05d0\u05d7\u05ea \u05dc\u05e9\u05e9\u05d4/.test(x.json.text) && !/x\(\)/.test(x.json.text), x.json);
     check('source_read: another site refused', (await call({ op: 'source_read', url: 'https://example.com/' })).status === 400);
+  }
+  // 22/10/2026: a scanned PDF read on the server (the assistant: read_resource has no text, od-read is blocked)
+  {
+    check('pdf_read check: 1-5 PDFs, a question, no path out, no Word file', !pdfReadCheck({ paths: ['_\u05e0\u05db\u05e0\u05e1 \u05de\u05d4\u05de\u05d9\u05d9\u05dc/a.pdf'], question: 'is it there?' }).error
+      && /question/.test(pdfReadCheck({ paths: ['a/b.pdf'], question: 'x' }).error) && pdfReadCheck({ paths: ['../b.pdf'], question: 'is it there?' }).error
+      && /PDF/.test(pdfReadCheck({ paths: ['a/b.docx'], question: 'is it there?' }).error) && pdfReadCheck({ paths: [], question: 'is it there?' }).error);
+    const E = { ...ENV, ANTHROPIC_KEY: 'ak' };
+    graph = async (u) => /:\/content$/.test(u) ? new Response(/big\.pdf/.test(decodeURIComponent(u)) ? new Uint8Array(PDF_READ_MAX + 1) : new Uint8Array([0x25, 0x50, 0x44, 0x46]), { status: 200 }) : new Response('{}', { status: 404 });
+    let x = await call({ op: 'pdf_read', agent: 'routine-wa-assistant', why: 'test', paths: ['a/one.pdf', 'a/big.pdf'], question: 'is confined space written?' }, 'k-123', 'POST', E);
+    const one = x.json.files && x.json.files.find((f) => f.name === 'one.pdf'), big = x.json.files && x.json.files.find((f) => f.name === 'big.pdf');
+    check('pdf_read: the PDF goes to Claude as a document with the question, the answer comes back', one && one.ok && /not written/.test(one.answer) && claudeReads.length === 1 && claudeReads[0].key === 'ak'
+      && claudeReads[0].b.messages[0].content[0].type === 'document' && claudeReads[0].b.messages[0].content[0].source.data === 'JVBERg==' && claudeReads[0].b.messages[0].content[1].text === 'is confined space written?', { j: x.json, c: claudeReads.length });
+    check('pdf_read: a file over the cap is not sent, and ok is false', big && !big.ok && /too big/.test(big.error) && x.json.ok === false && claudeReads.length === 1);
+    check('pdf_read: an extra field refused', (await call({ op: 'pdf_read', agent: 'a-b', why: 'test', paths: ['a/one.pdf'], question: 'is it there?', model: 'x' }, 'k-123', 'POST', E)).status === 400);
+    x = await call({ op: 'pdf_read', agent: 'a-b', why: 'test', paths: ['a/one.pdf'], question: 'is it there?' });
+    check('pdf_read without ANTHROPIC_KEY: a clear error', x.json.ok === false && /ANTHROPIC_KEY/.test(x.json.error));
+    graph = async () => new Response('{}', { status: 500 });
   }
   // 21/10/2026: a photo Michael sent on WhatsApp reaches the assistant
   {
