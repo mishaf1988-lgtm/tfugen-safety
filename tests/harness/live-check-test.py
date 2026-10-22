@@ -44,8 +44,12 @@ check("tools and everyday words do not match a decision (passkeys heading)", ask
 # 18/10/2026: a question about making the workers faster shared 3 everyday words with a long heading.
 EFF = "איזו שיטה לבנות כדי להפוך את העבודה עם העובדים מהירה וזולה יותר?"
 check("3 shared words out of a long heading are not a repeat", ask(EFF, [("בצע: שיחה חדשה שבועית לכל עובד (מומלץ)", "")], sid="t3") == "")
+# 22/10/2026: the retry reworded an option and was stopped again. The pause is per question, not per option text.
+o = ask(REPO, [("בצע: לבדוק (מומלץ)", "x")], sid="t4")
+check("a retry with a reworded option still passes", '"deny"' in o and ask(REPO, [("בצע: לבדוק מה נשבר (מומלץ)", "z")], sid="t4") == "", o)
 import sys, importlib
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".claude", "hooks"))
 LC = importlib.import_module("live-check")
 check("a stop word with a prefix letter stays a stop word ('מומלץ' is not 'ומלץ')", LC.words("מומלץ בדיקות") == set(), LC.words("מומלץ בדיקות"))
+check("reading, mail, the assistant: everyday words, not a subject", LC.words("קריאה בלבד במייל של העוזר") == set(), LC.words("קריאה בלבד במייל של העוזר"))
 done()

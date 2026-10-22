@@ -66,7 +66,10 @@ STOP = {"מיכאל", "מומלץ", "שאלון", "בשאלון", "אחרי", "�
         # 17/10/2026: tools and everyday words of this work matched a passkeys decision on three of
         # them (Supabase, phone, sign-in) for a question about test runs. They name no subject.
         "supabase", "cloudflare", "github", "preview", "טלפון", "כניסה", "שיחה", "פריט", "בדיקה",
-        "בדיקות", "בדיקת", "פתוח", "עודכן", "הלאה"}
+        "בדיקות", "בדיקת", "פתוח", "עודכן", "הלאה",
+        # 22/10/2026: a question on reading scanned permits was stopped twice on a decision about the weekly
+        # assistant mail ("קריאה, מייל, בלבד, העוזר"). Words of every task here, they name no subject.
+        "קריאה", "קריאת", "בלבד", "מייל", "עוזר"}
 
 
 def words(s):
@@ -120,7 +123,9 @@ def main():
     heads = [] if (m or seen) else heading_hits(t)
     if not m and not seen and not heads:
         return
-    key = hashlib.sha1((str(d.get("session_id") or "") + "\n" + t).encode("utf-8")).hexdigest()[:16]
+    # 22/10/2026: the key is the questions alone, so a retry that reworded an option still passes.
+    qs = "\n".join(str(q.get("question") or "") for q in ((d.get("tool_input") or {}).get("questions") or []))
+    key = hashlib.sha1((str(d.get("session_id") or "") + "\n" + qs).encode("utf-8")).hexdigest()[:16]
     mark = os.path.join(os.environ.get("LIVE_CHECK_STATE") or tempfile.gettempdir(), "live-check-" + key)
     if os.path.exists(mark):
         return  # asked again after the pause: let it through
