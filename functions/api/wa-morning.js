@@ -69,7 +69,8 @@ export function weatherLine(w, today) {
 // notes = [{agent, text}]: agent_report for_michael lines since the last update (20/10/2026).
 // weather = the weather_tomorrow record (weatherLine), first in the text.
 // devDone = development requests closed yesterday (devClosedYesterday), the last line; null = not read, no line.
-export function buildBrief(items, failed, today, compact, notes, weather, devDone) {
+export const LEARN_ALERT = 30;
+export function buildBrief(items, failed, today, compact, notes, weather, devDone, learnOpen) {
   const wx = weatherLine(weather, today);
   failed = failed.map(agentName);
   // A worker's note goes out as written, so an internal id is cut out here (21/10/2026, hasInternalId).
@@ -78,7 +79,11 @@ export function buildBrief(items, failed, today, compact, notes, weather, devDon
   // line between its own "update from the assistant:" and "to answer, write here", so no heading, no
   // closing line, and items joined by "; " instead of new lines that would turn into " | ".
   // 21/10/2026 (Michael on WhatsApp: "add at the end a line with the number of development requests closed yesterday")
-  const dev = Number.isInteger(devDone) ? '\u05d1\u05e7\u05e9\u05d5\u05ea \u05e4\u05d9\u05ea\u05d5\u05d7 \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 \u05d0\u05ea\u05de\u05d5\u05dc: ' + devDone + '.' : '';
+  const devLine = Number.isInteger(devDone) ? '\u05d1\u05e7\u05e9\u05d5\u05ea \u05e4\u05d9\u05ea\u05d5\u05d7 \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 \u05d0\u05ea\u05de\u05d5\u05dc: ' + devDone + '.' : '';
+  // 22/10/2026 (Michael: "approve the upgrade"): the assistant's notebook is folded into its rules by the daily retro
+  // (retro-prompt.md 7b). More than LEARN_ALERT open entries = the retro is not folding them; one line says so.
+  const nb = Number.isInteger(learnOpen) && learnOpen > LEARN_ALERT ? '\u05d4\u05de\u05d7\u05d1\u05e8\u05ea \u05e9\u05dc \u05d4\u05e2\u05d5\u05d6\u05e8: ' + learnOpen + ' \u05d3\u05d1\u05e8\u05d9\u05dd \u05e9\u05dc\u05de\u05d3 \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05db\u05e0\u05e1\u05d5 \u05dc\u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05e9\u05dc\u05d5.' : '';
+  const dev = [devLine, nb].filter(Boolean).join(' ');
   if (compact) {
     const parts = [];
     if (wx) parts.push(wx);
@@ -152,7 +157,9 @@ export async function gather(env, now) {
   try { weather = JSON.parse((await stateGet(env, 'weather_tomorrow')) || 'null'); } catch (e) { weather = null; }
   let devDone = null;
   try { devDone = devClosedYesterday(JSON.parse((await stateGet(env, 'dev_inbox')) || '[]'), today); } catch (e) { devDone = null; }
-  return { today, items, failed, notes, weather, devDone };
+  let learnOpen = null;
+  try { learnOpen = JSON.parse((await stateGet(env, 'assistant_learned')) || '[]').filter((x) => x && x.status === 'new').length; } catch (e) { learnOpen = null; }
+  return { today, items, failed, notes, weather, devDone, learnOpen };
 }
 // Pure: requests in dev_inbox closed (done_at) on the Israel day before today. A Sunday counts Saturday only.
 export function devClosedYesterday(list, today) {
@@ -337,7 +344,7 @@ export async function run(env, now, body) {
   const cal = await calendarStep(env, now, !!body.dry).catch((e) => ({ error: String(e.message || e).slice(0, 200) }));
   const g = await gather(env, now);
   const open = await ownerWindowOpen(env, sbFrom(env), now.getTime());
-  const text = buildBrief(g.items, g.failed, g.today, !open, g.notes, g.weather, g.devDone);
+  const text = buildBrief(g.items, g.failed, g.today, !open, g.notes, g.weather, g.devDone, g.learnOpen);
   if (body.dry) return { ok: true, sent: false, dry: true, text, cal };
   if (!body.force && (await stateGet(env, LAST_KEY).catch(() => null)) === g.today) return { ok: true, sent: false, reason: 'already sent today', cal };
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };
