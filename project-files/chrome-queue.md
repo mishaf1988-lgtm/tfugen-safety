@@ -140,6 +140,19 @@
 - [ ] **C34. שני סודות ב-GitHub להתראת וואטסאפ כשהאתר לא עונה** (לא דחוף, מיכאל 22/10/2026: "לא נראה לי דחוף"; בינתיים ריצה שנכשלת שולחת מייל מ-GitHub. להזכיר רק כשהוא ליד המחשב ממילא) (22/10/2026, מיכאל בשאלון: "בצע: התראה בוואטסאפ במקום"; `.github/workflows/site-up.yml`). (1) מפתח Meta: ב-business.facebook.com > הגדרות > משתמשי מערכת > המשתמש של "בטיחות" > יצירת אסימון, עם `whatsapp_business_messaging`, בלי תפוגה (אסימון חדש לא מבטל את הקיים ב-Cloudflare). (2) ב-https://github.com/mishaf1988-lgtm/tfugen-safety/settings/secrets/actions/new: `META_ACCESS_TOKEN` = האסימון, ואז `WA_TO` = המספר של מיכאל בפורמט 972XXXXXXXXX. ה-repo ציבורי: רק כסוד, לא בקוד. אחרי: Claude מריץ את הבדיקה ביד ובודק בלוג שאין "no WhatsApp secrets". טקסט להדבקה בכרום:
   > ב-Meta Business צור אסימון חדש למשתמש המערכת של האפליקציה "בטיחות" עם ההרשאה whatsapp_business_messaging ובלי תפוגה, והוסף אותו כסוד בשם META_ACCESS_TOKEN ב-https://github.com/mishaf1988-lgtm/tfugen-safety/settings/secrets/actions/new. אחר כך הוסף שם סוד WA_TO עם המספר שלי (972...). אל תכתוב את האסימון בצ'אט.
 
+- [ ] **C36. זרימה 6: זיהוי טקסט בסריקות (OCR) ב-Power Automate** (22/10/2026, מיכאל: "אני חייב שתצליח לפתוח ולקרוא סריקה", ובשאלון: "בצע: Power Automate מזהה טקסט (מומלץ)". מהענן מסווג ההרשאות חוסם קריאה של סריקה עם פרטי עובדים, גם דרך השרת. כאן הזיהוי נעשה בתוך Microsoft, ו-Claude קורא רק את קובץ הטקסט במחבר 365. פירוט: `power-automate-mail.md`, "זרימה 6")
+  ```
+  משימה: לבנות ב-Power Automate זרימה חדשה בשם "6 - טקסט מסריקות". מיכאל אישר (22/10/2026). לא לשנות את הזרימות הקיימות.
+  1. פתח https://make.powerautomate.com, Create, Automated cloud flow. טריגר: OneDrive for Business, "When a file is created". תיקייה: שולחן העבודה/ניהול בטיחות/_נכנס מהמייל. Include subfolders: No.
+  2. Condition: שם הקובץ (File name) מסתיים ב-.pdf (ends with, בלי רישיות). בענף No: כלום.
+  3. בענף Yes: OneDrive for Business, "Get file content" על אותו קובץ (Identifier מהטריגר).
+  4. AI Builder, "Recognize text in an image or a PDF document" עם התוכן מצעד 3. אם הפעולה מבקשת רישיון, ניסיון (trial), תשלום או קרדיטים: עצור, אל תאשר כלום, ודווח בדיוק מה כתוב על המסך.
+  5. Compose: join של שורות הטקסט מתוצאת צעד 4 (Lines, Text) עם מעבר שורה.
+  6. OneDrive for Business, "Create file": תיקייה שולחן העבודה/ניהול בטיחות/_טקסט סריקות (ליצור אותה אם חסרה), שם: השם של הקובץ המקורי בלי .pdf ועם .txt בסוף, תוכן: הפלט של צעד 5.
+  7. שמור. בדיקה: העלה PDF סרוק כלשהו לתיקייה _נכנס מהמייל, חכה עד 5 דקות, ובדוק שנוצר קובץ txt עם טקסט ב-_טקסט סריקות. אחר כך מחק את קובץ הבדיקה שהעלית (רק אותו).
+  דווח: האם הזרימה רצה, שם קובץ הטקסט שנוצר, ו-3 השורות הראשונות שבו.
+  ```
+
 ## בוצע
 
 - [x] **C35. מפתח הפעלה למפתח התורן** (22/10/2026, מיכאל בשאלון: "בצע: רק כשיש בקשה (מומלץ)"; `devFireTarget` ב-routine-db). (1) בדף https://claude.ai/code/routines/trig_017p7AWHAPjxncswGqdfab2p: הוספת מפעיל API ויצירת טוקן. (2) ב-Cloudflare, Pages, tapugan-safety, Settings, Variables and Secrets, Production: סוד חדש `RUNNER_FIRE_TOKEN` = הטוקן, ושמירה. אחרי: Claude מפרסם מחדש (סוד חדש צריך פריסה), מוריד את השעון לפעם ביום, ובודק בבקשה הבאה ש-`fired.to` = `runner`. טקסט להדבקה בכרום:
