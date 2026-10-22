@@ -25,7 +25,7 @@ globalThis.fetch = async (url, opt = {}) => {
   }
   if (url.startsWith(SB + '/rest/v1/oauth_tokens')) return new Response(JSON.stringify([{ user_email: 'm', refresh_token: 'r', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite' }]), { status: 200 });
   if (url.startsWith('https://graph.microsoft.com/')) return graph(url, opt);
-  if (url === 'https://api.anthropic.com/v1/messages') { const b = JSON.parse(opt.body); claudeReads.push({ key: opt.headers['x-api-key'], b }); return new Response(JSON.stringify({ content: [{ type: 'text', text: 'not written: only work at height. TEXT: ...' }] }), { status: 200 }); }
+  if (url === 'https://api.anthropic.com/v1/messages') { const b = JSON.parse(opt.body); claudeReads.push({ key: opt.headers['x-api-key'], b }); if (b.messages[0].content[1].text === 'make it fail') return new Response(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'Your credit balance is too low' } }), { status: 400 }); return new Response(JSON.stringify({ content: [{ type: 'text', text: 'not written: only work at height. TEXT: ...' }] }), { status: 200 }); }
   if (url.startsWith('https://api.anthropic.com/')) { fires.push({ url, auth: opt.headers.Authorization, body: JSON.parse(opt.body) }); return new Response(JSON.stringify({ claude_code_session_id: fireSession }), { status: 200 }); }
   // expiry_set: a small docs / equip_inspections table (rows[table] = [...])
   const m = /\/rest\/v1\/(docs|equip_inspections)\?(.*)$/.exec(url);
@@ -597,6 +597,8 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('pdf_read: the PDF goes to Claude as a document with the question, the answer comes back', one && one.ok && /not written/.test(one.answer) && claudeReads.length === 1 && claudeReads[0].key === 'ak'
       && claudeReads[0].b.messages[0].content[0].type === 'document' && claudeReads[0].b.messages[0].content[0].source.data === 'JVBERg==' && claudeReads[0].b.messages[0].content[1].text === 'is confined space written?', { j: x.json, c: claudeReads.length });
     check('pdf_read: a file over the cap is not sent, and ok is false', big && !big.ok && /too big/.test(big.error) && x.json.ok === false && claudeReads.length === 1);
+    x = await call({ op: 'pdf_read', agent: 'a-b', why: 'test', paths: ['a/one.pdf'], question: 'make it fail' }, 'k-123', 'POST', E);
+    check('pdf_read: a refusal from Claude carries its message', x.json.files && /claude 400 Your credit balance is too low/.test(x.json.files[0].error), x.json);
     check('pdf_read: an extra field refused', (await call({ op: 'pdf_read', agent: 'a-b', why: 'test', paths: ['a/one.pdf'], question: 'is it there?', model: 'x' }, 'k-123', 'POST', E)).status === 400);
     x = await call({ op: 'pdf_read', agent: 'a-b', why: 'test', paths: ['a/one.pdf'], question: 'is it there?' });
     check('pdf_read without ANTHROPIC_KEY: a clear error', x.json.ok === false && /ANTHROPIC_KEY/.test(x.json.error));
