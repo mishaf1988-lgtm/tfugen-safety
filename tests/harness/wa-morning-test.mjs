@@ -1,6 +1,6 @@
 // The morning update on WhatsApp from the server (20/10/2026): pg_cron calls /api/wa-morning twice,
 // only the call on 07:xx in Israel on Sunday-Thursday sends, once a day, to Michael's number only.
-import { areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX } from './_build/wa-morning.mjs';
+import { areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT } from './_build/wa-morning.mjs';
 import { OD_ROOT } from './_build/routine-db.mjs';
 import fs from 'fs';
 
@@ -252,6 +252,9 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   j = await run(OD, new Date('2026-10-20T12:00:00Z'), { calendar: true });
   check('calendar: the query leaves other areas out (resp_area=is.null), and a row that got through is not written (21/10/2026 retro)', equipUrls.length === 1 && /resp_area=is\.null/.test(equipUrls[0]) && j.cal.written === 0 && !puts.length, [equipUrls, j.cal]);
 
+    { // 22/10/2026: an unfolded notebook (over LEARN_ALERT open entries) gets one line at the end; at or under, nothing
+    const a = buildBrief([], [], '2026-10-22', false, [], null, 5, LEARN_ALERT + 19), b = buildBrief([], [], '2026-10-22', false, [], null, 5, LEARN_ALERT), c = buildBrief([], [], '2026-10-22', true, [], null, null, 49);
+    check('the notebook line: over the limit it shows the count, at the limit nothing, and the compact form keeps it', a.includes('\u05d4\u05de\u05d7\u05d1\u05e8\u05ea \u05e9\u05dc \u05d4\u05e2\u05d5\u05d6\u05e8: 49') && a.includes(': 5.') && !b.includes('\u05d4\u05de\u05d7\u05d1\u05e8\u05ea') && c.includes('49'), { a, b, c }); }
   console.log('\nwa-morning-test: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })();
