@@ -183,13 +183,17 @@ export function signAskOf(raw) {
   let q = m[1].replace(/["'<>?!]/g, ' ').replace(/\s+/g, ' ').trim().replace(SIGN_TAIL_RE, '').trim();
   for (let i = 0; i < 6; i++) { const n = q.replace(SIGN_FILL_RE, ''); if (n === q) break; q = n.trim(); }
   q = q.replace(/\.pdf$/i, '').trim();
+  // 22/10/2026 (Michael, mid-task: "\u05dc\u05d7\u05ea\u05d5\u05dd \u05e2\u05dc \u05e9\u05e0\u05d4\u05dd \u05d5\u05dc\u05e6\u05e8\u05e3 \u05d0\u05d9\u05e9\u05d5\u05e8\u05d9\u05dd"): a word that points back at files already in the
+  // conversation is not a file name; the search found unrelated PDFs. The assistant knows which, so it handles it.
+  if (SIGN_REF_RE.test(q)) return null;
   return q.length > 120 ? q.slice(0, 120) : q;
 }
+const SIGN_REF_RE = /(^|\s)(\u05e9\u05e0\u05d9\u05d4\u05dd|\u05e9\u05e0\u05d4\u05dd|\u05e9\u05ea\u05d9\u05d4\u05df|\u05e9\u05ea\u05d9\u05d4\u05dd|\u05d0\u05d5\u05ea\u05dd|\u05d0\u05d5\u05ea\u05df|\u05d0\u05d5\u05ea\u05d5|\u05d0\u05d5\u05ea\u05d4|\u05d4\u05e7\u05d1\u05e6\u05d9\u05dd|\u05d4\u05d4\u05e8\u05e9\u05d0\u05d5\u05ea|\u05d4\u05d8\u05e4\u05e1\u05d9\u05dd|\u05d4\u05d4\u05d9\u05ea\u05e8\u05d9\u05dd|\u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd|\u05d4\u05dd|\u05d4\u05df)(\s|$)/;
 // The PDFs a search found, best first: the exact name, then the rest; never a signed copy. Pure.
 export function signPick(items, q) {
   const root = '/drive/root:/' + OD_ROOT;
   const norm = (x) => String(x).replace(/\.pdf$/i, '').trim().toLowerCase();
-  const list = (items || []).filter((x) => x && x.file && /\.pdf$/i.test(x.name || '') && !/\s-\s\u05d7\u05ea\u05d5\u05dd\.pdf$/i.test(x.name || ''))
+  const list = (items || []).filter((x) => x && x.file && /\.pdf$/i.test(x.name || '') && !/\s-\s\u05d7\u05ea\u05d5\u05dd( \(\d\))?\.pdf$/i.test(x.name || ''))
     .map((x) => { let p = ''; try { p = decodeURIComponent(String((x.parentReference && x.parentReference.path) || '')); } catch (e) { p = ''; }
       const dir = p.indexOf(root) === 0 ? p.slice(root.length).split('/').filter(Boolean) : null;
       return dir && dir.length && dir[0] !== OD_REQ && dir[0] !== OD_DRAFT ? { name: x.name, path: dir.concat([x.name]).join('/') } : null; })
@@ -258,10 +262,10 @@ export function signWords(q) {
   }
   return out.slice(0, 6);
 }
-export async function signAskPath(env, path) {
+export async function signAskPath(env, path, spot) {
   const res = await routineDb({ env, request: new Request('https://internal/api/routine-db', { method: 'POST',
     headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ op: 'sign_request', agent: 'wa-hook-sign', why: '\u05de\u05d9\u05db\u05d0\u05dc \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4: \u05ea\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9', path }) }) });
+    body: JSON.stringify(Object.assign({ op: 'sign_request', agent: 'wa-hook-sign', why: '\u05de\u05d9\u05db\u05d0\u05dc \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4: \u05ea\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9', path }, spot || {})) }) });
   const j = await res.json().catch(() => ({}));
   if (j.ok && (j.sent || j.created === false)) return { sent: true, id: j.id };
   return { text: null, error: j.error || res.status };
@@ -491,7 +495,7 @@ async function handle(env, raw) {
           const rows = await sbJson(env, 'server_state?key=eq.' + SIGN_PICK_KEY + '&select=value');
           let st = null; try { st = JSON.parse(rows && rows[0] ? rows[0].value : 'null'); } catch (x) { st = null; }
           const path = st && Date.now() - Date.parse(st.at) < SIGN_PICK_MS && st.paths[fr0.n - 1];
-          if (path) { const sa = await signAskPath(env, path); if (sa.sent) { seen.fast = 'sign_pick'; continue; } seen.sign_pick_error = String(sa.error || ''); }
+          if (path) { const sa = await signAskPath(env, path, st.spot && st.paths.length === 1 ? st.spot : null); if (sa.sent) { seen.fast = 'sign_pick'; continue; } seen.sign_pick_error = String(sa.error || ''); }
           // 21/10/2026: a failed pick says so, instead of falling silently to the assistant
           ans = path ? '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05d0\u05ea \u05d1\u05e7\u05e9\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d6\u05d4 (' + (seen.sign_pick_error || '?') + '). \u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1, \u05d0\u05d5 \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05de\u05d4 \u05dc\u05d7\u05ea\u05d5\u05dd.' : null;
           ref = 'sign-pick-fail';

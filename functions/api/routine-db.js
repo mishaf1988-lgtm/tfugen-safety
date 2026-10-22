@@ -691,11 +691,11 @@ export function signRequestCheck(b) {
   const c = odMkdirCheck({ agent: b.agent, why: b.why, parent: (inbox ? ['x'].concat(parts.slice(1)) : parts).join('/'), name });
   if (c.error) return { error: c.error === 'bad parent' || c.error === 'bad name' ? 'bad path' : c.error };
   if (inbox) c.parent = OD_ROOT + OD_INBOX + c.parent.slice((OD_ROOT + 'x').length);
-  if (parts[0] === OD_DRAFT || !/\.pdf$/i.test(name) || /\s-\s\u05d7\u05ea\u05d5\u05dd\.pdf$/i.test(name)) return { error: 'bad path' };
+  if (parts[0] === OD_DRAFT || !/\.pdf$/i.test(name) || /\s-\s\u05d7\u05ea\u05d5\u05dd( \(\d\))?\.pdf$/i.test(name)) return { error: 'bad path' };
   const num = (v, lo, hi) => v === undefined || v === null ? undefined : (Number.isFinite(v) && v >= lo && v <= hi ? v : NaN);
-  const page = num(b.page, 1, 200), x = num(b.x, 0, 2000), y = num(b.y, 0, 2000);
-  if ([page, x, y].some((v) => Number.isNaN(v)) || (page !== undefined && !Number.isInteger(page))) return { error: 'bad page / x / y' };
-  return { path: c.parent + '/' + name, folder: parts.join('/'), name, page, x, y };
+  const page = num(b.page, 1, 200), x = num(b.x, 0, 2000), y = num(b.y, 0, 2000), w = num(b.w, 40, 200);
+  if ([page, x, y, w].some((v) => Number.isNaN(v)) || (page !== undefined && !Number.isInteger(page))) return { error: 'bad page / x / y / w' };
+  return { path: c.parent + '/' + name, folder: parts.join('/'), name, page, x, y, w };
 }
 // 12/10/2026 (retro, Michael: "בצע"): OneDrive keeps createdDateTime on a move, so a file that waited a
 // month in the inbox and was then moved to "לא לתיוק" was deleted the next night. Every move there is
@@ -1264,9 +1264,13 @@ export async function onRequest(context) {
     // assistant offers 1-5 PDFs as buttons; a tap reaches wa-hook's sign_pick, and only then the server asks
     // "sign in your name?" (sign_request) and signs after his yes. Offering signs nothing.
     if (body.op === 'sign_offer') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths', 'text'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths', 'text', 'page', 'x', 'y', 'w'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (!Array.isArray(body.paths) || !body.paths.length || body.paths.length > 5) return jsonResp({ ok: false, error: 'paths: 1-5' }, 400, {});
-      const checked = body.paths.map((p) => signRequestCheck({ agent: body.agent, why: body.why, path: p }));
+      // 22/10/2026 (Michael: "the signature's place is not good", on a scanned permit with no text layer): the spot
+      // Michael approved (page/x/y, w) rides with ONE offered file to the sign request; the default corner otherwise.
+      const hasSpot = ['page', 'x', 'y'].some((k) => body[k] !== undefined);
+      if (hasSpot && (body.paths.length !== 1 || ['page', 'x', 'y'].some((k) => body[k] === undefined))) return jsonResp({ ok: false, error: 'page, x and y together, with one path' }, 400, {});
+      const checked = body.paths.map((p) => signRequestCheck({ agent: body.agent, why: body.why, path: p, page: body.page, x: body.x, y: body.y, w: body.w }));
       const bad = checked.findIndex((x) => x.error);
       if (bad >= 0) return jsonResp({ ok: false, error: 'path ' + (bad + 1) + ': ' + checked[bad].error }, 400, {});
       if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
@@ -1275,7 +1279,7 @@ export async function onRequest(context) {
       const now = new Date().toISOString();
       const rel = checked.map((x) => x.path.slice(OD_ROOT.length));
       const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify([{ key: 'sign_pick', value: JSON.stringify({ at: now, paths: rel }), updated_at: now }]), signal: tmo(SB_MS) });
+        body: JSON.stringify([{ key: 'sign_pick', value: JSON.stringify(Object.assign({ at: now, paths: rel }, hasSpot ? { spot: { page: checked[0].page, x: checked[0].x, y: checked[0].y, w: checked[0].w } } : {})), updated_at: now }]), signal: tmo(SB_MS) });
       if (!w.ok) return jsonResp({ ok: false, error: 'save ' + w.status }, 200, {});
       const head = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 300);
       const text = (head ? head + '\n' : '') + rel.map((p, i) => (i + 1) + '. ' + p).join('\n') + '\n\u05e2\u05dc \u05d0\u05d9\u05d6\u05d4 \u05dc\u05d7\u05ea\u05d5\u05dd? \u05dc\u05dc\u05d7\u05d5\u05e5 \u05e2\u05dc \u05d4\u05de\u05e1\u05e4\u05e8.';
@@ -1285,7 +1289,7 @@ export async function onRequest(context) {
       return jsonResp({ ok: s.ok, sent: s.ok, offered: rel.length, error: s.error || undefined }, 200, {});
     }
     if (body.op === 'sign_request') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path', 'page', 'x', 'y'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path', 'page', 'x', 'y', 'w'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const c = signRequestCheck(body);
       if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
       if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
@@ -1308,7 +1312,7 @@ export async function onRequest(context) {
       } catch (x) { spot = null; }
       const rows = await stateRead([SIGN_KEY]);
       const now = new Date().toISOString();
-      const r = signAdd(rows[0] ? rows[0].value : '[]', { agent: body.agent, path: c.path, name: c.name, page: spot ? spot.page : c.page, x: spot ? spot.x : c.x, y: spot ? spot.y : c.y, w: spot && spot.w ? spot.w : undefined }, now);
+      const r = signAdd(rows[0] ? rows[0].value : '[]', { agent: body.agent, path: c.path, name: c.name, page: spot ? spot.page : c.page, x: spot ? spot.x : c.x, y: spot ? spot.y : c.y, w: spot && spot.w ? spot.w : c.w }, now);
       if (!r.created) return jsonResp({ ok: true, id: r.id, created: false, note: 'already waiting for Michael on this file' }, 200, {});
       const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
         body: JSON.stringify([{ key: SIGN_KEY, value: JSON.stringify(r.list), updated_at: now }]), signal: tmo(SB_MS) });
@@ -1439,6 +1443,9 @@ export async function onRequest(context) {
       if (hasPassport(body.text)) return jsonResp({ ok: false, error: 'passport number in text: write "4 workers from the list", no ids (20/10/2026)' }, 400, {});
       if (asksRepoSetup(body.text)) return jsonResp({ ok: false, error: 'asks Michael to add a repository or edit a Routine: no such choice (C32); say the dev runner builds it at its next wake (07:17-19:17 every 2 hours) (21/10/2026)' }, 400, {});
       if (hasInternalId(body.text)) return jsonResp({ ok: false, error: 'internal id in text (dev-..., trig_, session_, cse_, h-...): say what was done, not its id (21/10/2026)' }, 400, {});
+      // 22/10/2026 (the assistant sent "1. yes / 2. another place" with ref signmail, and the tap on 2 ran the server's
+      // "reply to the sender"): sign refs belong to the server's own buttons; an assistant message cannot carry them.
+      if (/^sign/i.test(String(body.ref || ''))) return jsonResp({ ok: false, error: 'ref sign*: reserved for the server signing buttons; use another ref' }, 400, {});
       if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
       const to = await ownerWa(env, url);
       if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
