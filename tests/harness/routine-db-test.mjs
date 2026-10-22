@@ -158,6 +158,11 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
       const a = devFireTarget({ RUNNER_FIRE_TOKEN: 'r', DEV_FIRE_TOKEN: 'd' }), b = devFireTarget({ DEV_FIRE_TOKEN: 'd' });
       check('dev_request: the runner token does not change the target (an API fire opens a new session, 22/10/2026)', a.which === 'dev' && !a.url.includes(RUNNER_TRIGGER), a);
       check('dev_request: without it, the immediate-development Routine as before; no token at all = no fire', b.which === 'dev' && b.url.includes(DEV_TRIGGER) && b.body === null && devFireTarget({}) === null, b); }
+    check('wa_me: a sign* ref is the server\'s own (22/10/2026), refused before anything is sent', (await call({ op: 'wa_me', agent: 'routine-wa-assistant', text: 'x', ref: 'signmail' })).status === 400);
+    { const { signRequestCheck } = await import('./_build/routine-db.mjs');
+      const c = signRequestCheck({ agent: 'routine-wa-assistant', why: 'test test', path: '99_x/a.pdf', page: 2, x: 225, y: 342, w: 90 });
+      check('sign_request / sign_offer: a set spot with its width passes, a width out of range does not', c.page === 2 && c.w === 90 && !!signRequestCheck({ agent: 'routine-wa-assistant', why: 'test test', path: '99_x/a.pdf', page: 2, x: 1, y: 1, w: 500 }).error, c);
+      check('a second signed copy "(2)" is never offered for signing', !!signRequestCheck({ agent: 'routine-wa-assistant', why: 'test test', path: '99_x/a - \u05d7\u05ea\u05d5\u05dd (2).pdf' }).error); }
     // wa_file (22/10/2026): the paths follow draftAttach; nothing is read or sent before they pass
     { const before = calls.length;
       check('wa_file: a path out of the safety folder, a .exe, or too many: 400', (await call({ op: 'wa_file', agent: 'routine-wa-assistant', paths: ['../x.pdf'] })).status === 400
@@ -630,7 +635,7 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     const prot = await call({ op: 'sign_offer', agent: 'routine-wa-assistant', why: 'test offer', paths: ['a/1.pdf', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d9\u05d9\u05dc/2.pdf'] }, 'k-123', 'POST', E);
     check('sign_offer: a protected folder = refused, by its number', prot.status === 400 && /^path 2:/.test(prot.json.error), prot);
     const extra = await call({ op: 'sign_offer', agent: 'routine-wa-assistant', why: 'test offer', paths: ['a/1.pdf'], page: 2 }, 'k-123', 'POST', E);
-    check('sign_offer: no page / x / y (the place is found at the request)', extra.status === 400 && /field not allowed/.test(extra.json.error), extra);
+    check('sign_offer: page alone is refused (page, x and y together, one file; 22/10/2026)', extra.status === 400 && /together/.test(extra.json.error), extra);
     delete state.sign_pick;
     const noOwner = await call({ op: 'sign_offer', agent: 'routine-wa-assistant', why: 'test offer', paths: ['a/1.pdf', '_\u05e0\u05db\u05e0\u05e1 \u05de\u05d4\u05de\u05d9\u05d9\u05dc/q.pdf'] }, 'k-123', 'POST', E);
     check('sign_offer: valid paths (the mail inbox too) pass the checks; no owner number = nothing saved', noOwner.json.ok === false && /owner/.test(noOwner.json.error) && !('sign_pick' in state), noOwner); }

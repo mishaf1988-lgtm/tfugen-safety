@@ -72,5 +72,6 @@ check('the button title fits WhatsApp (20)', SIGN_MAIL_LABEL.length <= 20);
   check('button 2 / "reply to the sender" is the reply; "mail" alone stays the mail to me', signReplyOf({ choice: 2 }, { ref: 'signmail' }) && signReplyOf({ text: 'השב לשולח במייל' }, { ref: 'signmail' }) && signReplyOf({ text: '1' }, { ref: 'signmail' }) === null && signReplyOf({ choice: 2 }, { ref: 'brief' }) === null);
   check('fastRoute: reply before mail', (fastRoute({ text: 'השב לשולח במייל' }, '', { ref: 'signmail' }) || {}).kind === 'sign_reply' && (fastRoute({ text: 'שלח לי במייל' }, '', { ref: 'signmail' }) || {}).kind === 'sign_mail');
   check('the reply button title fits WhatsApp (20)', SIGN_REPLY_LABEL.length <= 20); }
+check('a word pointing back at files in the conversation is not a search (22/10: "לחתום על שנהם")', signAskOf('לחתום על שנהם ולצרף אישורים') === null && signAskOf('תחתום על ההרשאות') === null && signAskOf('תחתום על הצעת מחיר המור') === 'הצעת מחיר המור');
 console.log('\nsign-ask-test: ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

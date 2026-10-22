@@ -97,7 +97,7 @@ function mockFetch(opts) {
     if (s.indexOf('/storage/v1/object/backups/owner-signature/sig.png') > 0) return opts.noSig ? new Response('{}', { status: 400 }) : new Response(sig, { status: 200 });
     if (method === 'PUT') return new Response(JSON.stringify({ webUrl: 'https://x/y', size: 1 }), { status: 201 });
     if (/:\/content$/.test(s)) return new Response(opts.notPdf ? new Uint8Array([1, 2, 3, 4, 5, 6]) : srcBytes, { status: 200 });
-    if (s.indexOf(encodeURIComponent('מכתב מינוי - חתום.pdf') + '?select=id') > 0) return new Response(opts.taken ? '{"id":"1"}' : '{}', { status: opts.taken ? 200 : 404 });
+    if (s.indexOf(encodeURIComponent('מכתב מינוי - חתום') ) > 0 && s.indexOf('?select=id') > 0) { const first = s.indexOf(encodeURIComponent('מכתב מינוי - חתום.pdf')) > 0; const t = opts.taken === 'all' || (opts.taken && first); return new Response(t ? '{"id":"1"}' : '{}', { status: t ? 200 : 404 }); }
     return new Response('{}', { status: 500 });
   };
   return { f, calls };
@@ -111,7 +111,10 @@ check('no write to the original path', !mk.calls.some((x) => x.method !== 'GET' 
 check('no DELETE and no PATCH at all', !mk.calls.some((x) => x.method === 'DELETE' || x.method === 'PATCH'));
 mk = mockFetch({ taken: true }); globalThis.fetch = mk.f;
 r = await signRun(env, 'https://sb', 'tok', req, ms0);
-check('a signed copy already there = not signed, nothing written', !r.ok && r.error === 'signed file exists' && !mk.calls.some((x) => x.method === 'PUT'));
+check('signed again (22/10/2026): the first signed copy stays, the new one is "(2)", one PUT', r.ok && r.name === 'מכתב מינוי - חתום (2).pdf' && mk.calls.filter((x) => x.method === 'PUT').length === 1, r);
+mk = mockFetch({ taken: 'all' }); globalThis.fetch = mk.f;
+r = await signRun(env, 'https://sb', 'tok', req, ms0);
+check('a signed copy already there (every name taken) = not signed, nothing written', !r.ok && r.error === 'signed file exists' && !mk.calls.some((x) => x.method === 'PUT'));
 mk = mockFetch({ noSig: true }); globalThis.fetch = mk.f;
 r = await signRun(env, 'https://sb', 'tok', req, ms0);
 check('no signature image in the bucket = not signed, nothing written', !r.ok && r.error === 'no signature image' && !mk.calls.some((x) => x.method === 'PUT'));
