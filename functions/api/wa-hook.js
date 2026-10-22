@@ -17,7 +17,7 @@ import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo, SITE } from '../_shared.js';
 import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, LEARN_KEY, learnedLine } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 import { accessToken } from '../_onedrive.js';
-import { onRequest as routineDb, OD_ROOT, OD_REQ, OD_DRAFT } from './routine-db.js';
+import { onRequest as routineDb, OD_ROOT, OD_REQ, OD_DRAFT, OD_INBOX } from './routine-db.js';
 import { SIGN_KEY, signRefOf, signAnswer, signTake, signMark, signRun, signDoneText, SIGN_CANCEL_TEXT, SIGN_EXPIRED_TEXT, SIGN_DONE_TEXT } from '../_sign.js';
 
 export const FAIL_TEXT = '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05dc\u05e2\u05d5\u05d6\u05e8. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.';
@@ -314,6 +314,31 @@ export function signMailBody(st) {
   return { op: 'mail_draft', agent: 'wa-hook-sign', why: '\u05de\u05d9\u05db\u05d0\u05dc \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4: \u05e9\u05dc\u05d7 \u05dc\u05d9 \u05d1\u05de\u05d9\u05d9\u05dc \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05da \u05d4\u05d7\u05ea\u05d5\u05dd', to: SITE.managerEmail,
     subject: String(st.name).replace(/\.pdf$/i, ''), body: '\u05de\u05e6\u05d5\u05e8\u05e3 \u05d4\u05de\u05e1\u05de\u05da \u05d4\u05d7\u05ea\u05d5\u05dd.', attach: [st.rel] };
 }
+// 22/10/2026 (Michael in the questionnaire: "do it: a draft to the original sender"): a file from the mail inbox
+// gets a second button. The server cannot read mail (no Mail.Read, _onedrive.js), so the tap goes to the
+// assistant as a ready task: find the mail by the time and the attachment name in the file's name (the inbox
+// flow names it "YYYY-MM-DD HHMM - <attachment>", UTC), and draft a reply with the signed copy. Only a draft.
+export const SIGN_REPLY_LABEL = '\u05d4\u05e9\u05d1 \u05dc\u05e9\u05d5\u05dc\u05d7';
+const SENT_MARK = '\u05e0\u05e9\u05dc\u05d7';
+export function signReplyFrom(rel) {
+  const parts = String(rel || '').split('/');
+  if (parts.length !== 2 || parts[0] !== OD_INBOX || parts[1].indexOf(SENT_MARK) >= 0) return null;
+  const m = /^(\d{4}-\d{2}-\d{2}) (\d{2})(\d{2}) - (.+?) - \u05d7\u05ea\u05d5\u05dd\.pdf$/i.exec(parts[1]);
+  return m ? { at: m[1] + 'T' + m[2] + ':' + m[3] + 'Z', file: m[4] + '.pdf' } : null;
+}
+export function signReplyOf(m, prev) {
+  if (!prev || prev.ref !== 'signmail') return null;
+  const c = m && m.choice !== undefined && m.choice !== null ? String(m.choice) : '';
+  const t = String((m && m.text) || '').trim();
+  return c === '2' || /^2(\.|\s|$)/.test(t) || (t.length <= 60 && /\u05d4\u05e9\u05d1|\u05dc\u05e9\u05d5\u05dc\u05d7|\u05ea\u05e2\u05e0\u05d4|\u05ea\u05e9\u05d9\u05d1/.test(t)) ? true : null;
+}
+// the task the assistant gets instead of the tap. Pure.
+export function signReplyTask(st) {
+  const r = signReplyFrom(st.rel);
+  return '\u05de\u05d9\u05db\u05d0\u05dc \u05dc\u05d7\u05e5 "\u05d4\u05e9\u05d1 \u05dc\u05e9\u05d5\u05dc\u05d7" \u05e2\u05dc \u05d4\u05de\u05e1\u05de\u05da \u05e9\u05d7\u05ea\u05de\u05ea\u05d9 \u05d1\u05e9\u05de\u05d5. \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d7\u05ea\u05d5\u05dd: ' + st.rel
+    + '. \u05d4\u05de\u05e7\u05d5\u05e8 \u05d4\u05d2\u05d9\u05e2 \u05d1\u05de\u05d9\u05d9\u05dc \u05d1-' + r.at + ' (UTC, \u05de\u05e9\u05dd \u05d4\u05e7\u05d5\u05d1\u05e5), \u05db\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3 \u05d1\u05e9\u05dd ' + r.file
+    + '. \u05dc\u05de\u05e6\u05d5\u05d0 \u05d0\u05ea \u05d4\u05de\u05d9\u05d9\u05dc \u05d1-outlook_email_search (\u05dc\u05e4\u05d9 \u05e9\u05dd \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d5\u05d4\u05e9\u05e2\u05d4), \u05d5\u05dc\u05d4\u05db\u05d9\u05df \u05d8\u05d9\u05d5\u05d8\u05ea \u05ea\u05e9\u05d5\u05d1\u05d4: mail_draft \u05e2\u05dd reply_to = \u05d4\u05de\u05d6\u05d4\u05d4 \u05e9\u05dc \u05d4\u05de\u05d9\u05d9\u05dc, to = \u05d4\u05e9\u05d5\u05dc\u05d7, attach = ["' + st.rel + '"], \u05d5\u05d2\u05d5\u05e3 \u05e7\u05e6\u05e8: \u05de\u05e6\u05d5\u05e8\u05e3 \u05d4\u05de\u05e1\u05de\u05da \u05d4\u05d7\u05ea\u05d5\u05dd. \u05e8\u05e7 \u05d8\u05d9\u05d5\u05d8\u05d4, \u05dc\u05d0 \u05dc\u05e9\u05dc\u05d5\u05d7. \u05dc\u05e2\u05e0\u05d5\u05ea \u05dc\u05de\u05d9\u05db\u05d0\u05dc \u05dc\u05de\u05d9 \u05d4\u05d8\u05d9\u05d5\u05d8\u05d4 \u05d5\u05e9\u05d4\u05d9\u05d0 \u05d1-Drafts. \u05de\u05d9\u05d9\u05dc \u05e9\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0: \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05d5, \u05dc\u05d0 \u05dc\u05e0\u05d7\u05e9 \u05e0\u05de\u05e2\u05df.';
+}
 export const SIGN_MAIL_DONE = '\u05d4\u05d8\u05d9\u05d5\u05d8\u05d4 \u05d0\u05dc\u05d9\u05da \u05e2\u05dd \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d7\u05ea\u05d5\u05dd \u05de\u05e6\u05d5\u05e8\u05e3 \u05ea\u05d5\u05e4\u05d9\u05e2 \u05d1-Drafts \u05e9\u05dc Outlook \u05ea\u05d5\u05da \u05d3\u05e7\u05d4. \u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05de\u05de\u05da.';
 export const SIGN_MAIL_GONE = '\u05dc\u05d0 \u05de\u05e6\u05d0\u05ea\u05d9 \u05de\u05e1\u05de\u05da \u05d7\u05ea\u05d5\u05dd \u05de-24 \u05d4\u05e9\u05e2\u05d5\u05ea \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d5\u05ea \u05dc\u05e6\u05e8\u05e3. \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05d0\u05d9\u05d6\u05d4 \u05e7\u05d5\u05d1\u05e5.';
 export function fastRoute(m, about, prev) {
@@ -325,6 +350,7 @@ export function fastRoute(m, about, prev) {
   if (ask !== null) return { kind: 'sign_ask', q: ask };
   const pk = signPickOf(m, prev);
   if (pk) return { kind: 'sign_pick', n: pk };
+  if (signReplyOf(m, prev)) return { kind: 'sign_reply' };
   if (signMailOf(m, prev)) return { kind: 'sign_mail' };
   if (!raw || raw.length > 40) return null;
   // 21/10/2026: an answer to "sign in your name on <file>?" (routine-db sign_request). Only the server signs, and
@@ -471,7 +497,14 @@ async function handle(env, raw) {
         }
         else if (fr0.kind === 'sign') {
           const fs = await fastSign(env, fr0, m.id);
-          if (fs && fs.mail) { ans = fs.text; choices = [SIGN_MAIL_LABEL]; ref = 'signmail'; } else { ans = fs; ref = 'sign-done'; }
+          if (fs && fs.mail) { ans = fs.text; choices = signReplyFrom(fs.mail) ? [SIGN_MAIL_LABEL, SIGN_REPLY_LABEL] : [SIGN_MAIL_LABEL]; ref = 'signmail'; } else { ans = fs; ref = 'sign-done'; }
+        }
+        else if (fr0.kind === 'sign_reply') {
+          // no answer here: the tap becomes the assistant's task (it reads mail, the server cannot)
+          const rows = await sbJson(env, 'server_state?key=eq.' + SIGN_MAIL_KEY + '&select=value');
+          let st = null; try { st = JSON.parse(rows && rows[0] ? rows[0].value : 'null'); } catch (x) { st = null; }
+          if (st && signReplyFrom(st.rel) && Date.now() - Date.parse(st.at) < SIGN_MAIL_MS) m.text = signReplyTask(st);
+          else { ans = SIGN_MAIL_GONE; ref = 'sign-reply'; }
         }
         else if (fr0.kind === 'sign_mail') {
           const rows = await sbJson(env, 'server_state?key=eq.' + SIGN_MAIL_KEY + '&select=value');

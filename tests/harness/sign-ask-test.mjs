@@ -1,8 +1,8 @@
 // Michael's own "sign in my name on <file>" read by the server (21/10/2026, wa-hook signAskOf / signPick /
 // fastRoute): the assistant's sign_request was stopped by the cloud permission check, so the server finds the PDF
 // in the safety folder and asks him itself. Pure parts only; the search and routine-db are covered elsewhere.
-import { signAskOf, signPick, signAskManyText, fastRoute, recentPdfs, signPickOf, signPickChoices, signPickText, graphSearch, signWords, signMailOf, signMailBody, SIGN_MAIL_LABEL } from './_build/wa-hook.mjs';
-import { OD_ROOT } from './_build/routine-db.mjs';
+import { signAskOf, signPick, signAskManyText, fastRoute, recentPdfs, signPickOf, signPickChoices, signPickText, graphSearch, signWords, signMailOf, signMailBody, SIGN_MAIL_LABEL, signReplyFrom, signReplyOf, signReplyTask, SIGN_REPLY_LABEL } from './_build/wa-hook.mjs';
+import { OD_ROOT, OD_INBOX } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 300) : '')); } };
@@ -56,5 +56,15 @@ check('fastRoute routes the tap as sign_mail', (fastRoute({ choice: 1 }, '', { r
 { const b = signMailBody({ rel: '_x/a - חתום.pdf', name: 'a - חתום.pdf' });
   check('the draft: to Michael, the signed file attached, subject = its name, only a draft (mail_draft)', b.op === 'mail_draft' && b.to === 'sviva@tapugan.co.il' && b.attach.length === 1 && b.attach[0] === '_x/a - חתום.pdf' && b.subject === 'a - חתום', b); }
 check('the button title fits WhatsApp (20)', SIGN_MAIL_LABEL.length <= 20);
+// "reply to the sender" (22/10/2026): only for a file the inbox flow saved; the tap becomes the assistant's task
+{ const rel = OD_INBOX + '/2026-10-21 1210 - (1) PQ26000853 - הצעה - חתום.pdf';
+  const r = signReplyFrom(rel);
+  check('an inbox file: the mail time (UTC) and the attachment name from its name', r && r.at === '2026-10-21T12:10Z' && r.file === '(1) PQ26000853 - הצעה.pdf', r);
+  check('not offered outside the inbox, for a file I sent, or a name without the flow time', signReplyFrom('99_x/a - חתום.pdf') === null && signReplyFrom(OD_INBOX + '/2026-10-21 1210 - נשלח a - חתום.pdf') === null && signReplyFrom(OD_INBOX + '/a - חתום.pdf') === null);
+  const t = signReplyTask({ rel });
+  check('the task names the signed file, the time, the attachment, reply_to and "only a draft"', t.includes(rel) && t.includes('2026-10-21T12:10Z') && t.includes('reply_to') && t.includes('mail_draft') && t.includes('רק טיוטה'), t);
+  check('button 2 / "reply to the sender" is the reply; "mail" alone stays the mail to me', signReplyOf({ choice: 2 }, { ref: 'signmail' }) && signReplyOf({ text: 'השב לשולח במייל' }, { ref: 'signmail' }) && signReplyOf({ text: '1' }, { ref: 'signmail' }) === null && signReplyOf({ choice: 2 }, { ref: 'brief' }) === null);
+  check('fastRoute: reply before mail', (fastRoute({ text: 'השב לשולח במייל' }, '', { ref: 'signmail' }) || {}).kind === 'sign_reply' && (fastRoute({ text: 'שלח לי במייל' }, '', { ref: 'signmail' }) || {}).kind === 'sign_mail');
+  check('the reply button title fits WhatsApp (20)', SIGN_REPLY_LABEL.length <= 20); }
 console.log('\nsign-ask-test: ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
