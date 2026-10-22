@@ -352,6 +352,10 @@ export function fastRoute(m, about, prev) {
   const sid0 = signRefOf(about, prev);
   if (sid0) { const yes = signAnswer(m); if (yes !== null) return { kind: 'sign', id: sid0, yes }; }
   const ask = signAskOf(raw);
+  // 22/10/2026 18:31 (Michael: "the assistant gets tangled again"): the assistant wrote "sending you the Negev permit to
+  // sign", Michael answered "sign in my name", and the server, with no file name, sent the newest PDFs in the folder
+  // (signs). With no name and a recent assistant message, the assistant knows which file: it gets the message.
+  if (ask === '' && prev && prev.ref !== 'signpick') return null;
   if (ask !== null) return { kind: 'sign_ask', q: ask };
   const pk = signPickOf(m, prev);
   if (pk) return { kind: 'sign_pick', n: pk };

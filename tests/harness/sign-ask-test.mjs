@@ -73,5 +73,6 @@ check('the button title fits WhatsApp (20)', SIGN_MAIL_LABEL.length <= 20);
   check('fastRoute: reply before mail', (fastRoute({ text: 'השב לשולח במייל' }, '', { ref: 'signmail' }) || {}).kind === 'sign_reply' && (fastRoute({ text: 'שלח לי במייל' }, '', { ref: 'signmail' }) || {}).kind === 'sign_mail');
   check('the reply button title fits WhatsApp (20)', SIGN_REPLY_LABEL.length <= 20); }
 check('a word pointing back at files in the conversation is not a search (22/10: "לחתום על שנהם")', signAskOf('לחתום על שנהם ולצרף אישורים') === null && signAskOf('תחתום על ההרשאות') === null && signAskOf('תחתום על הצעת מחיר המור') === 'הצעת מחיר המור');
+check('no file name right after an assistant message: the assistant gets it (22/10 18:31), with no recent message: the newest PDFs', fastRoute({ text: 'חתום בשמי' }, '', { ref: 'none', text: 'x' }) === null && (fastRoute({ text: 'חתום בשמי' }, '', null) || {}).kind === 'sign_ask' && (fastRoute({ text: 'תחתום בשמי על טופס 16' }, '', { ref: 'none', text: 'x' }) || {}).kind === 'sign_ask');
 console.log('\nsign-ask-test: ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
