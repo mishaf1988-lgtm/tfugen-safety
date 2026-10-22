@@ -10,12 +10,20 @@ name: "האתר לא עונה - Tapugan Safety"
 # through from abroad: GET /api/wa-hook (machine path; without Meta's token the function itself answers 403
 # "forbidden", which proves the Functions run) and GET /logo.jpg (the static files). Three tries a minute apart
 # before failing, so one slow answer does not mail.
+#
+# WhatsApp (22/10/2026, Michael in the questionnaire: "do it: a WhatsApp alert instead"): once when the site goes
+# down (the previous run passed) and once when it is back, through the approved template (any time of day, no
+# 24-hour window). Needs two repository secrets Michael adds (project-files/chrome-queue.md C34):
+# META_ACCESS_TOKEN (a Meta system-user token) and WA_TO (his number, 972...). The repo is public: never inline
+# them. Without them the WhatsApp step says so and the failed run still mails. The phone number id is not a
+# secret (plain text in Cloudflare too).
 on:
   schedule:
     - cron: '*/15 * * * *'
   workflow_dispatch:
 
-permissions: {}
+permissions:
+  actions: read
 
 jobs:
   check:
@@ -23,14 +31,43 @@ jobs:
     timeout-minutes: 6
     steps:
       - name: Site answers
+        id: probe
         run: |
           site=https://tapugan-safety.pages.dev
+          up=false
           for i in 1 2 3; do
             fn=$(curl -s -m 20 -w ' %{http_code}' "$site/api/wa-hook" || true)
             st=$(curl -s -o /dev/null -m 20 -w '%{http_code}' "$site/logo.jpg" || true)
             echo "try $i: functions [$fn], static [$st]"
-            if [ "$fn" = "forbidden 403" ] && [ "$st" = "200" ]; then echo "site OK"; exit 0; fi
+            if [ "$fn" = "forbidden 403" ] && [ "$st" = "200" ]; then up=true; break; fi
             [ $i -lt 3 ] && sleep 60
           done
-          echo "::error::tapugan-safety.pages.dev does not answer (functions [$fn], static [$st])"
+          echo "up=$up" >> "$GITHUB_OUTPUT"
+          echo "detail=functions [$fn], static [$st]" >> "$GITHUB_OUTPUT"
+      - name: WhatsApp on a change
+        env:
+          GH_TOKEN: ${{ github.token }}
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+          WA_TO: ${{ secrets.WA_TO }}
+          UP: ${{ steps.probe.outputs.up }}
+        run: |
+          # the last finished scheduled run of this workflow (before this one): success = was up
+          prev=$(curl -s -m 20 -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/site-up.yml/runs?status=completed&event=schedule&per_page=1" \
+            | python3 -c "import sys,json; r=json.load(sys.stdin).get('workflow_runs') or [{}]; print(r[0].get('conclusion') or 'none')")
+          echo "previous run: $prev, now up: $UP"
+          if [ "$UP" = "false" ] && [ "$prev" != "failure" ]; then
+            msg='האתר tapugan-safety.pages.dev לא עונה כבר כמה דקות (בדיקה מ-GitHub). הוואטסאפ, החתימה והעוזר לא יעבדו עד שיחזור. הנתונים שמורים ב-Supabase.'
+          elif [ "$UP" = "true" ] && [ "$prev" = "failure" ]; then
+            msg='האתר tapugan-safety.pages.dev חזר לענות (בדיקה מ-GitHub).'
+          else exit 0; fi
+          if [ -z "$META_ACCESS_TOKEN" ] || [ -z "$WA_TO" ]; then echo "::warning::no WhatsApp secrets (C34), GitHub's mail only"; exit 0; fi
+          body=$(MSG="$msg" python3 -c "import json,os; print(json.dumps({'messaging_product':'whatsapp','to':os.environ['WA_TO'],'type':'template','template':{'name':'tfugen_assistant_update','language':{'code':'he'},'components':[{'type':'body','parameters':[{'type':'text','text':os.environ['MSG']}]}]}}))")
+          code=$(curl -s -o /tmp/wa.json -w '%{http_code}' -m 20 -X POST "https://graph.facebook.com/v25.0/1165172413343378/messages" \
+            -H "Authorization: Bearer $META_ACCESS_TOKEN" -H 'Content-Type: application/json' -d "$body")
+          echo "whatsapp: $code"; [ "$code" = "200" ] || { head -c 300 /tmp/wa.json; echo "::warning::WhatsApp send failed"; }
+      - name: Fail when down (GitHub mails too)
+        if: steps.probe.outputs.up != 'true'
+        run: |
+          echo "::error::tapugan-safety.pages.dev does not answer (${{ steps.probe.outputs.detail }})"
           exit 1
