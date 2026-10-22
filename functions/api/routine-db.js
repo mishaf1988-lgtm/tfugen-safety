@@ -83,6 +83,8 @@
 //   worker_now / worker_done  (21/10/2026) {agent, worker, task} one task for one worker (WORKERS), fired at once to
 //              WORKER_TRIGGER (a new session per task) when WORKER_FIRE_TOKEN is set; {id, note} closes it and sends
 //              the note to Michael on WhatsApp. server_state.worker_jobs. workerJobAdd / workerJobDone.
+//   wa_file  (22/10/2026) {agent, paths[1-5], caption?} files from the safety folder (draftAttach rules) sent to Michael on
+//              WhatsApp as documents, inside the 24-hour window only. Logged as an assistant line.
 //   office_ask  (22/10/2026) {agent, row, text} a line Michael typed at the assistant's desk in the office: fired to the
 //              WhatsApp assistant (assistantFire) with officeFireText; it answers on WhatsApp. Logged as owner_in, channel office.
 //   source_read  (21/10/2026) {url} the text of one page of nevo.co.il or gov.il, read from the server (both refuse
@@ -863,6 +865,39 @@ export async function onRequest(context) {
         } catch (x) { wa = 'failed'; }
       }
       return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length, wa, fired }, 200, {});
+    }
+    // wa_file (22/10/2026, Michael to the assistant: "I asked to get the files here", and "the link is broken"): 1-5
+    // files from the safety folder sent to Michael on WhatsApp as documents. Only to him, only inside the 24-hour window
+    // (a document has no template), and only paths draftAttach allows (inside the safety folder, PDF / Word / Excel).
+    if (body.op === 'wa_file') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths', 'caption'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
+      const c = draftAttach(body.paths);
+      if (c.error || !c.attach.length) return jsonResp({ ok: false, error: (c.error || 'paths: 1-5').replace('attach', 'paths') }, 400, {});
+      if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
+      const to = await ownerWa(env, url);
+      if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
+      const win = await ownerWindowOpen(env, url);
+      if (win === false) return jsonResp({ ok: false, error: 'window closed: Michael has not written in 23 hours, a file cannot go out; send him the folder in words' }, 200, {});
+      const at = await accessToken(env);
+      const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+      const sent = [];
+      for (let i = 0; i < c.attach.length; i++) {
+        const a = c.attach[i];
+        let r;
+        try {
+          const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(OD_ROOT + a.rel) + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(30000) });
+          r = d.ok ? await sendDocToOwner(env, to, new Uint8Array(await d.arrayBuffer()), a.name, i === 0 ? body.caption : '', win) : { ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status };
+        } catch (x) { r = { ok: false, error: 'read' }; }
+        sent.push({ name: a.name, ok: !!r.ok, error: r.ok ? undefined : r.error });
+      }
+      const ok = sent.filter((x) => x.ok);
+      // logged like wa_me, so wa_review sees what went out
+      await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
+        body: JSON.stringify([{ id: 'wd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
+          event_type: 'assistant', channel: ok.length ? 'whatsapp' : 'whatsapp_error',
+          payload: { title: ('[' + ok.length + '/' + sent.length + ' files] ' + sent.map((x) => x.name).join(', ')).slice(0, 120), text: sent.map((x) => x.name + (x.ok ? '' : ' (' + x.error + ')')).join('\n').slice(0, 1500), via: 'document', agent: body.agent } }]) }).catch(() => null);
+      return jsonResp({ ok: ok.length === sent.length, sent }, 200, {});
     }
     if (body.op === 'office_ask') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'row', 'text'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
