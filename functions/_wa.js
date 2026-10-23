@@ -152,6 +152,17 @@ export function promiseToCheck(raw, ids, nowIso) {
   list.forEach((x) => { if (x && ids.indexOf(x.id) >= 0) { x.reminded_at = nowIso; x.check_at = nowIso; x.check = PROMISE_VERIFY; } });
   return list;
 }
+// The list for tomorrow (23/10/2026, Michael in the questionnaire: "do it: tomorrow's list in the evening"): at 15:00
+// Sunday to Thursday the server adds a promise whose check fires the assistant at once (promiseCheck), so no new
+// Routine and no new prompt header. The assistant builds the list (routine-wa-assistant.md 2ב, "evening list").
+export const EVENING_HOUR = 15, EVENING_CHECK = 'evening list: what is planned for the next working day (contractor work and permits in the mail, inspections, visits in the calendar, expiries this week) and what each one still lacks; one wa_me, then promise_done quiet';
+export function eveningAdd(raw, dayIL, dow, hourIL, nowIso) {
+  if (!(dow >= 0 && dow <= 4) || hourIL !== EVENING_HOUR) return null;
+  const list = plist(raw), id = 'p-evening-' + dayIL.replace(/-/g, '');
+  if (list.some((x) => x && x.id === id)) return null;
+  list.push({ id, at: nowIso, agent: 'wa-morning', text: '\u05e8\u05e9\u05d9\u05de\u05ea \u05de\u05d7\u05e8', status: 'open', check_at: nowIso, check: EVENING_CHECK, reminded_at: nowIso });
+  return list;
+}
 export function promiseRemindText(due) {
   return '\u05e2\u05d5\u05d3 \u05e4\u05ea\u05d5\u05d7, \u05dc\u05d0 \u05e9\u05db\u05d7\u05ea\u05d9: ' + due.map((x) => x.text + (x.who ? ' (\u05de\u05d7\u05db\u05d4 \u05dc' + x.who + ')' : '')).join('; ') + '.';
 }
@@ -160,7 +171,9 @@ export function promiseRemindText(due) {
 // check and get back to you" writes the promise with check_in_min; wa-morning watch (every 5 minutes) fires the
 // assistant at that time with a server line (promiseCheckFireText), and that run checks, closes the promise
 // (promise_done, "done" on WhatsApp) or sets the next check. Daytime only, at most PROMISE_CHECKS_MAX per promise.
-export const PROMISE_CHECK_MIN = 10, PROMISE_CHECK_MAX_MIN = 2880, PROMISE_CHECKS_MAX = 6;
+// 23/10/2026 (Michael in the questionnaire: "do it: fewer follow-up checks"; 18 fires in 5 days): 30 minutes at the
+// earliest and 3 checks a promise, then Michael is told where it stands.
+export const PROMISE_CHECK_MIN = 30, PROMISE_CHECK_MAX_MIN = 2880, PROMISE_CHECKS_MAX = 3;
 export const PROMISE_CHECK_HEAD = '[\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea \u05e9\u05ea\u05d6\u05de\u05e0\u05ea, \u05e0\u05d1\u05d3\u05e7 \u05d1\u05e9\u05e8\u05ea]';
 export function promiseCheckSet(p, b, nowIso) {
   if (b.check_in_min == null || b.check_in_min === '') return {};

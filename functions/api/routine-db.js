@@ -689,6 +689,19 @@ export function odPutPdfCheck(b) {
 export const PERMIT_SPOT = { page: 2, x: 225, y: 342, w: 90, permit: true };
 export const PERMIT_NAME = /\u05d4\u05e8\u05e9\u05d0\u05ea (\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea|\u05e2\u05d1\u05d5\u05d3\u05d4)/;
 export function permitSpot(name, pages) { return PERMIT_NAME.test(String(name || '')) && pages === 2 ? Object.assign({}, PERMIT_SPOT) : null; }
+// 23/10/2026 (Michael in the questionnaire: "do it: the server stops missing/expired without a check" and "clear
+// words for a draft and a sent mail"). Five times in three days the assistant wrote "missing", "expired" or "waits
+// for you" about something already done, and once "the mail went out" about a draft. A wa_me with such a claim now
+// carries `checked`: where it was checked (the mail, Sent Items, a table). A claim that the assistant itself sent a
+// mail is refused: it only drafts. Pure.
+const CLAIM_RE = /(^|[\s(\-])(\u05d7\u05e1\u05e8|\u05d7\u05e1\u05e8\u05d4|\u05d7\u05e1\u05e8\u05d9\u05dd|\u05d7\u05e1\u05e8\u05d5\u05ea|\u05e4\u05d2|\u05e4\u05d2\u05d4|\u05e4\u05d2\u05d5|\u05e4\u05d2\u05d9\u05dd|\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3|\u05de\u05d7\u05db\u05d4 \u05dc\u05da|\u05de\u05d7\u05db\u05d9\u05dd \u05dc\u05da|\u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7|\u05dc\u05d0 \u05d4\u05ea\u05e7\u05d1\u05dc|\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d4\u05d2\u05d9\u05e2)(?=[\s,.:;)!?\-]|$)/;
+const SENT_RE = /(\u05e9\u05dc\u05d7\u05ea\u05d9 (\u05d0\u05ea )?(\u05d4)?\u05de\u05d9\u05d9\u05dc|\u05e9\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d5|\u05e9\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4|\u05e9\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05dd|\u05d4\u05de\u05d9\u05d9\u05dc \u05e0\u05e9\u05dc\u05d7|\u05d4\u05de\u05d9\u05d9\u05dc \u05d9\u05e6\u05d0)/;
+export function claimGate(text, checked) {
+  const t = String(text || '');
+  if (SENT_RE.test(t)) return 'the text says you sent a mail: you only make drafts. Write "\u05d4\u05db\u05e0\u05ea\u05d9 \u05d8\u05d9\u05d5\u05d8\u05d4" or "\u05e0\u05e9\u05dc\u05d7 \u05de\u05de\u05da \u05d1-<\u05e9\u05e2\u05d4>" (after Sent Items)';
+  if (CLAIM_RE.test(t) && String(checked || '').trim().length < 8) return 'the text says missing / expired / waits for you: add "checked" with where you checked (outlook_email_search in Sent Items and the thread, the table and its row) (23/10/2026)';
+  return null;
+}
 export function signRequestCheck(b) {
   const parts = String(b.path || '').split('/').filter(Boolean);
   const name = parts.pop() || '';
@@ -1458,6 +1471,8 @@ export async function onRequest(context) {
       // 22/10/2026 (the assistant sent "1. yes / 2. another place" with ref signmail, and the tap on 2 ran the server's
       // "reply to the sender"): sign refs belong to the server's own buttons; an assistant message cannot carry them.
       if (/^sign/i.test(String(body.ref || ''))) return jsonResp({ ok: false, error: 'ref sign*: reserved for the server signing buttons; use another ref' }, 400, {});
+      const cg = claimGate(body.text, body.checked);
+      if (cg) return jsonResp({ ok: false, error: cg }, 400, {});
       if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
       const to = await ownerWa(env, url);
       if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});

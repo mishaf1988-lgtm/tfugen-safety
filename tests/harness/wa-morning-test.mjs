@@ -100,6 +100,9 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     { const { promiseToCheck, promiseCheckDue, PROMISE_VERIFY } = await import('./_build/_wa.mjs');
       const c = promiseToCheck(JSON.stringify(l), [l[0].id], new Date(T0 + 25 * 3600e3).toISOString());
       check('a day-old promise becomes a check for the assistant first, not a reminder to Michael (23/10/2026)', c[0].check === PROMISE_VERIFY && c[0].reminded_at && promiseCheckDue(JSON.stringify(c), T0 + 25 * 3600e3 + 1000, 13) && promiseCheckDue(JSON.stringify(c), T0 + 25 * 3600e3 + 1000, 13).id === l[0].id, c); }
+    { const { eveningAdd, EVENING_HOUR, EVENING_CHECK } = await import('./_build/_wa.mjs');
+      const e1 = eveningAdd('[]', '2026-10-25', 0, EVENING_HOUR, '2026-10-25T12:00:00.000Z');
+      check('the evening list: one check at 15:00 on a working day, never twice, never on Friday or out of the hour (23/10/2026)', e1 && e1.length === 1 && e1[0].check === EVENING_CHECK && e1[0].check_at && eveningAdd(JSON.stringify(e1), '2026-10-25', 0, EVENING_HOUR, 'x') === null && eveningAdd('[]', '2026-10-23', 5, EVENING_HOUR, 'x') === null && eveningAdd('[]', '2026-10-25', 0, 14, 'x') === null, e1); }
     check('promise: the reminder says what and who it waits on', /the six labels \(\u05de\u05d7\u05db\u05d4 \u05dcdev\)/.test(promiseRemindText(l)));
     const d = promiseDone(JSON.stringify(l), { id: l[0].id }, 'fixed', 'now');
     check('promise_done text: done, what, note', promiseDoneText(d.closed, 'fixed') === '\u05d1\u05d5\u05e6\u05e2: the six labels. fixed' && d.list[0].status === 'done');
@@ -121,7 +124,7 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     const maxed = JSON.parse(L); maxed[0].checks = PROMISE_CHECKS_MAX;
     check('check: after ' + PROMISE_CHECKS_MAX + ' checks no more (tell Michael instead)', !!promiseAdd(JSON.stringify(maxed), { agent: 'routine-wa-assistant', text: 'the merged PDF', check_in_min: 30 }, N).error);
     const ft = promiseCheckFireText(Object.assign({}, a.list[0], { checks: 1 }), N);
-    check('check: the fire text opens with the server line, carries the promise, what to check and who', ft.split('\n')[0] === PROMISE_CHECK_HEAD && ft.indexOf('promise: ' + a.id) >= 0 && /waiting_on: docs/.test(ft) && /check \(.*\): the chat row has an answer/.test(ft) && /check_no: 1 of 6/.test(ft), ft);
+    check('check: the fire text opens with the server line, carries the promise, what to check and who', ft.split('\n')[0] === PROMISE_CHECK_HEAD && ft.indexOf('promise: ' + a.id) >= 0 && /waiting_on: docs/.test(ft) && /check \(.*\): the chat row has an answer/.test(ft) && ft.includes('check_no: 1 of ' + PROMISE_CHECKS_MAX), ft);
     // end to end: watch fires the assistant once, marks it, logs it
     const fires = [], f0 = globalThis.fetch;
     globalThis.fetch = async (url, opt = {}) => { if (String(url).startsWith('https://api.anthropic.com/')) { fires.push(JSON.parse(opt.body)); return new Response(JSON.stringify({ claude_code_session_id: 'session_X1' }), { status: 200 }); } return f0(url, opt); };
