@@ -1088,7 +1088,8 @@ export async function onRequest(context) {
       });
       if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status }, 200, {});
       let wa = null;
-      if (body.op === 'promise_done' && env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN) {
+      // quiet (23/10/2026): closing what Michael did himself, or what he already heard about, sends him nothing
+      if (body.op === 'promise_done' && body.quiet !== true && env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN) {
         try {
           const to = await ownerWa(env, url), text = promiseDoneText(r.closed, body.note);
           const s = to ? await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };

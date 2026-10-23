@@ -97,6 +97,9 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     check('promise: due after 24 hours, in daytime only', promiseDue(JSON.stringify(l), T0 + 25 * 3600e3, 11).length === 1 && promiseDue(JSON.stringify(l), T0 + 25 * 3600e3, 22).length === 0 && promiseDue(JSON.stringify(l), T0 + 25 * 3600e3, 7).length === 0);
     l[0].reminded_at = 'x';
     check('promise: reminded once only', promiseDue(JSON.stringify(l), T0 + 48 * 3600e3, 11).length === 0);
+    { const { promiseToCheck, promiseCheckDue, PROMISE_VERIFY } = await import('./_build/_wa.mjs');
+      const c = promiseToCheck(JSON.stringify(l), [l[0].id], new Date(T0 + 25 * 3600e3).toISOString());
+      check('a day-old promise becomes a check for the assistant first, not a reminder to Michael (23/10/2026)', c[0].check === PROMISE_VERIFY && c[0].reminded_at && promiseCheckDue(JSON.stringify(c), T0 + 25 * 3600e3 + 1000, 13) && promiseCheckDue(JSON.stringify(c), T0 + 25 * 3600e3 + 1000, 13).id === l[0].id, c); }
     check('promise: the reminder says what and who it waits on', /the six labels \(\u05de\u05d7\u05db\u05d4 \u05dcdev\)/.test(promiseRemindText(l)));
     const d = promiseDone(JSON.stringify(l), { id: l[0].id }, 'fixed', 'now');
     check('promise_done text: done, what, note', promiseDoneText(d.closed, 'fixed') === '\u05d1\u05d5\u05e6\u05e2: the six labels. fixed' && d.list[0].status === 'done');

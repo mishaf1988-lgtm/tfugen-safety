@@ -143,6 +143,15 @@ export function promiseDue(raw, nowMs, hourIL) {
   if (!(hourIL >= 8 && hourIL < 20)) return [];
   return plist(raw).filter((x) => x && x.status === 'open' && !x.reminded_at && nowMs - Date.parse(x.at) >= PROMISE_REMIND_H * 3600e3).slice(0, 3);
 }
+// 23/10/2026 (Michael: "the assistant asks for things I already did"): at 13:15 the server reminded him of the signed
+// permits he had sent the evening before. A day-old promise now goes to the assistant as a check first (it searches
+// the mail, closes what was done, and reminds only what is still open). Pure: the list with the check set.
+export const PROMISE_VERIFY = 'a day passed: check in the mail and the data whether this was already done (Sent Items, the thread). Done = promise_done. Still open = one wa_me reminder to Michael, then promise_done only when it is done';
+export function promiseToCheck(raw, ids, nowIso) {
+  const list = plist(raw);
+  list.forEach((x) => { if (x && ids.indexOf(x.id) >= 0) { x.reminded_at = nowIso; x.check_at = nowIso; x.check = PROMISE_VERIFY; } });
+  return list;
+}
 export function promiseRemindText(due) {
   return '\u05e2\u05d5\u05d3 \u05e4\u05ea\u05d5\u05d7, \u05dc\u05d0 \u05e9\u05db\u05d7\u05ea\u05d9: ' + due.map((x) => x.text + (x.who ? ' (\u05de\u05d7\u05db\u05d4 \u05dc' + x.who + ')' : '')).join('; ') + '.';
 }

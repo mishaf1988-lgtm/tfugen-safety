@@ -19,7 +19,7 @@
 //   body {watch: true}  the watchdog for a stuck run, every 5 minutes (watchVerdict)
 // The same run writes calendar requests for upcoming expiries (calendarStep, below).
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
-import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, PROMISE_KEY, promiseDue, promiseRemindText, promiseCheckDue, promiseCheckFireText, assistantFire } from '../_wa.js';
+import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, PROMISE_KEY, promiseDue, promiseRemindText, promiseToCheck, promiseCheckDue, promiseCheckFireText, assistantFire } from '../_wa.js';
 import { odConfigured, accessToken, putFile } from '../_onedrive.js';
 
 export const LAST_KEY = 'wa_morning_last';
@@ -267,7 +267,13 @@ export function watchVerdict(last, outs, nowMs, warned) {
 async function promiseRemind(env, now) {
   const raw = await stateGet(env, PROMISE_KEY);
   const due = promiseDue(raw, now.getTime(), ilHour(now));
-  if (!due.length || !env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return null;
+  if (!due.length) return null;
+  // the assistant checks first (promiseToCheck); the plain reminder only when it cannot be woken
+  if (assistantFire(env)) {
+    await stateSet(env, PROMISE_KEY, JSON.stringify(promiseToCheck(raw, due.map((x) => x.id), now.toISOString())));
+    return { checks: due.length };
+  }
+  if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return null;
   const to = await ownerWa(env, sbFrom(env));
   if (!to) return null;
   let list = []; try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
