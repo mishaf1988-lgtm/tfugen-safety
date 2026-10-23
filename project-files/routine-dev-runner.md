@@ -1,6 +1,6 @@
 # Routine: המפתח התורן (בקשות קוד מהעוזר, כל שעתיים)
 
-**הטריגר והשיחה:** `trig_017p7AWHAPjxncswGqdfab2p` בשיחה `session_013Z9kiSW2ewwXYCq9cdoDT5` (גם ב-`ACCOUNT-INVENTORY.md`). שיחה קבועה שנפתחה עם `source_url` של tfugen-safety, ולכן `git push` עובד בה (בשונה מ-`routine-dev-fire.md`, שבו ה-push נחסם, 21/10/2026). א'-ה', 07:17 עד 19:17 כל שעתיים.
+**הטריגר והשיחה:** `trig_019kyW1TMXvJeK38auAh1Bkt` בשיחה `session_01MSqAcaJBru46xLKoM4Pyhf` (מ-23/10/2026; הקודמים `trig_017p7AWHAPjxncswGqdfab2p` / `session_013Z9kiSW2ewwXYCq9cdoDT5` כבויים: השיחה התארכה וכל השכמה עלתה כ-1.9 דולר, מיכאל בשאלון: "בצע: מפתח תורן זול יותר") (גם ב-`ACCOUNT-INVENTORY.md`). שיחה קבועה שנפתחה עם `source_url` של tfugen-safety, ולכן `git push` עובד בה (בשונה מ-`routine-dev-fire.md`, שבו ה-push נחסם, 21/10/2026). א'-ה', 07:17 עד 19:17 כל שעתיים.
 
 מיכאל, 21/10/2026: "חייבים למצוא פתרון לעבודה רציפה", ובשאלון: "בצע: כל שעתיים". חיבור GitHub ל-Routine שנוצר מכלי אפשרי רק בהגדרות הארגון (נבדק בכרום, C32), ומיכאל לא רוצה תלות במנהל הארגון (09/10/2026). שם הסוכן: `dev-runner`.
 

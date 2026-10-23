@@ -558,7 +558,7 @@ export const DEV_TRIGGER = 'trig_0114iVUybrBb6vRqZt1EyoyL';
 // (dev-20261022054056-cxum): the fire opened a NEW session, without the repo, as DECISIONS 20/10/2026 (C27, relay_fire
 // landed: false) had already recorded; an API fire never enters the standing session, with or without text. So the
 // runner path is off (RUNNER_RUNS = false) and the runner keeps its two-hourly clock; DEV_TRIGGER as before.
-export const RUNNER_TRIGGER = 'trig_017p7AWHAPjxncswGqdfab2p', RUNNER_RUNS = false;
+export const RUNNER_TRIGGER = 'trig_019kyW1TMXvJeK38auAh1Bkt', RUNNER_RUNS = false; // 23/10/2026: a fresh session (the old trig_017p7... is off)
 export function devFireTarget(env) {
   if (RUNNER_RUNS && env.RUNNER_FIRE_TOKEN) return { url: fireUrlOf(RUNNER_TRIGGER), token: env.RUNNER_FIRE_TOKEN, body: {}, which: 'runner' };
   if (env.DEV_FIRE_TOKEN) return { url: fireUrlOf(DEV_TRIGGER), token: env.DEV_FIRE_TOKEN, body: null, which: 'dev' };
