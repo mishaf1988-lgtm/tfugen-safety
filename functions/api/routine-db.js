@@ -129,7 +129,7 @@ import { PDFDocument } from '../_pdflib.js';
 import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, fireUrlOf, sameSession, recentLine } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
-  'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks'];
+  'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads'];
 export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
@@ -280,6 +280,9 @@ export const COLUMNS = {
   trustee_reports: ['id', 'loc', 'location_id', 's', 'ok', 'ts', 'closed_d', 'num'],
   // talk_field reads this week's draft: no trainer signature, no links, no translations.
   toolbox_talks: ['id', 'd', 's', 'kind', 'dept', 'created_by', 'title', 'body'],
+  // 23/10/2026 (Michael in the questionnaire: "do it: how many signed the talk"): counts only, per talk and department;
+  // no name, ID number, phone, signature or employee number.
+  toolbox_reads: ['id', 'talk_id', 'dept', 'read_at', 'quiz_ok'],
 };
 
 // talk_field (15/10/2026). Pure: the new body, or { error }. row = the talk as it is now; today = YYYY-MM-DD (Israel).
