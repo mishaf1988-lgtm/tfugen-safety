@@ -428,3 +428,17 @@ export function inboundMessages(body) {
   }));
   return out;
 }
+
+// The conversation so far (21/10/2026, the assistant's own list, item 5: "every message starts from zero"; that day
+// two messages 11 seconds apart started two runs that each saw only its own). The last messages of the last 3 hours,
+// both sides, oldest first, without the message being answered now. Pure, tested.
+export const RECENT_H = 3, RECENT_N = 8, RECENT_MAX = 2500;
+export function recentLine(rows, curWamid, nowMs) {
+  const hm = (t) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
+  const out = (Array.isArray(rows) ? rows : []).filter((r) => r && r.payload && (r.event_type === 'owner_in' || r.event_type === 'assistant')
+    && r.payload.wamid !== curWamid && nowMs - Date.parse(r.ts) <= RECENT_H * 3600e3 && String(r.payload.text || r.payload.title || '').trim())
+    .sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts)).slice(-RECENT_N)
+    .map((r) => hm(r.ts) + ' ' + (r.event_type === 'owner_in' ? '\u05de\u05d9\u05db\u05d0\u05dc' : '\u05d4\u05e2\u05d5\u05d6\u05e8') + ': ' + String(r.payload.text || r.payload.title).replace(/\s+/g, ' ').slice(0, 300));
+  while (out.length && out.join(' || ').length > RECENT_MAX) out.shift();
+  return out.join(' || ');
+}

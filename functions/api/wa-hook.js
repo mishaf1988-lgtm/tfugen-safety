@@ -14,7 +14,7 @@
 // notifications_log (payload.wamid), so the assistant knows what Michael is answering.
 // Machine path in _middleware: Meta calls from outside Israel.
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo, SITE } from '../_shared.js';
-import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, LEARN_KEY, learnedLine } from '../_wa.js';
+import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, LEARN_KEY, learnedLine, recentLine } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 import { accessToken } from '../_onedrive.js';
 import { onRequest as routineDb, OD_ROOT, OD_REQ, OD_DRAFT, OD_INBOX } from './routine-db.js';
@@ -36,19 +36,8 @@ async function note(env, value) {
   } catch (e) { /* a missing note is not a failure */ }
 }
 
-// The conversation so far (21/10/2026, the assistant's own list, item 5: "every message starts from zero"; that day
-// two messages 11 seconds apart started two runs that each saw only its own). The last messages of the last 3 hours,
-// both sides, oldest first, without the message being answered now. Pure, tested.
-export const RECENT_H = 3, RECENT_N = 8, RECENT_MAX = 2500;
-export function recentLine(rows, curWamid, nowMs) {
-  const hm = (t) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
-  const out = (Array.isArray(rows) ? rows : []).filter((r) => r && r.payload && (r.event_type === 'owner_in' || r.event_type === 'assistant')
-    && r.payload.wamid !== curWamid && nowMs - Date.parse(r.ts) <= RECENT_H * 3600e3 && String(r.payload.text || r.payload.title || '').trim())
-    .sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts)).slice(-RECENT_N)
-    .map((r) => hm(r.ts) + ' ' + (r.event_type === 'owner_in' ? '\u05de\u05d9\u05db\u05d0\u05dc' : '\u05d4\u05e2\u05d5\u05d6\u05e8') + ': ' + String(r.payload.text || r.payload.title).replace(/\s+/g, ' ').slice(0, 300));
-  while (out.length && out.join(' || ').length > RECENT_MAX) out.shift();
-  return out.join(' || ');
-}
+// recentLine moved to _wa.js (23/10/2026) so routine-db (office_ask) uses it too; re-exported for the tests.
+export { recentLine, RECENT_H, RECENT_N, RECENT_MAX } from '../_wa.js';
 export function fireText(m, about, prev, snapshot, learned, recent) {
   const lines = ['[\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05de\u05de\u05d9\u05db\u05d0\u05dc, \u05e0\u05d1\u05d3\u05e7 \u05d1\u05e9\u05e8\u05ea: \u05d7\u05ea\u05d9\u05de\u05ea Meta \u05d5\u05d4\u05de\u05e1\u05e4\u05e8 \u05e9\u05dc\u05d5]',
     'at: ' + (m.ts ? new Date(m.ts * 1000).toISOString() : new Date().toISOString()), 'wamid: ' + m.id];
