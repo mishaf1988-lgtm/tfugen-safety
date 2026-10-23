@@ -682,6 +682,13 @@ export function odPutPdfCheck(b) {
 // sign_request (21/10/2026): {path} = a PDF inside the safety folder, the same folders od_put_pdf may write to
 // (not the protected ones, not the inbox, the requests or the drafts folder), not a file that is already a
 // signed copy. page 1-200, x / y 0-2000 points, all optional. Pure.
+// 23/10/2026 (Michael: "he has to check and see"): a scanned safety permit has no text, so findSignSpot finds no line,
+// and the signature fell on the footer logos (22/10). The permit is the factory's own form (18_..., "templates for
+// contractors"): page 2, "approvals and signatures", the safety officer's row, on the line left of "signature". Measured
+// on the template and approved by Michael on 22/10 13:57 for the T.S. permit. Only a 2-page file named as a permit.
+export const PERMIT_SPOT = { page: 2, x: 225, y: 342, w: 90, permit: true };
+export const PERMIT_NAME = /\u05d4\u05e8\u05e9\u05d0\u05ea (\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea|\u05e2\u05d1\u05d5\u05d3\u05d4)/;
+export function permitSpot(name, pages) { return PERMIT_NAME.test(String(name || '')) && pages === 2 ? Object.assign({}, PERMIT_SPOT) : null; }
 export function signRequestCheck(b) {
   const parts = String(b.path || '').split('/').filter(Boolean);
   const name = parts.pop() || '';
@@ -1308,7 +1315,10 @@ export async function onRequest(context) {
       try {
         const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(c.path) + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) });
         pdfBytes = d.ok ? new Uint8Array(await d.arrayBuffer()) : null;
-        if (pdfBytes && c.page === undefined && c.x === undefined && c.y === undefined) spot = signPlace(findSignSpot(await PDFDocument.load(pdfBytes, { ignoreEncryption: true })));
+        if (pdfBytes && c.page === undefined && c.x === undefined && c.y === undefined) {
+          const doc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+          spot = signPlace(findSignSpot(doc)) || permitSpot(c.name, doc.getPageCount());
+        }
       } catch (x) { spot = null; }
       const rows = await stateRead([SIGN_KEY]);
       const now = new Date().toISOString();
