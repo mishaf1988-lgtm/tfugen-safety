@@ -63,6 +63,8 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   check('the table list has no users / auth / backup table', !TABLES.some((t) => /user|auth|backup|server_state/.test(t)));
 
   console.log('\n3. medical tables: expiry only; trustee reports: no text, no names');
+  check('toolbox_reads: counts per talk and department allowed (23/10/2026)', cleanQuery('select=id,talk_id,dept&talk_id=eq.w20261018', 'toolbox_reads') !== null);
+  check('toolbox_reads: name, ID number, phone, signature refused', ['emp_name', 'id_no', 'phone', 'sig_url', 'emp_no', 'emp_id'].every((c) => cleanQuery('select=' + c, 'toolbox_reads') === null) && cleanQuery('select=*', 'toolbox_reads') === null && cleanQuery('select=id&emp_name=eq.x', 'toolbox_reads') === null);
   check('med select=e: allowed', cleanQuery('select=e&e=lte.2026-12-31', 'med') !== null);
   check('med select=*: refused', cleanQuery('select=*', 'med') === null);
   check('med without select: refused', cleanQuery('e=lte.2026-12-31', 'med') === null);
