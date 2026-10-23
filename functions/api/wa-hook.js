@@ -208,7 +208,8 @@ export function signAskManyText(list) {
 }
 // Search the safety folder, then ask through routine-db sign_request (its own checks: folder, PDF, not protected).
 // Returns { sent } when the document and the question went out, or { text } to answer instead.
-export const LEARNED_MAX = 8000;
+// 23/10/2026: 60 open entries are about 12,000 characters, past 8,000 again; the retro folded 7 that night.
+export const LEARNED_MAX = 16000;
 export const SIGN_PICK_KEY = 'sign_pick', SIGN_PICK_MS = 3600e3;
 // The candidates go out as buttons; a tap ("1") on that very message asks for the one picked (sign_pick, 1 hour).
 export function signPickText(list, none) {
