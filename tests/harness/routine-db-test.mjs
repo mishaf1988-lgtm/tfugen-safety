@@ -153,6 +153,8 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     { const { officeFireText, OFFICE_ROW } = await import('./_build/routine-db.mjs');
       const t = officeFireText('abc123XYZ', 'תבדוק\nמה עם טופס 16', '2026-10-22T05:00:00.000Z');
       check('office_ask: the head names the office and the row, the text is one line, the answer goes to WhatsApp', t.split('\n')[0].indexOf('מהמשרד של מיכאל') >= 0 && t.includes('abc123XYZ') && t.includes('text: תבדוק / מה') && t.includes('wa_me') && t.includes('doc_id ans-abc123XYZ') && t.includes('reply_to: "abc123XYZ"'), t);
+      const tr = officeFireText('abc123XYZ', 'וגם את הגז', '2026-10-23T15:00:00.000Z', '18:36 מיכאל: מתי פג אישור הכבאות');
+      check('office_ask: the conversation so far rides along as recent, and only when there is one (23/10/2026)', tr.split('\n').pop().startsWith('recent (') && tr.includes('אישור הכבאות') && !t.includes('recent ('), tr);
       check('office_ask: a row id is a db id, not free text', OFFICE_ROW.test('k9Xz_12-ab') && !OFFICE_ROW.test('a b') && !OFFICE_ROW.test('x')); }
     { const { devFireTarget, RUNNER_TRIGGER, DEV_TRIGGER } = await import('./_build/routine-db.mjs');
       const a = devFireTarget({ RUNNER_FIRE_TOKEN: 'r', DEV_FIRE_TOKEN: 'd' }), b = devFireTarget({ DEV_FIRE_TOKEN: 'd' });
