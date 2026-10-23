@@ -35,6 +35,7 @@ check('a signed copy is not signed again', signRequestCheck({ ...ok, path: 'מי
 check('no agent / no why = refused', signRequestCheck({ ...ok, agent: 'X Y' }).error === 'bad agent name' && signRequestCheck({ ...ok, why: '' }).error === 'why required');
 check('page and place: numbers in range only', signRequestCheck({ ...ok, page: 2, x: 300, y: 80 }).page === 2 && signRequestCheck({ ...ok, page: 0 }).error && signRequestCheck({ ...ok, x: '5' }).error && signRequestCheck({ ...ok, page: 1.5 }).error);
 const ask = signAskText('מכתב מינוי.pdf', 'מינויים');
+check('a permit spot: the question names the safety officer row (23/10/2026)', signAskText('a.pdf', 'x', { page: 2, permit: true }).includes('\u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea'));
 check('a spot Michael approved: the question says page N, the place you approved, not "no place found" (22/10/2026)', signAskText('a.pdf', 'x', { page: 2, set: true }).includes('\u05d1\u05e2\u05de\u05d5\u05d3 2, \u05d1\u05de\u05e7\u05d5\u05dd \u05e9\u05d0\u05d9\u05e9\u05e8\u05ea') && !signAskText('a.pdf', 'x', { page: 2, set: true }).includes('\u05dc\u05d0 \u05de\u05e6\u05d0\u05ea\u05d9'));
 check('the question names the file and the new name, keyboard characters only', /^לחתום בשמך על מכתב מינוי\.pdf\?/.test(ask) && ask.indexOf('מכתב מינוי - חתום.pdf') > 0 && !/[—–־«»“”→·…]/.test(ask));
 

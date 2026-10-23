@@ -163,6 +163,8 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
       const c = signRequestCheck({ agent: 'routine-wa-assistant', why: 'test test', path: '99_x/a.pdf', page: 2, x: 225, y: 342, w: 90 });
       check('sign_request / sign_offer: a set spot with its width passes, a width out of range does not', c.page === 2 && c.w === 90 && !!signRequestCheck({ agent: 'routine-wa-assistant', why: 'test test', path: '99_x/a.pdf', page: 2, x: 1, y: 1, w: 500 }).error, c);
       check('a second signed copy "(2)" is never offered for signing', !!signRequestCheck({ agent: 'routine-wa-assistant', why: 'test test', path: '99_x/a - \u05d7\u05ea\u05d5\u05dd (2).pdf' }).error); }
+    { const { permitSpot } = await import('./_build/routine-db.mjs');
+      check('a scanned 2-page safety permit gets the safety officer row, anything else nothing (23/10/2026)', permitSpot('2026-10-22 0943 - \u05d4\u05e8\u05e9\u05d0\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e0\u05d2\u05d1.pdf', 2).page === 2 && permitSpot('\u05d4\u05e8\u05e9\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 x.pdf', 2).x === 225 && permitSpot('\u05d4\u05e8\u05e9\u05d0\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.pdf', 3) === null && permitSpot('\u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8.pdf', 2) === null); }
     // wa_file (22/10/2026): the paths follow draftAttach; nothing is read or sent before they pass
     { const before = calls.length;
       check('wa_file: a path out of the safety folder, a .exe, or too many: 400', (await call({ op: 'wa_file', agent: 'routine-wa-assistant', paths: ['../x.pdf'] })).status === 400

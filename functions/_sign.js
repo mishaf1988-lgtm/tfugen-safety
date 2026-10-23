@@ -85,7 +85,8 @@ export function signAnswer(m) {
 export function signedName(name) { return String(name).replace(/\.pdf$/i, '') + SIGN_SUFFIX + '.pdf'; }
 // Where it goes, in words. spot = { page } when the document's signature line was found (signPlace).
 export function signAskText(name, folder, spot) {
-  const where = spot && spot.set ? '\u05d1\u05e2\u05de\u05d5\u05d3 ' + spot.page + ', \u05d1\u05de\u05e7\u05d5\u05dd \u05e9\u05d0\u05d9\u05e9\u05e8\u05ea'
+  const where = spot && spot.permit ? '\u05d1\u05e2\u05de\u05d5\u05d3 2, \u05d1\u05e9\u05d5\u05e8\u05ea \u05d0\u05d9\u05e9\u05d5\u05e8 \u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (\u05dc\u05e4\u05d9 \u05ea\u05d1\u05e0\u05d9\u05ea \u05d4\u05d4\u05e8\u05e9\u05d0\u05d4)'
+    : spot && spot.set ? '\u05d1\u05e2\u05de\u05d5\u05d3 ' + spot.page + ', \u05d1\u05de\u05e7\u05d5\u05dd \u05e9\u05d0\u05d9\u05e9\u05e8\u05ea'
     : spot && spot.page ? '\u05e2\u05dc \u05e9\u05d5\u05e8\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05d1\u05e2\u05de\u05d5\u05d3 ' + spot.page
     : '\u05d1\u05e2\u05de\u05d5\u05d3 \u05d4\u05d0\u05d7\u05e8\u05d5\u05df \u05dc\u05de\u05d8\u05d4 \u05de\u05d9\u05de\u05d9\u05df (\u05dc\u05d0 \u05de\u05e6\u05d0\u05ea\u05d9 \u05de\u05e7\u05d5\u05dd \u05d7\u05ea\u05d9\u05de\u05d4 \u05d1\u05de\u05e1\u05de\u05da)';
   return '\u05dc\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05da \u05e2\u05dc ' + name + '?\n(' + folder + ')\n'
