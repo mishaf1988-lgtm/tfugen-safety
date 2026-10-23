@@ -96,6 +96,8 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     check('promise: not due before 24 hours', promiseDue(JSON.stringify(l), T0 + 23 * 3600e3, 11).length === 0);
     check('promise: due after 24 hours, in daytime only', promiseDue(JSON.stringify(l), T0 + 25 * 3600e3, 11).length === 1 && promiseDue(JSON.stringify(l), T0 + 25 * 3600e3, 22).length === 0 && promiseDue(JSON.stringify(l), T0 + 25 * 3600e3, 7).length === 0);
     l[0].reminded_at = 'x';
+    const fut = [{ id: 'pf', at: new Date(T0).toISOString(), status: 'open', check_at: new Date(T0 + 44 * 3600e3).toISOString() }];
+    check('promise: a check scheduled ahead is not day-old due (23/10/2026)', promiseDue(JSON.stringify(fut), T0 + 25 * 3600e3, 11).length === 0 && promiseDue(JSON.stringify(fut), T0 + 45 * 3600e3, 11).length === 1);
     check('promise: reminded once only', promiseDue(JSON.stringify(l), T0 + 48 * 3600e3, 11).length === 0);
     { const { promiseToCheck, promiseCheckDue, PROMISE_VERIFY } = await import('./_build/_wa.mjs');
       const c = promiseToCheck(JSON.stringify(l), [l[0].id], new Date(T0 + 25 * 3600e3).toISOString());

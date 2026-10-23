@@ -138,10 +138,13 @@ export function promiseDoneText(closed, note) {
   if (!closed.length) return n ? '\u05d1\u05d5\u05e6\u05e2: ' + n : '';
   return '\u05d1\u05d5\u05e6\u05e2: ' + closed.map((x) => x.text).join('; ') + (n ? '. ' + n : '.');
 }
-// The ones to remind about now: open, never reminded, older than PROMISE_REMIND_H, between 08:00 and 19:59 in Israel.
+// The ones to remind about now: open, never reminded, older than PROMISE_REMIND_H, no check scheduled ahead, between 08:00 and 19:59 in Israel.
 export function promiseDue(raw, nowMs, hourIL) {
   if (!(hourIL >= 8 && hourIL < 20)) return [];
-  return plist(raw).filter((x) => x && x.status === 'open' && !x.reminded_at && nowMs - Date.parse(x.at) >= PROMISE_REMIND_H * 3600e3).slice(0, 3);
+  // 23/10/2026 (the assistant's own dev request, a Friday reminder for Sunday 10:00): a promise whose check_at is still
+  // ahead is a scheduled check, not a forgotten one; the day-old check would overwrite its time and text.
+  return plist(raw).filter((x) => x && x.status === 'open' && !x.reminded_at && nowMs - Date.parse(x.at) >= PROMISE_REMIND_H * 3600e3
+    && !(x.check_at && Date.parse(x.check_at) > nowMs)).slice(0, 3);
 }
 // 23/10/2026 (Michael: "the assistant asks for things I already did"): at 13:15 the server reminded him of the signed
 // permits he had sent the evening before. A day-old promise now goes to the assistant as a check first (it searches
