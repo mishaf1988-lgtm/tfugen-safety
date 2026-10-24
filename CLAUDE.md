@@ -38,7 +38,7 @@ Claude Code loads this file automatically at the start of every session in this 
    - `askDel(table, id)` → מחיקה עם אישור
    - `goPage(name)` → ניווט
    - `showView(table, id)` → צפייה בפריט
-5. **אל תיצור קבצי HTML נוספים**. הכל ב-`index.html`.
+5. **אל תיצור קבצי HTML נוספים**. הכל ב-`index.html`. חריג יחיד: `/chat` (צ'אט העוזר כאייקון נפרד, `functions/chat.js`; מיכאל בשאלון 24/10/2026: "בצע: עמוד צ'אט קל נפרד").
 6. **אל תוסיף framework / build step / bundler**.
 7. **אין לסמן `[x]` בלי הוכחת הרצה** — פעולה ידנית ב-Supabase, migration, RLS, Storage policy או שינוי Auth תסומן כבוצעה ב-`STATUS.md` רק אחרי שהמשתמש אישר במפורש שההרצה והאימות עברו. `IF NOT EXISTS` אומר שההרצה בטוחה לחזרה, אבל לא מוכיח שהפעולה בוצעה או שהאפליקציה עובדת. נאכף ב-CI (`.github/scripts/rule7-gate.py`): שורת `[x]` חדשה עם קובץ migration ובלי "אומת" נכשלת.
 

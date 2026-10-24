@@ -77,7 +77,9 @@ function machineCall(request, path) {
 // Functions (they have their own gates). Pages serves x.html also as /x, so both are listed.
 export const PUBLIC_PATHS = ['/', '/index.html', '/index', '/sw.js', '/app.js', '/manifest.webmanifest', '/robots.txt',
   '/logo.jpg', '/icon.svg', '/icon-180.png', '/icon-192.png', '/icon-512.png', '/icon-maskable-512.png',
-  '/privacy.html', '/privacy', '/user-data-deletion.html', '/user-data-deletion'];
+  '/privacy.html', '/privacy', '/user-data-deletion.html', '/user-data-deletion',
+  // 24/10/2026: Michael's chat with his assistant (functions/chat.js; it logs in itself)
+  '/chat'];
 export function publicPath(path) {
   return path.indexOf('/api/') === 0 || PUBLIC_PATHS.indexOf(path) >= 0;
 }
