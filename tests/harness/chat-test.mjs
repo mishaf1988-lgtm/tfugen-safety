@@ -155,6 +155,7 @@ console.log('\n6. a photo or a PDF from him (25/10/2026)');
   check('anything but a photo or a PDF: 400', r.status === 400);
   r = await onRequest({ request: new Request('https://app.test/api/chat?up=1', { method: 'POST', headers: { Authorization: 'Bearer ' + ADM1 }, body: pdf }), env: ENV });
   check('without the second factor: 401, nothing saved', r.status === 401);
+  check('the page: a picked photo waits above the box (✕ drops it) and goes with the caption only on ➤', /id="pv"/.test(page) && /if\(pend_f\)return sendFile\(pend_f,/.test(page) && !/\$\('fi'\)\.onchange=function\(\)\{[^}]*fetch\(/.test(page));
   check('the page: 📎 sends a photo (made smaller) or a PDF with what is typed', /id="att"/.test(page) && /\/api\/chat\?up=1/.test(page) && /image\/jpeg',0\.82/.test(page));
 }
 
