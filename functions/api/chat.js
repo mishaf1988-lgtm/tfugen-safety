@@ -8,7 +8,8 @@
 //   GET  ?f=<id>&e=<exp>&s=<sig>  a file the server sent him (25/10/2026): the link comes signed in GET's rows (24
 //                  hours), so the phone opens it in its own viewer without a login header; only files in the safety folder.
 import { jsonResp, requireRole, defaultAllowedOrigins, originPasses, corsHeaders, SB_LIVE, SB_TIMEOUT_MS, tmo } from '../_shared.js';
-import { assistantFire, recentLine, lastOut, hmacHex } from '../_wa.js';
+import { assistantFire, recentLine, lastOut, hmacHex, ownerWa } from '../_wa.js';
+import { fastRoute, runFast, rateOf, rateNote } from './wa-hook.js';
 import { accessToken, putFile } from '../_onedrive.js';
 import { OD_ROOT, CHAT_DIR, UP_MAX, upKind } from './routine-db.js';
 import { ttsUpstream, sayParts, speechText } from './talk.js';
@@ -67,7 +68,7 @@ export function filePathOk(p) {
 const FILE_TYPES = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', doc: 'application/msword', xls: 'application/vnd.ms-excel',
   jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png' };
-async function serveFile(env, u) {
+export async function serveFile(env, u) {
   const id = String(u.searchParams.get('f') || ''), exp = Number(u.searchParams.get('e') || 0), sig = String(u.searchParams.get('s') || '');
   const no = (st, t) => new Response(t, { status: st, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } });
   if (!/^[a-z0-9]{6,40}$/.test(id) || !exp || exp < Date.now() || !env.SUPABASE_SERVICE_ROLE_KEY) return no(403, 'expired');
@@ -131,7 +132,7 @@ export async function onRequest(context) {
       + '&channel=in.(whatsapp,whatsapp_error,office,chat)&order=ts.desc&limit=' + CHAT_ROWS, { headers: h, signal: tmo(SB_TIMEOUT_MS) }).catch(() => null);
     if (!r || !r.ok) return jsonResp({ ok: false, error: 'read ' + (r ? r.status : 'network') }, 200, cors);
     const rows = chatRows(await r.json().catch(() => [])), exp = Date.now() + FILE_LINK_MS;
-    for (const m of rows) if (m.id) { m.url = '/api/chat?f=' + m.id + '&e=' + exp + '&s=' + await fileSig(env, m.id, exp); delete m.id; }
+    for (const m of rows) if (m.id) { m.url = '/api/chat-file/' + encodeURIComponent(m.doc || 'file') + '?f=' + m.id + '&e=' + exp + '&s=' + await fileSig(env, m.id, exp); delete m.id; }
     return jsonResp({ ok: true, rows }, 200, cors);
   }
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, cors);
@@ -158,11 +159,12 @@ export async function onRequest(context) {
     if (!up.r) return jsonResp({ error: up.err }, up.status || 502, Object.assign({}, cors, X));
     return new Response(up.r.body, { headers: Object.assign({}, cors, X, { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-store' }) });
   }
-  return chatSend(env, url, h, cors, text, null);
+  const choice = Number.isInteger(body.choice) && body.choice >= 1 && body.choice <= 10 ? body.choice : null;
+  return chatSend(env, url, h, cors, text, null, choice);
 }
 
 // his line (or file) to the assistant: logged as his own on channel chat, then fired like a WhatsApp message
-async function chatSend(env, url, h, cors, text, media) {
+async function chatSend(env, url, h, cors, text, media, choice) {
   const af = assistantFire(env);
   if (!af) return jsonResp({ ok: false, error: 'assistant not configured' }, 200, cors);
   const now = new Date().toISOString(), id = 'ch' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -174,6 +176,15 @@ async function chatSend(env, url, h, cors, text, media) {
   await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_TIMEOUT_MS),
     body: JSON.stringify([{ id, user_email: 'server', ts: now, event_type: 'owner_in', channel: 'chat',
       payload: Object.assign({ title: shown.replace(/\s+/g, ' ').slice(0, 120), text: shown.slice(0, 1500) }, media ? { kind: 'document', file: media.file, name: media.name } : {}) }]) }).catch(() => null);
+  // the same fast lane as WhatsApp (25/10/2026, in the questionnaire: "do it: immediate signing"): "do it" on a
+  // signature question signs now, a tap on a sign list picks, and so on; only what it does not answer goes on
+  if (!media) {
+    const m = { id: null, text, choice }, fr0 = fastRoute(m, null, prev), seen = {};
+    const rt = rateOf(m, null, prev);
+    if (rt) await rateNote(env, rt.good, prev && prev.text).catch(() => null);
+    if (fr0 && await runFast(env, await ownerWa(env, url).catch(() => ''), m, fr0, seen, true).catch(() => false)) return jsonResp({ ok: true, fast: seen.fast || fr0.kind }, 200, cors);
+    text = m.text;
+  }
   let fired;
   try {
     const fr = await fetch(af.url, { method: 'POST', signal: tmo(FIRE_MS),
