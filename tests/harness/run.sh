@@ -52,11 +52,13 @@ sed -i "s#'./_pdflib.js'#'./_pdflib.mjs'#" _build/_pdftext.mjs
 sed -i "s#'./api/hazard-file.js'#'./hazard-file.mjs'#" _build/_meeting.mjs
 sed -i "s#'./_xlsxpatch.js'#'./_xlsxpatch.mjs'#" _build/_pptx.mjs _build/_deckpatch.mjs
 sed -i "s#'./_onedrive.js'#'./_onedrive.mjs'#" _build/_watchdog.mjs
-for f in trustee-log ms-auth trustee-notify mail-inbox close-hazard hazard-file od-read od-pick od-scan hazard-report meeting-data hazard-deck weekly-digest backup-od talk xlsx-gaps routine-db codes weather wa-hook wa-morning; do
+for f in trustee-log ms-auth trustee-notify mail-inbox close-hazard hazard-file od-read od-pick od-scan hazard-report meeting-data hazard-deck weekly-digest backup-od talk xlsx-gaps routine-db codes weather wa-hook wa-morning chat; do
   sed -e "s#'../_shared.js'#'./_shared.mjs'#" -e "s#'../_xlsx.js'#'./_xlsx.mjs'#" -e "s#'../_onedrive.js'#'./_onedrive.mjs'#" -e "s#'../_closelink.js'#'./_closelink.mjs'#" -e "s#'../_xlsxpatch.js'#'./_xlsxpatch.mjs'#" -e "s#'../_ai.js'#'./_ai.mjs'#" -e "s#'./hazard-file.js'#'./hazard-file.mjs'#" -e "s#'./hazard-deck.js'#'./hazard-deck.mjs'#" -e "s#'./od-read.js'#'./od-read.mjs'#" -e "s#'../_meeting.js'#'./_meeting.mjs'#" -e "s#'../_pptx.js'#'./_pptx.mjs'#" -e "s#'../_deckpatch.js'#'./_deckpatch.mjs'#" -e "s#'../_watchdog.js'#'./_watchdog.mjs'#" -e "s#'../_appjs.js'#'./_appjs.mjs'#" -e "s#'../_logo.js'#'./_logo.mjs'#" -e "s#'../_wa.js'#'./_wa.mjs'#" -e "s#'./talk.js'#'./talk.mjs'#" -e "s#'./hazard-report.js'#'./hazard-report.mjs'#" -e "s#'./wa-morning.js'#'./wa-morning.mjs'#" -e "s#'../_sign.js'#'./_sign.mjs'#" -e "s#'./routine-db.js'#'./routine-db.mjs'#" -e "s#'../_pdftext.js'#'./_pdftext.mjs'#" -e "s#'../_pdflib.js'#'./_pdflib.mjs'#" -e "s#'../_ocr.js'#'./_ocr.mjs'#" ../../functions/api/$f.js > _build/$f.mjs
 done
 # _site.js (17/10/2026): the factory's names and addresses, imported by _shared and the root modules
 cp ../../functions/_site.js _build/_site.mjs; cp ../../functions/_site.js _build/_site.js  # also for tests that copy _shared.js into _build themselves
+# /chat (24/10/2026): the page itself, at the root of functions/
+sed "s#'./api/talk.js'#'./talk.mjs'#" ../../functions/chat.js > _build/chat-page.mjs
 sed -i "s#'./_site.js'#'./_site.mjs'#" _build/*.mjs
 filter="${1:-}"; fail=0
 # SHARD=i/n (the GitHub workflow, 01/10/2026): only every n-th file, from i.
@@ -95,7 +97,7 @@ for f in *.js *.mjs *.py; do
     echo "$line"; fail=1; echo "$out" | grep -E "✗|FAIL|HARNESS" | head -5
   fi
 done
-rm -rf _build
+[ -n "${KEEP_BUILD:-}" ] || rm -rf _build
 # A filter that matches no file used to print ALL GREEN over zero suites (01/10/2026, lesson 22).
 [ "${ran:-0}" -eq 0 ] && { echo "NO SUITE MATCHED '$filter'"; fail=1; }
 [ $fail -eq 0 ] && echo "ALL GREEN" || echo "FAILURES ABOVE"
