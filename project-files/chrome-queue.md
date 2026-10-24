@@ -209,6 +209,15 @@
   דווח: מה נוצר, ה-Endpoint, מה נשמר ב-Cloudflare (שמות בלבד), ומה נעצר ולמה.
   ```
 
+- [ ] **C44. מפתח ההתראות של הצ'אט ב-Cloudflare** (24/10/2026, מיכאל בשאלון: "בצע: לבנות התראות". מיכאל עושה את זה בעצמו מהדף ששלחתי, כמו WA_PIN. הערך לא נכתב פה כי הוא סודי.)
+  ```
+  משימה: להוסיף סוד אחד לפרויקט tapugan-safety ב-Cloudflare Pages. הערך נמצא בדף "מפתח התראות" שקיבלת מ-Claude.
+  1. https://dash.cloudflare.com > Workers & Pages > tapugan-safety > Settings > Variables and Secrets > Add.
+  2. Type: Secret. Variable name: VAPID_PRIVATE. Value: הערך מהדף. Environment: Production. Save.
+  3. Deployments > הפריסה העליונה > Retry deployment.
+  4. דווח: נשמר, והפריסה הסתיימה.
+  ```
+
 ## בוצע
 
 - [x] **C35. מפתח הפעלה למפתח התורן** (22/10/2026, מיכאל בשאלון: "בצע: רק כשיש בקשה (מומלץ)"; `devFireTarget` ב-routine-db). (1) בדף https://claude.ai/code/routines/trig_017p7AWHAPjxncswGqdfab2p: הוספת מפעיל API ויצירת טוקן. (2) ב-Cloudflare, Pages, tapugan-safety, Settings, Variables and Secrets, Production: סוד חדש `RUNNER_FIRE_TOKEN` = הטוקן, ושמירה. אחרי: Claude מפרסם מחדש (סוד חדש צריך פריסה), מוריד את השעון לפעם ביום, ובודק בבקשה הבאה ש-`fired.to` = `runner`. טקסט להדבקה בכרום:
