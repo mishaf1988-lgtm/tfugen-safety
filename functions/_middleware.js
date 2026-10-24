@@ -79,7 +79,7 @@ export const PUBLIC_PATHS = ['/', '/index.html', '/index', '/sw.js', '/app.js', 
   '/logo.jpg', '/icon.svg', '/icon-180.png', '/icon-192.png', '/icon-512.png', '/icon-maskable-512.png',
   '/privacy.html', '/privacy', '/user-data-deletion.html', '/user-data-deletion',
   // 24/10/2026: Michael's chat with his assistant (functions/chat.js; it logs in itself)
-  '/chat'];
+  '/chat', '/chat-icon-180.png', '/chat-icon-192.png', '/chat-icon-512.png', '/chat-icon-maskable-512.png'];
 export function publicPath(path) {
   return path.indexOf('/api/') === 0 || PUBLIC_PATHS.indexOf(path) >= 0;
 }
