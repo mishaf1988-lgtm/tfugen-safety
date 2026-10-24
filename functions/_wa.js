@@ -417,6 +417,12 @@ export async function metaSigOk(raw, header, secret) {
   return d === 0;
 }
 
+// Delivery statuses (sent, delivered, read) in a webhook body (24/10/2026): every message the server sends comes back
+// as one, so their absence after a send means Meta stopped calling the hook (the app fell out of Live).
+export const STATUS_KEY = 'wa_status_last';
+export function hasStatuses(body) {
+  return ((body && body.entry) || []).some((e) => ((e && e.changes) || []).some((c) => !!(c && c.value && Array.isArray(c.value.statuses) && c.value.statuses.length)));
+}
 // The messages Michael sent, from one webhook body. Statuses (delivered, read) are not messages.
 export function inboundMessages(body) {
   const out = [];
