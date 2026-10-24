@@ -705,15 +705,20 @@ export function odArchiveCheck(b) {
 // folder, e.g. an appointment letter and its certificate merged into one file. A PDF only (%PDF- at the
 // start), 4 MB at most, never replacing a file (name taken = refused), never into the protected folders.
 export const OD_PUT_MAX = 4 * 1024 * 1024;
+export const OD_PUT_TYPES = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
 export function odPutPdfCheck(b) {
   const c = odMkdirCheck({ agent: b.agent, why: b.why, parent: b.dir, name: b.name });
   if (c.error) return { error: c.error === 'bad parent' ? 'bad dir' : c.error };
-  if (!/\.pdf$/i.test(c.name)) return { error: 'bad name' };
+  // 24/10/2026 (Michael: "documents in the folder must be Word for editing as before; PDF later for display"):
+  // a Word or Excel file too, checked by its own signature (a .docx is a zip, PK\x03\x04).
+  const ext = (/\.(pdf|docx|xlsx)$/i.exec(c.name) || [])[1];
+  if (!ext) return { error: 'bad name' };
   let bytes;
   try { bytes = Uint8Array.from(atob(String(b.b64 || '')), (ch) => ch.charCodeAt(0)); } catch (e) { return { error: 'bad b64' }; }
   if (!bytes.length || bytes.length > OD_PUT_MAX) return { error: 'size 1-' + OD_PUT_MAX };
-  if (String.fromCharCode(...bytes.slice(0, 5)) !== '%PDF-') return { error: 'not a pdf' };
-  return { dir: c.parent, name: c.name, bytes };
+  const head = String.fromCharCode(...bytes.slice(0, 5));
+  if (ext.toLowerCase() === 'pdf' ? head !== '%PDF-' : head.slice(0, 4) !== 'PK\x03\x04') return { error: 'not a ' + ext.toLowerCase() };
+  return { dir: c.parent, name: c.name, bytes, type: OD_PUT_TYPES[ext.toLowerCase()] };
 }
 // sign_request (21/10/2026): {path} = a PDF inside the safety folder, the same folders od_put_pdf may write to
 // (not the protected ones, not the inbox, the requests or the drafts folder), not a file that is already a
@@ -1371,7 +1376,7 @@ export async function onRequest(context) {
       if (!(await par.json().catch(() => ({}))).folder) return jsonResp({ ok: false, error: 'dir is not a folder' }, 200, {});
       const taken = await fetch(G + enc(c.dir + '/' + c.name) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
       if (taken.status !== 404) return jsonResp({ ok: false, error: taken.ok ? 'name taken' : 'name check ' + taken.status }, 200, {});
-      const up = await fetch(G + enc(c.dir + '/' + c.name) + ':/content?@microsoft.graph.conflictBehavior=fail', { method: 'PUT', headers: { ...gh, 'Content-Type': 'application/pdf' }, body: c.bytes, signal: tmo(GRAPH_MS) });
+      const up = await fetch(G + enc(c.dir + '/' + c.name) + ':/content?@microsoft.graph.conflictBehavior=fail', { method: 'PUT', headers: { ...gh, 'Content-Type': c.type }, body: c.bytes, signal: tmo(GRAPH_MS) });
       const uj = await up.json().catch(() => ({}));
       if (!up.ok) return jsonResp({ ok: false, error: 'put ' + up.status }, 200, {});
       return jsonResp({ ok: true, path: c.dir.slice(OD_ROOT.length) + '/' + c.name, size: uj.size || null, webUrl: uj.webUrl || null }, 200, {});
