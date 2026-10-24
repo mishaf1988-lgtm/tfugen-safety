@@ -408,6 +408,24 @@ async function sendToOwnerRaw(env, to, text, opts) {
 // Now each one is logged as wa_out (what was sent, or what WhatsApp refused) and goes to the phone as a pop-up.
 // Never throws and never changes what the caller gets: the log and the pop-up are extra.
 export const WA_OUT = 'wa_out';
+// 25/10/2026 (Michael: "cancel the notifications I get on WhatsApp, and handle the notifications in the new
+// assistant"): with server_state wa_owner_mode = 'chat' nothing goes to his WhatsApp, only to /chat (the log line
+// and the pop-up below), unless he himself wrote on WhatsApp in the last 15 minutes: then the conversation he is in
+// goes on there, and only once a phone has turned pop-ups on in /chat (no phone = he would get nothing at all).
+// Anything else in the key, or a read that fails, = WhatsApp as before.
+export const OWNER_MODE_KEY = 'wa_owner_mode', WA_TALK_MS = 15 * 60000;
+export async function chatOnly(env, nowMs) {
+  if (!env || !env.SUPABASE_SERVICE_ROLE_KEY) return false;
+  const sbUrl = env.SUPABASE_URL || SB_LIVE;
+  try {
+    if (String(await stateRow(env, sbUrl, OWNER_MODE_KEY) || '') !== 'chat') return false;
+    let subs = await stateRow(env, sbUrl, 'chat_push_subs');
+    if (typeof subs === 'string') { try { subs = JSON.parse(subs); } catch (e) { subs = null; } }
+    if (!Array.isArray(subs) || !subs.length) return false;
+    const at = Date.parse(await stateRow(env, sbUrl, OWNER_IN_KEY)) || 0;
+    return (nowMs || Date.now()) - at >= WA_TALK_MS;
+  } catch (e) { return false; }
+}
 const o_choices = (opts) => cleanChoices(opts && opts.choices).map((c, i) => (i + 1) + '. ' + c);
 export async function noteOut(env, text, r, kind, extra) {
   const t = String(text || '').trim();
@@ -420,7 +438,7 @@ export async function noteOut(env, text, r, kind, extra) {
       await fetch(sbUrl + '/rest/v1/notifications_log', { method: 'POST', signal: tmo(SB_TIMEOUT_MS),
         headers: { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
         body: JSON.stringify([{ id: 'wo' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
-          event_type: WA_OUT, channel: r && r.ok ? 'whatsapp' : 'whatsapp_error',
+          event_type: WA_OUT, channel: r && r.via === 'chat' ? 'chat' : r && r.ok ? 'whatsapp' : 'whatsapp_error',
           payload: Object.assign({ title: t.replace(/\s+/g, ' ').slice(0, 120), text: t.slice(0, 1500), kind: kind || 'text', via: (r && r.via) || null, detail: (r && r.error) || null }, extra || {}) }]) });
     } catch (e) { /* the message itself went (or not) as before */ }
     try { push = (await pushOwner(env, sbUrl, t)).sent || 0; } catch (e) { push = 0; }
@@ -428,7 +446,8 @@ export async function noteOut(env, text, r, kind, extra) {
   return push;
 }
 export async function sendToOwner(env, to, text, opts) {
-  const r = await sendToOwnerRaw(env, to, text, opts);
+  if (!String(text || '').trim()) return { ok: false, error: 'empty text' };
+  const r = (await chatOnly(env)) ? { ok: true, via: 'chat' } : await sendToOwnerRaw(env, to, text, opts);
   if (r.error === 'empty text') return r;
   // the buttons too, so the chat shows the same choices (a tap there sends "1. ..." like a tap on WhatsApp)
   const cs = o_choices(opts);
@@ -438,7 +457,7 @@ export async function sendToOwner(env, to, text, opts) {
 // src.path (25/10/2026, Michael: "the app must be the same as WhatsApp, files and all"): where the file is on the
 // drive, so /chat can open it (api/chat.js, files inside the safety folder only). The bytes are not kept twice.
 export async function sendDocToOwner(env, to, bytes, filename, caption, windowOpen, src) {
-  const r = await sendDocRaw(env, to, bytes, filename, caption, windowOpen);
+  const r = (await chatOnly(env)) ? { ok: true, via: 'chat' } : await sendDocRaw(env, to, bytes, filename, caption, windowOpen);
   const push = await noteOut(env, '\ud83d\udcce ' + String(filename || '') + (caption ? '\n' + caption : ''), r, 'document',
     { name: String(filename || '').slice(0, 200), file: src && src.path ? String(src.path).slice(0, 400) : null });
   return Object.assign(r, { push });
