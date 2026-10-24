@@ -5,8 +5,12 @@
 //                  the assistant answers with wa_me as always, and wa_me logs every answer, sent or not.
 //   POST ?say=1    {text, part} the answer read aloud in the training voice (talk.js), part by part.
 //   GET  ?m=1      the manifest of the home-screen icon (no login: a manifest holds no data).
+//   GET  ?f=<id>&e=<exp>&s=<sig>  a file the server sent him (25/10/2026): the link comes signed in GET's rows (24
+//                  hours), so the phone opens it in its own viewer without a login header; only files in the safety folder.
 import { jsonResp, requireRole, defaultAllowedOrigins, originPasses, corsHeaders, SB_LIVE, SB_TIMEOUT_MS, tmo } from '../_shared.js';
-import { assistantFire, recentLine, lastOut } from '../_wa.js';
+import { assistantFire, recentLine, lastOut, hmacHex } from '../_wa.js';
+import { accessToken } from '../_onedrive.js';
+import { OD_ROOT } from './routine-db.js';
 import { ttsUpstream, sayParts, speechText } from './talk.js';
 import { vapidPub, pushSubOk, pushSave, sendPush, pushPayload } from '../_push.js';
 
@@ -29,8 +33,11 @@ const head40 = (t) => String(t || '').replace(/\s+/g, ' ').trim().slice(0, 40);
 export function chatRows(rows) {
   const all = (Array.isArray(rows) ? rows : []).filter((r) => r && CHAT_TYPES.indexOf(r.event_type) >= 0 && String(r.text || '').trim());
   const outs = all.filter((r) => r.event_type === 'wa_out');
-  return all.filter((r) => r.event_type !== 'assistant' || !outs.some((o) => head40(o.text) === head40(r.text) && Math.abs(Date.parse(o.ts) - Date.parse(r.ts)) < 120000))
-    .map((r) => ({ ts: r.ts, who: r.event_type === 'owner_in' ? 'me' : 'bot', text: String(r.text), via: r.channel || null, failed: r.channel === 'whatsapp_error' }))
+  const near = (a, b) => Math.abs(Date.parse(a.ts) - Date.parse(b.ts)) < 120000;
+  return all.filter((r) => r.event_type !== 'assistant' || !outs.some((o) => near(o, r) && (head40(o.text) === head40(r.text) || (r.via === 'document' && o.kind === 'document'))))
+    .map((r) => Object.assign({ ts: r.ts, who: r.event_type === 'owner_in' ? 'me' : 'bot', text: String(r.text), via: r.channel || null, failed: r.channel === 'whatsapp_error' },
+      r.event_type === 'wa_out' && r.kind === 'document' && r.file ? { id: r.id, doc: String(r.name || '') } : {},
+      Array.isArray(r.choices) && r.choices.length ? { choices: r.choices.map(String).slice(0, 10) } : {}))
     .sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
 }
 export function chatManifest() {
@@ -39,6 +46,37 @@ export function chatManifest() {
     // 24/10/2026, Michael: "I want the icon to be like a safety worker": its own icons, not the app's
     icons: [{ src: '/chat-icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: '/chat-icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
       { src: '/chat-icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }] };
+}
+
+// a file link (25/10/2026): HMAC of id and expiry with the service key, 24 hours. Only a wa_out document row with a
+// path inside the safety folder opens; the path comes from that row, never from the link.
+export const FILE_LINK_MS = 24 * 3600000;
+export async function fileSig(env, id, exp) { return (await hmacHex(env.SUPABASE_SERVICE_ROLE_KEY, 'chat-file.' + id + '.' + exp)).slice(0, 32); }
+export function filePathOk(p) {
+  const s = String(p || '');
+  return s.indexOf(OD_ROOT) === 0 && s.length > OD_ROOT.length && !s.split('/').some((x) => x === '..' || x === '.') && /\.(pdf|docx|xlsx|doc|xls|jpg|jpeg|png)$/i.test(s);
+}
+const FILE_TYPES = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', doc: 'application/msword', xls: 'application/vnd.ms-excel',
+  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png' };
+async function serveFile(env, u) {
+  const id = String(u.searchParams.get('f') || ''), exp = Number(u.searchParams.get('e') || 0), sig = String(u.searchParams.get('s') || '');
+  const no = (st, t) => new Response(t, { status: st, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } });
+  if (!/^[a-z0-9]{6,40}$/.test(id) || !exp || exp < Date.now() || !env.SUPABASE_SERVICE_ROLE_KEY) return no(403, 'expired');
+  if (sig !== await fileSig(env, id, exp)) return no(403, 'bad link');
+  const k = env.SUPABASE_SERVICE_ROLE_KEY, url = env.SUPABASE_URL || SB_LIVE;
+  const rr = await fetch(url + '/rest/v1/notifications_log?id=eq.' + id + '&event_type=eq.wa_out&select=file:payload->>file,name:payload->>name',
+    { headers: { apikey: k, Authorization: 'Bearer ' + k }, signal: tmo(SB_TIMEOUT_MS) }).catch(() => null);
+  const row = rr && rr.ok ? ((await rr.json().catch(() => []))[0] || null) : null;
+  if (!row || !filePathOk(row.file)) return no(404, 'no file');
+  let at; try { at = await accessToken(env); } catch (e) { at = null; }
+  if (!at || !at.token) return no(502, 'drive');
+  const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+  const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(row.file) + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(30000) }).catch(() => null);
+  if (!d || !d.ok) return no(d && d.status === 404 ? 404 : 502, d && d.status === 404 ? 'the file was moved or renamed' : 'drive');
+  const name = String(row.name || row.file.split('/').pop()), ext = (name.match(/\.([a-z0-9]+)$/i) || [])[1] || '';
+  return new Response(d.body, { headers: { 'Content-Type': FILE_TYPES[ext.toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'private, no-store',
+    'Content-Disposition': "inline; filename*=UTF-8''" + encodeURIComponent(name), 'X-Content-Type-Options': 'nosniff' } });
 }
 
 export function tokenAal(request) {
@@ -57,6 +95,7 @@ export async function onRequest(context) {
   if (request.method === 'GET' && u.searchParams.get('m') === '1') {
     return new Response(JSON.stringify(chatManifest()), { headers: { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'public, max-age=3600' } });
   }
+  if (request.method === 'GET' && u.searchParams.get('f')) return serveFile(env, u);
   if (origin && !originPasses(origin, allowed)) return jsonResp({ error: 'origin not allowed' }, 403, cors);
   // his own assistant: the admin account only (a manager or a reporter has a session too)
   const who = await requireRole(request, env, ['admin']);
@@ -80,10 +119,12 @@ export async function onRequest(context) {
     return jsonResp({ ok: st === 201 || st === 200, test: st }, 200, cors);
   }
   if (request.method === 'GET') {
-    const r = await fetch(url + '/rest/v1/notifications_log?select=ts,event_type,channel,text:payload->>text&event_type=in.(owner_in,assistant,wa_out)'
+    const r = await fetch(url + '/rest/v1/notifications_log?select=id,ts,event_type,channel,text:payload->>text,via:payload->>via,kind:payload->>kind,file:payload->>file,name:payload->>name,choices:payload->choices&event_type=in.(owner_in,assistant,wa_out)'
       + '&channel=in.(whatsapp,whatsapp_error,office,chat)&order=ts.desc&limit=' + CHAT_ROWS, { headers: h, signal: tmo(SB_TIMEOUT_MS) }).catch(() => null);
     if (!r || !r.ok) return jsonResp({ ok: false, error: 'read ' + (r ? r.status : 'network') }, 200, cors);
-    return jsonResp({ ok: true, rows: chatRows(await r.json().catch(() => [])) }, 200, cors);
+    const rows = chatRows(await r.json().catch(() => [])), exp = Date.now() + FILE_LINK_MS;
+    for (const m of rows) if (m.id) { m.url = '/api/chat?f=' + m.id + '&e=' + exp + '&s=' + await fileSig(env, m.id, exp); delete m.id; }
+    return jsonResp({ ok: true, rows }, 200, cors);
   }
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, cors);
   let body = {}; try { body = await request.json(); } catch (e) { body = {}; }

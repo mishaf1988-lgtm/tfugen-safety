@@ -1025,7 +1025,8 @@ export async function onRequest(context) {
       const to = await ownerWa(env, url);
       if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
       const win = await ownerWindowOpen(env, url);
-      if (win === false) return jsonResp({ ok: false, error: 'window closed: Michael has not written in 23 hours, a file cannot go out; send him the folder in words' }, 200, {});
+      // window closed: WhatsApp refuses a document, but it still goes to his app chat (sendDocToOwner logs it with
+      // its path), so the files are read and logged and only the WhatsApp copy fails (25/10/2026)
       const at = await accessToken(env);
       const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
       const sent = [];
@@ -1034,7 +1035,7 @@ export async function onRequest(context) {
         let r;
         try {
           const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(OD_ROOT + a.rel) + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(30000) });
-          r = d.ok ? await sendDocToOwner(env, to, new Uint8Array(await d.arrayBuffer()), a.name, i === 0 ? body.caption : '', win) : { ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status };
+          r = d.ok ? await sendDocToOwner(env, to, new Uint8Array(await d.arrayBuffer()), a.name, i === 0 ? body.caption : '', win, { path: OD_ROOT + a.rel }) : { ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status };
         } catch (x) { r = { ok: false, error: 'read' }; }
         sent.push({ name: a.name, ok: !!r.ok, error: r.ok ? undefined : r.error });
       }
@@ -1044,7 +1045,8 @@ export async function onRequest(context) {
         body: JSON.stringify([{ id: 'wd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
           event_type: 'assistant', channel: ok.length ? 'whatsapp' : 'whatsapp_error',
           payload: { title: ('[' + ok.length + '/' + sent.length + ' files] ' + sent.map((x) => x.name).join(', ')).slice(0, 120), text: sent.map((x) => x.name + (x.ok ? '' : ' (' + x.error + ')')).join('\n').slice(0, 1500), via: 'document', agent: body.agent } }]) }).catch(() => null);
-      return jsonResp({ ok: ok.length === sent.length, sent }, 200, {});
+      if (win === false) return jsonResp({ ok: false, sent, chat: true, error: 'window closed: Michael has not written in 23 hours, the WhatsApp copy did not go out; the files are in his app chat (/chat), tell him so' }, 200, {});
+      return jsonResp({ ok: ok.length === sent.length, sent, chat: true }, 200, {});
     }
     if (body.op === 'office_ask') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'row', 'text'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
@@ -1499,7 +1501,7 @@ export async function onRequest(context) {
       // 21/10/2026 (Michael: "with the request, the form itself"): the document goes first, so the question with
       // the buttons stays his last message (its ref is what "1" answers). A failed document leaves the question as is.
       let doc = null;
-      try { doc = pdfBytes ? await sendDocToOwner(env, to, pdfBytes, c.name, '', win) : { ok: false, error: 'read' }; } catch (x) { doc = { ok: false, error: 'document' }; }
+      try { doc = pdfBytes ? await sendDocToOwner(env, to, pdfBytes, c.name, '', win, { path: c.path }) : { ok: false, error: 'read' }; } catch (x) { doc = { ok: false, error: 'document' }; }
       const s = await sendToOwner(env, to, text, { windowOpen: win, choices: SIGN_CHOICES });
       // 22/10/2026 (retro): a question that did not go out must not stay pending: the next sign_request on the same
       // file would answer "already waiting" and Michael would never be asked.

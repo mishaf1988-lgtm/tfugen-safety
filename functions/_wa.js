@@ -408,7 +408,8 @@ async function sendToOwnerRaw(env, to, text, opts) {
 // Now each one is logged as wa_out (what was sent, or what WhatsApp refused) and goes to the phone as a pop-up.
 // Never throws and never changes what the caller gets: the log and the pop-up are extra.
 export const WA_OUT = 'wa_out';
-export async function noteOut(env, text, r, kind) {
+const o_choices = (opts) => cleanChoices(opts && opts.choices).map((c, i) => (i + 1) + '. ' + c);
+export async function noteOut(env, text, r, kind, extra) {
   const t = String(text || '').trim();
   if (!t) return 0;
   let push = 0;
@@ -420,7 +421,7 @@ export async function noteOut(env, text, r, kind) {
         headers: { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
         body: JSON.stringify([{ id: 'wo' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
           event_type: WA_OUT, channel: r && r.ok ? 'whatsapp' : 'whatsapp_error',
-          payload: { title: t.replace(/\s+/g, ' ').slice(0, 120), text: t.slice(0, 1500), kind: kind || 'text', via: (r && r.via) || null, detail: (r && r.error) || null } }]) });
+          payload: Object.assign({ title: t.replace(/\s+/g, ' ').slice(0, 120), text: t.slice(0, 1500), kind: kind || 'text', via: (r && r.via) || null, detail: (r && r.error) || null }, extra || {}) }]) });
     } catch (e) { /* the message itself went (or not) as before */ }
     try { push = (await pushOwner(env, sbUrl, t)).sent || 0; } catch (e) { push = 0; }
   }
@@ -429,12 +430,17 @@ export async function noteOut(env, text, r, kind) {
 export async function sendToOwner(env, to, text, opts) {
   const r = await sendToOwnerRaw(env, to, text, opts);
   if (r.error === 'empty text') return r;
-  const push = await noteOut(env, ilTimes(String(text || '').trim()), r, 'text');
+  // the buttons too, so the chat shows the same choices (a tap there sends "1. ..." like a tap on WhatsApp)
+  const cs = o_choices(opts);
+  const push = await noteOut(env, ilTimes(String(text || '').trim()), r, 'text', cs.length ? { choices: cs } : null);
   return Object.assign(r, { push });
 }
-export async function sendDocToOwner(env, to, bytes, filename, caption, windowOpen) {
+// src.path (25/10/2026, Michael: "the app must be the same as WhatsApp, files and all"): where the file is on the
+// drive, so /chat can open it (api/chat.js, files inside the safety folder only). The bytes are not kept twice.
+export async function sendDocToOwner(env, to, bytes, filename, caption, windowOpen, src) {
   const r = await sendDocRaw(env, to, bytes, filename, caption, windowOpen);
-  const push = await noteOut(env, '\ud83d\udcce ' + String(filename || '') + (caption ? '\n' + caption : ''), r, 'document');
+  const push = await noteOut(env, '\ud83d\udcce ' + String(filename || '') + (caption ? '\n' + caption : ''), r, 'document',
+    { name: String(filename || '').slice(0, 200), file: src && src.path ? String(src.path).slice(0, 400) : null });
   return Object.assign(r, { push });
 }
 

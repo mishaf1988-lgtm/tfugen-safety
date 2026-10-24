@@ -7,14 +7,17 @@ let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
 const SB = 'https://sb.test';
 const ENV = { SUPABASE_URL: SB, SUPABASE_SERVICE_ROLE_KEY: 'svc', ASSISTANT_FIRE_URL: 'https://fire.test/x', ASSISTANT_FIRE_TOKEN: 'ft', ALLOWED_ORIGINS: 'https://app.test' };
-let calls = [], users = {}, logRows = [];
+let calls = [], users = {}, logRows = [], fileRows = {};
 globalThis.fetch = async (u, init) => {
   const url = String(u), m = (init && init.method) || 'GET';
   calls.push({ url, m, body: init && init.body });
   const json = (x, st = 200) => new Response(JSON.stringify(x), { status: st, headers: { 'Content-Type': 'application/json' } });
   if (url.startsWith(SB + '/auth/v1/user')) { const t = ((init && init.headers && init.headers.Authorization) || '').replace('Bearer ', ''); return users[t] ? json(users[t]) : json({ msg: 'bad' }, 401); }
   if (url.startsWith(SB + '/rest/v1/app_users')) return json([{ role: 'manager', active: true }]);
+  if (url.startsWith(SB + '/rest/v1/notifications_log') && m === 'GET' && /id=eq\./.test(url)) return json(fileRows[(url.match(/id=eq\.([a-z0-9]+)/) || [])[1]] ? [fileRows[(url.match(/id=eq\.([a-z0-9]+)/) || [])[1]]] : []);
   if (url.startsWith(SB + '/rest/v1/notifications_log') && m === 'GET') return json(/select=ts,event_type,payload/.test(url) ? [] : logRows);
+  if (url.startsWith(SB + '/rest/v1/oauth_tokens')) return json([{ user_email: 'm@x', refresh_token: 'r', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString() }]);
+  if (url.startsWith('https://graph.microsoft.com/')) return /%D7%A0%D7%99%D7%94%D7%95%D7%9C/.test(url) ? new Response('%PDF-1.4 x', { status: 200 }) : new Response('', { status: 404 });
   if (url.startsWith(SB + '/rest/v1/notifications_log') && m === 'POST') return new Response('', { status: 201 });
   if (url.startsWith(SB + '/rest/v1/server_state')) return json([]);
   if (url.startsWith('https://fire.test/')) return json({ claude_code_session_id: 'cse_x' }, 200);
@@ -86,5 +89,34 @@ const proc = readFileSync(new URL('../../project-files/routine-wa-assistant.md',
 const head = chatFireText('x', 't', '', null).split('\n')[0];
 const step1 = (proc.split('\n').find((l) => /^1\. \*\*/.test(l)) || '');
 check('step 1 of the assistant procedure accepts the exact header the chat sends', step1.indexOf('`' + head + '`') >= 0, head);
+console.log('\n5. files and buttons, like WhatsApp (25/10/2026)');
+{
+  const SAFE = 'שולחן העבודה/ניהול בטיחות/';
+  logRows = [{ id: 'wodoc1', ts: '2026-10-25T06:00:00Z', event_type: 'wa_out', channel: 'whatsapp', text: '📎 אישור כבאות.pdf', kind: 'document', file: SAFE + 'רישוי/אישור כבאות.pdf', name: 'אישור כבאות.pdf' },
+    { id: 'wa1', ts: '2026-10-25T06:00:05Z', event_type: 'assistant', channel: 'whatsapp', text: 'אישור כבאות.pdf', via: 'document' },
+    { id: 'wobtn', ts: '2026-10-25T06:01:00Z', event_type: 'wa_out', channel: 'whatsapp', text: 'לחתום?', choices: ['1. כן', '2. לא'] }];
+  r = await onRequest({ request: req('/api/chat', 'GET', ADM), env: ENV });
+  const j5 = await r.json();
+  const doc = j5.rows.find((x) => x.doc);
+  check('GET: a file the server sent shows once, with a signed link and its name; its assistant twin is not shown again', j5.rows.length === 2 && doc && /^\/api\/chat\?f=wodoc1&e=\d+&s=[0-9a-f]{32}$/.test(doc.url) && doc.doc === 'אישור כבאות.pdf' && !('id' in doc), j5.rows);
+  check('GET: the buttons of a question come with it', (j5.rows.find((x) => x.choices) || {}).choices.join('|') === '1. כן|2. לא');
+  fileRows = { wodoc1: { file: SAFE + 'רישוי/אישור כבאות.pdf', name: 'אישור כבאות.pdf' }, wooutside: { file: 'שולחן העבודה/אחר/x.pdf', name: 'x.pdf' } };
+  const nr = (u) => new Request('https://app.test' + u, { method: 'GET' });
+  r = await onRequest({ request: nr(doc.url), env: ENV });
+  check('the link opens the file without a login header: PDF, inline, its Hebrew name', r.status === 200 && r.headers.get('Content-Type') === 'application/pdf' && /inline; filename\*=UTF-8''/.test(r.headers.get('Content-Disposition')) && (await r.text()).startsWith('%PDF'));
+  r = await onRequest({ request: nr(doc.url.replace(/s=[0-9a-f]+/, 's=' + '0'.repeat(32))), env: ENV });
+  check('a changed signature: 403, nothing read', r.status === 403);
+  r = await onRequest({ request: nr(doc.url.replace('f=wodoc1', 'f=wooutside')), env: ENV });
+  check('a link for another row with the same signature: 403', r.status === 403);
+  const { fileSig } = await import('./_build/chat.mjs');
+  const e2 = Date.now() + 60000;
+  r = await onRequest({ request: nr('/api/chat?f=wooutside&e=' + e2 + '&s=' + await fileSig(ENV, 'wooutside', e2)), env: ENV });
+  check('a signed link to a file outside the safety folder: 404', r.status === 404);
+  r = await onRequest({ request: nr('/api/chat?f=wodoc1&e=' + (Date.now() - 1000) + '&s=' + await fileSig(ENV, 'wodoc1', Date.now() - 1000)), env: ENV });
+  check('an expired link: 403', r.status === 403);
+  check('the page: a file is a link that opens it, buttons send their own text', /class="doc" href=/.test(page) && /send\(x\.getAttribute\('data-c'\)\)/.test(page));
+  logRows = [];
+}
+
 console.log(`\nchat-test: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
