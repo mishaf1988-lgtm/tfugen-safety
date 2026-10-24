@@ -33,6 +33,13 @@ export function chatManifest() {
       { src: '/chat-icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }] };
 }
 
+export function tokenAal(request) {
+  try {
+    const t = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').split('.')[1] || '';
+    return JSON.parse(atob(t.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((t.length + 3) % 4))).aal || null;
+  } catch (e) { return null; }
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const allowed = defaultAllowedOrigins(env), origin = request.headers.get('origin') || '';
@@ -46,6 +53,9 @@ export async function onRequest(context) {
   // his own assistant: the admin account only (a manager or a reporter has a session too)
   const who = await requireRole(request, env, ['admin']);
   if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
+  // the admin account has a second factor (index.html, 25/09): a password-only session is not enough here either.
+  // requireRole already checked the token with Supabase, so reading its aal claim is safe. 401 sends the page to login.
+  if (tokenAal(request) !== 'aal2') return jsonResp({ error: 'mfa required' }, 401, cors);
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!key) return jsonResp({ error: 'server misconfigured' }, 500, cors);
   const url = env.SUPABASE_URL || SB_LIVE, h = { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' };
