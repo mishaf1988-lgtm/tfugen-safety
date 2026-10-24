@@ -47,6 +47,8 @@
 //              "do it: through the server"): step request_code (SMS to the number's SIM), verify_code (the 6 digits
 //              Michael reads), register (pin: the two-step PIN, WA_PIN or pin). Refused while connected.
 //   od_trash   ONE file to the to-delete folder at the top of the safety folder; Michael deletes it there.
+//   od_pull    ONE file from anywhere on the desktop (outside the safety folder) INTO a folder of the safety folder,
+//              e.g. the ISO binder or the to-delete folder (24/10/2026, Michael: read, and move when needed).
 //   wa_check   the assistant's setup, checked against Meta without showing a value (19/10/2026, Michael:
 //              "do the check yourself"): META_APP_SECRET by appsecret_proof, the app's webhook fields,
 //              the WABA's subscribed apps, and with fire_probe the fire token (status only). subscribe: true
@@ -716,6 +718,25 @@ export function odTrashCheck(b) {
   if (OD_NO_DIR.test(parts.slice(0, -1).join('/'))) return { error: 'bad path' };
   const name = (parts[parts.length - 2] + ' - ' + parts[parts.length - 1]).slice(-200);
   return { from: OD_ROOT + parts.join('/'), to: OD_ROOT + OD_TRASH_DIR, name };
+}
+// od_pull (24/10/2026, Michael in the questionnaire: "read, and move when needed", after asking for access to
+// the whole desktop): ONE file from the desktop outside the safety folder moves INTO an existing folder of
+// the safety folder (the to-delete folder included). The destination is always inside the safety folder, so
+// nothing is written anywhere else; never a folder, never into old versions or ARCHIVE, never replacing a file.
+export const OD_DESKTOP = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/';
+const OD_PULL_EXT = /\.(pdf|docx?|xlsx?|xlsm|pptx?|csv|txt|jpe?g|png)$/i;
+export function odPullCheck(b) {
+  if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
+  if (String(b.why || '').trim().length < 5) return { error: 'why required' };
+  const bad = (x) => x === '.' || x === '..' || OD_BAD.test(x) || x.length > 200 || x.startsWith('.');
+  const from = String(b.from || '').split('/').filter(Boolean);
+  if (from.length < 1 || from.length > 10 || from.some(bad) || !OD_PULL_EXT.test(from[from.length - 1])) return { error: 'bad from' };
+  if (OD_DESKTOP + from[0] + '/' === OD_ROOT) return { error: 'from is inside the safety folder: od_move / od_trash / od_archive' };
+  const dir = String(b.dir || '').split('/').filter(Boolean);
+  if (!dir.length || dir.length > OD_MKDIR_DEPTH + 1 || dir.some(bad)) return { error: 'bad dir' };
+  const jd = dir.join('/');
+  if (jd !== OD_TRASH_DIR && OD_NO_DIR.test(jd)) return { error: 'bad dir' };
+  return { from: OD_DESKTOP + from.join('/'), to: OD_ROOT + jd, name: from[from.length - 1], dir: jd };
 }
 // od_put_pdf (20/10/2026): ONE new PDF {dir, name, b64} into a folder that already exists inside the safety
 // folder, e.g. an appointment letter and its certificate merged into one file. A PDF only (%PDF- at the
@@ -1545,6 +1566,29 @@ export async function onRequest(context) {
       });
       if (!mv.ok) return jsonResp({ ok: false, error: 'move ' + mv.status }, 200, {});
       return jsonResp({ ok: true, path: c.dir.slice(OD_ROOT.length) + '/' + OD_ARCHIVE_DIR + '/' + c.name }, 200, {});
+    }
+    if (body.op === 'od_pull') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'from', 'dir'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const c = odPullCheck(body);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const at = await accessToken(env);
+      const gh = { Authorization: 'Bearer ' + at.token, 'Content-Type': 'application/json' };
+      const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
+      const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+      const src = await fetch(G + enc(c.from) + '?select=id,file', { headers: gh, signal: tmo(GRAPH_MS) });
+      if (!src.ok) return jsonResp({ ok: false, error: 'source ' + src.status }, 200, {});
+      const sj = await src.json();
+      if (!sj.file) return jsonResp({ ok: false, error: 'source is not a file' }, 200, {});
+      const tr = await fetch(G + enc(c.to) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
+      if (!tr.ok) return jsonResp({ ok: false, error: 'folder ' + tr.status }, 200, {});
+      const tj = await tr.json();
+      if (!tj.folder) return jsonResp({ ok: false, error: 'not a folder' }, 200, {});
+      const mv = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(sj.id) + '?@microsoft.graph.conflictBehavior=fail', {
+        method: 'PATCH', headers: gh, body: JSON.stringify({ parentReference: { id: tj.id } }), signal: tmo(GRAPH_MS),
+      });
+      if (mv.status === 409) return jsonResp({ ok: false, error: 'name taken in ' + c.dir }, 200, {});
+      if (!mv.ok) return jsonResp({ ok: false, error: 'move ' + mv.status }, 200, {});
+      return jsonResp({ ok: true, path: c.dir + '/' + c.name }, 200, {});
     }
     if (body.op === 'od_trash') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
