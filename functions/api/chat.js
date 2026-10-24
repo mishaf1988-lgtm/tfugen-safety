@@ -8,6 +8,7 @@
 import { jsonResp, requireRole, defaultAllowedOrigins, originPasses, corsHeaders, SB_LIVE, SB_TIMEOUT_MS, tmo } from '../_shared.js';
 import { assistantFire, recentLine, lastOut } from '../_wa.js';
 import { ttsUpstream, sayParts, speechText } from './talk.js';
+import { vapidPub, pushSubOk, pushSave, sendPush, pushPayload } from '../_push.js';
 
 export const CHAT_MAX = 2000, CHAT_ROWS = 60;
 const FIRE_MS = 20000;
@@ -59,6 +60,18 @@ export async function onRequest(context) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!key) return jsonResp({ error: 'server misconfigured' }, 500, cors);
   const url = env.SUPABASE_URL || SB_LIVE, h = { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' };
+  // ?push=1 (24/10/2026): pop-ups on his phone. GET: the public key and whether the server can send.
+  // POST {endpoint, keys}: keep this phone, and send it one test pop-up so he sees it works at once.
+  if (u.searchParams.get('push') === '1') {
+    if (request.method === 'GET') return jsonResp({ ok: true, key: vapidPub(env), ready: !!env.VAPID_PRIVATE }, 200, cors);
+    if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, cors);
+    if (!env.VAPID_PRIVATE) return jsonResp({ ok: false, error: 'push not configured' }, 200, cors);
+    let sb = {}; try { sb = await request.json(); } catch (e) { sb = {}; }
+    if (!pushSubOk(sb)) return jsonResp({ ok: false, error: 'subscription' }, 400, cors);
+    if (!(await pushSave(env, url, sb))) return jsonResp({ ok: false, error: 'save' }, 200, cors);
+    const st = await sendPush(env, sb, pushPayload('\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05e4\u05d5\u05e2\u05dc\u05d5\u05ea. \u05db\u05da \u05ea\u05d2\u05d9\u05e2 \u05ea\u05e9\u05d5\u05d1\u05d4 \u05de\u05d4\u05e2\u05d5\u05d6\u05e8, \u05d2\u05dd \u05db\u05e9\u05d4\u05e6\u0027\u05d0\u05d8 \u05e1\u05d2\u05d5\u05e8.'));
+    return jsonResp({ ok: st === 201 || st === 200, test: st }, 200, cors);
+  }
   if (request.method === 'GET') {
     const r = await fetch(url + '/rest/v1/notifications_log?select=ts,event_type,channel,text:payload->>text&event_type=in.(owner_in,assistant)'
       + '&channel=in.(whatsapp,whatsapp_error,office,chat)&order=ts.desc&limit=' + CHAT_ROWS, { headers: h, signal: tmo(SB_TIMEOUT_MS) }).catch(() => null);
