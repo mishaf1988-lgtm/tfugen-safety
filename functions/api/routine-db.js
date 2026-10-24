@@ -234,6 +234,15 @@ export function htmlText(html) {
     .replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
     .replace(/[ \t]+/g, ' ').replace(/ ?\n ?/g, '\n').replace(/\n{2,}/g, '\n').trim();
 }
+// a file from him (25/10/2026, "files and all"): a photo or a PDF, kept in the safety folder under CHAT_DIR
+export const CHAT_DIR = '\u05de\u05d4\u05e6\u0027\u05d0\u05d8/', UP_MAX = 8 * 1024 * 1024;
+export function upKind(b) {
+  if (!b || b.length < 8) return null;
+  if (b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF) return { ext: 'jpg', mime: 'image/jpeg', type: 'image' };
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47) return { ext: 'png', mime: 'image/png', type: 'image' };
+  if (b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46) return { ext: 'pdf', mime: 'application/pdf', type: 'document' };
+  return null;
+}
 export const WA_MEDIA_MAX = 8 * 1024 * 1024;
 export const waMediaMimeOk = (m) => /^(image\/(jpeg|png|webp)|application\/pdf)$/.test(String(m || ''));
 export const SKILL_BASE = String(SITE.assistantQueue || '').replace(/references\/research-queue\.md$/, '');
@@ -1216,6 +1225,22 @@ export async function onRequest(context) {
     }
     if (body.op === 'wa_media') {
       const id = String(body.id || '');
+      // a photo or a PDF Michael sent from /chat (25/10/2026): the id of his chat line, the file in the safety folder
+      if (/^ch[a-z0-9]{6,30}$/.test(id)) {
+        const lr = await fetch(url + '/rest/v1/notifications_log?id=eq.' + id + '&event_type=eq.owner_in&channel=eq.chat&select=file:payload->>file', { headers: h, signal: tmo(SB_MS) }).catch(() => null);
+        const row = lr && lr.ok ? ((await lr.json().catch(() => []))[0] || null) : null;
+        const f = row && String(row.file || '');
+        if (!f || f.indexOf(OD_ROOT + CHAT_DIR) !== 0 || f.split('/').some((x) => x === '..')) return jsonResp({ ok: false, error: 'no file on that chat line' }, 200, {});
+        const at = await accessToken(env);
+        const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + f.split('/').filter(Boolean).map(encodeURIComponent).join('/') + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(30000) }).catch(() => null);
+        if (!d || !d.ok) return jsonResp({ ok: false, error: 'read ' + (d ? d.status : 'network') }, 200, {});
+        const cb = new Uint8Array(await d.arrayBuffer());
+        if (cb.length > WA_MEDIA_MAX) return jsonResp({ ok: false, error: 'too big' }, 200, {});
+        const k = upKind(cb);
+        if (!k) return jsonResp({ ok: false, error: 'type not read' }, 200, {});
+        let cbin = ''; for (let i = 0; i < cb.length; i += 0x8000) cbin += String.fromCharCode.apply(null, cb.subarray(i, i + 0x8000));
+        return jsonResp({ ok: true, mime: k.mime, bytes: cb.length, b64: btoa(cbin), from: 'chat' }, 200, {});
+      }
       if (!/^[0-9]{5,30}$/.test(id)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
       if (!env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
       const auth = { Authorization: 'Bearer ' + env.META_ACCESS_TOKEN };

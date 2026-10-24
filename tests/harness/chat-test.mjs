@@ -17,6 +17,7 @@ globalThis.fetch = async (u, init) => {
   if (url.startsWith(SB + '/rest/v1/notifications_log') && m === 'GET' && /id=eq\./.test(url)) return json(fileRows[(url.match(/id=eq\.([a-z0-9]+)/) || [])[1]] ? [fileRows[(url.match(/id=eq\.([a-z0-9]+)/) || [])[1]]] : []);
   if (url.startsWith(SB + '/rest/v1/notifications_log') && m === 'GET') return json(/select=ts,event_type,payload/.test(url) ? [] : logRows);
   if (url.startsWith(SB + '/rest/v1/oauth_tokens')) return json([{ user_email: 'm@x', refresh_token: 'r', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString() }]);
+  if (url.startsWith('https://graph.microsoft.com/') && m === 'PUT') return json({ webUrl: 'https://od/x', size: 10 });
   if (url.startsWith('https://graph.microsoft.com/')) return /%D7%A0%D7%99%D7%94%D7%95%D7%9C/.test(url) ? new Response('%PDF-1.4 x', { status: 200 }) : new Response('', { status: 404 });
   if (url.startsWith(SB + '/rest/v1/notifications_log') && m === 'POST') return new Response('', { status: 201 });
   if (url.startsWith(SB + '/rest/v1/server_state')) return json([]);
@@ -116,6 +117,30 @@ console.log('\n5. files and buttons, like WhatsApp (25/10/2026)');
   check('an expired link: 403', r.status === 403);
   check('the page: a file is a link that opens it, buttons send their own text', /class="doc" href=/.test(page) && /send\(x\.getAttribute\('data-c'\)\)/.test(page));
   logRows = [];
+}
+
+console.log('\n6. a photo or a PDF from him (25/10/2026)');
+{
+  const { upName } = await import('./_build/chat.mjs');
+  const { upKind } = await import('./_build/routine-db.mjs');
+  check('upKind: JPEG, PNG and PDF by their first bytes, nothing else', upKind(new Uint8Array([0xFF, 0xD8, 0xFF, 0xE0, 0, 0, 0, 0])).ext === 'jpg' && upKind(new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0, 0, 0, 0])).ext === 'png' && upKind(new TextEncoder().encode('%PDF-1.4 x')).ext === 'pdf' && upKind(new TextEncoder().encode('<html>hi</html>')) === null);
+  check('upName: Israel time DD-MM-YYYY HH.MM.SS, a clean name, the real extension', upName('../../a/b:c.exe', 'jpg', new Date('2026-10-25T06:05:09Z')) === '25-10-2026 08.05.09 - .. .. a b c.jpg', upName('../../a/b:c.exe', 'jpg', new Date('2026-10-25T06:05:09Z')));
+  calls = [];
+  const pdf = new TextEncoder().encode('%PDF-1.4 test');
+  r = await onRequest({ request: new Request('https://app.test/api/chat?up=1', { method: 'POST', headers: { Authorization: 'Bearer ' + ADM, 'X-File-Name': encodeURIComponent('טופס.pdf'), 'X-Caption': encodeURIComponent('תבדוק את זה') }, body: pdf }), env: ENV });
+  const ju = await r.json();
+  const put = calls.find((c) => c.m === 'PUT' && c.url.startsWith('https://graph.microsoft.com/'));
+  const lg = calls.find((c) => c.url.includes('notifications_log') && c.m === 'POST');
+  const fr = calls.find((c) => c.url.startsWith('https://fire.test/'));
+  const row = lg && JSON.parse(lg.body)[0], ft = fr && JSON.parse(fr.body).text;
+  check('POST ?up=1: the file saved in the safety folder under its chat folder', ju.ok === true && put && decodeURIComponent(put.url).indexOf('ניהול בטיחות/מהצ\'אט/') > 0 && /טופס\.pdf:\/content$/.test(decodeURIComponent(put.url)), ju);
+  check('...logged as his own line with the file, so the chat shows it as a file', row && row.event_type === 'owner_in' && row.payload.kind === 'document' && /מהצ'אט\//.test(row.payload.file) && row.payload.text.startsWith('📎 '));
+  check('...and the assistant gets the WhatsApp media line, with the chat line id for wa_media, and the caption as text', ft && new RegExp('media: document id ' + row.id + ' \\(application/pdf, ').test(ft) && /"op":"wa_media","id":"ch/.test(ft) && /text: תבדוק את זה/.test(ft));
+  r = await onRequest({ request: new Request('https://app.test/api/chat?up=1', { method: 'POST', headers: { Authorization: 'Bearer ' + ADM }, body: new TextEncoder().encode('MZ executable') }), env: ENV });
+  check('anything but a photo or a PDF: 400', r.status === 400);
+  r = await onRequest({ request: new Request('https://app.test/api/chat?up=1', { method: 'POST', headers: { Authorization: 'Bearer ' + ADM1 }, body: pdf }), env: ENV });
+  check('without the second factor: 401, nothing saved', r.status === 401);
+  check('the page: 📎 sends a photo (made smaller) or a PDF with what is typed', /id="att"/.test(page) && /\/api\/chat\?up=1/.test(page) && /image\/jpeg',0\.82/.test(page));
 }
 
 console.log(`\nchat-test: ${pass} passed, ${fail} failed`);
