@@ -172,6 +172,17 @@
   דווח: לכל קובץ, שם הקובץ שהועתק ותיקיית היעד, או מה שלא נמצא.
   ```
 
+- [ ] **C39. מספר קבוע לעוזר בוואטסאפ: Twilio ו-WhatsApp Manager** (24/10/2026, מספר הבדיקה של Meta נפל (133010), אחרי רישום מחדש הוא שולח אבל לא מקבל. מיכאל בשאלון: "בצע: דף שלבים (מומלץ)", ואז "אני יחבר אותך דרך הכרום". דף השלבים: https://claude.ai/artifact/M7NrHYSmESUZLcV9xtMXWB. אחרי: Claude מוצא את מזהה המספר החדש, מיכאל מחליף את `META_PHONE_NUMBER_ID` ב-Cloudflare, Claude רושם (`wa_phone` register) ובודק בשני הכיוונים)
+  ```
+  משימה: לחבר מספר טלפון חדש לעוזר הוואטסאפ של מפעל תפוגן. מיכאל אישר (24/10/2026). עצור ושאל אותי לפני כל תשלום, הקלדת כרטיס אשראי, או מסמך/כתובת שמבקשים.
+  1. ב-https://console.twilio.com: פתח את החשבון "My first Twilio account" (לא Create new account). אם יש פס Trial: Upgrade. את פרטי התשלום אני מקליד בעצמי, 20 דולר.
+  2. Phone Numbers > Manage > Buy a number. Country: United States, לסמן SMS ו-Voice. Buy על מספר מקומי (Local) אחד. אם נדרש מסמך או כתובת: עצור וכתוב לי. רשום את המספר שנקנה.
+  3. ב-https://business.facebook.com/wa/manage/phone-numbers/ (החשבון העסקי הקיים של תפוגן): Add phone number. Display name: Tapugan Safety. קטגוריה: Industrial או הקרובה. המספר מסעיף 2 עם +1. אימות: Text message.
+  4. הקוד מגיע ל-Twilio: https://console.twilio.com/us1/monitor/logs/sms , ההודעה הנכנסת האחרונה. הקלד את 6 הספרות ב-Meta. לא להתקין וואטסאפ על המספר.
+  5. ב-WhatsApp Manager, ליד המספר החדש: אם יש Phone number ID, רשום אותו.
+  דווח: המספר שנקנה, מצב המספר ב-WhatsApp Manager (למשל Pending / Connected / שם בבדיקה), ה-Phone number ID אם נראה, ומה נעצר ולמה. אל תשנה הגדרות ב-Cloudflare.
+  ```
+
 ## בוצע
 
 - [x] **C35. מפתח הפעלה למפתח התורן** (22/10/2026, מיכאל בשאלון: "בצע: רק כשיש בקשה (מומלץ)"; `devFireTarget` ב-routine-db). (1) בדף https://claude.ai/code/routines/trig_017p7AWHAPjxncswGqdfab2p: הוספת מפעיל API ויצירת טוקן. (2) ב-Cloudflare, Pages, tapugan-safety, Settings, Variables and Secrets, Production: סוד חדש `RUNNER_FIRE_TOKEN` = הטוקן, ושמירה. אחרי: Claude מפרסם מחדש (סוד חדש צריך פריסה), מוריד את השעון לפעם ביום, ובודק בבקשה הבאה ש-`fired.to` = `runner`. טקסט להדבקה בכרום:
