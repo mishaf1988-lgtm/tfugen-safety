@@ -56,6 +56,28 @@ async function waPhoneStatus(env, nowIso) {
     return r.ok && j.status ? { at: nowIso, status: String(j.status) } : null;
   } catch (e) { return null; }
 }
+// Auto re-register (24/10/2026, the number fell to PENDING twice in one day; Michael in the questionnaire: "do it:
+// automatic registration"): when Meta says the number is not CONNECTED and the secret WA_PIN is set, register it
+// again, at most once an hour, and read the state back. CONNECTED after it = no alert and no mail; a failure keeps
+// the alert, now with Meta's reason. Pure part: whether to try.
+export const WA_REG_GAP_MS = 60 * 60 * 1000;
+export function waRegDue(wa, pin, nowMs) {
+  if (!wa || !wa.status || wa.status === 'CONNECTED' || !/^[0-9]{6}$/.test(String(pin || ''))) return false;
+  const t = Date.parse(wa.reg_at || '');
+  return !t || nowMs - t >= WA_REG_GAP_MS;
+}
+export async function waReRegister(env, wa, nowIso) {
+  const P = 'https://graph.facebook.com/v25.0/' + encodeURIComponent(env.META_PHONE_NUMBER_ID);
+  const H = { Authorization: 'Bearer ' + env.META_ACCESS_TOKEN, 'Content-Type': 'application/json' };
+  let reg = 'ok';
+  try {
+    const r = await fetch(P + '/register', { method: 'POST', headers: H, body: JSON.stringify({ messaging_product: 'whatsapp', pin: String(env.WA_PIN) }), signal: AbortSignal.timeout(8000) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.error) reg = 'fail: ' + String((j.error && (j.error.message || j.error.code)) || r.status).slice(0, 120);
+  } catch (e) { reg = 'fail: ' + String((e && e.message) || e).slice(0, 120); }
+  const after = await waPhoneStatus(env, nowIso);
+  return Object.assign({}, wa, after || {}, { reg_at: nowIso, reg });
+}
 // The database speed check: ms for the median of 3 reads, 4 slow samples spanning 45 minutes
 // (an hour of slowness, give or take a sample), one sample per 10 minutes at most, 8 kept.
 export const SLOW_MS = 1000, SLOW_TICKS = 4, LAT_KEEP = 8, PROBE_MS = 4000, WORK_H = [6, 18];
@@ -172,7 +194,7 @@ export function assess(st, nowMs, connected, started, vitre, lat, slowOpen, wa) 
   }
   // The assistant's WhatsApp number (24/10/2026: Meta dropped it, 133010, and Michael found out only when he could not
   // write to it; in the questionnaire: "do it: a mail when it drops"). wa = { status } from waPhoneStatus; no wa = not checked.
-  if (wa && wa.status && wa.status !== 'CONNECTED') out.push({ key: 'wa:phone', title: '\u05de\u05e1\u05e4\u05e8 \u05d4\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05e9\u05dc \u05d4\u05e2\u05d5\u05d6\u05e8 \u05de\u05e0\u05d5\u05ea\u05e7', detail: '\u05dc\u05e4\u05d9 Meta: ' + wa.status + '. \u05d4\u05e2\u05d5\u05d6\u05e8 \u05dc\u05d0 \u05de\u05e7\u05d1\u05dc \u05d5\u05dc\u05d0 \u05e9\u05d5\u05dc\u05d7 \u05d4\u05d5\u05d3\u05e2\u05d5\u05ea, \u05d5\u05d2\u05dd \u05e2\u05d3\u05db\u05d5\u05df \u05d4\u05d1\u05d5\u05e7\u05e8 \u05dc\u05d0 \u05d9\u05d5\u05e6\u05d0. \u05dc\u05e9\u05d7\u05d6\u05d5\u05e8: \u05d1\u05e9\u05d9\u05d7\u05ea \u05d4\u05e4\u05d9\u05ea\u05d5\u05d7, wa_phone \u05e2\u05dd step register \u05d5\u05d4-PIN \u05e9\u05dc \u05d4\u05de\u05e1\u05e4\u05e8 (ACCOUNT-INVENTORY, \u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4).' });
+  if (wa && wa.status && wa.status !== 'CONNECTED') out.push({ key: 'wa:phone', title: '\u05de\u05e1\u05e4\u05e8 \u05d4\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05e9\u05dc \u05d4\u05e2\u05d5\u05d6\u05e8 \u05de\u05e0\u05d5\u05ea\u05e7', detail: '\u05dc\u05e4\u05d9 Meta: ' + wa.status + (wa.reg && wa.reg !== 'ok' ? '. \u05e8\u05d9\u05e9\u05d5\u05dd \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9 \u05e0\u05db\u05e9\u05dc: ' + wa.reg : '') + '. \u05d4\u05e2\u05d5\u05d6\u05e8 \u05dc\u05d0 \u05de\u05e7\u05d1\u05dc \u05d5\u05dc\u05d0 \u05e9\u05d5\u05dc\u05d7 \u05d4\u05d5\u05d3\u05e2\u05d5\u05ea, \u05d5\u05d2\u05dd \u05e2\u05d3\u05db\u05d5\u05df \u05d4\u05d1\u05d5\u05e7\u05e8 \u05dc\u05d0 \u05d9\u05d5\u05e6\u05d0. \u05dc\u05e9\u05d7\u05d6\u05d5\u05e8: \u05d1\u05e9\u05d9\u05d7\u05ea \u05d4\u05e4\u05d9\u05ea\u05d5\u05d7, wa_phone \u05e2\u05dd step register \u05d5\u05d4-PIN \u05e9\u05dc \u05d4\u05de\u05e1\u05e4\u05e8 (ACCOUNT-INVENTORY, \u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4).' });
   // Meta stopped calling the hook (24/10/2026: the app "בטיחות" fell out of Live; the number stayed CONNECTED, so the
   // phone check saw nothing). A send that got no status back within WA_HOOK_MS. No status ever seen = not known yet.
   const waOut = jsonAt(v('wa_last_out')), waStat = jsonAt(v('wa_status_last'));
@@ -253,7 +275,10 @@ async function watchOnce(env, appUrl) {
   }
   const lat = prevLat.concat(sample ? [sample] : []).slice(-LAT_KEEP);
   const slowOpen = !!(prev && prev.open && prev.open.slow);
-  const wa = waDue(prev, now.getTime()) ? ((await waPhoneStatus(env, nowIso)) || (prev && prev.wa) || null) : (prev && prev.wa) || null;
+  let wa = waDue(prev, now.getTime()) ? ((await waPhoneStatus(env, nowIso)) || (prev && prev.wa) || null) : (prev && prev.wa) || null;
+  // the last attempt rides along, so the hourly limit holds across reads
+  if (wa && prev && prev.wa && prev.wa.reg_at && !wa.reg_at) wa = Object.assign({}, wa, { reg_at: prev.wa.reg_at, reg: prev.wa.reg });
+  if (env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN && waRegDue(wa, env.WA_PIN, now.getTime())) wa = await waReRegister(env, wa, nowIso);
   const list = assess(st, now.getTime(), connected, started, !!(env.VITRE_API_KEY_ID && env.VITRE_API_KEY_SECRET), lat, slowOpen, wa);
   const s = step(prev, list, nowIso);
   let mailErr = '', sent = 0;

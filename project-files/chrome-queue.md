@@ -272,3 +272,12 @@
 - [x] **C5. Azure: האם אפשר לפתוח מנוי עם החשבון של העבודה** (13/10/2026). **בוצע חלקית 13/10/2026 על ידי Claude בכרום:** Add פתח "Select an offer for your subscription" בלי הודעת חסימה: Free Trial, Pay-As-You-Go, Azure for students, תמיכה בתשלום, Visual Studio. המסך עוד לא מבקש כרטיס. **לא נבדק:** אחרי Sign up (התחברות חוזרת וכרטיס), שם תופיע חסימה של הארגון אם יש. נסגר בלי לבחור.
 - [x] **C4. Azure: האם יש מנוי דרך העבודה** (13/10/2026). **בוצע 13/10/2026 על ידי Claude בכרום:** בספרייה tapugan.co.il אין מנוי ("Subscriptions: Filtered (0 of 0)", סינון על כל התפקידים והסטטוסים) ואין חשבון חיוב (Billing scopes ריק). לא נבדקה ספרייה אחרת ("Switch directories"). לא נלחץ Add ולא הופעל ניסיון.
 
+- [ ] **C42. סוד `WA_PIN` ב-Cloudflare: רישום אוטומטי של מספר העוזר** (24/10/2026, המספר נפל ל-PENDING פעמיים ביום; מיכאל בשאלון: "בצע: רישום אוטומטי (מומלץ)". כתיבת סוד מהענן חסומה במסווג ההרשאות). אפשר גם ביד מהטלפון, לפי הדף ששלחתי.
+  ```
+  משימה: להוסיף סוד אחד לפרויקט Cloudflare Pages. מיכאל אישר (24/10/2026). אל תעתיק את הערך לצ'אט.
+  1. https://dash.cloudflare.com > Workers & Pages > tapugan-safety > Settings > Variables and Secrets.
+  2. Add > Type: Secret, Variable name: WA_PIN, Value: קוד ה-PIN בן 6 הספרות שמיכאל קיבל ב-24/10/2026 (הוא יקליד אותו), Environment: Production. Save.
+  3. Deployments > הפריסה האחרונה של main > Retry deployment (כדי שהסוד ייטען).
+  4. דווח: נשמר / לא נשמר, בלי הערך.
+  ```
+
