@@ -110,6 +110,14 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
       && !!odPullCheck({ agent: 'dev', why: 'climb up', from: '../a.pdf', dir: '22_x' }).error && !!odPullCheck({ agent: 'dev', why: 'a folder', from: 'x/folder', dir: '22_x' }).error
       && !!odPullCheck({ agent: 'dev', why: 'climb', from: 'x/a.pdf', dir: '../y' }).error && !!odPullCheck({ agent: 'dev', why: 'x', from: 'x/a.pdf', dir: '22_x' }).error;
   })());
+  check('od_pull dest desktop: between folders outside the safety folder, never into it, never into old versions (24/10/2026)', (() => {
+    const ok = odPullCheck({ agent: 'dev', why: 'tidy old iso', from: 'iso9001/a/x.pdf', dir: 'iso9001/b', dest: 'desktop' });
+    return ok.to === OD_DESKTOP + 'iso9001/b' && ok.from === OD_DESKTOP + 'iso9001/a/x.pdf'
+      && !!odPullCheck({ agent: 'dev', why: 'into safety', from: 'iso9001/x.pdf', dir: '\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/22_x', dest: 'desktop' }).error
+      && !!odPullCheck({ agent: 'dev', why: 'old versions', from: 'iso9001/x.pdf', dir: 'iso9001/_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea', dest: 'desktop' }).error
+      && !!odPullCheck({ agent: 'dev', why: 'climb up', from: 'iso9001/x.pdf', dir: '../b', dest: 'desktop' }).error
+      && !!odPullCheck({ agent: 'dev', why: 'bad dest', from: 'iso9001/x.pdf', dir: 'b', dest: 'drive' }).error;
+  })());
   check('od_trash: one file to the to-delete folder named after its folder; never from inside it or old versions, never a folder (24/10/2026)', (() => {
     const ok = odTrashCheck({ agent: 'dev', why: 'a test file', path: '18_x/2026 - a.pdf' });
     return ok.to === OD_ROOT + OD_TRASH_DIR && ok.name === '18_x - 2026 - a.pdf' && !!odTrashCheck({ agent: 'dev', why: 'x', path: '18_x/a.pdf' }).error
