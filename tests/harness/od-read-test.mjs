@@ -97,6 +97,7 @@ const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', ONEDRIVE_CLIENT_ID: 'cid', ONEDR
 
   // Scan (04/10/2026): the listing and the raw download of documents.
   check('the old ISO folder: raw read only, never a parsed read, never another root', safePath('2026/a.docx', true, 'iso-old') === 'שולחן העבודה/תקני ISO 9001 ו-22000/2026/a.docx' && safePath('2026/a.xlsx', false, 'iso-old') === null && safePath('../a.docx', true, 'iso-old') === null && safePath('a.docx', true, 'x') === null && safePath('a.docx', true, '') === 'שולחן העבודה/ניהול בטיחות/a.docx');
+  check('the whole desktop: raw read only, never a parsed read, never above it', safePath('2026/x/a.docx', true, 'desktop') === 'שולחן העבודה/2026/x/a.docx' && safePath('a.xlsx', false, 'desktop') === null && safePath('../a.docx', true, 'desktop') === null && safePath('a/../../b.pdf', true, 'desktop') === null);
   check('raw may fetch documents, the parsed reads still only workbooks', !!safePath('a/b.pdf', true) && !!safePath('a/b.docx', true) && safePath('a/b.pdf') === null && safePath('a/b.exe', true) === null && safePath('../b.pdf', true) === null);
   check('a folder stays inside the safety folder', safeDir('') === 'שולחן העבודה/ניהול בטיחות' && safeDir('12/א') === 'שולחן העבודה/ניהול בטיחות/12/א' && safeDir('../x') === null && safeDir('a/./b') === null);
   const listed = [];
