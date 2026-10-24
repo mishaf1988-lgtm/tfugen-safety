@@ -719,8 +719,10 @@ export function odTrashCheck(b) {
 }
 // od_put_pdf (20/10/2026): ONE new PDF {dir, name, b64} into a folder that already exists inside the safety
 // folder, e.g. an appointment letter and its certificate merged into one file. A PDF only (%PDF- at the
-// start), 4 MB at most, never replacing a file (name taken = refused), never into the protected folders.
-export const OD_PUT_MAX = 4 * 1024 * 1024;
+// start), 8 MB at most, never replacing a file (name taken = refused), never into the protected folders.
+// 8 MB from 24/10/2026: procedure 01 (4.3 MB) and the factory file (4.9 MB) did not fit into the ISO binder;
+// Graph's simple PUT takes up to 250 MB.
+export const OD_PUT_MAX = 8 * 1024 * 1024;
 export const OD_PUT_TYPES = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
 export function odPutPdfCheck(b) {
   const c = odMkdirCheck({ agent: b.agent, why: b.why, parent: b.dir, name: b.name });
