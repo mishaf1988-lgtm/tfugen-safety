@@ -78,5 +78,11 @@ check('a line over the limit: 400', r.status === 400);
 check('chatRows drops empty lines and other events', chatRows([{ ts: 'a', event_type: 'watch', text: 'x' }, { ts: 'b', event_type: 'assistant', text: ' ' }]).length === 0);
 check('chatFireText keeps a newline out of the one text line', !/\n.*\n.*\n.*\ntext: a\nb/.test(chatFireText('a\nb', 't', '', null)) && /text: a \/ b/.test(chatFireText('a\nb', 't', '', null)));
 
+// 24/10/2026 (lesson 154): Michael's first chat messages went unanswered, since step 1 of the procedure and the
+// trigger prompt listed only three headers. The header the server sends must be in step 1 (the prompt is outside the repo).
+const proc = readFileSync(new URL('../../project-files/routine-wa-assistant.md', import.meta.url), 'utf8');
+const head = chatFireText('x', 't', '', null).split('\n')[0];
+const step1 = (proc.split('\n').find((l) => /^1\. \*\*/.test(l)) || '');
+check('step 1 of the assistant procedure accepts the exact header the chat sends', step1.indexOf('`' + head + '`') >= 0, head);
 console.log(`\nchat-test: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
