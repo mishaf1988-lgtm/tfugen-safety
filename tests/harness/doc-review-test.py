@@ -18,6 +18,10 @@ with tempfile.TemporaryDirectory() as d:
     check('word: the changed number is one deleted word, the removed paragraph is deleted whole', '30' in dels and 'סעיף ישן שנמחק.' in dels and 'סיום.' not in dels, (r.stderr[-300:], dels))
     check('word: insertions are tracked with the author', 'w:author="מיכאל פרייליך"' in x and x.count('<w:ins ') >= 2)
     check('word: the unchanged paragraph is not marked', 'סעיף קבוע.' in docx.Document(j('out.docx')).paragraphs[2].text or 'סעיף קבוע.' in [p.text for p in docx.Document(j('out.docx')).paragraphs])
+    r = subprocess.run([sys.executable, os.path.join(T, 'accept_docx.py'), j('out.docx'), j('acc.docx')], capture_output=True, text=True)
+    acc = [p.text for p in docx.Document(j('acc.docx')).paragraphs] if r.returncode == 0 else []
+    x2 = zipfile.ZipFile(j('acc.docx')).read('word/document.xml').decode() if r.returncode == 0 else ''
+    check('accept_docx: accepting the tracked version gives the new text, with no revision marks left', acc == ['כותרת', 'צופה אש 60 דקות לאחר סיום.', 'סעיף קבוע.', 'סעיף חדש.'] and '<w:ins ' not in x2 and '<w:del ' not in x2, (r.stderr[-300:], acc))
     wb = openpyxl.Workbook(); ws = wb.active; ws['A1'] = 'x'; ws['B2'] = 30; ws['C3'] = 'ישן'; wb.save(j('o.xlsx'))
     wb = openpyxl.Workbook(); ws = wb.active; ws['A1'] = 'x'; ws['B2'] = 60; ws['D4'] = 'חדש'; wb.save(j('n.xlsx'))
     r = subprocess.run([sys.executable, os.path.join(T, 'track_xlsx.py'), j('o.xlsx'), j('n.xlsx'), j('out.xlsx')], capture_output=True, text=True)
