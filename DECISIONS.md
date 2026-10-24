@@ -2997,3 +2997,6 @@ Anonymous sessions (emp mode) לא יכולים SELECT/UPDATE/DELETE שום דב
 
 ### 24/10/2026: מייל כש-Meta מפסיקה לקרוא ל-webhook (האפליקציה יצאה מ-Live)
 מיכאל בשאלון: "בצע: לבדוק ולהוסיף (מומלץ)". נבחר: מומלץ. `app_probe` (#1925) הראה ש-Meta לא חושפת את מצב האפליקציה (`metadata` ריק, ההרשאות רק email/public_profile). במקום זה: כל הודעה שיוצאת חוזרת כסטטוס (sent/delivered/read) ב-webhook; `wa-hook` רושם `wa_status_last`, והשומר משווה ל-`wa_last_out`. שליחה בלי סטטוס אחרי 30 דקות = בעיה `wa:hook` במייל, עם מה לעשות (Publish). אין סטטוס מעולם = לא ידוע, בלי התראה.
+
+### 24/10/2026: זרימה 6 (OCR) נעצרה על קרדיטים של AI Builder
+כרום בנה את הזרימה; הריצה נכשלה: "Missing Copilot Credit or AI Builder credit capacity". מיכאל בשאלון: "בצע: לכבות ולבדוק חלופה חינמית (מומלץ)". נבחר: מומלץ. לפי ההחלטה הקודמת ("רק OCR של Microsoft", בלי קרדיט ל-Claude), החלופה שנבדקת: Azure AI Vision (Read) בשכבה החינמית F0, שהשרת קורא אליה וכותב txt ל-`_טקסט סריקות`.
