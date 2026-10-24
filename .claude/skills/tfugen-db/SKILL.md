@@ -1,6 +1,6 @@
 ---
 name: tfugen-db
-description: How to read and change the live Supabase database of tfugen-safety from a Claude Code cloud session - which MCP tools actually work, the project id, the migration workflow (file, apply, verify, STATUS), and what is forbidden. Load before any SQL, migration, schema question, row count, or claim about live data in this repo.
+description: How to read and change the live Supabase database of tfugen-safety, and the three levels of OneDrive file access (read, move, write), from a Claude Code cloud session - which MCP tools actually work, the project id, the migration workflow (file, apply, verify, STATUS), and what is forbidden. Load before any SQL, migration, schema question, row count, or claim about live data in this repo.
 ---
 
 # עבודה מול ה-DB החי (Supabase)
@@ -67,6 +67,13 @@ description: How to read and change the live Supabase database of tfugen-safety 
 
 ## ערך שהשרת מחשב ומיכאל רוצה לשנות (14/10/2026)
 בקשה מסוג "לשנות לפני שליחה" או "לתקן ידנית": קודם לבדוק אם הערך **נשמר** במסד או **מחושב** בכל פעם. דוגמה: האחראי של ליקוי נאמן חושב ב-`trusteeResp` ולא היה לו עמודה, כך שלא היה מה לשנות עד `trustee_reports.resp` (#1508). איך בודקים: `grep` על שם השדה בשאילתת ה-`select` של הפונקציה (למשל `trustee_reports?select=`) ובמקום שבונה את השורה (`buildRegister`). ערך מחושב בלי עמודה = שינוי סכמה: לשאול את מיכאל בשאלון לפני (טבלה רגישה או עם נתונים), גיבוי, עמודה nullable, ובקוד `stored || computed`, כדי שהתנהגות קיימת לא תשתנה. ואז להוסיף את העמודה **לכל** השאילתות שבונות מאותו מקור (ב-#1508 היו חמש), ולהריץ את ה-migration **לפני** המיזוג: `select` של עמודה שעוד לא קיימת מחזיר 400 ומפיל את כולן.
+
+## OneDrive: שלוש רמות גישה (24/10/2026, מיכאל: "אני רוצה שיהיה גישה לא רק לניהול הבטיחות, לשולחן העבודה")
+לא Supabase, אבל אותה שאלה: מה מותר לגעת. השרת (`/api/od-read`, `routine-db.sh`) מחזיק הרשאה לכל ה-OneDrive, והקוד מצמצם:
+1. **קריאה: כל שולחן העבודה.** `od-read` עם `{"root":"desktop","path":"<מתחת לשולחן העבודה>","raw":true}` וטוקן חד-פעמי (`state_set` של `od_raw_token` ו-`od_raw_exp`, עד שעה; אחרי שימוש `od_raw_exp` לעבר). בלי `root` = מתחת ל"ניהול בטיחות". המחבר 365 קורא טקסט מכל מקום, אבל לא מחזיר את הקובץ עצמו.
+2. **העברה: `od_pull`, קובץ אחד.** ברירת מחדל: מכל שולחן העבודה אל תיקייה קיימת ב"ניהול בטיחות" (כולל `למחיקה`). `dest:"desktop"`: בין שתי תיקיות מחוץ ל"ניהול בטיחות". אף פעם לא דורס (`conflictBehavior=fail`), לא מוציא מ"ניהול בטיחות" (שם `od_move`/`od_trash`/`od_archive`), לא אל `_גרסאות קודמות`/ARCHIVE.
+3. **כתיבה (קובץ חדש, תיקייה): רק ב"ניהול בטיחות".** `od_put_pdf` (pdf/docx/xlsx עד 8MB, לא מחליף), `od_mkdir`. מחיקה: אף פעם, רק `למחיקה` ומיכאל מרוקן.
+עדכון קובץ קיים = שם חדש (עם תאריך) והקודם ל-`od_archive`, כי `od_put_pdf` לא מחליף; הפניה לקובץ כזה בקבצי ה-md לפי תחילית השם, לא שם מלא (נשבר פעמיים ב-24/10/2026).
 
 ## אסור
 - בלי אישור מפורש באותה שיחה: `DROP`, `DELETE`, `TRUNCATE`, `ALTER ... DROP COLUMN`, שינוי או מחיקה של RLS policy.

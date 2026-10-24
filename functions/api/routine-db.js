@@ -49,6 +49,7 @@
 //   od_trash   ONE file to the to-delete folder at the top of the safety folder; Michael deletes it there.
 //   od_pull    ONE file from anywhere on the desktop (outside the safety folder) INTO a folder of the safety folder,
 //              e.g. the ISO binder or the to-delete folder (24/10/2026, Michael: read, and move when needed).
+//              dest: 'desktop' = dir under the desktop instead (between two folders outside the safety folder).
 //   wa_check   the assistant's setup, checked against Meta without showing a value (19/10/2026, Michael:
 //              "do the check yourself"): META_APP_SECRET by appsecret_proof, the app's webhook fields,
 //              the WABA's subscribed apps, and with fire_probe the fire token (status only). subscribe: true
@@ -733,8 +734,17 @@ export function odPullCheck(b) {
   if (from.length < 1 || from.length > 10 || from.some(bad) || !OD_PULL_EXT.test(from[from.length - 1])) return { error: 'bad from' };
   if (OD_DESKTOP + from[0] + '/' === OD_ROOT) return { error: 'from is inside the safety folder: od_move / od_trash / od_archive' };
   const dir = String(b.dir || '').split('/').filter(Boolean);
-  if (!dir.length || dir.length > OD_MKDIR_DEPTH + 1 || dir.some(bad)) return { error: 'bad dir' };
+  if (!dir.length || dir.length > 10 || dir.some(bad)) return { error: 'bad dir' };
   const jd = dir.join('/');
+  // dest 'desktop' (24/10/2026, Michael in the questionnaire: "do it: moving between folders outside the safety
+  // folder"): dir is under the desktop, e.g. tidying the old ISO 9001 folder. Never into the safety folder this
+  // way (the default dest keeps its rules) and never into an old-versions or ARCHIVE folder.
+  if (b.dest === 'desktop') {
+    if (OD_DESKTOP + dir[0] + '/' === OD_ROOT || OD_NO_DIR.test(jd)) return { error: 'bad dir' };
+    return { from: OD_DESKTOP + from.join('/'), to: OD_DESKTOP + jd, name: from[from.length - 1], dir: jd };
+  }
+  if (b.dest !== undefined) return { error: 'bad dest' };
+  if (dir.length > OD_MKDIR_DEPTH + 1) return { error: 'bad dir' };
   if (jd !== OD_TRASH_DIR && OD_NO_DIR.test(jd)) return { error: 'bad dir' };
   return { from: OD_DESKTOP + from.join('/'), to: OD_ROOT + jd, name: from[from.length - 1], dir: jd };
 }
@@ -1568,7 +1578,7 @@ export async function onRequest(context) {
       return jsonResp({ ok: true, path: c.dir.slice(OD_ROOT.length) + '/' + OD_ARCHIVE_DIR + '/' + c.name }, 200, {});
     }
     if (body.op === 'od_pull') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'from', 'dir'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'from', 'dir', 'dest'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const c = odPullCheck(body);
       if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
       const at = await accessToken(env);
