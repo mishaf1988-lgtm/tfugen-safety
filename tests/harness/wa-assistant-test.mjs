@@ -176,6 +176,7 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   check('the right secret passes appsecret_proof', c.ok && c.secret_ok === true && c.app_id === 'APP1', c);
   check('no messages field and no WABA app: reported, nothing changed', c.messages_ok === false && c.waba_has_app === false && !graphCalls.some((x) => x.m === 'POST'), c);
   check('no secret, token or number in the answer', !/app-secret|"mt"|tok|972/.test(JSON.stringify(c)), c);
+  check('pin_set says whether WA_PIN is a 6-digit PIN, never its value (24/10/2026, C42)', c.pin_set === /^[0-9]{6}$/.test(String(ENV.WA_PIN || '')) && (!ENV.WA_PIN || JSON.stringify(c).indexOf(String(ENV.WA_PIN)) < 0), c);
   c = await call({ op: 'wa_check', subscribe: true });
   check('subscribe: messages on the app hook, and the WABA subscribed', c.subscribed_now && c.messages_ok && c.waba_subscribed_now && c.waba_has_app === true && /\/api\/wa-hook$/.test(c.app_sub.callback_url), c);
   subs = [{ object: 'whatsapp_business_account', callback_url: 'https://old/hook', active: true, fields: [{ name: 'message_template_status_update' }] }];
