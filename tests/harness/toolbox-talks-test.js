@@ -210,7 +210,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   await page.evaluate(([n, o, r]) => { window._H_new = n; window._H_old = o; window._H_ru = r; }, [H('he', 'מלגזות', 'גוף חדש', ''), H('he', 'מלגזות', 'גוף ישן', ''), H('ru', 'Погрузчики', 'текст', '')]);
   const lh = await page.evaluate(async () => {
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-    const tomorrow = new Date(Date.now() + 864e5).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+    const tomorrow = new Date(Date.parse(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }) + 'T12:00:00Z') + 864e5).toISOString().slice(0, 10);
     DB.emp = [{ id: 'e1', n: 'פעיל', dep: 'ייצור' }, { id: 'e2', n: 'עזב', dep: 'ייצור', left_d: '2026-09-30' }, { id: 'e3', n: 'עוזב מחר', dep: 'מחסן', left_d: tomorrow }, { id: 'e4', n: 'עזב היום', dep: 'מחסן', left_d: today }];
     DB.toolbox_talks = [{ id: 'k1', d: '2026-09-20', title: 'מלגזות', body: 'גוף חדש', body_ru: 'Погрузчики\nтекст', file_url: '', s: 'פורסמה' }, { id: 'k2', d: '2026-10-04', title: 'אחרי העזיבה', body: 'x', s: 'פורסמה' }];
     DB.toolbox_reads = [
