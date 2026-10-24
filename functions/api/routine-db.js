@@ -1595,6 +1595,16 @@ export async function onRequest(context) {
         out.phone = { status: pj.status || null, platform: pj.platform_type || null, verified: pj.code_verification_status || null, name: pj.name_status || null, quality: pj.quality_rating || null, mode: pj.account_mode || null };
         out.phone_err = err(ph);
       }
+      // app_probe (24/10/2026, the app "בטיחות" fell out of Live and no webhook arrived; Michael: "do it: check and add"):
+      // which fields Meta returns on the app node, to find one that tells Live from unpublished. Names only, no values.
+      if (body.app_probe && appTok) {
+        const md = await g(V + appId + '?metadata=1&access_token=' + appTok);
+        out.app_fields = md.j && md.j.metadata && Array.isArray(md.j.metadata.fields) ? md.j.metadata.fields.map((f) => f.name).slice(0, 200) : null;
+        out.app_fields_err = err(md);
+        const pm = await g(V + appId + '/permissions?access_token=' + appTok);
+        out.app_perms = ((pm.j && pm.j.data) || []).map((x) => ({ p: x.permission, s: x.status })).slice(0, 40);
+        out.app_perms_err = err(pm);
+      }
       out.app_sub = s.sub; out.app_sub_err = s.err; out.messages_ok = subOk(); out.waba_has_app = w.has; out.waba_apps_err = w.err;
       if (body.fire_probe && out.fire_set) {
         const af = assistantFire(env);
