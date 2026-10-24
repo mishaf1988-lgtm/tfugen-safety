@@ -266,10 +266,11 @@ export function claimApply(map, b, nowIso) {
 }
 // mail_filing / validity_run (11/10/2026): run counts of the mail-filing and validity Routines, for the weekly mail.
 // iso_tasks (24/10/2026): the ISO prep list the assistant manages (routine-wa-assistant.md, "ISO management").
-export const WA_PHONE_STEPS = ['request_code', 'verify_code', 'register'];
+export const WA_PHONE_STEPS = ['request_code', 'verify_code', 'register', 'deregister'];
 // The body Meta expects for each step. The PIN: the secret WA_PIN when set, else the one in the request (24/10/2026:
 // writing the secret from the cloud was refused by the permission classifier; Michael chose the PIN himself).
 export function waPhoneBody(step, b, pin) {
+  if (step === 'deregister') return { body: {} };
   if (step === 'request_code') return { body: { code_method: b.method === 'VOICE' ? 'VOICE' : 'SMS', language: 'he' } };
   if (step === 'verify_code') {
     const code = String(b.code || '').replace(/\D/g, '');
@@ -1530,7 +1531,9 @@ export async function onRequest(context) {
       const P = 'https://graph.facebook.com/v25.0/' + encodeURIComponent(env.META_PHONE_NUMBER_ID);
       const H = { Authorization: 'Bearer ' + env.META_ACCESS_TOKEN, 'Content-Type': 'application/json' };
       const st = await fetch(P + '?fields=status,code_verification_status', { headers: H, signal: tmo(GRAPH_MS) }).then((r) => r.json()).catch(() => ({}));
-      if (st.status === 'CONNECTED') return jsonResp({ ok: false, error: 'the number is connected: nothing to do', phone: st }, 400, {});
+      // deregister (24/10/2026, Michael: "both"): the test number came back CONNECTED but WhatsApp still told him it
+      // is "no longer on WhatsApp"; one deregister and register to refresh it. Only from a CONNECTED number.
+      if (st.status === 'CONNECTED' && step !== 'deregister') return jsonResp({ ok: false, error: 'the number is connected: nothing to do', phone: st }, 400, {});
       const req = waPhoneBody(step, body, env.WA_PIN);
       if (req.error) return jsonResp({ ok: false, error: req.error }, 400, {});
       const r = await fetch(P + '/' + step, { method: 'POST', headers: H, body: JSON.stringify(req.body), signal: tmo(GRAPH_MS) });
