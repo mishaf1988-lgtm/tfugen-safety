@@ -1536,7 +1536,9 @@ export async function onRequest(context) {
       const r = await fetch(P + '/' + step, { method: 'POST', headers: H, body: JSON.stringify(req.body), signal: tmo(GRAPH_MS) });
       const j = await r.json().catch(() => ({}));
       const after = await fetch(P + '?fields=status,platform_type,code_verification_status', { headers: H, signal: tmo(GRAPH_MS) }).then((x) => x.json()).catch(() => ({}));
-      return jsonResp({ ok: r.ok && !j.error, step, error: j.error ? String(j.error.message || j.error.code).slice(0, 200) + (j.error.code ? ' (' + j.error.code + ')' : '') : null,
+      // details: Meta's own reason (24/10/2026: request_code answered only "Request code error (136024)")
+      const e = j.error || null, det = e ? [e.error_user_title, e.error_user_msg, e.error_data && e.error_data.details, e.error_subcode].filter(Boolean).join(' | ').slice(0, 400) : null;
+      return jsonResp({ ok: r.ok && !j.error, step, error: e ? String(e.message || e.code).slice(0, 200) + (e.code ? ' (' + e.code + ')' : '') : null, details: det || null,
         phone: { status: after.status || null, platform: after.platform_type || null, verified: after.code_verification_status || null } }, 200, {});
     }
     if (body.op === 'wa_check') {
