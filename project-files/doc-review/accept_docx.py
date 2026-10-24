@@ -31,7 +31,9 @@ for item in zin.infolist():
                 at = 1 if len(nxt) and nxt[0].tag == '{%s}pPr' % W else 0
                 for c in body: nxt.insert(at, c); at += 1
                 p_.getparent().remove(p_)
-            elif not ''.join(p_.itertext()).strip():
+            elif not ''.join(p_.itertext()).strip() and len(p_.getparent().findall('{%s}p' % W)) > 1:
+                # never the last paragraph of a table cell or text box: Word refuses a cell with none
+                # (24/10/2026, the contractor procedure: 37 empty cells, Microsoft answered 406)
                 p_.getparent().remove(p_)
         data = etree.tostring(root, xml_declaration=True, encoding='UTF-8', standalone=True)
     zout.writestr(item, data)
