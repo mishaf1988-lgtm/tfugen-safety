@@ -43,6 +43,18 @@ export const FILE_ROWS = 205, FULL_WARN = 164;
 export const STALE_MS = 45 * 60 * 1000, ERR_MS = 30 * 60 * 1000, FIRST_MS = 60 * 60 * 1000;
 // The Vitre import runs once a day; a day and two hours without a run = the cron stopped.
 export const VITRE_KEY = 'vitre_sync', VITRE_STALE_MS = 26 * 60 * 60 * 1000;
+// The number's state at Meta, read at most every WA_GAP_MS (op:'watch' rides every hazard-file call).
+export const WA_GAP_MS = 30 * 60 * 1000;
+export function waDue(prev, nowMs) { const t = prev && prev.wa && Date.parse(prev.wa.at); return !t || nowMs - t >= WA_GAP_MS; }
+async function waPhoneStatus(env, nowIso) {
+  if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return null;
+  try {
+    const r = await fetch('https://graph.facebook.com/v25.0/' + encodeURIComponent(env.META_PHONE_NUMBER_ID) + '?fields=status', { headers: { Authorization: 'Bearer ' + env.META_ACCESS_TOKEN }, signal: AbortSignal.timeout(8000) });
+    const j = await r.json().catch(() => ({}));
+    // A failed read is "unknown", never "dropped" (lesson 145): keep the last known state.
+    return r.ok && j.status ? { at: nowIso, status: String(j.status) } : null;
+  } catch (e) { return null; }
+}
 // The database speed check: ms for the median of 3 reads, 4 slow samples spanning 45 minutes
 // (an hour of slowness, give or take a sample), one sample per 10 minutes at most, 8 kept.
 export const SLOW_MS = 1000, SLOW_TICKS = 4, LAT_KEEP = 8, PROBE_MS = 4000, WORK_H = [6, 18];
@@ -127,7 +139,7 @@ export function stateKeys() {
 // started = when the watchdog first ran (a part with no ok_at yet gets an
 // hour from then, since ok_at is new with this change); vitre = the Vitre keys
 // are set, so the daily import is expected.
-export function assess(st, nowMs, connected, started, vitre, lat, slowOpen) {
+export function assess(st, nowMs, connected, started, vitre, lat, slowOpen, wa) {
   const v = (k) => (st[k] && st[k].value) || '';
   const at = (k) => (st[k] && st[k].at) || '';
   const out = [];
@@ -157,6 +169,9 @@ export function assess(st, nowMs, connected, started, vitre, lat, slowOpen) {
     if (r && r.error) out.push({ key: 'vitre:err', title: '\u05d9\u05d9\u05d1\u05d5\u05d0 \u05d4\u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05de-Vitre: \u05e9\u05d2\u05d9\u05d0\u05d4', detail: String(r.error).substring(0, 200) + when });
     else if (nowMs - (last || Date.parse(started) || nowMs) >= VITRE_STALE_MS) out.push({ key: 'vitre:stale', title: '\u05d9\u05d9\u05d1\u05d5\u05d0 \u05d4\u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05de-Vitre: \u05dc\u05d0 \u05e8\u05e5', detail: (last ? '\u05d4\u05e8\u05d9\u05e6\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: ' + ilTime(new Date(last).toISOString()) + '. ' : '\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e8\u05e9\u05de\u05d4 \u05e8\u05d9\u05e6\u05d4. ') + '\u05d4\u05d9\u05d9\u05d1\u05d5\u05d0 \u05d0\u05de\u05d5\u05e8 \u05dc\u05e8\u05d5\u05e5 \u05db\u05dc \u05d1\u05d5\u05e7\u05e8 \u05d1-06:00.' });
   }
+  // The assistant's WhatsApp number (24/10/2026: Meta dropped it, 133010, and Michael found out only when he could not
+  // write to it; in the questionnaire: "do it: a mail when it drops"). wa = { status } from waPhoneStatus; no wa = not checked.
+  if (wa && wa.status && wa.status !== 'CONNECTED') out.push({ key: 'wa:phone', title: '\u05de\u05e1\u05e4\u05e8 \u05d4\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05e9\u05dc \u05d4\u05e2\u05d5\u05d6\u05e8 \u05de\u05e0\u05d5\u05ea\u05e7', detail: '\u05dc\u05e4\u05d9 Meta: ' + wa.status + '. \u05d4\u05e2\u05d5\u05d6\u05e8 \u05dc\u05d0 \u05de\u05e7\u05d1\u05dc \u05d5\u05dc\u05d0 \u05e9\u05d5\u05dc\u05d7 \u05d4\u05d5\u05d3\u05e2\u05d5\u05ea, \u05d5\u05d2\u05dd \u05e2\u05d3\u05db\u05d5\u05df \u05d4\u05d1\u05d5\u05e7\u05e8 \u05dc\u05d0 \u05d9\u05d5\u05e6\u05d0. \u05dc\u05e9\u05d7\u05d6\u05d5\u05e8: \u05d1\u05e9\u05d9\u05d7\u05ea \u05d4\u05e4\u05d9\u05ea\u05d5\u05d7, wa_phone \u05e2\u05dd step register \u05d5\u05d4-PIN \u05e9\u05dc \u05d4\u05de\u05e1\u05e4\u05e8 (ACCOUNT-INVENTORY, \u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4).' });
   const slow = slowIssue(lat, nowMs, slowOpen);
   if (slow) out.push(slow);
   FILES.forEach(([f, name]) => {
@@ -233,7 +248,8 @@ async function watchOnce(env, appUrl) {
   }
   const lat = prevLat.concat(sample ? [sample] : []).slice(-LAT_KEEP);
   const slowOpen = !!(prev && prev.open && prev.open.slow);
-  const list = assess(st, now.getTime(), connected, started, !!(env.VITRE_API_KEY_ID && env.VITRE_API_KEY_SECRET), lat, slowOpen);
+  const wa = waDue(prev, now.getTime()) ? ((await waPhoneStatus(env, nowIso)) || (prev && prev.wa) || null) : (prev && prev.wa) || null;
+  const list = assess(st, now.getTime(), connected, started, !!(env.VITRE_API_KEY_ID && env.VITRE_API_KEY_SECRET), lat, slowOpen, wa);
   const s = step(prev, list, nowIso);
   let mailErr = '', sent = 0;
   // The samples are saved before the mail (15/10/2026): a mail step that hangs or dies must
@@ -252,7 +268,7 @@ async function watchOnce(env, appUrl) {
   } else if (s.fresh.length || s.done.length) mailErr = connected ? 'no Mail.Send' : 'not connected';
   // A notice that cannot go out is kept for the next run, but not forever.
   const done = sent ? [] : s.done.slice(-20);
-  const value = { at: nowIso, started, open: s.open, done, lat, mail_err: mailErr, mailed_at: sent ? nowIso : (prev && prev.mailed_at) || null };
+  const value = { at: nowIso, started, open: s.open, done, lat, wa, mail_err: mailErr, mailed_at: sent ? nowIso : (prev && prev.mailed_at) || null };
   await stateSet(env, { [WATCH_KEY]: JSON.stringify(value) });
   return { ok: true, open: Object.keys(s.open).length, fresh: s.fresh.length, resolved: sent ? s.done.length : 0, sent, mailErr, ms };
 }

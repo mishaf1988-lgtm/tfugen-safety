@@ -26,6 +26,7 @@ check('all ran in the last 5 minutes, connected: nothing', assess(S(fresh), NOW,
 let l = assess(S({ ...fresh, deck_ok_at: ago(50) }), NOW, true, ago(600));
 check('the deck last ran 50 minutes ago: "stale:deck"', keys(l).join() === 'stale:deck' && /מצגת/.test(l[0].title) && /לא התעדכן/.test(l[0].title), l);
 check('...with the time in DD/MM/YYYY HH:MM (Israel)', /\d{2}\/\d{2}\/2026 \d{2}:\d{2}/.test(l[0].detail) && ilTime(ago(50)) === '30/09/2026 10:10', [l[0].detail, ilTime(ago(50))]);
+check('the WhatsApp number: an alert when Meta says it is not CONNECTED, none when connected or unknown (24/10/2026)', (() => { const a = assess(S(fresh), NOW, true, ago(600), false, [], false, { status: 'PENDING' }); return a.length === 1 && a[0].key === 'wa:phone' && a[0].detail.indexOf('PENDING') >= 0 && assess(S(fresh), NOW, true, ago(600), false, [], false, { status: 'CONNECTED' }).length === 0 && assess(S(fresh), NOW, true, ago(600), false, [], false, null).length === 0; })());
 check('40 minutes is not yet stale (3 ticks)', assess(S({ ...fresh, deck_ok_at: ago(40) }), NOW, true, ago(600)).length === 0);
 l = assess(S({ ...fresh, hazard_xlsx_err: 'onedrive 423: locked', hazard_xlsx_err_at: ago(35), hazard_xlsx_ok_at: ago(35) }), NOW, true, ago(600));
 check('an error 35 minutes old: "err:hazard_xlsx" only (not also stale)', keys(l).join() === 'err:hazard_xlsx' && /423/.test(l[0].detail), l);
@@ -62,7 +63,7 @@ check('25 hours is not yet stale', assess(S({ ...fresh, vitre_sync: vs({ at: ago
 check('no Vitre run recorded, watchdog up 27 hours: stale', keys(assess(S(fresh), NOW, true, ago(27 * 60), true)).join() === 'vitre:stale');
 check('Vitre keys not set: no Vitre problem', assess(S({ ...fresh, vitre_sync: vs({ error: 'x' }) }), NOW, true, ago(6000), false).length === 0);
 check('the watchdog reads the key vitre.js writes', stateKeys().includes('vitre_sync') && /const SYNC_KEY = 'vitre_sync'/.test(src('functions/api/vitre.js')));
-check('runWatch turns the Vitre check on from the Vitre env vars', /assess\(st, now\.getTime\(\), connected, started, !!\(env\.VITRE_API_KEY_ID && env\.VITRE_API_KEY_SECRET\), lat, slowOpen\)/.test(src('functions/_watchdog.js')));
+check('runWatch turns the Vitre check on from the Vitre env vars', /assess\(st, now\.getTime\(\), connected, started, !!\(env\.VITRE_API_KEY_ID && env\.VITRE_API_KEY_SECRET\), lat, slowOpen, wa\)/.test(src('functions/_watchdog.js')));
 
 console.log('\n2. one mail when it starts, one when it is over');
 let st = step(null, [{ key: 'stale:deck', title: 'T', detail: 'D' }], ago(0));
