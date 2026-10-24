@@ -126,6 +126,7 @@
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
+import { OD_OCR_DIR, OCR_MODELS, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
 import { SIGN_KEY, SIGN_CHOICES, signAdd, signMark, signAskText, signPlace } from '../_sign.js';
 import { findSignSpot } from '../_pdftext.js';
 import { PDFDocument } from '../_pdflib.js';
@@ -675,42 +676,14 @@ export function pdfReadCheck(b) {
 // free"; earlier: "only Microsoft OCR"): up to 5 PDFs from the safety folder go to Azure AI Vision Read (free F0 tier),
 // and the text is written to _טקסט סריקות/<name>.txt. The answer holds names and lengths only, never the text:
 // Claude reads the txt with the Microsoft 365 connector, as flow 6 was meant to allow.
-export const OD_OCR_DIR = '_\u05d8\u05e7\u05e1\u05d8 \u05e1\u05e8\u05d9\u05e7\u05d5\u05ea';
+export { OD_OCR_DIR } from '../_ocr.js';
 export function ocrTxtCheck(b) {
   const c = draftAttach(b.paths);
   if (c.error || !c.attach.length) return { error: (c.error || 'paths: 1-' + DRAFT_ATTACH_MAX).replace('attach', 'paths') };
   if (c.attach.some((a) => !/\.pdf$/i.test(a.name))) return { error: 'paths: PDF files only' };
   return { files: c.attach.map((a) => Object.assign({}, a, { txt: a.name.replace(/\.pdf$/i, '') + '.txt' })) };
 }
-// Workers AI fallback (24/10/2026, no Azure subscription; Michael in the questionnaire: "do it: test Workers AI"):
-// a scanned PDF holds each page as a JPEG stream (DCTDecode); the first OCR_PAGES of them go to a vision model.
-export const OCR_MODELS = ['@cf/meta/llama-4-scout-17b-16e-instruct', '@cf/mistralai/mistral-small-3.1-24b-instruct', '@cf/google/gemma-3-12b-it', '@cf/meta/llama-3.2-11b-vision-instruct'];
-export const OCR_PAGES = 3;
-export const OCR_PROMPT = 'Transcribe all the text in this scanned document exactly, line by line, in its original language (mostly Hebrew). Keep numbers and dates as written. Output only the text, no comments.';
-export function pdfJpegs(buf, max) {
-  const out = [];
-  for (let i = 0; i + 1 < buf.length && out.length < max; i++) {
-    if (buf[i] !== 0xFF || buf[i + 1] !== 0xD8 || buf[i + 2] !== 0xFF) continue;
-    let j = i + 2;
-    while (j + 1 < buf.length && !(buf[j] === 0xFF && buf[j + 1] === 0xD9)) j++;
-    if (j + 1 >= buf.length) break;
-    if (j - i > 2000) out.push(buf.subarray(i, j + 2));
-    i = j + 1;
-  }
-  return out;
-}
-export async function aiOcr(env, model, jpg) {
-  let bin = ''; for (let i = 0; i < jpg.length; i += 0x8000) bin += String.fromCharCode.apply(null, jpg.subarray(i, i + 0x8000));
-  const input = model.indexOf('llama-3.2') >= 0 ? { prompt: OCR_PROMPT, image: Array.from(jpg), max_tokens: 1500 }
-    : { messages: [{ role: 'user', content: [{ type: 'text', text: OCR_PROMPT }, { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + btoa(bin) } }] }], max_tokens: 1500 };
-  const r = await env.AI.run(model, input);
-  return String((r && (r.response || (r.choices && r.choices[0] && r.choices[0].message && r.choices[0].message.content))) || '').trim();
-}
-// The lines of an Azure Read result, page by page.
-export function ocrLines(j) {
-  const pages = (j && j.analyzeResult && j.analyzeResult.readResults) || [];
-  return pages.map((p) => ((p && p.lines) || []).map((l) => String((l && l.text) || '')).join('\n')).join('\n\n').trim();
-}
+export { OCR_MODELS, OCR_PAGES, OCR_PROMPT, pdfJpegs, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
 // od_archive (20/10/2026, Michael: "when the assistant works on a form it must not keep the old form, move it
 // to the archive"): ONE file inside the safety folder moves to "_גרסאות קודמות" in its own folder (created if
 // missing), same name. Only when the file that replaces it (replaced_by) sits in the same folder, so this
@@ -1127,21 +1100,11 @@ export async function onRequest(context) {
       const files = [];
       for (const a of c.files) {
         try {
+          if (!azure) { files.push(await ocrOne(env, at.token, a.rel, a.name, aiModel)); continue; }
           const d = await fetch(G + enc(OD_ROOT + a.rel) + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(30000) });
           if (!d.ok) { files.push({ name: a.name, ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status }); continue; }
           const buf = new Uint8Array(await d.arrayBuffer());
           if (buf.length > PDF_READ_MAX) { files.push({ name: a.name, ok: false, error: 'too big: ' + buf.length }); continue; }
-          if (!azure) {
-            const pages = pdfJpegs(buf, OCR_PAGES);
-            if (!pages.length) { files.push({ name: a.name, ok: false, error: 'no scanned page image in this PDF' }); continue; }
-            const parts = [];
-            for (const pg of pages) parts.push(await aiOcr(env, aiModel, pg));
-            const text = parts.join('\n\n').trim();
-            const up = await fetch(G + enc(OD_ROOT + OD_OCR_DIR + '/' + a.txt) + ':/content?@microsoft.graph.conflictBehavior=replace', { method: 'PUT', signal: tmo(GRAPH_MS),
-              headers: { Authorization: 'Bearer ' + at.token, 'Content-Type': 'text/plain; charset=utf-8' }, body: text });
-            files.push({ name: a.name, ok: up.ok && text.length > 0, txt: OD_OCR_DIR + '/' + a.txt, chars: text.length, pages: pages.length, engine: aiModel, error: up.ok ? (text ? undefined : 'no text found') : 'write ' + up.status });
-            continue;
-          }
           const r = await fetch(base + '/vision/v3.2/read/analyze', { method: 'POST', body: buf, signal: tmo(30000),
             headers: { 'Ocp-Apim-Subscription-Key': env.AZURE_VISION_KEY, 'Content-Type': 'application/octet-stream' } });
           const loc = r.headers.get('operation-location');
