@@ -1550,6 +1550,14 @@ export async function onRequest(context) {
         out.waba_subscribed_now = r.status === 200; out.waba_err = err(r);
         w = await readWaba();
       }
+      // The number itself (24/10/2026, wa_me answered 133010 "not registered" and Michael's chat said the
+      // number is no longer on WhatsApp): its state at Meta, so the cause is read, not guessed.
+      if (env.META_PHONE_NUMBER_ID) {
+        const ph = await g(V + encodeURIComponent(env.META_PHONE_NUMBER_ID) + '?fields=status,platform_type,code_verification_status,name_status,quality_rating,account_mode', { headers: bearer });
+        const pj = ph.j || {};
+        out.phone = { status: pj.status || null, platform: pj.platform_type || null, verified: pj.code_verification_status || null, name: pj.name_status || null, quality: pj.quality_rating || null, mode: pj.account_mode || null };
+        out.phone_err = err(ph);
+      }
       out.app_sub = s.sub; out.app_sub_err = s.err; out.messages_ok = subOk(); out.waba_has_app = w.has; out.waba_apps_err = w.err;
       if (body.fire_probe && out.fire_set) {
         const af = assistantFire(env);
