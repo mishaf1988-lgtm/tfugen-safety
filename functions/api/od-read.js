@@ -124,7 +124,11 @@ export async function onRequest(context) {
   if (!full) return jsonResp({ ok: false, error: 'bad path' }, 400, {});
   try {
     const { token } = await accessToken(env);
-    const r = await fetch(G + seg(full) + ':/content', { headers: { Authorization: 'Bearer ' + token }, signal: tmo(FILE_MS) });
+    // format 'pdf' (24/10/2026, Michael: the Tapugan logo was missing at the top of the LibreOffice PDFs): Microsoft
+    // renders the Word/Excel file to PDF itself, as Word would print it. Raw read only, with the one-off token.
+    const asPdf = body.format === 'pdf' && body.raw === true && /\.(docx?|xlsx?|xlsm|pptx?)$/i.test(full);
+    if (body.format !== undefined && !asPdf) return jsonResp({ ok: false, error: 'bad format' }, 400, {});
+    const r = await fetch(G + seg(full) + ':/content' + (asPdf ? '?format=pdf' : ''), { headers: { Authorization: 'Bearer ' + token }, signal: tmo(FILE_MS) });
     if (!r.ok) return jsonResp({ ok: false, error: 'onedrive ' + r.status, path: full }, 200, {});
     const bytes = new Uint8Array(await r.arrayBuffer());
     if (body.raw === true) {
