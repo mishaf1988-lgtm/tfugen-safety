@@ -166,6 +166,17 @@ export function eveningAdd(raw, dayIL, dow, hourIL, nowIso) {
   list.push({ id, at: nowIso, agent: 'wa-morning', text: '\u05e8\u05e9\u05d9\u05de\u05ea \u05de\u05d7\u05e8', status: 'open', check_at: nowIso, check: EVENING_CHECK, reminded_at: nowIso });
   return list;
 }
+// The weekly ISO review (24/10/2026, Michael: "teach the assistant to manage ISO"): on Sunday at 10:00 the server
+// adds a promise whose check fires the assistant at once, like the evening list. The assistant works the open
+// items of state iso_tasks (routine-wa-assistant.md, "ISO management") and writes back what it found.
+export const ISO_HOUR = 10, ISO_CHECK = 'weekly ISO review: state iso_tasks, open items due in 30 days or overdue; look for new evidence in the mail and the folders, file a copy to the audit binder, update iso_tasks; one wa_me only if something changed or is due in 14 days, then promise_done quiet';
+export function isoWeekAdd(raw, dayIL, dow, hourIL, nowIso) {
+  if (dow !== 0 || hourIL !== ISO_HOUR) return null;
+  const list = plist(raw), id = 'p-iso-' + dayIL.replace(/-/g, '');
+  if (list.some((x) => x && x.id === id)) return null;
+  list.push({ id, at: nowIso, agent: 'wa-morning', text: '\u05e1\u05e7\u05d9\u05e8\u05ea ISO \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea', status: 'open', check_at: nowIso, check: ISO_CHECK, reminded_at: nowIso });
+  return list;
+}
 export function promiseRemindText(due) {
   return '\u05e2\u05d5\u05d3 \u05e4\u05ea\u05d5\u05d7, \u05dc\u05d0 \u05e9\u05db\u05d7\u05ea\u05d9: ' + due.map((x) => x.text + (x.who ? ' (\u05de\u05d7\u05db\u05d4 \u05dc' + x.who + ')' : '')).join('; ') + '.';
 }

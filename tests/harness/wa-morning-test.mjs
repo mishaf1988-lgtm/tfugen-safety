@@ -102,6 +102,9 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     { const { promiseToCheck, promiseCheckDue, PROMISE_VERIFY } = await import('./_build/_wa.mjs');
       const c = promiseToCheck(JSON.stringify(l), [l[0].id], new Date(T0 + 25 * 3600e3).toISOString());
       check('a day-old promise becomes a check for the assistant first, not a reminder to Michael (23/10/2026)', c[0].check === PROMISE_VERIFY && c[0].reminded_at && promiseCheckDue(JSON.stringify(c), T0 + 25 * 3600e3 + 1000, 13) && promiseCheckDue(JSON.stringify(c), T0 + 25 * 3600e3 + 1000, 13).id === l[0].id, c); }
+    { const { isoWeekAdd, ISO_HOUR, ISO_CHECK } = await import('./_build/_wa.mjs');
+      const i1 = isoWeekAdd('[]', '2026-10-25', 0, ISO_HOUR, '2026-10-25T07:00:00.000Z');
+      check('the weekly ISO review: one check on Sunday at 10:00, never twice, never on another day or hour (24/10/2026)', i1 && i1.length === 1 && i1[0].check === ISO_CHECK && i1[0].id === 'p-iso-20261025' && isoWeekAdd(JSON.stringify(i1), '2026-10-25', 0, ISO_HOUR, 'x') === null && isoWeekAdd('[]', '2026-10-26', 1, ISO_HOUR, 'x') === null && isoWeekAdd('[]', '2026-10-25', 0, 9, 'x') === null, i1); }
     { const { eveningAdd, EVENING_HOUR, EVENING_CHECK } = await import('./_build/_wa.mjs');
       const e1 = eveningAdd('[]', '2026-10-25', 0, EVENING_HOUR, '2026-10-25T12:00:00.000Z');
       check('the evening list: one check at 15:00 on a working day, never twice, never on Friday or out of the hour (23/10/2026)', e1 && e1.length === 1 && e1[0].check === EVENING_CHECK && e1[0].check_at && eveningAdd(JSON.stringify(e1), '2026-10-25', 0, EVENING_HOUR, 'x') === null && eveningAdd('[]', '2026-10-23', 5, EVENING_HOUR, 'x') === null && eveningAdd('[]', '2026-10-25', 0, 14, 'x') === null, e1); }

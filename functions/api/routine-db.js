@@ -130,7 +130,7 @@ import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLA
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -262,7 +262,8 @@ export function claimApply(map, b, nowIso) {
   return { map: m, ans: { mine: true, item, claim: m[item] } };
 }
 // mail_filing / validity_run (11/10/2026): run counts of the mail-filing and validity Routines, for the weekly mail.
-export const STATE_WRITE = ['quote_track', 'nevo_versions', 'od_raw_token', 'od_raw_exp', 'mail_filing', 'validity_run'];
+// iso_tasks (24/10/2026): the ISO prep list the assistant manages (routine-wa-assistant.md, "ISO management").
+export const STATE_WRITE = ['quote_track', 'nevo_versions', 'od_raw_token', 'od_raw_exp', 'mail_filing', 'validity_run', 'iso_tasks'];
 // Run reports whose "at" the server stamps (11/10/2026): a Routine wrote a guessed time 11 minutes off,
 // and the next run reads mail from that time. mail_filing: the last entry of the list; validity_run: the object.
 export const STAMP_AT = ['mail_filing', 'validity_run'];

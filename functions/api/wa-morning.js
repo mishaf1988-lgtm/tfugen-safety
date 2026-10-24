@@ -19,7 +19,7 @@
 //   body {watch: true}  the watchdog for a stuck run, every 5 minutes (watchVerdict)
 // The same run writes calendar requests for upcoming expiries (calendarStep, below).
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
-import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, PROMISE_KEY, promiseDue, promiseRemindText, promiseToCheck, eveningAdd, promiseCheckDue, promiseCheckFireText, assistantFire } from '../_wa.js';
+import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, PROMISE_KEY, promiseDue, promiseRemindText, promiseToCheck, eveningAdd, isoWeekAdd, promiseCheckDue, promiseCheckFireText, assistantFire } from '../_wa.js';
 import { odConfigured, accessToken, putFile } from '../_onedrive.js';
 
 export const LAST_KEY = 'wa_morning_last';
@@ -314,6 +314,10 @@ export async function watch(env, now) {
     const ev = eveningAdd(await stateGet(env, PROMISE_KEY), ilDay(now), ilDow(now), ilHour(now), now.toISOString());
     if (ev) await stateSet(env, PROMISE_KEY, JSON.stringify(ev));
   } catch (e) { /* no list tonight; the next tick tries again within the hour */ }
+  try {
+    const iw = isoWeekAdd(await stateGet(env, PROMISE_KEY), ilDay(now), ilDow(now), ilHour(now), now.toISOString());
+    if (iw) await stateSet(env, PROMISE_KEY, JSON.stringify(iw));
+  } catch (e) { /* the next tick tries again within the hour */ }
   const pc = await promiseCheck(env, now).catch(() => null);
   const pr = await promiseRemind(env, now).catch(() => null);
   const r = await watchReply(env, now);
