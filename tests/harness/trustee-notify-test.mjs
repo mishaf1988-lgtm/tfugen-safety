@@ -94,7 +94,7 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
 (async () => {
   console.log('\n1. happy path: hazard → claim → WhatsApp (fallback template) + email → log');
   { const w = world({ row: fresh(), prefs: prefsOn }); const r = await onRequest({ request: req({ id: 'r1' }), env }); const j = await r.json();
-    const meta = w.calls.filter(c => c.u.includes('graph.facebook.com')); const resend = w.calls.find(c => c.u.includes('resend')); const log = w.calls.find(c => c.u.includes('notifications_log'));
+    const meta = w.calls.filter(c => c.u.includes('graph.facebook.com')); const resend = w.calls.find(c => c.u.includes('resend')); const log = w.calls.find(c => c.u.includes('notifications_log') && !JSON.stringify(c.body).includes('"wa_out"'));
     check('200, whatsapp sent, email sent', r.status === 200 && j.ok && j.whatsapp === 'sent' && j.email === 'sent', j);
     // The fallback template's own labels are, in order, «סוג», «מיקום»,
     // «חומרה». We used to pass location, kind, finding -- so the store room
@@ -125,7 +125,7 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
     await onRequest({ request: req({ id: 'r1' }), env });
     const meta = w.calls.filter((c) => c.u.includes('graph.facebook.com'));
     const resend = w.calls.find((c) => c.u.includes('resend'));
-    const log = w.calls.find((c) => c.u.includes('notifications_log'));
+    const log = w.calls.find((c) => c.u.includes('notifications_log') && !JSON.stringify(c.body).includes('"wa_out"'));
     check('the function reads trustee_tasks for the row\u2019s number', w.calls.some((c) => /trustee_tasks\?n=eq\.5/.test(c.u)), w.calls.map((c) => c.u));
     check('WhatsApp carries the renamed task, not the frozen wording', meta.length && /עמדות כיבוי אש ומטפים/.test(meta[meta.length - 1].body.template.components[0].parameters.map((p) => p.text).join('|')), meta.map((m) => m.body.template.components[0].parameters));
     check('no [TS-] reply tag while mail-inbox is off', resend && !/\[TS-/.test(resend.body.subject), resend && resend.body.subject);
@@ -168,7 +168,7 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
   { const w = world({ row: fresh(), prefs: { trustee_hazard: { whatsapp: false, whatsapp_to: '972501234567', email: false, email_to: 'a@b.c' } } }); const j = await (await onRequest({ request: req({ id: 'r1' }), env })).json();
     check('channels unticked in the matrix → nothing sent even with addresses', j.skipped === 'no recipient configured', j); }
   { const w = world({ row: fresh(), prefs: { trustee_hazard: { whatsapp: true, whatsapp_to: '972501234567' } }, metaFail: true }); const j = await (await onRequest({ request: req({ id: 'r1' }), env })).json();
-    const log = w.calls.find(c => c.u.includes('notifications_log'));
+    const log = w.calls.find(c => c.u.includes('notifications_log') && !JSON.stringify(c.body).includes('"wa_out"'));
     check('Meta failure is reported and logged as whatsapp_error; email not configured is not attempted', /error: Meta template 401/.test(j.whatsapp) && !j.email && log.body[0].channel === 'whatsapp_error', j); }
   { const w = world({ row: fresh(), prefs: prefsOn }); const j = await (await onRequest({ request: req({ id: 'r1' }), env: { ...env, TRUSTEE_NOTIFY_SECRET: 's3' } })).json();
     check('with a secret configured, a call without the header is refused', j.error === 'forbidden'); 
@@ -197,7 +197,7 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
   console.log('\n4. near_miss: the second source');
   const nmFresh = () => ({ id: 'n1', rep: 'משה לוי', descr: 'משטח כמעט נפל מהמלגזה', area: 'רציף העמסה', sev: 'גבוהה', typ: 'ציוד הרמה', d: '2026-09-21', s: 'פתוח', photo_url: null, ts: new Date().toISOString(), notified_at: null });
   { const w = world({ nm: nmFresh(), prefs: prefsOn }); const r = await onRequest({ request: req({ id: 'n1', src: 'near_miss' }), env }); const j = await r.json();
-    const meta = w.calls.filter(c => c.u.includes('graph.facebook.com')); const resend = w.calls.find(c => c.u.includes('resend')); const log = w.calls.find(c => c.u.includes('notifications_log'));
+    const meta = w.calls.filter(c => c.u.includes('graph.facebook.com')); const resend = w.calls.find(c => c.u.includes('resend')); const log = w.calls.find(c => c.u.includes('notifications_log') && !JSON.stringify(c.body).includes('"wa_out"'));
     check('200, both channels', r.status === 200 && j.whatsapp === 'sent' && j.email === 'sent', j);
     check('it reads near_miss, not trustee_reports', w.calls.some(c => /rest\/v1\/near_miss\?id=eq\.n1/.test(c.u)) && !w.calls.some(c => c.u.includes('trustee_reports?id=')), w.calls.map(c => c.u));
     // rep/descr/area, not u/f/loc. Getting this wrong sends a message with the
@@ -234,7 +234,7 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
   // on 2026-09-21 the only way to find out what to do was to read
   // net._http_response in the SQL editor.
   console.log('\n5. a refusal a person can act on');
-  { const w = world({ row: fresh(), prefs: prefsOn, resendUnverified: true }); const j = await (await onRequest({ request: req({ id: 'r1' }), env })).json(); const log = w.calls.find(c => c.u.includes('notifications_log'));
+  { const w = world({ row: fresh(), prefs: prefsOn, resendUnverified: true }); const j = await (await onRequest({ request: req({ id: 'r1' }), env })).json(); const log = w.calls.find(c => c.u.includes('notifications_log') && !JSON.stringify(c.body).includes('"wa_out"'));
     check('the 403 names the address Resend WILL accept', /mishaf1988@gmail\.com/.test(j.email), j.email);
     check('...says what to do about it, in Hebrew', /דומיין מאומת/.test(j.email) && /resend\.com\/domains/.test(j.email), j.email);
     check('...and does not hand over the raw JSON', !/statusCode/.test(j.email) && !/validation_error/.test(j.email), j.email);
@@ -448,7 +448,7 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
     const [a, b] = await Promise.all([onRequest({ request: req({ op: 'retry' }, hs), env: envS }), onRequest({ request: req({ op: 'retry' }, hs), env: envS })]);
     const [ja, jb] = [await a.json(), await b.json()];
     const mails = w.calls.filter((c) => c.u.includes('api.resend.com')).length;
-    check('the same due retry, two sweeps at once: one email, one WhatsApp', mails === 1 && (w.st.logs || []).filter((l) => l.channel === 'whatsapp').length === 1, [mails, ja, jb]);
+    check('the same due retry, two sweeps at once: one email, one WhatsApp', mails === 1 && (w.st.logs || []).filter((l) => l.channel === 'whatsapp' && l.event_type !== 'wa_out').length === 1, [mails, ja, jb]);
     check('...the second one says the lease was held', ja.busy === true || jb.busy === true, [ja, jb]);
     check('...the entry is off the fail map and the lease is free again', !JSON.parse(w.st.state.notify_fail)['trustee_reports:r1'] && !w.st.state.notify_retry_lock, w.st.state);
   }

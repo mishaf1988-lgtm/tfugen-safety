@@ -1,6 +1,6 @@
 // /api/chat (24/10/2026): Michael's own chat with his assistant, the page at /chat. Only the admin account.
 //   GET            the conversation: Michael's lines and the assistant's answers from every channel (WhatsApp,
-//                  the office, this chat), newest 60, oldest first. failed = the WhatsApp copy did not go out.
+//                  the office, this chat), and every other message the server sent him (wa_out), newest 100, oldest first. failed = the WhatsApp copy did not go out.
 //   POST {text}    a line to the assistant: logged as his own (channel chat) and fired like a WhatsApp message;
 //                  the assistant answers with wa_me as always, and wa_me logs every answer, sent or not.
 //   POST ?say=1    {text, part} the answer read aloud in the training voice (talk.js), part by part.
@@ -10,7 +10,7 @@ import { assistantFire, recentLine, lastOut } from '../_wa.js';
 import { ttsUpstream, sayParts, speechText } from './talk.js';
 import { vapidPub, pushSubOk, pushSave, sendPush, pushPayload } from '../_push.js';
 
-export const CHAT_MAX = 2000, CHAT_ROWS = 60;
+export const CHAT_MAX = 2000, CHAT_ROWS = 100;
 const FIRE_MS = 20000;
 export function chatFireText(text, at, recent, prev) {
   const lines = ['[\u05e6\'\u05d0\u05d8 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e9\u05dc \u05de\u05d9\u05db\u05d0\u05dc, \u05e0\u05d1\u05d3\u05e7 \u05d1\u05e9\u05e8\u05ea: \u05db\u05e0\u05d9\u05e1\u05d4 \u05e2\u05dd \u05d4\u05d7\u05e9\u05d1\u05d5\u05df \u05e9\u05dc\u05d5]', 'at: ' + at];
@@ -21,8 +21,15 @@ export function chatFireText(text, at, recent, prev) {
   return lines.join('\n');
 }
 // notifications_log rows to chat lines. payload->>text arrives as "text".
+// wa_out (25/10/2026, Michael: "not everything that came on WhatsApp came to the app"): every message the server sent
+// him. An assistant line also has its wa_out twin (wa_me goes through sendToOwner); the twin wins, the line from
+// before wa_out existed stays. Same start of text within two minutes = the same message.
+const CHAT_TYPES = ['owner_in', 'assistant', 'wa_out'];
+const head40 = (t) => String(t || '').replace(/\s+/g, ' ').trim().slice(0, 40);
 export function chatRows(rows) {
-  return (Array.isArray(rows) ? rows : []).filter((r) => r && (r.event_type === 'owner_in' || r.event_type === 'assistant') && String(r.text || '').trim())
+  const all = (Array.isArray(rows) ? rows : []).filter((r) => r && CHAT_TYPES.indexOf(r.event_type) >= 0 && String(r.text || '').trim());
+  const outs = all.filter((r) => r.event_type === 'wa_out');
+  return all.filter((r) => r.event_type !== 'assistant' || !outs.some((o) => head40(o.text) === head40(r.text) && Math.abs(Date.parse(o.ts) - Date.parse(r.ts)) < 120000))
     .map((r) => ({ ts: r.ts, who: r.event_type === 'owner_in' ? 'me' : 'bot', text: String(r.text), via: r.channel || null, failed: r.channel === 'whatsapp_error' }))
     .sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
 }
@@ -73,7 +80,7 @@ export async function onRequest(context) {
     return jsonResp({ ok: st === 201 || st === 200, test: st }, 200, cors);
   }
   if (request.method === 'GET') {
-    const r = await fetch(url + '/rest/v1/notifications_log?select=ts,event_type,channel,text:payload->>text&event_type=in.(owner_in,assistant)'
+    const r = await fetch(url + '/rest/v1/notifications_log?select=ts,event_type,channel,text:payload->>text&event_type=in.(owner_in,assistant,wa_out)'
       + '&channel=in.(whatsapp,whatsapp_error,office,chat)&order=ts.desc&limit=' + CHAT_ROWS, { headers: h, signal: tmo(SB_TIMEOUT_MS) }).catch(() => null);
     if (!r || !r.ok) return jsonResp({ ok: false, error: 'read ' + (r ? r.status : 'network') }, 200, cors);
     return jsonResp({ ok: true, rows: chatRows(await r.json().catch(() => [])) }, 200, cors);

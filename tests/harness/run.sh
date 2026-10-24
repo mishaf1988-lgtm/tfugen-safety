@@ -45,7 +45,7 @@ sed "s#'../_shared.js'#'./_shared.mjs'#" ../../functions/api/wa-status.js > _bui
 sed "s#'../_shared.js'#'./_shared.mjs'#" ../../functions/api/claude.js > _build/claude.mjs
 # trustee-log (27/09): its own helper modules, imported as ../_xlsx.js and ../_onedrive.js
 for m in _xlsx _onedrive _closelink _xlsxpatch _ai _meeting _pptx _deckpatch _watchdog _appjs _logo _wa _sign _signcaption _pdflib _pdftext _ocr _push; do cp ../../functions/$m.js _build/$m.mjs; done
-sed -i "s#'./_shared.js'#'./_shared.mjs'#" _build/_wa.mjs
+sed -i -e "s#'./_shared.js'#'./_shared.mjs'#" -e "s#'./_push.js'#'./_push.mjs'#" _build/_wa.mjs
 sed -i "s#'./_shared.js'#'./_shared.mjs'#" _build/_push.mjs
 # _sign (21/10/2026): the owner's signature, pdf-lib and the caption beside it
 sed -i -e "s#'./_shared.js'#'./_shared.mjs'#" -e "s#'./_pdflib.js'#'./_pdflib.mjs'#" -e "s#'./_signcaption.js'#'./_signcaption.mjs'#" _build/_sign.mjs

@@ -61,7 +61,7 @@ r = await onRequest({ request: req('/api/chat', 'GET', ADM), env: ENV });
 let j = await r.json();
 check('GET: his lines and the answers from every channel, oldest first; an answer WhatsApp refused is still shown, marked', r.status === 200 && j.rows.length === 2 && j.rows[0].who === 'me' && j.rows[1].who === 'bot' && j.rows[1].failed === true, j);
 const q = calls.filter((c) => c.url.includes('notifications_log') && c.m === 'GET').pop();
-check('GET reads only the conversation: owner_in and assistant, the four channels', /event_type=in\.\(owner_in,assistant\)/.test(q.url) && /channel=in\.\(whatsapp,whatsapp_error,office,chat\)/.test(q.url));
+check('GET reads only the conversation: owner_in, assistant and wa_out, the four channels', /event_type=in\.\(owner_in,assistant,wa_out\)/.test(q.url) && /channel=in\.\(whatsapp,whatsapp_error,office,chat\)/.test(q.url));
 
 console.log('\n4. a line to the assistant');
 calls = [];
@@ -75,6 +75,8 @@ r = await onRequest({ request: req('/api/chat', 'POST', ADM, { text: '   ' }), e
 check('an empty line: 400', r.status === 400);
 r = await onRequest({ request: req('/api/chat', 'POST', ADM, { text: 'x'.repeat(CHAT_MAX + 1) }), env: ENV });
 check('a line over the limit: 400', r.status === 400);
+check('chatRows: every message sent on WhatsApp shows (wa_out); an assistant line with its wa_out twin shows once; an old assistant line stays',
+  (() => { const x = chatRows([{ ts: '2026-10-25T05:00:00Z', event_type: 'wa_out', channel: 'whatsapp', text: 'בוקר טוב, עדכון' }, { ts: '2026-10-25T06:00:00Z', event_type: 'assistant', channel: 'whatsapp', text: 'תשובה' }, { ts: '2026-10-25T06:00:01Z', event_type: 'wa_out', channel: 'whatsapp', text: 'תשובה' }, { ts: '2026-10-20T06:00:00Z', event_type: 'assistant', channel: 'whatsapp', text: 'ישנה' }]); return x.length === 3 && x.every((r) => r.who === 'bot') && x.filter((r) => r.text === 'תשובה').length === 1; })());
 check('chatRows drops empty lines and other events', chatRows([{ ts: 'a', event_type: 'watch', text: 'x' }, { ts: 'b', event_type: 'assistant', text: ' ' }]).length === 0);
 check('chatFireText keeps a newline out of the one text line', !/\n.*\n.*\n.*\ntext: a\nb/.test(chatFireText('a\nb', 't', '', null)) && /text: a \/ b/.test(chatFireText('a\nb', 't', '', null)));
 
