@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX } from './_build/routine-db.mjs';
+import { sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -88,6 +88,7 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   r = await call({ op: 'state_set', key: 'quote_track', value: { 'Q-eq-1-261101': { stage: 'sent', sent: '2026-10-11' } } });
   check('state_set: written and read back equal', r.json.ok && JSON.parse(state.quote_track)['Q-eq-1-261101'].stage === 'sent', r.json);
   check('state_set of another key (weekly_digest): refused, untouched', (await call({ op: 'state_set', key: 'weekly_digest', value: 'y' })).status === 400 && state.weekly_digest === 'x');
+  check('wa_phone: SMS in Hebrew, a 6-digit code only, the PIN from the secret first, else the request (24/10/2026)', WA_PHONE_STEPS.join() === 'request_code,verify_code,register' && waPhoneBody('request_code', {}).body.code_method === 'SMS' && waPhoneBody('request_code', {}).body.language === 'he' && waPhoneBody('verify_code', { code: '123-456' }).body.code === '123456' && !!waPhoneBody('verify_code', { code: '12345' }).error && waPhoneBody('register', { pin: '111111' }, undefined).body.pin === '111111' && !!waPhoneBody('register', {}, undefined).error && waPhoneBody('register', { pin: '111111' }, '654321').body.pin === '654321');
   check('the write list is exactly the seven keys (mail_filing, validity_run 11/10/2026; iso_tasks 24/10/2026)', STATE_WRITE.join() === 'quote_track,nevo_versions,od_raw_token,od_raw_exp,mail_filing,validity_run,iso_tasks');
   const t0 = Date.now();
   r = await call({ op: 'state_set', key: 'mail_filing', value: [{ at: '2020-01-01T00:00:00Z', got: 1 }, { at: '2026-10-11T15:05:00Z', got: 0 }] });
