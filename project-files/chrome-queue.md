@@ -194,6 +194,21 @@
   דווח: מה ראית בכל סעיף, מילה במילה.
   ```
 
+- [ ] **C41. משאב Azure Vision חינמי לזיהוי טקסט בסריקות** (24/10/2026, זרימה 6 נכשלה על קרדיטים של AI Builder. מיכאל בשאלון: "בצע: Azure Vision חינמי (מומלץ)". הקוד בשרת: `ocr_txt` ב-routine-db. אחרי: Claude מריץ `ocr_txt` על "בדיקת OCR - 24.10.2026.pdf" ובודק במחבר 365 שנוצר txt. גם: לכבות את זרימה 6 ב-Power Automate)
+  ```
+  משימה: ליצור משאב Azure AI Vision בשכבה החינמית, ולכבות זרימה ישנה. מיכאל אישר (24/10/2026). עצור ושאל אותי לפני: כרטיס אשראי, הרשמה למנוי, או כל שכבה שאינה Free F0. אל תעתיק מפתחות לצ'אט.
+  1. ב-https://make.powerautomate.com, My flows: לכבות (Turn off) את "6 - טקסט מסריקות". לא למחוק.
+  2. ב-https://portal.azure.com עם החשבון sviva@tapugan.co.il: אם אין מנוי (Subscription) פעיל, עצור ודווח מה מוצע.
+  3. Create a resource > חפש "Computer Vision" (Azure AI services) > Create.
+     Resource group: חדש, tapugan-ocr. Region: West Europe. Name: tapugan-ocr-vision (אם תפוס, הוסף ספרה). Pricing tier: Free F0. Review + create > Create.
+  4. אחרי שנוצר: Keys and Endpoint. רשום את Endpoint (כתובת, לא סוד). את KEY 1 לא להעתיק לצ'אט.
+  5. ב-https://dash.cloudflare.com > Workers & Pages > tapugan-safety > Settings > Variables and Secrets, סביבת Production > Add:
+     AZURE_VISION_ENDPOINT = ה-Endpoint מסעיף 4 (Type: Text).
+     AZURE_VISION_KEY = KEY 1 (Type: Secret). אם אינך מורשה להדביק ערך סודי: עצור, ומיכאל מדביק בעצמו.
+     Save. ואז Deployments > הפריסה האחרונה של Production > Retry deployment (כדי שהסודות ייטענו).
+  דווח: מה נוצר, ה-Endpoint, מה נשמר ב-Cloudflare (שמות בלבד), ומה נעצר ולמה.
+  ```
+
 ## בוצע
 
 - [x] **C35. מפתח הפעלה למפתח התורן** (22/10/2026, מיכאל בשאלון: "בצע: רק כשיש בקשה (מומלץ)"; `devFireTarget` ב-routine-db). (1) בדף https://claude.ai/code/routines/trig_017p7AWHAPjxncswGqdfab2p: הוספת מפעיל API ויצירת טוקן. (2) ב-Cloudflare, Pages, tapugan-safety, Settings, Variables and Secrets, Production: סוד חדש `RUNNER_FIRE_TOKEN` = הטוקן, ושמירה. אחרי: Claude מפרסם מחדש (סוד חדש צריך פריסה), מוריד את השעון לפעם ביום, ובודק בבקשה הבאה ש-`fired.to` = `runner`. טקסט להדבקה בכרום:
