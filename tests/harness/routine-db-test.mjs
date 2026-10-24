@@ -118,6 +118,12 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
       && !!odPullCheck({ agent: 'dev', why: 'climb up', from: 'iso9001/x.pdf', dir: '../b', dest: 'desktop' }).error
       && !!odPullCheck({ agent: 'dev', why: 'bad dest', from: 'iso9001/x.pdf', dir: 'b', dest: 'drive' }).error;
   })());
+  check('od_put_pdf: an old .doc / .xls as it is, by the OLE signature; a zip or PDF named .doc is refused (24/10/2026)', (() => {
+    const ole = Buffer.from([0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1, 1, 2]).toString('base64'), zip = Buffer.from('PK\x03\x04abcd').toString('base64');
+    const P = { agent: 'dev', why: 'file as it is', dir: '22_x' };
+    return odPutPdfCheck({ ...P, name: 'a.doc', b64: ole }).type === 'application/msword' && odPutPdfCheck({ ...P, name: 'a.xls', b64: ole }).type === 'application/vnd.ms-excel'
+      && !!odPutPdfCheck({ ...P, name: 'a.doc', b64: zip }).error && !!odPutPdfCheck({ ...P, name: 'a.docx', b64: ole }).error && !!odPutPdfCheck({ ...P, name: 'a.exe', b64: ole }).error;
+  })());
   check('od_trash: one file to the to-delete folder named after its folder; never from inside it or old versions, never a folder (24/10/2026)', (() => {
     const ok = odTrashCheck({ agent: 'dev', why: 'a test file', path: '18_x/2026 - a.pdf' });
     return ok.to === OD_ROOT + OD_TRASH_DIR && ok.name === '18_x - 2026 - a.pdf' && !!odTrashCheck({ agent: 'dev', why: 'x', path: '18_x/a.pdf' }).error

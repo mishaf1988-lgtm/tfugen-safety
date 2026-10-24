@@ -754,19 +754,22 @@ export function odPullCheck(b) {
 // 8 MB from 24/10/2026: procedure 01 (4.3 MB) and the factory file (4.9 MB) did not fit into the ISO binder;
 // Graph's simple PUT takes up to 250 MB.
 export const OD_PUT_MAX = 8 * 1024 * 1024;
-export const OD_PUT_TYPES = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
+export const OD_PUT_TYPES = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', doc: 'application/msword', xls: 'application/vnd.ms-excel' };
 export function odPutPdfCheck(b) {
   const c = odMkdirCheck({ agent: b.agent, why: b.why, parent: b.dir, name: b.name });
   if (c.error) return { error: c.error === 'bad parent' ? 'bad dir' : c.error };
   // 24/10/2026 (Michael: "documents in the folder must be Word for editing as before; PDF later for display"):
   // a Word or Excel file too, checked by its own signature (a .docx is a zip, PK\x03\x04).
-  const ext = (/\.(pdf|docx|xlsx)$/i.exec(c.name) || [])[1];
+  const ext = (/\.(pdf|docx|xlsx|doc|xls)$/i.exec(c.name) || [])[1];
   if (!ext) return { error: 'bad name' };
   let bytes;
   try { bytes = Uint8Array.from(atob(String(b.b64 || '')), (ch) => ch.charCodeAt(0)); } catch (e) { return { error: 'bad b64' }; }
   if (!bytes.length || bytes.length > OD_PUT_MAX) return { error: 'size 1-' + OD_PUT_MAX };
   const head = String.fromCharCode(...bytes.slice(0, 5));
-  if (ext.toLowerCase() === 'pdf' ? head !== '%PDF-' : head.slice(0, 4) !== 'PK\x03\x04') return { error: 'not a ' + ext.toLowerCase() };
+  // 24/10/2026 (Michael: "Excel files need no conversion at all"): an old .doc / .xls as it is, checked by the
+  // OLE signature D0 CF 11 E0, so a file is filed in its own format instead of converted.
+  const e = ext.toLowerCase(), ole = bytes[0] === 0xD0 && bytes[1] === 0xCF && bytes[2] === 0x11 && bytes[3] === 0xE0;
+  if (e === 'pdf' ? head !== '%PDF-' : (e === 'doc' || e === 'xls') ? !ole : head.slice(0, 4) !== 'PK\x03\x04') return { error: 'not a ' + e };
   return { dir: c.parent, name: c.name, bytes, type: OD_PUT_TYPES[ext.toLowerCase()] };
 }
 // sign_request (21/10/2026): {path} = a PDF inside the safety folder, the same folders od_put_pdf may write to

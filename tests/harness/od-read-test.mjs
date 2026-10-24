@@ -67,6 +67,12 @@ const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', ONEDRIVE_CLIENT_ID: 'cid', ONEDR
   res = await onRequest({ request: req({ 'x-raw-token': TOK }, { path: '13_סיורי מפגעים/2026/מצגת שבועית.חודשית.pptx', raw: true }), env: ENV });
   const rawBytes = new Uint8Array(await res.arrayBuffer());
   check('raw download with a valid one-off token: the file bytes', res.status === 200 && rawBytes.length === deck.length, [res.status, rawBytes.length]);
+  { const inner = globalThis.fetch, seen = []; globalThis.fetch = async (u, i) => { seen.push(decodeURIComponent(String(u))); return inner(u, i); };
+    const a = await onRequest({ request: req({ 'x-raw-token': TOK }, { path: '15_x/a.docx', raw: true, format: 'pdf' }), env: ENV });
+    const b = await onRequest({ request: req({ 'x-raw-token': TOK }, { path: '15_x/a.pdf', raw: true, format: 'pdf' }), env: ENV });
+    const c = await onRequest({ request: req({ 'x-raw-token': TOK }, { path: '15_x/a.docx', raw: true, format: 'html' }), env: ENV });
+    globalThis.fetch = inner;
+    check('format pdf: Microsoft renders a Word file to PDF (?format=pdf); a PDF or another format is refused (24/10/2026)', a.status === 200 && seen.some((u) => u.endsWith('a.docx:/content?format=pdf')) && b.status === 400 && c.status === 400, [a.status, b.status, c.status, seen.slice(-3)]); }
   res = await onRequest({ request: req({ 'x-raw-token': TOK }, { path: '13_סיורי מפגעים/2026/מצגת שבועית.חודשית.pptx' }), env: ENV });
   check('the token opens only the raw download, not the other reads', res.status === 403);
   rawWorld({ od_raw_token: TOK, od_raw_exp: new Date(Date.now() - 1000).toISOString() });
