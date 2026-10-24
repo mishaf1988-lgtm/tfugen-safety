@@ -671,6 +671,22 @@ export function pdfReadCheck(b) {
   if (c.attach.some((a) => !/\.pdf$/i.test(a.name))) return { error: 'paths: PDF files only' };
   return { question: q, files: c.attach };
 }
+// ocr_txt (24/10/2026, AI Builder in flow 6 wanted paid credits; Michael in the questionnaire: "do it: Azure Vision
+// free"; earlier: "only Microsoft OCR"): up to 5 PDFs from the safety folder go to Azure AI Vision Read (free F0 tier),
+// and the text is written to _טקסט סריקות/<name>.txt. The answer holds names and lengths only, never the text:
+// Claude reads the txt with the Microsoft 365 connector, as flow 6 was meant to allow.
+export const OD_OCR_DIR = '_\u05d8\u05e7\u05e1\u05d8 \u05e1\u05e8\u05d9\u05e7\u05d5\u05ea';
+export function ocrTxtCheck(b) {
+  const c = draftAttach(b.paths);
+  if (c.error || !c.attach.length) return { error: (c.error || 'paths: 1-' + DRAFT_ATTACH_MAX).replace('attach', 'paths') };
+  if (c.attach.some((a) => !/\.pdf$/i.test(a.name))) return { error: 'paths: PDF files only' };
+  return { files: c.attach.map((a) => Object.assign({}, a, { txt: a.name.replace(/\.pdf$/i, '') + '.txt' })) };
+}
+// The lines of an Azure Read result, page by page.
+export function ocrLines(j) {
+  const pages = (j && j.analyzeResult && j.analyzeResult.readResults) || [];
+  return pages.map((p) => ((p && p.lines) || []).map((l) => String((l && l.text) || '')).join('\n')).join('\n\n').trim();
+}
 // od_archive (20/10/2026, Michael: "when the assistant works on a form it must not keep the old form, move it
 // to the archive"): ONE file inside the safety folder moves to "_גרסאות קודמות" in its own folder (created if
 // missing), same name. Only when the file that replaces it (replaced_by) sits in the same folder, so this
@@ -1055,6 +1071,43 @@ export async function onRequest(context) {
       try { raw = new TextDecoder(cs.toLowerCase()).decode(buf); } catch (e) { raw = new TextDecoder('utf-8').decode(buf); }
       const text = htmlText(raw);
       return jsonResp({ ok: true, url: u, chars: text.length, cut: text.length > SOURCE_MAX, text: text.slice(0, SOURCE_MAX) }, 200, {});
+    }
+    if (body.op === 'ocr_txt') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
+      const c = ocrTxtCheck(body);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      if (!env.AZURE_VISION_ENDPOINT || !env.AZURE_VISION_KEY) return jsonResp({ ok: false, error: 'AZURE_VISION_ENDPOINT / AZURE_VISION_KEY not set' }, 200, {});
+      const at = await accessToken(env);
+      const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+      const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
+      const base = String(env.AZURE_VISION_ENDPOINT).replace(/\/+$/, '');
+      const files = [];
+      for (const a of c.files) {
+        try {
+          const d = await fetch(G + enc(OD_ROOT + a.rel) + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(30000) });
+          if (!d.ok) { files.push({ name: a.name, ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status }); continue; }
+          const buf = new Uint8Array(await d.arrayBuffer());
+          if (buf.length > PDF_READ_MAX) { files.push({ name: a.name, ok: false, error: 'too big: ' + buf.length }); continue; }
+          const r = await fetch(base + '/vision/v3.2/read/analyze', { method: 'POST', body: buf, signal: tmo(30000),
+            headers: { 'Ocp-Apim-Subscription-Key': env.AZURE_VISION_KEY, 'Content-Type': 'application/octet-stream' } });
+          const loc = r.headers.get('operation-location');
+          if (!r.ok || !loc) { const e = await r.json().catch(() => null); files.push({ name: a.name, ok: false, error: ('azure ' + r.status + ' ' + String((e && e.error && e.error.message) || '')).trim().slice(0, 200) }); continue; }
+          let j = null;
+          for (let i = 0; i < 20; i++) {
+            await new Promise((ok) => setTimeout(ok, 1000));
+            const g = await fetch(loc, { headers: { 'Ocp-Apim-Subscription-Key': env.AZURE_VISION_KEY }, signal: tmo(15000) });
+            j = await g.json().catch(() => null);
+            if (j && (j.status === 'succeeded' || j.status === 'failed')) break;
+          }
+          if (!j || j.status !== 'succeeded') { files.push({ name: a.name, ok: false, error: 'azure ' + ((j && j.status) || 'no answer') }); continue; }
+          const text = ocrLines(j);
+          const up = await fetch(G + enc(OD_ROOT + OD_OCR_DIR + '/' + a.txt) + ':/content?@microsoft.graph.conflictBehavior=replace', { method: 'PUT', signal: tmo(GRAPH_MS),
+            headers: { Authorization: 'Bearer ' + at.token, 'Content-Type': 'text/plain; charset=utf-8' }, body: text });
+          files.push({ name: a.name, ok: up.ok && text.length > 0, txt: OD_OCR_DIR + '/' + a.txt, chars: text.length, pages: ((j.analyzeResult && j.analyzeResult.readResults) || []).length, error: up.ok ? (text ? undefined : 'no text found') : 'write ' + up.status });
+        } catch (x) { files.push({ name: a.name, ok: false, error: 'read' }); }
+      }
+      return jsonResp({ ok: files.every((f) => f.ok), files }, 200, {});
     }
     if (body.op === 'pdf_read') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths', 'question'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});

@@ -121,6 +121,7 @@ Client ID ו-Tenant: ב-`project-files/ONEDRIVE-SERVER-SETUP.md`. הרשאות d
 | `TRUSTEE_CODE`, `TRUSTEE_REMEMBER` | כניסת נאמנים |
 | `GH_SKILLS_TOKEN` | המייל השבועי קורא את תור העוזר ב-michael-skills; `backup-od` מוריד איתו את ה-zip השבועי של michael-skills (17/10/2026) |
 | `GEMINI_API_KEY`, `GEMINI_MODEL`, `TTS_MODEL`, `TTS_VOICE` | הקראה בקול |
+| `AZURE_VISION_ENDPOINT`, `AZURE_VISION_KEY` | זיהוי טקסט בסריקות (`ocr_txt`, 24/10/2026). משאב Azure AI Vision בשכבה החינמית F0, `tapugan-ocr`, West Europe (C41). מפתח חדש: Azure Portal, המשאב, Keys and Endpoint |
 | `META_ACCESS_TOKEN`, `META_PHONE_NUMBER_ID`, `META_WABA_ID` | וואטסאפ |
 | `META_APP_SECRET`, `WA_VERIFY_TOKEN`, `ASSISTANT_FIRE_URL`, `ASSISTANT_FIRE_TOKEN`, `POSTMAN_FIRE_TOKEN` (מ-C27: הטוקן של הדוור `trig_01Py8YXifD3HtnQUmFgoTRft`, ל-`relay_fire`), `RUNNER_FIRE_TOKEN` (מ-C35, 22/10/2026: הטוקן של המפתח התורן; לא בשימוש, `RUNNER_RUNS` = false), `DEV_FIRE_TOKEN` (מ-C31: הטוקן של "פיתוח מיידי" `trig_0114iVUybrBb6vRqZt1EyoyL`, ל-`dev_request`), `WORKER_FIRE_TOKEN` (מ-C33, כשיישמר: הטוקן של "עובד לפי דרישה" `trig_011UyDNeQ1NV72NNyXJxwxtE`, ל-`worker_now`) | העוזר בוואטסאפ (19/10/2026): חתימת ה-webhook של Meta, אימות ה-webhook, וה-API trigger של `trig_01TofqtqNWtrXMnqiNjHq1nZ`. `WA_VERIFY_TOKEN` ו-`ASSISTANT_FIRE_URL` נכתבו דרך ה-API; השניים האחרים רק מיכאל (ערכים ש-Meta ו-claude.ai מראים פעם אחת) |
 | `RESEND_KEY`, `RESEND_FROM` | מייל גיבוי |
