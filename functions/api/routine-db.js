@@ -1733,7 +1733,8 @@ export async function onRequest(context) {
       };
       const err = (r) => r.j && r.j.error ? String(r.j.error.message || r.j.error.code).slice(0, 160) : null;
       const bearer = { Authorization: 'Bearer ' + tok };
-      const out = { ok: true, secret_set: !!sec, verify_set: !!env.WA_VERIFY_TOKEN, fire_set: !!assistantFire(env), fire_to: assistantFire(env) ? assistantFire(env).which : null, fire2_url_set: !!env.ASSISTANT2_FIRE_URL, fire2_key_set: !!env.ASSISTANT2_FIRE_TOKEN, hook };
+      // pin_set (24/10/2026, C42): whether the watchdog can re-register the number by itself; never the value.
+      const out = { ok: true, secret_set: !!sec, verify_set: !!env.WA_VERIFY_TOKEN, pin_set: /^[0-9]{6}$/.test(String(env.WA_PIN || '')), fire_set: !!assistantFire(env), fire_to: assistantFire(env) ? assistantFire(env).which : null, fire2_url_set: !!env.ASSISTANT2_FIRE_URL, fire2_key_set: !!env.ASSISTANT2_FIRE_TOKEN, hook };
       const dbg = await g(V + 'debug_token?input_token=' + encodeURIComponent(tok), { headers: bearer });
       const appId = dbg.j && dbg.j.data && dbg.j.data.app_id ? String(dbg.j.data.app_id) : null;
       out.app_id = appId;
