@@ -336,3 +336,9 @@ fetch('/api/claude', {
 נאכף: `doc-review-test.py` ("word tables": תא שהשתנה מסומן מילה במילה, תא שלא השתנה לא מסומן, שורה חדשה מסומנת כשורה שנוספה). נבדק שהבדיקה נכשלת על הגרסה הקודמת.
 חזר: 0
 
+**153. דף הצ'אט נכשל בכניסה: captcha וקוד דו-שלבי (24/10/2026, PR זה).**
+מה קרה: `/chat` נבנה עם כניסה ישירה ל-`/auth/v1/token`, בלי טוקן Turnstile ובלי קוד האימות. ב-Supabase מופעלת הגנת captcha (מ-30/09) ול-admin יש TOTP, אז מיכאל קיבל "no captcha_token found" בטלפון. הבדיקות עברו כי ה-mock של Supabase לא דרש את שניהם.
+הכלל: דף חדש עם כניסה מעתיק את דרישות הכניסה של `index.html`: Turnstile (`gotrue_meta_security.captcha_token`, אותו sitekey) וקוד דו-שלבי (challenge + verify, והשרת דורש `aal2`). לפני שמסרים דף כניסה: `grep -n "_captcha\|_mfa" index.html`.
+נאכף: `chat-test.mjs` (הטוקן והקוד בדף, sitekey זהה ל-`index.html`, טוקן `aal1` נדחה ב-401).
+חזר: 0
+

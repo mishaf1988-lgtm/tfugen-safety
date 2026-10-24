@@ -21,7 +21,10 @@ globalThis.fetch = async (u, init) => {
   return json({ error: 'unexpected ' + url }, 599);
 };
 const req = (path, method, tok, body) => new Request('https://app.test' + path, { method, headers: Object.assign({ 'Content-Type': 'application/json' }, tok ? { Authorization: 'Bearer ' + tok } : {}), body: body ? JSON.stringify(body) : undefined });
-users.adm = { email: 'admin@tfugen.local' };
+const jwt = (aal) => 'h.' + Buffer.from(JSON.stringify({ aal })).toString('base64url') + '.s';
+const ADM = jwt('aal2'), ADM1 = jwt('aal1');
+users[ADM] = { email: 'admin@tfugen.local' };
+users[ADM1] = { email: 'admin@tfugen.local' };
 users.mgr = { email: 'someone@tfugen.local' };
 users.anon = { is_anonymous: true };
 
@@ -45,9 +48,16 @@ check('an anonymous session: 403', r.status === 403);
 r = await onRequest({ request: req('/api/chat', 'POST', 'mgr', { text: 'x' }), env: ENV });
 check('a manager: 403, nothing fired', r.status === 403 && !calls.some((c) => c.url.startsWith('https://fire.test/')));
 
+calls = [];
+r = await onRequest({ request: req('/api/chat', 'GET', ADM1), env: ENV });
+check('his account with the password only (no second factor): 401 back to login, nothing read', r.status === 401 && !calls.some((c) => c.url.includes('notifications_log')));
+check('the page: a Turnstile token on the password sign-in, then the 6-digit code (challenge, verify)', /gotrue_meta_security/.test(page) && /challenges\.cloudflare\.com\/turnstile/.test(page) && /\/challenge'/.test(page) && /\/verify'/.test(page));
+const idx = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+check('the page uses the same Turnstile sitekey as index.html', (idx.match(/TURNSTILE_SITEKEY='([^']*)'/) || [])[1] === (page.match(/var TS='([^']*)'/) || [])[1]);
+
 console.log('\n3. the conversation');
 logRows = [{ ts: '2026-10-24T19:00:00Z', event_type: 'assistant', channel: 'whatsapp_error', text: 'answer' }, { ts: '2026-10-24T18:59:00Z', event_type: 'owner_in', channel: 'whatsapp', text: 'question' }, { ts: '2026-10-24T18:58:00Z', event_type: 'assistant', channel: 'whatsapp', text: '' }];
-r = await onRequest({ request: req('/api/chat', 'GET', 'adm'), env: ENV });
+r = await onRequest({ request: req('/api/chat', 'GET', ADM), env: ENV });
 let j = await r.json();
 check('GET: his lines and the answers from every channel, oldest first; an answer WhatsApp refused is still shown, marked', r.status === 200 && j.rows.length === 2 && j.rows[0].who === 'me' && j.rows[1].who === 'bot' && j.rows[1].failed === true, j);
 const q = calls.filter((c) => c.url.includes('notifications_log') && c.m === 'GET').pop();
@@ -55,15 +65,15 @@ check('GET reads only the conversation: owner_in and assistant, the four channel
 
 console.log('\n4. a line to the assistant');
 calls = [];
-r = await onRequest({ request: req('/api/chat', 'POST', 'adm', { text: 'מה המצב?' }), env: ENV });
+r = await onRequest({ request: req('/api/chat', 'POST', ADM, { text: 'מה המצב?' }), env: ENV });
 j = await r.json();
 const logged = calls.find((c) => c.url.includes('notifications_log') && c.m === 'POST');
 const fire = calls.find((c) => c.url.startsWith('https://fire.test/'));
 check('POST: logged as his own line on channel chat, then the assistant fired', j.ok === true && !!logged && /"channel":"chat"/.test(logged.body) && /"event_type":"owner_in"/.test(logged.body) && !!fire, j);
 check('the fire text: the chat header, the line, and the instruction to answer with wa_me', fire && /wa_me/.test(JSON.parse(fire.body).text) && JSON.parse(fire.body).text.indexOf('מה המצב?') > 0);
-r = await onRequest({ request: req('/api/chat', 'POST', 'adm', { text: '   ' }), env: ENV });
+r = await onRequest({ request: req('/api/chat', 'POST', ADM, { text: '   ' }), env: ENV });
 check('an empty line: 400', r.status === 400);
-r = await onRequest({ request: req('/api/chat', 'POST', 'adm', { text: 'x'.repeat(CHAT_MAX + 1) }), env: ENV });
+r = await onRequest({ request: req('/api/chat', 'POST', ADM, { text: 'x'.repeat(CHAT_MAX + 1) }), env: ENV });
 check('a line over the limit: 400', r.status === 400);
 check('chatRows drops empty lines and other events', chatRows([{ ts: 'a', event_type: 'watch', text: 'x' }, { ts: 'b', event_type: 'assistant', text: ' ' }]).length === 0);
 check('chatFireText keeps a newline out of the one text line', !/\n.*\n.*\n.*\ntext: a\nb/.test(chatFireText('a\nb', 't', '', null)) && /text: a \/ b/.test(chatFireText('a\nb', 't', '', null)));
