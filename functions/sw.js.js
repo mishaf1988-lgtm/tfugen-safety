@@ -97,6 +97,10 @@ self.addEventListener('fetch', (e) => {
   ) {
     return;
   }
+  // /chat (25/10/2026, Michael: "to update the assistant I have to go into the other app"): this worker served the
+  // chat page from its own cache as a navigation, and only a new app worker, installed when the app was opened,
+  // let a new chat page in. The chat is not this app's page: always from the network, and /chat-sw.js does its pop-ups.
+  try { const pn = new URL(url).pathname; if (pn === '/chat' || pn.indexOf('/chat-') === 0) return; } catch (err) { /* not a URL: as before */ }
 
   // Keep the freshest copy around, but never let a cache error break the page.
   const isVendor = VENDOR.indexOf(url.split('?')[0]) >= 0;

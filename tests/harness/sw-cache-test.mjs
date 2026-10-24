@@ -290,6 +290,11 @@ console.log('\n4. everything that is not the shell behaves exactly as before');
     ['our /api/*', req('/api/trustee-notify')],
     ['Claude API', { url: 'https://api.anthropic.com/v1/messages', method: 'GET', mode: 'cors' }],
     ['Google fonts css', { url: 'https://fonts.googleapis.com/css2?family=Heebo', method: 'GET', mode: 'cors' }],
+    // 25/10/2026: the chat icon's page, worker and icons are never served from this app's cache (a new chat version
+    // reached Michael only after he opened the main app)
+    ['the /chat page (a navigation)', nav('/chat')],
+    ['/chat-sw.js', req('/chat-sw.js')],
+    ['a chat icon', req('/chat-icon-192.png')],
   ];
   bypass.forEach(([label, r]) => {
     const e = w.fire('fetch', r);
