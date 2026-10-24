@@ -1774,6 +1774,14 @@ export async function onRequest(context) {
         const pj = ph.j || {};
         out.phone = { status: pj.status || null, platform: pj.platform_type || null, verified: pj.code_verification_status || null, name: pj.name_status || null, quality: pj.quality_rating || null, mode: pj.account_mode || null };
         out.phone_err = err(ph);
+        // health (24/10/2026, Michael: "that is not a solution, find out why it happens"): Meta's own diagnosis of the
+        // number, the WABA, the business and the app: can_send_message and each error code with its description.
+        const he = await g(V + encodeURIComponent(env.META_PHONE_NUMBER_ID) + '?fields=health_status,is_pin_enabled,last_onboarded_time,messaging_limit_tier,throughput', { headers: bearer });
+        const hj = he.j || {}, hs = hj.health_status || {};
+        out.health = { can_send: hs.can_send_message || null, pin: hj.is_pin_enabled === undefined ? null : !!hj.is_pin_enabled, onboarded: hj.last_onboarded_time || null, tier: hj.messaging_limit_tier || null,
+          entities: (hs.entities || []).map((e) => ({ type: e.entity_type || null, can_send: e.can_send_message || null,
+            errors: (e.errors || []).map((x) => ({ code: x.error_code || null, what: String(x.error_description || '').slice(0, 200), fix: String(x.possible_solution || '').slice(0, 200) })) })) };
+        out.health_err = err(he);
       }
       // app_probe (24/10/2026, the app "בטיחות" fell out of Live and no webhook arrived; Michael: "do it: check and add"):
       // which fields Meta returns on the app node, to find one that tells Live from unpublished. Names only, no values.
