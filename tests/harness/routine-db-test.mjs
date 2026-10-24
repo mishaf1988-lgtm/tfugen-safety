@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS } from './_build/routine-db.mjs';
+import { sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS, odTrashCheck, OD_TRASH_DIR } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -101,6 +101,12 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     const got = pdfJpegs(buf, 2);
     return got.length === 2 && got[0].length === 3005 && got[1].length === 2505 && pdfJpegs(Uint8Array.from([1, 2, 3]), 3).length === 0 && OCR_MODELS.length >= 2;
   })());
+  check('od_trash: one file to the to-delete folder named after its folder; never from inside it or old versions, never a folder (24/10/2026)', (() => {
+    const ok = odTrashCheck({ agent: 'dev', why: 'a test file', path: '18_x/2026 - a.pdf' });
+    return ok.to === OD_ROOT + OD_TRASH_DIR && ok.name === '18_x - 2026 - a.pdf' && !!odTrashCheck({ agent: 'dev', why: 'x', path: '18_x/a.pdf' }).error
+      && !!odTrashCheck({ agent: 'dev', why: 'a test', path: OD_TRASH_DIR + '/a.pdf' }).error && !!odTrashCheck({ agent: 'dev', why: 'a test', path: '18_x/_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea/a.pdf' }).error
+      && !!odTrashCheck({ agent: 'dev', why: 'a test', path: 'a.pdf' }).error && !!odTrashCheck({ agent: 'dev', why: 'a test', path: '18_x/folder' }).error;
+  })());
   check('the write list is exactly the seven keys (mail_filing, validity_run 11/10/2026; iso_tasks 24/10/2026)', STATE_WRITE.join() === 'quote_track,nevo_versions,od_raw_token,od_raw_exp,mail_filing,validity_run,iso_tasks');
   const t0 = Date.now();
   r = await call({ op: 'state_set', key: 'mail_filing', value: [{ at: '2020-01-01T00:00:00Z', got: 1 }, { at: '2026-10-11T15:05:00Z', got: 0 }] });
@@ -125,7 +131,7 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     const own = [...src.matchAll(/method:\s*'PATCH'/g)].map((m) => (owner(m.index) || {}).op).sort().join();
     // 20/10/2026: hazard_choice, one note column on trustee_reports / near_miss (Michael: "only record").
     // 20/10/2026: od_archive, a move of an old form version into "_גרסאות קודמות" (Michael: "to the archive").
-    check('no DELETE anywhere; one PATCH each in expiry_set, hazard_choice, od_archive, od_move and talk_field', !/method:\s*'DELETE'/.test(src) && patches.length === 5 && own === 'expiry_set,hazard_choice,od_archive,od_move,talk_field', own);
+    check('no DELETE anywhere; one PATCH each in expiry_set, hazard_choice, od_archive, od_move, od_trash (24/10/2026, a move, not a delete) and talk_field', !/method:\s*'DELETE'/.test(src) && patches.length === 6 && own === 'expiry_set,hazard_choice,od_archive,od_move,od_trash,talk_field', own);
   }
 
   console.log('\n4b. agent_report: append-only run log');
