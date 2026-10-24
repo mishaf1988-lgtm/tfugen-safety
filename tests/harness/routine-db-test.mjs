@@ -548,6 +548,9 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('a folder that is not there: refused', !x.json.ok && /^dir 404/.test(x.json.error) && !puts.length, x.json);
     check('not a PDF, not .pdf, too big, a protected folder, a bad b64, or an extra field: refused',
       [{ b64: Buffer.from('hello').toString('base64') }, { name: 'b.docx' }, { dir: 'x/למחיקה' }, { b64: '***' }].every((o) => !!odPutPdfCheck({ ...P, ...o }).error) && !!odPutPdfCheck({ ...P, b64: Buffer.alloc(OD_PUT_MAX + 1, 37).toString('base64') }).error && (await call({ ...P, overwrite: true })).status === 400 && !puts.length);
+    { const zip = Buffer.concat([Buffer.from([0x50, 0x4b, 3, 4]), Buffer.alloc(20, 1)]).toString('base64');
+      const w = odPutPdfCheck({ ...P, name: 'b.docx', b64: zip }), x2 = odPutPdfCheck({ ...P, name: 'b.xlsx', b64: zip });
+      check('od_put_pdf takes Word and Excel too, each by its own signature and type (24/10/2026)', !w.error && /wordprocessingml/.test(w.type) && !x2.error && /spreadsheetml/.test(x2.type) && !!odPutPdfCheck({ ...P, name: 'b.doc', b64: zip }).error && !!odPutPdfCheck({ ...P, name: 'b.pdf', b64: zip }).error, [w.error, x2.error]); }
     graph = async () => new Response('{}', { status: 500 });
   }
 
