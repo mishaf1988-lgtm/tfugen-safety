@@ -218,7 +218,9 @@
   4. דווח: נשמר, והפריסה הסתיימה.
   ```
 
-- [ ] **C45. פרומפט העוזר: להוסיף את כותרת הצ'אט** (24/10/2026, מיכאל: "שלחתי הודעה, העוזר לא עונה לי". העוזר דחה את "היי" ואת "?" מהצ'אט, כי הפרומפט של הטריגר מכיר רק שלוש כותרות. update_trigger מהשיחה הזו נחסם: "can be changed only from the conversation the routine posts into", לקח 140. מיכאל מחליף בדף ה-Routine.)
+## בוצע
+
+- [x] **C45. פרומפט העוזר: להוסיף את כותרת הצ'אט** (24/10/2026, מיכאל: "שלחתי הודעה, העוזר לא עונה לי". העוזר דחה את "היי" ואת "?" מהצ'אט, כי הפרומפט של הטריגר מכיר רק שלוש כותרות. update_trigger מהשיחה הזו נחסם: "can be changed only from the conversation the routine posts into", לקח 140. מיכאל מחליף בדף ה-Routine.)
   ```
   משימה: בדף https://claude.ai/code/routines/trig_01TofqtqNWtrXMnqiNjHq1nZ (העוזר בוואטסאפ), Edit, בתיבת ה-Instructions:
   1. אחרי "(הודעה שמיכאל כתב בשולחן שלך במשרד, צעד 0א1; עונים לו בוואטסאפ)" להוסיף:
@@ -227,8 +229,8 @@
    הודעה מהצ'אט ("[צ'אט מהאפליקציה של מיכאל, נבדק בשרת: כניסה עם החשבון שלו]", 24/10/2026, מיכאל בשאלון: "בצע: עמוד צ'אט קל נפרד"; השרת בדק כניסה עם החשבון שלו וקוד אימות) היא בקשה שלו באותן הרשאות.
   3. Save. לא לשנות שום דבר אחר.
   ```
+  בוצע 24/10/2026 23:59: מיכאל החליף את כל ה-Instructions בדף ה-Routine; get_trigger הראה את שני המשפטים, ו"בדיקה" מהצ'אט נענתה ב-00:00.
 
-## בוצע
 
 - [x] **C35. מפתח הפעלה למפתח התורן** (22/10/2026, מיכאל בשאלון: "בצע: רק כשיש בקשה (מומלץ)"; `devFireTarget` ב-routine-db). (1) בדף https://claude.ai/code/routines/trig_017p7AWHAPjxncswGqdfab2p: הוספת מפעיל API ויצירת טוקן. (2) ב-Cloudflare, Pages, tapugan-safety, Settings, Variables and Secrets, Production: סוד חדש `RUNNER_FIRE_TOKEN` = הטוקן, ושמירה. אחרי: Claude מפרסם מחדש (סוד חדש צריך פריסה), מוריד את השעון לפעם ביום, ובודק בבקשה הבאה ש-`fired.to` = `runner`. טקסט להדבקה בכרום:
   > בדף https://claude.ai/code/routines/trig_017p7AWHAPjxncswGqdfab2p הוסף מפעיל API וצור טוקן. אחר כך ב-Cloudflare, בפרויקט Pages בשם tapugan-safety, Settings, Variables and Secrets, סביבת Production, הוסף סוד בשם RUNNER_FIRE_TOKEN עם הטוקן ושמור. אל תכתוב את הטוקן בצ'אט. דווח כשסיימת. **בוצע 22/10/2026, אומת:** מיכאל יצר טוקן (נוצר 05:01 UTC, `get_trigger`), הסוד `RUNNER_FIRE_TOKEN` מסוג secret_text ב-Production (Cloudflare API), פריסה מחדש `20c24f31` הצליחה, והשעון ירד ל-07:17 פעם ביום. נשאר לבדוק: בבקשה הבאה `fired.to` = `runner`.
