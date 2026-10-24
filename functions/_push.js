@@ -2,13 +2,35 @@
 // connected?"; in the questionnaire: "do it: build notifications"). Every assistant message (wa_me) also goes to the
 // phones that turned notifications on in /chat, whether WhatsApp delivered it or not, so Meta's block does not matter.
 // No library: VAPID (RFC 8292) and the aes128gcm payload (RFC 8291) with WebCrypto, as Cloudflare runs it.
-// The public key is public by design (the page needs it to subscribe); the private half is the secret VAPID_PRIVATE.
+// The key pair (25/10/2026, Michael: "handle the notifications in the new assistant"): the server makes it itself
+// the first time it is needed and keeps it in server_state (no grant to anon or authenticated, RLS with no policy:
+// only the service key reads it), so nobody pastes a secret and none passes through a chat. The public half goes to
+// the page to subscribe. env.VAPID_PRIVATE with env.VAPID_PUBLIC replace it (the tests use their own pair).
 import { tmo, SB_TIMEOUT_MS } from './_shared.js';
 import { SITE } from './_site.js';
 
-export const VAPID_PUBLIC = 'BGbOqnFAcK9X65IDyUrf9EQUvft0ykSJMvhy1N_y9NrJKoWIvqbndM_C5Uqr8JI--3WHPhheMIA0y6KmNdFw6hM';
-// env.VAPID_PUBLIC replaces it only when a new key pair is made (and the tests use their own pair).
-export const vapidPub = (env) => (env && env.VAPID_PUBLIC) || VAPID_PUBLIC;
+export const VAPID_KEY = 'vapid_keys';
+async function readKeys(env, sbUrl) {
+  const r = await fetch(sbUrl + '/rest/v1/server_state?key=eq.' + VAPID_KEY + '&select=value', { headers: sbH(env), signal: tmo(SB_TIMEOUT_MS) }).catch(() => null);
+  if (!r || !r.ok) return null;
+  const rows = await r.json().catch(() => []);
+  let v = rows && rows[0] ? rows[0].value : null;
+  if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { v = null; } }
+  return v && v.d && v.pub ? { d: String(v.d), pub: String(v.pub) } : null;
+}
+export async function vapidKeys(env, sbUrl) {
+  if (env && env.VAPID_PRIVATE && env.VAPID_PUBLIC) return { d: env.VAPID_PRIVATE, pub: env.VAPID_PUBLIC };
+  if (!env || !env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  const have = await readKeys(env, sbUrl);
+  if (have) return have;
+  const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign']);
+  const d = (await crypto.subtle.exportKey('jwk', kp.privateKey)).d, pub = b64u(await crypto.subtle.exportKey('raw', kp.publicKey));
+  // two first calls at once: the first row stays (ignore-duplicates), and both read it back
+  await fetch(sbUrl + '/rest/v1/server_state?on_conflict=key', { method: 'POST', signal: tmo(SB_TIMEOUT_MS),
+    headers: { ...sbH(env), Prefer: 'resolution=ignore-duplicates,return=minimal' },
+    body: JSON.stringify([{ key: VAPID_KEY, value: { d, pub, at: new Date().toISOString() }, updated_at: new Date().toISOString() }]) }).catch(() => null);
+  return readKeys(env, sbUrl);
+}
 export const PUSH_KEY = 'chat_push_subs';
 export const PUSH_MAX_SUBS = 5;
 const PUSH_MS = 10000;
@@ -27,7 +49,7 @@ export function pushSubOk(s) {
 }
 
 export async function vapidAuth(privD, endpoint, nowSec, pubB64) {
-  const pk = pubB64 || VAPID_PUBLIC, pub = unb64u(pk);
+  const pk = String(pubB64 || ''), pub = unb64u(pk);
   const key = await crypto.subtle.importKey('jwk', { kty: 'EC', crv: 'P-256', d: privD, x: b64u(pub.slice(1, 33)), y: b64u(pub.slice(33, 65)), ext: true },
     { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
   const head = b64u(enc.encode(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));
@@ -62,11 +84,11 @@ export function pushPayload(text) {
   return { title: '\u05e2\u05d5\u05d6\u05e8 \u05de\u05e4\u05e2\u05dc', body: t.length > 300 ? t.slice(0, 297) + '...' : t, url: '/chat', tag: 'chat' };
 }
 
-export async function sendPush(env, sub, obj) {
+export async function sendPush(env, sub, obj, keys) {
   try {
     const body = await pushEncrypt(sub, enc.encode(JSON.stringify(obj)));
     const r = await fetch(sub.endpoint, { method: 'POST', signal: tmo(PUSH_MS), body,
-      headers: { Authorization: await vapidAuth(env.VAPID_PRIVATE, sub.endpoint, 0, vapidPub(env)), TTL: '86400', Urgency: 'high',
+      headers: { Authorization: await vapidAuth(keys.d, sub.endpoint, 0, keys.pub), TTL: '86400', Urgency: 'high',
         'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream' } });
     return r.status;
   } catch (e) { return 'network'; }
@@ -77,7 +99,10 @@ export async function pushSubs(env, sbUrl) {
   const r = await fetch(sbUrl + '/rest/v1/server_state?key=eq.' + PUSH_KEY + '&select=value', { headers: sbH(env), signal: tmo(SB_TIMEOUT_MS) }).catch(() => null);
   if (!r || !r.ok) return null;
   const rows = await r.json().catch(() => []);
-  return rows && rows[0] && Array.isArray(rows[0].value) ? rows[0].value.filter(pushSubOk) : [];
+  // server_state.value is text: the list comes back as a JSON string (25/10/2026, lesson 158)
+  let v = rows && rows[0] ? rows[0].value : null;
+  if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { v = null; } }
+  return Array.isArray(v) ? v.filter(pushSubOk) : [];
 }
 async function putSubs(env, sbUrl, subs) {
   await fetch(sbUrl + '/rest/v1/server_state?on_conflict=key', { method: 'POST', signal: tmo(SB_TIMEOUT_MS),
@@ -94,11 +119,13 @@ export async function pushSave(env, sbUrl, sub) {
 }
 // Every phone; one the push service says is gone (404, 410) is dropped. Never throws: a push is extra.
 export async function pushOwner(env, sbUrl, text) {
-  if (!env.VAPID_PRIVATE || !env.SUPABASE_SERVICE_ROLE_KEY || !String(text || '').trim()) return { sent: 0, skipped: true };
+  if (!env.SUPABASE_SERVICE_ROLE_KEY || !String(text || '').trim()) return { sent: 0, skipped: true };
   try {
     const subs = await pushSubs(env, sbUrl);
     if (!subs || !subs.length) return { sent: 0 };
-    const obj = pushPayload(text), st = await Promise.all(subs.map((s) => sendPush(env, s, obj)));
+    const keys = await vapidKeys(env, sbUrl);
+    if (!keys) return { sent: 0, skipped: true };
+    const obj = pushPayload(text), st = await Promise.all(subs.map((s) => sendPush(env, s, obj, keys)));
     const gone = subs.filter((s, i) => st[i] === 404 || st[i] === 410);
     if (gone.length) await putSubs(env, sbUrl, subs.filter((s) => gone.indexOf(s) < 0));
     return { sent: st.filter((x) => x === 201 || x === 200).length, statuses: st };

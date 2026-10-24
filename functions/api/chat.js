@@ -13,7 +13,7 @@ import { fastRoute, runFast, rateOf, rateNote } from './wa-hook.js';
 import { accessToken, putFile } from '../_onedrive.js';
 import { OD_ROOT, CHAT_DIR, UP_MAX, upKind } from './routine-db.js';
 import { ttsUpstream, sayParts, speechText } from './talk.js';
-import { vapidPub, pushSubOk, pushSave, sendPush, pushPayload } from '../_push.js';
+import { vapidKeys, pushSubOk, pushSave, sendPush, pushPayload } from '../_push.js';
 
 export const CHAT_MAX = 2000, CHAT_ROWS = 100;
 const FIRE_MS = 20000;
@@ -118,13 +118,14 @@ export async function onRequest(context) {
   // ?push=1 (24/10/2026): pop-ups on his phone. GET: the public key and whether the server can send.
   // POST {endpoint, keys}: keep this phone, and send it one test pop-up so he sees it works at once.
   if (u.searchParams.get('push') === '1') {
-    if (request.method === 'GET') return jsonResp({ ok: true, key: vapidPub(env), ready: !!env.VAPID_PRIVATE }, 200, cors);
+    const keys = await vapidKeys(env, url).catch(() => null);
+    if (request.method === 'GET') return jsonResp({ ok: !!keys, key: keys ? keys.pub : null, ready: !!keys }, 200, cors);
     if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, cors);
-    if (!env.VAPID_PRIVATE) return jsonResp({ ok: false, error: 'push not configured' }, 200, cors);
+    if (!keys) return jsonResp({ ok: false, error: 'push not configured' }, 200, cors);
     let sb = {}; try { sb = await request.json(); } catch (e) { sb = {}; }
     if (!pushSubOk(sb)) return jsonResp({ ok: false, error: 'subscription' }, 400, cors);
     if (!(await pushSave(env, url, sb))) return jsonResp({ ok: false, error: 'save' }, 200, cors);
-    const st = await sendPush(env, sb, pushPayload('\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05e4\u05d5\u05e2\u05dc\u05d5\u05ea. \u05db\u05da \u05ea\u05d2\u05d9\u05e2 \u05ea\u05e9\u05d5\u05d1\u05d4 \u05de\u05d4\u05e2\u05d5\u05d6\u05e8, \u05d2\u05dd \u05db\u05e9\u05d4\u05e6\u0027\u05d0\u05d8 \u05e1\u05d2\u05d5\u05e8.'));
+    const st = await sendPush(env, sb, pushPayload('\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05e4\u05d5\u05e2\u05dc\u05d5\u05ea. \u05db\u05da \u05ea\u05d2\u05d9\u05e2 \u05ea\u05e9\u05d5\u05d1\u05d4 \u05de\u05d4\u05e2\u05d5\u05d6\u05e8, \u05d2\u05dd \u05db\u05e9\u05d4\u05e6\u0027\u05d0\u05d8 \u05e1\u05d2\u05d5\u05e8.'), keys);
     return jsonResp({ ok: st === 201 || st === 200, test: st }, 200, cors);
   }
   if (request.method === 'GET') {
