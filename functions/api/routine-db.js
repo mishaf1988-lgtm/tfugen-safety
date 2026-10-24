@@ -682,6 +682,30 @@ export function ocrTxtCheck(b) {
   if (c.attach.some((a) => !/\.pdf$/i.test(a.name))) return { error: 'paths: PDF files only' };
   return { files: c.attach.map((a) => Object.assign({}, a, { txt: a.name.replace(/\.pdf$/i, '') + '.txt' })) };
 }
+// Workers AI fallback (24/10/2026, no Azure subscription; Michael in the questionnaire: "do it: test Workers AI"):
+// a scanned PDF holds each page as a JPEG stream (DCTDecode); the first OCR_PAGES of them go to a vision model.
+export const OCR_MODELS = ['@cf/meta/llama-4-scout-17b-16e-instruct', '@cf/mistralai/mistral-small-3.1-24b-instruct', '@cf/google/gemma-3-12b-it', '@cf/meta/llama-3.2-11b-vision-instruct'];
+export const OCR_PAGES = 3;
+export const OCR_PROMPT = 'Transcribe all the text in this scanned document exactly, line by line, in its original language (mostly Hebrew). Keep numbers and dates as written. Output only the text, no comments.';
+export function pdfJpegs(buf, max) {
+  const out = [];
+  for (let i = 0; i + 1 < buf.length && out.length < max; i++) {
+    if (buf[i] !== 0xFF || buf[i + 1] !== 0xD8 || buf[i + 2] !== 0xFF) continue;
+    let j = i + 2;
+    while (j + 1 < buf.length && !(buf[j] === 0xFF && buf[j + 1] === 0xD9)) j++;
+    if (j + 1 >= buf.length) break;
+    if (j - i > 2000) out.push(buf.subarray(i, j + 2));
+    i = j + 1;
+  }
+  return out;
+}
+export async function aiOcr(env, model, jpg) {
+  let bin = ''; for (let i = 0; i < jpg.length; i += 0x8000) bin += String.fromCharCode.apply(null, jpg.subarray(i, i + 0x8000));
+  const input = model.indexOf('llama-3.2') >= 0 ? { prompt: OCR_PROMPT, image: Array.from(jpg), max_tokens: 1500 }
+    : { messages: [{ role: 'user', content: [{ type: 'text', text: OCR_PROMPT }, { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + btoa(bin) } }] }], max_tokens: 1500 };
+  const r = await env.AI.run(model, input);
+  return String((r && (r.response || (r.choices && r.choices[0] && r.choices[0].message && r.choices[0].message.content))) || '').trim();
+}
 // The lines of an Azure Read result, page by page.
 export function ocrLines(j) {
   const pages = (j && j.analyzeResult && j.analyzeResult.readResults) || [];
@@ -1072,12 +1096,30 @@ export async function onRequest(context) {
       const text = htmlText(raw);
       return jsonResp({ ok: true, url: u, chars: text.length, cut: text.length > SOURCE_MAX, text: text.slice(0, SOURCE_MAX) }, 200, {});
     }
+    if (body.op === 'ocr_probe') {
+      // a sample image the caller made (never a file from the drive), to compare the models' Hebrew before choosing one
+      if (!env.AI || typeof env.AI.run !== 'function') return jsonResp({ ok: false, error: 'Workers AI binding missing' }, 200, {});
+      const b64 = String(body.b64 || '');
+      if (!b64 || b64.length > 1400000) return jsonResp({ ok: false, error: 'b64: a JPEG up to 1MB' }, 400, {});
+      const jpg = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+      const models = OCR_MODELS.filter((m) => !body.model || m === body.model);
+      const res = [];
+      for (const m of models) {
+        const t0 = Date.now();
+        try { res.push({ model: m, ms: Date.now() - t0, text: (await aiOcr(env, m, jpg)).slice(0, 1500) }); }
+        catch (e) { res.push({ model: m, error: String((e && e.message) || e).slice(0, 200) }); }
+        res[res.length - 1].ms = Date.now() - t0;
+      }
+      return jsonResp({ ok: true, res }, 200, {});
+    }
     if (body.op === 'ocr_txt') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
       const c = ocrTxtCheck(body);
       if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
-      if (!env.AZURE_VISION_ENDPOINT || !env.AZURE_VISION_KEY) return jsonResp({ ok: false, error: 'AZURE_VISION_ENDPOINT / AZURE_VISION_KEY not set' }, 200, {});
+      const azure = !!(env.AZURE_VISION_ENDPOINT && env.AZURE_VISION_KEY);
+      const aiModel = env.OCR_MODEL && OCR_MODELS.indexOf(env.OCR_MODEL) >= 0 ? env.OCR_MODEL : OCR_MODELS[0];
+      if (!azure && !(env.AI && typeof env.AI.run === 'function')) return jsonResp({ ok: false, error: 'no OCR engine: AZURE_VISION_* not set and no Workers AI binding' }, 200, {});
       const at = await accessToken(env);
       const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
       const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
@@ -1089,6 +1131,17 @@ export async function onRequest(context) {
           if (!d.ok) { files.push({ name: a.name, ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status }); continue; }
           const buf = new Uint8Array(await d.arrayBuffer());
           if (buf.length > PDF_READ_MAX) { files.push({ name: a.name, ok: false, error: 'too big: ' + buf.length }); continue; }
+          if (!azure) {
+            const pages = pdfJpegs(buf, OCR_PAGES);
+            if (!pages.length) { files.push({ name: a.name, ok: false, error: 'no scanned page image in this PDF' }); continue; }
+            const parts = [];
+            for (const pg of pages) parts.push(await aiOcr(env, aiModel, pg));
+            const text = parts.join('\n\n').trim();
+            const up = await fetch(G + enc(OD_ROOT + OD_OCR_DIR + '/' + a.txt) + ':/content?@microsoft.graph.conflictBehavior=replace', { method: 'PUT', signal: tmo(GRAPH_MS),
+              headers: { Authorization: 'Bearer ' + at.token, 'Content-Type': 'text/plain; charset=utf-8' }, body: text });
+            files.push({ name: a.name, ok: up.ok && text.length > 0, txt: OD_OCR_DIR + '/' + a.txt, chars: text.length, pages: pages.length, engine: aiModel, error: up.ok ? (text ? undefined : 'no text found') : 'write ' + up.status });
+            continue;
+          }
           const r = await fetch(base + '/vision/v3.2/read/analyze', { method: 'POST', body: buf, signal: tmo(30000),
             headers: { 'Ocp-Apim-Subscription-Key': env.AZURE_VISION_KEY, 'Content-Type': 'application/octet-stream' } });
           const loc = r.headers.get('operation-location');

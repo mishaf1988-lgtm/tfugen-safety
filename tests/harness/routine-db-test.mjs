@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR } from './_build/routine-db.mjs';
+import { sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -94,6 +94,12 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     const lines = ocrLines({ analyzeResult: { readResults: [{ lines: [{ text: 'x' }, { text: 'y' }] }, { lines: [{ text: 'z' }] }] } });
     return ok.files && ok.files[0].txt === '2026-10-22 0532 - a.txt' && !!ocrTxtCheck({ paths: ['a.docx'] }).error && !!ocrTxtCheck({}).error && lines === 'x\ny\n\nz' && OD_OCR_DIR.length > 3
       && !/text: text|answer: text/.test(fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8').split("body.op === 'ocr_txt'")[1].split("body.op === 'pdf_read'")[0]);
+  })());
+  check('pdfJpegs: finds each JPEG (FFD8FF..FFD9) in a PDF body, skips tiny ones, stops at max (24/10/2026)', (() => {
+    const jpg = (n) => [0xFF, 0xD8, 0xFF].concat(new Array(n).fill(7), [0xFF, 0xD9]);
+    const buf = Uint8Array.from([].concat([37, 80, 68, 70], jpg(3000), [10, 10], jpg(10), [1], jpg(2500), jpg(2600)));
+    const got = pdfJpegs(buf, 2);
+    return got.length === 2 && got[0].length === 3005 && got[1].length === 2505 && pdfJpegs(Uint8Array.from([1, 2, 3]), 3).length === 0 && OCR_MODELS.length >= 2;
   })());
   check('the write list is exactly the seven keys (mail_filing, validity_run 11/10/2026; iso_tasks 24/10/2026)', STATE_WRITE.join() === 'quote_track,nevo_versions,od_raw_token,od_raw_exp,mail_filing,validity_run,iso_tasks');
   const t0 = Date.now();
