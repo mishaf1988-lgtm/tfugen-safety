@@ -25,10 +25,16 @@ export const UPLOAD_LOG = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05
 const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
 const seg = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
 
-export function safePath(p, raw) {
+// The old ISO folder (24/10/2026, Michael in the questionnaire: "בצע: קריאה גם מתקני ISO 9001 ו-22000"):
+// the 2026 management review exists as Word only there. Read-only, and only as a raw read with the
+// one-off token ({root: 'iso-old', raw: true}); writing stays inside the safety folder.
+export const ISO_OLD = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05ea\u05e7\u05e0\u05d9 ISO 9001 \u05d5-22000/';
+export function safePath(p, raw, root) {
   const parts = String(p || '').split('/').filter(Boolean);
   const ext = raw ? /\.(xls[xmx]?|pptx|pdf|docx?|txt|csv)$/i : /\.(xls[xm]|pptx)$/i;
   if (!parts.length || parts.some((x) => x === '..' || x === '.') || !ext.test(parts[parts.length - 1])) return null;
+  if (root === 'iso-old') return raw ? ISO_OLD + parts.join('/') : null;
+  if (root !== undefined && root !== null && root !== '') return null;
   return ROOT + parts.join('/');
 }
 
@@ -110,7 +116,7 @@ export async function onRequest(context) {
       return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 200, {});
     }
   }
-  const full = body.uploadLog === true ? (rawOk ? UPLOAD_LOG : null) : safePath(body.path, body.raw === true);
+  const full = body.uploadLog === true ? (rawOk ? UPLOAD_LOG : null) : safePath(body.path, body.raw === true, body.root);
   if (!full) return jsonResp({ ok: false, error: 'bad path' }, 400, {});
   try {
     const { token } = await accessToken(env);
