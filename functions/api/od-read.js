@@ -29,11 +29,15 @@ const seg = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).
 // the 2026 management review exists as Word only there. Read-only, and only as a raw read with the
 // one-off token ({root: 'iso-old', raw: true}); writing stays inside the safety folder.
 export const ISO_OLD = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05ea\u05e7\u05e0\u05d9 ISO 9001 \u05d5-22000/';
+export const DESKTOP = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/';
 export function safePath(p, raw, root) {
   const parts = String(p || '').split('/').filter(Boolean);
   const ext = raw ? /\.(xls[xmx]?|pptx|pdf|docx?|txt|csv)$/i : /\.(xls[xm]|pptx)$/i;
   if (!parts.length || parts.some((x) => x === '..' || x === '.') || !ext.test(parts[parts.length - 1])) return null;
   if (root === 'iso-old') return raw ? ISO_OLD + parts.join('/') : null;
+  // The whole desktop (24/10/2026, Michael: "I want access not only to the safety folder, to the desktop"):
+  // the same read-only raw read with the one-off token; writing stays inside the safety folder.
+  if (root === 'desktop') return raw ? DESKTOP + parts.join('/') : null;
   if (root !== undefined && root !== null && root !== '') return null;
   return ROOT + parts.join('/');
 }
