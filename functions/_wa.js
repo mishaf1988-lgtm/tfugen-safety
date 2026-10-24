@@ -5,7 +5,8 @@
 // The assistant talks only to Michael. His number is not a new setting: it is the one he already
 // saved for the trustee alerts, notification_prefs[admin].prefs.trustee_hazard.whatsapp_to, the
 // same row trustee-notify.js sends to. No row, no number: nothing is sent and nothing is accepted.
-import { SITE, SB_TIMEOUT_MS, tmo } from './_shared.js';
+import { SITE, SB_TIMEOUT_MS, SB_LIVE, tmo } from './_shared.js';
+import { pushOwner } from './_push.js';
 
 export const META_API_VERSION = 'v25.0';
 // The utility template for an update when the 24 hour window is closed. One parameter, the text.
@@ -282,7 +283,7 @@ export const DOC_MAX = 15 * 1024 * 1024;
 export const DOC_MIME = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
 export function docMime(name) { const m = /\.([a-z0-9]+)$/i.exec(String(name || '')); return (m && DOC_MIME[m[1].toLowerCase()]) || DOC_MIME.pdf; }
-export async function sendDocToOwner(env, to, bytes, filename, caption, windowOpen) {
+async function sendDocRaw(env, to, bytes, filename, caption, windowOpen) {
   if (windowOpen === false) return { ok: false, error: 'window closed' };
   if (!bytes || !bytes.length || bytes.length > DOC_MAX) return { ok: false, error: 'size' };
   const name = String(filename || 'file.pdf').slice(0, 200);
@@ -373,7 +374,7 @@ export function ilTimes(t, nowMs) {
 
 // Free text inside the window (opts.windowOpen true); outside it the template (one line, 1000 chars).
 // A closed window that Meta still reports at once (131047) also falls back to the template.
-export async function sendToOwner(env, to, text, opts) {
+async function sendToOwnerRaw(env, to, text, opts) {
   const o = opts || {};
   const body = ilTimes(String(text || '').trim()).slice(0, 4096);
   if (!body) return { ok: false, error: 'empty text' };
@@ -399,6 +400,48 @@ export async function sendToOwner(env, to, text, opts) {
   if (p.ok) return { ok: true, via: 'template', wamid: id(p) };
   const pc = p.parsed && p.parsed.error && p.parsed.error.code;
   return { ok: false, error: 'template ' + p.status + ' ' + (pc || ''), code: pc };
+}
+
+// Every message to Michael's WhatsApp, in one place (25/10/2026, Michael: "WhatsApp works too, and not everything
+// that came on WhatsApp came to the app"). Only the assistant's wa_me was logged for /chat; the "received", the
+// morning update, hazard alerts, reminders, the watch's "no answer yet", documents to sign and dev_done were not.
+// Now each one is logged as wa_out (what was sent, or what WhatsApp refused) and goes to the phone as a pop-up.
+// Never throws and never changes what the caller gets: the log and the pop-up are extra.
+export const WA_OUT = 'wa_out';
+const o_choices = (opts) => cleanChoices(opts && opts.choices).map((c, i) => (i + 1) + '. ' + c);
+export async function noteOut(env, text, r, kind, extra) {
+  const t = String(text || '').trim();
+  if (!t) return 0;
+  let push = 0;
+  const k = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (k) {
+    const sbUrl = env.SUPABASE_URL || SB_LIVE;
+    try {
+      await fetch(sbUrl + '/rest/v1/notifications_log', { method: 'POST', signal: tmo(SB_TIMEOUT_MS),
+        headers: { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify([{ id: 'wo' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
+          event_type: WA_OUT, channel: r && r.ok ? 'whatsapp' : 'whatsapp_error',
+          payload: Object.assign({ title: t.replace(/\s+/g, ' ').slice(0, 120), text: t.slice(0, 1500), kind: kind || 'text', via: (r && r.via) || null, detail: (r && r.error) || null }, extra || {}) }]) });
+    } catch (e) { /* the message itself went (or not) as before */ }
+    try { push = (await pushOwner(env, sbUrl, t)).sent || 0; } catch (e) { push = 0; }
+  }
+  return push;
+}
+export async function sendToOwner(env, to, text, opts) {
+  const r = await sendToOwnerRaw(env, to, text, opts);
+  if (r.error === 'empty text') return r;
+  // the buttons too, so the chat shows the same choices (a tap there sends "1. ..." like a tap on WhatsApp)
+  const cs = o_choices(opts);
+  const push = await noteOut(env, ilTimes(String(text || '').trim()), r, 'text', cs.length ? { choices: cs } : null);
+  return Object.assign(r, { push });
+}
+// src.path (25/10/2026, Michael: "the app must be the same as WhatsApp, files and all"): where the file is on the
+// drive, so /chat can open it (api/chat.js, files inside the safety folder only). The bytes are not kept twice.
+export async function sendDocToOwner(env, to, bytes, filename, caption, windowOpen, src) {
+  const r = await sendDocRaw(env, to, bytes, filename, caption, windowOpen);
+  const push = await noteOut(env, '\ud83d\udcce ' + String(filename || '') + (caption ? '\n' + caption : ''), r, 'document',
+    { name: String(filename || '').slice(0, 200), file: src && src.path ? String(src.path).slice(0, 400) : null });
+  return Object.assign(r, { push });
 }
 
 // Meta signs every webhook body with the app secret: X-Hub-Signature-256: sha256=<hex>.

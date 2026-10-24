@@ -193,7 +193,7 @@ console.log('\n5. the manager\'s link');
 console.log('\n5b. who left, and the version signed (Michael, 03/10/2026)');
 {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-  const tomorrow = new Date(Date.now() + 864e5).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+  const tomorrow = new Date(Date.parse(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }) + 'T12:00:00Z') + 864e5).toISOString().slice(0, 10);
   const emps = EMPS.concat([{ id: 'e8', n: 'עזב אתמול', dep: 'ייצור', left_d: '2026-01-01' }, { id: 'e9', n: 'עוזב מחר', dep: 'ייצור', left_d: tomorrow }, { id: 'e7', n: 'עזב היום', dep: 'ייצור', left_d: today }]);
   const tok = await makeTalkToken(ENV, 'tt1');
   let w = world({ emps });

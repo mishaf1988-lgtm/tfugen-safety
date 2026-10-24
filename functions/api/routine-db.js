@@ -134,7 +134,6 @@ import { OD_OCR_DIR, OCR_MODELS, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
 import { SIGN_KEY, SIGN_CHOICES, signAdd, signMark, signAskText, signPlace } from '../_sign.js';
 import { findSignSpot } from '../_pdftext.js';
 import { PDFDocument } from '../_pdflib.js';
-import { pushOwner } from '../_push.js';
 import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, fireUrlOf, sameSession, recentLine } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
@@ -234,6 +233,15 @@ export function htmlText(html) {
   return String(html || '').replace(/<(script|style|noscript)[\s\S]*?<\/\1>/gi, ' ').replace(/<br\s*\/?>|<\/(p|div|tr|li|h[1-6])>/gi, '\n')
     .replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
     .replace(/[ \t]+/g, ' ').replace(/ ?\n ?/g, '\n').replace(/\n{2,}/g, '\n').trim();
+}
+// a file from him (25/10/2026, "files and all"): a photo or a PDF, kept in the safety folder under CHAT_DIR
+export const CHAT_DIR = '\u05de\u05d4\u05e6\u0027\u05d0\u05d8/', UP_MAX = 8 * 1024 * 1024;
+export function upKind(b) {
+  if (!b || b.length < 8) return null;
+  if (b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF) return { ext: 'jpg', mime: 'image/jpeg', type: 'image' };
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47) return { ext: 'png', mime: 'image/png', type: 'image' };
+  if (b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46) return { ext: 'pdf', mime: 'application/pdf', type: 'document' };
+  return null;
 }
 export const WA_MEDIA_MAX = 8 * 1024 * 1024;
 export const waMediaMimeOk = (m) => /^(image\/(jpeg|png|webp)|application\/pdf)$/.test(String(m || ''));
@@ -1026,7 +1034,8 @@ export async function onRequest(context) {
       const to = await ownerWa(env, url);
       if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
       const win = await ownerWindowOpen(env, url);
-      if (win === false) return jsonResp({ ok: false, error: 'window closed: Michael has not written in 23 hours, a file cannot go out; send him the folder in words' }, 200, {});
+      // window closed: WhatsApp refuses a document, but it still goes to his app chat (sendDocToOwner logs it with
+      // its path), so the files are read and logged and only the WhatsApp copy fails (25/10/2026)
       const at = await accessToken(env);
       const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
       const sent = [];
@@ -1035,7 +1044,7 @@ export async function onRequest(context) {
         let r;
         try {
           const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(OD_ROOT + a.rel) + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(30000) });
-          r = d.ok ? await sendDocToOwner(env, to, new Uint8Array(await d.arrayBuffer()), a.name, i === 0 ? body.caption : '', win) : { ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status };
+          r = d.ok ? await sendDocToOwner(env, to, new Uint8Array(await d.arrayBuffer()), a.name, i === 0 ? body.caption : '', win, { path: OD_ROOT + a.rel }) : { ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status };
         } catch (x) { r = { ok: false, error: 'read' }; }
         sent.push({ name: a.name, ok: !!r.ok, error: r.ok ? undefined : r.error });
       }
@@ -1045,7 +1054,8 @@ export async function onRequest(context) {
         body: JSON.stringify([{ id: 'wd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
           event_type: 'assistant', channel: ok.length ? 'whatsapp' : 'whatsapp_error',
           payload: { title: ('[' + ok.length + '/' + sent.length + ' files] ' + sent.map((x) => x.name).join(', ')).slice(0, 120), text: sent.map((x) => x.name + (x.ok ? '' : ' (' + x.error + ')')).join('\n').slice(0, 1500), via: 'document', agent: body.agent } }]) }).catch(() => null);
-      return jsonResp({ ok: ok.length === sent.length, sent }, 200, {});
+      if (win === false) return jsonResp({ ok: false, sent, chat: true, error: 'window closed: Michael has not written in 23 hours, the WhatsApp copy did not go out; the files are in his app chat (/chat), tell him so' }, 200, {});
+      return jsonResp({ ok: ok.length === sent.length, sent, chat: true }, 200, {});
     }
     if (body.op === 'office_ask') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'row', 'text'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
@@ -1215,6 +1225,22 @@ export async function onRequest(context) {
     }
     if (body.op === 'wa_media') {
       const id = String(body.id || '');
+      // a photo or a PDF Michael sent from /chat (25/10/2026): the id of his chat line, the file in the safety folder
+      if (/^ch[a-z0-9]{6,30}$/.test(id)) {
+        const lr = await fetch(url + '/rest/v1/notifications_log?id=eq.' + id + '&event_type=eq.owner_in&channel=eq.chat&select=file:payload->>file', { headers: h, signal: tmo(SB_MS) }).catch(() => null);
+        const row = lr && lr.ok ? ((await lr.json().catch(() => []))[0] || null) : null;
+        const f = row && String(row.file || '');
+        if (!f || f.indexOf(OD_ROOT + CHAT_DIR) !== 0 || f.split('/').some((x) => x === '..')) return jsonResp({ ok: false, error: 'no file on that chat line' }, 200, {});
+        const at = await accessToken(env);
+        const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + f.split('/').filter(Boolean).map(encodeURIComponent).join('/') + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(30000) }).catch(() => null);
+        if (!d || !d.ok) return jsonResp({ ok: false, error: 'read ' + (d ? d.status : 'network') }, 200, {});
+        const cb = new Uint8Array(await d.arrayBuffer());
+        if (cb.length > WA_MEDIA_MAX) return jsonResp({ ok: false, error: 'too big' }, 200, {});
+        const k = upKind(cb);
+        if (!k) return jsonResp({ ok: false, error: 'type not read' }, 200, {});
+        let cbin = ''; for (let i = 0; i < cb.length; i += 0x8000) cbin += String.fromCharCode.apply(null, cb.subarray(i, i + 0x8000));
+        return jsonResp({ ok: true, mime: k.mime, bytes: cb.length, b64: btoa(cbin), from: 'chat' }, 200, {});
+      }
       if (!/^[0-9]{5,30}$/.test(id)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
       if (!env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
       const auth = { Authorization: 'Bearer ' + env.META_ACCESS_TOKEN };
@@ -1500,7 +1526,7 @@ export async function onRequest(context) {
       // 21/10/2026 (Michael: "with the request, the form itself"): the document goes first, so the question with
       // the buttons stays his last message (its ref is what "1" answers). A failed document leaves the question as is.
       let doc = null;
-      try { doc = pdfBytes ? await sendDocToOwner(env, to, pdfBytes, c.name, '', win) : { ok: false, error: 'read' }; } catch (x) { doc = { ok: false, error: 'document' }; }
+      try { doc = pdfBytes ? await sendDocToOwner(env, to, pdfBytes, c.name, '', win, { path: c.path }) : { ok: false, error: 'read' }; } catch (x) { doc = { ok: false, error: 'document' }; }
       const s = await sendToOwner(env, to, text, { windowOpen: win, choices: SIGN_CHOICES });
       // 22/10/2026 (retro): a question that did not go out must not stay pending: the next sign_request on the same
       // file would answer "already waiting" and Michael would never be asked.
@@ -1684,8 +1710,8 @@ export async function onRequest(context) {
       if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
       const r = await sendToOwner(env, to, body.text, { noTemplate: body.no_template === true, windowOpen: await ownerWindowOpen(env, url), choices: Array.isArray(body.choices) ? body.choices : null });
       if (r.ok) await noteLastOut(env, url, body.text, body.ref);
-      // 24/10/2026: the same message as a pop-up on the phones that turned it on in /chat, sent or blocked on WhatsApp
-      const ps = await pushOwner(env, url, body.text);
+      // the pop-up on his phone and the wa_out line for /chat: sendToOwner does both, for every message (25/10/2026)
+      const ps = { sent: r.push || 0 };
       try {
         await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
           body: JSON.stringify([{ id: 'wa' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),

@@ -23,6 +23,7 @@ globalThis.fetch = async (url, opt = {}) => {
     const keys = decodeURIComponent((/key=(?:in\.\(([^)]*)\)|eq\.(.*))/.exec(url) || []).slice(1).filter(Boolean)[0] || '').split(',');
     return new Response(JSON.stringify(keys.filter((k) => k in state).map((k) => ({ key: k, value: state[k], updated_at: 'now' }))), { status: 200 });
   }
+  if (url.startsWith(SB + '/rest/v1/notifications_log') && /id=eq\.ch/.test(url)) return new Response(JSON.stringify(chatLine(url)), { status: 200 });
   if (url.startsWith(SB + '/rest/v1/oauth_tokens')) return new Response(JSON.stringify([{ user_email: 'm', refresh_token: 'r', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite' }]), { status: 200 });
   if (url.startsWith('https://graph.microsoft.com/')) return graph(url, opt);
   if (url === 'https://api.anthropic.com/v1/messages') { const b = JSON.parse(opt.body); claudeReads.push({ key: opt.headers['x-api-key'], b }); if (b.messages[0].content[1].text === 'make it fail') return new Response(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'Your credit balance is too low' } }), { status: 400 }); return new Response(JSON.stringify({ content: [{ type: 'text', text: 'not written: only work at height. TEXT: ...' }] }), { status: 200 }); }
@@ -39,6 +40,7 @@ globalThis.fetch = async (url, opt = {}) => {
 };
 let rows = {};
 let graph = async () => new Response('{}', { status: 500 });
+let chatLine = () => [];
 const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   const r = await onRequest({ request: new Request('https://x/api/routine-db', { method, headers: { 'x-routine-key': key, 'content-type': 'application/json' }, body: method === 'POST' ? JSON.stringify(body) : undefined }), env });
   return { status: r.status, json: await r.json() };
@@ -680,6 +682,17 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     x = await call({ op: 'wa_media', id: '90000001' }, 'k-123', 'POST', E);
     check('wa_media: too big is refused before download', x.json.ok === false && /too big/.test(x.json.error));
     check('wa_media: an id with a path in it is refused', (await call({ op: 'wa_media', id: '1/../me' }, 'k-123', 'POST', E)).status === 400);
+    // 25/10/2026: a photo he sent from /chat: the id of his chat line, the file read from the safety folder
+    const CD = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/\u05de\u05d4\u05e6\u0027\u05d0\u05d8/';
+    chatLine = () => [{ file: CD + '25-10-2026 08.00.00 - x.jpg' }];
+    let gurl = '';
+    graph = async (u) => { gurl = u; return new Response(new Uint8Array([0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3, 4]), { status: 200 }); };
+    x = await call({ op: 'wa_media', id: 'chabc12345' }, 'k-123', 'POST', E);
+    check('wa_media ch...: his photo from the chat, read from the chat folder, as base64 with its type', x.json.ok && x.json.mime === 'image/jpeg' && x.json.from === 'chat' && decodeURIComponent(gurl).indexOf(CD) > 0, x.json);
+    chatLine = () => [{ file: '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/other/x.jpg' }];
+    x = await call({ op: 'wa_media', id: 'chabc12345' }, 'k-123', 'POST', E);
+    check('wa_media ch...: a line whose file is outside the chat folder is not read', x.json.ok === false && /no file/.test(x.json.error));
+    chatLine = () => []; graph = async () => new Response('{}', { status: 500 });
   }
   check('/api/routine-db is a machine path', /const MACHINE_PATHS = \[[^\]]*'\/api\/routine-db'/.test(mw));
 

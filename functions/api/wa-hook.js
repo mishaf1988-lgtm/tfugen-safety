@@ -412,7 +412,7 @@ export async function fastSign(env, r, wamid) {
   await signLog(env, (res.ok ? 'signed: ' + res.name : 'sign failed: ' + t.req.name), Object.assign({ result: res.ok ? 'signed' : 'failed', signed: res.name || null, webUrl: res.webUrl || null, error: res.error || null }, base));
   // 21/10/2026: the signed copy itself, as a document, ready to forward (the text answer follows it).
   if (res.ok && res.bytes) {
-    try { const to = await ownerWa(env, sbFrom(env)); if (to) await sendDocToOwner(env, to, res.bytes, res.name, '', true); } catch (e) { /* the file is in the folder */ }
+    try { const to = await ownerWa(env, sbFrom(env)); if (to) await sendDocToOwner(env, to, res.bytes, res.name, '', true, { path: t.req.path.split('/').slice(0, -1).concat(res.name).join('/') }); } catch (e) { /* the file is in the folder */ }
   }
   if (res.ok) {
     const dir = t.req.path.split('/').slice(0, -1).join('/');

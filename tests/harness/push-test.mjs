@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { VAPID_PUBLIC, pushEncrypt, vapidAuth, pushOwner, pushSubOk, pushPayload, unb64u, b64u, PUSH_KEY } from './_build/_push.mjs';
 import { onRequest } from './_build/chat.mjs';
+import { sendToOwner } from './_build/_wa.mjs';
 import { CHAT_SW } from '../../functions/chat-sw.js.js';
 
 let pass = 0, fail = 0;
@@ -86,6 +87,18 @@ const ENV = { SUPABASE_URL: SB, SUPABASE_SERVICE_ROLE_KEY: 'k', VAPID_PRIVATE: v
   check('and the phone can open it', (await decrypt(ph, new Uint8Array(toA.body))).text.indexOf('תשובה') > 0);
 }
 
+{
+  // sendToOwner itself: Meta accepts, then one wa_out line with the text sent, then the pop-up
+  stored = [ph.sub]; calls = [];
+  const f1 = globalThis.fetch;
+  globalThis.fetch = async (u, i) => String(u).includes('graph.facebook.com') ? new Response(JSON.stringify({ messages: [{ id: 'wamid.1' }] }), { status: 200 }) : f1(u, i);
+  const sr = await sendToOwner(ENV, '972500000000', 'בוקר טוב', { windowOpen: true });
+  globalThis.fetch = f1;
+  const lg = calls.find((c) => c.url.includes('/notifications_log') && c.m === 'POST');
+  const row = lg && JSON.parse(lg.body)[0];
+  check('sendToOwner: sent, logged as wa_out on whatsapp with the text, and pushed to the phone', sr.ok && row && row.event_type === 'wa_out' && row.channel === 'whatsapp' && row.payload.text === 'בוקר טוב' && sr.push === 1 && calls.some((c) => c.url === 'https://push.test/a'), { sr, row });
+}
+
 console.log('\n4. /api/chat?push=1');
 const jwt = (aal) => 'h.' + Buffer.from(JSON.stringify({ aal })).toString('base64url') + '.s';
 const req = (q, method, body) => new Request('https://app.test/api/chat' + q, { method, headers: { Authorization: 'Bearer ' + jwt('aal2'), 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
@@ -110,6 +123,7 @@ const mw = readFileSync(new URL('../../functions/_middleware.js', import.meta.ur
 check('/chat-sw.js is public (the browser fetches it without a login)', mw.includes("'/chat-sw.js'"));
 const rdb = readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
 const wa = rdb.slice(rdb.indexOf("if (body.op === 'wa_me')"), rdb.indexOf("if (body.op === 'wa_review')"));
-check('wa_me sends the pop-up whatever WhatsApp answered, and logs how many went', /pushOwner\(env, url, body\.text\)/.test(wa) && /push: ps\.sent/.test(wa) && wa.indexOf('pushOwner') < wa.indexOf('notifications_log'));
+const waSrc = readFileSync(new URL('../../functions/_wa.js', import.meta.url), 'utf8');
+check('every message to Michael (sendToOwner, sendDocToOwner) is logged as wa_out and pushed, sent or refused; wa_me reports the count', /export async function sendToOwner[\s\S]{0,300}noteOut\(/.test(waSrc) && /export async function sendDocToOwner[\s\S]{0,300}noteOut\(/.test(waSrc) && /pushOwner\(env, sbUrl, t\)/.test(waSrc) && /push: ps\.sent/.test(wa) && /ps = \{ sent: r\.push/.test(wa));
 console.log(`\npush-test: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
