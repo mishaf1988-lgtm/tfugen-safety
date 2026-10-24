@@ -7,7 +7,7 @@ let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
 const SB = 'https://sb.test';
 const ENV = { SUPABASE_URL: SB, SUPABASE_SERVICE_ROLE_KEY: 'svc', ASSISTANT_FIRE_URL: 'https://fire.test/x', ASSISTANT_FIRE_TOKEN: 'ft', ALLOWED_ORIGINS: 'https://app.test' };
-let calls = [], users = {}, logRows = [], fileRows = {};
+let calls = [], users = {}, logRows = [], fileRows = {}, lastOutVal = null, doc_url_saved = '';
 globalThis.fetch = async (u, init) => {
   const url = String(u), m = (init && init.method) || 'GET';
   calls.push({ url, m, body: init && init.body });
@@ -20,7 +20,7 @@ globalThis.fetch = async (u, init) => {
   if (url.startsWith('https://graph.microsoft.com/') && m === 'PUT') return json({ webUrl: 'https://od/x', size: 10 });
   if (url.startsWith('https://graph.microsoft.com/')) return /%D7%A0%D7%99%D7%94%D7%95%D7%9C/.test(url) ? new Response('%PDF-1.4 x', { status: 200 }) : new Response('', { status: 404 });
   if (url.startsWith(SB + '/rest/v1/notifications_log') && m === 'POST') return new Response('', { status: 201 });
-  if (url.startsWith(SB + '/rest/v1/server_state')) return json([]);
+  if (url.startsWith(SB + '/rest/v1/server_state')) return json(/key=eq\.wa_last_out/.test(url) && lastOutVal ? [{ value: lastOutVal }] : []);
   if (url.startsWith('https://fire.test/')) return json({ claude_code_session_id: 'cse_x' }, 200);
   return json({ error: 'unexpected ' + url }, 599);
 };
@@ -99,7 +99,8 @@ console.log('\n5. files and buttons, like WhatsApp (25/10/2026)');
   r = await onRequest({ request: req('/api/chat', 'GET', ADM), env: ENV });
   const j5 = await r.json();
   const doc = j5.rows.find((x) => x.doc);
-  check('GET: a file the server sent shows once, with a signed link and its name; its assistant twin is not shown again', j5.rows.length === 2 && doc && /^\/api\/chat\?f=wodoc1&e=\d+&s=[0-9a-f]{32}$/.test(doc.url) && doc.doc === 'אישור כבאות.pdf' && !('id' in doc), j5.rows);
+  doc_url_saved = doc && doc.url;
+  check('GET: a file the server sent shows once, with a signed link and its name; its assistant twin is not shown again', j5.rows.length === 2 && doc && /^\/api\/chat-file\/%D7%90[^/?]*\.pdf\?f=wodoc1&e=\d+&s=[0-9a-f]{32}$/.test(doc.url) && decodeURIComponent(doc.url.split('?')[0]).endsWith('/אישור כבאות.pdf') && doc.doc === 'אישור כבאות.pdf' && !('id' in doc), j5.rows);
   check('GET: the buttons of a question come with it', (j5.rows.find((x) => x.choices) || {}).choices.join('|') === '1. כן|2. לא');
   fileRows = { wodoc1: { file: SAFE + 'רישוי/אישור כבאות.pdf', name: 'אישור כבאות.pdf' }, wooutside: { file: 'שולחן העבודה/אחר/x.pdf', name: 'x.pdf' } };
   const nr = (u) => new Request('https://app.test' + u, { method: 'GET' });
@@ -115,8 +116,22 @@ console.log('\n5. files and buttons, like WhatsApp (25/10/2026)');
   check('a signed link to a file outside the safety folder: 404', r.status === 404);
   r = await onRequest({ request: nr('/api/chat?f=wodoc1&e=' + (Date.now() - 1000) + '&s=' + await fileSig(ENV, 'wodoc1', Date.now() - 1000)), env: ENV });
   check('an expired link: 403', r.status === 403);
-  check('the page: a file is a link that opens it, buttons send their own text', /class="doc" href=/.test(page) && /send\(x\.getAttribute\('data-c'\)\)/.test(page));
+  check('the page: a file is a link that opens it, buttons send their own text', /class="doc" href=/.test(page) && /send\(x\.getAttribute\('data-c'\),i\+1\)/.test(page));
   logRows = [];
+  fileRows = { wodoc1: fileRows.wodoc1 };
+}
+
+{
+  // the same fast lane as WhatsApp: a tap on "accurate" after a professional answer is answered by the server, no Routine
+  const { onRequest: fileRoute } = await import('./_build/chat-file.mjs');
+  r = await fileRoute({ request: new Request('https://app.test' + doc_url_saved), env: ENV });
+  check('/api/chat-file/<name>: the same signed file, under its own name for sharing', r.status === 200 && r.headers.get('Content-Type') === 'application/pdf');
+  lastOutVal = { at: new Date().toISOString(), text: 'answer', ref: 'pro' };
+  calls = [];
+  r = await onRequest({ request: req('/api/chat', 'POST', ADM, { text: '1. מדויק', choice: 1 }), env: ENV });
+  const jf = await r.json();
+  check('a button tap the WhatsApp fast lane answers: answered by the server (logged for the chat), the assistant not fired', jf.ok === true && jf.fast === 'rate' && !calls.some((c) => c.url.startsWith('https://fire.test/')) && calls.some((c) => c.url.includes('notifications_log') && c.m === 'POST' && /wa_out/.test(c.body)), jf);
+  lastOutVal = null;
 }
 
 console.log('\n6. a photo or a PDF from him (25/10/2026)');

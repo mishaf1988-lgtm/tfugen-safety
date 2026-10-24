@@ -149,7 +149,7 @@ export function rateAdd(raw, good, q, nowIso) {
   list.push({ at: nowIso, good: !!good, q: String(q || '').replace(/\s+/g, ' ').slice(0, 200) });
   return list.slice(-RATE_MAX);
 }
-async function rateNote(env, good, q) {
+export async function rateNote(env, good, q) {
   try {
     const rows = await sbJson(env, 'server_state?key=eq.' + RATE_KEY + '&select=value');
     const list = rateAdd(rows && rows[0] ? rows[0].value : '[]', good, q, new Date().toISOString());
@@ -477,61 +477,7 @@ async function handle(env, raw) {
     const rt = rateOf(m, about, prev);
     if (rt) { await rateNote(env, rt.good, about ? about.split(' | ')[1] : prev && prev.text); seen.rate = rt.good ? 'good' : 'bad'; }
     const fr0 = wa ? fastRoute(m, about, prev) : null;
-    if (fr0) {
-      let ans = null, ref = null, choices = null;
-      try {
-        if (fr0.kind === 'sign_ask') {
-          const sa = await fastSignAsk(env, fr0.q);
-          if (sa.sent) { seen.fast = 'sign_ask'; continue; }
-          if (sa.pick) {
-            await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-              body: JSON.stringify([{ key: SIGN_PICK_KEY, value: JSON.stringify({ at: new Date().toISOString(), paths: sa.pick.map((x) => x.path) }), updated_at: new Date().toISOString() }]) });
-            const pt = signPickText(sa.pick, sa.none);
-            const ps = await sendToOwner(env, owner, pt, { windowOpen: true, noTemplate: true, choices: signPickChoices(sa.pick) }).catch(() => null);
-            if (ps && ps.ok) { seen.fast = 'sign_pick_list'; await noteLastOut(env, sbFrom(env), pt, 'signpick'); await logOut(env, pt, ps); continue; }
-          }
-          ans = sa.text; ref = 'sign-ask';
-          if (!ans) seen.sign_ask_error = String(sa.error || 'search');
-        }
-        else if (fr0.kind === 'sign_pick') {
-          const rows = await sbJson(env, 'server_state?key=eq.' + SIGN_PICK_KEY + '&select=value');
-          let st = null; try { st = JSON.parse(rows && rows[0] ? rows[0].value : 'null'); } catch (x) { st = null; }
-          const path = st && Date.now() - Date.parse(st.at) < SIGN_PICK_MS && st.paths[fr0.n - 1];
-          if (path) { const sa = await signAskPath(env, path, st.spot && st.paths.length === 1 ? st.spot : null); if (sa.sent) { seen.fast = 'sign_pick'; continue; } seen.sign_pick_error = String(sa.error || ''); }
-          // 21/10/2026: a failed pick says so, instead of falling silently to the assistant
-          ans = path ? '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05d0\u05ea \u05d1\u05e7\u05e9\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d6\u05d4 (' + (seen.sign_pick_error || '?') + '). \u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1, \u05d0\u05d5 \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05de\u05d4 \u05dc\u05d7\u05ea\u05d5\u05dd.' : null;
-          ref = 'sign-pick-fail';
-        }
-        else if (fr0.kind === 'sign') {
-          const fs = await fastSign(env, fr0, m.id);
-          if (fs && fs.mail) { ans = fs.text; choices = signReplyFrom(fs.mail) ? [SIGN_MAIL_LABEL, SIGN_REPLY_LABEL] : [SIGN_MAIL_LABEL]; ref = 'signmail'; } else { ans = fs; ref = 'sign-done'; }
-        }
-        else if (fr0.kind === 'sign_reply') {
-          // no answer here: the tap becomes the assistant's task (it reads mail, the server cannot)
-          const rows = await sbJson(env, 'server_state?key=eq.' + SIGN_MAIL_KEY + '&select=value');
-          let st = null; try { st = JSON.parse(rows && rows[0] ? rows[0].value : 'null'); } catch (x) { st = null; }
-          if (st && signReplyFrom(st.rel) && Date.now() - Date.parse(st.at) < SIGN_MAIL_MS) m.text = signReplyTask(st);
-          else { ans = SIGN_MAIL_GONE; ref = 'sign-reply'; }
-        }
-        else if (fr0.kind === 'sign_mail') {
-          const rows = await sbJson(env, 'server_state?key=eq.' + SIGN_MAIL_KEY + '&select=value');
-          let st = null; try { st = JSON.parse(rows && rows[0] ? rows[0].value : 'null'); } catch (x) { st = null; }
-          if (st && st.rel && Date.now() - Date.parse(st.at) < SIGN_MAIL_MS) {
-            const res = await routineDb({ env, request: new Request('https://internal/api/routine-db', { method: 'POST',
-              headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' }, body: JSON.stringify(signMailBody(st)) }) });
-            const j = await res.json().catch(() => ({}));
-            ans = j.ok ? SIGN_MAIL_DONE : null; seen.sign_mail_error = j.ok ? undefined : String(j.error || res.status);
-          } else ans = SIGN_MAIL_GONE;
-          ref = 'sign-mail';
-        }
-        else if (fr0.kind === 'rate') { ans = RATE_THANKS; ref = 'rate'; }
-        else if (fr0.kind === 'hazard') { ans = await fastHazard(env, fr0); ref = fr0.src + ' ' + fr0.id; }
-        else { const g = await gather(env, new Date()); ans = buildBrief(g.items, g.failed, g.today, false, g.notes, g.weather); ref = 'brief'; }
-      } catch (e) { ans = null; }
-      const sr = ans ? await sendToOwner(env, owner, ans, Object.assign({ windowOpen: true, noTemplate: true }, choices ? { choices } : {})).catch(() => null) : null;
-      if (sr && sr.ok) { seen.fast = fr0.kind; await noteLastOut(env, sbFrom(env), ans, ref); await logOut(env, ans, sr); continue; }
-      seen.fast_fail = fr0.kind;
-    }
+    if (fr0 && await runFast(env, owner, m, fr0, seen, false)) continue;
     if (wa) { const a = await sendToOwner(env, owner, ACK_TEXT, { windowOpen: true, noTemplate: true }).catch(() => null); seen.ack = !!(a && a.ok); seen.ack_ms = Date.now() - t0; }
     // 20/10/2026 20:30: a message got "got it" and then nothing, no log line and no fire. The work after the
     // response runs in waitUntil, which Cloudflare stops about 30 seconds after the response; the snapshot
@@ -569,6 +515,67 @@ async function handle(env, raw) {
     if (!(fr && fr.ok) && wa) await sendToOwner(env, owner, FAIL_TEXT, { windowOpen: true, noTemplate: true }).catch(() => null);
   }
   await note(env, seen);
+}
+
+// The fast lane (moved out of the handler 25/10/2026, so /chat runs the same one: Michael, "the app must be the
+// same as WhatsApp", and in the questionnaire "do it: immediate signing"). true = answered here (no ack, no
+// Routine). chat = the line came from /chat: an answer counts even when WhatsApp refused it, since sendToOwner
+// logs it for the chat anyway. m.text may be rewritten (sign_reply) for the assistant.
+export async function runFast(env, owner, m, fr0, seen, chat) {
+  let ans = null, ref = null, choices = null;
+  try {
+    if (fr0.kind === 'sign_ask') {
+      const sa = await fastSignAsk(env, fr0.q);
+      if (sa.sent) { seen.fast = 'sign_ask'; return true; }
+      if (sa.pick) {
+        await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify([{ key: SIGN_PICK_KEY, value: JSON.stringify({ at: new Date().toISOString(), paths: sa.pick.map((x) => x.path) }), updated_at: new Date().toISOString() }]) });
+        const pt = signPickText(sa.pick, sa.none);
+        const ps = await sendToOwner(env, owner, pt, { windowOpen: true, noTemplate: true, choices: signPickChoices(sa.pick) }).catch(() => null);
+        if (ps && ps.ok) { seen.fast = 'sign_pick_list'; await noteLastOut(env, sbFrom(env), pt, 'signpick'); await logOut(env, pt, ps); return true; }
+      }
+      ans = sa.text; ref = 'sign-ask';
+      if (!ans) seen.sign_ask_error = String(sa.error || 'search');
+    }
+    else if (fr0.kind === 'sign_pick') {
+      const rows = await sbJson(env, 'server_state?key=eq.' + SIGN_PICK_KEY + '&select=value');
+      let st = null; try { st = JSON.parse(rows && rows[0] ? rows[0].value : 'null'); } catch (x) { st = null; }
+      const path = st && Date.now() - Date.parse(st.at) < SIGN_PICK_MS && st.paths[fr0.n - 1];
+      if (path) { const sa = await signAskPath(env, path, st.spot && st.paths.length === 1 ? st.spot : null); if (sa.sent) { seen.fast = 'sign_pick'; return true; } seen.sign_pick_error = String(sa.error || ''); }
+      // 21/10/2026: a failed pick says so, instead of falling silently to the assistant
+      ans = path ? '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05d0\u05ea \u05d1\u05e7\u05e9\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d6\u05d4 (' + (seen.sign_pick_error || '?') + '). \u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1, \u05d0\u05d5 \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05de\u05d4 \u05dc\u05d7\u05ea\u05d5\u05dd.' : null;
+      ref = 'sign-pick-fail';
+    }
+    else if (fr0.kind === 'sign') {
+      const fs = await fastSign(env, fr0, m.id);
+      if (fs && fs.mail) { ans = fs.text; choices = signReplyFrom(fs.mail) ? [SIGN_MAIL_LABEL, SIGN_REPLY_LABEL] : [SIGN_MAIL_LABEL]; ref = 'signmail'; } else { ans = fs; ref = 'sign-done'; }
+    }
+    else if (fr0.kind === 'sign_reply') {
+      // no answer here: the tap becomes the assistant's task (it reads mail, the server cannot)
+      const rows = await sbJson(env, 'server_state?key=eq.' + SIGN_MAIL_KEY + '&select=value');
+      let st = null; try { st = JSON.parse(rows && rows[0] ? rows[0].value : 'null'); } catch (x) { st = null; }
+      if (st && signReplyFrom(st.rel) && Date.now() - Date.parse(st.at) < SIGN_MAIL_MS) m.text = signReplyTask(st);
+      else { ans = SIGN_MAIL_GONE; ref = 'sign-reply'; }
+    }
+    else if (fr0.kind === 'sign_mail') {
+      const rows = await sbJson(env, 'server_state?key=eq.' + SIGN_MAIL_KEY + '&select=value');
+      let st = null; try { st = JSON.parse(rows && rows[0] ? rows[0].value : 'null'); } catch (x) { st = null; }
+      if (st && st.rel && Date.now() - Date.parse(st.at) < SIGN_MAIL_MS) {
+        const res = await routineDb({ env, request: new Request('https://internal/api/routine-db', { method: 'POST',
+          headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' }, body: JSON.stringify(signMailBody(st)) }) });
+        const j = await res.json().catch(() => ({}));
+        ans = j.ok ? SIGN_MAIL_DONE : null; seen.sign_mail_error = j.ok ? undefined : String(j.error || res.status);
+      } else ans = SIGN_MAIL_GONE;
+      ref = 'sign-mail';
+    }
+    else if (fr0.kind === 'rate') { ans = RATE_THANKS; ref = 'rate'; }
+    else if (fr0.kind === 'hazard') { ans = await fastHazard(env, fr0); ref = fr0.src + ' ' + fr0.id; }
+    else { const g = await gather(env, new Date()); ans = buildBrief(g.items, g.failed, g.today, false, g.notes, g.weather); ref = 'brief'; }
+  } catch (e) { ans = null; }
+  const sr = ans ? await sendToOwner(env, owner, ans, Object.assign({ windowOpen: true, noTemplate: true }, choices ? { choices } : {})).catch(() => null) : null;
+  if (sr && (sr.ok || (chat && ans))) { seen.fast = fr0.kind; await noteLastOut(env, sbFrom(env), ans, ref); await logOut(env, ans, sr); return true; }
+  seen.fast_fail = fr0.kind;
+  return false;
 }
 
 export async function onRequest(context) {
