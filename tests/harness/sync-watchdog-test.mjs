@@ -8,7 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { assess, step, mailHtml, mailSubject, runWatch, stateKeys, WATCH_KEY, STALE_MS, ERR_MS, ilTime, slowIssue, probe, SLOW_MS, SLOW_TICKS, LAT_KEEP, PROBE_MS, LAT_GAP_MS, SLOW_SPAN_MS, WATCH_LOCK } from './_build/_watchdog.mjs';
+import { assess, step, mailHtml, mailSubject, runWatch, stateKeys, WATCH_KEY, STALE_MS, ERR_MS, ilTime, slowIssue, probe, SLOW_MS, SLOW_TICKS, LAT_KEEP, PROBE_MS, LAT_GAP_MS, SLOW_SPAN_MS, WATCH_LOCK, waRegDue, waReRegister, WA_REG_GAP_MS } from './_build/_watchdog.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).substring(0, 400) : '')); } };
@@ -69,6 +69,32 @@ check('25 hours is not yet stale', assess(S({ ...fresh, vitre_sync: vs({ at: ago
 check('no Vitre run recorded, watchdog up 27 hours: stale', keys(assess(S(fresh), NOW, true, ago(27 * 60), true)).join() === 'vitre:stale');
 check('Vitre keys not set: no Vitre problem', assess(S({ ...fresh, vitre_sync: vs({ error: 'x' }) }), NOW, true, ago(6000), false).length === 0);
 check('the watchdog reads the key vitre.js writes', stateKeys().includes('vitre_sync') && /const SYNC_KEY = 'vitre_sync'/.test(src('functions/api/vitre.js')));
+check('WhatsApp auto re-register: only when not CONNECTED, with a 6-digit WA_PIN, at most once an hour (24/10/2026)', (() => {
+  const T = Date.parse('2026-10-24T20:00:00Z');
+  return waRegDue({ status: 'PENDING' }, '123456', T) && !waRegDue({ status: 'CONNECTED' }, '123456', T) && !waRegDue({ status: 'PENDING' }, '', T)
+    && !waRegDue({ status: 'PENDING' }, '12345', T) && !waRegDue(null, '123456', T)
+    && !waRegDue({ status: 'PENDING', reg_at: new Date(T - 600e3).toISOString() }, '123456', T) && waRegDue({ status: 'PENDING', reg_at: new Date(T - WA_REG_GAP_MS).toISOString() }, '123456', T);
+})());
+await (async () => {
+  const real = globalThis.fetch, calls = [];
+  let state = 'PENDING';
+  globalThis.fetch = async (u, init) => {
+    calls.push([String(u), init && init.method, init && init.body]);
+    if (String(u).endsWith('/register')) { state = 'CONNECTED'; return new Response(JSON.stringify({ success: true }), { status: 200 }); }
+    return new Response(JSON.stringify({ status: state }), { status: 200 });
+  };
+  const env = { META_PHONE_NUMBER_ID: '111', META_ACCESS_TOKEN: 'tok', WA_PIN: '654321' };
+  const w = await waReRegister(env, { at: 'x', status: 'PENDING' }, '2026-10-24T20:00:00.000Z');
+  const reg = calls.find((c) => c[0].endsWith('/111/register'));
+  check('WhatsApp auto re-register: POSTs the PIN to Meta and reads the state back; CONNECTED after it means no alert', !!reg && reg[1] === 'POST' && JSON.parse(reg[2]).pin === '654321' && w.status === 'CONNECTED' && w.reg === 'ok' && w.reg_at === '2026-10-24T20:00:00.000Z'
+    && assess(S(fresh), NOW, true, ago(600), false, [], false, w).every((i) => i.key !== 'wa:phone'), calls);
+  state = 'PENDING';
+  globalThis.fetch = async (u) => String(u).endsWith('/register') ? new Response(JSON.stringify({ error: { message: 'bad pin', code: 136025 } }), { status: 400 }) : new Response(JSON.stringify({ status: 'PENDING' }), { status: 200 });
+  const f = await waReRegister(env, { status: 'PENDING' }, '2026-10-24T20:00:00.000Z');
+  const al = assess(S(fresh), NOW, true, ago(600), false, [], false, f).filter((i) => i.key === 'wa:phone');
+  check('WhatsApp auto re-register: a failure keeps the alert, with Meta\'s reason in it', f.reg.indexOf('bad pin') >= 0 && al.length === 1 && al[0].detail.indexOf('bad pin') >= 0, [f, al]);
+  globalThis.fetch = real;
+})();
 check('runWatch turns the Vitre check on from the Vitre env vars', /assess\(st, now\.getTime\(\), connected, started, !!\(env\.VITRE_API_KEY_ID && env\.VITRE_API_KEY_SECRET\), lat, slowOpen, wa\)/.test(src('functions/_watchdog.js')));
 
 console.log('\n2. one mail when it starts, one when it is over');
