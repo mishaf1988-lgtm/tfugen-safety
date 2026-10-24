@@ -43,6 +43,9 @@
 //   hazard_choice  Michael's answer to the assistant's hazard message (20/10/2026, Michael: "only
 //              record, I route"): {src: trustee_hazard|near_miss, id, choice: 1-4}. Writes one line
 //              to trustee_reports.mgr_note / near_miss.notes and nothing else: no status, no closing.
+//   wa_phone   bring the WhatsApp number back when Meta dropped it (24/10/2026, 133010, Michael in the questionnaire:
+//              "do it: through the server"): step request_code (SMS to the number's SIM), verify_code (the 6 digits
+//              Michael reads), register (pin: the two-step PIN, WA_PIN or pin). Refused while connected.
 //   wa_check   the assistant's setup, checked against Meta without showing a value (19/10/2026, Michael:
 //              "do the check yourself"): META_APP_SECRET by appsecret_proof, the app's webhook fields,
 //              the WABA's subscribed apps, and with fire_probe the fire token (status only). subscribe: true
@@ -263,6 +266,19 @@ export function claimApply(map, b, nowIso) {
 }
 // mail_filing / validity_run (11/10/2026): run counts of the mail-filing and validity Routines, for the weekly mail.
 // iso_tasks (24/10/2026): the ISO prep list the assistant manages (routine-wa-assistant.md, "ISO management").
+export const WA_PHONE_STEPS = ['request_code', 'verify_code', 'register'];
+// The body Meta expects for each step. The PIN: the secret WA_PIN when set, else the one in the request (24/10/2026:
+// writing the secret from the cloud was refused by the permission classifier; Michael chose the PIN himself).
+export function waPhoneBody(step, b, pin) {
+  if (step === 'request_code') return { body: { code_method: b.method === 'VOICE' ? 'VOICE' : 'SMS', language: 'he' } };
+  if (step === 'verify_code') {
+    const code = String(b.code || '').replace(/\D/g, '');
+    return /^[0-9]{6}$/.test(code) ? { body: { code } } : { error: 'code: 6 digits' };
+  }
+  const p = String(pin || b.pin || '').replace(/\D/g, '');
+  if (!/^[0-9]{6}$/.test(p)) return { error: 'pin: 6 digits (the secret WA_PIN or pin in the request)' };
+  return { body: { messaging_product: 'whatsapp', pin: p } };
+}
 export const STATE_WRITE = ['quote_track', 'nevo_versions', 'od_raw_token', 'od_raw_exp', 'mail_filing', 'validity_run', 'iso_tasks'];
 // Run reports whose "at" the server stamps (11/10/2026): a Routine wrote a guessed time 11 minutes off,
 // and the next run reads mail from that time. mail_filing: the last entry of the list; validity_run: the object.
@@ -1506,6 +1522,22 @@ export async function onRequest(context) {
       if (!r.ok) return jsonResp({ ok: false, error: 'read ' + r.status }, 200, {});
       const rows = (await r.json()).map((x) => ({ ts: x.ts, who: x.event_type === 'owner_in' ? 'michael' : x.event_type === 'watch' ? 'watch' : 'assistant', text: x.text || x.title || '', fast: x.fast === 'true', via: x.via || null }));
       return jsonResp({ ok: true, days, rows, turns: waTurns(rows) }, 200, {});
+    }
+    if (body.op === 'wa_phone') {
+      const step = String(body.step || '');
+      if (WA_PHONE_STEPS.indexOf(step) < 0) return jsonResp({ ok: false, error: 'step: ' + WA_PHONE_STEPS.join(' / ') }, 400, {});
+      if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
+      const P = 'https://graph.facebook.com/v25.0/' + encodeURIComponent(env.META_PHONE_NUMBER_ID);
+      const H = { Authorization: 'Bearer ' + env.META_ACCESS_TOKEN, 'Content-Type': 'application/json' };
+      const st = await fetch(P + '?fields=status,code_verification_status', { headers: H, signal: tmo(GRAPH_MS) }).then((r) => r.json()).catch(() => ({}));
+      if (st.status === 'CONNECTED') return jsonResp({ ok: false, error: 'the number is connected: nothing to do', phone: st }, 400, {});
+      const req = waPhoneBody(step, body, env.WA_PIN);
+      if (req.error) return jsonResp({ ok: false, error: req.error }, 400, {});
+      const r = await fetch(P + '/' + step, { method: 'POST', headers: H, body: JSON.stringify(req.body), signal: tmo(GRAPH_MS) });
+      const j = await r.json().catch(() => ({}));
+      const after = await fetch(P + '?fields=status,platform_type,code_verification_status', { headers: H, signal: tmo(GRAPH_MS) }).then((x) => x.json()).catch(() => ({}));
+      return jsonResp({ ok: r.ok && !j.error, step, error: j.error ? String(j.error.message || j.error.code).slice(0, 200) + (j.error.code ? ' (' + j.error.code + ')' : '') : null,
+        phone: { status: after.status || null, platform: after.platform_type || null, verified: after.code_verification_status || null } }, 200, {});
     }
     if (body.op === 'wa_check') {
       if (!env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
