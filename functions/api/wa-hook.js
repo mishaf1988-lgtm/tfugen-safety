@@ -14,7 +14,7 @@
 // notifications_log (payload.wamid), so the assistant knows what Michael is answering.
 // Machine path in _middleware: Meta calls from outside Israel.
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo, SITE } from '../_shared.js';
-import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, LEARN_KEY, learnedLine, recentLine } from '../_wa.js';
+import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, hasStatuses, STATUS_KEY, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, LEARN_KEY, learnedLine, recentLine } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 import { accessToken } from '../_onedrive.js';
 import { onRequest as routineDb, OD_ROOT, OD_REQ, OD_DRAFT, OD_INBOX } from './routine-db.js';
@@ -445,7 +445,15 @@ async function logOut(env, text, r) {
 async function handle(env, raw) {
   let body; try { body = JSON.parse(raw); } catch (e) { return; }
   const msgs = inboundMessages(body);
-  if (!msgs.length) return;
+  if (!msgs.length) {
+    if (hasStatuses(body) && env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify([{ key: STATUS_KEY, value: { at: new Date().toISOString() }, updated_at: new Date().toISOString() }]) });
+      } catch (e) { /* the watchdog then says only what it knows */ }
+    }
+    return;
+  }
   const owner = await ownerWa(env, sbFrom(env));
   // 20/10/2026 (Michael: "the assistant answers slowly again"): the milliseconds from the webhook to the ack,
   // to the fire, and the session the fire opened, so one answer can be traced end to end (get_session on it).

@@ -44,7 +44,8 @@ export const STALE_MS = 45 * 60 * 1000, ERR_MS = 30 * 60 * 1000, FIRST_MS = 60 *
 // The Vitre import runs once a day; a day and two hours without a run = the cron stopped.
 export const VITRE_KEY = 'vitre_sync', VITRE_STALE_MS = 26 * 60 * 60 * 1000;
 // The number's state at Meta, read at most every WA_GAP_MS (op:'watch' rides every hazard-file call).
-export const WA_GAP_MS = 30 * 60 * 1000;
+export const WA_GAP_MS = 30 * 60 * 1000, WA_HOOK_MS = 30 * 60 * 1000;
+export function jsonAt(raw) { try { const o = JSON.parse(raw || 'null'); return o && Date.parse(o.at) || 0; } catch (e) { return 0; } }
 export function waDue(prev, nowMs) { const t = prev && prev.wa && Date.parse(prev.wa.at); return !t || nowMs - t >= WA_GAP_MS; }
 async function waPhoneStatus(env, nowIso) {
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return null;
@@ -129,7 +130,7 @@ export async function probe(env) {
 }
 
 export function stateKeys() {
-  const keys = [WATCH_KEY, VITRE_KEY];
+  const keys = [WATCH_KEY, VITRE_KEY, 'wa_last_out', 'wa_status_last'];
   PARTS.forEach((p) => ['ok_at', 'err', 'err_at'].forEach((x) => keys.push(p.k + '_' + x)));
   FILES.forEach(([f]) => { keys.push('hazard_' + f + '_dropped'); keys.push('hazard_' + f + '_rows'); });
   return keys;
@@ -172,6 +173,10 @@ export function assess(st, nowMs, connected, started, vitre, lat, slowOpen, wa) 
   // The assistant's WhatsApp number (24/10/2026: Meta dropped it, 133010, and Michael found out only when he could not
   // write to it; in the questionnaire: "do it: a mail when it drops"). wa = { status } from waPhoneStatus; no wa = not checked.
   if (wa && wa.status && wa.status !== 'CONNECTED') out.push({ key: 'wa:phone', title: '\u05de\u05e1\u05e4\u05e8 \u05d4\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05e9\u05dc \u05d4\u05e2\u05d5\u05d6\u05e8 \u05de\u05e0\u05d5\u05ea\u05e7', detail: '\u05dc\u05e4\u05d9 Meta: ' + wa.status + '. \u05d4\u05e2\u05d5\u05d6\u05e8 \u05dc\u05d0 \u05de\u05e7\u05d1\u05dc \u05d5\u05dc\u05d0 \u05e9\u05d5\u05dc\u05d7 \u05d4\u05d5\u05d3\u05e2\u05d5\u05ea, \u05d5\u05d2\u05dd \u05e2\u05d3\u05db\u05d5\u05df \u05d4\u05d1\u05d5\u05e7\u05e8 \u05dc\u05d0 \u05d9\u05d5\u05e6\u05d0. \u05dc\u05e9\u05d7\u05d6\u05d5\u05e8: \u05d1\u05e9\u05d9\u05d7\u05ea \u05d4\u05e4\u05d9\u05ea\u05d5\u05d7, wa_phone \u05e2\u05dd step register \u05d5\u05d4-PIN \u05e9\u05dc \u05d4\u05de\u05e1\u05e4\u05e8 (ACCOUNT-INVENTORY, \u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4).' });
+  // Meta stopped calling the hook (24/10/2026: the app "בטיחות" fell out of Live; the number stayed CONNECTED, so the
+  // phone check saw nothing). A send that got no status back within WA_HOOK_MS. No status ever seen = not known yet.
+  const waOut = jsonAt(v('wa_last_out')), waStat = jsonAt(v('wa_status_last'));
+  if (waOut && waStat && nowMs - waOut >= WA_HOOK_MS && waStat < waOut) out.push({ key: 'wa:hook', title: '\u05d4\u05d5\u05d3\u05e2\u05d5\u05ea \u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05de-Meta \u05dc\u05d0 \u05de\u05d2\u05d9\u05e2\u05d5\u05ea \u05dc\u05e9\u05e8\u05ea', detail: '\u05d4\u05e2\u05d5\u05d6\u05e8 \u05e9\u05dc\u05d7 \u05d4\u05d5\u05d3\u05e2\u05d4 \u05d1-' + ilTime(new Date(waOut).toISOString()) + ' \u05d5-Meta \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e8\u05d4 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e9\u05dc\u05d9\u05d7\u05d4. \u05db\u05e0\u05e8\u05d0\u05d4 \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 "\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea" \u05d1-Meta \u05d9\u05e6\u05d0\u05d4 \u05de\u05de\u05e6\u05d1 Live: developers.facebook.com, \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, Publish. \u05e2\u05d3 \u05d0\u05d6 \u05d4\u05d5\u05d3\u05e2\u05d5\u05ea \u05e9\u05ea\u05db\u05ea\u05d5\u05d1 \u05dc\u05e2\u05d5\u05d6\u05e8 \u05dc\u05d0 \u05de\u05d2\u05d9\u05e2\u05d5\u05ea.' });
   const slow = slowIssue(lat, nowMs, slowOpen);
   if (slow) out.push(slow);
   FILES.forEach(([f, name]) => {

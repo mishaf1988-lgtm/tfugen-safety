@@ -2994,3 +2994,6 @@ Anonymous sessions (emp mode) לא יכולים SELECT/UPDATE/DELETE שום דב
 
 ### 24/10/2026: הסיבה לנפילת הוואטסאפ: האפליקציה ב-Meta יצאה ממצב Live
 בדיקה דרך כרום (מיכאל: "הכוונה לבדוק קודם את meta"): ב-Webhooks האזהרה "No production data ... will be delivered unless the app has been published". האפליקציה "בטיחות" (2100358170694098) לא הייתה מפורסמת, למרות ההחלטה מ-04/05/2026. כרום פרסם (Publish, "App Mode Change ... switched to live mode on 24 Oct, 2026") ותיקן את Privacy policy URL ל-`/privacy.html`. מיכאל כתב ב-13:42 ו-`wa_hook_last` רשם הודעה ממנו שהעירה את העוזר. הנפילה של המספר (133010, PENDING) תוקנה קודם ב-`wa_phone` register. נבחר: אחר (בדיקה ב-Meta לפני מספר חדש, ההצעה של מיכאל). C39 (Twilio) מושהה. לבדוק בעתיד: אם `wa_hook_last` לא מתעדכן בזמן שמיכאל כותב, לבדוק App Mode לפני כל דבר אחר.
+
+### 24/10/2026: מייל כש-Meta מפסיקה לקרוא ל-webhook (האפליקציה יצאה מ-Live)
+מיכאל בשאלון: "בצע: לבדוק ולהוסיף (מומלץ)". נבחר: מומלץ. `app_probe` (#1925) הראה ש-Meta לא חושפת את מצב האפליקציה (`metadata` ריק, ההרשאות רק email/public_profile). במקום זה: כל הודעה שיוצאת חוזרת כסטטוס (sent/delivered/read) ב-webhook; `wa-hook` רושם `wa_status_last`, והשומר משווה ל-`wa_last_out`. שליחה בלי סטטוס אחרי 30 דקות = בעיה `wa:hook` במייל, עם מה לעשות (Publish). אין סטטוס מעולם = לא ידוע, בלי התראה.
