@@ -28,8 +28,9 @@ export function chatRows(rows) {
 export function chatManifest() {
   return { name: '\u05e2\u05d5\u05d6\u05e8 \u05de\u05e4\u05e2\u05dc', short_name: '\u05e2\u05d5\u05d6\u05e8', id: '/chat', start_url: '/chat', scope: '/chat', display: 'standalone',
     orientation: 'portrait', background_color: '#efeae2', theme_color: '#1f7a4d', lang: 'he', dir: 'rtl',
-    icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }] };
+    // 24/10/2026, Michael: "I want the icon to be like a safety worker": its own icons, not the app's
+    icons: [{ src: '/chat-icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: '/chat-icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/chat-icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }] };
 }
 
 export async function onRequest(context) {

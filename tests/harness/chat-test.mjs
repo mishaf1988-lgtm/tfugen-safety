@@ -1,6 +1,7 @@
 // /chat and /api/chat (24/10/2026): Michael's assistant as its own home-screen icon, outside Meta.
 import { onRequest, chatRows, chatFireText, chatManifest, CHAT_MAX } from './_build/chat.mjs';
 import { chatPage } from './_build/chat-page.mjs';
+import { existsSync, readFileSync } from 'node:fs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -29,6 +30,9 @@ const page = chatPage();
 check('the page: the icon manifest, the player, the site values filled in, no placeholder left', /rel="manifest" href="\/api\/chat\?m=1"/.test(page) && /window\.tapSay=/.test(page) && !/__SITE__|__PLAYER__/.test(page) && /"loginDomain":"[^"]+"/.test(page));
 const mf = chatManifest();
 check('the manifest: its own id, start and scope at /chat, standalone, RTL', mf.id === '/chat' && mf.start_url === '/chat' && mf.scope === '/chat' && mf.display === 'standalone' && mf.dir === 'rtl' && mf.icons.length >= 2);
+const mw = readFileSync(new URL('../../functions/_middleware.js', import.meta.url), 'utf8');
+check('the icon: the safety worker, every manifest icon a file in the repo and public before login', mf.icons.every((i) => /^\/chat-icon-/.test(i.src) && existsSync(new URL('../..' + i.src, import.meta.url)) && mw.includes("'" + i.src + "'")) && mw.includes("'/chat-icon-180.png'"));
+check('while the assistant works: the worker animation with changing steps, not a static wait line', /function startWork\(/.test(page) && /class="m bot work"|'m bot work'/.test(page) && /prefers-reduced-motion/.test(page));
 let r = await onRequest({ request: req('/api/chat?m=1', 'GET'), env: ENV });
 check('GET ?m=1: the manifest without a login (it holds no data)', r.status === 200 && (await r.json()).start_url === '/chat');
 
