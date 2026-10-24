@@ -18,6 +18,20 @@ with tempfile.TemporaryDirectory() as d:
     check('word: the changed number is one deleted word, the removed paragraph is deleted whole', '30' in dels and 'סעיף ישן שנמחק.' in dels and 'סיום.' not in dels, (r.stderr[-300:], dels))
     check('word: insertions are tracked with the author', 'w:author="מיכאל פרייליך"' in x and x.count('<w:ins ') >= 2)
     check('word: the unchanged paragraph is not marked', 'סעיף קבוע.' in docx.Document(j('out.docx')).paragraphs[2].text or 'סעיף קבוע.' in [p.text for p in docx.Document(j('out.docx')).paragraphs])
+    def tbl_doc(path, rows, extra_para):
+        dd = docx.Document(); dd.add_paragraph(extra_para); tb = dd.add_table(rows=len(rows), cols=2)
+        for ri, row in enumerate(rows):
+            for ci, v in enumerate(row): tb.cell(ri, ci).text = v
+        dd.save(path)
+    tbl_doc(j('to.docx'), [['נכתב ע"י: מיכאל', 'תאריך: 16.10.2026'], ['אושר ע"י: צחי', 'תפקיד: סמנכ"ל']], 'פתיחה')
+    tbl_doc(j('tn.docx'), [['נכתב ע"י: מיכאל', 'תאריך: 16.10.2026'], ['אושר ע"י: מורן', 'תפקיד: מנהלת איכות'], ['טיוטה', 'אישור']], 'פתיחה')
+    r = subprocess.run([sys.executable, os.path.join(T, 'track_docx.py'), j('to.docx'), j('tn.docx'), j('tt.docx')], capture_output=True, text=True)
+    xt = zipfile.ZipFile(j('tt.docx')).read('word/document.xml').decode() if r.returncode == 0 else ''
+    dt = re.findall(r'<w:delText[^>]*>([^<]*)', xt)
+    check('word tables: a changed cell is marked word by word, an unchanged cell is not, a new row is an inserted row', 'צחי' in dt and 'מיכאל' not in ''.join(dt) and '16.10.2026' not in ''.join(dt) and '<w:trPr><w:ins ' in xt and 'מורן' in xt, (r.stderr[-300:], dt))
+    r = subprocess.run([sys.executable, os.path.join(T, 'accept_docx.py'), j('tt.docx'), j('ta.docx')], capture_output=True, text=True)
+    ta = docx.Document(j('ta.docx')) if r.returncode == 0 else None
+    check('word tables: accepting the tracked table gives the new table', ta is not None and [[c.text for c in row.cells] for row in ta.tables[0].rows] == [['נכתב ע"י: מיכאל', 'תאריך: 16.10.2026'], ['אושר ע"י: מורן', 'תפקיד: מנהלת איכות'], ['טיוטה', 'אישור']], r.stderr[-300:])
     r = subprocess.run([sys.executable, os.path.join(T, 'accept_docx.py'), j('out.docx'), j('acc.docx')], capture_output=True, text=True)
     acc = [p.text for p in docx.Document(j('acc.docx')).paragraphs] if r.returncode == 0 else []
     x2 = zipfile.ZipFile(j('acc.docx')).read('word/document.xml').decode() if r.returncode == 0 else ''
