@@ -21,6 +21,7 @@
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
 import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, PROMISE_KEY, promiseDue, promiseRemindText, promiseToCheck, eveningAdd, isoWeekAdd, promiseCheckDue, promiseCheckFireText, assistantFire } from '../_wa.js';
 import { odConfigured, accessToken, putFile } from '../_onedrive.js';
+import { OCR_ROOT, OCR_INBOX, OCR_AUTO_KEY, OCR_AUTO_GAP_MS, OCR_DONE_MAX, OCR_MODELS, ocrAutoPick, ocrOne } from '../_ocr.js';
 
 export const LAST_KEY = 'wa_morning_last';
 export const MAX_CHARS = 700;
@@ -309,6 +310,31 @@ export async function promiseCheck(env, now) {
       payload: { title: clip(e.text, 120), kind: 'promise_check', ref: e.id, check_no: e.checks, status: fr ? fr.status : 'network', session: (fj && fj.claude_code_session_id) || null } }]) }).catch(() => {});
   return { id: e.id, fired: !!(fr && fr.ok) };
 }
+// Each new scanned PDF in the mail inbox gets its text in _\u05d8\u05e7\u05e1\u05d8 \u05e1\u05e8\u05d9\u05e7\u05d5\u05ea (24/10/2026, Michael in the questionnaire: "do it:
+// automatic"), so the assistant reads a scan without asking. One PDF a tick, every OCR_AUTO_GAP_MS at most; a PDF that
+// failed is marked done too, so it is not retried every tick (the assistant can still run ocr_txt on it).
+async function ocrAuto(env, now) {
+  if (!odConfigured(env) || !(env.AI && typeof env.AI.run === 'function')) return null;
+  let st = null; try { st = JSON.parse((await stateGet(env, OCR_AUTO_KEY)) || 'null'); } catch (e) { st = null; }
+  st = st && typeof st === 'object' ? st : { at: null, done: [] };
+  if (st.at && now.getTime() - Date.parse(st.at) < OCR_AUTO_GAP_MS) return null;
+  const at = await accessToken(env);
+  const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+  const lr = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(OCR_ROOT + OCR_INBOX) + ':/children?$top=200&$select=name,createdDateTime,file',
+    { headers: { Authorization: 'Bearer ' + at.token }, signal: AbortSignal.timeout(20000) });
+  if (!lr.ok) return { error: 'list ' + lr.status };
+  const lj = await lr.json().catch(() => null);
+  const next = ocrAutoPick((lj && lj.value) || [], st.done, now.getTime());
+  st.at = now.toISOString();
+  let res = null;
+  if (next) {
+    const model = env.OCR_MODEL && OCR_MODELS.indexOf(env.OCR_MODEL) >= 0 ? env.OCR_MODEL : OCR_MODELS[0];
+    res = await ocrOne(env, at.token, OCR_INBOX + '/' + next.name, next.name, model).catch((e) => ({ name: next.name, ok: false, error: 'ocr' }));
+    st.done = (st.done || []).concat([next.name]).slice(-OCR_DONE_MAX);
+  }
+  await stateSet(env, OCR_AUTO_KEY, JSON.stringify(st));
+  return res ? { name: res.name, ok: res.ok, chars: res.chars || 0, error: res.error || null } : { idle: true };
+}
 export async function watch(env, now) {
   try {
     const ev = eveningAdd(await stateGet(env, PROMISE_KEY), ilDay(now), ilDow(now), ilHour(now), now.toISOString());
@@ -318,10 +344,11 @@ export async function watch(env, now) {
     const iw = isoWeekAdd(await stateGet(env, PROMISE_KEY), ilDay(now), ilDow(now), ilHour(now), now.toISOString());
     if (iw) await stateSet(env, PROMISE_KEY, JSON.stringify(iw));
   } catch (e) { /* the next tick tries again within the hour */ }
+  const oc = await ocrAuto(env, now).catch(() => null);
   const pc = await promiseCheck(env, now).catch(() => null);
   const pr = await promiseRemind(env, now).catch(() => null);
   const r = await watchReply(env, now);
-  return Object.assign({}, r, pr ? { promises: pr } : {}, pc ? { check: pc } : {});
+  return Object.assign({}, r, pr ? { promises: pr } : {}, pc ? { check: pc } : {}, oc ? { ocr: oc } : {});
 }
 async function watchReply(env, now) {
   const rows = await sb(env, 'notifications_log?select=ts,payload&event_type=eq.owner_in&order=ts.desc&limit=1').catch(() => []);

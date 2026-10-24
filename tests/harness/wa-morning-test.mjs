@@ -102,6 +102,11 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     { const { promiseToCheck, promiseCheckDue, PROMISE_VERIFY } = await import('./_build/_wa.mjs');
       const c = promiseToCheck(JSON.stringify(l), [l[0].id], new Date(T0 + 25 * 3600e3).toISOString());
       check('a day-old promise becomes a check for the assistant first, not a reminder to Michael (23/10/2026)', c[0].check === PROMISE_VERIFY && c[0].reminded_at && promiseCheckDue(JSON.stringify(c), T0 + 25 * 3600e3 + 1000, 13) && promiseCheckDue(JSON.stringify(c), T0 + 25 * 3600e3 + 1000, 13).id === l[0].id, c); }
+    { const { ocrAutoPick, OCR_ROOT, OCR_INBOX } = await import('./_build/_ocr.mjs');
+      const rd = await import('./_build/routine-db.mjs');
+      const N = Date.parse('2026-10-24T10:00:00Z'), f = (name, h) => ({ name, file: {}, createdDateTime: new Date(N - h * 3600e3).toISOString() });
+      const items = [f('a.pdf', 5), f('b.pdf', 30), f('c.jpg', 1), f('old.pdf', 24 * 5), { name: 'dir', createdDateTime: new Date(N).toISOString() }];
+      check('auto OCR: the oldest new PDF of the last 3 days, not one already done, never a folder or a jpg (24/10/2026)', ocrAutoPick(items, [], N).name === 'b.pdf' && ocrAutoPick(items, ['b.pdf'], N).name === 'a.pdf' && ocrAutoPick(items, ['a.pdf', 'b.pdf'], N) === null && OCR_ROOT === rd.OD_ROOT && OCR_INBOX === rd.OD_INBOX); }
     { const { isoWeekAdd, ISO_HOUR, ISO_CHECK } = await import('./_build/_wa.mjs');
       const i1 = isoWeekAdd('[]', '2026-10-25', 0, ISO_HOUR, '2026-10-25T07:00:00.000Z');
       check('the weekly ISO review: one check on Sunday at 10:00, never twice, never on another day or hour (24/10/2026)', i1 && i1.length === 1 && i1[0].check === ISO_CHECK && i1[0].id === 'p-iso-20261025' && isoWeekAdd(JSON.stringify(i1), '2026-10-25', 0, ISO_HOUR, 'x') === null && isoWeekAdd('[]', '2026-10-26', 1, ISO_HOUR, 'x') === null && isoWeekAdd('[]', '2026-10-25', 0, 9, 'x') === null, i1); }
