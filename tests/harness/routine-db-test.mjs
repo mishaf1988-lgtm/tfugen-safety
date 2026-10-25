@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
+import { asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -565,6 +565,21 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     const t = devInboxTold(L, 'dev dev-20261025104303-0jox', '2026-10-25T12:00:00Z');
     check('told: the open one gets told_at', t && t[0].told_at === '2026-10-25T12:00:00Z' && !t[1].told_at, t);
     check('told: a done one, an unknown id, another ref or bad state = null', devInboxTold(L, 'dev dev-20261025090000-aaaa', 'x') === null && devInboxTold(L, 'dev dev-20261025000000-zzzz', 'x') === null && devInboxTold(L, 'mail-triage', 'x') === null && devInboxTold('x', 'dev dev-20261025104303-0jox', 'x') === null && !DEV_REF.test('dev x'));
+  }
+
+  console.log('\n4e0. approval needs buttons; dev_request times in Israel (25/10/2026)');
+  {
+    const B = '\u05d1\u05e6\u05e2';
+    check('a question offering ' + B + ' with no choices = blocked; with choices, or no question, or another word = passes',
+      asksApprovalNoButtons('\u05dc\u05d4\u05d6\u05d9\u05d6?\n1. ' + B + '\n2. \u05dc\u05d0', null) && !asksApprovalNoButtons('\u05dc\u05d4\u05d6\u05d9\u05d6?\n1. ' + B, [B, '\u05dc\u05d0'])
+      && !asksApprovalNoButtons('\u05d0\u05d7\u05e8\u05d9 ' + B + ' \u05e9\u05dc\u05da \u05d4\u05d6\u05d6\u05ea\u05d9.', null) && !asksApprovalNoButtons('\u05de\u05d1\u05e6\u05e2\u05d9\u05dd \u05d4\u05e9\u05d1\u05d5\u05e2?', null));
+    const before = state.dev_inbox;
+    const d = new Date(); d.setUTCHours(10, 43, 0, 0);
+    const IL1043 = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
+    const r = await call({ op: 'dev_request', agent: 'routine-wa-assistant', text: 'Michael at 10:43 UTC asked to move an event, test only' });
+    const got = JSON.parse(state.dev_inbox || '[]').find((x) => x && x.id === (r.json && r.json.id));
+    check('dev_request: "10:43 UTC" is written as Israel time (12:43 in winter, 13:43 in summer)', got && got.text.indexOf(IL1043) >= 0 && !/UTC/.test(got.text), { r: r.json, got });
+    state.dev_inbox = before;
   }
 
   console.log('\n4e2. cal_move (25/10/2026): one JSON file for the flow that moves an event');
