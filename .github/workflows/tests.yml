@@ -2,8 +2,9 @@
 # Michael, 01/10/2026: "yes, four groups in parallel"). Until now the tests ran
 # only when Claude remembered to run them (#994 went in red).
 #
-# Four shards of tests/harness/run.sh in parallel (SHARD=i/4), about 2-3
-# minutes instead of 7. A change that touches only .md files skips them. The
+# Eight shards of tests/harness/run.sh in parallel (SHARD=i/8; four until
+# 25/10/2026, Michael: "do all three" to make the wait shorter), about 2
+# minutes instead of 3. A change that touches only .md files skips them. The
 # one check to require on main is "tests": it is green only when every shard
 # passed, or when nothing but documentation changed. The repo is public, so
 # Actions minutes cost nothing. .claude/hooks/merge-gate.py reads the same
@@ -99,7 +100,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -113,7 +114,7 @@ jobs:
       - run: npm i -g playwright@1.56.1 acorn
       - run: pip install requests pillow python-docx openpyxl  # pillow: tools/make-logo.py (17/10/2026); docx, openpyxl: doc-review-test.py (24/10/2026)
       - run: playwright install --with-deps chromium
-      - run: SHARD=${{ matrix.shard }}/4 bash tests/harness/run.sh
+      - run: SHARD=${{ matrix.shard }}/8 bash tests/harness/run.sh
 
   tests:
     needs: [changes, lessons, harness]
