@@ -572,7 +572,7 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
     }
     else if (fr0.kind === 'rate') { ans = RATE_THANKS; ref = 'rate'; }
     else if (fr0.kind === 'hazard') { ans = await fastHazard(env, fr0); ref = fr0.src + ' ' + fr0.id; }
-    else { const g = await gather(env, new Date()); ans = buildBrief(g.items, g.failed, g.today, false, g.notes, g.weather); ref = 'brief'; }
+    else { const g = await gather(env, new Date()); ans = buildBrief(g.items, g.failed, g.today, false, [], null, null, null, true); ref = 'brief'; }
   } catch (e) { ans = null; }
   const sr = ans ? await sendToOwner(env, owner, ans, Object.assign({ windowOpen: true, noTemplate: true }, choices ? { choices } : {})).catch(() => null) : null;
   if (sr && (sr.ok || (chat && ans))) { seen.fast = fr0.kind; await noteLastOut(env, sbFrom(env), ans, ref); await logOut(env, ans, sr); return true; }

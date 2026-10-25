@@ -71,11 +71,16 @@ export function weatherLine(w, today) {
 // weather = the weather_tomorrow record (weatherLine), first in the text.
 // devDone = development requests closed yesterday (devClosedYesterday), the last line; null = not read, no line.
 export const LEARN_ALERT = 30;
-export function buildBrief(items, failed, today, compact, notes, weather, devDone, learnOpen) {
+// A PR number in a worker's note ("(#1965)") means nothing to Michael (25/10/2026, the test session on that morning's update).
+export const stripPrRefs = (t) => String(t || '').replace(/\s*\(#\d{3,5}\)/g, '').replace(/#\d{3,5}\b/g, '').replace(/\s*[,;]\s*(?=[.;]|$)/g, '').replace(/\s{2,}/g, ' ').trim();
+// urgent (25/10/2026, the test session: the "what is urgent" button gave back the whole morning update word for word):
+// only what is urgent, the expiries and an agent that failed; no weather, no workers' notes, no development line.
+export function buildBrief(items, failed, today, compact, notes, weather, devDone, learnOpen, urgent) {
+  if (urgent) { notes = []; weather = null; devDone = null; learnOpen = null; }
   const wx = weatherLine(weather, today);
   failed = failed.map(agentName);
   // A worker's note goes out as written, so an internal id is cut out here (21/10/2026, hasInternalId).
-  notes = (notes || []).map((x) => ({ agent: x.agent, text: stripInternalIds(x.text) })).filter((x) => x.text).slice(0, 3);
+  notes = (notes || []).map((x) => ({ agent: x.agent, text: stripPrRefs(stripInternalIds(x.text)) })).filter((x) => x.text).slice(0, 3);
   // compact (20/10/2026, Michael's screenshot): outside the 24 hour window the template carries one
   // line between its own "update from the assistant:" and "to answer, write here", so no heading, no
   // closing line, and items joined by "; " instead of new lines that would turn into " | ".
@@ -108,6 +113,8 @@ export function buildBrief(items, failed, today, compact, notes, weather, devDon
     notes.forEach((x) => lines.push('- ' + agentName(x.agent) + ': ' + clip(x.text, 160)));
   }
   if (failed.length) lines.push('\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc \u05d1-24 \u05d4\u05e9\u05e2\u05d5\u05ea \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d5\u05ea: ' + failed.slice(0, 5).join(', ') + '.');
+  if (urgent && !lines.length) return '\u05d0\u05d9\u05df \u05e2\u05db\u05e9\u05d9\u05d5 \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05d3\u05d7\u05d5\u05e3.';
+  if (urgent) return ['\u05de\u05d4 \u05d3\u05d7\u05d5\u05e3:'].concat(lines).join('\n').slice(0, MAX_CHARS);
   if (!lines.length) return '\u05d1\u05d5\u05e7\u05e8 \u05d8\u05d5\u05d1, \u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.' + (dev ? '\n' + dev : '');
   const head = '\u05d1\u05d5\u05e7\u05e8 \u05d8\u05d5\u05d1. \u05e2\u05d3\u05db\u05d5\u05df ' + dmy(today) + ':';
   const tail = '\u05de\u05d4 \u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d1\u05de\u05e9\u05e8\u05d3: \u05db\u05ea\u05d1\u05d5 \u05dc\u05d9 "\u05de\u05d4 \u05d4\u05de\u05e6\u05d1?".';

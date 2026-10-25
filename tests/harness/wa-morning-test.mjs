@@ -67,6 +67,14 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   const cw = buildBrief([], [], '2026-10-20', true, [], wx);
   check('short version: weather and "nothing waiting"', /^מזג האוויר: 17-26/.test(cw) && /אין שום דבר שמחכה לך היום\.$/.test(cw), cw);
   check('weather keeps keyboard characters', !/[—–“”…־]/.test(tw + cw));
+  // 25/10/2026 (the test session): "what is urgent" gave back the whole update; a dev note carried "(#1965)".
+  const notes = [{ agent: 'dev', text: 'כותרת הצ\'אט נוספה לנוהל (#1965) ולפרומפט, ראה #1966' }];
+  const u = buildBrief(four, ['routine-od-scan'], '2026-10-20', false, notes, wx, 2, 66, true);
+  check('urgent: the expiries and the failed agent only; no weather, workers, development or notebook line', /^מה דחוף:\n/.test(u) && /A/.test(u) && /סוכן שנכשל/.test(u) && !/מזג|מהעובדים|בקשות פיתוח|המחברת|בוקר טוב/.test(u), u);
+  check('urgent with nothing urgent: one line', buildBrief([], [], '2026-10-20', false, notes, wx, 0, 0, true) === 'אין עכשיו שום דבר דחוף.');
+  const full = buildBrief(four, [], '2026-10-20', false, notes, wx);
+  check('the morning update keeps the workers\' note, without the PR numbers', /נוספה לנוהל ולפרומפט, ראה\n|נוספה לנוהל ולפרומפט, ראה$/m.test(full) && !/#19/.test(full), full);
+  check('the fast lane builds "what is urgent" with urgent on', /buildBrief\(g\.items, g\.failed, g\.today, false, \[\], null, null, null, true\)/.test(fs.readFileSync(new URL('../../functions/api/wa-hook.js', import.meta.url), 'utf8')));
 
 
   // 20/10/2026, Michael's screenshot: the template showed " | " between lines, "update" twice and routine-wa-assistant.
@@ -86,7 +94,7 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   check('internal ids: cut out of the notes, text kept', !/dev-2026|trig_|session_|cse_|\(\)/.test(ni) && /\u05dc\u05e4\u05d9\u05ea\u05d5\u05d7\./.test(ni) && /\u05d7\u05d3\u05e9\u05d4, \u05d1\u05e9\u05d9\u05d7\u05d4/.test(ni), ni);
   check('internal ids: a note that was only an id is dropped', !/\u05e1\u05e8\u05d9\u05e7\u05ea/.test(ni) && (ni.match(/\n- /g) || []).length === 2, ni);
   const nk = buildBrief([], [], '2026-10-21', true, [{ agent: 'routine-coa', text: '\u05d8\u05d5\u05e4\u05e1 16, 21/10/2026, ISO 45001, #1802' }]);
-  check('internal ids: dates, form numbers, ISO and PR numbers stay', /\u05d8\u05d5\u05e4\u05e1 16, 21\/10\/2026, ISO 45001, #1802/.test(nk), nk);
+  check('internal ids: dates, form numbers and ISO stay; a PR number is cut (25/10/2026)', /\u05d8\u05d5\u05e4\u05e1 16, 21\/10\/2026, ISO 45001\./.test(nk) && !/#1802|,\./.test(nk), nk);
 
   // 21/10/2026: a promise still open after a day gets one reminder, in daytime
   {
