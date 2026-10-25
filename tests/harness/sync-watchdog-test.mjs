@@ -8,7 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { assess, step, mailHtml, mailSubject, runWatch, stateKeys, WATCH_KEY, STALE_MS, ERR_MS, ilTime, slowIssue, probe, SLOW_MS, SLOW_TICKS, LAT_KEEP, PROBE_MS, LAT_GAP_MS, SLOW_SPAN_MS, WATCH_LOCK, waRegDue, waReRegister, WA_REG_GAP_MS, PUSH_FAIL_MS } from './_build/_watchdog.mjs';
+import { assess, step, mailHtml, mailSubject, runWatch, stateKeys, WATCH_KEY, STALE_MS, ERR_MS, ilTime, slowIssue, probe, SLOW_MS, SLOW_TICKS, LAT_KEEP, PROBE_MS, LAT_GAP_MS, SLOW_SPAN_MS, WATCH_LOCK, waRegDue, waReRegister, WA_REG_GAP_MS, PUSH_FAIL_MS, STALE_CONFIRM_MS, causeText } from './_build/_watchdog.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).substring(0, 400) : '')); } };
@@ -125,7 +125,12 @@ console.log('\n1b. the pop-ups, when they are the only channel (25/10/2026)');
 
 console.log('\n2. one mail when it starts, one when it is over');
 let st = step(null, [{ key: 'stale:deck', title: 'T', detail: 'D' }], ago(0));
-check('new problem: to mail', st.fresh.join() === 'stale:deck' && !st.done.length);
+check('a stale part seen for the first time: not mailed yet (the next tick confirms; 25/10/2026, mailed in the tick the runs came back)', !st.fresh.length && !st.done.length && !!st.open['stale:deck']);
+check('an error is still mailed at once', step(null, [{ key: 'err:deck', title: 'T', detail: 'D' }], ago(0)).fresh.join() === 'err:deck');
+st = step({ open: { 'stale:deck': { title: 'T', since: ago(15), mailed: false } } }, [{ key: 'stale:deck', title: 'T', detail: 'D' }], ago(0));
+check('new problem, still stale ' + (STALE_CONFIRM_MS / 60000) + ' minutes later: to mail, since kept', st.fresh.join() === 'stale:deck' && !st.done.length && st.open['stale:deck'].since === ago(15));
+check('the reason: 1102 in words, the count and the last time in Israel; none = nothing', /1102, 10/.test(causeText([{ code: '1102', n: 10, last: '2026-10-25T19:45:00Z' }])) && /21:45/.test(causeText([{ code: '1102', n: 10, last: '2026-10-25T19:45:00Z' }])) && /Cloudflare/.test(causeText([{ code: '1102', n: 1, last: '2026-10-25T19:45:00Z' }])) && causeText([]) === '' && causeText(null) === '', causeText([{ code: '1102', n: 10, last: '2026-10-25T19:45:00Z' }]));
+check('the reason reads the function the migration makes', /net_recent_errors/.test(src('functions/_watchdog.js')) && /create or replace function public\.net_recent_errors/.test(src('migrations/2026-10-25_net_recent_errors.sql')) && /grant execute .* to service_role/.test(src('migrations/2026-10-25_net_recent_errors.sql')));
 st.open['stale:deck'].mailed = true;
 const prev = { open: st.open, done: [] };
 st = step(prev, [{ key: 'stale:deck', title: 'T', detail: 'D2' }], ago(0));
@@ -158,6 +163,7 @@ globalThis.fetch = async (url, init) => {
 const env = { SUPABASE_SERVICE_ROLE_KEY: 'k', SUPABASE_URL: 'https://x.supabase.co', ONEDRIVE_CLIENT_ID: 'c', ONEDRIVE_CLIENT_SECRET: 's' };
 const realNow = Date.now();
 store = { hazard_xlsm_ok_at: new Date(realNow).toISOString(), hazard_xlsx_ok_at: new Date(realNow).toISOString(), deck_ok_at: new Date(realNow - 50 * 60000).toISOString(), trustee_log_ok_at: new Date(realNow).toISOString(), [WATCH_KEY]: JSON.stringify({ started: new Date(realNow - 600 * 60000).toISOString(), open: {} }) };
+{ const w0 = JSON.parse(store[WATCH_KEY]); w0.open = { 'stale:deck': { title: 'T', since: ago(15), mailed: false } }; store[WATCH_KEY] = JSON.stringify(w0); } // seen stale a tick ago (STALE_CONFIRM_MS)
 let r = await runWatch(env, 'https://tapugan-safety.pages.dev/');
 check('a stale deck: one mail, to the connected mailbox', mails.length === 1 && mails[0].toRecipients[0].emailAddress.address === 'sviva@tapugan.co.il' && /מצגת/.test(mails[0].subject), [r, mails.map((m) => m.subject)]);
 r = await runWatch(env, 'x');
@@ -168,6 +174,7 @@ check('the deck ran again: one "back to work" mail', mails.length === 2 && /חז
 r = await runWatch(env, 'x');
 check('...and then quiet', mails.length === 2);
 mailFail = true; store.deck_ok_at = new Date(Date.now() - 50 * 60000).toISOString();
+{ const w0 = JSON.parse(store[WATCH_KEY]); w0.open = { 'stale:deck': { title: 'T', since: ago(15), mailed: false } }; store[WATCH_KEY] = JSON.stringify(w0); } // seen stale a tick ago (STALE_CONFIRM_MS)
 r = await runWatch(env, 'x');
 const w = JSON.parse(store[WATCH_KEY]);
 check('the mail fails: the problem stays unmailed and the error is kept', mails.length === 2 && w.open['stale:deck'] && !w.open['stale:deck'].mailed && /503/.test(w.mail_err), w);
@@ -267,7 +274,7 @@ console.log('\n7. the review of 15/10/2026: ticks are not 15 minutes apart');
   check('...a free lock is taken and given back (PATCH twice)', seq.filter((x) => x === 'PATCH:lock').length === 2 && seq[0] === 'PATCH:lock' && seq[seq.length - 1] === 'PATCH:lock', seq);
   // The samples are saved before the mail.
   store.deck_ok_at = new Date(Date.now() - 50 * 60000).toISOString();
-  store[WATCH_KEY] = JSON.stringify({ started: ago(600), open: {}, lat: [{ at: ago(60), ms: 50 }] });
+  store[WATCH_KEY] = JSON.stringify({ started: ago(600), open: { 'stale:deck': { title: 'T', since: ago(15), mailed: false } }, lat: [{ at: ago(60), ms: 50 }] });
   seq = []; r = await runWatch(env, 'x');
   const wi = seq.indexOf('write:2'), mi = seq.indexOf('mail');
   check('a sample and a mail in one run: the sample is written before the mail goes', wi >= 0 && mi > wi && r.sent === 1, seq);

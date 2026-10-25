@@ -1,4 +1,4 @@
--- dumped 2026-10-20 from the live project by tools/platform/schema-dump.sql; verified with schema-fingerprint.sql
+-- dumped 2026-10-25 from the live project by tools/platform/schema-dump.sql; verified with schema-fingerprint.sql
 create schema if not exists private;
 
 create extension if not exists "uuid-ossp" with schema extensions;
@@ -962,6 +962,24 @@ begin
 end
 $function$;
 
+CREATE OR REPLACE FUNCTION private.wa_watch_tick()
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare s text;
+begin
+  select decrypted_secret into s from vault.decrypted_secrets where name = 'trustee_notify_secret' limit 1;
+  perform net.http_post(
+    url := 'https://tapugan-safety.pages.dev/api/wa-morning',
+    body := '{"watch": true}'::jsonb,
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-notify-secret', coalesce(s, '')),
+    timeout_milliseconds := 30000
+  );
+end
+$function$;
+
 CREATE OR REPLACE FUNCTION private.weather_tick()
  RETURNS void
  LANGUAGE plpgsql
@@ -1074,6 +1092,22 @@ begin
   returning value::int into n;
   return n;
 end;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.net_recent_errors(minutes integer DEFAULT 60)
+ RETURNS TABLE(code text, n bigint, last timestamp with time zone)
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  select coalesce(substring(r.content from 'error code: (\d+)'), r.status_code::text, 'none') as code,
+         count(*) as n, max(r.created) as last
+  from net._http_response r
+  where r.created > now() - make_interval(mins => least(greatest(minutes, 5), 1440))
+    and (r.status_code is null or r.status_code >= 500)
+  group by 1
+  order by 2 desc
+  limit 5;
 $function$;
 
 CREATE TRIGGER clear_must_change_password BEFORE UPDATE OF encrypted_password ON auth.users FOR EACH ROW EXECUTE FUNCTION private.clear_must_change_password();
@@ -2434,6 +2468,8 @@ revoke all on function private.vitre_sync_tick() from public, anon, authenticate
 
 revoke all on function private.wa_morning_tick() from public, anon, authenticated;
 
+revoke all on function private.wa_watch_tick() from public, anon, authenticated;
+
 revoke all on function private.weather_tick() from public, anon, authenticated;
 
 revoke all on function private.weekly_digest_tick() from public, anon, authenticated;
@@ -2460,6 +2496,8 @@ revoke all on function public.guess_clear(p_key text) from public, anon, authent
 
 revoke all on function public.guess_hit(p_key text, p_window_s integer) from public, anon, authenticated;
 
+revoke all on function public.net_recent_errors(minutes integer) from public, anon, authenticated;
+
 grant usage on schema private to anon, authenticated, supabase_auth_admin;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values ('backups', 'backups', false, null, NULL) on conflict (id) do nothing;
@@ -2485,6 +2523,8 @@ select cron.schedule('trustee-log-retry', '*/15 * * * *', 'select private.truste
 select cron.schedule('vitre-sync', '0 3,4 * * *', 'select private.vitre_sync_tick()');
 
 select cron.schedule('wa-morning', '47 4,5 * * 0-4', 'select private.wa_morning_tick()');
+
+select cron.schedule('wa-watch', '*/5 * * * *', 'select private.wa_watch_tick()');
 
 select cron.schedule('weather', '7 14 * * *', 'select private.weather_tick()');
 

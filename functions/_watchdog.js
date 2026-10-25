@@ -246,10 +246,15 @@ export function pushIssues(v, nowMs) {
 
 // Pure. prev = the stored watch state; list = assess(). What to mail now:
 // problems not mailed yet, and mailed problems that are gone.
+// 25/10/2026 (Michael: "do it", after a "not updated" mail at 21:15 that went out in the very tick the runs
+// came back): the watch runs beside the runs of its tick and reads what the tick before left. A part that is
+// stale is mailed only once it has been stale for STALE_CONFIRM_MS, so the next tick confirms it.
+export const STALE_CONFIRM_MS = 10 * 60 * 1000;
 export function step(prev, list, nowIso) {
   const open = {}, before = (prev && prev.open) || {};
   list.forEach((x) => { const b = before[x.key]; open[x.key] = { title: x.title, detail: x.detail, since: (b && b.since) || nowIso, mailed: !!(b && b.mailed) }; });
-  const fresh = Object.keys(open).filter((k) => !open[k].mailed);
+  const now = Date.parse(nowIso) || 0;
+  const fresh = Object.keys(open).filter((k) => !open[k].mailed && (k.indexOf('stale:') !== 0 || now - (Date.parse(open[k].since) || now) >= STALE_CONFIRM_MS));
   const done = ((prev && prev.done) || []).slice();
   Object.keys(before).forEach((k) => { if (!open[k] && before[k].mailed) done.push({ key: k, title: before[k].title, since: before[k].since, until: nowIso }); });
   return { open, fresh, done };
@@ -273,6 +278,35 @@ export function mailSubject(fresh, done, open) {
   if (!fresh.length && onlySlow(done || [])) return SITE.name + ': \u05d4\u05de\u05e1\u05d3 \u05d7\u05d6\u05e8 \u05dc\u05de\u05d4\u05d9\u05e8\u05d5\u05ea \u05e8\u05d2\u05d9\u05dc\u05d4';
   if (fresh.length) return SITE.name + ': \u05d1\u05e2\u05d9\u05d4 \u05d1\u05e1\u05e0\u05db\u05e8\u05d5\u05df (' + fresh.length + ') - ' + open[fresh[0]].title;
   return SITE.name + ': \u05d4\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d7\u05d6\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3' + (Object.keys(open).length ? ' (\u05d7\u05dc\u05e7\u05d9\u05ea)' : '');
+}
+
+// 25/10/2026 (Michael: "do it"): the reason, in the mail. A request Cloudflare stopped (503 "error code: 1102")
+// never reaches our code, so no <part>_err is written; pg_cron keeps the answer in net._http_response, and
+// public.net_recent_errors (migrations/2026-10-25_net_recent_errors.sql) sums the last hour. rows = [{code, n, last}].
+export const CF_CODES = {
+  '1102': '\u05d7\u05e8\u05d9\u05d2\u05d4 \u05de\u05de\u05d2\u05d1\u05dc\u05ea \u05d4\u05d6\u05d9\u05db\u05e8\u05d5\u05df \u05d0\u05d5 \u05d4\u05de\u05e2\u05d1\u05d3 \u05d1-Cloudflare',
+  '1101': '\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e7\u05d5\u05d3 \u05e9\u05dc \u05d4\u05e9\u05e8\u05ea',
+  '522': '\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05e2\u05e0\u05d4 \u05d1\u05d6\u05de\u05df', '524': '\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05e2\u05e0\u05d4 \u05d1\u05d6\u05de\u05df',
+  none: '\u05dc\u05d0 \u05d4\u05d2\u05d9\u05e2\u05d4 \u05ea\u05e9\u05d5\u05d1\u05d4 \u05de\u05d4\u05e9\u05e8\u05ea',
+};
+export function causeText(rows) {
+  const ok = (Array.isArray(rows) ? rows : []).filter((r) => r && +r.n > 0);
+  if (!ok.length) return '';
+  const n = ok.reduce((a, r) => a + (+r.n), 0);
+  const last = ok.map((r) => r.last).sort().pop();
+  return '\u05d4\u05e1\u05d9\u05d1\u05d4: \u05d1\u05e9\u05e2\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4 ' + n + ' \u05d1\u05e7\u05e9\u05d5\u05ea \u05dc\u05e9\u05e8\u05ea \u05e0\u05e2\u05e6\u05e8\u05d5 ('
+    + ok.map((r) => (CF_CODES[r.code] || '\u05e7\u05d5\u05d3') + ' ' + (r.code === 'none' ? '' : r.code + ', ') + r.n).join('; ').replace(/ ,/g, ',')
+    + ')' + (last ? ', \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4 \u05d1-' + ilTime(last) : '') + '.';
+}
+async function recentErrors(env) {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) return [];
+  try {
+    const r = await fetch((env.SUPABASE_URL || SITE.supabaseUrl) + '/rest/v1/rpc/net_recent_errors', { method: 'POST',
+      headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' }, body: JSON.stringify({ minutes: 60 }), signal: AbortSignal.timeout(4000) });
+    const j = r.ok ? await r.json() : [];
+    return Array.isArray(j) ? j : [];
+  } catch (e) { return []; }
 }
 
 // One run at a time (15/10/2026): op:'watch' rides every hazard-file call, so two could read
@@ -308,6 +342,11 @@ async function watchOnce(env, appUrl) {
   if (wa && prev && prev.wa && prev.wa.reg_at && !wa.reg_at) wa = Object.assign({}, wa, { reg_at: prev.wa.reg_at, reg: prev.wa.reg });
   if (env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN && waRegDue(wa, env.WA_PIN, now.getTime())) wa = await waReRegister(env, wa, nowIso);
   const list = assess(st, now.getTime(), connected, started, !!(env.VITRE_API_KEY_ID && env.VITRE_API_KEY_SECRET), lat, slowOpen, wa);
+  // the reason, on a stale part or an error only (one read, only when there is one)
+  if (list.some((x) => /^(stale|err):/.test(x.key))) {
+    const why = causeText(await recentErrors(env));
+    if (why) list.forEach((x) => { if (/^(stale|err):/.test(x.key)) x.detail = x.detail + ' ' + why; });
+  }
   const s = step(prev, list, nowIso);
   let mailErr = '', sent = 0;
   // The samples are saved before the mail (15/10/2026): a mail step that hangs or dies must
