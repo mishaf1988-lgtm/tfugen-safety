@@ -184,6 +184,19 @@ export function devInboxAdd(raw, b, nowIso) {
   while (list.length > DEV_INBOX_MAX) { const i = list.findIndex((x) => x.status !== 'open'); list.splice(i >= 0 ? i : 0, 1); }
   return { list, id, created: true };
 }
+// 25/10/2026 (Michael: "it has to be a dialogue... no stops"): a wa_me with ref "dev <id>" marks the open request
+// told_at, so the server's guard (wa-morning devStuck) knows Michael heard about it. null = not a dev ref or no such open one.
+export const DEV_REF = /^dev (dev-\d{14}-[a-z0-9]{4})$/;
+export function devInboxTold(raw, ref, nowIso) {
+  const m = DEV_REF.exec(String(ref || ''));
+  if (!m) return null;
+  let list = [];
+  try { list = JSON.parse(raw || '[]'); } catch (e) { return null; }
+  const x = Array.isArray(list) && list.find((y) => y && y.id === m[1] && y.status === 'open');
+  if (!x) return null;
+  x.told_at = nowIso;
+  return list;
+}
 export function devInboxDone(raw, id, note, nowIso) {
   let list = [];
   try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
@@ -1812,6 +1825,12 @@ export async function onRequest(context) {
       if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
       const r = await sendToOwner(env, to, body.text, { noTemplate: body.no_template === true, windowOpen: await ownerWindowOpen(env, url), choices: Array.isArray(body.choices) ? body.choices : null });
       if (r.ok) await noteLastOut(env, url, body.text, body.ref);
+      if (r.ok && DEV_REF.test(String(body.ref || ''))) {
+        const rows = await stateRead([DEV_INBOX_KEY]).catch(() => []);
+        const told = devInboxTold(rows && rows[0] && rows[0].value, body.ref, new Date().toISOString());
+        if (told) await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+          body: JSON.stringify([{ key: DEV_INBOX_KEY, value: JSON.stringify(told), updated_at: new Date().toISOString() }]) }).catch(() => null);
+      }
       // the pop-up on his phone and the wa_out line for /chat: sendToOwner does both, for every message (25/10/2026)
       const ps = { sent: r.push || 0 };
       try {
