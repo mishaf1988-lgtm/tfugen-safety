@@ -23,5 +23,8 @@ description: How to hand Michael a step he must do himself on his phone (create 
 - **"אם משהו לא מסתדר"**: 2-3 שגיאות צפויות, ולכל אחת מה עושים.
 - **בטלפון:** לציין כשצריך לגלול כדי לראות את הכפתור.
 
+## מקרים שכבר עבדו
+- **מחבר לריצה (Routine)** (25/10/2026, C46): `create_trigger` עם `connectors` נדחה ("not available for this organization"), ובלעדיו הריצה נוצרת בלי מחבר (אזהרה "stores no MCP connectors"). מיכאל הוסיף מהטלפון: `claude.ai/code/routines/<trig_id>` בדפדפן, Edit, Connectors, Microsoft 365, Save (דף: `UAc3LoDAUYPKkyPo4yqkUi`). אימות: `get_trigger` מראה אותו ב-`mcp_connections`, ואז `fire_trigger` אחד ובדיקה של התוצאה במסד.
+
 ## כללי הטקסט
 רק תווים שיש במקלדת (CLAUDE.md, טקסט לאנשים): בלי מקף ארוך, בלי « », בלי חצים, בלי תו כיוון נסתר (U+200E, נמצא ונוקה ב-17/10/2026). בדיקה מהירה לפני פרסום: `python3 -c` שמדפיס כל תו מעל U+2000 בקובץ.
