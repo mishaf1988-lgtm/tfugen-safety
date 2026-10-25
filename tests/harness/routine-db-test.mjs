@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
+import { calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -105,7 +105,7 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   })());
   check('od_pull never into the mail-flow folders (draft, file request, inbox, calendar queue, OCR text): those take files through mail_draft / mail_request only (25/10/2026 retro)', (() => {
     const t = (d) => odPullCheck({ agent: 'dev', why: 'to a flow folder', from: 'x/a.txt', dir: d });
-    return OD_TRIGGER_DIRS.length === 5 && OD_TRIGGER_DIRS.every((d) => !!t(d).error) && !!t(OD_DRAFT + '/sub').error && !t('22_x/09_y').error;
+    return OD_TRIGGER_DIRS.length === 6 && OD_TRIGGER_DIRS.every((d) => !!t(d).error) && !!t(OD_DRAFT + '/sub').error && !t('22_x/09_y').error;
   })());
   check('od_pull: one file from the desktop INTO a folder of the safety folder; never from inside it, never into old versions, never above the desktop (24/10/2026)', (() => {
     const ok = odPullCheck({ agent: 'dev', why: 'to the binder', from: 'תקני ISO/2026/a.docx', dir: '22_x/09_y' });
@@ -557,6 +557,27 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
       (await call({ ...D, to: 'x@y' })).status === 400 && (await call({ ...D, subject: '' })).status === 400 && (await call({ ...D, body: '' })).status === 400
       && (await call({ ...D, cc: 'not-an-address' })).status === 400 && (await call({ ...D, send: true })).status === 400 && !puts.length);
     check('without the key: 403', (await call(D, 'nope')).status === 403 && !puts.length);
+  }
+
+  console.log('\n4e2. cal_move (25/10/2026): one JSON file for the flow that moves an event');
+  {
+    let puts = [];
+    graph = async (url, opt = {}) => {
+      if (opt.method === 'PUT') { puts.push({ url: decodeURIComponent(url), body: opt.body }); return new Response(JSON.stringify({ size: 10 }), { status: 201 }); }
+      return new Response('{}', { status: 400 });
+    };
+    const ID = 'AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AzWOnlEnvT0Cf1PLfXWwjNwAH4Yc40gAA';
+    const D = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+    const ok = { op: 'cal_move', agent: 'routine-wa-assistant', why: 'course day moved', id: ID, subject: 'x course', start: D + 'T08:00', end: D + 'T15:00', approved: '\u05d1\u05e6\u05e2' };
+    delete state[CAL_MOVED_KEY];
+    const x = await call(ok);
+    const f = puts[0] && JSON.parse(puts[0].body);
+    check('written: one PUT into the move folder, id and Israel wall clock with seconds', x.json.ok && puts.length === 1 && puts[0].url.indexOf('/root:/' + OD_ROOT + OD_CAL_MOVE + '/') > 0 && f.id === ID && f.start === D + 'T08:00:00' && f.end === D + 'T15:00:00' && f.tz === 'Israel Standard Time', { x: x.json, puts });
+    check('logged in cal_moved, readable by state_get', String(state[CAL_MOVED_KEY] || '').indexOf(D + 'T08:00') >= 0 && STATE_READ.indexOf(CAL_MOVED_KEY) >= 0, state[CAL_MOVED_KEY]);
+    puts = [];
+    const bad = async (o) => (await call(Object.assign({}, ok, o))).status === 400;
+    check('refused, nothing written: no "\u05d1\u05e6\u05e2", end before start, a past day, a bad time, a bad id, an extra field', await bad({ approved: 'ok' }) && await bad({ end: D + 'T07:00' }) && await bad({ start: '2020-01-01T08:00', end: '2020-01-01T09:00' }) && await bad({ start: D + ' 08:00' }) && await bad({ id: ID + '?x' }) && await bad({ attendees: 'a@b' }) && !puts.length);
+    check('pure: over 14 days or over a year ahead = refused', !!calMoveCheck(Object.assign({}, ok, { start: '2099-11-23T08:00', end: '2099-12-23T08:00' }), Date.parse('2099-11-01T00:00:00Z')).error && !!calMoveCheck(Object.assign({}, ok, { start: '2099-11-23T08:00', end: '2099-11-23T09:00' }), Date.now()).error && !calMoveCheck(Object.assign({}, ok, { start: '2026-11-23T08:00', end: '2026-11-23T15:00' }), Date.parse('2026-10-25T10:00:00Z')).error);
   }
 
   console.log('\n4f. mail_request: one text file with the message id, for the second flow');
