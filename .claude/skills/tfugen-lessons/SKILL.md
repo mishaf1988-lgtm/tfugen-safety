@@ -68,7 +68,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: stdout ב-cp1255 ואימוג'י: session-start נפל בשקט. שיחה מחוץ לריפו: hooks לא נטענו.
 הכלל: hook קובע stdout ו-stdin ל-UTF-8, ובבדיקות `encoding="utf-8"`. בדיקה חיה רק מתיקיית הריפו, בלי `PYTHONUTF8=1`.
 נאכף: `hook-utf8-test.py` (stdout וגם stdin); התיקייה: בענן `session-start.py` מעתיק את ה-hooks ל-`~/.claude` (`session-start-test.py`).
-חזר: 2 (14/10: התיקייה עברה ל-/home/user באמצע שיחה, ה-hooks כבו בשקט).
+חזר: 3 (25/10: אחרי `add_repo`; לקריאה בלבד `get_file_contents`; 14/10).
 
 ## לפני כתיבה למקום משותף
 
@@ -140,7 +140,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: נכתבו באנגלית.
 הכלל: עברית תמיד.
 נאכף: `hebrew-reply.py` (Stop) בודק כל קטע טקסט לחוד, `hebrew-reply-test.py`; תזכורת בתחילת כל תור `hebrew-prompt.py`, והודעת `ci-watch.py` בעברית (`hebrew-prompt-test.py`); שאלון באנגלית נחסם ב-`questionnaire-hebrew.py` (PreToolUse על AskUserQuestion, `questionnaire-hebrew-test.py`).
-חזר: 61 (21/10: הודעות ביניים אחרי הפעלה מחדש; 20/10: שאלון, ולכן `questionnaire-hebrew.py`). בלי repo כתיקיית עבודה אין hooks.
+חזר: 63 (25/10: פעמיים, נתפס ב-hook; 21/10: אחרי הפעלה מחדש; 20/10: שאלון, ולכן `questionnaire-hebrew.py`). בלי repo כתיקיית עבודה אין hooks.
 
 **14. שיחה ארוכה מדי (01/10/2026).**
 מה קרה: הודעות איטיות ויקרות; "שיחה חדשה" הוטל על מיכאל.
