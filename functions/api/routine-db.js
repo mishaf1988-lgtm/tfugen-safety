@@ -140,7 +140,7 @@ import { OD_OCR_DIR, OCR_MODELS, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
 import { SIGN_KEY, SIGN_CHOICES, signAdd, signMark, signAskText, signPlace } from '../_sign.js';
 import { findSignSpot } from '../_pdftext.js';
 import { PDFDocument } from '../_pdflib.js';
-import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, fireUrlOf, sameSession, recentLine } from '../_wa.js';
+import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, fireUrlOf, sameSession, recentLine, ilTimes } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads'];
@@ -186,6 +186,12 @@ export function devInboxAdd(raw, b, nowIso) {
 }
 // 25/10/2026 (Michael: "it has to be a dialogue... no stops"): a wa_me with ref "dev <id>" marks the open request
 // told_at, so the server's guard (wa-morning devStuck) knows Michael heard about it. null = not a dev ref or no such open one.
+// A question (a "?") that offers "\u05d1\u05e6\u05e2" as an answer, with no choices: Michael gets no button to tap.
+export function asksApprovalNoButtons(text, choices) {
+  if (Array.isArray(choices) && choices.length) return false;
+  const t = String(text || '');
+  return /\?/.test(t) && /(^|[^\u05d0-\u05ea])\u05d1\u05e6\u05e2([^\u05d0-\u05ea]|$)/.test(t);
+}
 export const DEV_REF = /^dev (dev-\d{14}-[a-z0-9]{4})$/;
 export function devInboxTold(raw, ref, nowIso) {
   const m = DEV_REF.exec(String(ref || ''));
@@ -1026,6 +1032,9 @@ export async function onRequest(context) {
       const now = new Date().toISOString();
       const rows = await stateRead([DEV_INBOX_KEY]);
       const raw = rows && rows[0] && rows[0].value;
+      // 25/10/2026 (Michael in the questionnaire: "do it: add"): a request said 13:42 for 12:43, the day the clock went back.
+      // Times written as UTC ("10:43 UTC", ISO with Z) become Israel time here, as in the messages to Michael.
+      if (body.op === 'dev_request') body.text = ilTimes(body.text);
       const r = body.op === 'dev_request' ? devInboxAdd(raw, body, now) : devInboxDone(raw, String(body.id || ''), body.note, now);
       if (r.error) return jsonResp({ ok: false, error: r.error }, 400, {});
       const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', {
@@ -1814,6 +1823,8 @@ export async function onRequest(context) {
     if (body.op === 'wa_me') {
       if (hasPassport(body.text)) return jsonResp({ ok: false, error: 'passport number in text: write "4 workers from the list", no ids (20/10/2026)' }, 400, {});
       if (asksRepoSetup(body.text)) return jsonResp({ ok: false, error: 'asks Michael to add a repository or edit a Routine: no such choice (C32); say the dev runner builds it at its next wake (07:17-19:17 every 2 hours) (21/10/2026)' }, 400, {});
+      // 25/10/2026 (Michael in the questionnaire: "do it: block"): the assistant asked for "\u05d1\u05e6\u05e2" with no buttons, and fixed it only when he said so.
+      if (asksApprovalNoButtons(body.text, body.choices)) return jsonResp({ ok: false, error: 'asks for \u05d1\u05e6\u05e2 with no buttons: send it again with "choices", e.g. ["\u05d1\u05e6\u05e2","\u05dc\u05d0"]' }, 400, {});
       if (hasInternalId(body.text)) return jsonResp({ ok: false, error: 'internal id in text (dev-..., trig_, session_, cse_, h-...): say what was done, not its id (21/10/2026)' }, 400, {});
       // 22/10/2026 (the assistant sent "1. yes / 2. another place" with ref signmail, and the tap on 2 ran the server's
       // "reply to the sender"): sign refs belong to the server's own buttons; an assistant message cannot carry them.
