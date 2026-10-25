@@ -36,6 +36,21 @@ with tempfile.TemporaryDirectory() as d:
     acc = [p.text for p in docx.Document(j('acc.docx')).paragraphs] if r.returncode == 0 else []
     x2 = zipfile.ZipFile(j('acc.docx')).read('word/document.xml').decode() if r.returncode == 0 else ''
     check('accept_docx: accepting the tracked version gives the new text, with no revision marks left', acc == ['כותרת', 'צופה אש 60 דקות לאחר סיום.', 'סעיף קבוע.', 'סעיף חדש.'] and '<w:ins ' not in x2 and '<w:del ' not in x2, (r.stderr[-300:], acc))
+    tbl_doc(j('ro.docx'), [['a', 'b'], ['מחוק', 'x'], ['c', 'd']], 'פתיחה')
+    tbl_doc(j('rn.docx'), [['a', 'b'], ['c', 'd']], 'פתיחה')
+    r = subprocess.run([sys.executable, os.path.join(T, 'track_docx.py'), j('ro.docx'), j('rn.docx'), j('rt.docx')], capture_output=True, text=True)
+    r2 = subprocess.run([sys.executable, os.path.join(T, 'accept_docx.py'), j('rt.docx'), j('ra.docx')], capture_output=True, text=True) if r.returncode == 0 else None
+    ra = docx.Document(j('ra.docx')) if r2 is not None and r2.returncode == 0 else None
+    check('accept_docx: a deleted table row is gone after accepting, no empty row left (25/10/2026 retro)', ra is not None and [[c.text for c in row.cells] for row in ra.tables[0].rows] == [['a', 'b'], ['c', 'd']], [[c.text for c in row.cells] for row in ra.tables[0].rows] if ra else (r.stderr, r2.stderr if r2 else ''))
+    tbl_doc(j('co.docx'), [['a', 'b'], ['c', 'd']], 'x')
+    zc = zipfile.ZipFile(j('co.docx')); pc = {n: zc.read(n) for n in zc.namelist()}
+    xc = pc['word/document.xml'].decode()
+    xc = xc.replace('<w:tcPr>', '<w:tcPr><w:cellDel w:id="7" w:author="x" w:date="2026-01-01T00:00:00Z"/>', 1) if '<w:tcPr>' in xc else xc
+    pc['word/document.xml'] = xc.encode()
+    with zipfile.ZipFile(j('co2.docx'), 'w') as zo: [zo.writestr(n, b) for n, b in pc.items()]
+    r3 = subprocess.run([sys.executable, os.path.join(T, 'accept_docx.py'), j('co2.docx'), j('co3.docx')], capture_output=True, text=True)
+    c3 = docx.Document(j('co3.docx')) if r3.returncode == 0 else None
+    check('accept_docx: a cell marked deleted (cellDel) is removed when accepting (25/10/2026 retro)', '<w:cellDel' in xc and c3 is not None and 'cellDel' not in zipfile.ZipFile(j('co3.docx')).read('word/document.xml').decode() and [len(r.cells) for r in c3.tables[0].rows] == [1, 2], [len(r.cells) for r in c3.tables[0].rows] if c3 else r3.stderr)
     tb = docx.Document(); cell = tb.add_table(rows=1, cols=1).cell(0, 0); cell.paragraphs[0].add_run('תא שנמחק')
     tb.save(j('t.docx')); zt = zipfile.ZipFile(j('t.docx')); parts = {n: zt.read(n) for n in zt.namelist()}
     W_ = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'

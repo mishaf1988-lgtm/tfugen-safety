@@ -15,6 +15,13 @@ for item in zin.infolist():
         root = etree.fromstring(data)
         # a deleted paragraph mark (w:pPr/w:rPr/w:del) joins the paragraph with the next one, like Word does
         joined = root.xpath('//w:p[w:pPr/w:rPr/w:del or w:pPr/w:rPr/w:moveFrom]', namespaces=ns)
+        # a deleted table row (w:trPr/w:del): accepting removes the whole row, not only the mark inside it (25/10/2026 retro)
+        for tr in root.xpath('//w:tr[w:trPr/w:del or w:trPr/w:moveFrom]', namespaces=ns):
+            tot['del'] += 1; tr.getparent().remove(tr)
+        # a deleted cell (w:tcPr/w:cellDel): accepting removes the cell, unless it is the only one in its row
+        for tc in root.xpath('//w:tc[w:tcPr/w:cellDel]', namespaces=ns):
+            if len(tc.getparent().findall('{%s}tc' % W)) > 1:
+                tot['del'] += 1; tc.getparent().remove(tc)
         for el in root.xpath('//w:del|//w:moveFrom', namespaces=ns):
             tot['del'] += 1; el.getparent().remove(el)
         for el in root.xpath('//w:ins|//w:moveTo', namespaces=ns):

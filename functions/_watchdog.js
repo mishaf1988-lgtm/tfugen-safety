@@ -152,7 +152,7 @@ export async function probe(env) {
 }
 
 export function stateKeys() {
-  const keys = [WATCH_KEY, VITRE_KEY, 'wa_last_out', 'wa_status_last'];
+  const keys = [WATCH_KEY, VITRE_KEY, 'wa_meta_out', 'wa_status_last'];
   PARTS.forEach((p) => ['ok_at', 'err', 'err_at'].forEach((x) => keys.push(p.k + '_' + x)));
   FILES.forEach(([f]) => { keys.push('hazard_' + f + '_dropped'); keys.push('hazard_' + f + '_rows'); });
   return keys;
@@ -197,7 +197,8 @@ export function assess(st, nowMs, connected, started, vitre, lat, slowOpen, wa) 
   if (wa && wa.status && wa.status !== 'CONNECTED') out.push({ key: 'wa:phone', title: '\u05de\u05e1\u05e4\u05e8 \u05d4\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05e9\u05dc \u05d4\u05e2\u05d5\u05d6\u05e8 \u05de\u05e0\u05d5\u05ea\u05e7', detail: '\u05dc\u05e4\u05d9 Meta: ' + wa.status + (wa.reg && wa.reg !== 'ok' ? '. \u05e8\u05d9\u05e9\u05d5\u05dd \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9 \u05e0\u05db\u05e9\u05dc: ' + wa.reg : '') + '. \u05d4\u05e2\u05d5\u05d6\u05e8 \u05dc\u05d0 \u05de\u05e7\u05d1\u05dc \u05d5\u05dc\u05d0 \u05e9\u05d5\u05dc\u05d7 \u05d4\u05d5\u05d3\u05e2\u05d5\u05ea, \u05d5\u05d2\u05dd \u05e2\u05d3\u05db\u05d5\u05df \u05d4\u05d1\u05d5\u05e7\u05e8 \u05dc\u05d0 \u05d9\u05d5\u05e6\u05d0. \u05dc\u05e9\u05d7\u05d6\u05d5\u05e8: \u05d1\u05e9\u05d9\u05d7\u05ea \u05d4\u05e4\u05d9\u05ea\u05d5\u05d7, wa_phone \u05e2\u05dd step register \u05d5\u05d4-PIN \u05e9\u05dc \u05d4\u05de\u05e1\u05e4\u05e8 (ACCOUNT-INVENTORY, \u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4).' });
   // Meta stopped calling the hook (24/10/2026: the app "בטיחות" fell out of Live; the number stayed CONNECTED, so the
   // phone check saw nothing). A send that got no status back within WA_HOOK_MS. No status ever seen = not known yet.
-  const waOut = jsonAt(v('wa_last_out')), waStat = jsonAt(v('wa_status_last'));
+  // wa_meta_out, not wa_last_out (25/10/2026, retro): a message that went to /chat only never gets a Meta status
+  const waOut = jsonAt(v('wa_meta_out')), waStat = jsonAt(v('wa_status_last'));
   if (waOut && waStat && nowMs - waOut >= WA_HOOK_MS && waStat < waOut) out.push({ key: 'wa:hook', title: '\u05d4\u05d5\u05d3\u05e2\u05d5\u05ea \u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05de-Meta \u05dc\u05d0 \u05de\u05d2\u05d9\u05e2\u05d5\u05ea \u05dc\u05e9\u05e8\u05ea', detail: '\u05d4\u05e2\u05d5\u05d6\u05e8 \u05e9\u05dc\u05d7 \u05d4\u05d5\u05d3\u05e2\u05d4 \u05d1-' + ilTime(new Date(waOut).toISOString()) + ' \u05d5-Meta \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e8\u05d4 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e9\u05dc\u05d9\u05d7\u05d4. \u05db\u05e0\u05e8\u05d0\u05d4 \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 "\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea" \u05d1-Meta \u05d9\u05e6\u05d0\u05d4 \u05de\u05de\u05e6\u05d1 Live: developers.facebook.com, \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, Publish. \u05e2\u05d3 \u05d0\u05d6 \u05d4\u05d5\u05d3\u05e2\u05d5\u05ea \u05e9\u05ea\u05db\u05ea\u05d5\u05d1 \u05dc\u05e2\u05d5\u05d6\u05e8 \u05dc\u05d0 \u05de\u05d2\u05d9\u05e2\u05d5\u05ea.' });
   const slow = slowIssue(lat, nowMs, slowOpen);
   if (slow) out.push(slow);

@@ -29,10 +29,16 @@ check('...with the time in DD/MM/YYYY HH:MM (Israel)', /\d{2}\/\d{2}\/2026 \d{2}
 check('the WhatsApp number: an alert when Meta says it is not CONNECTED, none when connected or unknown (24/10/2026)', (() => { const a = assess(S(fresh), NOW, true, ago(600), false, [], false, { status: 'PENDING' }); return a.length === 1 && a[0].key === 'wa:phone' && a[0].detail.indexOf('PENDING') >= 0 && assess(S(fresh), NOW, true, ago(600), false, [], false, { status: 'CONNECTED' }).length === 0 && assess(S(fresh), NOW, true, ago(600), false, [], false, null).length === 0; })());
 check('Meta stopped calling the hook: a send with no status after 30 minutes is a problem; a status after it, a fresh send, or no status ever seen is not (24/10/2026)', (() => {
   const at = (ms) => JSON.stringify({ at: new Date(NOW - ms).toISOString() });
-  const a = (o, st) => assess(S({ ...fresh, wa_last_out: o, wa_status_last: st }), NOW, true, ago(600));
+  const a = (o, st) => assess(S({ ...fresh, wa_meta_out: o, wa_status_last: st }), NOW, true, ago(600));
   const bad = a(at(3600e3), at(7200e3));
   return bad.length === 1 && bad[0].key === 'wa:hook' && a(at(3600e3), at(3500e3)).length === 0 && a(at(600e3), at(7200e3)).length === 0 && a(at(3600e3), undefined).length === 0;
 })());
+check('a message that went to /chat only (wa_last_out, no wa_meta_out) never raises the "Meta stopped" alert; a real Meta send still does (25/10/2026 retro)', (() => {
+  const at = (ms) => JSON.stringify({ at: new Date(NOW - ms).toISOString() });
+  const a = (extra) => assess(S({ ...fresh, wa_last_out: at(3600e3), wa_status_last: at(7200e3), ...extra }), NOW, true, ago(600));
+  return a({}).length === 0 && a({ wa_meta_out: at(3600e3) }).length === 1;
+})());
+check('stateKeys reads wa_meta_out, not wa_last_out', stateKeys().includes('wa_meta_out') && !stateKeys().includes('wa_last_out'));
 check('40 minutes is not yet stale (3 ticks)', assess(S({ ...fresh, deck_ok_at: ago(40) }), NOW, true, ago(600)).length === 0);
 l = assess(S({ ...fresh, hazard_xlsx_err: 'onedrive 423: locked', hazard_xlsx_err_at: ago(35), hazard_xlsx_ok_at: ago(35) }), NOW, true, ago(600));
 check('an error 35 minutes old: "err:hazard_xlsx" only (not also stale)', keys(l).join() === 'err:hazard_xlsx' && /423/.test(l[0].detail), l);
