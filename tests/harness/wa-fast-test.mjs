@@ -3,6 +3,7 @@
 // itself by rules; everything else, and anything unclear, still goes to the assistant.
 import { recentLine, RECENT_MAX, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX } from './_build/wa-hook.mjs';
 import { HAZARD_OPTIONS, hazardAsk, assistantFire, fireUrlOf } from './_build/_wa.mjs';
+import { rateAgain } from './_build/chat.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 300) : '')); } };
@@ -47,6 +48,10 @@ check('a tap carries the answer as its context ("assistant | ..."): still a rati
 check('a tap on an older professional answer is rated even when something else went out after it', rateOf(m('1. \u05de\u05d3\u05d5\u05d9\u05e7', 1), 'assistant | answer | ref pro | t', { text: 'done: x', ref: 'dev' }).good === true);
 check('a tap on a non-professional message of the assistant: not a rating', rateOf(m('1', 1), 'assistant | a question | ref none | t', pro) === null);
 check('an answer logged before the ref was kept: the last answer decides', rateOf(m('1. \u05de\u05d3\u05d5\u05d9\u05e7', 1), 'assistant | answer | t', pro).good === true && rateOf(m('1', 1), 'assistant | answer | t', { text: 'x', ref: 'dev' }) === null);
+// 25/10/2026 (dev request: three taps on "1. accurate" in the chat ran the assistant twice): after the thanks
+const thanks = { text: 'x', ref: 'rate' };
+check('a tap on "accurate" again after the thanks: quiet, not a rating and not a run', rateOf(m('1. \u05de\u05d3\u05d5\u05d9\u05e7', 1), null, thanks) === null && rateAgain(m('1. \u05de\u05d3\u05d5\u05d9\u05e7', 1), thanks) === true && rateAgain(m('\u05de\u05d3\u05d5\u05d9\u05e7'), thanks) === true);
+check('"not accurate" after the thanks still goes on, and "accurate" after anything else is not quiet', rateAgain(m('2. \u05dc\u05d0 \u05de\u05d3\u05d5\u05d9\u05e7', 2), thanks) === false && rateAgain(m('1', 1), pro) === false && rateAgain(m('1', 1), { text: 'x', ref: 'brief' }) === false && rateAgain(m('1', 1), null) === false);
 const rl = rateAdd(JSON.stringify(Array.from({ length: RATE_MAX }, () => ({ good: true }))), false, 'q '.repeat(300), '2026-10-21T08:00:00Z');
 check('ratings: the newest kept, at most ' + RATE_MAX + ', question cut to 200', rl.length === RATE_MAX && rl[rl.length - 1].good === false && rl[rl.length - 1].q.length === 200);
 // 25/10/2026: five taps in nine seconds on one answer were two ratings; the same answer again replaces its rating
