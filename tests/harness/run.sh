@@ -63,8 +63,13 @@ sed "s#'./api/talk.js'#'./talk.mjs'#" ../../functions/chat.js > _build/chat-page
 sed "s#'../chat.js'#'./chat.mjs'#" "../../functions/api/chat-file/[[name]].js" > _build/chat-file.mjs
 sed -i "s#'./_site.js'#'./_site.mjs'#" _build/*.mjs
 filter="${1:-}"; fail=0
-# SHARD=i/n (the GitHub workflow, 01/10/2026): only every n-th file, from i.
-shard="${SHARD:-}"; idx=0
+# SHARD=i/n (the GitHub workflow, 01/10/2026): one shard of the files. Since 25/10/2026 the files are
+# split by measured time (.github/scripts/shard-plan.py), not every n-th by name: shard 0 drew the three
+# slowest suites and ended a minute after the rest.
+shard="${SHARD:-}"; mine=""
+if [ -n "$shard" ]; then
+  mine=$(python3 ../../.github/scripts/shard-plan.py "${shard#*/}" "${shard%/*}" *.js *.mjs *.py) || { echo "HARNESS ERROR: shard-plan failed"; exit 1; }
+fi
 # The only two scripts that legitimately print a report instead of a pass/fail
 # count. Anything ELSE that prints no summary has crashed or timed out, and that
 # is a failure — it used to be reported as "(report only)" and ALL GREEN still
@@ -75,7 +80,7 @@ for f in *.js *.mjs *.py; do
   # to a folder), not a pass/fail suite. Run it by name; see README.
   [ "$f" = "visual-audit.js" ] && continue
   [ -n "$filter" ] && [[ "$f" != *"$filter"* ]] && continue
-  if [ -n "$shard" ]; then i=$idx; idx=$((idx + 1)); [ $((i % ${shard#*/})) -ne "${shard%/*}" ] && continue; fi
+  if [ -n "$shard" ]; then grep -qxF "$f" <<< "$mine" || continue; fi
   ran=$((${ran:-0} + 1))
   printf '%-28s ' "$f"
   case "$f" in
