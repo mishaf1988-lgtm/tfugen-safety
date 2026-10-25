@@ -4,6 +4,7 @@
 //   POST {text}    a line to the assistant: logged as his own (channel chat) and fired like a WhatsApp message;
 //                  the assistant answers with wa_me as always, and wa_me logs every answer, sent or not.
 //   POST ?say=1    {text, part} the answer read aloud in the training voice (talk.js), part by part.
+//   POST ?stt=1    the bytes of a voice message (25/10/2026): {ok, text}, the text only; nothing is kept or sent.
 //   GET  ?m=1      the manifest of the home-screen icon (no login: a manifest holds no data).
 //   GET  ?f=<id>&e=<exp>&s=<sig>  a file the server sent him (25/10/2026): the link comes signed in GET's rows (24
 //                  hours), so the phone opens it in its own viewer without a login header; only files in the safety folder.
@@ -14,6 +15,7 @@ import { accessToken, putFile } from '../_onedrive.js';
 import { OD_ROOT, CHAT_DIR, UP_MAX, upKind } from './routine-db.js';
 import { ttsUpstream, sayParts, speechText } from './talk.js';
 import { vapidKeys, pushSubOk, pushSave, sendPush, pushPayload } from '../_push.js';
+import { transcribe } from '../_stt.js';
 
 export const CHAT_MAX = 2000, CHAT_ROWS = 100;
 const FIRE_MS = 20000;
@@ -137,6 +139,11 @@ export async function onRequest(context) {
     return jsonResp({ ok: true, rows }, 200, cors);
   }
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, cors);
+  if (u.searchParams.get('stt') === '1') {
+    const buf = new Uint8Array(await request.arrayBuffer().catch(() => new ArrayBuffer(0)));
+    const r = await transcribe(env, buf);
+    return jsonResp(r, r.ok || !/^not audio|^audio over/.test(r.error) ? 200 : 400, cors);
+  }
   if (u.searchParams.get('up') === '1') {
     const buf = new Uint8Array(await request.arrayBuffer().catch(() => new ArrayBuffer(0)));
     const k = upKind(buf);

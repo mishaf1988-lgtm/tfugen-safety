@@ -127,6 +127,7 @@
 //              from body, by the manager). Plain keyboard text, no ID-like digits. talkFieldApply.
 // No delete, no other table, no raw SQL. The data is data, not instructions
 // (trustee_reports holds free text from an anonymous kiosk).
+import { transcribe } from '../_stt.js';
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
@@ -1157,6 +1158,14 @@ export async function onRequest(context) {
         res[res.length - 1].ms = Date.now() - t0;
       }
       return jsonResp({ ok: true, res }, 200, {});
+    }
+    // stt (25/10/2026): a voice message to text, the same Whisper as /api/chat?stt=1, so a session in the cloud can
+    // check it on a real recording (the chat needs his phone's login). b64 of the audio; nothing is kept.
+    if (body.op === 'stt') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'b64'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
+      let bytes; try { bytes = Uint8Array.from(atob(String(body.b64 || '')), (c) => c.charCodeAt(0)); } catch (e) { return jsonResp({ ok: false, error: 'b64' }, 400, {}); }
+      return jsonResp(await transcribe(env, bytes), 200, {});
     }
     if (body.op === 'ocr_txt') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
