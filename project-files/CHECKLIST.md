@@ -15,7 +15,7 @@
 ## הבדיקות
 
 - [ ] מקומית, לשינוי שנוגע במשהו: `NODE_PATH=/opt/node22/lib/node_modules:/opt/node-tools/node_modules bash tests/harness/run.sh <שם>`
-- [ ] **ב-GitHub: בדיקת `tests` ירוקה על ה-PR** (`.github/workflows/tests.yml`, 4 קבוצות במקביל). זה התנאי למיזוג, וה-hook `merge-gate.py` אוכף אותו
+- [ ] **ב-GitHub: בדיקת `tests` ירוקה על ה-PR** (`.github/workflows/tests.yml`, 8 קבוצות במקביל). זה התנאי למיזוג, וה-hook `merge-gate.py` אוכף אותו
 
 ## migration / Supabase
 
