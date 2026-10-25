@@ -64,6 +64,7 @@
 - **התיקייה:** `ניהול בטיחות\_הזזות ביומן`.
 - **הזרימה** "הזזות ביומן": טריגר `When a file is created (properties only)` של OneDrive for Business על `/שולחן העבודה/ניהול בטיחות/_הזזות ביומן`; `Get file content`; `Compose` עם `json(trim(string(body('Get_file_content'))))`; Office 365 Outlook **`Send an HTTP request`**: Method `PATCH`, URI `https://graph.microsoft.com/v1.0/me/events/@{encodeUriComponent(outputs('Compose')?['id'])}`, Body: `{"start":{"dateTime":"@{outputs('Compose')?['start']}","timeZone":"Israel Standard Time"},"end":{"dateTime":"@{outputs('Compose')?['end']}","timeZone":"Israel Standard Time"}}`. רק השעות משתנות: לא `Update event (V4)`, שמחליפה גם שדות שלא נשלחו (גוף, מוזמנים).
 - **מי מקבל עדכון:** המוזמנים של אירוע שמיכאל ארגן מקבלים עדכון מ-Outlook. לכן `approved` חובה, והעוזר מראה למיכאל לפני "בצע" את השעה החדשה ואת שמות המוזמנים. אירוע שמישהו אחר ארגן (`isOrganizer: false`) לא מזיזים: מציעים טיוטת תשובה למארגן.
+- **נבנתה 25/10/2026** (C47, Claude בכרום): נשמרה, פורסמה, On, Flow checker 0/0. בעורך החדש "/" פותח תפריט הוספה, ולכן ה-"/" בסוף `/me/events/` נבלע בפעם הראשונה; לבדוק את ה-URI ב-Code view.
 - **הבדיקה העצמית:** אחרי `cal_move`, `outlook_calendar_search` על היום החדש מראה את האירוע בשעה החדשה (2-3 דקות).
 
 ## ניקוי "לא לתיוק" (11/10/2026, מיכאל בשאלון: "בצע: מחיקה אחרי 30 יום (מומלץ)")

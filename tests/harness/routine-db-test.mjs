@@ -581,6 +581,7 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     const x = await call(ok);
     const f = puts[0] && JSON.parse(puts[0].body);
     check('written: one PUT into the move folder, id and Israel wall clock with seconds', x.json.ok && puts.length === 1 && puts[0].url.indexOf('/root:/' + OD_ROOT + OD_CAL_MOVE + '/') > 0 && f.id === ID && f.start === D + 'T08:00:00' && f.end === D + 'T15:00:00' && f.tz === 'Israel Standard Time', { x: x.json, puts });
+    check('the file is plain JSON text, no BOM (the flow parses it with json(trim(string(...))), which keeps a BOM)', typeof puts[0].body === 'string' && puts[0].body.charCodeAt(0) === 123, puts[0] && puts[0].body);
     check('logged in cal_moved, readable by state_get', String(state[CAL_MOVED_KEY] || '').indexOf(D + 'T08:00') >= 0 && STATE_READ.indexOf(CAL_MOVED_KEY) >= 0, state[CAL_MOVED_KEY]);
     puts = [];
     const bad = async (o) => (await call(Object.assign({}, ok, o))).status === 400;
