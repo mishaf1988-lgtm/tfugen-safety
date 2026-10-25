@@ -9,7 +9,7 @@
 //                  hours), so the phone opens it in its own viewer without a login header; only files in the safety folder.
 import { jsonResp, requireRole, defaultAllowedOrigins, originPasses, corsHeaders, SB_LIVE, SB_TIMEOUT_MS, tmo } from '../_shared.js';
 import { assistantFire, recentLine, lastOut, hmacHex, ownerWa } from '../_wa.js';
-import { fastRoute, runFast, rateOf, rateNote } from './wa-hook.js';
+import { fastRoute, runFast, rateOf, rateNote, RATE_CHOICES } from './wa-hook.js';
 import { accessToken, putFile } from '../_onedrive.js';
 import { OD_ROOT, CHAT_DIR, UP_MAX, upKind } from './routine-db.js';
 import { ttsUpstream, sayParts, speechText } from './talk.js';
@@ -164,6 +164,13 @@ export async function onRequest(context) {
   return chatSend(env, url, h, cors, text, null, choice);
 }
 
+// a tap on "1. accurate" again, right after the server thanked him for one (ref rate). Pure.
+export function rateAgain(m, prev) {
+  if (!prev || prev.ref !== 'rate') return false;
+  const raw = String((m && m.text) || '').trim().replace(/^1\. */, '').replace(/[.!]/g, '').trim();
+  return !!m && (m.choice === 1 || raw === RATE_CHOICES[0]);
+}
+
 // his line (or file) to the assistant: logged as his own on channel chat, then fired like a WhatsApp message
 async function chatSend(env, url, h, cors, text, media, choice) {
   const af = assistantFire(env);
@@ -183,6 +190,9 @@ async function chatSend(env, url, h, cors, text, media, choice) {
     const m = { id: null, text, choice }, fr0 = fastRoute(m, null, prev), seen = {};
     const rt = rateOf(m, null, prev);
     if (rt) await rateNote(env, rt.good, prev && prev.text).catch(() => null);
+    // 25/10/2026 (dev request: three taps on "1. accurate" ran the assistant twice, and it thanked him again): a tap
+    // on "accurate" after the thanks is already noted, so no run and no second thanks. "not accurate" still goes on.
+    if (!rt && rateAgain(m, prev)) return jsonResp({ ok: true, quiet: true, fast: 'rate_again' }, 200, cors);
     if (fr0 && await runFast(env, await ownerWa(env, url).catch(() => ''), m, fr0, seen, true).catch(() => false)) return jsonResp({ ok: true, fast: seen.fast || fr0.kind }, 200, cors);
     text = m.text;
   }
