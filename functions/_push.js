@@ -117,6 +117,17 @@ export async function pushSave(env, sbUrl, sub) {
   await putSubs(env, sbUrl, [one].concat(cur.filter((s) => s.endpoint !== sub.endpoint)).slice(0, PUSH_MAX_SUBS));
   return true;
 }
+// How the last push went (25/10/2026, handoff: with wa_owner_mode=chat the pop-up is Michael's only channel, so a
+// phone that dropped or pushes that keep failing must reach him; _watchdog.js reads these and mails). One write per
+// push and no read: push_last every time, push_ok_at only when a phone took it, push_gone only when one was dropped.
+export const PUSH_LAST = 'push_last', PUSH_OK_AT = 'push_ok_at', PUSH_GONE = 'push_gone';
+async function noteHealth(env, sbUrl, h) {
+  const at = new Date().toISOString(), rows = [{ key: PUSH_LAST, value: JSON.stringify(Object.assign({ at }, h)), updated_at: at }];
+  if (h.sent > 0) rows.push({ key: PUSH_OK_AT, value: at, updated_at: at });
+  if (h.gone > 0) rows.push({ key: PUSH_GONE, value: JSON.stringify({ at, n: h.gone, left: h.left }), updated_at: at });
+  await fetch(sbUrl + '/rest/v1/server_state?on_conflict=key', { method: 'POST', signal: tmo(SB_TIMEOUT_MS),
+    headers: { ...sbH(env), Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }).catch(() => null);
+}
 // Every phone; one the push service says is gone (404, 410) is dropped. Never throws: a push is extra.
 export async function pushOwner(env, sbUrl, text) {
   if (!env.SUPABASE_SERVICE_ROLE_KEY || !String(text || '').trim()) return { sent: 0, skipped: true };
@@ -124,10 +135,12 @@ export async function pushOwner(env, sbUrl, text) {
     const subs = await pushSubs(env, sbUrl);
     if (!subs || !subs.length) return { sent: 0 };
     const keys = await vapidKeys(env, sbUrl);
-    if (!keys) return { sent: 0, skipped: true };
+    if (!keys) { await noteHealth(env, sbUrl, { sent: 0, failed: subs.length, gone: 0, left: subs.length, st: ['no key'] }); return { sent: 0, skipped: true }; }
     const obj = pushPayload(text), st = await Promise.all(subs.map((s) => sendPush(env, s, obj, keys)));
     const gone = subs.filter((s, i) => st[i] === 404 || st[i] === 410);
     if (gone.length) await putSubs(env, sbUrl, subs.filter((s) => gone.indexOf(s) < 0));
-    return { sent: st.filter((x) => x === 201 || x === 200).length, statuses: st };
+    const sent = st.filter((x) => x === 201 || x === 200).length;
+    await noteHealth(env, sbUrl, { sent, failed: st.length - sent, gone: gone.length, left: subs.length - gone.length, st: st.slice(0, PUSH_MAX_SUBS) });
+    return { sent, statuses: st };
   } catch (e) { return { sent: 0, error: String(e && e.message || e).slice(0, 120) }; }
 }

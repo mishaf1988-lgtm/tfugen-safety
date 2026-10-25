@@ -152,7 +152,7 @@ export async function probe(env) {
 }
 
 export function stateKeys() {
-  const keys = [WATCH_KEY, VITRE_KEY, 'wa_meta_out', 'wa_status_last'];
+  const keys = [WATCH_KEY, VITRE_KEY, 'wa_meta_out', 'wa_status_last', 'wa_owner_mode', 'chat_push_subs', 'push_last', 'push_ok_at', 'push_gone'];
   PARTS.forEach((p) => ['ok_at', 'err', 'err_at'].forEach((x) => keys.push(p.k + '_' + x)));
   FILES.forEach(([f]) => { keys.push('hazard_' + f + '_dropped'); keys.push('hazard_' + f + '_rows'); });
   return keys;
@@ -200,6 +200,7 @@ export function assess(st, nowMs, connected, started, vitre, lat, slowOpen, wa) 
   // wa_meta_out, not wa_last_out (25/10/2026, retro): a message that went to /chat only never gets a Meta status
   const waOut = jsonAt(v('wa_meta_out')), waStat = jsonAt(v('wa_status_last'));
   if (waOut && waStat && nowMs - waOut >= WA_HOOK_MS && waStat < waOut) out.push({ key: 'wa:hook', title: '\u05d4\u05d5\u05d3\u05e2\u05d5\u05ea \u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05de-Meta \u05dc\u05d0 \u05de\u05d2\u05d9\u05e2\u05d5\u05ea \u05dc\u05e9\u05e8\u05ea', detail: '\u05d4\u05e2\u05d5\u05d6\u05e8 \u05e9\u05dc\u05d7 \u05d4\u05d5\u05d3\u05e2\u05d4 \u05d1-' + ilTime(new Date(waOut).toISOString()) + ' \u05d5-Meta \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e8\u05d4 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e9\u05dc\u05d9\u05d7\u05d4. \u05db\u05e0\u05e8\u05d0\u05d4 \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 "\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea" \u05d1-Meta \u05d9\u05e6\u05d0\u05d4 \u05de\u05de\u05e6\u05d1 Live: developers.facebook.com, \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, Publish. \u05e2\u05d3 \u05d0\u05d6 \u05d4\u05d5\u05d3\u05e2\u05d5\u05ea \u05e9\u05ea\u05db\u05ea\u05d5\u05d1 \u05dc\u05e2\u05d5\u05d6\u05e8 \u05dc\u05d0 \u05de\u05d2\u05d9\u05e2\u05d5\u05ea.' });
+  pushIssues(v, nowMs).forEach((x) => out.push(x));
   const slow = slowIssue(lat, nowMs, slowOpen);
   if (slow) out.push(slow);
   FILES.forEach(([f, name]) => {
@@ -214,6 +215,32 @@ export function assess(st, nowMs, connected, started, vitre, lat, slowOpen, wa) 
         detail: (WHY[x.why] || '\u05dc\u05d0 \u05e0\u05e7\u05dc\u05d8') + (x.val ? '. \u05d4\u05e2\u05e8\u05da \u05d1\u05e7\u05d5\u05d1\u05e5: ' + String(x.val).substring(0, 80) : '') });
     });
   });
+  return out;
+}
+
+// The pop-ups (25/10/2026, handoff): with wa_owner_mode=chat they are Michael's only channel, so they are watched
+// only then. _push.js writes push_last / push_ok_at / push_gone. A failure is an alert once no phone took a push for
+// PUSH_FAIL_MS (one network error between two good pushes is not); it closes with the next push a phone takes.
+// A dropped phone is an alert until a phone subscribes again, or (another phone is left) a later push gets through.
+export const PUSH_FAIL_MS = 30 * 60 * 1000;
+const pj = (raw) => { try { const o = JSON.parse(raw || 'null'); return o && typeof o === 'object' ? o : null; } catch (e) { return null; } };
+export function pushIssues(v, nowMs) {
+  if (String(v('wa_owner_mode') || '').trim() !== 'chat') return [];
+  const out = [], okAt = Date.parse(v('push_ok_at')) || 0, last = pj(v('push_last')), gone = pj(v('push_gone'));
+  const lastAt = last && Date.parse(last.at) || 0;
+  if (last && lastAt && !(last.sent > 0) && last.failed > 0 && lastAt - okAt >= PUSH_FAIL_MS) {
+    out.push({ key: 'push:fail', title: '\u05d4\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05d4\u05e7\u05d5\u05e4\u05e6\u05d5\u05ea \u05d1\u05d8\u05dc\u05e4\u05d5\u05df \u05dc\u05d0 \u05e0\u05de\u05e1\u05e8\u05d5\u05ea',
+      detail: '\u05e0\u05d9\u05e1\u05d9\u05d5\u05df \u05d0\u05d7\u05e8\u05d5\u05df \u05d1-' + ilTime(last.at) + ' (' + (Array.isArray(last.st) ? last.st.join(', ') : '?') + ')' + (okAt ? ', \u05d4\u05d4\u05ea\u05e8\u05d0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4 \u05e9\u05e0\u05de\u05e1\u05e8\u05d4 \u05d1-' + ilTime(new Date(okAt).toISOString()) : ', \u05d0\u05e3 \u05d4\u05ea\u05e8\u05d0\u05d4 \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05de\u05e1\u05e8\u05d4') + '. \u05d4\u05d4\u05d5\u05d3\u05e2\u05d5\u05ea \u05e0\u05e9\u05de\u05e8\u05d5\u05ea \u05d1\u05e6\'\u05d0\u05d8, \u05d0\u05d1\u05dc \u05d4\u05d8\u05dc\u05e4\u05d5\u05df \u05dc\u05d0 \u05de\u05e6\u05dc\u05e6\u05dc. \u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05e6\'\u05d0\u05d8 \u05d5\u05dc\u05dc\u05d7\u05d5\u05e5 \u05e2\u05dc \ud83d\udd14 \u05e9\u05d5\u05d1.' });
+  }
+  const goneAt = gone && Date.parse(gone.at) || 0;
+  if (goneAt) {
+    let subs = pj(v('chat_push_subs'));
+    const newest = Array.isArray(subs) ? Math.max(0, ...subs.map((s) => Date.parse(s && s.at) || 0)) : 0;
+    const left = +gone.left || 0;
+    if (newest <= goneAt && !(left > 0 && okAt > goneAt)) out.push(left > 0
+      ? { key: 'push:gone', title: '\u05d8\u05dc\u05e4\u05d5\u05df \u05d9\u05e8\u05d3 \u05de\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea', detail: '\u05d1-' + ilTime(gone.at) + ' \u05e9\u05d9\u05e8\u05d5\u05ea \u05d4\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05d0\u05de\u05e8 \u05e9\u05d4\u05de\u05e0\u05d5\u05d9 \u05e9\u05dc \u05d8\u05dc\u05e4\u05d5\u05df \u05d0\u05d7\u05d3 \u05db\u05d1\u05e8 \u05dc\u05d0 \u05e7\u05d9\u05d9\u05dd (\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e9\u05d4\u05d5\u05e1\u05e8\u05d4, \u05d4\u05e8\u05e9\u05d0\u05d4 \u05e9\u05d1\u05d5\u05d8\u05dc\u05d4 \u05d0\u05d5 \u05e0\u05d9\u05e7\u05d5\u05d9 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd). \u05e0\u05e9\u05d0\u05e8\u05d5 ' + left + '. \u05d1\u05d8\u05dc\u05e4\u05d5\u05df \u05d4\u05d4\u05d5\u05d0: \u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05e6\'\u05d0\u05d8 \u05d5\u05dc\u05dc\u05d7\u05d5\u05e5 \u05e2\u05dc \ud83d\udd14.' }
+      : { key: 'push:gone', title: '\u05d0\u05e3 \u05d8\u05dc\u05e4\u05d5\u05df \u05dc\u05d0 \u05e8\u05e9\u05d5\u05dd \u05dc\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea, \u05d4\u05d4\u05d5\u05d3\u05e2\u05d5\u05ea \u05d7\u05d6\u05e8\u05d5 \u05dc\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4', detail: '\u05d1-' + ilTime(gone.at) + ' \u05e9\u05d9\u05e8\u05d5\u05ea \u05d4\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05d0\u05de\u05e8 \u05e9\u05d4\u05de\u05e0\u05d5\u05d9 \u05e9\u05dc \u05d4\u05d8\u05dc\u05e4\u05d5\u05df \u05db\u05d1\u05e8 \u05dc\u05d0 \u05e7\u05d9\u05d9\u05dd (\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e9\u05d4\u05d5\u05e1\u05e8\u05d4, \u05d4\u05e8\u05e9\u05d0\u05d4 \u05e9\u05d1\u05d5\u05d8\u05dc\u05d4 \u05d0\u05d5 \u05e0\u05d9\u05e7\u05d5\u05d9 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd). \u05e2\u05d3 \u05e9\u05ea\u05dc\u05d7\u05e5 \u05e9\u05d5\u05d1 \u05e2\u05dc \ud83d\udd14 \u05d1\u05e6\'\u05d0\u05d8, \u05d4\u05d4\u05d5\u05d3\u05e2\u05d5\u05ea \u05d4\u05d5\u05dc\u05db\u05d5\u05ea \u05dc\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4, \u05d5\u05d0\u05dd Meta \u05d7\u05d5\u05e1\u05de\u05ea, \u05d4\u05df \u05de\u05d2\u05d9\u05e2\u05d5\u05ea \u05e8\u05e7 \u05dc\u05e6\'\u05d0\u05d8 \u05d1\u05dc\u05d9 \u05e6\u05dc\u05e6\u05d5\u05dc.' });
+  }
   return out;
 }
 
