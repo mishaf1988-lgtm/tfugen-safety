@@ -146,7 +146,9 @@ export function rateAdd(raw, good, q, nowIso) {
   let list = [];
   try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
   if (!Array.isArray(list)) list = [];
-  list.push({ at: nowIso, good: !!good, q: String(q || '').replace(/\s+/g, ' ').slice(0, 200) });
+  const e = { at: nowIso, good: !!good, q: String(q || '').replace(/\s+/g, ' ').slice(0, 200) };
+  // 25/10/2026 (Michael: "I could tap accurate or not accurate many times"): one rating per answer, the last tap wins
+  if (list.length && list[list.length - 1] && list[list.length - 1].q === e.q) list[list.length - 1] = e; else list.push(e);
   return list.slice(-RATE_MAX);
 }
 export async function rateNote(env, good, q) {

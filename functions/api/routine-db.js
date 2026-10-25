@@ -442,6 +442,9 @@ export const DRAFT_TO = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{
 // written that morning): a draft opening "good morning" from 11:00 Israel time opens "hi" instead.
 export function greetByHour(text, nowMs) {
   const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', hour12: false }).format(new Date(nowMs || Date.now())));
+  // 25/10/2026 (a test round: a draft made at 10:26 opened with "hi"): the other way too, "hi" becomes
+  // "good morning" from 05:00 to 10:59, so the rule does not depend on the assistant reading the clock right
+  if (h >= 5 && h < 11) return String(text).replace(/^\u05d4\u05d9\u05d9(?=[\s,!.])/, '\u05d1\u05d5\u05e7\u05e8 \u05d8\u05d5\u05d1');
   return h >= 11 && h < 24 ? String(text).replace(/^\u05d1\u05d5\u05e7\u05e8 \u05d8\u05d5\u05d1(?=[\s,!.])/, '\u05d4\u05d9\u05d9') : String(text);
 }
 // 21/10/2026 (Michael approved): reading the log by "the first answer after each message" gave four

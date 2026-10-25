@@ -117,6 +117,11 @@ console.log('\n5. files and buttons, like WhatsApp (25/10/2026)');
   r = await onRequest({ request: nr('/api/chat?f=wodoc1&e=' + (Date.now() - 1000) + '&s=' + await fileSig(ENV, 'wodoc1', Date.now() - 1000)), env: ENV });
   check('an expired link: 403', r.status === 403);
   check('the page: under the buttons an "other" one (25/10/2026, Michael): it sends nothing, it opens the box for his own answer', /class=\\?"oth\\?"/.test(page) && /querySelectorAll\('\.ch button\[data-c\]'\)/.test(page) && /o\.onclick=function\(\)\{var x=\$\('x'\);x\.placeholder=[^}]*x\.focus\(\)/.test(page) && !/o\.onclick=[^}]*send\(/.test(page));
+  // 25/10/2026, the test round: five taps on "accurate" in nine seconds; no signal emptied the box; a share button
+  check('the page: an answer of his closes the buttons above it (add() calls done())', /function add\(m,local\)\{if\(m\.who==='me'\)\{done\(\);/.test(page) && /function done\(\)\{document\.querySelectorAll\('\.ch button'\)\.forEach\(function\(b\)\{b\.disabled=true\}\)\}/.test(page));
+  check('the page: a line that was not sent goes back into the box, on a refusal and on no signal', (page.match(/back\(t\);sys\(/g) || []).length === 2 && /function back\(t\)/.test(page));
+  check('the page: a file bubble has a share button that shares the file itself, not its link', /class=\\?"sh\\?"/.test(page) && /navigator\.share\(\{files:\[f\]/.test(page) && !/navigator\.share\(\{[^}]*url:/.test(page));
+  check('the page: a new answer while he reads higher up shows the new-message chip', /else chip\(1\);return true\}/.test(page) && /id=\\?"nw\\?"/.test(page));
   check('the page: a file is a link that opens it, buttons send their own text', /class="doc" href=/.test(page) && /send\(x\.getAttribute\('data-c'\),i\+1\)/.test(page));
   logRows = [];
   fileRows = { wodoc1: fileRows.wodoc1 };

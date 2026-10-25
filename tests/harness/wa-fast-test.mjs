@@ -49,6 +49,10 @@ check('a tap on a non-professional message of the assistant: not a rating', rate
 check('an answer logged before the ref was kept: the last answer decides', rateOf(m('1. \u05de\u05d3\u05d5\u05d9\u05e7', 1), 'assistant | answer | t', pro).good === true && rateOf(m('1', 1), 'assistant | answer | t', { text: 'x', ref: 'dev' }) === null);
 const rl = rateAdd(JSON.stringify(Array.from({ length: RATE_MAX }, () => ({ good: true }))), false, 'q '.repeat(300), '2026-10-21T08:00:00Z');
 check('ratings: the newest kept, at most ' + RATE_MAX + ', question cut to 200', rl.length === RATE_MAX && rl[rl.length - 1].good === false && rl[rl.length - 1].q.length === 200);
+// 25/10/2026: five taps in nine seconds on one answer were two ratings; the same answer again replaces its rating
+const r1 = rateAdd('[]', true, 'answer A', '2026-10-25T08:06:50Z'), r2 = rateAdd(JSON.stringify(r1), true, 'answer A', '2026-10-25T08:06:51Z'), r3 = rateAdd(JSON.stringify(r2), false, 'answer A', '2026-10-25T08:06:57Z');
+check('ratings: one per answer, the last tap wins', r2.length === 1 && r3.length === 1 && r3[0].good === false && r3[0].at === '2026-10-25T08:06:57Z', r3);
+check('ratings: another answer is a new rating', rateAdd(JSON.stringify(r3), true, 'answer B', '2026-10-25T09:00:00Z').length === 2);
 console.log('\n5. the conversation so far (recentLine)');
 {
   const N = Date.parse('2026-10-21T10:30:00Z');
