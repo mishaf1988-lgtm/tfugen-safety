@@ -116,6 +116,7 @@ console.log('\n5. files and buttons, like WhatsApp (25/10/2026)');
   check('a signed link to a file outside the safety folder: 404', r.status === 404);
   r = await onRequest({ request: nr('/api/chat?f=wodoc1&e=' + (Date.now() - 1000) + '&s=' + await fileSig(ENV, 'wodoc1', Date.now() - 1000)), env: ENV });
   check('an expired link: 403', r.status === 403);
+  check('the page: under the buttons an "other" one (25/10/2026, Michael): it sends nothing, it opens the box for his own answer', /class=\\?"oth\\?"/.test(page) && /querySelectorAll\('\.ch button\[data-c\]'\)/.test(page) && /o\.onclick=function\(\)\{var x=\$\('x'\);x\.placeholder=[^}]*x\.focus\(\)/.test(page) && !/o\.onclick=[^}]*send\(/.test(page));
   check('the page: a file is a link that opens it, buttons send their own text', /class="doc" href=/.test(page) && /send\(x\.getAttribute\('data-c'\),i\+1\)/.test(page));
   logRows = [];
   fileRows = { wodoc1: fileRows.wodoc1 };
