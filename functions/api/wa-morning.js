@@ -272,6 +272,42 @@ export function watchVerdict(last, outs, nowMs, warned) {
     + '. \u05d9\u05d9\u05ea\u05db\u05df \u05e9\u05d4\u05e8\u05d9\u05e6\u05d4 \u05e0\u05ea\u05e7\u05e2\u05d4. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05e9\u05d5\u05d1, \u05d0\u05d5 \u05dc\u05d7\u05db\u05d5\u05ea \u05e2\u05d5\u05d3 \u05db\u05de\u05d4 \u05d3\u05e7\u05d5\u05ea.' };
 }
 // 21/10/2026: a promise to Michael still open after a day: one reminder (_wa.js promiseDue).
+// 25/10/2026 (Michael in the questionnaire: "do it: build it", after a calendar request sat in dev_inbox and he heard
+// nothing): an open dev request older than DEV_STUCK_MS that nobody told him about (no told_at, set by a wa_me with
+// ref "dev <id>") gets one line, once, between 07:00 and 21:00 Israel. The ref goes along, so his answer goes to dev.
+export const DEV_STUCK_MS = 2 * 60 * 60 * 1000, DEV_WARN_KEY = 'dev_warned', DEV_WARN_MAX = 50;
+export function devStuck(raw, warnedRaw, nowMs, hour) {
+  if (!(hour >= 7 && hour < 21)) return [];
+  let list = [], warned = [];
+  try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
+  try { warned = JSON.parse(warnedRaw || '[]'); } catch (e) { warned = []; }
+  if (!Array.isArray(list)) return [];
+  if (!Array.isArray(warned)) warned = [];
+  return list.filter((x) => x && x.status === 'open' && !x.told_at && warned.indexOf(x.id) < 0 && nowMs - (Date.parse(x.at) || nowMs) >= DEV_STUCK_MS);
+}
+export function devStuckText(x) {
+  const hm = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(x.at));
+  return '\u05d1\u05e7\u05e9\u05ea \u05e4\u05d9\u05ea\u05d5\u05d7 \u05de-' + hm + ' \u05e2\u05d3\u05d9\u05d9\u05df \u05e4\u05ea\u05d5\u05d7\u05d4, \u05d5\u05dc\u05d0 \u05e7\u05d9\u05d1\u05dc\u05ea \u05e2\u05dc\u05d9\u05d4 \u05e2\u05d3\u05db\u05d5\u05df: "'
+    + clip(stripInternalIds(x.text), 160) + '". \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e2\u05e0\u05d5\u05ea \u05db\u05d0\u05df, \u05d5\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e2\u05d5\u05d1\u05e8\u05ea \u05dc\u05e4\u05d9\u05ea\u05d5\u05d7.';
+}
+async function devRemind(env, now) {
+  const [raw, warnedRaw] = await Promise.all([stateGet(env, 'dev_inbox'), stateGet(env, DEV_WARN_KEY)]);
+  const due = devStuck(raw, warnedRaw, now.getTime(), ilHour(now));
+  if (!due.length) return null;
+  if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return null;
+  const to = await ownerWa(env, sbFrom(env));
+  if (!to) return null;
+  const x = due[0]; // one a tick: each line carries its own ref for the answer
+  let warned = []; try { warned = JSON.parse(warnedRaw || '[]'); } catch (e) { warned = []; }
+  await stateSet(env, DEV_WARN_KEY, JSON.stringify([x.id].concat(Array.isArray(warned) ? warned : []).slice(0, DEV_WARN_MAX)));
+  const text = devStuckText(x);
+  const r = await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, sbFrom(env)) });
+  if (r.ok) await noteLastOut(env, sbFrom(env), text, 'dev ' + x.id);
+  await sb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify([{ id: 'wd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
+      event_type: 'watch', channel: r.ok ? 'whatsapp' : 'whatsapp_error', payload: { title: clip(text, 120), kind: 'dev_stuck', detail: r.error || null } }]) }).catch(() => {});
+  return { warned: 1, sent: r.ok };
+}
 async function promiseRemind(env, now) {
   const raw = await stateGet(env, PROMISE_KEY);
   const due = promiseDue(raw, now.getTime(), ilHour(now));
@@ -354,8 +390,9 @@ export async function watch(env, now) {
   const oc = await ocrAuto(env, now).catch(() => null);
   const pc = await promiseCheck(env, now).catch(() => null);
   const pr = await promiseRemind(env, now).catch(() => null);
+  const dv = await devRemind(env, now).catch(() => null);
   const r = await watchReply(env, now);
-  return Object.assign({}, r, pr ? { promises: pr } : {}, pc ? { check: pc } : {}, oc ? { ocr: oc } : {});
+  return Object.assign({}, r, pr ? { promises: pr } : {}, dv ? { dev: dv } : {}, pc ? { check: pc } : {}, oc ? { ocr: oc } : {});
 }
 async function watchReply(env, now) {
   const rows = await sb(env, 'notifications_log?select=ts,payload&event_type=eq.owner_in&order=ts.desc&limit=1').catch(() => []);

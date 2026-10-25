@@ -187,6 +187,23 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     check('dev count: compact keeps it at the end within ' + MAX_CHARS, comp.length <= MAX_CHARS && /אתמול: 1\.$/.test(comp), comp.length);
   }
 
+  // 25/10/2026: the guard for a dev request Michael never heard about
+  {
+    const { devStuck, devStuckText, DEV_STUCK_MS } = await import('./_build/wa-morning.mjs');
+    const T = Date.parse('2026-10-25T12:00:00Z');
+    const L = JSON.stringify([
+      { id: 'dev-20261025090000-aaaa', at: '2026-10-25T09:00:00Z', status: 'open', text: 'move the course day dev-20261025090000-aaaa' },
+      { id: 'dev-20261025091000-bbbb', at: '2026-10-25T09:10:00Z', status: 'open', text: 'told', told_at: '2026-10-25T09:20:00Z' },
+      { id: 'dev-20261025113000-cccc', at: '2026-10-25T11:30:00Z', status: 'open', text: 'fresh one' },
+      { id: 'dev-20261025080000-dddd', at: '2026-10-25T08:00:00Z', status: 'done', text: 'closed' }]);
+    const d = devStuck(L, '[]', T, 15);
+    check('dev guard: only open, untold and older than ' + (DEV_STUCK_MS / 3600000) + 'h', d.length === 1 && d[0].id === 'dev-20261025090000-aaaa', d);
+    check('dev guard: once (warned list), and quiet at night', devStuck(L, '["dev-20261025090000-aaaa"]', T, 15).length === 0 && devStuck(L, '[]', T, 22).length === 0 && devStuck(L, '[]', T, 6).length === 0);
+    check('dev guard: bad state = nothing, never a throw', devStuck('x', 'y', T, 15).length === 0 && devStuck(null, null, T, 15).length === 0);
+    const tx = devStuckText(d[0]);
+    check('dev guard: the time in Israel (UTC+2 after 25/10), no internal id', /11:00/.test(tx) && !/dev-\d{14}/.test(tx), tx);
+  }
+
   // 20/10/2026: the watchdog for a stuck run
   {
     const T = Date.parse('2026-10-20T18:00:00Z'), last = { ts: '2026-10-20T18:00:00Z', payload: { wamid: 'w1' } };

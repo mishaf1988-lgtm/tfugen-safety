@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
+import { devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -557,6 +557,14 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
       (await call({ ...D, to: 'x@y' })).status === 400 && (await call({ ...D, subject: '' })).status === 400 && (await call({ ...D, body: '' })).status === 400
       && (await call({ ...D, cc: 'not-an-address' })).status === 400 && (await call({ ...D, send: true })).status === 400 && !puts.length);
     check('without the key: 403', (await call(D, 'nope')).status === 403 && !puts.length);
+  }
+
+  console.log('\n4e1. devInboxTold (25/10/2026): a wa_me with ref "dev <id>" marks the request told');
+  {
+    const L = JSON.stringify([{ id: 'dev-20261025104303-0jox', status: 'open' }, { id: 'dev-20261025090000-aaaa', status: 'done' }]);
+    const t = devInboxTold(L, 'dev dev-20261025104303-0jox', '2026-10-25T12:00:00Z');
+    check('told: the open one gets told_at', t && t[0].told_at === '2026-10-25T12:00:00Z' && !t[1].told_at, t);
+    check('told: a done one, an unknown id, another ref or bad state = null', devInboxTold(L, 'dev dev-20261025090000-aaaa', 'x') === null && devInboxTold(L, 'dev dev-20261025000000-zzzz', 'x') === null && devInboxTold(L, 'mail-triage', 'x') === null && devInboxTold('x', 'dev dev-20261025104303-0jox', 'x') === null && !DEV_REF.test('dev x'));
   }
 
   console.log('\n4e2. cal_move (25/10/2026): one JSON file for the flow that moves an event');
