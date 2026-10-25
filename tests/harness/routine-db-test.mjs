@@ -240,7 +240,13 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     { const { greetByHour } = await import('./_build/routine-db.mjs');
       const gm = '\u05d1\u05d5\u05e7\u05e8 \u05d8\u05d5\u05d1 \u05d0\u05dc\u05d9\u05e0\u05d4,\n\u05e9\u05dc\u05d5\u05dd';
       check('greeting: good morning kept at 10:30 Israel', greetByHour(gm, Date.parse('2026-10-21T07:30:00Z')) === gm);
-      check('greeting: good morning becomes hi at 11:57 Israel', greetByHour(gm, Date.parse('2026-10-21T08:57:00Z')) === '\u05d4\u05d9\u05d9 \u05d0\u05dc\u05d9\u05e0\u05d4,\n\u05e9\u05dc\u05d5\u05dd', greetByHour(gm, Date.parse('2026-10-21T08:57:00Z'))); }
+      check('greeting: good morning becomes hi at 11:57 Israel', greetByHour(gm, Date.parse('2026-10-21T08:57:00Z')) === '\u05d4\u05d9\u05d9 \u05d0\u05dc\u05d9\u05e0\u05d4,\n\u05e9\u05dc\u05d5\u05dd', greetByHour(gm, Date.parse('2026-10-21T08:57:00Z')));
+      // 25/10/2026: the draft to the supply chain manager was made at 10:26 Israel (winter time, UTC+2) and opened with "hi"
+      const hi = '\u05d4\u05d9\u05d9 \u05d0\u05dc\u05d9\u05e0\u05d4,\n\u05e9\u05dc\u05d5\u05dd';
+      check('greeting: hi becomes good morning at 10:26 Israel, winter time', greetByHour(hi, Date.parse('2026-10-25T08:26:00Z')) === gm, greetByHour(hi, Date.parse('2026-10-25T08:26:00Z')));
+      check('greeting: hi kept at 11:05 Israel and at 03:00 Israel', greetByHour(hi, Date.parse('2026-10-25T09:05:00Z')) === hi && greetByHour(hi, Date.parse('2026-10-25T01:00:00Z')) === hi);
+      const was = '\u05d4\u05d9\u05d9\u05ea\u05d9 \u05d1\u05de\u05e4\u05e2\u05dc';
+      check('greeting: a word that starts like hi is not touched', greetByHour(was, Date.parse('2026-10-25T07:00:00Z')) === was); }
     const { DEV_TRIGGER, DEV_FIRE_HEAD } = await import('./_build/routine-db.mjs');
     state.dev_inbox = '[]'; const f0 = fires.length;
     let r = await call({ op: 'dev_request', agent: 'routine-wa-assistant', text: 'בלי טוקן לא מפעילים כלום' });
@@ -473,7 +479,8 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     puts = [];
     await call({ ...D, body: 'היי,\nאפשר לתאם איתם מועד? תודה, מיכאל.' });
     const sg1 = puts[0] ? JSON.parse(puts[0].body) : {};
-    check('an inline "thanks, <first name>." at the end of the last line is cut', sg1.body === 'היי,\nאפשר לתאם איתם מועד?', sg1.body);
+    // the opening line follows the clock (greetByHour, "hi" or "good morning"); only the end is checked here
+    check('an inline "thanks, <first name>." at the end of the last line is cut', typeof sg1.body === 'string' && sg1.body.split('\n').length === 2 && sg1.body.split('\n')[1] === 'אפשר לתאם איתם מועד?', sg1.body);
     puts = [];
     await call({ ...D, body: 'שלום,\nנא לתאם.\nתודה,\nמיכאל' });
     const sg2 = puts[0] ? JSON.parse(puts[0].body) : {};
