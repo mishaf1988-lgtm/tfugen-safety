@@ -302,7 +302,7 @@ async function recentErrors(env) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!key) return [];
   try {
-    const r = await fetch((env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/rpc/net_recent_errors', { method: 'POST',
+    const r = await fetch((env.SUPABASE_URL || SITE.supabaseUrl) + '/rest/v1/rpc/net_recent_errors', { method: 'POST',
       headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' }, body: JSON.stringify({ minutes: 60 }), signal: AbortSignal.timeout(4000) });
     const j = r.ok ? await r.json() : [];
     return Array.isArray(j) ? j : [];
