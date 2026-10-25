@@ -118,6 +118,11 @@
 //              mail and saves its attachments into the inbox folder. Neither the cloud, the
 //              server (no Mail.Read) nor Cowork can get an attachment's bytes; the flow can.
 //              A new file each time (time + random), never replacing one. MAIL_REQ_ID.
+//   cal_move  (25/10/2026, Michael in the questionnaire: "בצע: דרך Power Automate", after the assistant
+//              could only read the calendar) {id, subject, start, end, approved}: move one event of Michael's
+//              calendar. Like mail_request: a JSON file into OD_CAL_MOVE, and the flow "הזזות ביומן"
+//              (power-automate-mail.md, flow 6) PATCHes only start and end of that event. approved = Michael's
+//              own words with "בצע" (the attendees get an update, a message to a person). Logged in cal_moved.
 //   talk_field  (15/10/2026, Michael: "בצע: הדרכה שבועית מהשטח") {id, dept, text}: into this week's
 //              shared weekly draft (private.talk_week: id w<YYYYMMDD>, s draft, kind null,
 //              created_by 'routine', a "## <department>" section per department) put a short part
@@ -139,7 +144,7 @@ import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLA
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage'];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'cal_moved'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -528,6 +533,26 @@ export function draftRequest(b) {
 export { hasInternalId };
 export function hasPassport(t) { return /(^|[^A-Za-z0-9])[A-Z]{1,2}[0-9]{6,8}(?![A-Za-z0-9])/.test(String(t || '')); }
 export const MAIL_REQ_ID = /^[A-Za-z0-9_=+\/-]{40,400}$/;
+export const OD_CAL_MOVE = '_\u05d4\u05d6\u05d6\u05d5\u05ea \u05d1\u05d9\u05d5\u05de\u05df', CAL_MOVED_KEY = 'cal_moved', CAL_MOVED_MAX = 30;
+const CAL_T = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+// Pure. Israel wall clock "YYYY-MM-DDTHH:MM" for start and end, from today up to a year ahead, at most 14 days long.
+export function calMoveCheck(b, nowMs) {
+  if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
+  if (String(b.why || '').trim().length < 5) return { error: 'why required' };
+  const id = String(b.id || '').trim(), subject = String(b.subject || '').replace(/\s+/g, ' ').trim();
+  if (!MAIL_REQ_ID.test(id)) return { error: 'bad id: the event id as outlook_calendar_search returns it' };
+  if (subject.length < 2 || subject.length > 200) return { error: 'subject: the event subject, 2-200 characters' };
+  if (!/\u05d1\u05e6\u05e2/.test(String(b.approved || ''))) return { error: 'approved: Michael\'s words with "\u05d1\u05e6\u05e2", after he saw the new time and who gets an update' };
+  const start = String(b.start || ''), end = String(b.end || '');
+  if (!CAL_T.test(start) || !CAL_T.test(end)) return { error: 'start and end: YYYY-MM-DDTHH:MM, Israel time' };
+  const ms = (x) => Date.parse(x + ':00Z');
+  if (isNaN(ms(start)) || isNaN(ms(end)) || !(ms(end) > ms(start))) return { error: 'end must be after start' };
+  if (ms(end) - ms(start) > 14 * 86400000) return { error: 'longer than 14 days' };
+  const today = new Date(nowMs).toISOString().slice(0, 10);
+  if (start.slice(0, 10) < today) return { error: 'start in the past' };
+  if (ms(start) - nowMs > 366 * 86400000) return { error: 'more than a year ahead' };
+  return { id, subject, start, end, file: JSON.stringify({ id, subject, start: start + ':00', end: end + ':00', tz: 'Israel Standard Time' }) };
+}
 const OD_NO_DIR = /(^|\/)(_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea|\u05dc\u05de\u05d7\u05d9\u05e7\u05d4|ARCHIVE)(\/|$)/i;
 // 18/10/2026 (Michael: "גם וגם"): csv too, the data file next to a lab certificate pdf.
 const OD_EXT = /\.(pdf|docx?|xlsx|csv|jpe?g|png)$/i;
@@ -764,7 +789,7 @@ export function odDedupeVerdict(item, kept, appId) {
 // nothing is written anywhere else; never a folder, never into old versions or ARCHIVE, never replacing a file.
 export const OD_DESKTOP = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/';
 const OD_PULL_EXT = /\.(pdf|docx?|xlsx?|xlsm|pptx?|csv|txt|jpe?g|png)$/i;
-export const OD_TRIGGER_DIRS = [OD_INBOX, OD_REQ, OD_DRAFT, '_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df', OD_OCR_DIR];
+export const OD_TRIGGER_DIRS = [OD_INBOX, OD_REQ, OD_DRAFT, '_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df', OD_OCR_DIR, OD_CAL_MOVE];
 export function odPullCheck(b) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
   if (String(b.why || '').trim().length < 5) return { error: 'why required' };
@@ -1462,6 +1487,20 @@ export async function onRequest(context) {
       const name = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '') + '-' + Math.random().toString(36).slice(2, 8) + '.txt';
       const f = await putFile(at.token, OD_ROOT + OD_REQ, name, id, 'text/plain');
       return jsonResp({ ok: true, file: OD_REQ + '/' + name, size: f.size || null }, 200, {});
+    }
+    if (body.op === 'cal_move') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'id', 'subject', 'start', 'end', 'approved'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const c = calMoveCheck(body, Date.now());
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const at = await accessToken(env);
+      const name = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '') + '-' + Math.random().toString(36).slice(2, 8) + '.txt';
+      await putFile(at.token, OD_ROOT + OD_CAL_MOVE, name, c.file, 'text/plain');
+      const rows = await stateRead([CAL_MOVED_KEY]).catch(() => []);
+      let list = []; try { list = JSON.parse((rows[0] && rows[0].value) || '[]'); } catch (e) { list = []; }
+      const line = { at: new Date().toISOString(), subject: c.subject, start: c.start, end: c.end, file: name, agent: body.agent, approved: String(body.approved).slice(0, 200) };
+      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+        body: JSON.stringify([{ key: CAL_MOVED_KEY, value: JSON.stringify([line].concat(Array.isArray(list) ? list : []).slice(0, CAL_MOVED_MAX)), updated_at: line.at }]) }).catch(() => null);
+      return jsonResp({ ok: true, file: OD_CAL_MOVE + '/' + name, start: c.start, end: c.end }, 200, {});
     }
     if (body.op === 'mail_draft') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'cc', 'subject', 'body', 'attach', 'reply_to'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});

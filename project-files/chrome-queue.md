@@ -320,3 +320,15 @@
   2. לא לשנות את הפרומפט ולא את התזמון.
   3. Save, ולדווח מה מופיע עכשיו תחת Connectors.
   ```
+- [ ] **C47. Power Automate: "הזזות ביומן"** (25/10/2026, מיכאל בשאלון: "בצע: דרך Power Automate (מומלץ)"). אחרי זה העוזר יכול להזיז אירוע ביומן שלך, רק אחרי "בצע" שלך. הפירוט: `power-automate-mail.md` זרימה 7. טקסט להדבקה בכרום:
+  ```
+  אתה בונה בשבילי זרימה אחת ב-Power Automate. עבור על השלבים ברצף, עצור רק אם משהו לא תואם, ותאר מה אתה רואה. אל תשנה זרימה קיימת, ואל תוסיף פעולה ששולחת מייל.
+  1. ב-OneDrive (https://www.office.com/launch/onedrive), בתיקייה "שולחן העבודה" > "ניהול בטיחות", צור תיקייה חדשה בשם: _הזזות ביומן (אם קיימת, דלג).
+  2. https://make.powerautomate.com > Create > Automated cloud flow. שם: הזזות ביומן. טריגר: OneDrive for Business "When a file is created (properties only)". Folder: /שולחן העבודה/ניהול בטיחות/_הזזות ביומן.
+  3. New step: OneDrive for Business "Get file content". File: Id מהטריגר.
+  4. New step: Data Operation "Compose". Inputs, בלשונית Expression: json(trim(string(body('Get_file_content'))))
+  5. New step: Office 365 Outlook "Send an HTTP request" (לא Update event). Method: PATCH. URI: https://graph.microsoft.com/v1.0/me/events/ ואחריו, כ-Expression: encodeUriComponent(outputs('Compose')?['id']). Content-Type: application/json. Body: {"start":{"dateTime":"X1","timeZone":"Israel Standard Time"},"end":{"dateTime":"X2","timeZone":"Israel Standard Time"}} כש-X1 הוא Expression outputs('Compose')?['start'] ו-X2 הוא Expression outputs('Compose')?['end'].
+  6. Save, ובדוק ב-Flow checker שאין שגיאות. אל תריץ בדיקה ידנית.
+  בסוף: דוח קצר: נשמרה או לא, ומה הראה ה-Flow checker.
+  ```
+  אחרי הביצוע: Claude מזיז את מפגש הקורס מ-26/10/2026 ל-23/11/2026 (08:00-15:00), שמיכאל כבר ביקש, ובודק ב-`outlook_calendar_search` שהאירוע זז. צחי מוזמן לאירוע ויקבל עדכון.
