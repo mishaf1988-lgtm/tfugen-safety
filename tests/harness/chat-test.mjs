@@ -159,5 +159,15 @@ console.log('\n6. a photo or a PDF from him (25/10/2026)');
   check('the page: 📎 sends a photo (made smaller) or a PDF with what is typed', /id="att"/.test(page) && /\/api\/chat\?up=1/.test(page) && /image\/jpeg',0\.82/.test(page));
 }
 
+console.log('\n7. on a computer where the app is installed (25/10/2026, project-files/chat-desktop-install)');
+{
+  // the install order (assistant first, then Tapugan) works only while the two keep these identities: Chrome gives
+  // /chat to the app with the longest scope. A new id, scope or start_url on the app = a new app for everyone.
+  const app = JSON.parse(readFileSync(new URL('../../manifest.webmanifest', import.meta.url), 'utf8'));
+  check('manifest.webmanifest keeps its identity: no id, start_url "/", scope "/" (existing installs and the two shortcuts)', !('id' in app) && app.start_url === '/' && app.scope === '/' && (app.shortcuts || []).every((x) => /^\/\?/.test(x.url)), app);
+  const cm = chatManifest();
+  check('the assistant keeps its own nested identity: id, start_url and scope "/chat"', cm.id === '/chat' && cm.start_url === '/chat' && cm.scope === '/chat');
+}
+
 console.log(`\nchat-test: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
