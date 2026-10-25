@@ -735,6 +735,7 @@ export function odTrashCheck(b) {
 // nothing is written anywhere else; never a folder, never into old versions or ARCHIVE, never replacing a file.
 export const OD_DESKTOP = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/';
 const OD_PULL_EXT = /\.(pdf|docx?|xlsx?|xlsm|pptx?|csv|txt|jpe?g|png)$/i;
+export const OD_TRIGGER_DIRS = [OD_INBOX, OD_REQ, OD_DRAFT, '_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df', OD_OCR_DIR];
 export function odPullCheck(b) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
   if (String(b.why || '').trim().length < 5) return { error: 'why required' };
@@ -754,6 +755,10 @@ export function odPullCheck(b) {
   }
   if (b.dest !== undefined) return { error: 'bad dest' };
   if (dir.length > OD_MKDIR_DEPTH + 1) return { error: 'bad dir' };
+  // the folders whose new files start a flow or are read as the agents' own output (draft, file request, inbox, calendar
+  // queue, OCR text) take files only through their own checked ops (25/10/2026 retro): mail_draft and mail_request
+  // validate recipients and attachments, od_move already refuses the inbox as a target; od_pull would bypass all of it
+  if (OD_TRIGGER_DIRS.indexOf(dir[0]) >= 0) return { error: 'bad dir' };
   if (jd !== OD_TRASH_DIR && OD_NO_DIR.test(jd)) return { error: 'bad dir' };
   return { from: OD_DESKTOP + from.join('/'), to: OD_ROOT + jd, name: from[from.length - 1], dir: jd };
 }

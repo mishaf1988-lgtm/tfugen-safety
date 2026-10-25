@@ -264,6 +264,18 @@ export async function ownerWa(env, sbUrl) {
   } catch (e) { return ''; }
 }
 
+// The time of the last message that really went to Meta (25/10/2026, retro): the watchdog waits for a delivery status
+// only after such a send. wa_last_out also gets the messages that went to /chat only, which Meta never sees.
+export const META_OUT_KEY = 'wa_meta_out';
+async function noteMetaOut(env) {
+  const k = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!k) return;
+  try {
+    await fetch((env.SUPABASE_URL || SB_LIVE) + '/rest/v1/server_state?on_conflict=key', { method: 'POST', signal: tmo(SB_TIMEOUT_MS),
+      headers: { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([{ key: META_OUT_KEY, value: { at: new Date().toISOString() }, updated_at: new Date().toISOString() }]) });
+  } catch (e) { /* a missing note only silences one check */ }
+}
 export async function metaPost(env, payload) {
   const r = await fetch(`https://graph.facebook.com/${META_API_VERSION}/${env.META_PHONE_NUMBER_ID}/messages`, {
     method: 'POST', headers: { Authorization: 'Bearer ' + env.META_ACCESS_TOKEN, 'Content-Type': 'application/json' },
@@ -271,6 +283,7 @@ export async function metaPost(env, payload) {
   });
   const text = await r.text();
   let parsed; try { parsed = JSON.parse(text); } catch (e) { parsed = { raw: text.slice(0, 300) }; }
+  if (r.ok) await noteMetaOut(env);
   return { ok: r.ok, status: r.status, parsed };
 }
 
