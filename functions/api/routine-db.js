@@ -139,7 +139,7 @@ import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLA
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks'];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -732,6 +732,31 @@ export function odTrashCheck(b) {
   if (OD_NO_DIR.test(parts.slice(0, -1).join('/'))) return { error: 'bad path' };
   const name = (parts[parts.length - 2] + ' - ' + parts[parts.length - 1]).slice(-200);
   return { from: OD_ROOT + parts.join('/'), to: OD_ROOT + OD_TRASH_DIR, name };
+}
+// od_dedupe (25/10/2026, Michael: "a mechanism you can delete with yourself, as long as these are forms you made and
+// sent me, they already exist in the folder, and it is only duplicates"; in the questionnaire: "do it: to the recycle
+// bin (recommended)"). The one delete there is, an exception to "files: never delete" (05/10/2026). The handler deletes
+// `path` only when OneDrive says this server's own app created it (createdBy.application.id = ONEDRIVE_CLIENT_ID), and
+// `keep` is another file with the same size and the same content hash. Graph's delete goes to the recycle bin (93
+// days), and every delete is a line in server_state od_deleted. Pure: the two paths, or { error }.
+export const OD_DELETED_KEY = 'od_deleted', OD_DELETED_MAX = 200;
+export function odDedupeCheck(b) {
+  const a = odTrashCheck({ agent: b.agent, why: b.why, path: b.path });
+  if (a.error) return a;
+  const k = odTrashCheck({ agent: b.agent, why: b.why, path: b.keep });
+  if (k.error) return { error: 'bad keep path' };
+  if (a.from === k.from) return { error: 'path and keep are the same file' };
+  return { del: a.from, keep: k.from };
+}
+// Pure: may this item go, given the item, the one kept, and this server's app id.
+export function odDedupeVerdict(item, kept, appId) {
+  if (!item || !item.file || !kept || !kept.file) return 'not a file';
+  if (item.id === kept.id) return 'same item';
+  const app = item.createdBy && item.createdBy.application && item.createdBy.application.id;
+  if (!appId || app !== appId) return 'not created by the server';
+  const h1 = item.file.hashes && item.file.hashes.quickXorHash, h2 = kept.file.hashes && kept.file.hashes.quickXorHash;
+  if (!h1 || !h2 || h1 !== h2 || item.size !== kept.size) return 'content differs';
+  return null;
 }
 // od_pull (24/10/2026, Michael in the questionnaire: "read, and move when needed", after asking for access to
 // the whole desktop): ONE file from the desktop outside the safety folder moves INTO an existing folder of
@@ -1646,6 +1671,27 @@ export async function onRequest(context) {
       if (mv.status === 409) return jsonResp({ ok: false, error: 'name taken in ' + c.dir }, 200, {});
       if (!mv.ok) return jsonResp({ ok: false, error: 'move ' + mv.status }, 200, {});
       return jsonResp({ ok: true, path: c.dir + '/' + c.name }, 200, {});
+    }
+    if (body.op === 'od_dedupe') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path', 'keep'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const c = odDedupeCheck(body);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const at = await accessToken(env);
+      const gh = { Authorization: 'Bearer ' + at.token };
+      const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+      const meta = async (p) => { const r = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(p) + '?select=id,size,file,createdBy', { headers: gh, signal: tmo(GRAPH_MS) }); return r.ok ? r.json() : { status: r.status }; };
+      const item = await meta(c.del), kept = await meta(c.keep);
+      if (item.status || kept.status) return jsonResp({ ok: false, error: item.status ? 'path ' + item.status : 'keep ' + kept.status }, 200, {});
+      const why = odDedupeVerdict(item, kept, env.ONEDRIVE_CLIENT_ID);
+      if (why) return jsonResp({ ok: false, error: why }, 200, {});
+      const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(item.id), { method: 'DELETE', headers: gh, signal: tmo(GRAPH_MS) });
+      if (d.status !== 204) return jsonResp({ ok: false, error: 'delete ' + d.status }, 200, {});
+      const rows = await stateRead([OD_DELETED_KEY]).catch(() => []);
+      let list = []; try { list = JSON.parse((rows[0] && rows[0].value) || '[]'); } catch (e) { list = []; }
+      const line = { at: new Date().toISOString(), path: c.del.slice(OD_ROOT.length), kept: c.keep.slice(OD_ROOT.length), size: item.size, agent: body.agent, why: String(body.why).slice(0, 200) };
+      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+        body: JSON.stringify([{ key: OD_DELETED_KEY, value: JSON.stringify([line].concat(Array.isArray(list) ? list : []).slice(0, OD_DELETED_MAX)), updated_at: line.at }]) }).catch(() => null);
+      return jsonResp({ ok: true, deleted: line.path, kept: line.kept, bin: true }, 200, {});
     }
     if (body.op === 'od_trash') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});

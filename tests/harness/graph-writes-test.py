@@ -34,6 +34,7 @@ APPROVED_SEND = {
     'functions/api/codes.js': 1,  # a password changed: to Michael only, never the password (10/10/2026, "maasher")
 }
 APPROVED_DELETE = {
+    'functions/api/routine-db.js': 1,  # od_dedupe: a duplicate the server itself made, same hash as the file kept, to the recycle bin (25/10/2026, Michael in the questionnaire: "do it: to the recycle bin")
     'functions/api/backup-od.js': 1,   # prune old daily backups in _Backups (01/10/2026); the same prune empties 'לא לתיוק' after 30 days (11/10/2026, Michael: "בצע: מחיקה אחרי 30 יום")
     'functions/api/hazard-file.js': 1,  # prune old copies in 'הוחלפו' after KEEP_DAYS (29/09/2026)
 }
