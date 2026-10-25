@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
+import { odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -130,6 +130,27 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     return odPutPdfCheck({ ...P, name: 'a.doc', b64: ole }).type === 'application/msword' && odPutPdfCheck({ ...P, name: 'a.xls', b64: ole }).type === 'application/vnd.ms-excel'
       && !!odPutPdfCheck({ ...P, name: 'a.doc', b64: zip }).error && !!odPutPdfCheck({ ...P, name: 'a.docx', b64: ole }).error && !!odPutPdfCheck({ ...P, name: 'a.exe', b64: ole }).error;
   })());
+  check('od_dedupe: two clean paths inside the safety folder, not the same file (25/10/2026)', (() => {
+    const ok = odDedupeCheck({ agent: 'routine-wa-assistant', why: 'duplicate of the form', path: '02_x/a (1).pdf', keep: '02_x/a.pdf' });
+    return ok.del === OD_ROOT + '02_x/a (1).pdf' && ok.keep === OD_ROOT + '02_x/a.pdf'
+      && odDedupeCheck({ agent: 'a1', why: 'duplicate', path: '02_x/a.pdf', keep: '02_x/a.pdf' }).error === 'path and keep are the same file'
+      && odDedupeCheck({ agent: 'a1', why: 'duplicate', path: '02_x/a.pdf', keep: '../a.pdf' }).error === 'bad keep path'
+      && !!odDedupeCheck({ agent: 'a1', why: 'x', path: '02_x/a.pdf', keep: '02_x/b.pdf' }).error;
+  })());
+  {
+    const f = (id, app, hash, size) => ({ id, size, file: { hashes: { quickXorHash: hash } }, createdBy: app ? { application: { id: app } } : { user: { displayName: 'M' } } });
+    const V = odDedupeVerdict;
+    check('od_dedupe: goes only when this server made it and the kept file has the same size and hash',
+      V(f('1', 'APP', 'h', 10), f('2', null, 'h', 10), 'APP') === null
+      && V(f('1', null, 'h', 10), f('2', 'APP', 'h', 10), 'APP') === 'not created by the server'
+      && V(f('1', 'FLOW', 'h', 10), f('2', null, 'h', 10), 'APP') === 'not created by the server'
+      && V(f('1', 'APP', 'h', 10), f('2', null, 'g', 10), 'APP') === 'content differs'
+      && V(f('1', 'APP', 'h', 10), f('2', null, 'h', 11), 'APP') === 'content differs'
+      && V(f('1', 'APP', '', 10), f('2', null, '', 10), 'APP') === 'content differs'
+      && V(f('1', 'APP', 'h', 10), f('1', null, 'h', 10), 'APP') === 'same item'
+      && V(f('1', 'APP', 'h', 10), f('2', null, 'h', 10), undefined) === 'not created by the server'
+      && V({ id: '1' }, f('2', null, 'h', 10), 'APP') === 'not a file');
+  }
   check('od_trash: one file to the to-delete folder named after its folder; never from inside it or old versions, never a folder (24/10/2026)', (() => {
     const ok = odTrashCheck({ agent: 'dev', why: 'a test file', path: '18_x/2026 - a.pdf' });
     return ok.to === OD_ROOT + OD_TRASH_DIR && ok.name === '18_x - 2026 - a.pdf' && !!odTrashCheck({ agent: 'dev', why: 'x', path: '18_x/a.pdf' }).error
@@ -160,7 +181,10 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     const own = [...src.matchAll(/method:\s*'PATCH'/g)].map((m) => (owner(m.index) || {}).op).sort().join();
     // 20/10/2026: hazard_choice, one note column on trustee_reports / near_miss (Michael: "only record").
     // 20/10/2026: od_archive, a move of an old form version into "_גרסאות קודמות" (Michael: "to the archive").
-    check('no DELETE anywhere; one PATCH each in expiry_set, hazard_choice, od_archive, od_move, od_pull and od_trash (24/10/2026, moves, not deletes) and talk_field', !/method:\s*'DELETE'/.test(src) && patches.length === 7 && own === 'expiry_set,hazard_choice,od_archive,od_move,od_pull,od_trash,talk_field', own);
+    // 25/10/2026: the one DELETE, od_dedupe (Michael in the questionnaire: "do it: to the recycle bin"); only there, and only of a Graph item
+    const dels = [...src.matchAll(/method:\s*'DELETE'/g)].map((m) => (owner(m.index) || {}).op);
+    check('one DELETE, in od_dedupe only, of a OneDrive item (to the recycle bin); never a table row', dels.join() === 'od_dedupe' && /graph\.microsoft\.com\/v1\.0\/me\/drive\/items\/' \+ encodeURIComponent\(item\.id\), \{ method: 'DELETE'/.test(src), dels);
+    check('no other DELETE; one PATCH each in expiry_set, hazard_choice, od_archive, od_move, od_pull and od_trash (24/10/2026, moves, not deletes) and talk_field', dels.length === 1 && patches.length === 7 && own === 'expiry_set,hazard_choice,od_archive,od_move,od_pull,od_trash,talk_field', own);
   }
 
   console.log('\n4b. agent_report: append-only run log');
@@ -444,6 +468,38 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('why missing, a bad agent name, or an extra field: refused, nothing created', (await call({ ...base, why: '' })).status === 400 && (await call({ ...base, agent: 'Bad' })).status === 400 && (await call({ ...base, extra: 1 })).status === 400 && !Object.keys(drive).some((k) => k.endsWith('/analyses')));
     check('without the key: 403, nothing created', (await call(base, 'nope')).status === 403 && !Object.keys(drive).some((k) => k.endsWith('/analyses')));
     graph = async () => new Response('{}', { status: 500 });
+    // od_dedupe through the handler (25/10/2026): Graph answers for two files, one made by this server's app
+    {
+      const E = { ...ENV, ONEDRIVE_CLIENT_ID: 'APP' };
+      let items, deleted;
+      const mk = () => { deleted = []; items = { 'a (1).pdf': { id: 'i1', size: 10, file: { hashes: { quickXorHash: 'h' } }, createdBy: { application: { id: 'APP' } } },
+        'a.pdf': { id: 'i2', size: 10, file: { hashes: { quickXorHash: 'h' } }, createdBy: { user: { displayName: 'M' } } } }; };
+      graph = async (url, opt) => {
+        if ((opt.method || 'GET') === 'DELETE') { deleted.push(decodeURIComponent(url.split('/items/')[1])); return new Response(null, { status: 204 }); }
+        const name = decodeURIComponent(url.split('?')[0].split('/').pop());
+        return items[name] ? new Response(JSON.stringify(items[name]), { status: 200 }) : new Response('{}', { status: 404 });
+      };
+      const D = { op: 'od_dedupe', agent: 'routine-wa-assistant', why: 'the same form saved twice', path: '02_x/a (1).pdf', keep: '02_x/a.pdf' };
+      mk(); delete state.od_deleted;
+      let x = await call(D, 'k-123', 'POST', E);
+      const log = JSON.parse(state.od_deleted || '[]');
+      check('od_dedupe: the copy this server made, same hash and size: one DELETE of that item (recycle bin), and a line in od_deleted', x.json.ok && x.json.bin && deleted.join() === 'i1'
+        && log.length === 1 && log[0].path === '02_x/a (1).pdf' && log[0].kept === '02_x/a.pdf' && log[0].agent === 'routine-wa-assistant', { j: x.json, deleted, log });
+      mk(); items['a (1).pdf'].createdBy = { user: { displayName: 'M' } };
+      x = await call(D, 'k-123', 'POST', E);
+      check('od_dedupe: a file Michael made: refused, nothing deleted', !x.json.ok && x.json.error === 'not created by the server' && deleted.length === 0, x.json);
+      mk(); items['a.pdf'].file.hashes.quickXorHash = 'g';
+      x = await call(D, 'k-123', 'POST', E);
+      check('od_dedupe: different content: refused, nothing deleted', !x.json.ok && x.json.error === 'content differs' && deleted.length === 0, x.json);
+      mk(); delete items['a.pdf'];
+      x = await call(D, 'k-123', 'POST', E);
+      check('od_dedupe: the kept file is not there: refused, nothing deleted', !x.json.ok && /^keep 404/.test(x.json.error) && deleted.length === 0, x.json);
+      mk();
+      x = await call(D, 'k-123', 'POST', ENV);
+      check('od_dedupe: no app id in the environment: refused, nothing deleted', !x.json.ok && x.json.error === 'not created by the server' && deleted.length === 0, x.json);
+      check('od_dedupe: an extra field or no key: refused', (await call({ ...D, force: true }, 'k-123', 'POST', E)).status === 400 && (await call(D, 'nope', 'POST', E)).status === 403 && deleted.length === 0);
+      graph = async () => new Response('{}', { status: 500 });
+    }
   }
 
   console.log('\n4f2. mail_draft: one request file for the draft flow (20/10/2026: the 365 connector is read only)');
