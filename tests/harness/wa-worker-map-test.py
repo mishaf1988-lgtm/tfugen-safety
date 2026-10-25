@@ -21,6 +21,7 @@ NOT_WORKER = {
     'routine-dev-fire.md': 'immediate development per request, takes no worker tasks (21/10/2026)',
     'routine-worker-now.md': 'the worker on demand, takes one task as the named worker (21/10/2026)',
     'routine-dev-runner.md': 'the on-duty developer, code requests every two hours (21/10/2026)',
+    'routine-mail-triage.md': 'the daily mail scan, one message to Michael; "more mails" goes to the assistant itself (25/10/2026)',
 }
 wa = open(os.path.join(PF, 'routine-wa-assistant.md'), encoding='utf-8').read()
 line = next((l for l in wa.split('\n') if l.startswith('   - **משימה של עובד')), '')
