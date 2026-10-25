@@ -8,7 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { assess, step, mailHtml, mailSubject, runWatch, stateKeys, WATCH_KEY, STALE_MS, ERR_MS, ilTime, slowIssue, probe, SLOW_MS, SLOW_TICKS, LAT_KEEP, PROBE_MS, LAT_GAP_MS, SLOW_SPAN_MS, WATCH_LOCK, waRegDue, waReRegister, WA_REG_GAP_MS } from './_build/_watchdog.mjs';
+import { assess, step, mailHtml, mailSubject, runWatch, stateKeys, WATCH_KEY, STALE_MS, ERR_MS, ilTime, slowIssue, probe, SLOW_MS, SLOW_TICKS, LAT_KEEP, PROBE_MS, LAT_GAP_MS, SLOW_SPAN_MS, WATCH_LOCK, waRegDue, waReRegister, WA_REG_GAP_MS, PUSH_FAIL_MS } from './_build/_watchdog.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).substring(0, 400) : '')); } };
@@ -102,6 +102,26 @@ await (async () => {
   globalThis.fetch = real;
 })();
 check('runWatch turns the Vitre check on from the Vitre env vars', /assess\(st, now\.getTime\(\), connected, started, !!\(env\.VITRE_API_KEY_ID && env\.VITRE_API_KEY_SECRET\), lat, slowOpen, wa\)/.test(src('functions/_watchdog.js')));
+
+console.log('\n1b. the pop-ups, when they are the only channel (25/10/2026)');
+{
+  const a = (extra) => assess(S({ ...fresh, wa_owner_mode: 'chat', ...extra }), NOW, true, ago(600));
+  const last = (min, sent, failed, st) => JSON.stringify({ at: ago(min), sent, failed, gone: 0, left: 1, st });
+  check('chat mode, the last push went: nothing', a({ push_last: last(1, 1, 0, [201]), push_ok_at: ago(1) }).length === 0);
+  check('chat mode, one failure 5 minutes after a good push: not yet', a({ push_last: last(1, 0, 1, ['network']), push_ok_at: ago(6) }).length === 0);
+  const f = a({ push_last: last(1, 0, 1, [403]), push_ok_at: ago(1 + PUSH_FAIL_MS / 60000) });
+  check('chat mode, no phone took a push for ' + PUSH_FAIL_MS / 60000 + ' minutes: push:fail, with the status', f.length === 1 && f[0].key === 'push:fail' && f[0].detail.indexOf('403') >= 0, f);
+  check('chat mode, failing and never once delivered: push:fail', keys(a({ push_last: last(1, 0, 1, [400]) })).join() === 'push:fail');
+  check('not chat mode (WhatsApp is the channel): pop-up failures are not an alert', assess(S({ ...fresh, push_last: last(1, 0, 1, [403]) }), NOW, true, ago(600)).length === 0);
+  const g0 = JSON.stringify({ at: ago(20), n: 1, left: 0 }), g1 = JSON.stringify({ at: ago(20), n: 1, left: 1 });
+  const subs = (min) => JSON.stringify([{ endpoint: 'https://x', at: ago(min) }]);
+  const lg = a({ push_gone: g0, chat_push_subs: '[]' });
+  check('the only phone dropped: push:gone, saying the messages went back to WhatsApp', lg.length === 1 && lg[0].key === 'push:gone' && lg[0].title.indexOf('\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4') >= 0, lg);
+  check('...closed when a phone subscribes again after the drop', a({ push_gone: g0, chat_push_subs: subs(5) }).length === 0);
+  check('...an old subscription (before the drop) does not close it', keys(a({ push_gone: g1, chat_push_subs: subs(60), push_ok_at: ago(20) })).join() === 'push:gone');
+  check('one of two dropped: open until a later push gets through to the one left', keys(a({ push_gone: g1, push_ok_at: ago(20) })).join() === 'push:gone' && a({ push_gone: g1, push_ok_at: ago(3), push_last: last(3, 1, 0, [201]) }).length === 0);
+  check('the watchdog reads every key _push.js writes, and the mode', ['push_last', 'push_ok_at', 'push_gone', 'chat_push_subs', 'wa_owner_mode'].every((k) => stateKeys().includes(k)) && /PUSH_LAST = 'push_last', PUSH_OK_AT = 'push_ok_at', PUSH_GONE = 'push_gone'/.test(src('functions/_push.js')));
+}
 
 console.log('\n2. one mail when it starts, one when it is over');
 let st = step(null, [{ key: 'stale:deck', title: 'T', detail: 'D' }], ago(0));

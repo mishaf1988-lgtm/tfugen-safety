@@ -1,7 +1,7 @@
 // Pop-ups on Michael's phone (24/10/2026): functions/_push.js, /api/chat?push=1, /chat-sw.js, wa_me.
 // The payload is decrypted here the way the phone does it (RFC 8291), and the VAPID signature checked with the public key.
 import { readFileSync } from 'node:fs';
-import { vapidKeys, VAPID_KEY, pushEncrypt, vapidAuth, pushOwner, pushSubOk, pushPayload, unb64u, b64u, PUSH_KEY } from './_build/_push.mjs';
+import { vapidKeys, VAPID_KEY, pushEncrypt, vapidAuth, pushOwner, pushSubOk, pushPayload, unb64u, b64u, PUSH_KEY, PUSH_LAST, PUSH_OK_AT, PUSH_GONE } from './_build/_push.mjs';
 import { chatOnly, OWNER_MODE_KEY } from './_build/_wa.mjs';
 import { onRequest } from './_build/chat.mjs';
 import { sendToOwner } from './_build/_wa.mjs';
@@ -71,9 +71,10 @@ globalThis.fetch = async (u, init) => {
     return json(key in state ? [{ value: asText(state[key]) }] : []);
   }
   if (url.startsWith(SB + '/rest/v1/server_state') && m === 'POST') {
-    const row = JSON.parse(init.body)[0];
-    if (row.key === PUSH_KEY) stored = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
-    else if (!(row.key in state) || !/ignore-duplicates/.test(init.headers.Prefer)) state[row.key] = row.value;
+    for (const row of JSON.parse(init.body)) {
+      if (row.key === PUSH_KEY) stored = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
+      else if (!(row.key in state) || !/ignore-duplicates/.test(init.headers.Prefer)) state[row.key] = row.value;
+    }
     return new Response('', { status: 201 });
   }
   if (url.startsWith('https://push.test/')) return new Response('', { status: sends[url] || 201 });
@@ -105,6 +106,22 @@ const ENV = { SUPABASE_URL: SB, SUPABASE_SERVICE_ROLE_KEY: 'k', VAPID_PRIVATE: v
   const vok = await S.verify({ name: 'ECDSA', hash: 'SHA-256' }, vk.publicKey, unb64u(sg), enc.encode(h + '.' + b));
   check('the request: aes128gcm, TTL, urgency high, and a VAPID token the push service can verify (aud = its origin)', toA.headers['Content-Encoding'] === 'aes128gcm' && toA.headers.TTL && toA.headers.Urgency === 'high' && vok && JSON.parse(new TextDecoder().decode(unb64u(b))).aud === 'https://push.test');
   check('and the phone can open it', (await decrypt(ph, new Uint8Array(toA.body))).text.indexOf('תשובה') > 0);
+}
+
+console.log('\n3b. how the last push went, for the watchdog (25/10/2026)');
+{
+  const J = (k) => (typeof state[k] === 'string' ? JSON.parse(state[k]) : state[k]);
+  const last = J(PUSH_LAST), gone = J(PUSH_GONE);
+  check('the push above: push_last says 1 sent, 1 failed, 1 dropped, 1 left, with the statuses', last && last.sent === 1 && last.failed === 1 && last.gone === 1 && last.left === 1 && last.st.join() === '201,410' && Date.parse(last.at) > 0, last);
+  check('...push_ok_at is that moment, and push_gone keeps the drop with how many are left', !!last && state[PUSH_OK_AT] === last.at && gone && gone.n === 1 && gone.left === 1 && gone.at === last.at, { ok: state[PUSH_OK_AT], gone });
+  const okBefore = state[PUSH_OK_AT];
+  delete state[PUSH_GONE];
+  stored = [ph.sub]; sends['https://push.test/a'] = 500;
+  await new Promise((res) => setTimeout(res, 5));
+  r = await pushOwner(ENV, SB, 'x');
+  const l2 = J(PUSH_LAST);
+  check('a push no phone took: push_last 0 sent, 1 failed; push_ok_at and push_gone untouched', r.sent === 0 && !!l2 && l2.sent === 0 && l2.failed === 1 && l2.st[0] === 500 && l2 && last && l2.at !== last.at && state[PUSH_OK_AT] === okBefore && !(PUSH_GONE in state), l2);
+  delete sends['https://push.test/a'];
 }
 
 {
