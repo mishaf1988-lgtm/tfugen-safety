@@ -312,3 +312,11 @@
   3. באותו מסך, Business verification: רק לדווח מה המצב ומה נדרש (Start verification / Not verified / Pending). לא להתחיל אימות ולא להעלות מסמך.
   4. דווח: מה נשמר בכל שדה, ומה מצב האימות.
   ```
+
+- [ ] **C46. חיבור Microsoft 365 לריצה "סריקת מיילים יומית"** (25/10/2026, מיכאל בשאלון: "בצע: פעם ביום, 08:30". הריצה נוצרה משיחת הפיתוח, אבל הכלי לא מצרף חיבור: "this trigger stores no MCP connectors". בלי החיבור היא לא קוראת מיילים.)
+  ```
+  משימה: בדף https://claude.ai/code/routines/trig_01MB92o4ptUuC2a42SyP5S4e (סריקת מיילים יומית), Edit:
+  1. בחלק Connectors להוסיף את Microsoft 365. אם אפשר לבחור כלים: רק outlook_email_search ו-read_resource (קריאה).
+  2. לא לשנות את הפרומפט ולא את התזמון.
+  3. Save, ולדווח מה מופיע עכשיו תחת Connectors.
+  ```
