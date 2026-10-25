@@ -49,7 +49,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-dev.
 - **חיפוש רחב = סוכן משנה על Haiku** (`Agent` עם `model: haiku`, סוג `Explore`).
   הוא קורא את הקטעים אצלו ומחזיר רק מיקומים ומסקנה. הוא **מוצא**; להחליט, לערוך
   ולבדוק נשאר אצל המודל הראשי. לא לתת לו לשפוט נכונות.
-- **הרצות harness**: בענן `PARALLEL=4 bash tests/harness/run.sh` (4 shards ב-worktrees, כ-11 דק' במקום 45; 05/10/2026). hook `lean-harness.py` כבר מקצר `bash tests/harness/run.sh`
+- **הרצות harness**: לפני push מריצים את הבדיקות של מה שנגעת בו (`bash tests/harness/run.sh <שם>`, כמה שמות בלולאה), וההרצה המלאה היא ה-CI (8 קבוצות, כ-2 דק'). מ-25/10/2026, מיכאל: "בצע את שלושתם", כי ההרצה המלאה בענן לקחה כ-11 דק' לפני כל push. הרצה מלאה מקומית (`PARALLEL=4 bash tests/harness/run.sh`, כ-11 דק') רק כשה-CI אדום ולא ברור למה. hook `lean-harness.py` כבר מקצר `bash tests/harness/run.sh`
   לשורה אחת כשהכל ירוק, ומחזיר לוג מלא כשמשהו אדום. לא צריך `grep` ידני יותר.
 - **אל תקרא שוב קובץ שכבר נקרא בסשן.** אם ערכת אותו, ה-Edit כבר נכשל אם משהו
   לא תאם.
@@ -106,7 +106,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-dev.
 
 **100. דחיפה אחרי הרצה חלקית של הבדיקות, וסינון שהסתיר `HARNESS ERROR` (15/10/2026, #1545).**
 מה קרה: לפני ה-push הרצתי רק `run.sh trustee`, `run.sh batch` וכו'. ב-CI נכשלו `keyboard-only` (« » בהערה שנכתבה דרך python) ו-`outbox-race`, שמחלץ פונקציות מהקובץ ולא הכיר פונקציה חדשה. אחר כך סיננתי את הריצה המלאה עם `grep -E "✗|crashed|FAIL|GREEN"`, וזה לא תפס `HARNESS ERROR ReferenceError`: ראיתי רק "FAILURES ABOVE".
-הכלל: לפני כל push, `PARALLEL=4 bash tests/harness/run.sh` מלא. ולקרוא אותו בסינון הפוך: `grep -vE "passed, 0 failed|^\s+✓|report only"`, שמראה כל שורה שאינה הצלחה.
+הכלל: לפני כל push, הבדיקות של כל קובץ שנגעת בו, כולל אלה שקוראות אותו (`grep -l <קובץ> tests/harness/*`); ההרצה המלאה היא ה-CI, ואדום שם = לתקן מיד באותו PR (מ-25/10/2026, מיכאל: "בצע"; עד אז הרצה מלאה מקומית לפני כל push). הרצה מלאה, כשצריך, נקראת בסינון הפוך: `grep -vE "passed, 0 failed|^\s+✓|report only"`, שמראה כל שורה שאינה הצלחה.
 נאכף: טקסט (אין דרך בקוד: hook לא יודע אילו בדיקות רצו מאז העריכה האחרונה). ה-CI ו-`merge-gate.py` חוסמים מיזוג אדום.
 חזר: 0
 
