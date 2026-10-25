@@ -1,10 +1,9 @@
-// A voice message to text (25/10/2026, Michael: "a text-only recording is what my iPhone keyboard already does; a
-// transcribed recording is useful"; in the questionnaire: "do it: a transcribed voice message"). The phone records
-// (MediaRecorder: webm/opus on Android, mp4/aac on an iPhone), the server writes it out with Whisper on Workers AI
-// (the AI binding the OCR already uses), and the text goes into the box for him to fix before he sends it.
-// Used by /api/chat?stt=1 and by routine-db op 'stt' (so a cloud session can check it on a real recording).
+// Voice to text with Whisper on Workers AI (the AI binding the OCR already uses), 25/10/2026. It was the 🎤 of /chat;
+// Michael tried it and asked to remove it ("it transcribes me and then writes it as text"), since the iPhone keyboard
+// dictates already. What stays is this, for the server: routine-db op 'stt' (a voice note the assistant gets, or a
+// cloud session checking the model on a real recording). Measured live 25/10/2026: Hebrew m4a and webm word for word.
 export const STT_MODEL = '@cf/openai/whisper-large-v3-turbo';
-export const STT_MAX = 6 * 1024 * 1024; // about 6 minutes of opus, 3 of aac; the page stops at 3 minutes
+export const STT_MAX = 6 * 1024 * 1024; // about 6 minutes of opus, 3 of aac
 
 // by the bytes, never by the name or the header the phone sends
 export function sttKind(b) {
