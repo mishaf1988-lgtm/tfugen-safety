@@ -547,16 +547,23 @@ export function draftSentGate(b) {
 export function asksOwnerToDelete(t) {
   return /(^|[^\u05d0-\u05ea])(\u05dc\u05de\u05d7\u05d5\u05e7|\u05ea\u05de\u05d7\u05e7)\s+(\u05d0\u05d5\u05ea|\u05d0\u05ea)/.test(String(t || ''));
 }
+const DRAFT_OURS = /@tapugan\.co\.il$/i;
+export function draftListOk(list) {
+  if (!list.every((x) => DRAFT_TO.test(x))) return false;
+  return list.length <= 5 || (list.length <= 30 && list.every((x) => DRAFT_OURS.test(x)));
+}
 export function draftRequest(b) {
   // Up to 5 recipients, "a@x; b@y" (20/10/2026: one mail to the two people in charge of the ammonia
   // equipment); the flow's To field takes them separated by ";".
   const list = String(b.to || '').split(/[;,]/).map((x) => x.trim()).filter(Boolean);
   // 5 since 20/10/2026 (Michael: "Geny was in it too"): a reply in a thread keeps everyone already on it.
-  if (!list.length || list.length > 5 || !list.every((x) => DRAFT_TO.test(x))) return { error: 'bad to' };
+  // Up to 30 when every address is ours (26/10/2026, Michael: "why can't you make me a normal mail with all the
+  // recipients?", the hearing tests notice to 24 managers).
+  if (!list.length || !draftListOk(list)) return { error: 'bad to' };
   // cc (20/10/2026, the monthly water report to the Ministry of Health goes to one inspector with three in copy):
   // up to 5, the same rules as to; the flow's CC field takes them separated by ";".
   const ccList = String(b.cc || '').split(/[;,]/).map((x) => x.trim()).filter(Boolean);
-  if (ccList.length > 5 || !ccList.every((x) => DRAFT_TO.test(x))) return { error: 'bad cc' };
+  if (ccList.length && !draftListOk(ccList)) return { error: 'bad cc' };
   const to = list.join(';'), subject = String(b.subject || '').replace(/\s+/g, ' ').trim(), text = greetByHour(String(b.body || '').replace(/\r\n/g, '\n').trim(), b._now);
   if (!subject || subject.length > 200) return { error: 'subject 1-200 characters' };
   if (!text || text.length > 5000) return { error: 'body 1-5000 characters' };
