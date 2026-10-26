@@ -54,6 +54,7 @@ export function chatManifest() {
 // a file link (25/10/2026): HMAC of id and expiry with the service key, 24 hours. Only a wa_out document row with a
 // path inside the safety folder opens; the path comes from that row, never from the link.
 export const FILE_LINK_MS = 24 * 3600000;
+const GRAPH_OD_MS = 8000;
 export function upName(raw, ext, now) {
   const base = String(raw || '').replace(/\.[a-z0-9]{1,5}$/i, '').replace(/[\\/:*?"<>|#%\x00-\x1f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60) || 'file';
   const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
@@ -81,6 +82,16 @@ export async function serveFile(env, u) {
   let at; try { at = await accessToken(env); } catch (e) { at = null; }
   if (!at || !at.token) return no(502, 'drive');
   const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+  // 26/10/2026 (Michael: "the files open through the site, they should open through OneDrive, with the original name",
+  // "in WhatsApp it opens perfectly"): od=1 answers the file's OneDrive link. For Word, Excel and PowerPoint Graph gives
+  // Doc.aspx with mobileredirect=true, which a phone opens in the Office app; the page puts it on the file's line.
+  if (u.searchParams.get('od') === '1') {
+    const w = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(row.file) + '?$select=webUrl,name', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_OD_MS) }).catch(() => null);
+    const j = w && w.ok ? await w.json().catch(() => null) : null;
+    const ok = j && /^https:\/\/[a-z0-9-]+(-my)?\.sharepoint\.com\//i.test(String(j.webUrl || ''));
+    return new Response(JSON.stringify(ok ? { ok: true, webUrl: j.webUrl, name: j.name || row.name } : { ok: false, error: w && w.status === 404 ? 'moved' : 'drive' }),
+      { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' } });
+  }
   const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(row.file) + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(30000) }).catch(() => null);
   if (!d || !d.ok) return no(d && d.status === 404 ? 404 : 502, d && d.status === 404 ? 'the file was moved or renamed' : 'drive');
   const name = String(row.name || row.file.split('/').pop()), ext = (name.match(/\.([a-z0-9]+)$/i) || [])[1] || '';
