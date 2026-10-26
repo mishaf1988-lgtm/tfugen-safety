@@ -190,7 +190,21 @@ export function devInboxAdd(raw, b, nowIso) {
 export function asksApprovalNoButtons(text, choices) {
   if (Array.isArray(choices) && choices.length) return false;
   const t = String(text || '');
-  return /\?/.test(t) && /(^|[^\u05d0-\u05ea])\u05d1\u05e6\u05e2([^\u05d0-\u05ea]|$)/.test(t);
+  // 26/10/2026: "\u05dc\u05d1\u05e6\u05e2?" (to do it?) with no buttons left a calendar move hanging; the prefixed forms count too
+  return /\?/.test(t) && /(^|[^\u05d0-\u05ea])(\u05dc|\u05e9|\u05e9\u05d0|\u05d5\u05d0|\u05d0)?\u05d1\u05e6\u05e2([^\u05d0-\u05ea]|$)/.test(t);
+}
+// 26/10/2026 (Michael: "it sends old things"): every message of his fires its own run, so when he writes again before
+// an answer came, the older run answers last ("sorry, I understood: Wednesday or Thursday?" after he had tapped
+// Wednesday). wa_me takes answers = the at: of the message the run answers; a message of his more than STALE_GAP_MS
+// newer makes the reply say which message it answers, and its buttons go when he has already tapped a newer one.
+// Pure: rows = owner_in rows newer than answers + STALE_GAP_MS, [{ts, payload:{text}}].
+export const STALE_GAP_MS = 5000;
+export function staleReply(answersIso, rows) {
+  const at = Date.parse(answersIso || '');
+  if (isNaN(at) || !Array.isArray(rows) || !rows.length) return null;
+  const hm = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(at));
+  const tapped = rows.some((r) => /^\s*\d{1,2}\.\s/.test(String((r && r.payload && r.payload.text) || '')));
+  return { prefix: '\u05dc\u05d2\u05d1\u05d9 \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05e9\u05dc\u05da \u05de-' + hm + ':\n', dropChoices: tapped };
 }
 export const DEV_REF = /^dev (dev-\d{14}-[a-z0-9]{4})$/;
 export function devInboxTold(raw, ref, nowIso) {
@@ -1831,6 +1845,13 @@ export async function onRequest(context) {
       if (/^sign/i.test(String(body.ref || ''))) return jsonResp({ ok: false, error: 'ref sign*: reserved for the server signing buttons; use another ref' }, 400, {});
       const cg = claimGate(body.text, body.checked);
       if (cg) return jsonResp({ ok: false, error: cg }, 400, {});
+      let stale = null;
+      if (body.answers && !isNaN(Date.parse(body.answers))) {
+        const since = new Date(Date.parse(body.answers) + STALE_GAP_MS).toISOString();
+        const nr = await fetch(url + '/rest/v1/notifications_log?select=ts,payload&event_type=eq.owner_in&ts=gt.' + encodeURIComponent(since) + '&order=ts.asc&limit=5', { headers: h, signal: tmo(SB_MS) }).then((x) => (x.ok ? x.json() : [])).catch(() => []);
+        stale = staleReply(body.answers, nr);
+        if (stale) { body.text = stale.prefix + String(body.text || ''); if (stale.dropChoices) delete body.choices; }
+      }
       if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
       const to = await ownerWa(env, url);
       if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
@@ -1850,7 +1871,7 @@ export async function onRequest(context) {
             event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error',
             payload: { title: String(body.text || '').replace(/\s+/g, ' ').slice(0, 120), text: String(body.text || '').slice(0, 1500), via: r.via || null, wamid: r.wamid || null, ref: body.ref ? String(body.ref).slice(0, 40) : 'none', detail: r.error || null, push: ps.sent || 0 } }]) });
       } catch (e) { /* the message went out; a missing log line is not a failure */ }
-      return jsonResp(Object.assign({}, r, { push: ps.sent || 0 }), 200, {});
+      return jsonResp(Object.assign({}, r, { push: ps.sent || 0 }, stale ? { stale: true, choices_dropped: !!stale.dropChoices } : {}), 200, {});
     }
     // wa_review (20/10/2026, Michael: "not only time, also wisdom, quality and expertise"): the weekly
     // quality review in the retro (retro-prompt.md 7a) reads Michael's messages to his assistant and its
