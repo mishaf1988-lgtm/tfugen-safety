@@ -92,5 +92,12 @@ console.log('\n8. send an invite only on his yes to that question (26/10/2026)')
   const y = fastRoute({ text: 'בצע' }, null, prev), n = fastRoute({ text: 'לא' }, null, prev), q = fastRoute({ text: 'תוסיף גם את נחום' }, null, prev);
   check('"בצע" = send, "לא" = no, a correction = to the assistant', y && y.kind === 'cal_invite' && y.id === 'ab12cd34' && y.yes === true && n && n.kind === 'cal_invite' && n.yes === false && (!q || q.kind !== 'cal_invite'), { y, n, q });
 }
+console.log('\n9. move an event only on his yes to that question (26/10/2026 retro)');
+{
+  const prev = { ref: 'calmove:ab12cd34' };
+  const y = fastRoute({ text: 'בצע' }, null, prev), n = fastRoute({ text: 'לא' }, null, prev), q = fastRoute({ text: 'לא, ליום חמישי' }, null, prev);
+  check('"בצע" = move, "לא" = no, a correction = to the assistant', y && y.kind === 'cal_move' && y.id === 'ab12cd34' && y.yes === true && n && n.kind === 'cal_move' && n.yes === false && (!q || q.kind !== 'cal_move'), { y, n, q });
+  check('"בצע" after an invite question is an invite, not a move', fastRoute({ text: 'בצע' }, null, { ref: 'calinvite:ab12cd34' }).kind === 'cal_invite');
+}
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
