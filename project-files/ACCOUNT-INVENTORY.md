@@ -89,6 +89,7 @@ Network secret שני (18/10/2026, C20): Host `api.supabase.com`, מפתח Supab
 | טיוטות מהעוזר (20/10/2026, C23) | קובץ חדש ב-`_טיוטות למייל` | קורא JSON מהקובץ ושומר טיוטה ב-Outlook של מיכאל (`mail_draft`); אין שליחה |
 | תורים ליומן (20/10/2026, C24) | קובץ חדש ב-`_תורים ליומן` | קורא JSON מהקובץ ויוצר אירוע ביומן של מיכאל (Create event V4), בלי מוזמנים |
 | הזזות ביומן (25/10/2026, C47) | קובץ חדש ב-`_הזזות ביומן` | קורא JSON מהקובץ ומזיז אירוע ביומן של מיכאל (PATCH של start ו-end בלבד, `power-automate-mail.md` זרימה 7) |
+| טיוטות למחיקה (26/10/2026, C49) | קובץ חדש ב-`_טיוטות למחיקה` | קורא JSON, בודק שזו עדיין טיוטה עם אותו נושא, ומעביר אותה לפריטים שנמחקו (`power-automate-mail.md` זרימה 8) |
 | קבצים ממיילים ששלחתי (20/10/2026, C24) | מייל חדש עם קובץ ב-Sent Items | אותן החרגות (על הנמענים) ואותם סוגים כמו הזרימה הראשונה; שומר ב-`_נכנס מהמייל` עם "נשלח" בשם |
 
 להעברה: לבנות מחדש לפי `power-automate-mail.md` (Claude בכרום עשה את זה ב-11/10/2026). החיבורים: Office 365 Outlook ו-OneDrive for Business של החשבון, בלי אישור מנהל.
@@ -102,6 +103,7 @@ Network secret שני (18/10/2026, C20): Host `api.supabase.com`, מפתח Supab
 | `_טיוטות למייל` | `mail_draft` (השרת) | זרימה 3 |
 | `_תורים ליומן` | `wa-morning.js` (השרת, `calendarStep`; מה נכתב: `server_state.cal_sent`) | זרימה 4 |
 | `_הזזות ביומן` | `cal_move` (השרת; מה נכתב: `server_state.cal_moved`) | זרימה 7 |
+| `_טיוטות למחיקה` | `draft_trash` (השרת; מה נכתב: `server_state.drafts_trashed`, ומה מותר: `drafts_made`) | זרימה 8 |
 | `00_דוחות ומעקב\קטלוג מסמכים.xlsx`, גיליון Claude Log | Cowork | מיכאל |
 | `Apps/Tapugan Safety/_Backups` (cron, monthly, photos, talks, code) | `backup-od` | שחזור. `code`: zip של שני המאגרים פעם בשבוע, 8 אחרונים (17/10/2026) |
 
