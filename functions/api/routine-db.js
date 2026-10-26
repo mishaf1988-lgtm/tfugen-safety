@@ -1969,6 +1969,8 @@ export async function onRequest(context) {
       // 25/10/2026 (Michael in the questionnaire: "do it: block"): the assistant asked for "\u05d1\u05e6\u05e2" with no buttons, and fixed it only when he said so.
       if (asksApprovalNoButtons(body.text, body.choices)) return jsonResp({ ok: false, error: 'asks for \u05d1\u05e6\u05e2 with no buttons: send it again with "choices", e.g. ["\u05d1\u05e6\u05e2","\u05dc\u05d0"]' }, 400, {});
       if (asksOwnerToDelete(body.text)) return jsonResp({ ok: false, error: 'asks Michael to delete: a file you made goes to od_trash yourself; a draft you replaced: draft_trash it yourself (26/10/2026)' }, 400, {});
+      // 26/10/2026 (load test: an answer ended "\u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9: \u05de\u05d0\u05d5\u05e9\u05e8."): the second checker's verdict is for you, not for Michael.
+      if (/\u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9\s*:/.test(String(body.text || ''))) return jsonResp({ ok: false, error: 'the second checker\'s verdict is internal: drop the "\u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9:" line and send the answer itself (26/10/2026)' }, 400, {});
       if (hasInternalId(body.text)) return jsonResp({ ok: false, error: 'internal id in text (dev-..., trig_, session_, cse_, h-...): say what was done, not its id (21/10/2026)' }, 400, {});
       // 22/10/2026 (the assistant sent "1. yes / 2. another place" with ref signmail, and the tap on 2 ran the server's
       // "reply to the sender"): sign refs belong to the server's own buttons; an assistant message cannot carry them.
