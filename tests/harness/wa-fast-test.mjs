@@ -79,5 +79,12 @@ console.log('\n6. a file Michael sends keeps its media id (26/10/2026, the PDF q
   const r = recentLine([{ ts: '2026-10-26T09:43:00Z', event_type: 'owner_in', payload: p }], 'CUR', N);
   check('recent shows the file with its id for wa_media (it used to drop an empty line)', r.indexOf('Q3594.pdf') > 0 && r.indexOf('[wa_media 1234567890]') > 0, r);
 }
+console.log('\n7. close a tour finding only on his yes to that question (26/10/2026)');
+{
+  const prev = { ref: 'tourclose:th-12' };
+  const y = fastRoute({ text: 'בצע' }, null, prev), n = fastRoute({ text: '2' }, null, prev), q = fastRoute({ text: 'רגע, איזה ליקוי?' }, null, prev);
+  check('"בצע" = close, "2" = no, a question = to the assistant', y && y.kind === 'tour_close' && y.id === 'th-12' && y.yes === true && n && n.kind === 'tour_close' && n.yes === false && (!q || q.kind !== 'tour_close'), { y, n, q });
+  check('"בצע" with no tour question before it is not a close', !(fastRoute({ text: 'בצע' }, null, { ref: 'brief' }) || {}).kind || fastRoute({ text: 'בצע' }, null, { ref: 'brief' }).kind !== 'tour_close');
+}
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
