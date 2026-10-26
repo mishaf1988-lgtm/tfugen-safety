@@ -649,6 +649,16 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('a reply draft the server made: matched by its recipients whatever the subject', !draftTrashCheck(Object.assign({}, ok, { to: 'shlomi@x.co.il', subject: 'RE: anything' }), JSON.parse(state[DRAFTS_MADE_KEY]), Date.now()).error);
     check('older than 30 days = refused; draftSubj strips RE:, FW: and the Hebrew prefixes', !!draftTrashCheck(ok, JSON.parse(state[DRAFTS_MADE_KEY]), Date.now() + 31 * 864e5).error
       && draftSubj('\u05d4\u05e9\u05d1: FW: A  b') === 'a b');
+    // 26/10/2026: mail_draft with replaces = the server moves the replaced drafts (the assistant's own draft_trash is
+    // stopped by its session's permission classifier)
+    puts = [];
+    const md = { op: 'mail_draft', agent: 'routine-wa-assistant', why: 'with the quote attached', to: 'tzahi@x.co.il;yana@x.co.il', subject: 'hearing tests quote', body: 'x', checked: 'Sent Items hearing 13:00' };
+    const y = await call(Object.assign({}, md, { replaces: [{ id: ID, subject: 'RE: hearing tests quote', to: 'yana@x.co.il;tzahi@x.co.il' }] }));
+    const tp = puts.filter((x) => x.url.indexOf(OD_DRAFT_TRASH + '/') > 0);
+    check('mail_draft replaces: the draft request, then one trash request for the replaced draft, logged', y.json.ok && y.json.replaced && y.json.replaced.length === 1 && tp.length === 1 && JSON.parse(tp[0].body).id === ID && String(state[DRAFTS_TRASHED_KEY] || '').indexOf('replaced by') >= 0, { y: y.json, n: puts.length });
+    puts = [];
+    const z = await call(Object.assign({}, md, { replaces: [{ id: ID, subject: 'another thing', to: 'tzahi@x.co.il' }] }));
+    check('mail_draft replaces a draft the server did not make: refused, nothing written at all', z.status === 400 && /replaces/.test(z.json.error) && puts.length === 0, z.json);
     delete state[DRAFTS_MADE_KEY]; delete state[DRAFTS_TRASHED_KEY];
   }
 
