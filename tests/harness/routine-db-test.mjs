@@ -11,7 +11,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const ENV = { ROUTINE_KEY: 'k-123', SUPABASE_SERVICE_ROLE_KEY: 'srv' };
 let calls = [], state = {}, fires = [], fireSession = 'cse_01POSTMAN';
-let ghCalls = [], mediaMeta = null, claudeReads = [];
+let ghCalls = [], mediaMeta = null, claudeReads = [], ownerIn = null;
 globalThis.fetch = async (url, opt = {}) => {
   if (String(url).startsWith('https://www.nevo.co.il/law_html/')) { const b = new TextEncoder().encode('<html><head><meta charset="utf-8"><script>x()</script></head><body><p>75. (\u05d0) \u05dc\u05e4\u05d7\u05d5\u05ea \u05d0\u05d7\u05ea \u05dc\u05e9\u05e9\u05d4 \u05d7\u05d3\u05e9\u05d9\u05dd</p></body></html>'); const res = new Response(b, { status: 200, headers: { 'content-type': 'text/html' } }); Object.defineProperty(res, 'url', { value: String(url) }); return res; }
   if (String(url).startsWith('https://graph.facebook.com/v25.0/90000001')) return new Response(JSON.stringify(mediaMeta), { status: 200 });
@@ -23,6 +23,8 @@ globalThis.fetch = async (url, opt = {}) => {
     const keys = decodeURIComponent((/key=(?:in\.\(([^)]*)\)|eq\.(.*))/.exec(url) || []).slice(1).filter(Boolean)[0] || '').split(',');
     return new Response(JSON.stringify(keys.filter((k) => k in state).map((k) => ({ key: k, value: state[k], updated_at: 'now' }))), { status: 200 });
   }
+  // ownerIn: the owner_in rows a test sets (wa_me stale, 26/10/2026 retro); null = the default row below
+  if (ownerIn && url.startsWith(SB + '/rest/v1/notifications_log') && /event_type=eq\.owner_in/.test(url)) return new Response(JSON.stringify(ownerIn), { status: 200 });
   if (url.startsWith(SB + '/rest/v1/notifications_log') && /id=eq\.ch/.test(url)) return new Response(JSON.stringify(chatLine(url)), { status: 200 });
   if (url.startsWith(SB + '/rest/v1/oauth_tokens')) return new Response(JSON.stringify([{ user_email: 'm', refresh_token: 'r', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite' }]), { status: 200 });
   if (url.startsWith('https://graph.microsoft.com/')) return graph(url, opt);
@@ -522,6 +524,11 @@ const callIn = async (body) => {
       mk();
       x = await call(D, 'k-123', 'POST', ENV);
       check('od_dedupe: no app id in the environment: refused, nothing deleted', !x.json.ok && x.json.error === 'not created by the server' && deleted.length === 0, x.json);
+      { mk(); let keepReads = 0; const g0 = graph;
+        graph = async (url, opt) => { if ((opt.method || 'GET') === 'GET' && /a\.pdf/.test(decodeURIComponent(url)) && ++keepReads > 1) items['a.pdf'] = { ...items['a.pdf'], id: 'i9' }; return g0(url, opt); };
+        x = await call(D, 'k-123', 'POST', E);
+        check('od_dedupe run: the kept copy is replaced between the first read and the delete = refused, nothing deleted (was a source check; 26/10/2026 retro)', !x.json.ok && /keep changed/.test(x.json.error) && deleted.length === 0 && keepReads >= 2, { j: x.json, keepReads });
+        graph = g0; }
       check('od_dedupe: an extra field or no key: refused', (await call({ ...D, force: true }, 'k-123', 'POST', E)).status === 400 && (await call(D, 'nope', 'POST', E)).status === 403 && deleted.length === 0);
       graph = async () => new Response('{}', { status: 500 });
     }
@@ -759,6 +766,18 @@ const callIn = async (body) => {
     const held = await call({ op: 'wa_me', ref: 'promise:p-1', text: 'בדיקות שמיעה: תזכורת על השריון' });
     const urgent = await call({ op: 'wa_me', ref: 'promise:p-1', text: 'בדיקות שמיעה: תזכורת על השריון', overlap_ok: true });
     check('wa_me: a promise check-in is held while he talks; overlap_ok passes it on (here to "whatsapp not configured")', held.status === 400 && /held/.test(held.json.error) && urgent.json.error === 'whatsapp not configured', { held: held.json, urgent: urgent.json });
+  }
+
+  console.log('\n4e4c. wa_me stale, run through the handler (26/10/2026 retro: it was a source check)');
+  {
+    const T = new Date(Date.now() - 60000).toISOString(), later = new Date(Date.now() - 20000).toISOString();
+    ownerIn = [{ ts: later, payload: { text: '1. \u05e8\u05d1\u05d9\u05e2\u05d9 08:00' } }];
+    const q = await call({ op: 'wa_me', agent: 'routine-wa-assistant', answers: T, text: '\u05dc\u05d4\u05d6\u05d9\u05d6?\n1. \u05d1\u05e6\u05e2', choices: ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'], overlap_ok: true });
+    const r = await call({ op: 'wa_me', agent: 'routine-wa-assistant', answers: T, text: '\u05d4\u05d6\u05d6\u05ea\u05d9 \u05dc-08:00.', overlap_ok: true });
+    ownerIn = [];
+    const f = await call({ op: 'wa_me', agent: 'routine-wa-assistant', answers: T, text: '\u05dc\u05d4\u05d6\u05d9\u05d6?\n1. \u05d1\u05e6\u05e2', choices: ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'], overlap_ok: true });
+    ownerIn = null;
+    check('wa_me run: a newer tap of his refuses an approval question (stale); another reply and a fresh question go on (here to "whatsapp not configured")', q.status === 400 && /^stale/.test(q.json.error) && r.json.error === 'whatsapp not configured' && f.json.error === 'whatsapp not configured', { q: q.json, r: r.json, f: f.json });
   }
 
   console.log('\n4e5. tour_close_ask (26/10/2026, Michael: "do it: only after my do-it")');
