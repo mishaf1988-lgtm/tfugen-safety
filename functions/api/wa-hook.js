@@ -17,7 +17,7 @@ import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo, SITE } from '../_shared.js';
 import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, hasStatuses, STATUS_KEY, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, LEARN_KEY, learnedLine, recentLine } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 import { accessToken } from '../_onedrive.js';
-import { onRequest as routineDb, OD_ROOT, isAutoTop, OD_INBOX, tourRefOf, TOUR_CLOSE_KEY, TOUR_CLOSE_MS, TOUR_OPEN, TOUR_CLOSED } from './routine-db.js';
+import { onRequest as routineDb, OD_ROOT, isAutoTop, OD_INBOX, tourRefOf, TOUR_CLOSE_KEY, TOUR_CLOSE_MS, TOUR_OPEN, TOUR_CLOSED, calInviteRefOf, CAL_INVITE_ASK_KEY, CAL_INVITE_ASK_MS } from './routine-db.js';
 import { SIGN_KEY, signRefOf, signAnswer, signTake, signMark, signRun, signDoneText, SIGN_CANCEL_TEXT, SIGN_EXPIRED_TEXT, SIGN_DONE_TEXT } from '../_sign.js';
 
 export const FAIL_TEXT = '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05dc\u05e2\u05d5\u05d6\u05e8. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.';
@@ -354,6 +354,9 @@ export function fastRoute(m, about, prev) {
   // 26/10/2026: an answer to "close tour finding <n>?" (routine-db tour_close_ask); only a yes / no, else the assistant
   const tid = tourRefOf(about, prev);
   if (tid) { const yes = signAnswer(m); if (yes !== null) return { kind: 'tour_close', id: tid, yes }; }
+  // 26/10/2026: an answer to "send the invite?" (routine-db cal_invite_ask); same rule
+  const cid = calInviteRefOf(about, prev);
+  if (cid) { const yes = signAnswer(m); if (yes !== null) return { kind: 'cal_invite', id: cid, yes }; }
   const ask = signAskOf(raw);
   // 22/10/2026 18:31 (Michael: "the assistant gets tangled again"): the assistant wrote "sending you the Negev permit to
   // sign", Michael answered "sign in my name", and the server, with no file name, sent the newest PDFs in the folder
@@ -393,6 +396,20 @@ async function fastTourClose(env, r) {
   const after = await sbJson(env, 'tour_hazards?id=eq.' + encodeURIComponent(r.id) + '&s=eq.' + encodeURIComponent(TOUR_OPEN), { method: 'PATCH', headers: { Prefer: 'return=representation' },
     body: JSON.stringify({ s: TOUR_CLOSED, closed_d: today, closed_by: '\u05de\u05d9\u05db\u05d0\u05dc', close_note: String(st.note || '').slice(0, 300) }) });
   return Array.isArray(after) && after.length === 1 ? tourClosedText(after[0]) : null;
+}
+export const CAL_INVITE_NO = '\u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7. \u05d4\u05d6\u05d9\u05de\u05d5\u05df \u05d1\u05d5\u05d8\u05dc.', CAL_INVITE_GONE = '\u05d4\u05d1\u05e7\u05e9\u05d4 \u05dc\u05d6\u05d9\u05de\u05d5\u05df \u05db\u05d1\u05e8 \u05dc\u05d0 \u05d1\u05ea\u05d5\u05e7\u05e3. \u05db\u05ea\u05d5\u05d1 \u05dc\u05e2\u05d5\u05d6\u05e8 \u05e9\u05d5\u05d1.';
+export function calInviteSentText(j) { return '\u05d4\u05d6\u05d9\u05de\u05d5\u05df \u05e0\u05e9\u05dc\u05d7 \u05dc\u05d9\u05e6\u05d9\u05e8\u05d4 (' + j.attendees + ' \u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd). \u05d4\u05d5\u05d0 \u05d9\u05d5\u05e4\u05d9\u05e2 \u05d1\u05d9\u05d5\u05de\u05df \u05e9\u05dc\u05da \u05ea\u05d5\u05da \u05db-5 \u05d3\u05e7\u05d5\u05ea, \u05d5\u05d0\u05d6 \u05d4\u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd \u05de\u05e7\u05d1\u05dc\u05d9\u05dd \u05d0\u05d5\u05ea\u05d5.'; }
+async function fastCalInvite(env, r) {
+  const rows = await sbJson(env, 'server_state?key=eq.' + CAL_INVITE_ASK_KEY + '&select=value');
+  let st = null; try { st = JSON.parse(rows && rows[0] ? rows[0].value : 'null'); } catch (x) { st = null; }
+  if (!st || st.k !== r.id || Date.now() - Date.parse(st.at) > CAL_INVITE_ASK_MS) return CAL_INVITE_GONE;
+  await sbJson(env, 'server_state?key=eq.' + CAL_INVITE_ASK_KEY, { method: 'DELETE' });
+  if (!r.yes) return CAL_INVITE_NO;
+  const res = await routineDb({ env, request: new Request('https://internal/api/routine-db', { method: 'POST',
+    headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' },
+    body: JSON.stringify(Object.assign({}, st.inv, { op: 'cal_invite', agent: 'wa-hook', why: String(st.inv.why || 'invite').slice(0, 200), approved: '\u05d1\u05e6\u05e2 (\u05db\u05e4\u05ea\u05d5\u05e8 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4)' })) }) });
+  const j = await res.json().catch(() => ({}));
+  return j.ok ? calInviteSentText(j) : null;
 }
 async function fastHazard(env, r) {
   const t = HAZARD_NOTE_TABLE[r.src];
@@ -605,6 +622,7 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
       ref = 'sign-mail';
     }
     else if (fr0.kind === 'tour_close') { ans = await fastTourClose(env, fr0); ref = 'tourclose-done'; }
+    else if (fr0.kind === 'cal_invite') { ans = await fastCalInvite(env, fr0); ref = 'calinvite-done'; }
     else if (fr0.kind === 'rate') { ans = RATE_THANKS; ref = 'rate'; }
     else if (fr0.kind === 'hazard') { ans = await fastHazard(env, fr0); ref = fr0.src + ' ' + fr0.id; }
     else { const g = await gather(env, new Date()); ans = buildBrief(g.items, g.failed, g.today, false, [], null, null, null, true); ref = 'brief'; }

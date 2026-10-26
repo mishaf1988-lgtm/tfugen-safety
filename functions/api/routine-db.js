@@ -124,7 +124,9 @@
 //              (power-automate-mail.md, flow 6) PATCHes only start and end of that event. approved = Michael's
 //              own words with "בצע" (the attendees get an update, a message to a person). Logged in cal_moved.
 //   cal_invite  (26/10/2026) {subject, start, end, to, cc, location, body, approved}: a new meeting in Michael's
-//              calendar; Graph sends the invitations. A JSON file into OD_CAL_INVITE, flow 9 "זימונים" POSTs it.
+//              calendar; Graph sends the invitations. A JSON file into OD_CAL_INVITE, flow 9 "\u05d6\u05d9\u05de\u05d5\u05e0\u05d9\u05dd" POSTs it.
+//   cal_invite_ask  (26/10/2026) {the cal_invite fields but approved, and who = the names}: asks Michael "send the
+//              invite?" with buttons; only his tap runs cal_invite (wa-hook, fastCalInvite). CAL_INVITE_ASK_KEY.
 //   tour_close_ask  (26/10/2026) {id, note}: asks Michael "close tour finding <n>?" with buttons; only his "do it" on
 //              that message closes it (wa-hook, fastTourClose). TOUR_CLOSE_KEY holds the one open request.
 //   draft_trash  (26/10/2026, Michael in the questionnaire: "to the recycle bin, automatic") {id, subject, to}:
@@ -153,7 +155,7 @@ import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLA
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'cal_moved', 'cal_invited', 'drafts_made', 'drafts_trashed'];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'drafts_made', 'drafts_trashed'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -690,7 +692,28 @@ export function calInviteCheck(b, nowMs) {
     start: { dateTime: t.start + ':00', timeZone: 'Israel Standard Time' }, end: { dateTime: t.end + ':00', timeZone: 'Israel Standard Time' },
     attendees: who(to, 'required').concat(who(cc, 'optional')) };
   if (location) event.location = { displayName: location };
+  // draft (26/10/2026, Michael: "an invite draft, the same way as mail drafts"): ask Outlook to keep it unsent;
+  // whether Graph honours isDraft on create is what the first test (attendee: Michael only) shows
+  if (b.draft === true) event.isDraft = true;
   return { subject: t.subject, start: t.start, end: t.end, count: to.length + cc.length, file: JSON.stringify({ event }) };
+}
+// 26/10/2026 (15:54, after Michael's "בצע" on the invite to the annual training): the assistant's own cal_invite was
+// stopped by its permission check (an action that writes to people). So, like tour_close_ask, the assistant only asks:
+// cal_invite_ask keeps the invite in CAL_INVITE_ASK_KEY and sends the question with ref calinvite:<k>; only Michael's
+// tap on that very message makes the server run cal_invite (wa-hook, fastCalInvite).
+export const CAL_INVITE_ASK_KEY = 'cal_invite_ask', CAL_INVITE_ASK_MS = 24 * 3600e3, CAL_INVITE_FIELDS = ['subject', 'start', 'end', 'to', 'cc', 'location', 'body', 'draft'];
+export function calInviteRefOf(about, prev) {
+  const a = String(about || '');
+  if (a) { const m = /\| ref calinvite:([a-z0-9]{8}) \|/.exec(a); return m ? m[1] : null; }
+  const r = /^calinvite:([a-z0-9]{8})$/.exec(String((prev && prev.ref) || ''));
+  return r ? r[1] : null;
+}
+export function calInviteAskText(c, b) {
+  const dmy = (x) => x.slice(8, 10) + '/' + x.slice(5, 7) + '/' + x.slice(0, 4);
+  const who = String(b.who || '').replace(/\s+/g, ' ').trim().slice(0, 300) || String(b.to || '').split(/[;,]/).map((x) => x.trim().split('@')[0]).filter(Boolean).join(', ');
+  return '\u05dc\u05e9\u05dc\u05d5\u05d7 \u05d6\u05d9\u05de\u05d5\u05df?\n1. \u05e0\u05d5\u05e9\u05d0: ' + c.subject + '\n2. \u05de\u05ea\u05d9: ' + dmy(c.start) + ' ' + c.start.slice(11) + '-' + c.end.slice(11)
+    + (b.location ? '\n3. \u05de\u05d9\u05e7\u05d5\u05dd: ' + String(b.location).replace(/\s+/g, ' ').trim().slice(0, 100) : '') + '\n4. \u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd (' + c.count + '): ' + who
+    + '\n\u05d1"\u05d1\u05e6\u05e2" \u05d4\u05d6\u05d9\u05de\u05d5\u05df \u05e0\u05e9\u05dc\u05d7 \u05dc\u05db\u05dc \u05d4\u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd.';
 }
 const OD_NO_DIR = /(^|\/)(_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea|\u05dc\u05de\u05d7\u05d9\u05e7\u05d4|ARCHIVE)(\/|$)/i;
 // 18/10/2026 (Michael: "גם וגם"): csv too, the data file next to a lab certificate pdf.
@@ -1680,7 +1703,7 @@ export async function onRequest(context) {
       return jsonResp({ ok: true, file: OD_CAL_MOVE + '/' + name, start: c.start, end: c.end }, 200, {});
     }
     if (body.op === 'cal_invite') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'subject', 'start', 'end', 'to', 'cc', 'location', 'body', 'approved'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'subject', 'start', 'end', 'to', 'cc', 'location', 'body', 'approved', 'draft'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const c = calInviteCheck(body, Date.now());
       if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
       const at = await accessToken(env);
@@ -2043,6 +2066,18 @@ export async function onRequest(context) {
         } catch (e) { recorded = false; }
       }
       return jsonResp({ ok: true, path: c.toDir + '/' + c.name, size: mj.size || sj.size || null, webUrl: mj.webUrl || null, recorded }, 200, {});
+    }
+    if (body.op === 'cal_invite_ask') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'who'].concat(CAL_INVITE_FIELDS).indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const c = calInviteCheck(Object.assign({}, body, { approved: '\u05d1\u05e6\u05e2' }), Date.now());
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      if (hasInternalId(body.who) || hasPassport(body.who)) return jsonResp({ ok: false, error: 'who: names only' }, 400, {});
+      const k = Math.random().toString(36).slice(2, 10).padEnd(8, '0'), inv = {};
+      for (const f of CAL_INVITE_FIELDS) if (body[f] !== undefined) inv[f] = body[f];
+      inv.why = body.why;
+      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+        body: JSON.stringify([{ key: CAL_INVITE_ASK_KEY, value: JSON.stringify({ k, inv, at: new Date().toISOString() }), updated_at: new Date().toISOString() }]) });
+      body = { op: 'wa_me', agent: body.agent, text: calInviteAskText(c, body), choices: ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'], ref: 'calinvite:' + k };
     }
     if (body.op === 'tour_close_ask') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'id', 'note'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});

@@ -86,5 +86,11 @@ console.log('\n7. close a tour finding only on his yes to that question (26/10/2
   check('"בצע" = close, "2" = no, a question = to the assistant', y && y.kind === 'tour_close' && y.id === 'th-12' && y.yes === true && n && n.kind === 'tour_close' && n.yes === false && (!q || q.kind !== 'tour_close'), { y, n, q });
   check('"בצע" with no tour question before it is not a close', !(fastRoute({ text: 'בצע' }, null, { ref: 'brief' }) || {}).kind || fastRoute({ text: 'בצע' }, null, { ref: 'brief' }).kind !== 'tour_close');
 }
+console.log('\n8. send an invite only on his yes to that question (26/10/2026)');
+{
+  const prev = { ref: 'calinvite:ab12cd34' };
+  const y = fastRoute({ text: 'בצע' }, null, prev), n = fastRoute({ text: 'לא' }, null, prev), q = fastRoute({ text: 'תוסיף גם את נחום' }, null, prev);
+  check('"בצע" = send, "לא" = no, a correction = to the assistant', y && y.kind === 'cal_invite' && y.id === 'ab12cd34' && y.yes === true && n && n.kind === 'cal_invite' && n.yes === false && (!q || q.kind !== 'cal_invite'), { y, n, q });
+}
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
