@@ -562,7 +562,8 @@ export function draftRequest(b) {
   const at = draftAttach(b.attach);
   if (at.error) return { error: at.error };
   // The style too (20/10/2026): a reply in a thread (Graph createReply "comment") drops dir="rtl" and keeps styles.
-  const req = { to, subject, body: kept, html: '<div dir="rtl" style="direction:rtl;text-align:right">' + html + SITE.signature + '</div>' };
+  // 26/10/2026 (Michael: "when you write a draft you do not write in Arial"): the body in Arial 14px, as the signature.
+  const req = { to, subject, body: kept, html: '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">' + html + SITE.signature + '</div>' };
   if (at.attach.length) req.attachments = at.attach.map((a) => ({ path: a.path, name: a.name }));
   if (ccList.length) req.cc = ccList.join(';');
   // 20/10/2026 (Michael: "this is a mail in a thread, so it must go in the thread of the mails"): reply_to =
