@@ -492,13 +492,19 @@ export const OD_INBOX = '_\u05e0\u05db\u05e0\u05e1 \u05de\u05d4\u05de\u05d9\u05d
 // (11/10/2026, Michael: "בצע: כל מה שמגיע, חוץ מרעש"). The only folder inside the inbox a file may go to.
 export const OD_SKIP = '\u05dc\u05d0 \u05dc\u05ea\u05d9\u05d5\u05e7';
 // The folder the second flow watches for requests (inside the safety folder).
-export const OD_REQ = '_\u05d1\u05e7\u05e9\u05d5\u05ea \u05de\u05d4\u05de\u05d9\u05d9\u05dc';
+// 26/10/2026 (Michael in the questionnaire: "do it: one parent folder"): the five folders only the flows read sit
+// in one folder, OD_AUTO. Each flow keeps its own subfolder. OD_AUTO_DIRS = their names; the old top-level
+// names stay refused as destinations too, in case an old folder is still there.
+export const OD_AUTO = '_\u05d0\u05d5\u05d8\u05d5\u05de\u05e6\u05d9\u05d4';
+export const OD_AUTO_DIRS = ['_\u05d1\u05e7\u05e9\u05d5\u05ea \u05de\u05d4\u05de\u05d9\u05d9\u05dc', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d9\u05d9\u05dc', '_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df', '_\u05d4\u05d6\u05d6\u05d5\u05ea \u05d1\u05d9\u05d5\u05de\u05df', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d7\u05d9\u05e7\u05d4'];
+export const isAutoTop = (x) => x === OD_AUTO || OD_AUTO_DIRS.indexOf(x) >= 0;
+export const OD_REQ = OD_AUTO + '/' + OD_AUTO_DIRS[0];
 // A Graph / Outlook message id: base64url-ish, as outlook_email_search returns it.
 // 20/10/2026 (Michael: "maybe through other tools", after the 365 connector turned out read only):
 // a draft in Michael's Outlook through Power Automate, like mail_request. The server writes one
 // request file; the flow "\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05de\u05d4\u05e2\u05d5\u05d6\u05e8" (power-automate-mail.md, flow 3) saves it as a draft.
 // Never sent: the flow has no send step, and Michael sends from Outlook.
-export const OD_DRAFT = '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d9\u05d9\u05dc';
+export const OD_DRAFT = OD_AUTO + '/' + OD_AUTO_DIRS[1];
 export const DRAFT_TO = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$/;
 // 21/10/2026 (Michael at 11:57: "do not write good morning, it is already noon", after the rule was
 // written that morning): a draft opening "good morning" from 11:00 Israel time opens "hi" instead.
@@ -605,10 +611,10 @@ export function draftRequest(b) {
 export { hasInternalId };
 export function hasPassport(t) { return /(^|[^A-Za-z0-9])[A-Z]{1,2}[0-9]{6,8}(?![A-Za-z0-9])/.test(String(t || '')); }
 export const MAIL_REQ_ID = /^[A-Za-z0-9_=+\/-]{40,400}$/;
-export const OD_CAL_MOVE = '_\u05d4\u05d6\u05d6\u05d5\u05ea \u05d1\u05d9\u05d5\u05de\u05df', CAL_MOVED_KEY = 'cal_moved', CAL_MOVED_MAX = 30;
+export const OD_CAL_MOVE = OD_AUTO + '/' + OD_AUTO_DIRS[3], CAL_MOVED_KEY = 'cal_moved', CAL_MOVED_MAX = 30;
 const CAL_T = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 // Pure. Israel wall clock "YYYY-MM-DDTHH:MM" for start and end, from today up to a year ahead, at most 14 days long.
-export const OD_DRAFT_TRASH = '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d7\u05d9\u05e7\u05d4';
+export const OD_DRAFT_TRASH = OD_AUTO + '/' + OD_AUTO_DIRS[4];
 export const DRAFTS_MADE_KEY = 'drafts_made', DRAFTS_MADE_MAX = 200, DRAFTS_TRASHED_KEY = 'drafts_trashed', DRAFT_TRASH_DAYS = 30;
 const mailSet = (x) => String(x || '').toLowerCase().split(/[;,]/).map((a) => a.trim()).filter(Boolean).sort().join(';');
 // RE: / FW: / Fwd: and the Hebrew Outlook prefixes, repeated
@@ -699,8 +705,8 @@ export function odMkdirCheck(b) {
   const name = String(b.name === undefined || b.name === null ? '' : b.name);
   const bad = (x) => x === '.' || x === '..' || OD_BAD.test(x) || x.length > 120 || x !== x.trim() || x.startsWith('.');
   if (!parent.length || parent.length > OD_MKDIR_DEPTH || parent.some(bad)) return { error: 'bad parent' };
-  if (OD_NO_DIR.test(parent.join('/')) || parent[0] === OD_INBOX || parent[0] === OD_REQ) return { error: 'bad parent' };
-  if (!name || name.indexOf('/') >= 0 || bad(name) || OD_NO_DIR.test(name) || name === OD_INBOX || name === OD_REQ) return { error: 'bad name' };
+  if (OD_NO_DIR.test(parent.join('/')) || parent[0] === OD_INBOX || isAutoTop(parent[0])) return { error: 'bad parent' };
+  if (!name || name.indexOf('/') >= 0 || bad(name) || OD_NO_DIR.test(name) || name === OD_INBOX || isAutoTop(name)) return { error: 'bad name' };
   return { parent: OD_ROOT + parent.join('/'), name };
 }
 // 20/10/2026 (Michael: "you have a tool to make a draft, attach the unsigned draft"): files a draft may
@@ -786,7 +792,7 @@ export function draftAttach(list) {
     const parts = String(raw || '').split('/').filter(Boolean);
     const bad = (x) => x === '.' || x === '..' || OD_BAD.test(x) || x.length > 200 || x.startsWith('.');
     if (!parts.length || parts.length > OD_MKDIR_DEPTH + 1 || parts.some(bad) || !/\.(pdf|docx|xlsx)$/i.test(parts[parts.length - 1])) return { error: 'attach: bad path' };
-    if (OD_NO_DIR.test(parts.join('/')) || parts[0] === OD_REQ || parts[0] === OD_DRAFT) return { error: 'attach: bad path' };
+    if (OD_NO_DIR.test(parts.join('/')) || isAutoTop(parts[0])) return { error: 'attach: bad path' };
     out.push({ rel: parts.join('/'), path: '/' + OD_ROOT + parts.join('/'), name: parts[parts.length - 1] });
   }
   return { attach: out };
@@ -833,7 +839,7 @@ export function odArchiveCheck(b) {
   const by = String(b.replaced_by || '');
   const bad = (x) => x === '.' || x === '..' || OD_BAD.test(x) || x.length > 200 || x.startsWith('.');
   if (parts.length < 2 || parts.length > OD_MKDIR_DEPTH + 1 || parts.some(bad) || !OD_EXT.test(parts[parts.length - 1])) return { error: 'bad path' };
-  if (OD_NO_DIR.test(parts.join('/')) || [OD_INBOX, OD_REQ, OD_DRAFT].indexOf(parts[0]) >= 0) return { error: 'bad path' };
+  if (OD_NO_DIR.test(parts.join('/')) || parts[0] === OD_INBOX || isAutoTop(parts[0])) return { error: 'bad path' };
   if (!by || by.indexOf('/') >= 0 || bad(by) || !OD_EXT.test(by) || by === parts[parts.length - 1]) return { error: 'replaced_by: the new file name in the same folder' };
   const dir = OD_ROOT + parts.slice(0, -1).join('/');
   return { from: OD_ROOT + parts.join('/'), dir, by: dir + '/' + by, name: parts[parts.length - 1] };
@@ -884,7 +890,7 @@ export function odDedupeVerdict(item, kept, appId) {
 // nothing is written anywhere else; never a folder, never into old versions or ARCHIVE, never replacing a file.
 export const OD_DESKTOP = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/';
 const OD_PULL_EXT = /\.(pdf|docx?|xlsx?|xlsm|pptx?|csv|txt|jpe?g|png)$/i;
-export const OD_TRIGGER_DIRS = [OD_INBOX, OD_REQ, OD_DRAFT, '_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df', OD_OCR_DIR, OD_CAL_MOVE];
+export const OD_TRIGGER_DIRS = [OD_INBOX, OD_AUTO, OD_OCR_DIR].concat(OD_AUTO_DIRS);
 export function odPullCheck(b) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
   if (String(b.why || '').trim().length < 5) return { error: 'why required' };
@@ -967,7 +973,7 @@ export function signRequestCheck(b) {
   const c = odMkdirCheck({ agent: b.agent, why: b.why, parent: (inbox ? ['x'].concat(parts.slice(1)) : parts).join('/'), name });
   if (c.error) return { error: c.error === 'bad parent' || c.error === 'bad name' ? 'bad path' : c.error };
   if (inbox) c.parent = OD_ROOT + OD_INBOX + c.parent.slice((OD_ROOT + 'x').length);
-  if (parts[0] === OD_DRAFT || !/\.pdf$/i.test(name) || /\s-\s\u05d7\u05ea\u05d5\u05dd( \(\d\))?\.pdf$/i.test(name)) return { error: 'bad path' };
+  if (isAutoTop(parts[0]) || !/\.pdf$/i.test(name) || /\s-\s\u05d7\u05ea\u05d5\u05dd( \(\d\))?\.pdf$/i.test(name)) return { error: 'bad path' };
   const num = (v, lo, hi) => v === undefined || v === null ? undefined : (Number.isFinite(v) && v >= lo && v <= hi ? v : NaN);
   const page = num(b.page, 1, 200), x = num(b.x, 0, 2000), y = num(b.y, 0, 2000), w = num(b.w, 40, 200);
   if ([page, x, y, w].some((v) => Number.isNaN(v)) || (page !== undefined && !Number.isInteger(page))) return { error: 'bad page / x / y / w' };
@@ -1612,7 +1618,7 @@ export async function onRequest(context) {
       const line = { at: new Date().toISOString(), subject: c.subject, file: name, agent: body.agent, why: String(body.why).slice(0, 200) };
       await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
         body: JSON.stringify([{ key: DRAFTS_TRASHED_KEY, value: JSON.stringify([line].concat(val(DRAFTS_TRASHED_KEY)).slice(0, 100)), updated_at: line.at }]) }).catch(() => null);
-      return jsonResp({ ok: true, file: OD_DRAFT_TRASH + '/' + name, note: 'the flow moves it to Deleted Items within about a minute; check Drafts after' }, 200, {});
+      return jsonResp({ ok: true, file: OD_DRAFT_TRASH + '/' + name, note: 'the flow moves it to Deleted Items within about 5 minutes (the OneDrive trigger); check Drafts after' }, 200, {});
     }
     if (body.op === 'mail_draft') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'cc', 'subject', 'body', 'attach', 'reply_to', 'checked'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});

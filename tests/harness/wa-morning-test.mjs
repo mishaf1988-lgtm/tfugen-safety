@@ -257,7 +257,7 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   check('the assistant no longer sends the morning update itself', /מ-20\/10\/2026 השרת שולח אותו/.test(rt));
 
   console.log('\n5. calendar requests for expiries (20/10/2026, Michael: "do it: calendar slots")');
-  check('the folder is inside the safety folder', OD_CAL === OD_ROOT + '_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df', OD_CAL);
+  check('the folder is inside the safety folder', OD_CAL === OD_ROOT + '_\u05d0\u05d5\u05d8\u05d5\u05de\u05e6\u05d9\u05d4/_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df', OD_CAL);
   check('21 days before the expiry', eventDay('2026-11-30', '2026-10-20') === '2026-11-09');
   check('too close or expired: tomorrow', eventDay('2026-10-25', '2026-10-20') === '2026-10-21' && eventDay('2026-09-01', '2026-10-20') === '2026-10-21');
   check('a Friday moves to Sunday, a Saturday to Sunday', eventDay('2026-11-27', '2026-10-20') === '2026-11-08' && eventDay('2026-10-22', '2026-10-23') === '2026-10-25' && eventDay('2026-11-28', '2026-10-20') === '2026-11-08', [eventDay('2026-11-27', '2026-10-20'), eventDay('2026-10-22', '2026-10-23'), eventDay('2026-11-28', '2026-10-20')]);

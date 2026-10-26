@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { overlapReply, OVERLAP_MS, draftTrashCheck, draftSubj, draftMadeLine, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
+import { OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftSubj, draftMadeLine, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -105,7 +105,7 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   })());
   check('od_pull never into the mail-flow folders (draft, file request, inbox, calendar queue, OCR text): those take files through mail_draft / mail_request only (25/10/2026 retro)', (() => {
     const t = (d) => odPullCheck({ agent: 'dev', why: 'to a flow folder', from: 'x/a.txt', dir: d });
-    return OD_TRIGGER_DIRS.length === 6 && OD_TRIGGER_DIRS.every((d) => !!t(d).error) && !!t(OD_DRAFT + '/sub').error && !t('22_x/09_y').error;
+    return OD_TRIGGER_DIRS.length === 8 && OD_TRIGGER_DIRS.every((d) => !!t(d).error) && !!t(OD_DRAFT + '/sub').error && !t('22_x/09_y').error;
   })());
   check('od_pull: one file from the desktop INTO a folder of the safety folder; never from inside it, never into old versions, never above the desktop (24/10/2026)', (() => {
     const ok = odPullCheck({ agent: 'dev', why: 'to the binder', from: 'תקני ISO/2026/a.docx', dir: '22_x/09_y' });
@@ -647,6 +647,25 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('older than 30 days = refused; draftSubj strips RE:, FW: and the Hebrew prefixes', !!draftTrashCheck(ok, JSON.parse(state[DRAFTS_MADE_KEY]), Date.now() + 31 * 864e5).error
       && draftSubj('\u05d4\u05e9\u05d1: FW: A  b') === 'a b');
     delete state[DRAFTS_MADE_KEY]; delete state[DRAFTS_TRASHED_KEY];
+  }
+
+  console.log('\n4e4. one folder for the flows (26/10/2026, Michael: "every automatic action from now on goes into this folder")');
+  {
+    const fsm = await import('node:fs'), pth = await import('node:path');
+    const root = new URL('../../functions/', import.meta.url).pathname;
+    const files = [];
+    const walk = (d) => fsm.readdirSync(d, { withFileTypes: true }).forEach((e) => e.isDirectory() ? walk(pth.join(d, e.name)) : /\.js$/.test(e.name) && files.push(pth.join(d, e.name)));
+    walk(root);
+    // a folder straight under the safety folder whose name starts with "_" = a constant here, and only these four
+    const ALLOWED = ['OD_INBOX', 'OD_AUTO', 'OD_ARCHIVE_DIR', 'OD_OCR_DIR'];
+    const tops = [], direct = [];
+    for (const f of files) {
+      const src = fsm.readFileSync(f, 'utf8');
+      for (const m of src.matchAll(/export const (OD_[A-Z_]+) = '_/g)) if (ALLOWED.indexOf(m[1]) < 0) tops.push(pth.basename(f) + ' ' + m[1]);
+      for (const m of src.matchAll(/(OD_ROOT \+ '_|\\u05d1\\u05d8\\u05d9\\u05d7\\u05d5\\u05ea\/_(?!\\u05d0\\u05d5\\u05d8\\u05d5|\\u05e0\\u05db\\u05e0\\u05e1|\\u05d8\\u05e7\\u05e1\\u05d8|\\u05d2\\u05e8\\u05e1))/g)) direct.push(pth.basename(f));
+    }
+    check('no new "_" folder straight under the safety folder: a folder a flow reads is OD_AUTO + "/" + its name (add it to OD_AUTO_DIRS)', tops.length === 0 && direct.length === 0, { tops, direct });
+    check('the five flow folders are inside OD_AUTO', [OD_REQ, OD_DRAFT, OD_CAL_MOVE, OD_DRAFT_TRASH].every((x) => x.indexOf(OD_AUTO + '/') === 0) && OD_AUTO_DIRS.length === 5);
   }
 
   console.log('\n4f. mail_request: one text file with the message id, for the second flow');
