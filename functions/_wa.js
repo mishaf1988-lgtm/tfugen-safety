@@ -553,7 +553,9 @@ export function recentLine(rows, curWamid, nowMs) {
   const out = (Array.isArray(rows) ? rows : []).filter((r) => r && r.payload && (r.event_type === 'owner_in' || r.event_type === 'assistant')
     && r.payload.wamid !== curWamid && nowMs - Date.parse(r.ts) <= RECENT_H * 3600e3 && String(r.payload.text || r.payload.title || '').trim())
     .sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts)).slice(-RECENT_N)
-    .map((r) => hm(r.ts) + ' ' + (r.event_type === 'owner_in' ? '\u05de\u05d9\u05db\u05d0\u05dc' : '\u05d4\u05e2\u05d5\u05d6\u05e8') + ': ' + String(r.payload.text || r.payload.title).replace(/\s+/g, ' ').slice(0, 300));
+    .map((r) => hm(r.ts) + ' ' + (r.event_type === 'owner_in' ? '\u05de\u05d9\u05db\u05d0\u05dc' : '\u05d4\u05e2\u05d5\u05d6\u05e8') + ': ' + String(r.payload.text || r.payload.title).replace(/\s+/g, ' ').slice(0, 300)
+      // 26/10/2026: a file he sent earlier keeps its id, so this run can read it and attach it
+      + (r.payload.media_id ? ' [wa_media ' + r.payload.media_id + ']' : ''));
   while (out.length && out.join(' || ').length > RECENT_MAX) out.shift();
   return out.join(' || ');
 }

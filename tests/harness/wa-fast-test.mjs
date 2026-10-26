@@ -1,7 +1,7 @@
 // The server's fast lane (20/10/2026, Michael in the questionnaire: "do it: a fast lane in the server").
 // A number 1-4 that answers a hazard alert, and "what is urgent" / "expiries", are answered by wa-hook
 // itself by rules; everything else, and anything unclear, still goes to the assistant.
-import { recentLine, RECENT_MAX, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX } from './_build/wa-hook.mjs';
+import { ownerInPayload, recentLine, RECENT_MAX, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX } from './_build/wa-hook.mjs';
 import { HAZARD_OPTIONS, hazardAsk, assistantFire, fireUrlOf } from './_build/_wa.mjs';
 import { rateAgain } from './_build/chat.mjs';
 
@@ -67,6 +67,16 @@ console.log('\n5. the conversation so far (recentLine)');
   check('oldest first, both sides, Israel time, without the message answered now, without old or other kinds', r === '13:27 \u05de\u05d9\u05db\u05d0\u05dc: question B || 13:28 \u05d4\u05e2\u05d5\u05d6\u05e8: answer B', r);
   const many = Array.from({ length: 30 }, (_, i) => row(i + 2, 'assistant', 'x'.repeat(300)));
   check('at most 8 lines and ' + RECENT_MAX + ' characters', recentLine(many, '', N).split(' || ').length <= 8 && recentLine(many, '', N).length <= RECENT_MAX);
+}
+console.log('\n6. a file Michael sends keeps its media id (26/10/2026, the PDF quote at 11:43)');
+{
+  const p = ownerInPayload({ id: 'w1', type: 'document', text: '', media: { id: '1234567890', mime: 'application/pdf', name: 'Q3594.pdf' } });
+  check('a document with no caption: "\ud83d\udcce name" as text, with media_id, mime and name', p.text === '\ud83d\udcce Q3594.pdf' && p.media_id === '1234567890' && p.mime === 'application/pdf' && p.name === 'Q3594.pdf', p);
+  const q = ownerInPayload({ id: 'w2', type: 'text', text: 'hi' });
+  check('a text message: no media fields', q.text === 'hi' && !('media_id' in q), q);
+  const N = Date.parse('2026-10-26T10:00:00Z');
+  const r = recentLine([{ ts: '2026-10-26T09:43:00Z', event_type: 'owner_in', payload: p }], 'CUR', N);
+  check('recent shows the file with its id for wa_media (it used to drop an empty line)', r.indexOf('Q3594.pdf') > 0 && r.indexOf('[wa_media 1234567890]') > 0, r);
 }
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
