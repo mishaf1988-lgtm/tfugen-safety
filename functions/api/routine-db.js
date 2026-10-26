@@ -506,6 +506,20 @@ export function waTurns(rows) {
   turns.forEach((t) => { t.answered = t.answers.length > 0; });
   return turns;
 }
+// 26/10/2026 (Michael: "it keeps repeating the same mistakes"): he pasted a mail he was about to send, tapped "do it"
+// on the assistant's offer, and sent it himself a minute later; the assistant drafted first and checked Sent Items
+// only after, then asked him to delete the duplicate. The assistant's draft to someone else now says what it checked.
+export function draftSentGate(b) {
+  if (String(b.agent || '') !== 'routine-wa-assistant') return null;
+  const to = String(b.to || '').toLowerCase().split(/[;,]/).map((x) => x.trim()).filter(Boolean);
+  if (to.length && to.every((x) => x === String(SITE.adminEmail || '').toLowerCase())) return null;
+  return /sent/i.test(String(b.checked || '')) ? null
+    : 'checked required: search Sent Items for this thread right before the draft, and pass "checked":"Sent Items <subject>, HH:MM UTC" (26/10/2026: a draft duplicated a mail Michael had just sent)';
+}
+// 26/10/2026: "delete it" is not a task to hand Michael. A file of yours goes to od_trash; a duplicate draft is named, not handed over.
+export function asksOwnerToDelete(t) {
+  return /(^|[^\u05d0-\u05ea])(\u05dc\u05de\u05d7\u05d5\u05e7|\u05ea\u05de\u05d7\u05e7)\s+(\u05d0\u05d5\u05ea|\u05d0\u05ea)/.test(String(t || ''));
+}
 export function draftRequest(b) {
   // Up to 5 recipients, "a@x; b@y" (20/10/2026: one mail to the two people in charge of the ammonia
   // equipment); the flow's To field takes them separated by ";".
@@ -1546,7 +1560,9 @@ export async function onRequest(context) {
       return jsonResp({ ok: true, file: OD_CAL_MOVE + '/' + name, start: c.start, end: c.end }, 200, {});
     }
     if (body.op === 'mail_draft') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'cc', 'subject', 'body', 'attach', 'reply_to'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'cc', 'subject', 'body', 'attach', 'reply_to', 'checked'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const sentGate = draftSentGate(body);
+      if (sentGate) return jsonResp({ ok: false, error: sentGate }, 400, {});
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
       if (String(body.why || '').trim().length < 5) return jsonResp({ ok: false, error: 'why required' }, 400, {});
       const d = draftRequest(body);
@@ -1850,6 +1866,7 @@ export async function onRequest(context) {
       if (asksRepoSetup(body.text)) return jsonResp({ ok: false, error: 'asks Michael to add a repository or edit a Routine: no such choice (C32); say the dev runner builds it at its next wake (07:17-19:17 every 2 hours) (21/10/2026)' }, 400, {});
       // 25/10/2026 (Michael in the questionnaire: "do it: block"): the assistant asked for "\u05d1\u05e6\u05e2" with no buttons, and fixed it only when he said so.
       if (asksApprovalNoButtons(body.text, body.choices)) return jsonResp({ ok: false, error: 'asks for \u05d1\u05e6\u05e2 with no buttons: send it again with "choices", e.g. ["\u05d1\u05e6\u05e2","\u05dc\u05d0"]' }, 400, {});
+      if (asksOwnerToDelete(body.text)) return jsonResp({ ok: false, error: 'asks Michael to delete: a file you made goes to od_trash yourself; a duplicate mail draft: say which one not to send, without asking him to delete (26/10/2026)' }, 400, {});
       if (hasInternalId(body.text)) return jsonResp({ ok: false, error: 'internal id in text (dev-..., trig_, session_, cse_, h-...): say what was done, not its id (21/10/2026)' }, 400, {});
       // 22/10/2026 (the assistant sent "1. yes / 2. another place" with ref signmail, and the tap on 2 ran the server's
       // "reply to the sender"): sign refs belong to the server's own buttons; an assistant message cannot carry them.
