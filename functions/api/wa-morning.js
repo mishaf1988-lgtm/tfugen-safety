@@ -194,7 +194,7 @@ export async function onRequest(context) {
 // a day so the first run does not flood the calendar. When: LEAD_DAYS before e, at the earliest
 // tomorrow, moved off Friday and Saturday, 09:00-09:30 Israel. server_state.cal_sent keeps
 // "table:id:e" of what was written; a renewed item (new e) gets a new event when it comes close again.
-export const OD_CAL = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df';
+export const OD_CAL = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/_\u05d0\u05d5\u05d8\u05d5\u05de\u05e6\u05d9\u05d4/_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df'  // 26/10/2026: inside _\u05d0\u05d5\u05d8\u05d5\u05de\u05e6\u05d9\u05d4 (OD_AUTO in routine-db.js);
 export const CAL_KEY = 'cal_sent', CAL_DAYS = 45, LEAD_DAYS = 21, CAL_MAX = 5;
 const addDays = (ymd, n) => new Date(Date.parse(ymd + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
 export function eventDay(e, today) {

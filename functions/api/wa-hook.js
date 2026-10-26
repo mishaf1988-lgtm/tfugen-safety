@@ -17,7 +17,7 @@ import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo, SITE } from '../_shared.js';
 import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, hasStatuses, STATUS_KEY, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, LEARN_KEY, learnedLine, recentLine } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 import { accessToken } from '../_onedrive.js';
-import { onRequest as routineDb, OD_ROOT, OD_REQ, OD_DRAFT, OD_INBOX } from './routine-db.js';
+import { onRequest as routineDb, OD_ROOT, isAutoTop, OD_INBOX } from './routine-db.js';
 import { SIGN_KEY, signRefOf, signAnswer, signTake, signMark, signRun, signDoneText, SIGN_CANCEL_TEXT, SIGN_EXPIRED_TEXT, SIGN_DONE_TEXT } from '../_sign.js';
 
 export const FAIL_TEXT = '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05dc\u05e2\u05d5\u05d6\u05e8. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.';
@@ -187,7 +187,7 @@ export function signPick(items, q) {
   const list = (items || []).filter((x) => x && x.file && /\.pdf$/i.test(x.name || '') && !/\s-\s\u05d7\u05ea\u05d5\u05dd( \(\d\))?\.pdf$/i.test(x.name || ''))
     .map((x) => { let p = ''; try { p = decodeURIComponent(String((x.parentReference && x.parentReference.path) || '')); } catch (e) { p = ''; }
       const dir = p.indexOf(root) === 0 ? p.slice(root.length).split('/').filter(Boolean) : null;
-      return dir && dir.length && dir[0] !== OD_REQ && dir[0] !== OD_DRAFT ? { name: x.name, path: dir.concat([x.name]).join('/') } : null; })
+      return dir && dir.length && !isAutoTop(dir[0]) ? { name: x.name, path: dir.concat([x.name]).join('/') } : null; })
     .filter(Boolean);
   const exact = list.filter((x) => norm(x.name) === norm(q));
   return exact.length === 1 ? [exact[0]] : list.slice(0, 5);
