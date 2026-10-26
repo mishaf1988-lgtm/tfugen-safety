@@ -28,6 +28,7 @@ console.log('\n2. the brief');
 ['מה המצב?', '2. מה מחכה לי', 'תעביר לרכז המסמכים', 'בצע', 'כן'].forEach((w) => check('"' + w + '" = to the assistant', fastRoute(m(w), '', null) === null));
 check('the four hazard options are what the alert lists', HAZARD_OPTIONS.every((o) => alertText.indexOf(o) >= 0));
 check('the brief words are a closed list', FAST_BRIEF.test('דחוף') && !FAST_BRIEF.test('לא דחוף'));
+check('the brief, in his words too (26/10/2026): "יש משהו דחוף", "מה דחוף היום", "מה פג עכשיו"; still not a longer or different question', FAST_BRIEF.test('יש משהו דחוף') && FAST_BRIEF.test('מה דחוף היום') && FAST_BRIEF.test('מה פג עכשיו') && !FAST_BRIEF.test('מה דחוף בנושא הגז') && !FAST_BRIEF.test('אילו תפוגות יש לנו בחודש הקרוב'));
 
 console.log('\n3. which Routine the server wakes (the lean session, 20/10/2026)');
 const O = { ASSISTANT_FIRE_URL: 'u1', ASSISTANT_FIRE_TOKEN: 't1' };
