@@ -36,6 +36,8 @@ NEVER = re.compile(r"(^|_)(delete|remove|trash|purge|destroy|send|reply|forward|
 # A move is the one way to "delete": into a folder named "למחיקה" that Michael empties himself.
 # The one real delete (25/10/2026, Michael in the questionnaire: "do it: to the recycle bin") is on the server,
 # not a 365 tool: routine-db op od_dedupe, a duplicate the server itself made, same hash as the file kept. This hook
+# 26/10/2026 (Michael in the questionnaire: "to the recycle bin, automatic"): routine-db op draft_trash, an assistant
+# draft a newer one replaced, to Deleted Items through flow 8. Also server-side, also not a 365 tool. This hook
 # keeps denying every delete through a 365 tool or the synced folder.
 MOVE = re.compile(r"(^|_)(move|copy)(_|$)", re.I)
 TRASH_FOLDER = "\u05dc\u05de\u05d7\u05d9\u05e7\u05d4"  # "למחיקה"

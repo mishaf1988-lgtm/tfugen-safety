@@ -67,6 +67,13 @@
 - **נבנתה 25/10/2026** (C47, Claude בכרום): נשמרה, פורסמה, On, Flow checker 0/0. בעורך החדש "/" פותח תפריט הוספה, ולכן ה-"/" בסוף `/me/events/` נבלע בפעם הראשונה; לבדוק את ה-URI ב-Code view.
 - **הבדיקה העצמית:** אחרי `cal_move`, `outlook_calendar_search` על היום החדש מראה את האירוע בשעה החדשה (2-3 דקות).
 
+## זרימה 8: טיוטות למחיקה (26/10/2026, C49)
+מיכאל, 26/10/2026: "אם הכנו טיוטה חדשה והקודמת כבר לא רלוונטית, היא תימחק מהטיוטות במייל". בשאלון: "בצע: לפח המיחזור, אוטומטי (מומלץ)". חריג שני לכלל "מחיקה אף פעם" (אחרי `od_dedupe`).
+- **השרת:** `routine-db` op `draft_trash` (`id` של הטיוטה כמו ש-`outlook_email_search` עם `folderName: "Drafts"` מחזיר, `subject` כמו בטיוטה, `to`, ו-`why`: איזו טיוטה חדשה החליפה אותה). מותר רק לטיוטה שהשרת עצמו הכין: אותם נמענים, ואותו נושא או טיוטת תשובה, ב-30 הימים האחרונים (`server_state.drafts_made`, נרשם בכל `mail_draft` מ-26/10/2026). כותב קובץ `.txt` עם JSON (`id`, `subject`). נרשם ב-`server_state.drafts_trashed`.
+- **התיקייה:** `ניהול בטיחות\_טיוטות למחיקה` (השרת יוצר אותה בקובץ הראשון).
+- **הזרימה** "טיוטות למחיקה": טריגר `When a file is created (properties only)` על `/שולחן העבודה/ניהול בטיחות/_טיוטות למחיקה`; `Get file content`; `Compose` עם `json(trim(string(body('Get_file_content'))))`; Office 365 Outlook `Send an HTTP request` GET `https://graph.microsoft.com/v1.0/me/messages/@{encodeUriComponent(outputs('Compose')?['id'])}?$select=isDraft,subject`; `Condition`: `isDraft` שווה `true` **וגם** `subject` שווה ל-`subject` מהקובץ; רק אז `Send an HTTP request` POST ל-`.../me/messages/@{encodeUriComponent(outputs('Compose')?['id'])}/move` עם Body `{"destinationId":"deleteditems"}`. כלומר לפח (פריטים שנמחקו), לא מחיקה סופית, ומייל שנשלח או שאינו טיוטה לא זז.
+- **הבדיקה העצמית:** אחרי `draft_trash`, `outlook_email_search` עם `folderName: "Drafts"` ומילה מהנושא מראה רק את הטיוטה החדשה (1-2 דקות).
+
 ## ניקוי "לא לתיוק" (11/10/2026, מיכאל בשאלון: "בצע: מחיקה אחרי 30 יום (מומלץ)")
 `backup-od.js` (כל בוקר 06:30), צעד 5: קבצים בתיקייה `_נכנס מהמייל/לא לתיוק` שנוצרו לפני יותר מ-30 יום נמחקים (לסל המחזור של OneDrive, 93 יום), עד 20 ביום, ורק כשנשאר תקציב אחרי הגיבויים. רק התיקייה הזו, רק קבצים. הכול שם עותקים: המקור נשאר במייל. חריג יחיד לכלל "מחיקה אף פעם" ב-365, כמו ניקוי הגיבויים.
 
