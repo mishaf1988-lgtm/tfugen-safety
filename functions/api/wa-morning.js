@@ -299,9 +299,10 @@ async function devRemind(env, now) {
   if (!to) return null;
   const x = due[0]; // one a tick: each line carries its own ref for the answer
   let warned = []; try { warned = JSON.parse(warnedRaw || '[]'); } catch (e) { warned = []; }
-  await stateSet(env, DEV_WARN_KEY, JSON.stringify([x.id].concat(Array.isArray(warned) ? warned : []).slice(0, DEV_WARN_MAX)));
   const text = devStuckText(x);
   const r = await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, sbFrom(env)) });
+  // marked warned only when it went out (26/10/2026 retro): a failed send is tried again on the next tick
+  if (r.ok) await stateSet(env, DEV_WARN_KEY, JSON.stringify([x.id].concat(Array.isArray(warned) ? warned : []).slice(0, DEV_WARN_MAX)));
   if (r.ok) await noteLastOut(env, sbFrom(env), text, 'dev ' + x.id);
   await sb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
     body: JSON.stringify([{ id: 'wd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
@@ -323,9 +324,10 @@ async function promiseRemind(env, now) {
   let list = []; try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
   const ids = due.map((x) => x.id);
   list.forEach((x) => { if (x && ids.indexOf(x.id) >= 0) x.reminded_at = now.toISOString(); });
-  await stateSet(env, PROMISE_KEY, JSON.stringify(list));
   const text = promiseRemindText(due);
   const r = await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, sbFrom(env)) });
+  // marked reminded only after it went out (26/10/2026 retro)
+  if (r.ok) await stateSet(env, PROMISE_KEY, JSON.stringify(list));
   await sb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
     body: JSON.stringify([{ id: 'wp' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
       event_type: 'promise', channel: r.ok ? 'whatsapp' : 'whatsapp_error', payload: { title: clip(text, 120), kind: 'promise', detail: r.error || null } }]) }).catch(() => {});
@@ -407,8 +409,9 @@ async function watchReply(env, now) {
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };
   const to = await ownerWa(env, sbFrom(env));
   if (!to) return { ok: false, error: 'no owner number in notification_prefs' };
-  await stateSet(env, WATCH_KEY, v.wamid);
   const r = await sendToOwner(env, to, v.text, { windowOpen: true, noTemplate: true });
+  // marked only after it went out (26/10/2026 retro): a failed alert is tried again on the next tick
+  if (r.ok) await stateSet(env, WATCH_KEY, v.wamid);
   // Its own event_type, not 'assistant': the weekly retro (retro-prompt.md 7a) counts these, and an
   // alert is not an answer to Michael's message.
   await sb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },

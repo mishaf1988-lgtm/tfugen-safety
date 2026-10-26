@@ -199,6 +199,11 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     const d = devStuck(L, '[]', T, 15);
     check('dev guard: only open, untold and older than ' + (DEV_STUCK_MS / 3600000) + 'h', d.length === 1 && d[0].id === 'dev-20261025090000-aaaa', d);
     check('dev guard: once (warned list), and quiet at night', devStuck(L, '["dev-20261025090000-aaaa"]', T, 15).length === 0 && devStuck(L, '[]', T, 22).length === 0 && devStuck(L, '[]', T, 6).length === 0);
+    const wm = (await import('node:fs')).readFileSync(new URL('../../functions/api/wa-morning.js', import.meta.url), 'utf8');
+    const iR = wm.indexOf('async function devRemind');
+    check('dev guard: marked warned only after a send that went out, so a failed send is tried again (a source check: devRemind is not run here; 26/10/2026 retro)', iR > 0 && /sendToOwner\([\s\S]{0,300}if \(r\.ok\) await stateSet\(env, DEV_WARN_KEY/.test(wm.slice(iR, iR + 2500)) && !/await stateSet\(env, DEV_WARN_KEY[\s\S]{0,200}const r = await sendToOwner/.test(wm.slice(iR, iR + 2500)));
+    const iW = wm.indexOf('stateSet(env, WATCH_KEY'), iP = wm.indexOf('stateSet(env, PROMISE_KEY, JSON.stringify(list))');
+    check('watch alert and promise reminder: marked only after a send that went out, so a failed one is tried again (source check; 26/10/2026 retro)', iW > 0 && /if \(r\.ok\) await stateSet\(env, WATCH_KEY/.test(wm.slice(iW - 40, iW + 60)) && iP > 0 && /if \(r\.ok\) await stateSet\(env, PROMISE_KEY, JSON\.stringify\(list\)\)/.test(wm.slice(iP - 40, iP + 80)));
     check('dev guard: bad state = nothing, never a throw', devStuck('x', 'y', T, 15).length === 0 && devStuck(null, null, T, 15).length === 0);
     const tx = devStuckText(d[0]);
     check('dev guard: the time in Israel (UTC+2 after 25/10), no internal id', /11:00/.test(tx) && !/dev-\d{14}/.test(tx), tx);

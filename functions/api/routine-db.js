@@ -187,6 +187,12 @@ export function devInboxAdd(raw, b, nowIso) {
 // 25/10/2026 (Michael: "it has to be a dialogue... no stops"): a wa_me with ref "dev <id>" marks the open request
 // told_at, so the server's guard (wa-morning devStuck) knows Michael heard about it. null = not a dev ref or no such open one.
 // A question (a "?") that offers "\u05d1\u05e6\u05e2" as an answer, with no choices: Michael gets no button to tap.
+// A stale reply (Michael already tapped a newer message) that asks him to approve something is not sent at all
+// (26/10/2026 retro): its buttons would go, and the question without them is what asksApprovalNoButtons refuses at the
+// door, while keeping them would let an old "approve" button confirm a question he has already replaced.
+export function staleRefuses(stale, text) {
+  return !!(stale && stale.dropChoices && asksApprovalNoButtons(text, null));
+}
 export function asksApprovalNoButtons(text, choices) {
   if (Array.isArray(choices) && choices.length) return false;
   const t = String(text || '');
@@ -581,7 +587,8 @@ export function calMoveCheck(b, nowMs) {
   const ms = (x) => Date.parse(x + ':00Z');
   if (isNaN(ms(start)) || isNaN(ms(end)) || !(ms(end) > ms(start))) return { error: 'end must be after start' };
   if (ms(end) - ms(start) > 14 * 86400000) return { error: 'longer than 14 days' };
-  const today = new Date(nowMs).toISOString().slice(0, 10);
+  // today in Israel (26/10/2026 retro): a UTC date let yesterday through between midnight and 02:00-03:00 Israel time
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(nowMs));
   if (start.slice(0, 10) < today) return { error: 'start in the past' };
   if (ms(start) - nowMs > 366 * 86400000) return { error: 'more than a year ahead' };
   return { id, subject, start, end, file: JSON.stringify({ id, subject, start: start + ':00', end: end + ':00', tz: 'Israel Standard Time' }) };
@@ -1759,6 +1766,10 @@ export async function onRequest(context) {
       if (item.status || kept.status) return jsonResp({ ok: false, error: item.status ? 'path ' + item.status : 'keep ' + kept.status }, 200, {});
       const why = odDedupeVerdict(item, kept, env.ONEDRIVE_CLIENT_ID);
       if (why) return jsonResp({ ok: false, error: why }, 200, {});
+      // the copy to keep is read again right before the delete (26/10/2026 retro): a parallel run cleaning the same pair the
+      // other way round would otherwise delete both; this narrows the window to the gap between this read and the delete
+      const keptNow = await meta(c.keep);
+      if (keptNow.status || keptNow.id !== kept.id) return jsonResp({ ok: false, error: 'keep changed or gone, nothing deleted' }, 200, {});
       const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(item.id), { method: 'DELETE', headers: gh, signal: tmo(GRAPH_MS) });
       if (d.status !== 204) return jsonResp({ ok: false, error: 'delete ' + d.status }, 200, {});
       const rows = await stateRead([OD_DELETED_KEY]).catch(() => []);
@@ -1850,6 +1861,7 @@ export async function onRequest(context) {
         const since = new Date(Date.parse(body.answers) + STALE_GAP_MS).toISOString();
         const nr = await fetch(url + '/rest/v1/notifications_log?select=ts,payload&event_type=eq.owner_in&ts=gt.' + encodeURIComponent(since) + '&order=ts.asc&limit=5', { headers: h, signal: tmo(SB_MS) }).then((x) => (x.ok ? x.json() : [])).catch(() => []);
         stale = staleReply(body.answers, nr);
+        if (stale && staleRefuses(stale, body.text)) return jsonResp({ ok: false, error: 'stale: Michael already tapped a newer message, so this approval question is not sent; ask it again from his newer message' }, 400, {});
         if (stale) { body.text = stale.prefix + String(body.text || ''); if (stale.dropChoices) delete body.choices; }
       }
       if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
