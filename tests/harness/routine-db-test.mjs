@@ -681,6 +681,18 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('the five flow folders are inside OD_AUTO', [OD_REQ, OD_DRAFT, OD_CAL_MOVE, OD_DRAFT_TRASH].every((x) => x.indexOf(OD_AUTO + '/') === 0) && OD_AUTO_DIRS.length === 5);
   }
 
+  console.log('\n4e4b. a promise check-in waits while Michael is in a conversation (26/10/2026)');
+  {
+    const src = (await import('node:fs')).readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
+    const { HOLD_REF, HOLD_MS } = await import('./_build/routine-db.mjs');
+    check('promise: and watch refs are held 5 minutes after an owner message, without answers only; overlap_ok lets an urgent one through', HOLD_REF.test('promise:p-1') && HOLD_REF.test('watch') && !HOLD_REF.test('dev 1') && !HOLD_REF.test('none') && HOLD_MS === 300000
+      && /if \(!body\.answers && HOLD_REF\.test/.test(src) && src.indexOf("if (body.overlap_ok !== true) {") < src.indexOf('HOLD_REF.test(String(body.ref'));
+    // the mock answers every notifications_log read with one row: an owner message "in the last 5 minutes"
+    const held = await call({ op: 'wa_me', ref: 'promise:p-1', text: 'בדיקות שמיעה: תזכורת על השריון' });
+    const urgent = await call({ op: 'wa_me', ref: 'promise:p-1', text: 'בדיקות שמיעה: תזכורת על השריון', overlap_ok: true });
+    check('wa_me: a promise check-in is held while he talks; overlap_ok passes it on (here to "whatsapp not configured")', held.status === 400 && /held/.test(held.json.error) && urgent.json.error === 'whatsapp not configured', { held: held.json, urgent: urgent.json });
+  }
+
   console.log('\n4e5. tour_close_ask (26/10/2026, Michael: "do it: only after my do-it")');
   {
     rows.tour_hazards = [{ id: 'th-12', n: 12, descr: 'נקודות צביטה חשופות', loc: 'מסוע אריזה', s: 'פתוח' }, { id: 'th-3', n: 3, descr: 'x', s: 'סגור' }];

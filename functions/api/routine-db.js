@@ -201,6 +201,7 @@ export function devInboxAdd(raw, b, nowIso) {
 // (another answers, or none) sent after the message this run answers = the overlap. A run with no answers (the dev
 // session, a ref "dev ...") counts every such row of the window. Same answers = the same run, its own messages.
 export const OVERLAP_MS = 3 * 60000;
+export const HOLD_REF = /^(promise:|watch)/, HOLD_MS = 5 * 60000;
 export function overlapReply(answers, ref, rows) {
   if (!Array.isArray(rows) || !rows.length) return null;
   const at = Date.parse(answers || '');
@@ -2026,6 +2027,13 @@ export async function onRequest(context) {
           + encodeURIComponent(new Date(Date.now() - OVERLAP_MS).toISOString()) + '&order=ts.desc&limit=10', { headers: h, signal: tmo(SB_MS) }).then((x) => (x.ok ? x.json() : [])).catch(() => []);
         const o = overlapReply(body.answers, body.ref, ov);
         if (o) return jsonResp({ ok: false, error: 'overlap: another run already answered at ' + o.hm + ': "' + o.text + '". Yours repeats it = do not send. It adds something = send only the new part, with "overlap_ok": true' }, 400, {});
+        // 26/10/2026 (Michael: "upgrade" the one question, two messages case: at 14:31 he asked "what is still open", a
+        // promise check sent its own line 33 seconds later and the full answer came at 14:33): a check-in of a promise
+        // or a watch (ref promise:/watch, no answers) waits while he is in a conversation. It stays open and comes back.
+        if (!body.answers && HOLD_REF.test(String(body.ref || ''))) {
+          const oi = await fetch(url + '/rest/v1/notifications_log?select=ts&event_type=eq.owner_in&ts=gte.' + encodeURIComponent(new Date(Date.now() - HOLD_MS).toISOString()) + '&limit=1', { headers: h, signal: tmo(SB_MS) }).then((x) => (x.ok ? x.json() : [])).catch(() => []);
+          if (Array.isArray(oi) && oi.length) return jsonResp({ ok: false, error: 'held: Michael wrote in the last 5 minutes and the run answering him covers what is open. Do not send now: leave the promise open, it comes back. overlap_ok:true only if it cannot wait (a deadline today)' }, 400, {});
+        }
       }
       if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
       const to = await ownerWa(env, url);
