@@ -123,6 +123,8 @@
 //              calendar. Like mail_request: a JSON file into OD_CAL_MOVE, and the flow "הזזות ביומן"
 //              (power-automate-mail.md, flow 6) PATCHes only start and end of that event. approved = Michael's
 //              own words with "בצע" (the attendees get an update, a message to a person). Logged in cal_moved.
+//   cal_invite  (26/10/2026) {subject, start, end, to, cc, location, body, approved}: a new meeting in Michael's
+//              calendar; Graph sends the invitations. A JSON file into OD_CAL_INVITE, flow 9 "זימונים" POSTs it.
 //   tour_close_ask  (26/10/2026) {id, note}: asks Michael "close tour finding <n>?" with buttons; only his "do it" on
 //              that message closes it (wa-hook, fastTourClose). TOUR_CLOSE_KEY holds the one open request.
 //   draft_trash  (26/10/2026, Michael in the questionnaire: "to the recycle bin, automatic") {id, subject, to}:
@@ -151,7 +153,7 @@ import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLA
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'cal_moved', 'drafts_made', 'drafts_trashed'];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'cal_moved', 'cal_invited', 'drafts_made', 'drafts_trashed'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -499,7 +501,7 @@ export const OD_SKIP = '\u05dc\u05d0 \u05dc\u05ea\u05d9\u05d5\u05e7';
 // in one folder, OD_AUTO. Each flow keeps its own subfolder. OD_AUTO_DIRS = their names; the old top-level
 // names stay refused as destinations too, in case an old folder is still there.
 export const OD_AUTO = '_\u05d0\u05d5\u05d8\u05d5\u05de\u05e6\u05d9\u05d4';
-export const OD_AUTO_DIRS = ['_\u05d1\u05e7\u05e9\u05d5\u05ea \u05de\u05d4\u05de\u05d9\u05d9\u05dc', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d9\u05d9\u05dc', '_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df', '_\u05d4\u05d6\u05d6\u05d5\u05ea \u05d1\u05d9\u05d5\u05de\u05df', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d7\u05d9\u05e7\u05d4'];
+export const OD_AUTO_DIRS = ['_\u05d1\u05e7\u05e9\u05d5\u05ea \u05de\u05d4\u05de\u05d9\u05d9\u05dc', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d9\u05d9\u05dc', '_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df', '_\u05d4\u05d6\u05d6\u05d5\u05ea \u05d1\u05d9\u05d5\u05de\u05df', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d7\u05d9\u05e7\u05d4', '_\u05d6\u05d9\u05de\u05d5\u05e0\u05d9\u05dd'];
 export const isAutoTop = (x) => x === OD_AUTO || OD_AUTO_DIRS.indexOf(x) >= 0;
 export const OD_REQ = OD_AUTO + '/' + OD_AUTO_DIRS[0];
 // A Graph / Outlook message id: base64url-ish, as outlook_email_search returns it.
@@ -665,6 +667,30 @@ export function calMoveCheck(b, nowMs) {
   if (start.slice(0, 10) < today) return { error: 'start in the past' };
   if (ms(start) - nowMs > 366 * 86400000) return { error: 'more than a year ahead' };
   return { id, subject, start, end, file: JSON.stringify({ id, subject, start: start + ':00', end: end + ':00', tz: 'Israel Standard Time' }) };
+}
+// cal_invite (26/10/2026, Michael: "can you add an invite to the mail?", and in the questionnaire "do it: a real
+// invite after do it"): a new event with attendees in Michael's calendar. Graph sends the invitations as it creates
+// it, so it is a message to people: approved = his words with "\u05d1\u05e6\u05e2" after he saw all of it. Attendees as
+// a mail draft (draftListOk: up to 5, or 30 of ours). The server builds the Graph event; flow 9 only POSTs it.
+export const OD_CAL_INVITE = OD_AUTO + '/' + OD_AUTO_DIRS[5], CAL_INVITED_KEY = 'cal_invited';
+export function calInviteCheck(b, nowMs) {
+  const t = calMoveCheck(Object.assign({}, b, { id: 'x'.repeat(40) }), nowMs);
+  if (t.error) return t;
+  const split = (x) => String(x || '').split(/[;,]/).map((a) => a.trim()).filter(Boolean);
+  const to = split(b.to), cc = split(b.cc);
+  if (!to.length || !draftListOk(to)) return { error: 'bad to: the attendees, as a mail draft (up to 5, or 30 of ours)' };
+  if (cc.length && !draftListOk(cc)) return { error: 'bad cc: the optional attendees' };
+  const location = String(b.location || '').replace(/\s+/g, ' ').trim();
+  if (location.length > 200) return { error: 'location: up to 200 characters' };
+  const text = String(b.body || '').replace(/\r\n/g, '\n').trim();
+  if (!text || text.length > 5000) return { error: 'body 1-5000 characters' };
+  const html = '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">' + text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').split('\n').join('<br>') + '</div>';
+  const who = (list, type) => list.map((address) => ({ emailAddress: { address }, type }));
+  const event = { subject: t.subject, body: { contentType: 'HTML', content: html },
+    start: { dateTime: t.start + ':00', timeZone: 'Israel Standard Time' }, end: { dateTime: t.end + ':00', timeZone: 'Israel Standard Time' },
+    attendees: who(to, 'required').concat(who(cc, 'optional')) };
+  if (location) event.location = { displayName: location };
+  return { subject: t.subject, start: t.start, end: t.end, count: to.length + cc.length, file: JSON.stringify({ event }) };
 }
 const OD_NO_DIR = /(^|\/)(_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea|\u05dc\u05de\u05d7\u05d9\u05e7\u05d4|ARCHIVE)(\/|$)/i;
 // 18/10/2026 (Michael: "גם וגם"): csv too, the data file next to a lab certificate pdf.
@@ -1652,6 +1678,20 @@ export async function onRequest(context) {
       await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
         body: JSON.stringify([{ key: CAL_MOVED_KEY, value: JSON.stringify([line].concat(Array.isArray(list) ? list : []).slice(0, CAL_MOVED_MAX)), updated_at: line.at }]) }).catch(() => null);
       return jsonResp({ ok: true, file: OD_CAL_MOVE + '/' + name, start: c.start, end: c.end }, 200, {});
+    }
+    if (body.op === 'cal_invite') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'subject', 'start', 'end', 'to', 'cc', 'location', 'body', 'approved'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const c = calInviteCheck(body, Date.now());
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const at = await accessToken(env);
+      const name = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '') + '-' + Math.random().toString(36).slice(2, 8) + '.txt';
+      await putFile(at.token, OD_ROOT + OD_CAL_INVITE, name, c.file, 'text/plain');
+      const rows = await stateRead([CAL_INVITED_KEY]).catch(() => []);
+      let list = []; try { list = JSON.parse((rows[0] && rows[0].value) || '[]'); } catch (e) { list = []; }
+      const line = { at: new Date().toISOString(), subject: c.subject, start: c.start, end: c.end, count: c.count, file: name, agent: body.agent, approved: String(body.approved).slice(0, 200) };
+      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+        body: JSON.stringify([{ key: CAL_INVITED_KEY, value: JSON.stringify([line].concat(Array.isArray(list) ? list : []).slice(0, CAL_MOVED_MAX)), updated_at: line.at }]) }).catch(() => null);
+      return jsonResp({ ok: true, file: OD_CAL_INVITE + '/' + name, start: c.start, end: c.end, attendees: c.count }, 200, {});
     }
     if (body.op === 'draft_trash') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'id', 'subject', 'to'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});

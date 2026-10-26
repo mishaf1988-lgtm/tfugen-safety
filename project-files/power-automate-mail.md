@@ -77,6 +77,13 @@
 - **הזרימה** "טיוטות למחיקה": טריגר `When a file is created (properties only)` על `/שולחן העבודה/ניהול בטיחות/_אוטומציה/_טיוטות למחיקה`; `Get file content`; `Compose` עם `json(trim(string(body('Get_file_content'))))`; Office 365 Outlook `Send an HTTP request` GET `https://graph.microsoft.com/v1.0/me/messages/@{encodeUriComponent(outputs('Compose')?['id'])}?$select=isDraft,subject`; `Condition`: `isDraft` שווה `true` **וגם** `subject` שווה ל-`subject` מהקובץ; רק אז `Send an HTTP request` POST ל-`.../me/messages/@{encodeUriComponent(outputs('Compose')?['id'])}/move` עם Body `{"destinationId":"deleteditems"}`. כלומר לפח (פריטים שנמחקו), לא מחיקה סופית, ומייל שנשלח או שאינו טיוטה לא זז.
 - **הבדיקה העצמית:** אחרי `draft_trash`, `outlook_email_search` עם `folderName: "Drafts"` ומילה מהנושא מראה רק את הטיוטה החדשה (1-2 דקות).
 
+## זרימה 9: זימונים (26/10/2026, C51)
+מיכאל, 26/10/2026: "האם אפשר להוסיף זימון? למייל", ובשאלון: "בצע: זימון אמיתי אחרי בצע". חריג לכלל "יומן קריאה בלבד", כמו זרימה 7.
+- **השרת:** `routine-db` op `cal_invite` (`subject`, `start` ו-`end` בשעון ישראל `YYYY-MM-DDTHH:MM`, `to` מוזמנים חובה ו-`cc` אופציונליים לפי כללי `mail_draft`: עד 5, או עד 30 כשכולם של תפוגן, `location`, `body`, ו-`approved` עם "בצע"). השרת בונה את אירוע ה-Graph בעצמו וכותב קובץ `.txt` עם `{"event":{...}}`. נרשם ב-`server_state.cal_invited`.
+- **התיקייה:** `ניהול בטיחות\_אוטומציה\_זימונים`.
+- **הזרימה** "זימונים": טריגר `When a file is created (properties only)` על `/שולחן העבודה/ניהול בטיחות/_אוטומציה/_זימונים`; `Get file content`; `Compose` עם `json(trim(string(body('Get_file_content'))))`; Office 365 Outlook `Send an HTTP request` POST `https://graph.microsoft.com/v1.0/me/events` עם Body `@{outputs('Compose')?['event']}`. יצירת אירוע עם מוזמנים שולחת להם הזמנה, ולכן `approved` חובה, והעוזר מראה למיכאל קודם את כל הזימון.
+- **הבדיקה העצמית:** אחרי `cal_invite`, `outlook_calendar_search` על היום מראה את האירוע עם המוזמנים (כ-5 דקות).
+
 ## ניקוי "לא לתיוק" (11/10/2026, מיכאל בשאלון: "בצע: מחיקה אחרי 30 יום (מומלץ)")
 `backup-od.js` (כל בוקר 06:30), צעד 5: קבצים בתיקייה `_נכנס מהמייל/לא לתיוק` שנוצרו לפני יותר מ-30 יום נמחקים (לסל המחזור של OneDrive, 93 יום), עד 20 ביום, ורק כשנשאר תקציב אחרי הגיבויים. רק התיקייה הזו, רק קבצים. הכול שם עותקים: המקור נשאר במייל. חריג יחיד לכלל "מחיקה אף פעם" ב-365, כמו ניקוי הגיבויים.
 
