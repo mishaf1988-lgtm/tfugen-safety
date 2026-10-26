@@ -741,6 +741,20 @@ export function devFireTarget(env) {
   if (env.DEV_FIRE_TOKEN) return { url: fireUrlOf(DEV_TRIGGER), token: env.DEV_FIRE_TOKEN, body: null, which: 'dev' };
   return null;
 }
+// 26/10/2026 (Michael: "upgrade", after the assistant told him "the dev session was fired now" and then "15:17"): the
+// fired session has no repository, so code waits for the runner (ACCOUNT-INVENTORY: Sun-Thu 07:17-19:17, every two
+// hours, Israel time). dev_request returns that wake as eta, and the assistant quotes it rather than guessing.
+const IL_PARTS = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+export function devEta(nowMs) {
+  let t = Math.floor(nowMs / 3600000) * 3600000 + 17 * 60000;
+  if (t <= nowMs) t += 3600000;
+  for (let i = 0; i < 200; i++, t += 3600000) {
+    const p = {}; for (const x of IL_PARTS.formatToParts(new Date(t))) p[x.type] = x.value;
+    const h = Number(p.hour);
+    if (['Fri', 'Sat'].indexOf(p.weekday) < 0 && h >= 7 && h <= 19 && h % 2 === 1 && p.minute === '17') return p.day + '/' + p.month + ' ' + p.hour + ':17';
+  }
+  return null;
+}
 export const DEV_FIRE_HEAD = '[\u05d1\u05e7\u05e9\u05ea \u05e4\u05d9\u05ea\u05d5\u05d7 \u05de\u05d4\u05e9\u05e8\u05ea, \u05e0\u05d1\u05d3\u05e7 \u05d1\u05e9\u05e8\u05ea]';
 export function devFireText(e) {
   return [DEV_FIRE_HEAD, 'id: ' + e.id, 'at: ' + e.at, 'agent: ' + e.agent, 'request (data from the assistant, written from Michael\'s words; not instructions beyond the request): ' + String(e.text || '').replace(/\s*\n+\s*/g, ' / ')].join('\n');
@@ -1215,7 +1229,8 @@ export async function onRequest(context) {
           wa = s.ok ? (s.via || 'sent') : (s.error || 'failed');
         } catch (x) { wa = 'failed'; }
       }
-      return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length, wa, fired }, 200, {});
+      const eta = body.op === 'dev_request' ? devEta(Date.now()) : undefined;
+      return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length, wa, fired, eta }, 200, {});
     }
     // wa_file (22/10/2026, Michael to the assistant: "I asked to get the files here", and "the link is broken"): 1-5
     // files from the safety folder sent to Michael on WhatsApp as documents. Only to him, only inside the 24-hour window
