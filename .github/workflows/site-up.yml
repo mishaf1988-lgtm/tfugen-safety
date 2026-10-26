@@ -72,10 +72,21 @@ jobs:
             msg='האתר tapugan-safety.pages.dev חזר לענות (בדיקה מ-GitHub).'
           else exit 0; fi
           if [ -z "$META_ACCESS_TOKEN" ] || [ -z "$WA_TO" ]; then echo "::warning::no WhatsApp secrets (C34), GitHub's mail only"; exit 0; fi
-          body=$(MSG="$msg" python3 -c "import json,os; print(json.dumps({'messaging_product':'whatsapp','to':os.environ['WA_TO'],'type':'template','template':{'name':'tfugen_assistant_update','language':{'code':'he'},'components':[{'type':'body','parameters':[{'type':'text','text':os.environ['MSG']}]}]}}))")
-          code=$(curl -s -o /tmp/wa.json -w '%{http_code}' -m 20 -X POST "https://graph.facebook.com/v25.0/1165172413343378/messages" \
-            -H "Authorization: Bearer $META_ACCESS_TOKEN" -H 'Content-Type: application/json' -d "$body")
-          echo "whatsapp: $code"; [ "$code" = "200" ] || { head -c 300 /tmp/wa.json; echo "::warning::WhatsApp send failed"; }
+          # 26/10/2026: the assistant's number moved (#2018) to phone id 1304479066092850 (Cloudflare META_PHONE_NUMBER_ID);
+          # the old 1165172413343378 answers 133010 "Account not registered". The template is the server's
+          # (SITE.templates.assistant); while Meta has not approved it, a plain text goes instead, which WhatsApp
+          # delivers when Michael wrote to the assistant in the last 24 hours.
+          PHONE=1304479066092850
+          send() { curl -s -o /tmp/wa.json -w '%{http_code}' -m 20 -X POST "https://graph.facebook.com/v25.0/$PHONE/messages" \
+            -H "Authorization: Bearer $META_ACCESS_TOKEN" -H 'Content-Type: application/json' -d "$1"; }
+          body=$(MSG="$msg" python3 -c "import json,os; print(json.dumps({'messaging_product':'whatsapp','to':os.environ['WA_TO'],'type':'template','template':{'name':'safety_assistant_update','language':{'code':'he'},'components':[{'type':'body','parameters':[{'type':'text','text':os.environ['MSG']}]}]}}))")
+          code=$(send "$body"); echo "whatsapp template: $code"
+          if [ "$code" != "200" ]; then
+            head -c 300 /tmp/wa.json; echo
+            text=$(MSG="$msg" python3 -c "import json,os; print(json.dumps({'messaging_product':'whatsapp','to':os.environ['WA_TO'],'type':'text','text':{'body':os.environ['MSG']}}))")
+            code=$(send "$text"); echo "whatsapp text: $code"
+            [ "$code" = "200" ] || { head -c 300 /tmp/wa.json; echo "::warning::WhatsApp send failed"; }
+          fi
       - name: Fail when down (GitHub mails too)
         if: steps.probe.outputs.up != 'true'
         run: |
