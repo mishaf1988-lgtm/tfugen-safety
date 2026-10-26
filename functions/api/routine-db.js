@@ -686,16 +686,18 @@ export function calInviteCheck(b, nowMs) {
   if (location.length > 200) return { error: 'location: up to 200 characters' };
   const text = String(b.body || '').replace(/\r\n/g, '\n').trim();
   if (!text || text.length > 5000) return { error: 'body 1-5000 characters' };
-  const html = '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">' + text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').split('\n').join('<br>') + '</div>';
+  // draft (26/10/2026, Michael: "an invite draft, the same way as mail drafts"; isDraft on create was ignored by Graph,
+  // tested with him as the only attendee, and in the questionnaire "do it: a meeting with no attendees, I add them"):
+  // the meeting goes into his calendar with no attendees, so nothing is sent; the addresses open the body to copy.
+  const draft = b.draft === true;
+  const head = draft ? '\u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd (\u05dc\u05d4\u05e2\u05ea\u05d9\u05e7 \u05dc\u05e9\u05d3\u05d4 \u05d4\u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd): ' + to.join('; ') + (cc.length ? '\n\u05d0\u05d5\u05e4\u05e6\u05d9\u05d5\u05e0\u05dc\u05d9: ' + cc.join('; ') : '') + '\n(\u05dc\u05de\u05d7\u05d5\u05e7 \u05d0\u05ea \u05d4\u05e9\u05d5\u05e8\u05d5\u05ea \u05e2\u05d3 \u05d4\u05e7\u05d5 \u05dc\u05e4\u05e0\u05d9 \u05d4\u05e9\u05dc\u05d9\u05d7\u05d4)\n______________________________________\n\n' : '';
+  const html = '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">' + (head + text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').split('\n').join('<br>') + '</div>';
   const who = (list, type) => list.map((address) => ({ emailAddress: { address }, type }));
   const event = { subject: t.subject, body: { contentType: 'HTML', content: html },
     start: { dateTime: t.start + ':00', timeZone: 'Israel Standard Time' }, end: { dateTime: t.end + ':00', timeZone: 'Israel Standard Time' },
-    attendees: who(to, 'required').concat(who(cc, 'optional')) };
+    attendees: draft ? [] : who(to, 'required').concat(who(cc, 'optional')) };
   if (location) event.location = { displayName: location };
-  // draft (26/10/2026, Michael: "an invite draft, the same way as mail drafts"): ask Outlook to keep it unsent;
-  // whether Graph honours isDraft on create is what the first test (attendee: Michael only) shows
-  if (b.draft === true) event.isDraft = true;
-  return { subject: t.subject, start: t.start, end: t.end, count: to.length + cc.length, file: JSON.stringify({ event }) };
+  return { subject: t.subject, start: t.start, end: t.end, count: to.length + cc.length, draft, file: JSON.stringify({ event }) };
 }
 // 26/10/2026 (15:54, after Michael's "בצע" on the invite to the annual training): the assistant's own cal_invite was
 // stopped by its permission check (an action that writes to people). So, like tour_close_ask, the assistant only asks:
@@ -711,9 +713,9 @@ export function calInviteRefOf(about, prev) {
 export function calInviteAskText(c, b) {
   const dmy = (x) => x.slice(8, 10) + '/' + x.slice(5, 7) + '/' + x.slice(0, 4);
   const who = String(b.who || '').replace(/\s+/g, ' ').trim().slice(0, 300) || String(b.to || '').split(/[;,]/).map((x) => x.trim().split('@')[0]).filter(Boolean).join(', ');
-  return '\u05dc\u05e9\u05dc\u05d5\u05d7 \u05d6\u05d9\u05de\u05d5\u05df?\n1. \u05e0\u05d5\u05e9\u05d0: ' + c.subject + '\n2. \u05de\u05ea\u05d9: ' + dmy(c.start) + ' ' + c.start.slice(11) + '-' + c.end.slice(11)
+  return (b.draft === true ? '\u05dc\u05d9\u05e6\u05d5\u05e8 \u05d1\u05d9\u05d5\u05de\u05df \u05e9\u05dc\u05da \u05e4\u05d2\u05d9\u05e9\u05d4 \u05de\u05d5\u05db\u05e0\u05d4, \u05d1\u05dc\u05d9 \u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd?' : '\u05dc\u05e9\u05dc\u05d5\u05d7 \u05d6\u05d9\u05de\u05d5\u05df?') + '\n1. \u05e0\u05d5\u05e9\u05d0: ' + c.subject + '\n2. \u05de\u05ea\u05d9: ' + dmy(c.start) + ' ' + c.start.slice(11) + '-' + c.end.slice(11)
     + (b.location ? '\n3. \u05de\u05d9\u05e7\u05d5\u05dd: ' + String(b.location).replace(/\s+/g, ' ').trim().slice(0, 100) : '') + '\n4. \u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd (' + c.count + '): ' + who
-    + '\n\u05d1"\u05d1\u05e6\u05e2" \u05d4\u05d6\u05d9\u05de\u05d5\u05df \u05e0\u05e9\u05dc\u05d7 \u05dc\u05db\u05dc \u05d4\u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd.';
+    + (b.draft === true ? '\n\u05d4\u05d4\u05d6\u05de\u05e0\u05d5\u05ea \u05d9\u05d5\u05e6\u05d0\u05d5\u05ea \u05e8\u05e7 \u05db\u05e9\u05d0\u05ea\u05d4 \u05de\u05d5\u05e1\u05d9\u05e3 \u05d0\u05ea \u05d4\u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd \u05d5\u05e9\u05d5\u05dc\u05d7 \u05de-Outlook.' : '\n\u05d1"\u05d1\u05e6\u05e2" \u05d4\u05d6\u05d9\u05de\u05d5\u05df \u05e0\u05e9\u05dc\u05d7 \u05dc\u05db\u05dc \u05d4\u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd.');
 }
 const OD_NO_DIR = /(^|\/)(_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea|\u05dc\u05de\u05d7\u05d9\u05e7\u05d4|ARCHIVE)(\/|$)/i;
 // 18/10/2026 (Michael: "גם וגם"): csv too, the data file next to a lab certificate pdf.
@@ -1714,7 +1716,7 @@ export async function onRequest(context) {
       const line = { at: new Date().toISOString(), subject: c.subject, start: c.start, end: c.end, count: c.count, file: name, agent: body.agent, approved: String(body.approved).slice(0, 200) };
       await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
         body: JSON.stringify([{ key: CAL_INVITED_KEY, value: JSON.stringify([line].concat(Array.isArray(list) ? list : []).slice(0, CAL_MOVED_MAX)), updated_at: line.at }]) }).catch(() => null);
-      return jsonResp({ ok: true, file: OD_CAL_INVITE + '/' + name, start: c.start, end: c.end, attendees: c.count }, 200, {});
+      return jsonResp({ ok: true, file: OD_CAL_INVITE + '/' + name, start: c.start, end: c.end, attendees: c.count, draft: c.draft }, 200, {});
     }
     if (body.op === 'draft_trash') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'id', 'subject', 'to'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
