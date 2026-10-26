@@ -133,7 +133,7 @@ console.log('\n3b. how the last push went, for the watchdog (25/10/2026)');
   globalThis.fetch = f1;
   const lg = calls.find((c) => c.url.includes('/notifications_log') && c.m === 'POST');
   const row = lg && JSON.parse(lg.body)[0];
-  check('sendToOwner: sent, logged as wa_out on whatsapp with the text, and pushed to the phone', sr.ok && row && row.event_type === 'wa_out' && row.channel === 'whatsapp' && row.payload.text === 'בוקר טוב' && sr.push === 1 && calls.some((c) => c.url === 'https://push.test/a'), { sr, row });
+  check('sendToOwner: sent, logged as wa_out on whatsapp with the text, and no pop-up (WhatsApp took it, 26/10/2026)', sr.ok && row && row.event_type === 'wa_out' && row.channel === 'whatsapp' && row.payload.text === 'בוקר טוב' && sr.push === 0 && !calls.some((c) => c.url === 'https://push.test/a'), { sr, row });
 }
 
 console.log('\n4. /api/chat?push=1');

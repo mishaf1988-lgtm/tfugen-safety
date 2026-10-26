@@ -454,7 +454,11 @@ export async function noteOut(env, text, r, kind, extra) {
           event_type: WA_OUT, channel: r && r.via === 'chat' ? 'chat' : r && r.ok ? 'whatsapp' : 'whatsapp_error',
           payload: Object.assign({ title: t.replace(/\s+/g, ' ').slice(0, 120), text: t.slice(0, 1500), kind: kind || 'text', via: (r && r.via) || null, detail: (r && r.error) || null }, extra || {}) }]) });
     } catch (e) { /* the message itself went (or not) as before */ }
-    try { push = (await pushOwner(env, sbUrl, t)).sent || 0; } catch (e) { push = 0; }
+    // 26/10/2026 (Michael: "the site should stop sending me notifications if WhatsApp works"): a message
+    // WhatsApp took needs no pop-up. Only the chat-only mode and a WhatsApp failure still pop up.
+    if (!(r && r.ok && r.via !== 'chat')) {
+      try { push = (await pushOwner(env, sbUrl, t)).sent || 0; } catch (e) { push = 0; }
+    }
   }
   return push;
 }
