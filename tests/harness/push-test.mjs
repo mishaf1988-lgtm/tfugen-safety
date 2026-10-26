@@ -133,7 +133,12 @@ console.log('\n3b. how the last push went, for the watchdog (25/10/2026)');
   globalThis.fetch = f1;
   const lg = calls.find((c) => c.url.includes('/notifications_log') && c.m === 'POST');
   const row = lg && JSON.parse(lg.body)[0];
-  check('sendToOwner: sent, logged as wa_out on whatsapp with the text, and pushed to the phone', sr.ok && row && row.event_type === 'wa_out' && row.channel === 'whatsapp' && row.payload.text === 'בוקר טוב' && sr.push === 1 && calls.some((c) => c.url === 'https://push.test/a'), { sr, row });
+  check('sendToOwner: sent, logged as wa_out on whatsapp with the text, and no pop-up (WhatsApp took it, 26/10/2026)', sr.ok && row && row.event_type === 'wa_out' && row.channel === 'whatsapp' && row.payload.text === 'בוקר טוב' && sr.push === 0 && !calls.some((c) => c.url === 'https://push.test/a'), { sr, row });
+  calls = [];
+  globalThis.fetch = async (u, i) => String(u).includes('graph.facebook.com') ? new Response(JSON.stringify({ error: { code: 131000, message: 'x' } }), { status: 400 }) : f1(u, i);
+  const sf = await sendToOwner(ENV, '972500000000', 'נכשל', { windowOpen: true });
+  globalThis.fetch = f1;
+  check('sendToOwner, WhatsApp refused: no pop-up either (26/10/2026, only WhatsApp)', !sf.ok && sf.push === 0 && !calls.some((c) => c.url === 'https://push.test/a'), sf);
 }
 
 console.log('\n4. /api/chat?push=1');
