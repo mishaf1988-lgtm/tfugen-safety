@@ -21,6 +21,13 @@ on:
   schedule:
     - cron: '*/15 * * * *'
   workflow_dispatch:
+    # 26/10/2026 (Michael adds the two secrets from his phone): a hand run with this on sends one test message,
+    # so Claude checks the secrets work without waiting for the site to go down.
+    inputs:
+      test_whatsapp:
+        description: 'send one WhatsApp test message'
+        type: boolean
+        default: false
 
 permissions:
   actions: read
@@ -50,13 +57,16 @@ jobs:
           META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
           WA_TO: ${{ secrets.WA_TO }}
           UP: ${{ steps.probe.outputs.up }}
+          TEST: ${{ inputs.test_whatsapp }}
         run: |
           # the last finished scheduled run of this workflow (before this one): success = was up
           prev=$(curl -s -m 20 -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/${{ github.repository }}/actions/workflows/site-up.yml/runs?status=completed&event=schedule&per_page=1" \
             | python3 -c "import sys,json; r=json.load(sys.stdin).get('workflow_runs') or [{}]; print(r[0].get('conclusion') or 'none')")
           echo "previous run: $prev, now up: $UP"
-          if [ "$UP" = "false" ] && [ "$prev" != "failure" ]; then
+          if [ "$TEST" = "true" ]; then
+            msg='בדיקה: ההתראה מ-GitHub כשהאתר לא עונה מחוברת לוואטסאפ שלך. אין צורך לענות.'
+          elif [ "$UP" = "false" ] && [ "$prev" != "failure" ]; then
             msg='האתר tapugan-safety.pages.dev לא עונה כבר כמה דקות (בדיקה מ-GitHub). הוואטסאפ, החתימה והעוזר לא יעבדו עד שיחזור. הנתונים שמורים ב-Supabase.'
           elif [ "$UP" = "true" ] && [ "$prev" = "failure" ]; then
             msg='האתר tapugan-safety.pages.dev חזר לענות (בדיקה מ-GitHub).'
