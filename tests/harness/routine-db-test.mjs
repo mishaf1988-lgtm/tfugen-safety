@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
+import { overlapReply, OVERLAP_MS, draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -580,6 +580,13 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('stale: a newer tap of his = the reply says which message (Israel time) and loses its buttons', st0 && /^\u05dc\u05d2\u05d1\u05d9 \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05e9\u05dc\u05da \u05de-17:28:\n$/.test(st0.prefix) && st0.dropChoices === true, st0);
     const st1 = staleReply('2026-10-25T15:27:18Z', [{ ts: '2026-10-25T15:28:05Z', payload: { text: '\u05dc\u05d0 \u05d4\u05d1\u05e0\u05ea \u05d0\u05d5\u05ea\u05d9' } }]);
     check('stale: a newer typed line = labelled, buttons kept; nothing newer or no answers = untouched', st1 && st1.dropChoices === false && staleReply('2026-10-25T15:27:18Z', []) === null && staleReply('', [{ ts: 'x', payload: {} }]) === null && STALE_GAP_MS === 5000);
+    // 26/10/2026: two runs answered the same thing (a photo, then "check the picture" 17 s later; the assistant and the dev session)
+    const ovRows = [{ ts: '2026-10-24T21:44:56Z', text: 'photo answer from the first run', answers: '2026-10-24T21:43:51Z' }];
+    const ov = overlapReply('2026-10-24T21:44:08Z', null, ovRows);
+    check('overlap: another run replied after the message this run answers = stopped once, with its time (Israel) and text', ov && ov.hm === '00:44' && /photo answer/.test(ov.text), ov);
+    check('overlap: the same run (same answers) is not stopped; a reply before the message is not; no answers and no dev ref = not checked',
+      overlapReply('2026-10-24T21:43:51Z', null, ovRows) === null && overlapReply('2026-10-24T21:45:00Z', null, ovRows) === null && overlapReply(null, 'hazard', ovRows) === null);
+    check('overlap: a dev session message (ref "dev ...", no answers) is stopped by any assistant reply in the window', !!overlapReply(null, 'dev dev-123', ovRows) && OVERLAP_MS === 180000);
     const before = state.dev_inbox;
     const d = new Date(); d.setUTCHours(10, 43, 0, 0);
     const IL1043 = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
