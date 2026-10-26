@@ -16,8 +16,10 @@ export const ASSISTANT_TEMPLATE = {
   name: SITE.waTemplates.assistant,
   category: 'UTILITY',
   language: 'he',
-  components: [{ type: 'BODY', text: '\u05e2\u05d3\u05db\u05d5\u05df \u05de\u05d4\u05e2\u05d5\u05d6\u05e8:\n\n{{1}}\n\n\u05dc\u05ea\u05e9\u05d5\u05d1\u05d4, \u05db\u05ea\u05d1\u05d5 \u05db\u05d0\u05df.',
-    example: { body_text: [['\u05e8\u05db\u05d6 \u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05ea\u05d9\u05d9\u05e7 3 \u05e7\u05d1\u05e6\u05d9\u05dd. \u05de\u05d7\u05db\u05d4 \u05dc\u05da: \u05d0\u05d9\u05e9\u05d5\u05e8 \u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 \u05d7\u05d3\u05e9\u05d4.']] } }],
+  // 26/10/2026: the first wording ("an update from the assistant: {{1}}") was put by Meta in MARKETING (0.0353
+  // a message, not 0.0053). This one ties the message to something Michael asked to follow, a utility use.
+  components: [{ type: 'BODY', text: '\u05e2\u05d3\u05db\u05d5\u05df \u05d1\u05e0\u05d5\u05e9\u05d0 \u05e9\u05d1\u05d9\u05e7\u05e9\u05ea \u05dc\u05e2\u05e7\u05d5\u05d1 \u05d0\u05d7\u05e8\u05d9\u05d5:\n\n{{1}}\n\n\u05dc\u05d4\u05de\u05e9\u05da \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc, \u05d4\u05e9\u05d1 \u05dc\u05d4\u05d5\u05d3\u05e2\u05d4 \u05d6\u05d5.',
+    example: { body_text: [['\u05ea\u05d5\u05e7\u05e3 \u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05de\u05dc\u05d2\u05d6\u05d4 \u05de\u05e1\u05ea\u05d9\u05d9\u05dd \u05d1-15/11/2026. \u05de\u05d7\u05db\u05d4 \u05dc\u05da: \u05d0\u05d9\u05e9\u05d5\u05e8 \u05ea\u05d0\u05e8\u05d9\u05da \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4.']] } }],
 };
 // Meta error codes that mean "outside the customer service window, send a template".
 export const WINDOW_CLOSED = [131047, 131026];
