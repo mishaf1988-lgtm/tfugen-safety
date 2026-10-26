@@ -123,6 +123,11 @@
 //              calendar. Like mail_request: a JSON file into OD_CAL_MOVE, and the flow "הזזות ביומן"
 //              (power-automate-mail.md, flow 6) PATCHes only start and end of that event. approved = Michael's
 //              own words with "בצע" (the attendees get an update, a message to a person). Logged in cal_moved.
+//   draft_trash  (26/10/2026, Michael in the questionnaire: "to the recycle bin, automatic") {id, subject, to}:
+//              an assistant draft that a newer one replaced goes to Deleted Items. Only a draft the server made
+//              (drafts_made: same recipients, same subject or a reply draft, 30 days). A JSON file into
+//              OD_DRAFT_TRASH; the flow "טיוטות למחיקה" (flow 8) moves it only if it is still a draft with
+//              that subject. Logged in drafts_trashed.
 //   talk_field  (15/10/2026, Michael: "בצע: הדרכה שבועית מהשטח") {id, dept, text}: into this week's
 //              shared weekly draft (private.talk_week: id w<YYYYMMDD>, s draft, kind null,
 //              created_by 'routine', a "## <department>" section per department) put a short part
@@ -144,7 +149,7 @@ import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLA
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'cal_moved'];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'cal_moved', 'drafts_made', 'drafts_trashed'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -603,6 +608,28 @@ export const MAIL_REQ_ID = /^[A-Za-z0-9_=+\/-]{40,400}$/;
 export const OD_CAL_MOVE = '_\u05d4\u05d6\u05d6\u05d5\u05ea \u05d1\u05d9\u05d5\u05de\u05df', CAL_MOVED_KEY = 'cal_moved', CAL_MOVED_MAX = 30;
 const CAL_T = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 // Pure. Israel wall clock "YYYY-MM-DDTHH:MM" for start and end, from today up to a year ahead, at most 14 days long.
+export const OD_DRAFT_TRASH = '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d7\u05d9\u05e7\u05d4';
+export const DRAFTS_MADE_KEY = 'drafts_made', DRAFTS_MADE_MAX = 200, DRAFTS_TRASHED_KEY = 'drafts_trashed', DRAFT_TRASH_DAYS = 30;
+const mailSet = (x) => String(x || '').toLowerCase().split(/[;,]/).map((a) => a.trim()).filter(Boolean).sort().join(';');
+// RE: / FW: / Fwd: and the Hebrew Outlook prefixes, repeated
+export const draftSubj = (x) => String(x || '').replace(/^\s*((re|fw|fwd|\u05d4\u05e9\u05d1|\u05d4\u05e2\u05d1\u05e8)\s*:\s*)+/i, '').replace(/\s+/g, ' ').trim().toLowerCase();
+export function draftMadeLine(req, nowIso) {
+  return { at: nowIso, to: mailSet(req.to), subject: String(req.subject || '').slice(0, 200), reply: !!req.reply_to };
+}
+// Pure: b = {agent, why, id, subject, to}; made = drafts_made. The draft must be one the server made: the same
+// recipients, and the same subject (a reply draft takes "RE: <thread>", so for one of those the recipients do).
+export function draftTrashCheck(b, made, nowMs) {
+  if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
+  if (String(b.why || '').trim().length < 5) return { error: 'why required: which newer draft replaced it' };
+  const id = String(b.id || '').trim(), subject = String(b.subject || '').replace(/\s+/g, ' ').trim(), to = mailSet(b.to);
+  if (!MAIL_REQ_ID.test(id)) return { error: 'bad id: the draft id as outlook_email_search (folderName Drafts) returns it' };
+  if (subject.length < 1 || subject.length > 200) return { error: 'subject: the draft subject exactly as in Drafts' };
+  if (!to) return { error: 'to: the draft recipients' };
+  const since = nowMs - DRAFT_TRASH_DAYS * 864e5;
+  const hit = (Array.isArray(made) ? made : []).find((m) => m && Date.parse(m.at) >= since && m.to === to && (m.reply || draftSubj(m.subject) === draftSubj(subject)));
+  if (!hit) return { error: 'not a draft the server made in the last 30 days (recipients and subject): Michael\'s own drafts are never touched' };
+  return { id, subject, file: JSON.stringify({ id, subject }) };
+}
 export function calMoveCheck(b, nowMs) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
   if (String(b.why || '').trim().length < 5) return { error: 'why required' };
@@ -1573,6 +1600,20 @@ export async function onRequest(context) {
         body: JSON.stringify([{ key: CAL_MOVED_KEY, value: JSON.stringify([line].concat(Array.isArray(list) ? list : []).slice(0, CAL_MOVED_MAX)), updated_at: line.at }]) }).catch(() => null);
       return jsonResp({ ok: true, file: OD_CAL_MOVE + '/' + name, start: c.start, end: c.end }, 200, {});
     }
+    if (body.op === 'draft_trash') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'id', 'subject', 'to'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const rows = await stateRead([DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY]).catch(() => []);
+      const val = (k) => { const r = (rows || []).find((x) => x && x.key === k); try { const v = JSON.parse((r && r.value) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
+      const c = draftTrashCheck(body, val(DRAFTS_MADE_KEY), Date.now());
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const at = await accessToken(env);
+      const name = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '') + '-' + Math.random().toString(36).slice(2, 8) + '.txt';
+      await putFile(at.token, OD_ROOT + OD_DRAFT_TRASH, name, c.file, 'text/plain');
+      const line = { at: new Date().toISOString(), subject: c.subject, file: name, agent: body.agent, why: String(body.why).slice(0, 200) };
+      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+        body: JSON.stringify([{ key: DRAFTS_TRASHED_KEY, value: JSON.stringify([line].concat(val(DRAFTS_TRASHED_KEY)).slice(0, 100)), updated_at: line.at }]) }).catch(() => null);
+      return jsonResp({ ok: true, file: OD_DRAFT_TRASH + '/' + name, note: 'the flow moves it to Deleted Items within about a minute; check Drafts after' }, 200, {});
+    }
     if (body.op === 'mail_draft') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'cc', 'subject', 'body', 'attach', 'reply_to', 'checked'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const sentGate = draftSentGate(body);
@@ -1594,6 +1635,14 @@ export async function onRequest(context) {
       // which the flow ("when a file is created") does not see as new.
       const name = new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + (await digest(d.file)).slice(0, 16) + '.txt';
       const f = await putFile(at.token, OD_ROOT + OD_DRAFT, name, d.file, 'text/plain');
+      // 26/10/2026: what draft_trash may later move to Deleted Items (only drafts made here)
+      try {
+        const mr = await stateRead([DRAFTS_MADE_KEY]).catch(() => []);
+        let made = []; try { made = JSON.parse((mr && mr[0] && mr[0].value) || '[]'); } catch (e) { made = []; }
+        const line = draftMadeLine(JSON.parse(d.file), new Date().toISOString());
+        await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+          body: JSON.stringify([{ key: DRAFTS_MADE_KEY, value: JSON.stringify([line].concat(Array.isArray(made) ? made : []).slice(0, DRAFTS_MADE_MAX)), updated_at: line.at }]) });
+      } catch (e) { /* the draft request is written; only its later deletion needs this line */ }
       return jsonResp({ ok: true, file: OD_DRAFT + '/' + name, size: f.size || null, attachments: d.attach.length }, 200, {});
     }
     if (body.op === 'od_put_pdf') {
@@ -1880,7 +1929,7 @@ export async function onRequest(context) {
       if (asksRepoSetup(body.text)) return jsonResp({ ok: false, error: 'asks Michael to add a repository or edit a Routine: no such choice (C32); say the dev runner builds it at its next wake (07:17-19:17 every 2 hours) (21/10/2026)' }, 400, {});
       // 25/10/2026 (Michael in the questionnaire: "do it: block"): the assistant asked for "\u05d1\u05e6\u05e2" with no buttons, and fixed it only when he said so.
       if (asksApprovalNoButtons(body.text, body.choices)) return jsonResp({ ok: false, error: 'asks for \u05d1\u05e6\u05e2 with no buttons: send it again with "choices", e.g. ["\u05d1\u05e6\u05e2","\u05dc\u05d0"]' }, 400, {});
-      if (asksOwnerToDelete(body.text)) return jsonResp({ ok: false, error: 'asks Michael to delete: a file you made goes to od_trash yourself; a duplicate mail draft: say which one not to send, without asking him to delete (26/10/2026)' }, 400, {});
+      if (asksOwnerToDelete(body.text)) return jsonResp({ ok: false, error: 'asks Michael to delete: a file you made goes to od_trash yourself; a draft you replaced: draft_trash it yourself (26/10/2026)' }, 400, {});
       if (hasInternalId(body.text)) return jsonResp({ ok: false, error: 'internal id in text (dev-..., trig_, session_, cse_, h-...): say what was done, not its id (21/10/2026)' }, 400, {});
       // 22/10/2026 (the assistant sent "1. yes / 2. another place" with ref signmail, and the tap on 2 ran the server's
       // "reply to the sender"): sign refs belong to the server's own buttons; an assistant message cannot carry them.

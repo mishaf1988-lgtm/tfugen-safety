@@ -29,6 +29,23 @@
 
 ## פתוח
 
+- [ ] **C49. זרימה "טיוטות למחיקה" ב-Power Automate** (26/10/2026, מיכאל בשאלון: "בצע: לפח המיחזור, אוטומטי"). טיוטה של העוזר שהוחלפה בחדשה עוברת לפריטים שנמחקו. עד שהזרימה בנויה, הבקשות נאספות בתיקייה ולא קורה כלום.
+  ```
+  אתה בונה בשבילי זרימה אחת ב-Power Automate בשם "טיוטות למחיקה". עבור על השלבים ברצף, ובכל שלב כתוב בקצרה מה ראית. אל תשנה זרימה קיימת, אל תמחק כלום, ואל תוסיף פעולה ששולחת מייל.
+  כללי עבודה: לשונית אחת בלבד. אם פעולה נכשלת בגלל חיבור: נסה שוב פעם אחת, ואם שוב נכשל, עצור וכתוב לי באיזה שלב.
+  0. https://make.powerautomate.com > My flows. אם יש זרימה בשם "טיוטות למחיקה": פתח אותה (Edit) והשלם את מה שחסר. אם אין: המשך לשלב 1.
+  1. אם אין ב-OneDrive, בתוך "שולחן העבודה" > "ניהול בטיחות", תיקייה בשם _טיוטות למחיקה: צור אותה (תיקייה ריקה, בדיוק בשם הזה).
+  2. Create > Automated cloud flow. שם: טיוטות למחיקה. טריגר: OneDrive for Business "When a file is created (properties only)". Folder: /שולחן העבודה/ניהול בטיחות/_טיוטות למחיקה (דרך סמל התיקייה).
+  3. New step: OneDrive for Business "Get file content". File: Id מהטריגר.
+  4. New step: Data Operation "Compose". Inputs, בלשונית Expression: json(trim(string(body('Get_file_content'))))
+  5. New step: Office 365 Outlook "Send an HTTP request". Method: GET. URI: https://graph.microsoft.com/v1.0/me/messages/ ואחריו כ-Expression: encodeUriComponent(outputs('Compose')?['id']) ואחריו הטקסט ?$select=isDraft,subject
+  6. New step: Condition. שורה 1: Expression body('Send_an_HTTP_request')?['isDraft'] , is equal to , Expression true. Add row (And), שורה 2: Expression body('Send_an_HTTP_request')?['subject'] , is equal to , Expression outputs('Compose')?['subject']
+  7. ב-If yes בלבד: Office 365 Outlook "Send an HTTP request". Method: POST. URI: https://graph.microsoft.com/v1.0/me/messages/ ואחריו כ-Expression: encodeUriComponent(outputs('Compose')?['id']) ואחריו הטקסט /move . Content-Type: application/json. Body: {"destinationId":"deleteditems"}. ב-If no: כלום.
+  8. Save (ואם יש Publish, גם Publish). בדוק ב-Code view שה-URI בשלבים 5 ו-7 מכיל "/me/messages/" עם הלוכסן בסוף (בעורך החדש "/" פותח תפריט ונבלע). Flow checker בלי שגיאות. אל תריץ בדיקה ידנית ואל תיצור קובץ בתיקייה.
+  בסוף: דוח קצר: נשמרה או לא, האם On, ומה הראה ה-Flow checker.
+  ```
+  אחרי הביצוע: Claude מכין טיוטת בדיקה לעצמו (מיכאל), אחריה טיוטה מתוקנת, ו-`draft_trash` על הראשונה; ב-`outlook_email_search` ב-Drafts נשארת רק השנייה, וב-Deleted Items מופיעה הראשונה.
+
 - [ ] **C32. להוסיף את ה-repo ל-Routine של הפיתוח המיידי** (נבדק בכרום 21/10/2026 17:20: הרשימה ריקה גם במחשב; ב-claude.ai/code אין בחירת מאגר בכלל; connect-github מפנה ל-Connectors, ושם אין חיבור GitHub, רק תוסף ה-MCP. **מושהה**: הבקשות עוברות לשיחת הפיתוח אחרי שעתיים. לפתוח מחדש רק אם יימצא מסך החיבור) (21/10/2026, ניסוי 4 של מיכאל: הקוד נבנה, ה-push נחסם כי tfugen-safety לא במקורות של `trig_0114iVUybrBb6vRqZt1EyoyL`). טקסט להדבקה בכרום:
   ```
   משימה: לחבר מאגר GitHub ל-Routine "פיתוח מיידי: בקשה מהעוזר". לא לשנות את ההוראות (Instructions), את המודל, את הטריגר או שום הגדרה אחרת. לא למחוק כלום. אם משהו לא נראה כמו שכתוב, לעצור ולתאר מה רואים.

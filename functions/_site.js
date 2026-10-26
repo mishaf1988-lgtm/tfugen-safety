@@ -42,7 +42,7 @@ export const SITE = {
   // WhatsApp templates as approved by Meta for this account. The server sends the first two.
   waTemplates: { dedicated: 'tfugen_safety_report', fallback: 'tfugen_incident_alert', ncrCritical: 'tfugen_ncr_critical',
     taskOverdue: 'tfugen_task_overdue_v2', expiryWarning: 'tfugen_expiry_warning', roundMissed: 'tfugen_round_missed',
-    assistant: 'tfugen_assistant_update' },
+    assistant: 'safety_assistant_update' },  // 26/10/2026: was tfugen_assistant_update (MARKETING in Meta)
   wabaId: '1109175661875883',  // 26/10/2026: the account "Michael Freilich" with the real number (08-6808365); was 4400035656982783, Meta's test account
   // The factory's departments (17/10/2026, product step 2). depts: the hazard register and the
   // department report (maintenance, MAINT in hazard-file.js, is added to the report). areaDept: a

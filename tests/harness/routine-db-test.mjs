@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { overlapReply, OVERLAP_MS, draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
+import { overlapReply, OVERLAP_MS, draftTrashCheck, draftSubj, draftMadeLine, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -513,6 +513,7 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     let x = await call(D);
     const fj = puts[0] ? JSON.parse(puts[0].body) : {};
     check('one PUT into the draft folder, JSON with to, subject, body and an RTL html (dir and style, 20/10/2026: a thread reply keeps only the style; Arial, 26/10/2026) with <br> and escaped tags', x.json.ok && puts.length === 1 && puts[0].url.indexOf('/root:/' + OD_ROOT + OD_DRAFT + '/') > 0 && fj.to === D.to && fj.subject === D.subject && fj.body === D.body && /^<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">.*<br>.*&lt;b&gt;2&lt;\/b&gt;<div style=/.test(fj.html), { x: x.json, puts });
+    { const made = JSON.parse(state.drafts_made || '[]'); check('the draft is recorded in drafts_made (recipients, subject), so draft_trash can later replace it (26/10/2026)', made[0] && made[0].to === 'tammybeg@gazit.co.il' && made[0].subject === 'תעודת כיול' && made[0].reply === false, made[0]); }
     puts = []; await call(D); await call(D); await call({ ...D, subject: 'אחר' });
     check('the same draft twice (a retry after a timeout) goes to the same file name; another draft to another', puts.length === 3 && puts[0].url === puts[1].url && puts[0].url !== puts[2].url && /\/\d{8}-[0-9a-f]{16}\.txt:\/content$/.test(puts[0].url), puts.map((x) => x.url.slice(-40)));
     puts = [];
@@ -620,6 +621,32 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('wa_me refuses a stale approval question before it changes the text, and od_dedupe reads the copy to keep again right before the delete (source checks: the handlers are not run here; 26/10/2026 retro)', /if \(stale && staleRefuses\(stale, body\.text\)\) return jsonResp\([\s\S]{0,400}if \(stale\) \{ body\.text = stale\.prefix/.test(rsrc) && /const keptNow = await meta\(c\.keep\);[\s\S]{0,200}keptNow\.id !== kept\.id[\s\S]{0,400}method: 'DELETE'/.test(rsrc));
     check('a stale approval question is refused (not sent, buttons would go or an old button would approve); another stale reply just loses its buttons (26/10/2026 retro)', staleRefuses({ dropChoices: true }, '\u05dc\u05d4\u05d6\u05d9\u05d6?\n1. ' + '\u05d1\u05e6\u05e2') === true && staleRefuses({ dropChoices: true }, '\u05e8\u05d1\u05d9\u05e2\u05d9 08:00') === false && staleRefuses(null, '\u05dc\u05d4\u05d6\u05d9\u05d6? \u05d1\u05e6\u05e2') === false);
     check('pure: over 14 days or over a year ahead = refused', !!calMoveCheck(Object.assign({}, ok, { start: '2099-11-23T08:00', end: '2099-12-23T08:00' }), Date.parse('2099-11-01T00:00:00Z')).error && !!calMoveCheck(Object.assign({}, ok, { start: '2099-11-23T08:00', end: '2099-11-23T09:00' }), Date.now()).error && !calMoveCheck(Object.assign({}, ok, { start: '2026-11-23T08:00', end: '2026-11-23T15:00' }), Date.parse('2026-10-25T10:00:00Z')).error);
+  }
+
+  console.log('\n4e3. draft_trash (26/10/2026, Michael: "a draft replaced by a new one is deleted from the drafts")');
+  {
+    let puts = [];
+    graph = async (url, opt = {}) => {
+      if (opt.method === 'PUT') { puts.push({ url: decodeURIComponent(url), body: opt.body }); return new Response(JSON.stringify({ size: 10 }), { status: 201 }); }
+      return new Response('{}', { status: 400 });
+    };
+    const ID = 'AAMkAGI2TG93AAA-draft-id-AAAAAAEPAAAiIsqMbYjsT5e-T7KzowPTAAAQoAAA';
+    const now = new Date().toISOString();
+    state[DRAFTS_MADE_KEY] = JSON.stringify([draftMadeLine({ to: 'Tzahi@x.co.il;yana@x.co.il', subject: 'hearing tests quote' }, now), draftMadeLine({ to: 'shlomi@x.co.il', subject: 'lift', reply_to: 'r' }, now)]);
+    delete state[DRAFTS_TRASHED_KEY];
+    const ok = { op: 'draft_trash', agent: 'routine-wa-assistant', why: 'replaced by the 10:15 draft', id: ID, subject: 'RE: Hearing  tests quote', to: 'yana@x.co.il; tzahi@x.co.il' };
+    const x = await call(ok);
+    const f = puts[0] && JSON.parse(puts[0].body);
+    check('a draft the server made (same recipients in any order and case, RE: and spaces ignored): one PUT into the trash folder with id and subject', x.json.ok && puts.length === 1 && puts[0].url.indexOf('/root:/' + OD_ROOT + OD_DRAFT_TRASH + '/') > 0 && f.id === ID && f.subject === 'RE: Hearing tests quote', { x: x.json, puts });
+    check('logged in drafts_trashed, both keys readable by state_get', String(state[DRAFTS_TRASHED_KEY] || '').indexOf('Hearing tests quote') >= 0 && STATE_READ.indexOf(DRAFTS_MADE_KEY) >= 0 && STATE_READ.indexOf(DRAFTS_TRASHED_KEY) >= 0, state[DRAFTS_TRASHED_KEY]);
+    puts = [];
+    const bad = async (o) => (await call(Object.assign({}, ok, o))).status === 400;
+    check('refused, nothing written: other recipients, another subject, no why, a bad id, an extra field (Michael\'s own drafts are never touched)',
+      await bad({ to: 'tzahi@x.co.il' }) && await bad({ subject: 'another thing' }) && await bad({ why: '' }) && await bad({ id: 'x' }) && await bad({ body: 'x' }) && puts.length === 0);
+    check('a reply draft the server made: matched by its recipients whatever the subject', !draftTrashCheck(Object.assign({}, ok, { to: 'shlomi@x.co.il', subject: 'RE: anything' }), JSON.parse(state[DRAFTS_MADE_KEY]), Date.now()).error);
+    check('older than 30 days = refused; draftSubj strips RE:, FW: and the Hebrew prefixes', !!draftTrashCheck(ok, JSON.parse(state[DRAFTS_MADE_KEY]), Date.now() + 31 * 864e5).error
+      && draftSubj('\u05d4\u05e9\u05d1: FW: A  b') === 'a b');
+    delete state[DRAFTS_MADE_KEY]; delete state[DRAFTS_TRASHED_KEY];
   }
 
   console.log('\n4f. mail_request: one text file with the message id, for the second flow');
