@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftSubj, draftMadeLine, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
+import { calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftSubj, draftMadeLine, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -105,7 +105,7 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   })());
   check('od_pull never into the mail-flow folders (draft, file request, inbox, calendar queue, OCR text): those take files through mail_draft / mail_request only (25/10/2026 retro)', (() => {
     const t = (d) => odPullCheck({ agent: 'dev', why: 'to a flow folder', from: 'x/a.txt', dir: d });
-    return OD_TRIGGER_DIRS.length === 8 && OD_TRIGGER_DIRS.every((d) => !!t(d).error) && !!t(OD_DRAFT + '/sub').error && !t('22_x/09_y').error;
+    return OD_TRIGGER_DIRS.length === 9 && OD_TRIGGER_DIRS.every((d) => !!t(d).error) && !!t(OD_DRAFT + '/sub').error && !t('22_x/09_y').error;
   })());
   check('od_pull: one file from the desktop INTO a folder of the safety folder; never from inside it, never into old versions, never above the desktop (24/10/2026)', (() => {
     const ok = odPullCheck({ agent: 'dev', why: 'to the binder', from: 'תקני ISO/2026/a.docx', dir: '22_x/09_y' });
@@ -627,6 +627,18 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     const bad = async (o) => (await call(Object.assign({}, ok, o))).status === 400;
     check('refused, nothing written: no "\u05d1\u05e6\u05e2", end before start, a past day, a bad time, a bad id, an extra field', await bad({ approved: 'ok' }) && await bad({ end: D + 'T07:00' }) && await bad({ start: '2020-01-01T08:00', end: '2020-01-01T09:00' }) && await bad({ start: D + ' 08:00' }) && await bad({ id: ID + '?x' }) && await bad({ attendees: 'a@b' }) && !puts.length);
     check('pure: "today" is the Israel date: 00:30 Israel on 02/11 refuses 01/11 (a UTC date let it through; 26/10/2026 retro)', calMoveCheck(Object.assign({}, ok, { start: '2099-11-01T08:00', end: '2099-11-01T09:00' }), Date.parse('2099-11-01T22:30:00Z')).error === 'start in the past' && !calMoveCheck(Object.assign({}, ok, { start: '2099-11-02T08:00', end: '2099-11-02T09:00' }), Date.parse('2099-11-01T22:30:00Z')).error);
+    { // cal_invite (26/10/2026, Michael: "a real invite after do it")
+      const inv = { op: 'cal_invite', agent: 'routine-wa-assistant', why: 'annual training', subject: 'Annual training', start: D + 'T11:00', end: D + 'T12:00', to: 'a@tapugan.co.il;b@tapugan.co.il', cc: 'c@tapugan.co.il', location: 'Tapugan', body: 'line 1\n<b>x</b>', approved: '1. \u05d1\u05e6\u05e2' };
+      puts = []; delete state[CAL_INVITED_KEY];
+      const y = await call(inv);
+      const ev = puts[0] && JSON.parse(puts[0].body).event;
+      check('cal_invite: one PUT into the invite folder with a Graph event (Israel time, required and optional attendees, location, escaped RTL body)', y.json.ok && puts.length === 1 && puts[0].url.indexOf('/root:/' + OD_ROOT + OD_CAL_INVITE + '/') > 0 && ev.start.dateTime === D + 'T11:00:00' && ev.start.timeZone === 'Israel Standard Time' && ev.attendees.length === 3 && ev.attendees[0].type === 'required' && ev.attendees[2].type === 'optional' && ev.location.displayName === 'Tapugan' && /dir="rtl"/.test(ev.body.content) && /line 1<br>&lt;b&gt;/.test(ev.body.content), { y: y.json, ev });
+      check('cal_invite logged in cal_invited, readable by state_get', String(state[CAL_INVITED_KEY] || '').indexOf(D + 'T11:00') >= 0 && STATE_READ.indexOf(CAL_INVITED_KEY) >= 0);
+      puts = [];
+      const badI = async (o) => (await call(Object.assign({}, inv, o))).status === 400;
+      check('cal_invite refused, nothing written: no "\u05d1\u05e6\u05e2", no attendees, six with one outside, 31 of ours, no body, a past day, an extra field (id)', await badI({ approved: 'ok' }) && await badI({ to: '' }) && await badI({ to: 'a@tapugan.co.il;b@tapugan.co.il;c@tapugan.co.il;d@tapugan.co.il;e@tapugan.co.il;x@gmail.com' }) && await badI({ to: Array.from({ length: 31 }, (_, i) => 'm' + i + '@tapugan.co.il').join(';') }) && await badI({ body: '' }) && await badI({ start: '2020-01-01T08:00', end: '2020-01-01T09:00' }) && await badI({ id: 'x' }) && !puts.length);
+      check('cal_invite pure: no location = no location field', !JSON.parse(calInviteCheck(Object.assign({}, inv, { location: '' }), Date.now()).file).event.location);
+    }
     const rsrc = (await import('node:fs')).readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
     check('wa_me refuses a stale approval question before it changes the text, and od_dedupe reads the copy to keep again right before the delete (source checks: the handlers are not run here; 26/10/2026 retro)', /if \(stale && staleRefuses\(stale, body\.text\)\) return jsonResp\([\s\S]{0,400}if \(stale\) \{ body\.text = stale\.prefix/.test(rsrc) && /const keptNow = await meta\(c\.keep\);[\s\S]{0,200}keptNow\.id !== kept\.id[\s\S]{0,400}method: 'DELETE'/.test(rsrc));
     check('a stale approval question is refused (not sent, buttons would go or an old button would approve); another stale reply just loses its buttons (26/10/2026 retro)', staleRefuses({ dropChoices: true }, '\u05dc\u05d4\u05d6\u05d9\u05d6?\n1. ' + '\u05d1\u05e6\u05e2') === true && staleRefuses({ dropChoices: true }, '\u05e8\u05d1\u05d9\u05e2\u05d9 08:00') === false && staleRefuses(null, '\u05dc\u05d4\u05d6\u05d9\u05d6? \u05d1\u05e6\u05e2') === false);
@@ -685,7 +697,7 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
       for (const m of src.matchAll(/(OD_ROOT \+ '_|\\u05d1\\u05d8\\u05d9\\u05d7\\u05d5\\u05ea\/_(?!\\u05d0\\u05d5\\u05d8\\u05d5|\\u05e0\\u05db\\u05e0\\u05e1|\\u05d8\\u05e7\\u05e1\\u05d8|\\u05d2\\u05e8\\u05e1))/g)) direct.push(pth.basename(f));
     }
     check('no new "_" folder straight under the safety folder: a folder a flow reads is OD_AUTO + "/" + its name (add it to OD_AUTO_DIRS)', tops.length === 0 && direct.length === 0, { tops, direct });
-    check('the five flow folders are inside OD_AUTO', [OD_REQ, OD_DRAFT, OD_CAL_MOVE, OD_DRAFT_TRASH].every((x) => x.indexOf(OD_AUTO + '/') === 0) && OD_AUTO_DIRS.length === 5);
+    check('the six flow folders are inside OD_AUTO', [OD_REQ, OD_DRAFT, OD_CAL_MOVE, OD_DRAFT_TRASH, OD_CAL_INVITE].every((x) => x.indexOf(OD_AUTO + '/') === 0) && OD_AUTO_DIRS.length === 6);
   }
 
   console.log('\n4e4b. a promise check-in waits while Michael is in a conversation (26/10/2026)');
