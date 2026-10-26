@@ -1627,13 +1627,28 @@ export async function onRequest(context) {
       return jsonResp({ ok: true, file: OD_DRAFT_TRASH + '/' + name, note: 'the flow moves it to Deleted Items within about 5 minutes (the OneDrive trigger); check Drafts after' }, 200, {});
     }
     if (body.op === 'mail_draft') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'cc', 'subject', 'body', 'attach', 'reply_to', 'checked'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'cc', 'subject', 'body', 'attach', 'reply_to', 'checked', 'replaces'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const sentGate = draftSentGate(body);
       if (sentGate) return jsonResp({ ok: false, error: sentGate }, 400, {});
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
       if (String(body.why || '').trim().length < 5) return jsonResp({ ok: false, error: 'why required' }, 400, {});
       const d = draftRequest(body);
       if (d.error) return jsonResp({ ok: false, error: d.error }, 400, {});
+      // 26/10/2026 (Michael: "why could it not move them to the bin?"): draft_trash from the assistant's cloud run is
+      // stopped by the session's permission classifier, as sign_request was on 21/10. replaces = the drafts this one
+      // replaces ({id, subject, to} as in Drafts); the server checks each with draftTrashCheck before anything is
+      // written, and moves them after the new draft's request. Flow 8 takes about 5 minutes, the new draft seconds.
+      let reps = [];
+      if (body.replaces !== undefined) {
+        if (!Array.isArray(body.replaces) || body.replaces.length > 5) return jsonResp({ ok: false, error: 'replaces: a list of up to 5 {id, subject, to}' }, 400, {});
+        const mr0 = await stateRead([DRAFTS_MADE_KEY]).catch(() => []);
+        let made0 = []; try { made0 = JSON.parse((mr0 && mr0[0] && mr0[0].value) || '[]'); } catch (e) { made0 = []; }
+        for (const r of body.replaces) {
+          const c = draftTrashCheck(Object.assign({}, r || {}, { agent: body.agent, why: 'replaced by: ' + String(body.subject || '') }), made0, Date.now());
+          if (c.error) return jsonResp({ ok: false, error: 'replaces: ' + c.error }, 400, {});
+          reps.push(c);
+        }
+      }
       const at = await accessToken(env);
       // Every attachment must be there now: a missing one would stop the flow with no draft at all.
       for (const a of d.attach) {
@@ -1655,7 +1670,19 @@ export async function onRequest(context) {
         await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
           body: JSON.stringify([{ key: DRAFTS_MADE_KEY, value: JSON.stringify([line].concat(Array.isArray(made) ? made : []).slice(0, DRAFTS_MADE_MAX)), updated_at: line.at }]) });
       } catch (e) { /* the draft request is written; only its later deletion needs this line */ }
-      return jsonResp({ ok: true, file: OD_DRAFT + '/' + name, size: f.size || null, attachments: d.attach.length }, 200, {});
+      const trashed = [];
+      for (const c of reps) {
+        const tn = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '') + '-' + Math.random().toString(36).slice(2, 8) + '.txt';
+        try { await putFile(at.token, OD_ROOT + OD_DRAFT_TRASH, tn, c.file, 'text/plain'); trashed.push({ subject: c.subject, file: tn }); } catch (e) { trashed.push({ subject: c.subject, error: 'write' }); }
+      }
+      if (trashed.length) {
+        const tr = await stateRead([DRAFTS_TRASHED_KEY]).catch(() => []);
+        let tl = []; try { tl = JSON.parse((tr && tr[0] && tr[0].value) || '[]'); } catch (e) { tl = []; }
+        const now = new Date().toISOString();
+        await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+          body: JSON.stringify([{ key: DRAFTS_TRASHED_KEY, value: JSON.stringify(trashed.filter((x) => x.file).map((x) => ({ at: now, subject: x.subject, file: x.file, agent: body.agent, why: 'replaced by ' + String(body.subject || '').slice(0, 120) })).concat(Array.isArray(tl) ? tl : []).slice(0, 100)), updated_at: now }]) }).catch(() => null);
+      }
+      return jsonResp(Object.assign({ ok: true, file: OD_DRAFT + '/' + name, size: f.size || null, attachments: d.attach.length }, trashed.length ? { replaced: trashed, note: 'the replaced drafts go to Deleted Items within about 5 minutes' } : {}), 200, {});
     }
     if (body.op === 'od_put_pdf') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'dir', 'name', 'b64'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
