@@ -82,6 +82,7 @@
 - **השרת:** `routine-db` op `cal_invite` (`subject`, `start` ו-`end` בשעון ישראל `YYYY-MM-DDTHH:MM`, `to` מוזמנים חובה ו-`cc` אופציונליים לפי כללי `mail_draft`: עד 5, או עד 30 כשכולם של תפוגן, `location`, `body`, ו-`approved` עם "בצע"). השרת בונה את אירוע ה-Graph בעצמו וכותב קובץ `.txt` עם `{"event":{...}}`. נרשם ב-`server_state.cal_invited`.
 - **התיקייה:** `ניהול בטיחות\_אוטומציה\_זימונים`.
 - **הזרימה** "זימונים": טריגר `When a file is created (properties only)` על `/שולחן העבודה/ניהול בטיחות/_אוטומציה/_זימונים`; `Get file content`; `Compose` עם `json(trim(string(body('Get_file_content'))))`; Office 365 Outlook `Send an HTTP request` POST `https://graph.microsoft.com/v1.0/me/events` עם Body `@{outputs('Compose')?['event']}`. יצירת אירוע עם מוזמנים שולחת להם הזמנה, ולכן `approved` חובה, והעוזר מראה למיכאל קודם את כל הזימון.
+- **נבנתה 26/10/2026** (C51, Claude בכרום): On, Flow checker 0/0, ריצת בדיקה בלי מוזמנים Succeeded ב-15:43. קובץ בדיקה: לגרור קובץ מוכן לדף, לא "מסמך טקסט חדש" (קובץ ריק מפעיל את הזרימה, והמילוי נרשם כעריכה).
 - **הבדיקה העצמית:** אחרי `cal_invite`, `outlook_calendar_search` על היום מראה את האירוע עם המוזמנים (כ-5 דקות).
 
 ## ניקוי "לא לתיוק" (11/10/2026, מיכאל בשאלון: "בצע: מחיקה אחרי 30 יום (מומלץ)")
