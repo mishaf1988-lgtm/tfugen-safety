@@ -134,6 +134,14 @@ console.log('\n3b. how the last push went, for the watchdog (25/10/2026)');
   const lg = calls.find((c) => c.url.includes('/notifications_log') && c.m === 'POST');
   const row = lg && JSON.parse(lg.body)[0];
   check('sendToOwner: sent, logged as wa_out on whatsapp with the text, and no pop-up (WhatsApp took it, 26/10/2026)', sr.ok && row && row.event_type === 'wa_out' && row.channel === 'whatsapp' && row.payload.text === 'בוקר טוב' && sr.push === 0 && !calls.some((c) => c.url === 'https://push.test/a'), { sr, row });
+  // 26/10/2026: the same text again within 10 minutes is not sent (dev_done called twice on 25/10)
+  calls = [];
+  const txt = 'בוקר טוב ' + 'x'.repeat(40);
+  globalThis.fetch = async (u, i) => String(u).includes('graph.facebook.com') ? new Response(JSON.stringify({ messages: [{ id: 'wamid.2' }] }), { status: 200 })
+    : String(u).includes('/notifications_log?select=payload') ? new Response(JSON.stringify([{ text: txt }]), { status: 200 }) : f1(u, i);
+  const sd = await sendToOwner(ENV, '972500000000', txt, { windowOpen: true });
+  globalThis.fetch = f1;
+  check('sendToOwner: the same text already sent in the last 10 minutes = not sent again, not logged', sd.ok && sd.duplicate && !calls.some((c) => c.url.includes('graph.facebook.com') || (c.url.includes('/notifications_log') && c.m === 'POST')), sd);
   calls = [];
   globalThis.fetch = async (u, i) => String(u).includes('graph.facebook.com') ? new Response(JSON.stringify({ error: { code: 131000, message: 'x' } }), { status: 400 }) : f1(u, i);
   const sf = await sendToOwner(ENV, '972500000000', 'נכשל', { windowOpen: true });
