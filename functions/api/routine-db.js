@@ -609,7 +609,9 @@ export function draftRequest(b) {
 // 21/10/2026 (Michael's screenshot: "dev-20261021053745-tqu3" in a WhatsApp answer): internal ids (a dev
 // request, a trigger, a session, an office chat row) mean nothing to him; the message says what was done.
 export { hasInternalId };
-export function hasPassport(t) { return /(^|[^A-Za-z0-9])[A-Z]{1,2}[0-9]{6,8}(?![A-Za-z0-9])/.test(String(t || '')); }
+// 26/10/2026: a quote number "PQ26001545" (Negev Ecology) was read as a passport and the assistant lost a round
+// rewriting its message. PQ is a quote prefix, never a passport.
+export function hasPassport(t) { return /(^|[^A-Za-z0-9])(?!PQ)[A-Z]{1,2}[0-9]{6,8}(?![A-Za-z0-9])/.test(String(t || '')); }
 export const MAIL_REQ_ID = /^[A-Za-z0-9_=+\/-]{40,400}$/;
 export const OD_CAL_MOVE = OD_AUTO + '/' + OD_AUTO_DIRS[3], CAL_MOVED_KEY = 'cal_moved', CAL_MOVED_MAX = 30;
 const CAL_T = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;

@@ -330,6 +330,7 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
 
   // 20/10/2026: no passport number on WhatsApp
   check('passport number: refused', hasPassport('4 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd: AD3659758') && hasPassport('AC3341142, ...'));
+  check('a quote number PQ26001545 passes; a passport still refused (26/10/2026)', !hasPassport('הצעת מחיר PQ26001545') && hasPassport('AD3659758'));
   check('company number, phone, C27, ISO45001, #1784: pass', !hasPassport('511969008 054-7940073 C27 ISO45001 #1784 trig_01Tofq session_01McD38'));
   // 21/10/2026, Michael's screenshot: "\u05d4\u05d5\u05e2\u05d1\u05e8 \u05dc\u05e4\u05d9\u05ea\u05d5\u05d7 dev-20261021053745-tqu3" in an answer.
   check('internal ids: refused (dev request, trigger, session, office row)', hasInternalId('\u05d4\u05d5\u05e2\u05d1\u05e8 \u05dc\u05e4\u05d9\u05ea\u05d5\u05d7 dev-20261021053745-tqu3.') && hasInternalId('trig_01TofqtqNWtrXMnqiNjHq1nZ') && hasInternalId('session_01McD38xyz') && hasInternalId('cse_01TuRyeMrE8W') && hasInternalId('chat h-20261020-2036'));

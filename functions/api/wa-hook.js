@@ -108,7 +108,10 @@ async function aboutAlert(env, wamid) {
 // hazard alert (the same note the assistant writes with routine-db hazard_choice), and "what is urgent" /
 // "expiries" (the morning brief the server already builds). Anything else, and anything unclear, goes to
 // the assistant as before. Pure, tested.
-export const FAST_BRIEF = /^(\u05de\u05d4 )?(\u05d3\u05d7\u05d5\u05e3|\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea|\u05e4\u05d2|\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3|\u05de\u05d4 \u05e4\u05d2)$/;
+// 26/10/2026 (Michael in the questionnaire: "do it: widen the fast route", and "the quality must not suffer"): the same
+// question only, in the words he uses ("\u05d9\u05e9 \u05de\u05e9\u05d4\u05d5 \u05d3\u05d7\u05d5\u05e3", "\u05de\u05d4 \u05d3\u05d7\u05d5\u05e3 \u05d4\u05d9\u05d5\u05dd"), and still only up to 40 characters; anything longer or
+// different goes to the assistant.
+export const FAST_BRIEF = /^(\u05de\u05d4 |\u05d9\u05e9 \u05de\u05e9\u05d4\u05d5 |\u05d9\u05e9 )?(\u05d3\u05d7\u05d5\u05e3|\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea|\u05e4\u05d2|\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3|\u05de\u05d4 \u05e4\u05d2)( \u05d4\u05d9\u05d5\u05dd| \u05e2\u05db\u05e9\u05d9\u05d5| \u05dc\u05d9)?$/;
 export function hazardRef(about, prev) {
   const a = String(about || ''), m = /^(trustee_hazard|near_miss) \|.*\| id ([A-Za-z0-9_.-]{1,80}) \|/.exec(a);
   if (m) return { src: m[1], id: m[2] };
