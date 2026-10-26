@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftSubj, draftMadeLine, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
+import { TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftSubj, draftMadeLine, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -29,7 +29,7 @@ globalThis.fetch = async (url, opt = {}) => {
   if (url === 'https://api.anthropic.com/v1/messages') { const b = JSON.parse(opt.body); claudeReads.push({ key: opt.headers['x-api-key'], b }); if (b.messages[0].content[1].text === 'make it fail') return new Response(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'Your credit balance is too low' } }), { status: 400 }); return new Response(JSON.stringify({ content: [{ type: 'text', text: 'not written: only work at height. TEXT: ...' }] }), { status: 200 }); }
   if (url.startsWith('https://api.anthropic.com/')) { fires.push({ url, auth: opt.headers.Authorization, body: JSON.parse(opt.body) }); return new Response(JSON.stringify({ claude_code_session_id: fireSession }), { status: 200 }); }
   // expiry_set: a small docs / equip_inspections table (rows[table] = [...])
-  const m = /\/rest\/v1\/(docs|equip_inspections)\?(.*)$/.exec(url);
+  const m = /\/rest\/v1\/(docs|equip_inspections|tour_hazards)\?(.*)$/.exec(url);
   if (m && rows[m[1]]) {
     const id = decodeURIComponent((/id=eq\.([^&]*)/.exec(m[2]) || [])[1] || '');
     const hit = rows[m[1]].filter((r) => String(r.id) === id);
@@ -679,6 +679,21 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     }
     check('no new "_" folder straight under the safety folder: a folder a flow reads is OD_AUTO + "/" + its name (add it to OD_AUTO_DIRS)', tops.length === 0 && direct.length === 0, { tops, direct });
     check('the five flow folders are inside OD_AUTO', [OD_REQ, OD_DRAFT, OD_CAL_MOVE, OD_DRAFT_TRASH].every((x) => x.indexOf(OD_AUTO + '/') === 0) && OD_AUTO_DIRS.length === 5);
+  }
+
+  console.log('\n4e5. tour_close_ask (26/10/2026, Michael: "do it: only after my do-it")');
+  {
+    rows.tour_hazards = [{ id: 'th-12', n: 12, descr: 'נקודות צביטה חשופות', loc: 'מסוע אריזה', s: 'פתוח' }, { id: 'th-3', n: 3, descr: 'x', s: 'סגור' }];
+    delete state[TOUR_CLOSE_KEY];
+    const a = await call({ op: 'tour_close_ask', agent: 'routine-wa-assistant', id: 'th-12', note: 'נבדק במקום, המגנים הותקנו' });
+    const st = state[TOUR_CLOSE_KEY] && JSON.parse(state[TOUR_CLOSE_KEY]);
+    check('an open finding: the request kept (id, note), then the question goes out as wa_me (here: WhatsApp not configured)', st && st.id === 'th-12' && /המגנים/.test(st.note) && a.json.error === 'whatsapp not configured' && rows.tour_hazards[0].s === 'פתוח', { a: a.json, st });
+    const b = await call({ op: 'tour_close_ask', agent: 'routine-wa-assistant', id: 'th-3', note: 'נבדק במקום, תקין' });
+    check('a closed finding, a bad id, a short note, an extra field: refused; nothing closed by the ask itself', !b.json.ok && /already closed/.test(b.json.error)
+      && (await call({ op: 'tour_close_ask', agent: 'a-b', id: '12', note: 'נבדק במקום' })).status === 400 && (await call({ op: 'tour_close_ask', agent: 'a-b', id: 'th-12', note: 'x' })).status === 400
+      && (await call({ op: 'tour_close_ask', agent: 'a-b', id: 'th-12', note: 'נבדק במקום', s: 'סגור' })).status === 400);
+    check('tourRefOf: the reply line or the last message, only tourclose:th-N', tourRefOf('x | ref tourclose:th-12 | y', null) === 'th-12' && tourRefOf('', { ref: 'tourclose:th-7' }) === 'th-7' && tourRefOf('', { ref: 'sign:s123456' }) === null && tourRefOf('x | ref dev 1 |', { ref: 'tourclose:th-7' }) === null);
+    delete rows.tour_hazards; delete state[TOUR_CLOSE_KEY];
   }
 
   console.log('\n4f. mail_request: one text file with the message id, for the second flow');

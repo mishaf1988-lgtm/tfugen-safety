@@ -123,6 +123,8 @@
 //              calendar. Like mail_request: a JSON file into OD_CAL_MOVE, and the flow "הזזות ביומן"
 //              (power-automate-mail.md, flow 6) PATCHes only start and end of that event. approved = Michael's
 //              own words with "בצע" (the attendees get an update, a message to a person). Logged in cal_moved.
+//   tour_close_ask  (26/10/2026) {id, note}: asks Michael "close tour finding <n>?" with buttons; only his "do it" on
+//              that message closes it (wa-hook, fastTourClose). TOUR_CLOSE_KEY holds the one open request.
 //   draft_trash  (26/10/2026, Michael in the questionnaire: "to the recycle bin, automatic") {id, subject, to}:
 //              an assistant draft that a newer one replaced goes to Deleted Items. Only a draft the server made
 //              (drafts_made: same recipients, same subject or a reply draft, 30 days). A JSON file into
@@ -962,6 +964,20 @@ const CLAIM_RE = /(^|[\s(\-])(\u05d7\u05e1\u05e8|\u05d7\u05e1\u05e8\u05d4|\u05d7
 const SENT_RE = /(\u05e9\u05dc\u05d7\u05ea\u05d9 (\u05d0\u05ea )?(\u05d4)?\u05de\u05d9\u05d9\u05dc|\u05e9\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d5|\u05e9\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4|\u05e9\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05dd|\u05d4\u05de\u05d9\u05d9\u05dc \u05e0\u05e9\u05dc\u05d7|\u05d4\u05de\u05d9\u05d9\u05dc \u05d9\u05e6\u05d0)/;
 // "\u05d4\u05db\u05e0\u05ea\u05d9 (2) \u05d8\u05d9\u05d5\u05d8\u05d5\u05ea", "\u05d4\u05d8\u05d9\u05d5\u05d8\u05d4 \u05de\u05d5\u05db\u05e0\u05d4 / \u05e0\u05de\u05e6\u05d0\u05ea", "\u05de\u05d7\u05db\u05d4 \u05d1-Drafts"; not "\u05ea\u05d5\u05e4\u05d9\u05e2 \u05d1-Drafts" (a promise, not a claim)
 export const DRAFT_READY_RE = /\u05d4\u05db\u05e0\u05ea\u05d9[^.\n]{0,14}\u05d8\u05d9\u05d5\u05d8|\u05d8\u05d9\u05d5\u05d8\S*\s+(\u05de\u05d5\u05db\u05e0|\u05e0\u05de\u05e6\u05d0)|(\u05e0\u05de\u05e6\u05d0|\u05de\u05d7\u05db)\S*\s+\u05d1-?Drafts/i;
+// 26/10/2026 (Michael in the questionnaire: "do it: only after my do-it"): a tour finding (tour_hazards) the
+// assistant may close. It asks with tour_close_ask; the server keeps the request in TOUR_CLOSE_KEY and sends the
+// question with ref tourclose:<id>; only Michael's "\u05d1\u05e6\u05e2" on that very message closes it (wa-hook fastRoute).
+export const TOUR_CLOSE_KEY = 'tour_close_ask', TOUR_CLOSE_MS = 24 * 3600e3, TOUR_OPEN = '\u05e4\u05ea\u05d5\u05d7', TOUR_CLOSED = '\u05e1\u05d2\u05d5\u05e8';
+export const TOUR_ID = /^th-[0-9]{1,6}$/;
+export function tourRefOf(about, prev) {
+  const a = String(about || '');
+  if (a) { const m = /\| ref tourclose:(th-[0-9]{1,6}) \|/.exec(a); return m ? m[1] : null; }
+  const r = /^tourclose:(th-[0-9]{1,6})$/.exec(String((prev && prev.ref) || ''));
+  return r ? r[1] : null;
+}
+export function tourCloseAskText(row, note) {
+  return '\u05dc\u05e1\u05d2\u05d5\u05e8 \u05d0\u05ea \u05dc\u05d9\u05e7\u05d5\u05d9 \u05d4\u05e1\u05d9\u05d5\u05e8 ' + (row.n || '') + ': ' + String(row.descr || '').replace(/\s+/g, ' ').slice(0, 120) + (row.loc ? ' (' + String(row.loc).slice(0, 60) + ')' : '') + '?\n\u05d4\u05e2\u05e8\u05ea \u05e1\u05d2\u05d9\u05e8\u05d4: ' + String(note).slice(0, 300);
+}
 export function claimGate(text, checked) {
   const t = String(text || '');
   if (SENT_RE.test(t)) return 'the text says you sent a mail: you only make drafts. Write "\u05d4\u05db\u05e0\u05ea\u05d9 \u05d8\u05d9\u05d5\u05d8\u05d4" or "\u05e0\u05e9\u05dc\u05d7 \u05de\u05de\u05da \u05d1-<\u05e9\u05e2\u05d4>" (after Sent Items)';
@@ -1964,6 +1980,20 @@ export async function onRequest(context) {
         } catch (e) { recorded = false; }
       }
       return jsonResp({ ok: true, path: c.toDir + '/' + c.name, size: mj.size || sj.size || null, webUrl: mj.webUrl || null, recorded }, 200, {});
+    }
+    if (body.op === 'tour_close_ask') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'id', 'note'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const id = String(body.id || ''), note = String(body.note || '').replace(/\s+/g, ' ').trim();
+      if (!TOUR_ID.test(id)) return jsonResp({ ok: false, error: 'id: a tour_hazards id like th-12' }, 400, {});
+      if (note.length < 5 || note.length > 300) return jsonResp({ ok: false, error: 'note: what Michael checked, 5-300 characters' }, 400, {});
+      if (hasInternalId(note) || hasPassport(note)) return jsonResp({ ok: false, error: 'no ids or personal numbers in the note' }, 400, {});
+      const rr = await fetch(url + '/rest/v1/tour_hazards?id=eq.' + encodeURIComponent(id) + '&select=id,n,descr,loc,s', { headers: h, signal: tmo(SB_MS) });
+      const row = rr.ok ? ((await rr.json().catch(() => []))[0] || null) : null;
+      if (!row) return jsonResp({ ok: false, error: 'no such tour finding' }, 400, {});
+      if (row.s !== TOUR_OPEN) return jsonResp({ ok: false, error: 'already closed (s=' + row.s + ')' }, 200, {});
+      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+        body: JSON.stringify([{ key: TOUR_CLOSE_KEY, value: JSON.stringify({ id, note, at: new Date().toISOString() }), updated_at: new Date().toISOString() }]) });
+      body = { op: 'wa_me', agent: body.agent, text: tourCloseAskText(row, note), choices: ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'], ref: 'tourclose:' + id };
     }
     if (body.op === 'wa_me') {
       if (hasPassport(body.text)) return jsonResp({ ok: false, error: 'passport number in text: write "4 workers from the list", no ids (20/10/2026)' }, 400, {});
