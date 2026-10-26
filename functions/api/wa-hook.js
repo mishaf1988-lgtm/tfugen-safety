@@ -430,11 +430,21 @@ export async function fastSign(env, r, wamid) {
 // Michael's own message, for the weekly quality review of the assistant's answers (20/10/2026, Michael:
 // "not only time, also wisdom, quality and expertise"; retro-prompt.md 7a). His own words to his own
 // assistant, in the app's own log; no one else's message reaches this point.
+// 26/10/2026 (dev request: the PDF quote Michael sent at 11:43 could not be attached later): a photo or a
+// document keeps its media id, type and name here, so a later run reads it with wa_media; a file with no
+// caption is "\ud83d\udcce <name>", not an empty line that recent drops.
+export function ownerInPayload(m) {
+  const md = m && m.media;
+  const t = String((m && m.text) || '') || (md ? '\ud83d\udcce ' + (md.name || m.type || 'file') : '');
+  const p = { title: t.replace(/\s+/g, ' ').slice(0, 120), text: t.slice(0, 1500), wamid: m && m.id, choice: (m && m.choice) || null };
+  if (md) { p.media_id = md.id; p.mime = md.mime || null; p.name = md.name || null; }
+  return p;
+}
 async function logIn(env, m) {
   try {
     await sbJson(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
       body: JSON.stringify([{ id: 'wi' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
-        event_type: 'owner_in', channel: 'whatsapp', payload: { title: String(m.text || '').replace(/\s+/g, ' ').slice(0, 120), text: String(m.text || '').slice(0, 1500), wamid: m.id, choice: m.choice || null } }]) });
+        event_type: 'owner_in', channel: 'whatsapp', payload: ownerInPayload(m) }]) });
   } catch (e) { /* a missing log line costs only the review */ }
 }
 async function logOut(env, text, r) {

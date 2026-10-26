@@ -195,6 +195,19 @@ export function devInboxAdd(raw, b, nowIso) {
 // A stale reply (Michael already tapped a newer message) that asks him to approve something is not sent at all
 // (26/10/2026 retro): its buttons would go, and the question without them is what asksApprovalNoButtons refuses at the
 // door, while keeping them would let an old "approve" button confirm a question he has already replaced.
+// Pure (26/10/2026): rows = assistant rows of the last OVERLAP_MS, [{ts, text, answers}]. A row from another run
+// (another answers, or none) sent after the message this run answers = the overlap. A run with no answers (the dev
+// session, a ref "dev ...") counts every such row of the window. Same answers = the same run, its own messages.
+export const OVERLAP_MS = 3 * 60000;
+export function overlapReply(answers, ref, rows) {
+  if (!Array.isArray(rows) || !rows.length) return null;
+  const at = Date.parse(answers || '');
+  if (isNaN(at) && !/^dev /.test(String(ref || ''))) return null;
+  const hit = rows.find((x) => x && x.text && Date.parse(x.ts) > (isNaN(at) ? 0 : at) && (isNaN(at) || x.answers !== answers));
+  if (!hit) return null;
+  const hm = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(Date.parse(hit.ts)));
+  return { hm, text: String(hit.text).replace(/\s+/g, ' ').slice(0, 160) };
+}
 export function staleRefuses(stale, text) {
   return !!(stale && stale.dropChoices && asksApprovalNoButtons(text, null));
 }
@@ -1605,7 +1618,7 @@ export async function onRequest(context) {
       const line = { at: new Date().toISOString(), subject: c.subject, file: name, agent: body.agent, why: String(body.why).slice(0, 200) };
       await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
         body: JSON.stringify([{ key: DRAFTS_TRASHED_KEY, value: JSON.stringify([line].concat(val(DRAFTS_TRASHED_KEY)).slice(0, 100)), updated_at: line.at }]) }).catch(() => null);
-      return jsonResp({ ok: true, file: OD_DRAFT_TRASH + '/' + name, note: 'the flow moves it to Deleted Items within about a minute; check Drafts after' }, 200, {});
+      return jsonResp({ ok: true, file: OD_DRAFT_TRASH + '/' + name, note: 'the flow moves it to Deleted Items within about 5 minutes (the OneDrive trigger); check Drafts after' }, 200, {});
     }
     if (body.op === 'mail_draft') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'cc', 'subject', 'body', 'attach', 'reply_to', 'checked'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
@@ -1937,10 +1950,21 @@ export async function onRequest(context) {
         if (stale && staleRefuses(stale, body.text)) return jsonResp({ ok: false, error: 'stale: Michael already tapped a newer message, so this approval question is not sent; ask it again from his newer message' }, 400, {});
         if (stale) { body.text = stale.prefix + String(body.text || ''); if (stale.dropChoices) delete body.choices; }
       }
+      // 26/10/2026 (Michael: "upgrade the duplicate answers"): each message of his fires its own run, and two runs
+      // answered the same thing (a photo and "check the picture" 17 seconds apart, 25/10 00:44 and 00:46; the
+      // assistant and the dev session both on the Arial request, 26/10 10:17 and 10:18). Another run's reply sent
+      // after the message this one answers stops it once; it sends again with overlap_ok only if it adds something.
+      if (body.overlap_ok !== true) {
+        const ov = await fetch(url + '/rest/v1/notifications_log?select=ts,payload->>text,payload->>answers&event_type=eq.assistant&ts=gte.'
+          + encodeURIComponent(new Date(Date.now() - OVERLAP_MS).toISOString()) + '&order=ts.desc&limit=10', { headers: h, signal: tmo(SB_MS) }).then((x) => (x.ok ? x.json() : [])).catch(() => []);
+        const o = overlapReply(body.answers, body.ref, ov);
+        if (o) return jsonResp({ ok: false, error: 'overlap: another run already answered at ' + o.hm + ': "' + o.text + '". Yours repeats it = do not send. It adds something = send only the new part, with "overlap_ok": true' }, 400, {});
+      }
       if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
       const to = await ownerWa(env, url);
       if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
       const r = await sendToOwner(env, to, body.text, { noTemplate: body.no_template === true, windowOpen: await ownerWindowOpen(env, url), choices: Array.isArray(body.choices) ? body.choices : null });
+      if (r.duplicate) return jsonResp({ ok: true, duplicate: true, note: 'the same text went out in the last 10 minutes; not sent again' }, 200, {});
       if (r.ok) await noteLastOut(env, url, body.text, body.ref);
       if (r.ok && DEV_REF.test(String(body.ref || ''))) {
         const rows = await stateRead([DEV_INBOX_KEY]).catch(() => []);
@@ -1954,7 +1978,7 @@ export async function onRequest(context) {
         await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
           body: JSON.stringify([{ id: 'wa' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
             event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error',
-            payload: { title: String(body.text || '').replace(/\s+/g, ' ').slice(0, 120), text: String(body.text || '').slice(0, 1500), via: r.via || null, wamid: r.wamid || null, ref: body.ref ? String(body.ref).slice(0, 40) : 'none', detail: r.error || null, push: ps.sent || 0 } }]) });
+            payload: { title: String(body.text || '').replace(/\s+/g, ' ').slice(0, 120), text: String(body.text || '').slice(0, 1500), via: r.via || null, wamid: r.wamid || null, ref: body.ref ? String(body.ref).slice(0, 40) : 'none', answers: body.answers ? String(body.answers).slice(0, 40) : null, detail: r.error || null, push: ps.sent || 0 } }]) });
       } catch (e) { /* the message went out; a missing log line is not a failure */ }
       return jsonResp(Object.assign({}, r, { push: ps.sent || 0 }, stale ? { stale: true, choices_dropped: !!stale.dropChoices } : {}), 200, {});
     }
