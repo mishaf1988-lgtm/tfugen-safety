@@ -376,7 +376,14 @@ export async function lastOut(env, sbUrl, nowMs) {
 const IL_FMT = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
 function ilParts(ms) { const o = {}; for (const x of IL_FMT.formatToParts(new Date(ms))) o[x.type] = x.value; return o; }
 export function ilTimes(t, nowMs) {
+  // 26/10/2026 (load test: "\u05d1\u05de\u05d9\u05d9\u05dc \u05de-19/10 07:59 UTC" was converted with today's offset, +2, while 19/10 was +3): a date
+  // right before the time is the day the time belongs to.
+  const yNow = ilParts(nowMs || Date.now()).year;
   return String(t || '')
+    .replace(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?(,?\s+(?:\u05d1-)?)([01]?\d|2[0-3]):([0-5]\d)\s?(?:Z|UTC)(?![A-Za-z0-9])/g, (m, dd, mo, yy, sep, hh, mm) => {
+      const ms = Date.parse((yy || yNow) + '-' + String(mo).padStart(2, '0') + '-' + String(dd).padStart(2, '0') + 'T' + String(hh).padStart(2, '0') + ':' + mm + ':00Z'); if (isNaN(ms)) return m;
+      const p = ilParts(ms); return p.day + '/' + p.month + (yy ? '/' + p.year : '') + sep + p.hour + ':' + p.minute;
+    })
     .replace(/\b(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?(?:Z|\+00:00)(?![A-Za-z0-9])/g, (m, d, hh, mm) => {
       const ms = Date.parse(d + 'T' + hh + ':' + mm + ':00Z'); if (isNaN(ms)) return m;
       const p = ilParts(ms); return p.day + '/' + p.month + '/' + p.year + ' ' + p.hour + ':' + p.minute;

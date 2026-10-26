@@ -339,6 +339,9 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   check('repo setup ask: an ordinary answer passes', !asksRepoSetup('\u05d4\u05d1\u05e7\u05e9\u05d4 \u05d1\u05ea\u05d5\u05e8, \u05d4\u05de\u05e4\u05ea\u05d7 \u05d4\u05ea\u05d5\u05e8\u05df \u05d1\u05d5\u05e0\u05d4 \u05d0\u05d5\u05ea\u05d4 \u05d1-19:17. \u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05d0\u05ea \u05d4\u05e4\u05e1\u05d5\u05dc\u05ea\u05d5\u05df \u05dc\u05d8\u05d9\u05d5\u05d8\u05d4'));
   { const now = Date.parse('2026-10-21T15:00:00Z');
     check('UTC times become Israel time (13:50Z, ISO stamp)', ilTimes('\u05e0\u05d1\u05d3\u05e7 13:50Z, \u05e9\u05d5\u05d1 \u05d1-2026-10-22T04:05:00.000Z', now) === '\u05e0\u05d1\u05d3\u05e7 16:50, \u05e9\u05d5\u05d1 \u05d1-22/10/2026 07:05', ilTimes('\u05e0\u05d1\u05d3\u05e7 13:50Z, \u05e9\u05d5\u05d1 \u05d1-2026-10-22T04:05:00.000Z', now));
+    { const nowW = Date.parse('2026-10-26T11:40:00Z');
+      check('a date before a UTC time is that time\'s day: 19/10 07:59 UTC = 10:59 (summer), 26/10 11:21 UTC = 13:21 (winter) (26/10/2026)',
+        ilTimes('\u05de-19/10 07:59 UTC', nowW) === '\u05de-19/10 10:59' && ilTimes('26/10/2026 11:21 UTC', nowW) === '26/10/2026 13:21' && ilTimes('11:21 UTC', nowW) === '13:21', [ilTimes('\u05de-19/10 07:59 UTC', nowW), ilTimes('26/10/2026 11:21 UTC', nowW)]); }
     check('Israel times, dates and ISO 45001: unchanged', ilTimes('21/10/2026 18:02 ISO 45001 07:47', now) === '21/10/2026 18:02 ISO 45001 07:47'); }
   {
     const r = await rdb({ request: new Request('https://x/api/routine-db', { method: 'POST', headers: { 'x-routine-key': 'k-1', 'content-type': 'application/json' }, body: JSON.stringify({ op: 'wa_me', text: 'AD3659758' }) }), env: ENV });

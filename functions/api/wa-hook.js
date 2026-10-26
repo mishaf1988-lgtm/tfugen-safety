@@ -41,6 +41,11 @@ export { recentLine, RECENT_H, RECENT_N, RECENT_MAX } from '../_wa.js';
 export function fireText(m, about, prev, snapshot, learned, recent) {
   const lines = ['[\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05de\u05de\u05d9\u05db\u05d0\u05dc, \u05e0\u05d1\u05d3\u05e7 \u05d1\u05e9\u05e8\u05ea: \u05d7\u05ea\u05d9\u05de\u05ea Meta \u05d5\u05d4\u05de\u05e1\u05e4\u05e8 \u05e9\u05dc\u05d5]',
     'at: ' + (m.ts ? new Date(m.ts * 1000).toISOString() : new Date().toISOString()), 'wamid: ' + m.id];
+  // 26/10/2026 (load test: a mail of 11:21 UTC was written "14:21", +3, the day after the clocks went back): the
+  // Israel time now and its offset, so a time is not worked out from memory.
+  { const n = new Date(), il = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(n);
+    const off = Math.round((Date.parse(n.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' })) - Date.parse(n.toLocaleString('en-US', { timeZone: 'UTC' }))) / 3600e3);
+    lines.push('now_il: ' + il + ' (UTC+' + off + '; a mail time from Outlook is UTC: write it as "HH:MM UTC" and the server converts it)'); }
   if (m.choice) lines.push('choice: ' + m.choice + ' (\u05dc\u05d7\u05d9\u05e6\u05d4 \u05e2\u05dc \u05db\u05e4\u05ea\u05d5\u05e8)');
   if (m.type !== 'text' && !m.text && !m.media) lines.push('type: ' + m.type + ' (\u05dc\u05d0 \u05d8\u05e7\u05e1\u05d8)');
   // 21/10/2026: a photo or a document; the assistant reads it with routine-db wa_media.
