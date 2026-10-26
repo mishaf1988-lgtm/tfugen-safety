@@ -70,11 +70,6 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 נאכף: `hook-utf8-test.py` (stdout וגם stdin); התיקייה: בענן `session-start.py` מעתיק את ה-hooks ל-`~/.claude` (`session-start-test.py`).
 חזר: 3 (25/10: אחרי `add_repo`; לקריאה בלבד `get_file_contents`; 14/10).
 
-**168. בדיקה שקרסה נראתה כמו שורה חסרה (26/10/2026, #2022).**
-מה קרה: הרצתי את `trustee-notify` עם `grep -E "FAIL|passed, [1-9]|GREEN"`. הבדיקה קרסה ב-`HARNESS ERROR` (שאילתת GET חדשה ל-`notifications_log` נתפסה בבדיקה כשורת הלוג), והסינון החביא את זה: לא יצא כלום, וחשבתי שעבר. CI נפל.
-הכלל: בהרצה מקומית מסננים עם `passed|✗|ERROR|crash` ובודקים שלכל קובץ יש שורת `passed`. שורה חסרה = כישלון.
-נאכף: בטקסט בלבד. `run.sh` כבר מסיים ב-`FAILURES ABOVE`; לסנן גם אותה.
-
 ## לפני כתיבה למקום משותף
 
 **74. קבצים שאבדו עם השיחה (11/10/2026, PR זה).**
