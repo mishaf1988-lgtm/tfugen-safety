@@ -903,7 +903,7 @@ export function ocrTxtCheck(b) {
   if (c.attach.some((a) => !/\.pdf$/i.test(a.name))) return { error: 'paths: PDF files only' };
   return { files: c.attach.map((a) => Object.assign({}, a, { txt: a.name.replace(/\.pdf$/i, '') + '.txt' })) };
 }
-export { OCR_MODELS, OCR_PAGES, OCR_PROMPT, pdfJpegs, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
+export { OCR_MODELS, OCR_PAGES, OCR_PROMPT, pdfJpegs, pdfCcitt, g4Gray, grayPng, ccittPng, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
 // od_archive (20/10/2026, Michael: "when the assistant works on a form it must not keep the old form, move it
 // to the archive"): ONE file inside the safety folder moves to "_גרסאות קודמות" in its own folder (created if
 // missing), same name. Only when the file that replaces it (replaced_by) sits in the same folder, so this
@@ -1402,13 +1402,14 @@ export async function onRequest(context) {
       // a sample image the caller made (never a file from the drive), to compare the models' Hebrew before choosing one
       if (!env.AI || typeof env.AI.run !== 'function') return jsonResp({ ok: false, error: 'Workers AI binding missing' }, 200, {});
       const b64 = String(body.b64 || '');
-      if (!b64 || b64.length > 1400000) return jsonResp({ ok: false, error: 'b64: a JPEG up to 1MB' }, 400, {});
+      if (!b64 || b64.length > 1400000) return jsonResp({ ok: false, error: 'b64: a JPEG (or with mime image/png, a PNG) up to 1MB' }, 400, {});
+      const mime = body.mime === 'image/png' ? 'image/png' : 'image/jpeg';
       const jpg = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
       const models = OCR_MODELS.filter((m) => !body.model || m === body.model);
       const res = [];
       for (const m of models) {
         const t0 = Date.now();
-        try { res.push({ model: m, ms: Date.now() - t0, text: (await aiOcr(env, m, jpg)).slice(0, 1500) }); }
+        try { res.push({ model: m, ms: Date.now() - t0, text: (await aiOcr(env, m, jpg, mime)).slice(0, 1500) }); }
         catch (e) { res.push({ model: m, error: String((e && e.message) || e).slice(0, 200) }); }
         res[res.length - 1].ms = Date.now() - t0;
       }
