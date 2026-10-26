@@ -547,10 +547,10 @@ export function draftSentGate(b) {
 export function asksOwnerToDelete(t) {
   return /(^|[^\u05d0-\u05ea])(\u05dc\u05de\u05d7\u05d5\u05e7|\u05ea\u05de\u05d7\u05e7)\s+(\u05d0\u05d5\u05ea|\u05d0\u05ea)/.test(String(t || ''));
 }
-const DRAFT_OURS = /@tapugan\.co\.il$/i;
+const draftOurs = (x) => x.toLowerCase().endsWith(SITE.mailDomain.toLowerCase());
 export function draftListOk(list) {
   if (!list.every((x) => DRAFT_TO.test(x))) return false;
-  return list.length <= 5 || (list.length <= 30 && list.every((x) => DRAFT_OURS.test(x)));
+  return list.length <= 5 || (list.length <= 30 && list.every(draftOurs));
 }
 export function draftRequest(b) {
   // Up to 5 recipients, "a@x; b@y" (20/10/2026: one mail to the two people in charge of the ammonia
