@@ -52,7 +52,7 @@ export async function ocrOne(env, token, rel, name, model) {
   const buf = new Uint8Array(await d.arrayBuffer());
   if (buf.length > 4 * 1024 * 1024) return { name, ok: false, error: 'too big: ' + buf.length };
   let pages = pdfJpegs(buf, OCR_PAGES), mime = 'image/jpeg';
-  if (!pages.length) { mime = 'image/png'; pages = []; for (const img of pdfCcitt(buf, OCR_PAGES)) pages.push(await ccittPng(img)); }
+  if (!pages.length) { mime = 'image/png'; pages = []; try { for (const img of pdfCcitt(buf, OCR_PAGES)) pages.push(await ccittPng(img)); } catch (e) { return { name, ok: false, error: String((e && e.message) || e).slice(0, 120) }; } }
   if (!pages.length) return { name, ok: false, error: 'no scanned page image in this PDF (JPEG or CCITT Group 4)' };
   const parts = [];
   for (const pg of pages) parts.push(await aiOcr(env, model, pg, mime));
@@ -97,7 +97,7 @@ export function g4Gray(data, columns, rows, scale) {
   const code = (table, maxLen) => { let v = 0; for (let len = 1; len <= maxLen; len++) { const b = bit(); if (b < 0) return null; v = (v << 1) | b; const k = (len << 16) | v; if (table.has(k)) return table.get(k); } return null; };
   const run = (table) => { let total = 0; for (;;) { const r = code(table, 13); if (r === null) return null; total += r; if (r < 64) return total; } };
   const W = Math.ceil(columns / scale), H = Math.ceil(rows / scale);
-  const out = new Uint8Array(W * H), acc = new Uint16Array(W), line = new Uint8Array(columns);
+  const out = new Uint8Array(W * H).fill(255), acc = new Uint16Array(W), line = new Uint8Array(columns); // white until a line is read (27/10/2026 retro: the rest of a broken stream stayed black)
   let ref = [columns, columns], y = 0;
   for (; y < rows; y++) {
     const cur = [];
@@ -188,5 +188,6 @@ export const OCR_PX = 1400;
 export async function ccittPng(img) {
   const scale = Math.max(1, Math.ceil(img.columns / OCR_PX));
   const g = g4Gray(img.data, img.columns, img.rows, scale);
+  if (g.lines < img.rows * 0.9) throw new Error('ccitt: only ' + g.lines + ' of ' + img.rows + ' lines decoded');
   return grayPng(g.width, g.height, g.gray);
 }

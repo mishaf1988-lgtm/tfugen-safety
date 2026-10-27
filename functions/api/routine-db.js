@@ -721,7 +721,8 @@ export function calInviteRefOf(about, prev) {
 }
 export function calInviteAskText(c, b) {
   const dmy = (x) => x.slice(8, 10) + '/' + x.slice(5, 7) + '/' + x.slice(0, 4);
-  const who = String(b.who || '').replace(/\s+/g, ' ').trim().slice(0, 300) || String(b.to || '').split(/[;,]/).map((x) => x.trim().split('@')[0]).filter(Boolean).join(', ');
+  // the recipients shown are the real to/cc addresses, never the free text `who` (27/10/2026 retro: it could name others than the invite goes to)
+  const addr = (x) => String(x || '').split(/[;,]/).map((y) => y.trim()).filter(Boolean), who = addr(b.to).concat(addr(b.cc)).join(', ').slice(0, 400);
   return (b.draft === true ? '\u05dc\u05d9\u05e6\u05d5\u05e8 \u05d1\u05d9\u05d5\u05de\u05df \u05e9\u05dc\u05da \u05e4\u05d2\u05d9\u05e9\u05d4 \u05de\u05d5\u05db\u05e0\u05d4, \u05d1\u05dc\u05d9 \u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd?' : '\u05dc\u05e9\u05dc\u05d5\u05d7 \u05d6\u05d9\u05de\u05d5\u05df?') + '\n1. \u05e0\u05d5\u05e9\u05d0: ' + c.subject + '\n2. \u05de\u05ea\u05d9: ' + dmy(c.start) + ' ' + c.start.slice(11) + '-' + c.end.slice(11)
     + (b.location ? '\n3. \u05de\u05d9\u05e7\u05d5\u05dd: ' + String(b.location).replace(/\s+/g, ' ').trim().slice(0, 100) : '') + '\n4. \u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd (' + c.count + '): ' + who
     + (b.draft === true ? '\n\u05d4\u05d4\u05d6\u05de\u05e0\u05d5\u05ea \u05d9\u05d5\u05e6\u05d0\u05d5\u05ea \u05e8\u05e7 \u05db\u05e9\u05d0\u05ea\u05d4 \u05de\u05d5\u05e1\u05d9\u05e3 \u05d0\u05ea \u05d4\u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd \u05d5\u05e9\u05d5\u05dc\u05d7 \u05de-Outlook.' : '\n\u05d1"\u05d1\u05e6\u05e2" \u05d4\u05d6\u05d9\u05de\u05d5\u05df \u05e0\u05e9\u05dc\u05d7 \u05dc\u05db\u05dc \u05d4\u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd.');
@@ -1201,6 +1202,7 @@ export async function onRequest(context) {
   if (!env.SUPABASE_SERVICE_ROLE_KEY) return jsonResp({ ok: false, error: 'server not configured' }, 200, {});
   let body = {};
   try { body = await request.json(); } catch (e) { return jsonResp({ ok: false, error: 'bad json' }, 400, {}); }
+  delete body.askInternal; // set only by the *_ask ops below, never by a caller (27/10/2026 retro)
   const url = env.SUPABASE_URL || SB_DEFAULT, k = env.SUPABASE_SERVICE_ROLE_KEY;
   const h = { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' };
   const stateRead = async (keys) => {
@@ -2102,7 +2104,7 @@ export async function onRequest(context) {
       return jsonResp({ ok: true, path: c.toDir + '/' + c.name, size: mj.size || sj.size || null, webUrl: mj.webUrl || null, recorded }, 200, {});
     }
     if (body.op === 'cal_move_ask') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'was', 'who'].concat(CAL_MOVE_FIELDS).indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'was', 'who', 'answers'].concat(CAL_MOVE_FIELDS).indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const c = calMoveCheck(Object.assign({}, body, { approved: '\u05d1\u05e6\u05e2' }), Date.now());
       if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
       if (body.was !== undefined && !CAL_T.test(String(body.was))) return jsonResp({ ok: false, error: 'was: the current start, YYYY-MM-DDTHH:MM, Israel time' }, 400, {});
@@ -2112,10 +2114,10 @@ export async function onRequest(context) {
       mv.why = body.why;
       await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
         body: JSON.stringify([{ key: CAL_MOVE_ASK_KEY, value: JSON.stringify({ k, mv, at: new Date().toISOString() }), updated_at: new Date().toISOString() }]) });
-      body = { op: 'wa_me', agent: body.agent, text: calMoveAskText(c, body), choices: ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'], ref: 'calmove:' + k };
+      body = { op: 'wa_me', agent: body.agent, answers: body.answers, askInternal: true, text: calMoveAskText(c, body), choices: ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'], ref: 'calmove:' + k };
     }
     if (body.op === 'cal_invite_ask') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'who'].concat(CAL_INVITE_FIELDS).indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'who', 'answers'].concat(CAL_INVITE_FIELDS).indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const c = calInviteCheck(Object.assign({}, body, { approved: '\u05d1\u05e6\u05e2' }), Date.now());
       if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
       if (hasInternalId(body.who) || hasPassport(body.who)) return jsonResp({ ok: false, error: 'who: names only' }, 400, {});
@@ -2124,10 +2126,10 @@ export async function onRequest(context) {
       inv.why = body.why;
       await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
         body: JSON.stringify([{ key: CAL_INVITE_ASK_KEY, value: JSON.stringify({ k, inv, at: new Date().toISOString() }), updated_at: new Date().toISOString() }]) });
-      body = { op: 'wa_me', agent: body.agent, text: calInviteAskText(c, body), choices: ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'], ref: 'calinvite:' + k };
+      body = { op: 'wa_me', agent: body.agent, answers: body.answers, askInternal: true, text: calInviteAskText(c, body), choices: ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'], ref: 'calinvite:' + k };
     }
     if (body.op === 'tour_close_ask') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'id', 'note'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'id', 'note', 'answers'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const id = String(body.id || ''), note = String(body.note || '').replace(/\s+/g, ' ').trim();
       if (!TOUR_ID.test(id)) return jsonResp({ ok: false, error: 'id: a tour_hazards id like th-12' }, 400, {});
       if (note.length < 5 || note.length > 300) return jsonResp({ ok: false, error: 'note: what Michael checked, 5-300 characters' }, 400, {});
@@ -2138,7 +2140,7 @@ export async function onRequest(context) {
       if (row.s !== TOUR_OPEN) return jsonResp({ ok: false, error: 'already closed (s=' + row.s + ')' }, 200, {});
       await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
         body: JSON.stringify([{ key: TOUR_CLOSE_KEY, value: JSON.stringify({ id, note, at: new Date().toISOString() }), updated_at: new Date().toISOString() }]) });
-      body = { op: 'wa_me', agent: body.agent, text: tourCloseAskText(row, note), choices: ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'], ref: 'tourclose:' + id };
+      body = { op: 'wa_me', agent: body.agent, answers: body.answers, askInternal: true, text: tourCloseAskText(row, note), choices: ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'], ref: 'tourclose:' + id };
     }
     if (body.op === 'wa_me') {
       if (hasPassport(body.text)) return jsonResp({ ok: false, error: 'passport number in text: write "4 workers from the list", no ids (20/10/2026)' }, 400, {});
@@ -2152,6 +2154,8 @@ export async function onRequest(context) {
       // 22/10/2026 (the assistant sent "1. yes / 2. another place" with ref signmail, and the tap on 2 ran the server's
       // "reply to the sender"): sign refs belong to the server's own buttons; an assistant message cannot carry them.
       if (/^sign/i.test(String(body.ref || ''))) return jsonResp({ ok: false, error: 'ref sign*: reserved for the server signing buttons; use another ref' }, 400, {});
+      // 27/10/2026 retro: calmove:/calinvite:/tourclose: run a pending action on Michael's "\u05d1\u05e6\u05e2"; only the *_ask ops (askInternal) may carry them
+      if (body.askInternal !== true && /^(calmove|calinvite|tourclose):/i.test(String(body.ref || ''))) return jsonResp({ ok: false, error: 'ref calmove:/calinvite:/tourclose: reserved for the *_ask ops; use another ref' }, 400, {});
       const cg = claimGate(body.text, body.checked);
       if (cg) return jsonResp({ ok: false, error: cg }, 400, {});
       let stale = null;
