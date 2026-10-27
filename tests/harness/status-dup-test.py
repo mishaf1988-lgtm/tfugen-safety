@@ -49,6 +49,15 @@ def id_overlaps(status, archive):
         if d: out.append((l.strip()[:100], d.strip()[:100]))
     return out
 
+# 27/10/2026 (lesson 173): a "move the closed item to the archive" step wrote the file with 'w'
+# instead of appending, and five PRs in a row left it with only their own items (1,146 lines to 2).
+# This test passed throughout, since an empty archive has no duplicates. Floor: the archive only grows.
+ARCH_FLOOR = 515  # [x] lines on 27/10/2026, after the restore
+arch_text = open(A, encoding='utf-8').read()
+n_done = len([l for l in arch_text.split('\n') if re.match(r'^\s*- \[x\]', l)])
+check('the archive kept its header and did not shrink (%d [x] lines, floor %d)' % (n_done, ARCH_FLOOR),
+      arch_text.startswith('# Tapugan Safety, STATUS') and n_done >= ARCH_FLOOR, n_done)
+
 real = duplicates(open(S, encoding='utf-8').read(), open(A, encoding='utf-8').read())
 check('no open STATUS item is already [x] in the archive', real == [], real)
 for o, d in id_overlaps(open(S, encoding='utf-8').read(), open(A, encoding='utf-8').read()):
