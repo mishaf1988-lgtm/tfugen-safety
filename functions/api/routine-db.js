@@ -1107,6 +1107,22 @@ export function triageGate(b) {
 // suppliers): everything the database knows about one item in one call, so the assistant cross-checks before it
 // answers (agent-common.md, "cross-check"). Mail threads and attachments stay the assistant's part (365 connector).
 // Pure: the query a person typed, normalised; null = too short or too long.
+// link_add (27/10/2026, Michael: "a light knowledge graph"; in the interview: the agents fill it, from now on): one link
+// between an item (equipment or document) and what belongs to it outside the database. Pure: the row, or { error }.
+export const LINK_RELS = ['mail', 'quote', 'report', 'order', 'supplier', 'file'];
+export function linkRow(b) {
+  if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
+  const table = String(b.table || '');
+  if (table !== 'equip_inspections' && table !== 'docs') return { error: 'table: equip_inspections or docs' };
+  const id = String(b.id === undefined || b.id === null ? '' : b.id);
+  if (!/^[A-Za-z0-9_.-]{1,80}$/.test(id)) return { error: 'bad id' };
+  if (LINK_RELS.indexOf(String(b.rel || '')) < 0) return { error: 'rel: ' + LINK_RELS.join(' | ') };
+  const ref = String(b.ref || '').trim(), title = String(b.title || '').replace(/\s+/g, ' ').trim();
+  if (ref.length < 3 || ref.length > 600 || /[\r\n]/.test(ref)) return { error: 'ref: the mail subject and date, the file path or the quote number, 3-600 characters' };
+  if (title.length < 2 || title.length > 200) return { error: 'title: what it is, for Michael, 2-200 characters' };
+  if (hasInternalId(title) || hasPassport(title + ' ' + ref)) return { error: 'no internal ids or personal numbers' };
+  return { row: { item_table: table, item_id: id, rel: b.rel, ref, title, agent: b.agent } };
+}
 export function cardQuery(q) {
   const s = String(q || '').replace(/[%*,()"'\\]/g, ' ').replace(/\s+/g, ' ').trim();
   return s.length >= 2 && s.length <= 60 ? s : null;
@@ -1255,6 +1271,17 @@ export async function onRequest(context) {
       if (!r.ok) return jsonResp({ ok: false, error: 'select ' + r.status, detail: (await r.text()).slice(0, 300) }, 200, {});
       return jsonResp({ ok: true, rows: await r.json() }, 200, {});
     }
+    if (body.op === 'link_add') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'table', 'id', 'rel', 'ref', 'title'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const c = linkRow(body);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const ex = await fetch(url + '/rest/v1/' + c.row.item_table + '?select=id&id=eq.' + encodeURIComponent(c.row.item_id), { headers: h, signal: tmo(SB_MS) }).then((r) => (r.ok ? r.json() : [])).catch(() => []);
+      if (!Array.isArray(ex) || ex.length !== 1) return jsonResp({ ok: false, error: 'no such item: find it with item_card first' }, 400, {});
+      const w = await fetch(url + '/rest/v1/item_links?on_conflict=item_table,item_id,rel,ref', { method: 'POST', headers: { ...h, Prefer: 'resolution=ignore-duplicates,return=representation' }, body: JSON.stringify([c.row]), signal: tmo(SB_MS) });
+      if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status, detail: (await w.text()).slice(0, 300) }, 200, {});
+      const got = await w.json().catch(() => []);
+      return jsonResp({ ok: true, added: Array.isArray(got) && got.length === 1 }, 200, {});
+    }
     if (body.op === 'item_card') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'q'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const q = cardQuery(body.q);
@@ -1270,7 +1297,9 @@ export async function onRequest(context) {
       const learned = cardLines(val('assistant_learned'), q, 6, (x) => String(x.text || '') + ' ' + String(x.source || '')).map((x) => ({ at: x.at, kind: x.kind, status: x.status, text: x.text }));
       const log = cardLines(val('agent_log'), q, 5, (x) => String(x.line || '') + ' ' + String(x.for_michael || '')).map((x) => ({ at: x.at, agent: x.agent, line: String(x.line || '').slice(0, 300), for_michael: x.for_michael ? String(x.for_michael).slice(0, 300) : undefined }));
       const contradictions = rowContradictions(equip);
-      return jsonResp({ ok: true, q, equip, docs, vendors, learned, log, contradictions,
+      const ids = [].concat((equip || []).map((x) => x.id), (docs || []).map((x) => x.id)).filter(Boolean);
+      const links = ids.length ? await get('item_links?select=item_table,item_id,rel,ref,title,at,agent&item_id=in.(' + ids.map((x) => encodeURIComponent('"' + x + '"')).join(',') + ')&order=at.desc&limit=40') : [];
+      return jsonResp({ ok: true, q, equip, docs, vendors, learned, log, contradictions, links,
         next: 'mail: outlook_email_search by the name and by the supplier, the whole thread, newest first; open quotes and reports; compare the same fields in all (agent-common.md, cross-check); no quote validity date' }, 200, {});
     }
     if (body.op === 'state_get') {
