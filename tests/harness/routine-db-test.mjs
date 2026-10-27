@@ -684,6 +684,11 @@ const callIn = async (body) => {
       }
       check('cal_invite pure: no location = no location field', !JSON.parse(calInviteCheck(Object.assign({}, inv, { location: '' }), Date.now()).file).event.location);
     }
+    { // lesson 169: an op that takes "approved" from the caller (his words as text the agent writes) runs only from wa-hook
+      const src = (await import('node:fs')).readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
+      const takes = [...src.matchAll(/if \(body\.op === '([a-z_]+)'\) \{\s*for \(const k of Object\.keys\(body\)\) if \(\[([^\]]*)\]/g)].filter((m) => /'approved'/.test(m[2])).map((m) => m[1]);
+      check('every op whose allowed fields include "approved" is server-only (CAL_SERVER_ONLY); a new one needs an _ask op and wa-hook (lesson 169)', takes.length >= 2 && takes.every((op) => CAL_SERVER_ONLY.indexOf(op) >= 0), { takes, CAL_SERVER_ONLY });
+    }
     { // cal_move_ask: the server asks, only his tap moves (26/10/2026 retro)
       const ask = { op: 'cal_move_ask', agent: 'routine-wa-assistant', why: 'course day moved', id: ID, subject: 'x course', start: D + 'T08:00', end: D + 'T15:00', was: D + 'T09:00', who: 'Shlomi, Slava' };
       puts = []; state[CAL_MOVE_ASK_KEY] = undefined;
