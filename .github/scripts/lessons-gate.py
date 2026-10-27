@@ -38,6 +38,28 @@ SKILL_DIRS = (".claude/skills/", "project-files/claude-ai-skill/")
 EXT = re.compile(r"michael-skills(#\d+|/pull/\d+|@[0-9a-f]{7,40}\b)")
 WAIVER = re.compile(r"^\s*(no-lesson|בלי לקח)\s*:\s*(.{10,})$", re.I | re.M)
 DOMAIN_MARK = "## לקחים בתחום"
+# 27/10/2026 (Michael in the questionnaire, after CodeRabbit: "do it: a built-in review only for a sensitive PR"):
+# a PR touching login, codes, users, signatures or database permissions carries a line "סקירה: <result>" from a
+# separate reviewer agent that got the diff, not the author's conclusion (CLAUDE.md, deploy section).
+SENSITIVE = ("functions/_middleware.js", "functions/_sign.js", "functions/api/codes.js", "functions/api/create-user.js",
+             "functions/api/delete-user.js", "functions/api/rename-user.js", "functions/api/reset-password.js",
+             "functions/api/ms-auth.js", "functions/api/trustee-gate.js", "functions/api/self-recovery.js",
+             "functions/api/owner-sig.js", "functions/api/_securityselftest.js")
+PERM_SQL = re.compile(r"\b(create|alter|drop)\s+policy\b|\bgrant\b|\brevoke\b|row\s+level\s+security|security\s+definer", re.I)
+REVIEW = re.compile(r"^\s*(review|סקירה)\s*:\s*(\S.{4,})$", re.I | re.M)
+
+
+def sensitive(files):
+    """The changed files that need a security review."""
+    out = [f for f in files if f in SENSITIVE]
+    for f in files:
+        if f.startswith("migrations/") and f.endswith(".sql"):
+            try:
+                if PERM_SQL.search(open(os.path.join(ROOT, f), encoding="utf-8").read()):
+                    out.append(f)
+            except OSError:
+                pass
+    return out
 
 
 def has_domain_lessons(f):
@@ -71,6 +93,11 @@ def check(title, body, files):
     if missing:
         return False, ("the skill line names %s, but no file of it changed in this PR. Update it, "
                        "or name the skill that did change." % ", ".join(missing))
+    sens = sensitive(files)
+    if sens and not REVIEW.search(body or ""):
+        return False, ("this PR touches login, users or database permissions (%s). Run a security review by a "
+                       "separate agent that gets the diff (CLAUDE.md, deploy section), fix what it finds, and add "
+                       "'סקירה: <what it checked and found>' to the PR description." % ", ".join(sens))
     if not FIX.search(title or ""):
         return True, "not a fix PR"
     if LESSONS in files or any(has_domain_lessons(f) for f in files):
