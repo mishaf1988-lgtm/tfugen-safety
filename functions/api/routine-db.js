@@ -55,6 +55,7 @@
 //              "do the check yourself"): META_APP_SECRET by appsecret_proof, the app's webhook fields,
 //              the WABA's subscribed apps, and with fire_probe the fire token (status only). subscribe: true
 //              adds the "messages" field and the WABA subscription when missing.
+//   client_errors (27/10/2026) {agent, since}: errors from users' browsers, grouped, no user name
 //   expiry_set  (11/10/2026, Michael in the questionnaire: "בצע: תיוק מייל + תוקף")
 //              update one row of docs / equip_inspections after a document was read:
 //              e, file_url (only under Michael's OneDrive), s (docs) or d (equipment).
@@ -546,6 +547,25 @@ export function expiryPatch(b, row, today) {
   const prev = String(row[t.note] || '').trim();
   patch[t.note] = prev ? prev + ' | ' + line : line;
   return { patch };
+}
+
+// client_errors: the same error (message, file, line) once, with how many times and on how many pages. The text came from a
+// browser, so it is data: cut to size and never a field the caller chose. Pure.
+export function clientErrors(rows) {
+  const by = {};
+  for (const row of rows) {
+    let t; try { t = JSON.parse(String(row.title || '')); } catch (e) { continue; }
+    if (!t || typeof t !== 'object') continue;
+    const m = short(t.m, 200), f = short(t.f, 60), l = Number(t.l) || 0;
+    if (!m) continue;
+    const k = m + '|' + f + '|' + l;
+    const e = by[k] || (by[k] = { msg: m, file: f, line: l, count: 0, pages: [], last: '', stack: short(t.st, 300) });
+    e.count++;
+    const pg = short(t.p, 40);
+    if (pg && e.pages.indexOf(pg) < 0 && e.pages.length < 5) e.pages.push(pg);
+    if (String(row.ts || '') > e.last) e.last = String(row.ts || '');
+  }
+  return Object.values(by).sort((a, b) => b.count - a.count).slice(0, 30);
 }
 
 // od_move: the safety folder, the folder the flow saves into, and what may go where.
@@ -1801,6 +1821,18 @@ export async function onRequest(context) {
       if (!r.ok) return jsonResp({ ok: false, error: 'read ' + r.status }, 200, {});
       const rows = (await r.json()).map((x) => ({ ts: x.ts, type: x.event_type, ref: x.ref || undefined, agent: x.agent || undefined, text: String(x.text || x.title || '').slice(0, 1500) }));
       return jsonResp({ ok: true, rows }, 200, {});
+    }
+    // 27/10/2026 (Michael in the questionnaire: "do it: to our own server"): the errors the app sends from users' browsers
+    // (index.html _errReport, audit_log table_name client_error). Read only, no user name: what broke, where, how often.
+    if (body.op === 'client_errors') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'since'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const since = Date.parse(String(body.since || ''));
+      if (isNaN(since) || Date.now() - since > 8 * 864e5) return jsonResp({ ok: false, error: 'since: an ISO time in the last 8 days' }, 400, {});
+      const r = await fetch(url + '/rest/v1/audit_log?select=ts,title&table_name=eq.client_error&ts=gte.'
+        + encodeURIComponent(new Date(since).toISOString()) + '&order=ts.desc&limit=200', { headers: h, signal: tmo(SB_MS) });
+      if (!r.ok) return jsonResp({ ok: false, error: 'read ' + r.status }, 200, {});
+      const rows = await r.json();
+      return jsonResp({ ok: true, rows: clientErrors(Array.isArray(rows) ? rows : []) }, 200, {});
     }
     if (body.op === 'agent_report') {
       const e = agentEntry(body, new Date().toISOString());
