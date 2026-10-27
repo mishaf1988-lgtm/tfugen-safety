@@ -1085,6 +1085,18 @@ export function tourRefOf(about, prev) {
 export function tourCloseAskText(row, note) {
   return '\u05dc\u05e1\u05d2\u05d5\u05e8 \u05d0\u05ea \u05dc\u05d9\u05e7\u05d5\u05d9 \u05d4\u05e1\u05d9\u05d5\u05e8 ' + (row.n || '') + ': ' + String(row.descr || '').replace(/\s+/g, ' ').slice(0, 120) + (row.loc ? ' (' + String(row.loc).slice(0, 60) + ')' : '') + '?\n\u05d4\u05e2\u05e8\u05ea \u05e1\u05d2\u05d9\u05e8\u05d4: ' + String(note).slice(0, 300);
 }
+// 27/10/2026 (the mail triage offered Michael "I will answer by Thursday" to Negev Ecology, which he had sent the day
+// before, and "until when?" in her mail was a quote; it also said "an updated quote" without what changed, and the
+// only change was 200 to 190 a ton; Michael: "do it" to both). A triage message (ref mail-triage) with a suggested
+// reply needs "checked" that names the thread (the whole conversation in Sent Items, not only after the mail
+// arrived), and one that mentions an updated quote needs "what changed" in the text. Pure.
+export function triageGate(b) {
+  if (String(b.ref || '') !== 'mail-triage') return null;
+  const t = String(b.text || '');
+  if (/\u05d4\u05e6\u05e2\u05d4:/.test(t) && !/(thread|\u05e9\u05e8\u05e9\u05d5\u05e8)/i.test(String(b.checked || ''))) return 'mail-triage with a suggested reply: search Sent Items for the whole thread (conversation), not only after this mail arrived, and say so in "checked" ("Sent Items, all the thread <subject>, HH:MM UTC"); a question that is only in the quoted part was already answered (27/10/2026)';
+  if (/(\u05e2\u05d3\u05db\u05e0\u05d9\u05ea|\u05de\u05e2\u05d5\u05d3\u05db\u05e0\u05ea|\u05de\u05ea\u05d5\u05e7\u05e0\u05ea)/.test(t) && !/\u05d4\u05e9\u05ea\u05e0\u05d4/.test(t)) return 'mail-triage mentions an updated quote: open the attachment and write what changed against the previous version (price, validity, new clauses) with "\u05d4\u05e9\u05ea\u05e0\u05d4:" (27/10/2026: the only change was 200 to 190 a ton, and an exclusivity clause)';
+  return null;
+}
 export function claimGate(text, checked) {
   const t = String(text || '');
   if (SENT_RE.test(t)) return 'the text says you sent a mail: you only make drafts. Write "\u05d4\u05db\u05e0\u05ea\u05d9 \u05d8\u05d9\u05d5\u05d8\u05d4" or "\u05e0\u05e9\u05dc\u05d7 \u05de\u05de\u05da \u05d1-<\u05e9\u05e2\u05d4>" (after Sent Items)';
@@ -2160,6 +2172,8 @@ export async function onRequest(context) {
       if (/^sign/i.test(String(body.ref || ''))) return jsonResp({ ok: false, error: 'ref sign*: reserved for the server signing buttons; use another ref' }, 400, {});
       // 27/10/2026 retro: calmove:/calinvite:/tourclose: run a pending action on Michael's "\u05d1\u05e6\u05e2"; only the *_ask ops (askInternal) may carry them
       if (body.askInternal !== true && /^(calmove|calinvite|tourclose):/i.test(String(body.ref || ''))) return jsonResp({ ok: false, error: 'ref calmove:/calinvite:/tourclose: reserved for the *_ask ops; use another ref' }, 400, {});
+      const tg = triageGate(body);
+      if (tg) return jsonResp({ ok: false, error: tg }, 400, {});
       const cg = claimGate(body.text, body.checked);
       if (cg) return jsonResp({ ok: false, error: cg }, 400, {});
       let stale = null;
