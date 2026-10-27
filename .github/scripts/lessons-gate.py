@@ -40,7 +40,7 @@ WAIVER = re.compile(r"^\s*(no-lesson|בלי לקח)\s*:\s*(.{10,})$", re.I | re.
 DOMAIN_MARK = "## לקחים בתחום"
 # 27/10/2026 (Michael in the questionnaire, after CodeRabbit: "do it: a built-in review only for a sensitive PR"):
 # a PR touching login, codes, users, signatures or database permissions carries a line "סקירה: <result>" from a
-# separate reviewer agent that got the diff, not the author's conclusion (CLAUDE.md, deploy section).
+# separate reviewer agent that got the diff, not the author's conclusion (CLAUDE.md, core rule 8).
 SENSITIVE = ("functions/_middleware.js", "functions/_sign.js", "functions/api/codes.js", "functions/api/create-user.js",
              "functions/api/delete-user.js", "functions/api/rename-user.js", "functions/api/reset-password.js",
              "functions/api/ms-auth.js", "functions/api/trustee-gate.js", "functions/api/self-recovery.js",
@@ -110,7 +110,7 @@ def check(title, body, files):
     sens = sensitive(files)
     if sens and not REVIEW.search(body or ""):
         return False, ("this PR touches login, users or database permissions (%s). Run a security review by a "
-                       "separate agent that gets the diff (CLAUDE.md, deploy section; the brief: project-files/security-review.md), fix what it finds, and add "
+                       "separate agent that gets the diff (CLAUDE.md, core rule 8; the brief: project-files/security-review.md), fix what it finds, and add "
                        "'סקירה: <what it checked and found>' to the PR description." % ", ".join(sens))
     if sens and not REFUTE.search(body or ""):
         return False, ("this PR touches login, users or database permissions (%s). Each confirmed finding of the review "

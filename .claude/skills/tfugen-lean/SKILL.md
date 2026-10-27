@@ -91,6 +91,8 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-dev.
 הרשאות, והתשובה הייתה ששדה התפקיד בעמוד המשתמשים כבר עושה את זה מקצה לקצה.
 חמש דקות של `grep` חסכו בניית מסך שלם.
 
+**בדיקת נוסח של prompt hook (27/10/2026):** `claude -p` מתוך הענן טוען את ה-hooks של ה-repo ואת ההוראות שלו, ועונה כמו שיחה ("המשרד נפתח") במקום כבודק. `--bare` נכשל באימות. מה שעובד: `claude -p --setting-sources local --tools "" --system-prompt "You are a strict JSON classifier. Answer only JSON." --model haiku "<הנוסח עם $ARGUMENTS מוחלף>"`, מתיקייה מחוץ ל-repo. 8 תשובות לדוגמה, חצי צריכות להיכשל.
+
 ## לקחים בתחום (12/10/2026)
 
 אותו מבנה ומספור כמו ב-`tfugen-lessons` (`lessons-format-test.py` בודק את כל הקבצים יחד).
