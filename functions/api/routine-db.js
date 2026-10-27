@@ -19,6 +19,7 @@
 //              name (Michael, 09/10/2026: "בצע: בלי טבלת רפואה"). COLUMNS.
 //   state_get  read server_state keys of STATE_READ.
 //   state_set  write one key of STATE_WRITE, then read it back (STAMP_AT keys: the server sets "at").
+//   quota_set  {util, resets_at}: the weekly quota as rate_limit_info shows it; the server decides quota_mode.
 //   live       the deployed commit (CF_PAGES_COMMIT_SHA) and the sha256 of the index.html this
 //              deployment serves (env.ASSETS). The cloud is outside Israel, so the country gate
 //              answers 403 to a plain fetch of the site; a night run compares this hash with the
@@ -159,7 +160,7 @@ import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLA
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text'];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'quota_mode'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -646,6 +647,21 @@ export const draftSubj = (x) => String(x || '').replace(/^\s*((re|fw|fwd|\u05d4\
 // 27/10/2026 (C52): the quality checker's Routine cannot be given the Microsoft 365 connector (create_trigger:
 // "the connectors parameter is not available for this organization"), so it reads the drafts here: the text
 // an agent sent to mail_draft, the last DRAFTS_TEXT_MAX of them, by state_get drafts_text.
+// 27/10/2026 (Michael in the questionnaire: "do it: quota mode", "a test week with no skipping"; ideas-lab 11): the
+// quality checker writes the seven-day window of its own rate_limit_info each morning. Saving = used more than 85%,
+// or more than 15 points ahead of the share of the week that has passed. Until QUOTA_DRY_UNTIL nothing is skipped:
+// every Routine only writes "in saving mode I would skip" in its line (agent-common.md, opening).
+export const QUOTA_KEY = 'quota_mode', QUOTA_DRY_UNTIL = '2026-11-03', QUOTA_WEEK_MS = 7 * 864e5;
+export function quotaMode(util, resetsAt, nowMs) {
+  const u = Number(util), r = Number(resetsAt);
+  if (!(u >= 0 && u <= 1.5)) return { error: 'util: 0-1, as utilization in rate_limit_info' };
+  if (!(r > 1.6e9 && r < 2.2e9)) return { error: 'resets_at: unix seconds, as resetsAt in rate_limit_info' };
+  const left = r * 1000 - nowMs;
+  if (left < 0 || left > QUOTA_WEEK_MS + 36e5) return { error: 'resets_at is not within the coming week' };
+  const elapsed = Math.round((1 - left / QUOTA_WEEK_MS) * 100) / 100;
+  const mode = u >= 0.85 || u > elapsed + 0.15 ? 'save' : 'normal';
+  return { at: new Date(nowMs).toISOString(), util: Math.round(u * 100) / 100, elapsed, resets: new Date(r * 1000).toISOString(), mode, dry: new Date(nowMs).toISOString().slice(0, 10) < QUOTA_DRY_UNTIL };
+}
 export const DRAFTS_TEXT_KEY = 'drafts_text', DRAFTS_TEXT_MAX = 30, DRAFTS_TEXT_BODY = 2000;
 export function draftTextLine(b, nowIso) {
   return { at: nowIso, agent: String(b.agent || ''), to: mailSet(b.to), cc: mailSet(b.cc), subject: String(b.subject || '').slice(0, 200),
@@ -1328,6 +1344,16 @@ export async function onRequest(context) {
       const rows = await stateRead([body.key]);
       const got = Array.isArray(rows) && rows[0] ? rows[0].value : null;
       return jsonResp({ ok: got === value, value: got }, 200, {});
+    }
+    if (body.op === 'quota_set') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'util', 'resets_at'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const q = quotaMode(body.util, body.resets_at, Date.now());
+      if (q.error) return jsonResp({ ok: false, error: q.error }, 400, {});
+      q.agent = String(body.agent || '').slice(0, 40);
+      const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+        body: JSON.stringify([{ key: QUOTA_KEY, value: JSON.stringify(q), updated_at: q.at }]) });
+      if (!r.ok) return jsonResp({ ok: false, error: 'write ' + r.status }, 200, {});
+      return jsonResp(Object.assign({ ok: true }, q), 200, {});
     }
     if (body.op === 'dev_request' || body.op === 'dev_done') {
       const now = new Date().toISOString();
