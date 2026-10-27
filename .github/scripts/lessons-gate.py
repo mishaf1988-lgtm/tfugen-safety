@@ -44,7 +44,17 @@ DOMAIN_MARK = "## לקחים בתחום"
 SENSITIVE = ("functions/_middleware.js", "functions/_sign.js", "functions/api/codes.js", "functions/api/create-user.js",
              "functions/api/delete-user.js", "functions/api/rename-user.js", "functions/api/reset-password.js",
              "functions/api/ms-auth.js", "functions/api/trustee-gate.js", "functions/api/self-recovery.js",
-             "functions/api/owner-sig.js", "functions/api/_securityselftest.js")
+             "functions/api/owner-sig.js", "functions/api/_securityselftest.js",
+             # 27/10/2026 (Michael: "do it: add to the sensitive list"): code that receives or parses a file or a
+             # URL from outside (anonymous trustees, WhatsApp, uploads, mail). The scan that day found the server
+             # signing any storage path an anonymous report gave (#2078). wa-hook.js is left out: its signature
+             # check and media handling sit in _wa.js, and it changes almost daily.
+             "functions/_wa.js", "functions/api/trustee-log.js", "functions/api/trustee-notify.js",
+             "functions/api/trustee-gate.js", "functions/api/hazard-file.js", "functions/api/hazard-report.js",
+             "functions/api/vitre.js", "functions/api/mail-inbox.js", "functions/api/od-read.js", "functions/api/od-pick.js",
+             "functions/api/chat.js", "functions/api/chat-file/[[name]].js", "functions/_closelink.js",
+             "functions/_pdftext.js", "functions/_xlsx.js", "functions/_xlsxpatch.js", "functions/_pptx.js",
+             "functions/_deckpatch.js", "functions/_ocr.js", "functions/_stt.js")
 PERM_SQL = re.compile(r"\b(create|alter|drop)\s+policy\b|\bgrant\b|\brevoke\b|row\s+level\s+security|security\s+definer", re.I)
 REVIEW = re.compile(r"^\s*(review|סקירה)\s*:\s*(\S.{4,})$", re.I | re.M)
 
