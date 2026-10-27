@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftSubj, draftMadeLine, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
+import { ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftSubj, draftMadeLine, quotaMode, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -844,6 +844,20 @@ const callIn = async (body) => {
     const q = calls.filter((c) => /notifications_log\?select=ts,event_type/.test(c.url)).pop();
     check('out_log: reads wa_out, owner_in and assistant since the time, oldest first; answers rows', r.json.ok && Array.isArray(r.json.rows) && q && /event_type=in\.\(wa_out,owner_in,assistant\)/.test(q.url) && /order=ts\.asc/.test(q.url), { j: r.json, url: q && q.url });
     check('out_log: no since, more than 4 days back, or an extra field = refused', (await call({ op: 'out_log' })).status === 400 && (await call({ op: 'out_log', since: '2020-01-01T00:00:00Z' })).status === 400 && (await call({ op: 'out_log', since: new Date().toISOString(), table: 'x' })).status === 400);
+  }
+
+  console.log('\n4e4e. quota mode (27/10/2026, ideas-lab 11, a test week first)');
+  {
+    const now = Date.parse('2026-10-27T09:00:00Z'), res = (d) => Math.round((now + d * 864e5) / 1000);
+    const half = quotaMode(0.58, res(3.5), now), ahead = quotaMode(0.70, res(3.5), now), full = quotaMode(0.86, res(0.5), now);
+    check('quotaMode: 58% at half the week = normal; 70% at half = save; 86% near the end = save; dry until ' + QUOTA_DRY_UNTIL,
+      half.mode === 'normal' && half.elapsed === 0.5 && ahead.mode === 'save' && full.mode === 'save' && half.dry === true && quotaMode(0.2, Math.round(Date.parse(QUOTA_DRY_UNTIL + 'T09:00:00Z') / 1000) + 3 * 86400, Date.parse(QUOTA_DRY_UNTIL + 'T09:00:00Z')).dry === false, { half, ahead, full });
+    check('quotaMode: util as percent, resets_at in ms, or a window already over = refused', !!quotaMode(58, res(3), now).error && !!quotaMode(0.5, res(3) * 1000, now).error && !!quotaMode(0.5, res(-1), now).error);
+    const r = await call({ op: 'quota_set', agent: 'routine-quality', util: 0.4, resets_at: Math.round(Date.now() / 1000) + 5 * 86400 });
+    const st = state[QUOTA_KEY] && JSON.parse(state[QUOTA_KEY]);
+    check('quota_set: written to quota_mode with the mode the server decided, readable by state_get; an extra field = refused', r.json.ok && st && st.mode === 'normal' && st.agent === 'routine-quality' && STATE_READ.indexOf(QUOTA_KEY) >= 0
+      && (await call({ op: 'quota_set', agent: 'a-b', util: 0.4, resets_at: Math.round(Date.now() / 1000) + 86400, mode: 'normal' })).status === 400, { r: r.json, st });
+    delete state[QUOTA_KEY];
   }
 
   console.log('\n4e5. tour_close_ask (26/10/2026, Michael: "do it: only after my do-it")');

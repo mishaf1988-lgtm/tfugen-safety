@@ -14,6 +14,9 @@
 5. **בדיקת ה-hooks** (18/10/2026, מיכאל: "בצע: לעשות את הצעות 1 עד 5"; אותה שיחה דיווחה "כבויים" ארבע פעמים בלי להפעיל): `echo "DELETE FROM ncr WHERE false"` ב-Bash חייב להיחסם ב-`guard-sql`. לא נחסם: `cd /home/user/tfugen-safety && echo '{"cwd":"/home/user/tfugen-safety"}' | CLAUDE_PROJECT_DIR=/home/user/tfugen-safety python3 .claude/hooks/session-start.py`, ובדיקה חוזרת. **לא לכתוב `~/.claude/settings.json` ביד**: שיחה אחרת נחסמה כולה ב-18/10/2026 (`can't open file .../hebrew-prompt.py`) כי הקובץ נכתב עם `$CLAUDE_PROJECT_DIR` בתוך הנתיב. אחרי ההפעלה לוודא שההודעה הבאה עוברת. עדיין לא נחסם: לכתוב בסגירה "hooks כבויים" ולהמשיך.
 
 
+6. **מצב מכסה** (27/10/2026, מיכאל בשאלון: "בצע: שבוע ניסוי בלי דילוג"; ideas-lab 11): `bash project-files/routine-db.sh '{"op":"state_get","key":"quota_mode"}'`. `mode` = `save` ו-`dry` = true (עד 03/11/2026): **לא מדלגים על כלום**, רק מוסיפים לשורת הסגירה `| מכסה: הייתי מדלג` (או, לסוכן דחוף: `| מכסה: הייתי בלי סוכני עזר`). הדחופים, שאף פעם לא מדולגים: `routine-wa-assistant`, `routine-mail-filing`, `mail-triage`, `routine-validity`, `routine-quality`, `routine-quotes`, `routine-chat-relay`, `dev-fire`, `dev-runner`, `worker-now`. עדכון הבוקר רץ בשרת ולא קורא את זה. `mode` = `normal`, אין מפתח, או מדידה בת יותר מ-36 שעות (`at`): כרגיל, בלי תוספת.
+
+
 ## סגירה (כל ריצה)
 
 שורת למידה אחת, בפורמט:
