@@ -16,5 +16,8 @@ check('open [ ] with a migration: ok', r7.bad_lines('+- [ ] **A** ' + M) == [])
 check('removed line (-): ok', r7.bad_lines('-- [x] **A** ' + M) == [])
 check('context line: ok', r7.bad_lines(' - [x] **A** ' + M) == [])
 check('[x] without a migration file: ok', r7.bad_lines('+- [x] **A** UI only') == [])
+check('a restored line, already in the history before the PR: ok',
+      r7.bad_lines('+- [x] **A** ' + M + ' done', lambda l: 'A' in l) == [])
+check('a new line not in the history still fails', len(r7.bad_lines('+- [x] **B** ' + M + ' done', lambda l: 'A' in l)) == 1)
 print('%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)
