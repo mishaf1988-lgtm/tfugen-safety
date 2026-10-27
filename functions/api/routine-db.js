@@ -473,7 +473,7 @@ export function equipAddRow(b, today, rand) {
   if (!file.startsWith(equipFilePrefix()) || !/\.pdf$/i.test(file) || file.length > 600 || /[\t\r\n\f\v"'<>\x00-\x1f]/.test(file) || /\/\.\.?\//.test(file)) return { error: 'file_url: a PDF under ' + equipFilePrefix() };
   const row = { id: rand, code, n, d: b.d, e: b.e, s: EQUIP_FIT, report_number: rn, file_url: file,
     notes: ddmm(today) + ' Claude (' + b.agent + '): \u05e9\u05d5\u05e8\u05d4 \u05d7\u05d3\u05e9\u05d4. ' + why + '. \u05de\u05e1\u05de\u05da: ' + doc }; // "new row", "document"
-  for (const [k, max] of [['loc', 80], ['vendor', 80], ['inspector', 60]]) if (b[k] !== undefined) { const v = short(b[k], max); if (v) row[k] = v; }
+  for (const [k, max] of [['loc', 80], ['vendor', 80], ['inspector', 60]]) if (b[k] !== undefined) { const v = short(b[k], max); if (/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/.test(v)) return { error: 'bad ' + k }; if (v) row[k] = v; }
   return { row };
 }
 // The PATCH for one row, or { error }. row = the row as it is now; today = YYYY-MM-DD.
@@ -518,6 +518,14 @@ export function expiryPatch(b, row, today) {
     if (!doc) return { error: 'doc required for report_number' };
     if (rn !== row.report_number) { patch.report_number = rn; said.push('\u05ea\u05e1\u05e7\u05d9\u05e8 ' + (row.report_number || '-') + ' -> ' + rn); }
   }
+  // 27/10/2026 (the sibling-field check: a new report may come from another inspector): the inspector's name, with the report
+  if (b.inspector !== undefined) {
+    if (b.table !== 'equip_inspections') return { error: 'field not allowed: inspector' };
+    const v = typeof b.inspector === 'string' ? short(b.inspector, 60) : '';
+    if (!v || /[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/.test(v)) return { error: 'bad inspector' };
+    if (!doc) return { error: 'doc required for inspector' };
+    if (v !== row.inspector) { patch.inspector = v; said.push('\u05d1\u05d5\u05d3\u05e7 ' + v); }
+  }
   if (b[t.extra] !== undefined) {
     const v = b[t.extra];
     if (t.extra === 's' && DOC_STATES.indexOf(v) < 0) return { error: 'bad s' };
@@ -531,7 +539,7 @@ export function expiryPatch(b, row, today) {
     if ((row.s === DOC_STATES[0] || row.s === DOC_STATES[1] || !row.s) && row.s !== ns) { patch.s = ns; said.push('s ' + ns); }
   }
   for (const k of Object.keys(b)) {
-    if (['op', 'table', 'id', 'agent', 'why', 'doc', 'e', 'file_url', 'report_number', t.extra].concat(outOfTracking ? ['s'] : []).indexOf(k) < 0) return { error: 'field not allowed: ' + k };
+    if (['op', 'table', 'id', 'agent', 'why', 'doc', 'e', 'file_url', 'report_number', 'inspector', t.extra].concat(outOfTracking ? ['s'] : []).indexOf(k) < 0) return { error: 'field not allowed: ' + k };
   }
   if (!said.length) return { patch: null };
   const line = ddmm(today) + ' Claude (' + b.agent + '): ' + said.join(', ') + '. ' + why + (doc ? '. \u05de\u05e1\u05de\u05da: ' + doc : '');
@@ -1860,7 +1868,7 @@ export async function onRequest(context) {
       if (!t) return jsonResp({ ok: false, error: 'table not allowed' }, 400, {});
       const id = String(body.id === undefined || body.id === null ? '' : body.id);
       if (!/^[A-Za-z0-9_.-]{1,80}$/.test(id)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
-      const cols = ['id', 'e', 'file_url', t.note, t.extra].concat(body.table === 'equip_inspections' ? ['report_number'] : []).join(',');
+      const cols = ['id', 'e', 'file_url', t.note, t.extra].concat(body.table === 'equip_inspections' ? ['report_number', 'inspector'] : []).join(',');
       const g = await fetch(url + '/rest/v1/' + body.table + '?select=' + cols + '&id=eq.' + encodeURIComponent(id), { headers: h, signal: tmo(SB_MS) });
       if (!g.ok) return jsonResp({ ok: false, error: 'read ' + g.status }, 200, {});
       const rows = await g.json();

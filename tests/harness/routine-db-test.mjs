@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 // /api/routine-db (09/10/2026, Michael: "בצע: דרך האתר שלנו", "בצע: בלי טבלת רפואה"):
 // the Routines' way to the database without the Supabase connector. One key, a fixed
 // list of tables, medical tables expiry only, trustee reports without text or names,
@@ -426,6 +427,22 @@ const callIn = async (body) => {
       const dup = await call({ ...rq, doc: 'r.pdf', report_number: '185999/226' });
       check('report_number already on another row: refused, nothing written', !dup.json.ok && /already on q2/.test(dup.json.error) && rows.equip_inspections[0].report_number === '185998/226', dup.json);
       rows.equip_inspections.pop();
+    }
+    { // 27/10/2026 (Michael: "do 1 and 2"): every report field equip_add writes, expiry_set can update on an existing row.
+      // The sibling gap twice: report_number (dev request 27/10/2026), then inspector. Identity fields stay out by design.
+      const src = readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
+      const m = /export function equipAddRow[\s\S]*?\[((?:'[a-z_]+',?\s*)+)\]\.some\(\(k\) => b\[k\] !== undefined && typeof b\[k\] !== 'string'\)/.exec(src);
+      const addFields = m ? m[1].match(/[a-z_]+/g) : [];
+      const IDENTITY = { why: 'reason', doc: 'source', code: 'which row', n: 'which row', loc: 'where it stands, not the report', vendor: 'who sold it, not the report' };
+      const SAMPLE = { d: '2026-06-01', e: '2027-06-01', report_number: '123456/226', file_url: FILE_URL_PREFIX + 'Documents/r.pdf', inspector: '\u05d1\u05d5\u05d3\u05e7' };
+      const gaps = addFields.filter((f) => !IDENTITY[f]).filter((f) => {
+        const r = expiryPatch({ op: 'expiry_set', table: 'equip_inspections', id: 'q1', agent: 'a-b', why: 'sibling check', doc: 'r.pdf', [f]: SAMPLE[f] || 'x' }, { e: '2026-01-01' }, '2026-10-27');
+        return r.error || !r.patch || !(f in r.patch);
+      });
+      check('equip_add fields were found in the source (' + addFields.length + ')', addFields.length >= 10, addFields);
+      check('every report field equip_add writes, expiry_set updates (or IDENTITY says why not)', !gaps.length, gaps);
+      check('inspector with a hidden direction mark: refused', !!expiryPatch({ op: 'expiry_set', table: 'equip_inspections', id: 'q1', agent: 'a-b', why: 'xxxxx', doc: 'r', inspector: 'a\u202eb' }, {}, '2026-10-27').error);
+      check('inspector: without a document, or on docs, refused', !!expiryPatch({ op: 'expiry_set', table: 'equip_inspections', id: 'q1', agent: 'a-b', why: 'xxxxx', inspector: 'x' }, {}, '2026-10-27').error && !!expiryPatch({ ...base, doc: 'r', inspector: 'x' }, {}, '2026-10-27').error && !!expiryPatch({ op: 'expiry_set', table: 'equip_inspections', id: 'q1', agent: 'a-b', why: 'xxxxx', doc: 'r', inspector: ['x'] }, {}, '2026-10-27').error);
     }
     check('equipment d in the future: refused', (await call({ op: 'expiry_set', table: 'equip_inspections', id: 'q1', agent: 'a-b', why: 'xxxxx', d: '2099-01-01' })).status === 400);
     check('expiryPatch: docs cannot set d, equipment cannot set s', !!expiryPatch({ ...base, d: '2026-01-01' }, rows.docs[0], '2026-10-11').error && !!expiryPatch({ ...base, table: 'equip_inspections', s: 'x' }, rows.equip_inspections[0], '2026-10-11').error);
