@@ -74,7 +74,8 @@ def sensitive(files):
 
 def has_domain_lessons(f):
     """A field skill holding lessons (Michael, 11/10/2026: lessons per field)."""
-    if not (f.startswith(".claude/skills/") and f.endswith("/SKILL.md")):
+    # 27/10/2026: a skill's lessons may sit in its references/ (tfugen-dev/references/lessons.md)
+    if not (f.startswith(".claude/skills/") and (f.endswith("/SKILL.md") or ("/references/" in f and f.endswith(".md")))):
         return False
     try:
         return DOMAIN_MARK in open(f, encoding="utf-8").read()
