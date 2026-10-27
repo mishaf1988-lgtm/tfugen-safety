@@ -962,7 +962,7 @@ export function ocrTxtCheck(b) {
   if (c.attach.some((a) => !/\.pdf$/i.test(a.name))) return { error: 'paths: PDF files only' };
   return { files: c.attach.map((a) => Object.assign({}, a, { txt: a.name.replace(/\.pdf$/i, '') + '.txt' })) };
 }
-export { OCR_MODELS, OCR_PAGES, OCR_PROMPT, pdfJpegs, pdfCcitt, g4Gray, grayPng, ccittPng, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
+export { OCR_MODELS, OCR_PAGES, OCR_PROMPT, pdfJpegs, pdfDct, pdfCcitt, g4Gray, grayPng, ccittPng, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
 // od_archive (20/10/2026, Michael: "when the assistant works on a form it must not keep the old form, move it
 // to the archive"): ONE file inside the safety folder moves to "_גרסאות קודמות" in its own folder (created if
 // missing), same name. Only when the file that replaces it (replaced_by) sits in the same folder, so this
@@ -1591,8 +1591,9 @@ export async function onRequest(context) {
       return jsonResp(await transcribe(env, bytes), 200, {});
     }
     if (body.op === 'ocr_txt') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths', 'from'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
+      if (body.from !== undefined && !(Number.isInteger(body.from) && body.from >= 1 && body.from <= 60)) return jsonResp({ ok: false, error: 'from: a page number 1-60' }, 400, {});
       const c = ocrTxtCheck(body);
       if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
       const azure = !!(env.AZURE_VISION_ENDPOINT && env.AZURE_VISION_KEY);
@@ -1605,7 +1606,7 @@ export async function onRequest(context) {
       const files = [];
       for (const a of c.files) {
         try {
-          if (!azure) { files.push(await ocrOne(env, at.token, a.rel, a.name, aiModel)); continue; }
+          if (!azure) { files.push(await ocrOne(env, at.token, a.rel, a.name, aiModel, body.from)); continue; }
           const d = await fetch(G + enc(OD_ROOT + a.rel) + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(30000) });
           if (!d.ok) { files.push({ name: a.name, ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status }); continue; }
           const buf = new Uint8Array(await d.arrayBuffer());
@@ -1626,7 +1627,7 @@ export async function onRequest(context) {
           const up = await fetch(G + enc(OD_ROOT + OD_OCR_DIR + '/' + a.txt) + ':/content?@microsoft.graph.conflictBehavior=replace', { method: 'PUT', signal: tmo(GRAPH_MS),
             headers: { Authorization: 'Bearer ' + at.token, 'Content-Type': 'text/plain; charset=utf-8' }, body: text });
           files.push({ name: a.name, ok: up.ok && text.length > 0, txt: OD_OCR_DIR + '/' + a.txt, chars: text.length, pages: ((j.analyzeResult && j.analyzeResult.readResults) || []).length, error: up.ok ? (text ? undefined : 'no text found') : 'write ' + up.status });
-        } catch (x) { files.push({ name: a.name, ok: false, error: 'read' }); }
+        } catch (x) { files.push({ name: a.name, ok: false, error: ('read: ' + String((x && x.message) || x)).slice(0, 160) }); } // 27/10/2026: the bare 'read' hid the cause
       }
       return jsonResp({ ok: files.every((f) => f.ok), files }, 200, {});
     }
