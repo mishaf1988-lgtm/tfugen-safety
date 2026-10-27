@@ -655,6 +655,12 @@ export function draftTrashCheck(b, made, nowMs) {
   if (!hit) return { error: 'not a draft the server made in the last 30 days (recipients and subject): Michael\'s own drafts are never touched' };
   return { id, subject, file: JSON.stringify({ id, subject }) };
 }
+// 27/10/2026 (the morning update said "load credit at console.anthropic.com" from the mail filing, after Michael
+// decided twice, 22/10 and 26/10/2026, not to): a line for him that asks to load Claude API credit is refused. Pure.
+export function asksApiCredit(t) {
+  const s = String(t || '');
+  return /\u05e7\u05e8\u05d3\u05d9\u05d8/.test(s) && /(\u05dc\u05d8\u05e2\u05d5\u05df|\u05dc\u05d4\u05d8\u05e2\u05d9\u05df|\u05d8\u05e2\u05d9\u05e0\u05ea|\u05ea\u05d8\u05e2\u05d9\u05df|\u05dc\u05d8\u05e2\u05d5\u05df|\u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05e7\u05e8\u05d3\u05d9\u05d8|console\.anthropic)/.test(s);
+}
 export function calMoveCheck(b, nowMs) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
   if (String(b.why || '').trim().length < 5) return { error: 'why required' };
@@ -1600,6 +1606,7 @@ export async function onRequest(context) {
     if (body.op === 'agent_report') {
       const e = agentEntry(body, new Date().toISOString());
       if (!e) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
+      if (asksApiCredit(e.for_michael)) return jsonResp({ ok: false, error: 'for_michael asks to load API credit: Michael decided no (22/10 and 26/10/2026). A scan is read with ocr_txt (_\u05d8\u05e7\u05e1\u05d8 \u05e1\u05e8\u05d9\u05e7\u05d5\u05ea); drop that line' }, 400, {});
       // 21/10/2026: the WhatsApp assistant sent {status, did} three times; each became an empty ok:false row,
       // and a later run read them as "runs that fell midway". A report with nothing in it is refused.
       if (!e.line && !e.for_michael) return jsonResp({ ok: false, error: 'line required (fields: ok, line, learned, for_michael)' }, 400, {});

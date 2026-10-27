@@ -82,7 +82,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: PR אחרי 31 commits, עוגנים ישנים, "ממצא" סגור.
 הכלל: `fetch` + `reset` לפני עריכה; `grep` ב-STATUS לפני ממצא ובקוד לפני "פתוח"; משימה מ-handoff וכל שאלה למיכאל: `grep` ב-DECISIONS קודם.
 נאכף: `fresh-main.py`; handoff אחד: `handoff-root-test.py`; פריט לשיחה: `claim.sh`; שאלה שהוכרעה: `live-check.py`.
-חזר: 11 (אחרון 22/10/2026: השכמת המפתח התורן ב-API, ו-DECISIONS 20/10 כבר מדד שהפעלה ב-API לא נכנסת לשיחה הקבועה; לפני: 17/10 שאלה על repo פרטי שהוכרע). לפני קוד מ-handoff: `get_session` על כותבת ה-handoff, פעילה = `send_message`; תפיסה במספר ה-BACKLOG; `list_migrations` לפני "קיים".
+חזר: 12 (אחרון 27/10/2026: תיוק המייל כתב בעדכון הבוקר "לטעון קרדיט API" אחרי שמיכאל החליט פעמיים שלא; נאכף מעכשיו ב-`asksApiCredit`. לפני: 22/10/2026: השכמת המפתח התורן ב-API, ו-DECISIONS 20/10 כבר מדד שהפעלה ב-API לא נכנסת לשיחה הקבועה; לפני: 17/10 שאלה על repo פרטי שהוכרע). לפני קוד מ-handoff: `get_session` על כותבת ה-handoff, פעילה = `send_message`; תפיסה במספר ה-BACKLOG; `list_migrations` לפני "קיים".
 
 ## לפני טענה או ממצא
 
