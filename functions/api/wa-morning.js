@@ -75,7 +75,26 @@ export const LEARN_ALERT = 30;
 export const stripPrRefs = (t) => String(t || '').replace(/\s*\(#\d{3,5}\)/g, '').replace(/#\d{3,5}\b/g, '').replace(/\s*[,;]\s*(?=[.;]|$)/g, '').replace(/\s{2,}/g, ' ').trim();
 // urgent (25/10/2026, the test session: the "what is urgent" button gave back the whole morning update word for word):
 // only what is urgent, the expiries and an agent that failed; no weather, no workers' notes, no development line.
-export function buildBrief(items, failed, today, compact, notes, weather, devDone, learnOpen, urgent) {
+// 27/10/2026 (Michael: "you know the inspection was done, so why urgent?", and in the questionnaire "do it: a mark and
+// a line of its own"): equipment inspected in the last WAIT_DAYS (d) whose e was not moved yet waits for its report, and
+// equipment marked disqualified (s) waits for a replacement. Both leave "urgent expiries" for a line of their own;
+// after WAIT_DAYS with no report the item is urgent again. Pure.
+export const WAIT_DAYS = 14;
+export const DISQ_RE = /^(\u05dc\u05d0 \u05ea\u05e7\u05d9\u05df|\u05dc\u05d0 \u05db\u05e9\u05d9\u05e8|\u05dc\u05ea\u05e7\u05df|\u05d0\u05e1\u05d5\u05e8|\u05e4\u05e1\u05d5\u05dc)/;
+export function splitUrgent(items, today) {
+  const from = new Date(Date.parse(today + 'T00:00:00Z') - WAIT_DAYS * 86400000).toISOString().slice(0, 10);
+  const out = { items: [], waiting: [], disq: [] };
+  (items || []).forEach((x) => {
+    if (x.s && DISQ_RE.test(String(x.s))) out.disq.push(x);
+    else if (x.d && /^\d{4}-\d{2}-\d{2}/.test(String(x.d)) && String(x.d).slice(0, 10) >= from && String(x.d).slice(0, 10) <= today) out.waiting.push(x);
+    else out.items.push(x);
+  });
+  return out;
+}
+export function buildBrief(items, failed, today, compact, notes, weather, devDone, learnOpen, urgent, waiting, disq) {
+  waiting = waiting || []; disq = disq || [];
+  const waitLine = waiting.length ? '\u05de\u05d7\u05db\u05d4 \u05dc\u05ea\u05e1\u05e7\u05d9\u05e8: ' + waiting.slice(0, 3).map((x) => clip(x.n, 40) + ' (\u05e0\u05d1\u05d3\u05e7 ' + dmy(String(x.d).slice(0, 10)) + ')').join('; ') + (waiting.length > 3 ? '; \u05d5\u05e2\u05d5\u05d3 ' + (waiting.length - 3) : '') + '.' : '';
+  const disqLine = disq.length ? '\u05e4\u05e1\u05d5\u05dc, \u05de\u05d7\u05db\u05d4 \u05dc\u05d4\u05d7\u05dc\u05e4\u05d4: ' + disq.slice(0, 3).map((x) => clip(x.n, 40)).join('; ') + (disq.length > 3 ? '; \u05d5\u05e2\u05d5\u05d3 ' + (disq.length - 3) : '') + '.' : '';
   if (urgent) { notes = []; weather = null; devDone = null; learnOpen = null; }
   const wx = weatherLine(weather, today);
   failed = failed.map(agentName);
@@ -96,6 +115,8 @@ export function buildBrief(items, failed, today, compact, notes, weather, devDon
     if (notes.length) parts.push('\u05de\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd: ' + notes.map((x) => agentName(x.agent) + ': ' + clip(x.text, 160)).join('; ') + '.');
     if (items.length) parts.push('\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea: ' + items.slice(0, 3).map((x) => clip(x.n, 50) + due(x, today)).join('; ')
       + (items.length > 3 ? '; \u05d5\u05e2\u05d5\u05d3 ' + (items.length - 3) : '') + '.');
+    if (waitLine) parts.push(waitLine);
+    if (disqLine) parts.push(disqLine);
     if (failed.length) parts.push('\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc: ' + failed.slice(0, 5).join(', ') + '.');
     if (wx && parts.length === 1) parts.push('\u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.');
     const body = parts.length ? parts.join(' ') : '\u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.';
@@ -108,6 +129,8 @@ export function buildBrief(items, failed, today, compact, notes, weather, devDon
     items.slice(0, 3).forEach((x) => lines.push('- ' + clip(x.n, 60) + due(x, today)));
     if (items.length > 3) lines.push('\u05d5\u05e2\u05d5\u05d3 ' + (items.length - 3) + ' \u05d1\u05de\u05e1\u05da \u05d4\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea.');
   }
+  if (waitLine) lines.push(waitLine);
+  if (disqLine) lines.push(disqLine);
   if (notes.length) {
     lines.push('\u05de\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd:');
     notes.forEach((x) => lines.push('- ' + agentName(x.agent) + ': ' + clip(x.text, 160)));
@@ -144,10 +167,11 @@ export async function gather(env, now) {
   const today = ilDay(now);
   const week = ilDay(new Date(now.getTime() + 7 * 86400000));
   const q = (t, cols) => sb(env, t + '?select=' + cols + '&e=not.is.null&e=lte.' + week + '&order=e.asc&limit=20').catch(() => []);
-  const [docs, equip] = await Promise.all([q('docs', 'n,e'), q('equip_inspections', 'n,loc,e,resp_area')]);
-  const items = [].concat((docs || []).map((x) => ({ n: x.n, e: x.e })),
-    (equip || []).map((x) => ({ n: x.loc ? x.n + ', ' + x.loc : x.n, e: x.e, area: x.resp_area || '' })))
+  const [docs, equip] = await Promise.all([q('docs', 'n,e'), q('equip_inspections', 'n,loc,e,resp_area,d,s')]);
+  const all = [].concat((docs || []).map((x) => ({ n: x.n, e: x.e })),
+    (equip || []).map((x) => ({ n: x.loc ? x.n + ', ' + x.loc : x.n, e: x.e, area: x.resp_area || '', d: x.d || null, s: x.s || '' })))
     .filter((x) => x.n && /^\d{4}-\d{2}-\d{2}/.test(String(x.e))).sort((a, b) => String(a.e).localeCompare(String(b.e)));
+  const { items, waiting, disq } = splitUrgent(all, today);
   let log = [];
   try { log = JSON.parse((await stateGet(env, 'agent_log')) || '[]'); } catch (e) { log = []; }
   const since = now.getTime() - 86400000;
@@ -167,7 +191,7 @@ export async function gather(env, now) {
   try { devDone = devClosedYesterday(JSON.parse((await stateGet(env, 'dev_inbox')) || '[]'), today); } catch (e) { devDone = null; }
   let learnOpen = null;
   try { learnOpen = JSON.parse((await stateGet(env, 'assistant_learned')) || '[]').filter((x) => x && x.status === 'new').length; } catch (e) { learnOpen = null; }
-  return { today, items, failed, notes, weather, devDone, learnOpen };
+  return { today, items, waiting, disq, failed, notes, weather, devDone, learnOpen };
 }
 // Pure: requests in dev_inbox closed (done_at) on the Israel day before today. A Sunday counts Saturday only.
 export function devClosedYesterday(list, today) {
@@ -432,7 +456,7 @@ export async function run(env, now, body) {
   const cal = await calendarStep(env, now, !!body.dry).catch((e) => ({ error: String(e.message || e).slice(0, 200) }));
   const g = await gather(env, now);
   const open = await ownerWindowOpen(env, sbFrom(env), now.getTime());
-  const text = buildBrief(g.items, g.failed, g.today, !open, g.notes, g.weather, g.devDone, g.learnOpen);
+  const text = buildBrief(g.items, g.failed, g.today, !open, g.notes, g.weather, g.devDone, g.learnOpen, false, g.waiting, g.disq);
   if (body.dry) return { ok: true, sent: false, dry: true, text, cal };
   if (!body.force && (await stateGet(env, LAST_KEY).catch(() => null)) === g.today) return { ok: true, sent: false, reason: 'already sent today', cal };
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };

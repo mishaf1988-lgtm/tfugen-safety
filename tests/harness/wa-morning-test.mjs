@@ -1,6 +1,6 @@
 // The morning update on WhatsApp from the server (20/10/2026): pg_cron calls /api/wa-morning twice,
 // only the call on 07:xx in Israel on Sunday-Thursday sends, once a day, to Michael's number only.
-import { areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT } from './_build/wa-morning.mjs';
+import { areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT, splitUrgent, WAIT_DAYS } from './_build/wa-morning.mjs';
 import { OD_ROOT } from './_build/routine-db.mjs';
 import fs from 'fs';
 
@@ -74,7 +74,7 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   check('urgent with nothing urgent: one line', buildBrief([], [], '2026-10-20', false, notes, wx, 0, 0, true) === 'אין עכשיו שום דבר דחוף.');
   const full = buildBrief(four, [], '2026-10-20', false, notes, wx);
   check('the morning update keeps the workers\' note, without the PR numbers', /נוספה לנוהל ולפרומפט, ראה\n|נוספה לנוהל ולפרומפט, ראה$/m.test(full) && !/#19/.test(full), full);
-  check('the fast lane builds "what is urgent" with urgent on', /buildBrief\(g\.items, g\.failed, g\.today, false, \[\], null, null, null, true\)/.test(fs.readFileSync(new URL('../../functions/api/wa-hook.js', import.meta.url), 'utf8')));
+  check('the fast lane builds "what is urgent" with urgent on', /buildBrief\(g\.items, g\.failed, g\.today, false, \[\], null, null, null, true, g\.waiting, g\.disq\)/.test(fs.readFileSync(new URL('../../functions/api/wa-hook.js', import.meta.url), 'utf8')));
 
 
   // 20/10/2026, Michael's screenshot: the template showed " | " between lines, "update" twice and routine-wa-assistant.
@@ -301,6 +301,17 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     { // 22/10/2026: an unfolded notebook (over LEARN_ALERT open entries) gets one line at the end; at or under, nothing
     const a = buildBrief([], [], '2026-10-22', false, [], null, 5, LEARN_ALERT + 19), b = buildBrief([], [], '2026-10-22', false, [], null, 5, LEARN_ALERT), c = buildBrief([], [], '2026-10-22', true, [], null, null, 49);
     check('the notebook line: over the limit it shows the count, at the limit nothing, and the compact form keeps it', a.includes('\u05d4\u05de\u05d7\u05d1\u05e8\u05ea \u05e9\u05dc \u05d4\u05e2\u05d5\u05d6\u05e8: 49') && a.includes(': 5.') && !b.includes('\u05d4\u05de\u05d7\u05d1\u05e8\u05ea') && c.includes('49'), { a, b, c }); }
+  { // 27/10/2026 (Michael: "you know the inspection was done, so why urgent?"): inspected = waiting for the report, disqualified apart
+    const T = '2026-10-27';
+    const all = [{ n: 'fork extenders', e: '2026-10-29', d: '2026-10-25', s: '\u05e4\u05e1\u05d5\u05dc' }, { n: 'big bag cross', e: '2026-10-29', d: '2026-10-25', s: '\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4' },
+      { n: 'gas controller', e: '2026-08-25', d: null, s: '\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3' }, { n: 'old check', e: '2026-10-30', d: '2026-09-01', s: '' }, { n: 'form 9', e: '2026-10-28' }];
+    const sp = splitUrgent(all, T);
+    check('split: disqualified apart, inspected in the last ' + WAIT_DAYS + ' days waits for its report, an old inspection and the rest stay urgent', sp.disq.map((x) => x.n).join() === 'fork extenders' && sp.waiting.map((x) => x.n).join() === 'big bag cross' && sp.items.map((x) => x.n).join() === 'gas controller,old check,form 9', sp);
+    check('split: an inspection dated after today does not count', splitUrgent([{ n: 'x', e: T, d: '2026-10-28' }], T).items.length === 1);
+    const full = buildBrief(sp.items, [], T, false, [], null, null, null, false, sp.waiting, sp.disq), urg = buildBrief(sp.items, [], T, false, [], null, null, null, true, sp.waiting, sp.disq), cmp = buildBrief(sp.items, [], T, true, [], null, null, null, false, sp.waiting, sp.disq);
+    check('brief: a line "waiting for the report" with the inspection date, and "disqualified" apart; also in "what is urgent" and the compact form', full.includes('\u05de\u05d7\u05db\u05d4 \u05dc\u05ea\u05e1\u05e7\u05d9\u05e8') && full.includes('25/10/2026') && full.includes('\u05e4\u05e1\u05d5\u05dc, \u05de\u05d7\u05db\u05d4 \u05dc\u05d4\u05d7\u05dc\u05e4\u05d4') && full.indexOf('big bag cross') > full.indexOf('\u05de\u05d7\u05db\u05d4 \u05dc\u05ea\u05e1\u05e7\u05d9\u05e8') && urg.includes('\u05de\u05d7\u05db\u05d4 \u05dc\u05ea\u05e1\u05e7\u05d9\u05e8') && urg.includes('\u05e4\u05e1\u05d5\u05dc') && cmp.includes('\u05de\u05d7\u05db\u05d4 \u05dc\u05ea\u05e1\u05e7\u05d9\u05e8'), { full, urg, cmp });
+    check('brief: without the new lists it is as before', buildBrief(sp.items, [], T, false, [], null, null, null) === buildBrief(sp.items, [], T, false, [], null, null, null, false, [], []));
+  }
   console.log('\nwa-morning-test: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })();

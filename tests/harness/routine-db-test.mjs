@@ -377,6 +377,13 @@ const callIn = async (body) => {
     check('docs: e null with s refused', (await call({ ...base, e: null, s: OUT, doc: 'q.txt' })).status === 400);
     x = await call({ ...eq, doc: 'questionnaire 18/10/2026', e: null, s: OUT });
     check('equipment out of tracking: e null, s set, note says so, one row', x.json.ok && x.json.changed && rows.equip_inspections[0].e === null && rows.equip_inspections[0].s === OUT && /Claude \(routine-validity\)/.test(rows.equip_inspections[0].notes) && rows.equip_inspections[0].notes.indexOf('questionnaire 18/10/2026') > 0, x.json);
+    { // 27/10/2026 (Michael: "extenders: disqualified"): equipment may be marked disqualified with a document; e stays
+      const DQ = '\u05e4\u05e1\u05d5\u05dc', e0 = rows.equip_inspections[0].e;
+      rows.equip_inspections[0].s = '\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4';
+      check('equipment disqualified without a document, or with e null: refused', (await call({ ...eq, s: DQ })).status === 400 && (await call({ ...eq, doc: 'x', e: null, s: DQ })).status === 400);
+      const y = await call({ ...eq, doc: 'Michael on WhatsApp 27/10/2026, inspection 25/10', s: DQ });
+      check('equipment disqualified: s set, e unchanged, the note says so', y.json.ok && y.json.changed && rows.equip_inspections[0].s === DQ && rows.equip_inspections[0].e === e0 && rows.equip_inspections[0].notes.indexOf('s ' + DQ) > 0, { j: y.json, row: rows.equip_inspections[0] });
+    }
     // 21/10/2026 (dev request from the assistant): a new e moves s between valid and expired; s given or "needs checking" wins
     const VAL = '\u05d1\u05ea\u05d5\u05e7\u05e3', EXP = '\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3', CHK = '\u05d8\u05e2\u05d5\u05df \u05d0\u05d9\u05de\u05d5\u05ea';
     const sp = (row, extra) => expiryPatch({ ...base, doc: 'form 16.pdf', ...extra }, row, '2026-10-21').patch || {};

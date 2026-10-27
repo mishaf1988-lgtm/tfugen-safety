@@ -435,6 +435,9 @@ export const EXPIRY_TABLES = {
 // equipment: the one state a run may set (18/10/2026, Michael: "בצע: לעשות את הצעות 1 עד 5"): taking a row
 // out of tracking after HIS decision ("לא רלוונטי" with e null), the way Drager 8000/7000 went by hand.
 export const EQUIP_OUT = '\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9';
+// 27/10/2026 (Michael on WhatsApp: "1. extenders: disqualified", after the 25/10 inspection): the second state a run may
+// set, with a document (the report or his words). e stays; the morning update lists it apart from the expiries.
+export const EQUIP_DISQ = '\u05e4\u05e1\u05d5\u05dc';
 export const DOC_STATES = ['\u05d1\u05ea\u05d5\u05e7\u05e3', '\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3', '\u05d8\u05e2\u05d5\u05df \u05d0\u05d9\u05de\u05d5\u05ea'];
 export const FILE_URL_PREFIX = SITE.odFileUrl;
 const isDay = (x) => /^\d{4}-\d{2}-\d{2}$/.test(String(x || '')) && !isNaN(Date.parse(x + 'T00:00:00Z')) && new Date(x + 'T00:00:00Z').toISOString().slice(0, 10) === x;
@@ -452,11 +455,12 @@ export function expiryPatch(b, row, today) {
   const outOfTracking = b.table === 'equip_inspections' && b.s !== undefined;
   if (outOfTracking) {
     // only this state, only together with e null and a document (his decision), so a run cannot hide a row by itself
-    if (b.s !== EQUIP_OUT || b.e !== null) return { error: 'bad s' };
     if (!doc) return { error: 'doc required for s' };
-    const old = row.e ? String(row.e).slice(0, 10) : '';
+    if (b.s === EQUIP_DISQ && b.e === undefined) { patch.s = EQUIP_DISQ; said.push('s ' + EQUIP_DISQ); }
+    else if (b.s !== EQUIP_OUT || b.e !== null) return { error: 'bad s' };
+    else { const old = row.e ? String(row.e).slice(0, 10) : '';
     patch.e = null; patch.s = EQUIP_OUT;
-    said.push('\u05ea\u05d5\u05e7\u05e3 ' + ddmm(old) + ' -> \u05d4\u05d5\u05e6\u05d0 \u05de\u05d4\u05de\u05e2\u05e7\u05d1 (' + EQUIP_OUT + ')');
+    said.push('\u05ea\u05d5\u05e7\u05e3 ' + ddmm(old) + ' -> \u05d4\u05d5\u05e6\u05d0 \u05de\u05d4\u05de\u05e2\u05e7\u05d1 (' + EQUIP_OUT + ')'); }
   } else if (b.e === null) {
     return { error: 'bad e' };
   }
