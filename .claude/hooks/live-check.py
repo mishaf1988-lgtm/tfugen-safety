@@ -18,6 +18,12 @@ the repo private, decided that morning ("## ... ה-repo נשאר ציבורי"),
 identifier. A DECISIONS.md heading sharing 3 or more content words with the question, and at
 least a quarter of its own content words (18/10/2026), denies once. Measured on that day's six questionnaires: the one repeat caught, the other five pass.
 
+Fourth check (27/10/2026, Michael: "בצע"): an upgrade offered with "בצע" already existed (the
+responsible person in the morning brief, closed in the archive on 21/10). A "בצע" option sharing 4+
+content words, and two thirds of its own, with one closed item of STATUS-archive.md denies once.
+Measured on 80 "בצע" options of 27/10/2026: that one caught, the other 79 pass. A grep of the same
+words in the code itself was measured too and dropped: 19 of 80 stopped, almost all on everyday words.
+
 Test:  echo '{"tool_name":"AskUserQuestion","session_id":"t","tool_input":{"questions":[{"question":"סריקת המייל הקיימת?","options":[]}]}}' | python3 .claude/hooks/live-check.py
 """
 import hashlib, json, os, re, sys, tempfile
@@ -110,6 +116,30 @@ def heading_hits(t):
     return ["DECISIONS.md:" + str(n) + " " + h[:80] for c, n, h in sorted(hits, reverse=True)][:2]
 
 
+def archived(inp):
+    """A "בצע" option that matches a closed item: 'STATUS-archive.md:12 <title>', or ''."""
+    root = os.environ.get("LIVE_CHECK_ROOT") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    try:
+        with open(os.path.join(root, "project-files", "STATUS-archive.md"), encoding="utf-8") as f:
+            done = [(i + 1, l) for i, l in enumerate(f.read().split("\n")) if l.lstrip().startswith("- [x]")]
+    except OSError:
+        return ""
+    for q in (inp or {}).get("questions") or []:
+        for o in q.get("options") or []:
+            label = str(o.get("label") or "")
+            if not label.startswith("\u05d1\u05e6\u05e2"):  # בצע
+                continue
+            ow = words(label[3:] + " " + str(o.get("description") or ""))
+            if len(ow) < 4:
+                continue
+            for n, l in done:
+                c = len(ow & words(l))
+                if c >= 4 and c * 3 >= len(ow) * 2:
+                    t = re.search(r"\*\*(.+?)\*\*", l)
+                    return "STATUS-archive.md:" + str(n) + " " + (t.group(1) if t else l)[:80]
+    return ""
+
+
 def main():
     try:
         d = json.load(sys.stdin)
@@ -121,7 +151,8 @@ def main():
     m = CLAIM.search(t)
     seen = [] if m else decided(t)
     heads = [] if (m or seen) else heading_hits(t)
-    if not m and not seen and not heads:
+    arch = "" if (m or seen or heads) else archived(d.get("tool_input"))
+    if not m and not seen and not heads and not arch:
         return
     # 22/10/2026: the key is the questions alone, so a retry that reworded an option still passes.
     qs = "\n".join(str(q.get("question") or "") for q in ((d.get("tool_input") or {}).get("questions") or []))
@@ -132,6 +163,10 @@ def main():
     try:
         open(mark, "w").close()
     except OSError:
+        return
+    if arch:
+        why = "live-check (לקח 10): הצעת \"בצע\" דומה לפריט שכבר נסגר (" + arch + "). לקרוא אותו ולבדוק בקוד אם זה כבר קיים, לפני שמציעים למיכאל לבנות. הצעה שבאמת חדשה עוברת בפעם השנייה."
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": why}}, ensure_ascii=False))
         return
     if heads:
         why = "live-check (לקח 10): לשאלה הזו כבר יש החלטה ב-DECISIONS (" + "; ".join(heads) + "). לקרוא אותה: אם היא עונה, לא לשאול שוב אלא לדווח מה הוחלט. שאלה שבאמת חדשה עוברת בפעם השנייה."

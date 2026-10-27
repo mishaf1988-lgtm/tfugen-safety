@@ -52,4 +52,14 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 LC = importlib.import_module("live-check")
 check("a stop word with a prefix letter stays a stop word ('מומלץ' is not 'ומלץ')", LC.words("מומלץ בדיקות") == set(), LC.words("מומלץ בדיקות"))
 check("reading, mail, the assistant: everyday words, not a subject", LC.words("קריאה בלבד במייל של העוזר") == set(), LC.words("קריאה בלבד במייל של העוזר"))
+# 27/10/2026: an upgrade offered with "בצע" was already built and closed (the responsible person in the morning brief).
+open(os.path.join(root, "project-files", "STATUS-archive.md"), "w", encoding="utf-8").write("# ארכיון\n\n"
+    + "- [x] **🧭 עמודת \"אחראי\" (תחום) לציוד (20/10/2026).** מוצג במייל השבועי. **עדכון 21/10/2026:** גם בעדכון הבוקר בוואטסאפ, בתוך הסוגריים של הפריט: \"אחראי התשתיות\" (`areaRole`).\n")
+o = ask("מה לבנות הלאה?", [("בצע: אחראי בעדכון הבוקר", "שם האחראי ליד משימת ציוד בוואטסאפ"), ("לא עכשיו", "")], sid="arch")
+check("a 'בצע' option matching a closed archive item: denied, naming the line", '"deny"' in o and "STATUS-archive.md:3" in o and "אחראי" in o, o)
+check("...and asked again it passes", ask("מה לבנות הלאה?", [("בצע: אחראי בעדכון הבוקר", "שם האחראי ליד משימת ציוד בוואטסאפ"), ("לא עכשיו", "")], sid="arch") == "")
+check("the same words without 'בצע' do not trigger it", ask("מה בדקת?", [("אחראי בעדכון הבוקר", "שם האחראי ליד משימת ציוד בוואטסאפ")], sid="arch2") == "")
+check("a 'בצע' option sharing fewer than 4 words passes", ask("מה לבנות?", [("בצע: אחראי חדש לתחום הקירור", "")], sid="arch3") == "")
+check("a 'בצע' option where the 4 shared words are under two thirds of its words passes",
+      ask("מה לבנות?", [("בצע: אחראי בעדכון הבוקר", "שם האחראי ליד ציוד בוואטסאפ, טבלה נפרדת למנהלים, דוחות חודשיים, גרפים צבעוניים")], sid="arch4") == "")
 done()
