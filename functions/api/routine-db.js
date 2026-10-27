@@ -153,6 +153,7 @@ import { accessToken, putFile } from '../_onedrive.js';
 import { OD_OCR_DIR, OCR_MODELS, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
 import { SIGN_KEY, SIGN_CHOICES, signAdd, signMark, signAskText, signPlace } from '../_sign.js';
 import { findSignSpot } from '../_pdftext.js';
+import { rowContradictions } from './wa-morning.js';
 import { PDFDocument } from '../_pdflib.js';
 import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, fireUrlOf, sameSession, recentLine, ilTimes } from '../_wa.js';
 
@@ -1102,6 +1103,20 @@ export function triageGate(b) {
   if (/(\u05e2\u05d3\u05db\u05e0\u05d9\u05ea|\u05de\u05e2\u05d5\u05d3\u05db\u05e0\u05ea|\u05de\u05ea\u05d5\u05e7\u05e0\u05ea)/.test(t) && !/\u05d4\u05e9\u05ea\u05e0\u05d4/.test(t)) return 'mail-triage mentions an updated quote: open the attachment and write what changed against the previous version (price, what is included, new clauses; never the validity date, Michael 26/10/2026) with "\u05d4\u05e9\u05ea\u05e0\u05d4:" (27/10/2026: the only change was 200 to 190 a ton, and an exclusivity clause)';
   return null;
 }
+// item_card (27/10/2026, Michael: "a linked item card", on WhatsApp from the assistant, for equipment, documents and
+// suppliers): everything the database knows about one item in one call, so the assistant cross-checks before it
+// answers (agent-common.md, "cross-check"). Mail threads and attachments stay the assistant's part (365 connector).
+// Pure: the query a person typed, normalised; null = too short or too long.
+export function cardQuery(q) {
+  const s = String(q || '').replace(/[%*,()"'\\]/g, ' ').replace(/\s+/g, ' ').trim();
+  return s.length >= 2 && s.length <= 60 ? s : null;
+}
+// Pure: the lines of a list (notebook, agent log) that mention q, newest first, at most n.
+export function cardLines(list, q, n, pick) {
+  const k = String(q || '').toLowerCase();
+  return (Array.isArray(list) ? list : []).filter((x) => x && pick(x).toLowerCase().indexOf(k) >= 0)
+    .sort((a, b) => String(b.at || '').localeCompare(String(a.at || ''))).slice(0, n);
+}
 export function claimGate(text, checked) {
   const t = String(text || '');
   if (SENT_RE.test(t)) return 'the text says you sent a mail: you only make drafts. Write "\u05d4\u05db\u05e0\u05ea\u05d9 \u05d8\u05d9\u05d5\u05d8\u05d4" or "\u05e0\u05e9\u05dc\u05d7 \u05de\u05de\u05da \u05d1-<\u05e9\u05e2\u05d4>" (after Sent Items)';
@@ -1239,6 +1254,24 @@ export async function onRequest(context) {
       const r = await fetch(url + '/rest/v1/' + body.table + (q ? '?' + q : ''), { headers: h, signal: tmo(SB_MS) });
       if (!r.ok) return jsonResp({ ok: false, error: 'select ' + r.status, detail: (await r.text()).slice(0, 300) }, 200, {});
       return jsonResp({ ok: true, rows: await r.json() }, 200, {});
+    }
+    if (body.op === 'item_card') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'q'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const q = cardQuery(body.q);
+      if (!q) return jsonResp({ ok: false, error: 'q: 2-60 characters, a name, a code or a supplier' }, 400, {});
+      const like = encodeURIComponent('*' + q + '*');
+      const get = (path) => fetch(url + '/rest/v1/' + path, { headers: h, signal: tmo(SB_MS) }).then((r) => (r.ok ? r.json() : [])).catch(() => []);
+      const [equip, docs, st] = await Promise.all([
+        get('equip_inspections?select=id,code,n,loc,vendor,d,e,s,deficiencies,resp_area,notes,file_url&or=(n.ilike.' + like + ',code.ilike.' + like + ',loc.ilike.' + like + ',vendor.ilike.' + like + ')&order=e.asc&limit=5'),
+        get('docs?select=id,n,e,s,nt,file_url&n=ilike.' + like + '&order=e.asc&limit=5'),
+        stateRead(['assistant_learned', 'agent_log', 'vendor_contacts']).catch(() => [])]);
+      const val = (k) => { const r = (st || []).find((x) => x && x.key === k); try { return JSON.parse((r && r.value) || '[]'); } catch (e) { return []; } };
+      const vendors = (Array.isArray(val('vendor_contacts')) ? val('vendor_contacts') : []).filter((v) => Array.isArray(v) && String(v[0] || '').indexOf(q) >= 0).slice(0, 5);
+      const learned = cardLines(val('assistant_learned'), q, 6, (x) => String(x.text || '') + ' ' + String(x.source || '')).map((x) => ({ at: x.at, kind: x.kind, status: x.status, text: x.text }));
+      const log = cardLines(val('agent_log'), q, 5, (x) => String(x.line || '') + ' ' + String(x.for_michael || '')).map((x) => ({ at: x.at, agent: x.agent, line: String(x.line || '').slice(0, 300), for_michael: x.for_michael ? String(x.for_michael).slice(0, 300) : undefined }));
+      const contradictions = rowContradictions(equip);
+      return jsonResp({ ok: true, q, equip, docs, vendors, learned, log, contradictions,
+        next: 'mail: outlook_email_search by the name and by the supplier, the whole thread, newest first; open quotes and reports; compare the same fields in all (agent-common.md, cross-check); no quote validity date' }, 200, {});
     }
     if (body.op === 'state_get') {
       const keys = (Array.isArray(body.keys) ? body.keys : [body.key]).filter((x) => STATE_READ.indexOf(x) >= 0);
