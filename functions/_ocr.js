@@ -6,7 +6,7 @@ export const OD_OCR_DIR = '_\u05d8\u05e7\u05e1\u05d8 \u05e1\u05e8\u05d9\u05e7\u0
 // Workers AI fallback (24/10/2026, no Azure subscription; Michael in the questionnaire: "do it: test Workers AI"):
 // a scanned PDF holds each page as a JPEG stream (DCTDecode); the first OCR_PAGES of them go to a vision model.
 export const OCR_MODELS = ['@cf/meta/llama-4-scout-17b-16e-instruct', '@cf/mistralai/mistral-small-3.1-24b-instruct', '@cf/google/gemma-3-12b-it', '@cf/meta/llama-3.2-11b-vision-instruct'];
-export const OCR_PAGES = 3;
+export const OCR_PAGES = 3, OCR_MAX_PAGES = 60;
 export const OCR_PROMPT = 'Transcribe all the text in this scanned document exactly, line by line, in its original language (mostly Hebrew). Keep numbers and dates as written. Output only the text, no comments.';
 export function pdfJpegs(buf, max) {
   const out = [];
@@ -31,20 +31,38 @@ export async function aiOcr(env, model, jpg, mime) {
 // original): each page JPEG sat in a /Filter [/FlateDecode /DCTDecode] stream, so the raw FFD8 search above found
 // nothing, or a false FFD8 inside deflated bytes that the model then refused. Here the image streams are found by
 // their dictionary, inflated when Flate comes first, and returned in file order (= page order for a scan).
-export async function pdfDct(buf) {
+// Safety (27/10/2026 review: the PDF comes from outside): at most `max` images, a dictionary looked at within 4 KB of
+// its filter, and an inflated image cut off at OCR_INFLATE_MAX, so a deflate bomb or thousands of images cannot
+// exhaust the isolate. Only the pages in [lo, hi) are inflated; the others count as pages without being read.
+export const OCR_INFLATE_MAX = 8 * 1024 * 1024;
+async function inflateCapped(bytes) {
+  const rd = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate')).getReader();
+  const parts = []; let n = 0;
+  for (;;) {
+    const { done, value } = await rd.read();
+    if (done) break;
+    n += value.length;
+    if (n > OCR_INFLATE_MAX) { await rd.cancel().catch(() => {}); throw new Error('image over ' + (OCR_INFLATE_MAX >> 20) + ' MB inflated'); }
+    parts.push(value);
+  }
+  const out = new Uint8Array(n); let o = 0; for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
+}
+export async function pdfDct(buf, max, lo, hi) {
+  max = max || 60; lo = lo || 0; hi = hi === undefined ? max : hi;
   let s = ''; for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
   const out = [];
   let at = 0;
-  for (;;) {
+  while (out.length < max) {
     const f = s.indexOf('/DCTDecode', at);
     if (f < 0) break;
     at = f + 10;
     const st = s.lastIndexOf(' obj', f), sk = s.indexOf('stream', f);
-    if (st < 0 || sk < 0) continue;
+    if (st < 0 || sk < 0 || f - st > 4096 || sk - f > 4096) continue;
     const d = s.slice(st, sk);
     if (!/\/Subtype\s*\/Image/.test(d)) continue;
     const fm = d.match(/\/Filter\s*(\[[^\]]*\]|\/\w+)/);
-    const filters = fm ? fm[1].match(/\/\w+/g) : [];
+    const filters = (fm ? fm[1].match(/\/\w+/g) : null) || [];
     if (filters[filters.length - 1] !== '/DCTDecode' || filters.slice(0, -1).some((x) => x !== '/FlateDecode')) continue;
     let len = null; const lm = d.match(/\/Length\s+(\d+)(\s+(\d+)\s+R)?/);
     if (lm && !lm[2]) len = Number(lm[1]);
@@ -52,9 +70,12 @@ export async function pdfDct(buf) {
     let p = sk + 6; if (s[p] === '\r') p++; if (s[p] === '\n') p++;
     if (len === null) { const e = s.indexOf('endstream', p); if (e < 0) continue; len = e - p; }
     let jpg = buf.subarray(p, p + len);
-    for (let k = 1; k < filters.length; k++) jpg = new Uint8Array(await new Response(new Blob([jpg]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer());
-    if (jpg[0] === 0xFF && jpg[1] === 0xD8 && jpg.length > 2000) out.push(jpg);
     at = p + len;
+    const idx = out.length;
+    if (idx < lo || idx >= hi) { out.push(null); continue; } // a page outside this call: counted, not read
+    for (let k = 1; k < filters.length; k++) jpg = await inflateCapped(jpg);
+    if (jpg.length > OCR_INFLATE_MAX) throw new Error('image over ' + (OCR_INFLATE_MAX >> 20) + ' MB');
+    out.push(jpg[0] === 0xFF && jpg[1] === 0xD8 && jpg.length > 2000 ? jpg : null); // null keeps the page numbers
   }
   return out;
 }
@@ -85,9 +106,9 @@ export async function ocrOne(env, token, rel, name, model, from) {
   if (!d.ok) return { name, ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status };
   const buf = new Uint8Array(await d.arrayBuffer());
   if (buf.length > 4 * 1024 * 1024) return { name, ok: false, error: 'too big: ' + buf.length };
-  const MAXP = 60;
-  let all = await pdfDct(buf), mime = 'image/jpeg', ccitt = null;
-  if (!all.length) all = pdfJpegs(buf, MAXP);
+  const MAXP = OCR_MAX_PAGES;
+  let all = await pdfDct(buf, MAXP, from - 1, from - 1 + OCR_PAGES), mime = 'image/jpeg', ccitt = null;
+  if (!all.length) all = pdfJpegs(buf, MAXP); // no image object found by its dictionary: the raw search, as before
   if (!all.length) { mime = 'image/png'; ccitt = pdfCcitt(buf, MAXP); }
   const total = ccitt ? ccitt.length : all.length;
   if (!total) return { name, ok: false, error: 'no scanned page image in this PDF (JPEG or CCITT Group 4)' };
@@ -96,7 +117,7 @@ export async function ocrOne(env, token, rel, name, model, from) {
   const pages = [];
   try { for (let i = from - 1; i < last; i++) pages.push(ccitt ? await ccittPng(ccitt[i]) : all[i]); } catch (e) { return { name, ok: false, error: String((e && e.message) || e).slice(0, 120) }; }
   const parts = [];
-  for (let i = 0; i < pages.length; i++) parts.push('--- \u05e2\u05de\u05d5\u05d3 ' + (from + i) + ' ---\n' + (await aiOcr(env, model, pages[i], mime))); // עמוד
+  for (let i = 0; i < pages.length; i++) parts.push('--- \u05e2\u05de\u05d5\u05d3 ' + (from + i) + ' ---\n' + (pages[i] ? await aiOcr(env, model, pages[i], mime) : '(\u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0)')); // "page N", and "(not read)" for a page without an image
   const txt = name.replace(/\.pdf$/i, '') + '.txt', url = G + enc(OCR_ROOT + OD_OCR_DIR + '/' + txt) + ':/content';
   let before = '';
   if (from > 1) { const o = await fetch(url, { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(20000) }).catch(() => null); if (o && o.ok) before = (await o.text()).trim() + '\n\n'; }

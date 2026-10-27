@@ -125,6 +125,14 @@ const callIn = async (body) => {
     const got = await pdfDct(new Uint8Array(pdf));
     check('pdfDct: page JPEGs in file order, Flate+DCT inflated, indirect /Length, other filter chains skipped (27/10/2026)',
       got.length === 4 && got.every((g, i) => Buffer.compare(Buffer.from(g), pages[i]) === 0), got.map((g) => g.length));
+    const bomb = Buffer.concat([Buffer.from([0xFF, 0xD8, 0xFF]), Buffer.alloc(20 * 1024 * 1024)]), zb = zlib.deflateSync(bomb);
+    const bombPdf = Buffer.concat([Buffer.from('%PDF-1.4\n', 'latin1'), obj(1, '/Filter [/FlateDecode /DCTDecode] /Length ' + zb.length, zb)]);
+    const bombErr = await pdfDct(new Uint8Array(bombPdf)).then(() => '', (e) => String(e.message));
+    const many = Buffer.concat([Buffer.from('%PDF-1.4\n', 'latin1')].concat(new Array(80).fill(0).map((x, i) => obj(i + 1, '/Filter /DCTDecode /Length ' + pages[0].length, pages[0]))));
+    const capped = await pdfDct(new Uint8Array(many), 60, 0, 3);
+    const empty = await pdfDct(new Uint8Array(Buffer.concat([Buffer.from('%PDF-1.4\n', 'latin1'), obj(1, '/Filter [] /DCTDecode /Length 4', Buffer.from('abcd'))])));
+    check('pdfDct, the PDF is untrusted: a deflate bomb stops at 8 MB, at most 60 images and only the asked pages read, an empty /Filter [] does not throw (27/10/2026 review)',
+      /over 8 MB/.test(bombErr) && capped.length === 60 && capped.slice(0, 3).every(Boolean) && capped.slice(3).every((x) => x === null) && Array.isArray(empty), { bombErr, n: capped.length });
     const saved = {}, real = globalThis.fetch;
     globalThis.fetch = async (u, o) => {
       const url = String(u);

@@ -21,7 +21,7 @@
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
 import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, PROMISE_KEY, promiseDue, promiseRemindText, promiseToCheck, eveningAdd, isoWeekAdd, promiseCheckDue, promiseCheckFireText, assistantFire } from '../_wa.js';
 import { odConfigured, accessToken, putFile } from '../_onedrive.js';
-import { OCR_ROOT, OCR_INBOX, OCR_AUTO_KEY, OCR_AUTO_GAP_MS, OCR_DONE_MAX, OCR_MODELS, ocrAutoPick, ocrOne } from '../_ocr.js';
+import { OCR_ROOT, OCR_INBOX, OCR_AUTO_KEY, OCR_AUTO_GAP_MS, OCR_DONE_MAX, OCR_MAX_PAGES, OCR_MODELS, ocrAutoPick, ocrOne } from '../_ocr.js';
 
 export const LAST_KEY = 'wa_morning_last';
 export const MAX_CHARS = 700;
@@ -416,10 +416,14 @@ async function ocrAuto(env, now) {
   st.at = now.toISOString();
   let res = null;
   if (next) {
+    // 27/10/2026 review: the state is saved before the read, so a PDF that kills the isolate is not picked again on
+    // every tick (it is already in done, and its cont is gone).
+    if (!cont) st.done = (st.done || []).concat([next.name]).slice(-OCR_DONE_MAX);
+    st.cont = null;
+    await stateSet(env, OCR_AUTO_KEY, JSON.stringify(st));
     const model = env.OCR_MODEL && OCR_MODELS.indexOf(env.OCR_MODEL) >= 0 ? env.OCR_MODEL : OCR_MODELS[0];
     res = await ocrOne(env, at.token, OCR_INBOX + '/' + next.name, next.name, model, cont ? cont.from : 1).catch((e) => ({ name: next.name, ok: false, error: 'ocr' }));
-    st.cont = res && res.ok && res.next ? { name: next.name, from: res.next } : null;
-    if (!cont) st.done = (st.done || []).concat([next.name]).slice(-OCR_DONE_MAX);
+    st.cont = res && res.ok && res.next && res.next <= OCR_MAX_PAGES ? { name: next.name, from: res.next } : null;
   }
   await stateSet(env, OCR_AUTO_KEY, JSON.stringify(st));
   return res ? { name: res.name, ok: res.ok, chars: res.chars || 0, error: res.error || null } : { idle: true };
