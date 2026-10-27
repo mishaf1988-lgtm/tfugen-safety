@@ -137,6 +137,15 @@
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/trigger-prompt-gate.py"
           }
         ]
+      },
+      {
+        "matcher": "Bash|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/desc-hebrew.py"
+          }
+        ]
       }
     ],
     "PostToolUse": [
