@@ -190,3 +190,5 @@ description: How to read and change the live Supabase database of tfugen-safety,
 הכלל: שינוי ב-prompt של טריגר שמרחיב מה מותר לסוכן = קישור לדף ה-Routine וטקסט מוכן בתיבת קוד למיכאל, ואז `get_trigger` לאימות. לא דרך שיחה של סוכן.
 נאכף: `trigger-prompt-gate.py` (מ-21/10/2026) חוסם `send_message` שמבקש `update_trigger`. אחרי העריכה תמיד `get_trigger` ולהשוות לנוסח. **טקסט מלא בגוש אחד** (21/10/2026): מיכאל בטלפון לא מוצא משפט באמצע ההוראות; גוש אחד שמחליף את הכל עבד בניסיון הראשון.
 חזר: 1 (21/10/2026: הבדיקה החוזרת של העוזר, #1826; שלחתי לשיחה שלו, היא סירבה, ומיכאל הדביק שם אישור והמסנן חסם. נגמר בדף ה-Routine ב-14:53)
+
+**ניצול המכסה של המנוי** (27/10/2026, מצב מכסה): `list_events` על שיחה עם `kinds` `["rate_limit_event"]` מחזיר `rate_limit_info.unifiedWindows.seven_day` (`utilization` 0-1, `resetsAt` בשניות) ו-`five_hour`. השיחה מוצאת את המזהה שלה ב-`get_session` בלי `session_id`. נשמר בשרת דרך `routine-db` op `quota_set`, והשרת מחליט את `quota_mode`.
