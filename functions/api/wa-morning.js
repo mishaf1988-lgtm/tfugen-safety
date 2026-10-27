@@ -91,7 +91,21 @@ export function splitUrgent(items, today) {
   });
   return out;
 }
-export function buildBrief(items, failed, today, compact, notes, weather, devDone, learnOpen, urgent, waiting, disq) {
+// 27/10/2026 (the extenders: the note said "disqualified" while s and deficiencies said "fit for work"; Michael: "do it"):
+// an equipment row whose state passes while its latest note or its deficiencies say it failed. Pure.
+export const PASS_RE = /^(\u05ea\u05e7\u05d9\u05df|\u05db\u05e9\u05d9\u05e8|\u05de\u05d5\u05ea\u05e8)/, FAIL_WORD = /(^|[^\u05d0-\u05ea])(?<!\u05dc\u05d0 )(\u05e0\u05e4\u05e1\u05dc|\u05e4\u05e1\u05d5\u05dc|\u05dc\u05d0 \u05db\u05e9\u05d9\u05e8|\u05dc\u05d0 \u05ea\u05e7\u05d9\u05df)/;
+export function rowContradictions(rows) {
+  return (rows || []).filter((r) => {
+    if (!r || !PASS_RE.test(String(r.s || ''))) return false;
+    // only an agent's own line (expiry_set writes "DD/MM/YYYY Claude (agent): ..."): older free-text notes tell history
+    // ("found faulty, rechecked and fine"), and reading them gave 3 false alarms on the live rows of 27/10/2026
+    const last = String(r.notes || '').split(' | ').pop();
+    return (/Claude \(/.test(last) && FAIL_WORD.test(last)) || FAIL_WORD.test(String(r.deficiencies || ''));
+  }).map((r) => r.n);
+}
+export function buildBrief(items, failed, today, compact, notes, weather, devDone, learnOpen, urgent, waiting, disq, contra) {
+  contra = urgent ? [] : (contra || []);
+  const contraLine = contra.length ? '\u05e9\u05d5\u05e8\u05d4 \u05e1\u05d5\u05ea\u05e8\u05ea \u05d1\u05de\u05e1\u05d3 (\u05d4\u05de\u05e6\u05d1 \u05ea\u05e7\u05d9\u05df \u05d5\u05d4\u05d4\u05e2\u05e8\u05d4 \u05d0\u05d5\u05de\u05e8\u05ea \u05e9\u05e0\u05e4\u05e1\u05dc): ' + contra.slice(0, 3).map((n) => clip(n, 40)).join('; ') + (contra.length > 3 ? '; \u05d5\u05e2\u05d5\u05d3 ' + (contra.length - 3) : '') + '. \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d5\u05dc\u05ea\u05e7\u05df.' : '';
   waiting = waiting || []; disq = disq || [];
   const waitLine = waiting.length ? '\u05de\u05d7\u05db\u05d4 \u05dc\u05ea\u05e1\u05e7\u05d9\u05e8: ' + waiting.slice(0, 3).map((x) => clip(x.n, 40) + ' (\u05e0\u05d1\u05d3\u05e7 ' + dmy(String(x.d).slice(0, 10)) + ')').join('; ') + (waiting.length > 3 ? '; \u05d5\u05e2\u05d5\u05d3 ' + (waiting.length - 3) : '') + '.' : '';
   const disqLine = disq.length ? '\u05e4\u05e1\u05d5\u05dc, \u05de\u05d7\u05db\u05d4 \u05dc\u05d4\u05d7\u05dc\u05e4\u05d4: ' + disq.slice(0, 3).map((x) => clip(x.n, 40)).join('; ') + (disq.length > 3 ? '; \u05d5\u05e2\u05d5\u05d3 ' + (disq.length - 3) : '') + '.' : '';
@@ -117,6 +131,7 @@ export function buildBrief(items, failed, today, compact, notes, weather, devDon
       + (items.length > 3 ? '; \u05d5\u05e2\u05d5\u05d3 ' + (items.length - 3) : '') + '.');
     if (waitLine) parts.push(waitLine);
     if (disqLine) parts.push(disqLine);
+    if (contraLine) parts.push(contraLine);
     if (failed.length) parts.push('\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc: ' + failed.slice(0, 5).join(', ') + '.');
     if (wx && parts.length === 1) parts.push('\u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.');
     const body = parts.length ? parts.join(' ') : '\u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.';
@@ -131,6 +146,7 @@ export function buildBrief(items, failed, today, compact, notes, weather, devDon
   }
   if (waitLine) lines.push(waitLine);
   if (disqLine) lines.push(disqLine);
+  if (contraLine) lines.push(contraLine);
   if (notes.length) {
     lines.push('\u05de\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd:');
     notes.forEach((x) => lines.push('- ' + agentName(x.agent) + ': ' + clip(x.text, 160)));
@@ -172,6 +188,7 @@ export async function gather(env, now) {
     (equip || []).map((x) => ({ n: x.loc ? x.n + ', ' + x.loc : x.n, e: x.e, area: x.resp_area || '', d: x.d || null, s: x.s || '' })))
     .filter((x) => x.n && /^\d{4}-\d{2}-\d{2}/.test(String(x.e))).sort((a, b) => String(a.e).localeCompare(String(b.e)));
   const { items, waiting, disq } = splitUrgent(all, today);
+  const contra = rowContradictions(await sb(env, 'equip_inspections?select=n,s,notes,deficiencies&limit=500').catch(() => []));
   let log = [];
   try { log = JSON.parse((await stateGet(env, 'agent_log')) || '[]'); } catch (e) { log = []; }
   const since = now.getTime() - 86400000;
@@ -191,7 +208,7 @@ export async function gather(env, now) {
   try { devDone = devClosedYesterday(JSON.parse((await stateGet(env, 'dev_inbox')) || '[]'), today); } catch (e) { devDone = null; }
   let learnOpen = null;
   try { learnOpen = JSON.parse((await stateGet(env, 'assistant_learned')) || '[]').filter((x) => x && x.status === 'new').length; } catch (e) { learnOpen = null; }
-  return { today, items, waiting, disq, failed, notes, weather, devDone, learnOpen };
+  return { today, items, waiting, disq, contra, failed, notes, weather, devDone, learnOpen };
 }
 // Pure: requests in dev_inbox closed (done_at) on the Israel day before today. A Sunday counts Saturday only.
 export function devClosedYesterday(list, today) {
@@ -456,7 +473,7 @@ export async function run(env, now, body) {
   const cal = await calendarStep(env, now, !!body.dry).catch((e) => ({ error: String(e.message || e).slice(0, 200) }));
   const g = await gather(env, now);
   const open = await ownerWindowOpen(env, sbFrom(env), now.getTime());
-  const text = buildBrief(g.items, g.failed, g.today, !open, g.notes, g.weather, g.devDone, g.learnOpen, false, g.waiting, g.disq);
+  const text = buildBrief(g.items, g.failed, g.today, !open, g.notes, g.weather, g.devDone, g.learnOpen, false, g.waiting, g.disq, g.contra);
   if (body.dry) return { ok: true, sent: false, dry: true, text, cal };
   if (!body.force && (await stateGet(env, LAST_KEY).catch(() => null)) === g.today) return { ok: true, sent: false, reason: 'already sent today', cal };
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };
