@@ -57,6 +57,9 @@ SENSITIVE = ("functions/_middleware.js", "functions/_sign.js", "functions/api/co
              "functions/_deckpatch.js", "functions/_ocr.js", "functions/_stt.js")
 PERM_SQL = re.compile(r"\b(create|alter|drop)\s+policy\b|\bgrant\b|\brevoke\b|row\s+level\s+security|security\s+definer", re.I)
 REVIEW = re.compile(r"^\s*(review|סקירה)\s*:\s*(\S.{4,})$", re.I | re.M)
+# 27/10/2026 (Michael in the questionnaire: "do it: brief + refute step", from cloudflare/security-audit-skill): every
+# confirmed finding is checked by a fresh agent that tries to disprove it. project-files/security-review.md.
+REFUTE = re.compile(r"^\s*(refute|הפרכה)\s*:\s*(\S.{4,})$", re.I | re.M)
 
 
 def sensitive(files):
@@ -107,8 +110,12 @@ def check(title, body, files):
     sens = sensitive(files)
     if sens and not REVIEW.search(body or ""):
         return False, ("this PR touches login, users or database permissions (%s). Run a security review by a "
-                       "separate agent that gets the diff (CLAUDE.md, deploy section), fix what it finds, and add "
+                       "separate agent that gets the diff (CLAUDE.md, deploy section; the brief: project-files/security-review.md), fix what it finds, and add "
                        "'סקירה: <what it checked and found>' to the PR description." % ", ".join(sens))
+    if sens and not REFUTE.search(body or ""):
+        return False, ("this PR touches login, users or database permissions (%s). Each confirmed finding of the review "
+                       "goes to a fresh agent that tries to disprove it (project-files/security-review.md); add "
+                       "'הפרכה: <what held and what was disproved>' or 'הפרכה: אין ממצא מאושר'." % ", ".join(sens))
     if not FIX.search(title or ""):
         return True, "not a fix PR"
     if LESSONS in files or any(has_domain_lessons(f) for f in files):
