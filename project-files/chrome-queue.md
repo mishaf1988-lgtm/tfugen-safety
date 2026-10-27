@@ -262,7 +262,7 @@
      drop policy if exists viewer_read on public.hearing_tests;
      alter table public.trustees add constraint trustees_no_phone check (ph is null or ph = '');
   3. Run. אם מופיע חלון אזהרה על פעולה הרסנית: לאשר את ההרצה (Run this query).
-  4. דווח: Success או טקסט השגיאה המלא. לא להריץ שום דבר אחר.
+  4. דווח: Success או טקסט השגיאה המלא. לא להריץ שום דבר אחר. (שגיאת "already exists" על trustees_no_phone = השורה כבר רצה בעבר, תקין.)
   ```
 
 ## בוצע
