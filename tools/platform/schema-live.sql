@@ -261,6 +261,8 @@ alter table public.train_plan add constraint train_plan_pkey PRIMARY KEY (id);
 
 alter table public.train_plan add constraint train_plan_yr_n_key UNIQUE (yr, n);
 
+alter table public.trustee_reports add constraint trustee_reports_photo_url_check CHECK (((photo_url IS NULL) OR (photo_url ~ '^https://[a-z0-9]+\.supabase\.co/storage/v1/object/public/incidents-photos/tru-[A-Za-z0-9._-]{1,250}$'::text) OR ((photo_url ~ '^pending:'::text) AND (length(photo_url) <= 300))));
+
 alter table public.trustee_reports add constraint trustee_reports_pkey PRIMARY KEY (id);
 
 alter table public.trustee_reports add constraint trustee_reports_t_check CHECK (((t >= 1) AND (t <= 20)));
