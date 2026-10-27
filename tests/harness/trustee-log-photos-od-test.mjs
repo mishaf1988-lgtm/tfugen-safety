@@ -10,7 +10,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const JPG = new Uint8Array(Buffer.from('/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAAeACgDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFgEBAQEAAAAAAAAAAAAAAAAAAAMG/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AmgItaAAAAAAAAAA//9k=', 'base64'));
 const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', ONEDRIVE_CLIENT_ID: 'cid', ONEDRIVE_CLIENT_SECRET: 'cs', TRUSTEE_NOTIFY_SECRET: 'nsec' };
-const pub = (n) => SB + '/storage/v1/object/public/incidents-photos/' + n;
+const pub = (n) => SB + '/storage/v1/object/public/incidents-photos/tru-ph-' + n;
 const photoDir = encodeURIComponent('תמונות');
 
 function world(reports, o) {
@@ -34,7 +34,7 @@ function world(reports, o) {
     if (u.startsWith(SB + '/storage/v1/render/image/')) return new Response('no', { status: 400 });
     if (u.startsWith(SB + '/storage/v1/object/authenticated/')) {
       const n = u.split('/').pop(); w.gets.push(n);
-      if (n === 'gone.jpg') return new Response('not found', { status: 404 });
+      if (n === 'tru-ph-gone.jpg') return new Response('not found', { status: 404 });
       return new Response(JPG, { status: 200 });
     }
     if (u.startsWith('https://graph.microsoft.com/v1.0/me/drive/root:/')) {
@@ -68,7 +68,7 @@ console.log('\n1. first write copies the photos and links them');
   check('Excel links point to OneDrive copies', w.lastLog.indexOf('https://tapugancoil-my.sharepoint.com/p/1') >= 0 && w.lastLog.indexOf('https://tapugancoil-my.sharepoint.com/p/2') >= 0);
   check('the gone photo keeps the Storage link', w.lastLog.indexOf('gone.jpg?token=t') >= 0);
   check('photos folder URL saved for the home card', w.state.trustee_photos_url === 'https://tapugancoil-my.sharepoint.com/folder', w.state);
-  check('each photo downloaded once (copy bytes reused as thumbnail)', w.gets.filter((n) => n === 'p1.jpg').length === 1, w.gets);
+  check('each photo downloaded once (copy bytes reused as thumbnail)', w.gets.filter((n) => n === 'tru-ph-p1.jpg').length === 1, w.gets);
   check('thumbnails embedded', (w.lastLog.match(/xl\/media\/image\d+\.jpeg/g) || []).length === 4, (w.lastLog.match(/xl\/media\/image\d+\.jpeg/g) || []).length);
   check('signature saved (nothing pending)', !!w.state.trustee_log_sig && r.photos_pending === 0, r);
 

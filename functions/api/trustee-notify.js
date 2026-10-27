@@ -529,9 +529,12 @@ async function sendWhatsApp(env, to, row, task, src, B, out) {
 // for seven days, which is long enough to act on a hazard and short enough that
 // a forwarded mail does not become a permanent key to the photo.
 const PHOTO_LINK_TTL = 7 * 24 * 3600;
-async function signPhoto(serviceKey, publicUrl, B) {
-  const m = String(publicUrl || '').match(/\/storage\/v1\/object\/(?:public\/|sign\/)?([^/]+)\/([^?]+)/);
-  if (!m) return null;
+async function signPhoto(serviceKey, publicUrl, B, prefix) {
+  // 27/10/2026 (security scan): our own base, the photos bucket, one flat file name; nothing else is signed.
+  const u = String(publicUrl || '');
+  if (u.indexOf(SUPABASE_URL + '/storage/v1/object/') !== 0) return null;
+  const m = u.substring(SUPABASE_URL.length).match(/^\/storage\/v1\/object\/(?:public\/|sign\/)?(incidents-photos)\/([A-Za-z0-9][A-Za-z0-9._-]{0,250})(\?|$)/);
+  if (!m || (prefix && m[2].indexOf(prefix) !== 0)) return null;
   try {
     spend(B, 1);
     const r = await tfetch(SUPABASE_URL + '/storage/v1/object/sign/' + m[1] + '/' + m[2], {
@@ -551,7 +554,7 @@ async function sendEmail(env, to, row, task, src, B) {
   // A photo that cannot be opened is worse than no photo: it reads as a broken
   // system. Link it only when the signature actually came back.
   const signed = row.photo_url && /^https?:\/\//.test(row.photo_url) && env.SUPABASE_SERVICE_ROLE_KEY
-    ? await signPhoto(env.SUPABASE_SERVICE_ROLE_KEY, row.photo_url, B)
+    ? await signPhoto(env.SUPABASE_SERVICE_ROLE_KEY, row.photo_url, B, src && src.event === 'trustee_hazard' ? 'tru-' : '')
     : null;
   const photo = signed ? '<p><a href="' + esc(signed) + '">📷 \u05ea\u05de\u05d5\u05e0\u05ea \u05d4\u05de\u05de\u05e6\u05d0</a></p>' : '';
   // A [TS-<id>] reply tag belongs here if mail-inbox.js is ever switched on
