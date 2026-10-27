@@ -11,11 +11,11 @@ let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const JPG = new Uint8Array(Buffer.from('/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAAeACgDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFgEBAQEAAAAAAAAAAAAAAAAAAAMG/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AmgItaAAAAAAAAAA//9k=', 'base64'));
-const pub = (n) => SB + '/storage/v1/object/public/incidents-photos/' + n;
+const pub = (n) => SB + '/storage/v1/object/public/incidents-photos/tru-ph-' + n;
 const now = Date.parse('2026-09-27T12:00:00Z'), day = 86400000, iso = (d) => new Date(now - d * day).toISOString();
 
 const calls = { sign: 0, get: [] };
-let brokenGet = 'bad.jpg';
+let brokenGet = 'tru-ph-bad.jpg';
 globalThis.fetch = async (url, init) => {
   url = String(url);
   if (url === SB + '/storage/v1/object/sign/incidents-photos') {
@@ -29,7 +29,7 @@ globalThis.fetch = async (url, init) => {
     const n = url.split('/').pop();
     calls.get.push(n);
     if (n === brokenGet) return new Response('x', { status: 404 });
-    if (n === 'notimg.jpg') return new Response('hello world, not a picture at all', { status: 200 });
+    if (n === 'tru-ph-notimg.jpg') return new Response('hello world, not a picture at all', { status: 200 });
     return new Response(JPG, { status: 200 });
   }
   throw new Error('unexpected fetch ' + url);
@@ -61,11 +61,11 @@ check('foreign URL: never fetched, never signed', !calls.get.some((n) => n === '
 check('foreign URL cell left as text', aoa[rowOf('foreign')][PC] === 'https://evil.example/x.jpg');
 check('one sign call for all photos, 1-year expiry', calls.sign === 1 && calls.signBody.expiresIn === 365 * 86400, calls.signBody);
 const cell = aoa[rowOf('closed_old')][PC];
-check('photo cell becomes a signed link', cell && cell.link === SB + '/storage/v1/object/sign/incidents-photos/closed_old.jpg?token=Tclosed_old.jpg', cell);
+check('photo cell becomes a signed link', cell && cell.link === SB + '/storage/v1/object/sign/incidents-photos/tru-ph-closed_old.jpg?token=Ttru-ph-closed_old.jpg', cell);
 check('image row/col point at the photo cell', images.every((i) => i.col === PC && aoa[i.row][PC] && aoa[i.row][PC].link));
 
 check('no transforms: asked once, then originals', calls.render === 1, calls.render);
-check('open findings fetched before newer closed ones', calls.get[0] === 'bad.jpg' || calls.get[0] === 'notimg.jpg' || calls.get[0] === 'open_old.jpg', calls.get);
+check('open findings fetched before newer closed ones', calls.get[0] === 'tru-ph-bad.jpg' || calls.get[0] === 'tru-ph-notimg.jpg' || calls.get[0] === 'tru-ph-open_old.jpg', calls.get);
 {
   // With transforms, and a budget of 15: 20 open findings -> 15 thumbnails.
   const many = []; for (let i = 0; i < 20; i++) many.push({ id: 'm' + i, u: 'a', t: 1, d: iso(i).slice(0, 10), ts: iso(i), ok: false, s: 'פתוח', f: 'x', photo_url: pub('m' + i + '.jpg') });
@@ -101,7 +101,12 @@ check('open findings fetched before newer closed ones', calls.get[0] === 'bad.jp
 }
 
 console.log('\n2. storagePath');
-check('public URL parsed', JSON.stringify(storagePath(pub('a/b.jpg'), SB)) === JSON.stringify({ bucket: 'incidents-photos', path: 'a/b.jpg' }));
+check('public URL parsed', JSON.stringify(storagePath(pub('b.jpg'), SB)) === JSON.stringify({ bucket: 'incidents-photos', path: 'tru-ph-b.jpg' }));
+// 27/10/2026 (security scan): an anonymous report could point photo_url at any object, e.g. the owner's
+// signature in backups, and the server signed it for a year and mailed it
+check('another bucket refused (the owner signature in backups)', storagePath(SB + '/storage/v1/object/public/backups/owner-signature/sig.png', SB) === null);
+check('a sub-folder, an encoded slash or .. refused', storagePath(pub('a/b.jpg'), SB) === null && storagePath(SB + '/storage/v1/object/public/incidents-photos/tru-ph-%2F..%2Fx.jpg', SB) === null);
+check('a photo not made by the kiosk (no tru-) refused', storagePath(SB + '/storage/v1/object/public/incidents-photos/mf-attach-area-1.jpg', SB) === null);
 check('other host refused', storagePath('https://x.supabase.co/storage/v1/object/public/b/c.jpg', SB) === null);
 check('imageInfo reads JPEG size', JSON.stringify(imageInfo(JPG)) === JSON.stringify({ ext: 'jpeg', h: 30, w: 40 }), imageInfo(JPG));
 

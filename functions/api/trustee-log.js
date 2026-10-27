@@ -119,12 +119,19 @@ export async function signature(aoa) {
   return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-// {bucket, path} of a photo URL in our own Storage; null for anything else.
+// 27/10/2026 (security scan of the outside-input paths): photo_url of a trustee report is written by an
+// anonymous session, so a crafted URL could point at any object (e.g. the owner's signature in backups) and
+// the server would sign it with the service key and mail it. Only one flat file in the photos bucket passes.
+export const PHOTO_BUCKET = 'incidents-photos';
+const PHOTO_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,250}$/;
+// {bucket, path} of a trustee photo in our own Storage (tru-...); null for anything else.
 export function storagePath(url, base) {
   const u = String(url || '');
   if (u.indexOf(base + '/storage/v1/object/') !== 0) return null;
   const m = u.substring(base.length).match(/^\/storage\/v1\/object\/(?:public\/|sign\/|authenticated\/)?([^/?]+)\/([^?]+)/);
-  return m ? { bucket: m[1], path: decodeURIComponent(m[2]) } : null;
+  if (!m || m[1] !== PHOTO_BUCKET) return null;
+  let path; try { path = decodeURIComponent(m[2]); } catch (e) { return null; }
+  return PHOTO_NAME.test(path) && /^tru-/.test(path) ? { bucket: m[1], path } : null;
 }
 
 // Replaces the photo cells with {text, link} and returns the thumbnails to
