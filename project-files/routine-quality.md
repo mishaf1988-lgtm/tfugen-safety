@@ -1,6 +1,6 @@
 # Routine: בודק האיכות היומי
 
-**הטריגר:** ראה `ACCOUNT-INVENTORY.md` ("בודק האיכות היומי"). א'-ה' 06:43 שעון ישראל, לפני עדכון הבוקר (07:47) (`trig_01XgSGMbPk2UjxaCHFCJ9MWz`). כל ריצה בשיחה חדשה. בלי מחבר Microsoft 365: אי אפשר לצרף אותו לריצה מהשיחה ("not available for this organization"), ולכן הטיוטות נקראות מהמסד (`drafts_text`, C52 נסגר 27/10/2026).
+**הטריגר:** ראה `ACCOUNT-INVENTORY.md` ("בודק האיכות היומי"). א'-ה' 06:43 שעון ישראל, לפני עדכון הבוקר (07:47) (`trig_01XgSGMbPk2UjxaCHFCJ9MWz`). כל ריצה בשיחה חדשה, עם מחבר Microsoft 365 לקריאה בלבד (מיכאל חיבר מהטלפון 27/10/2026, C52; נבדק ב-`get_trigger`). גיבוי כשהמחבר לא עונה: הטיוטות מהמסד (`drafts_text`).
 
 מיכאל, 27/10/2026, אחרי שתפס בעצמו שלוש טעויות של הסוכנים באותו בוקר (המלצה לטעון קרדיט API, תוקף של הצעת מחיר, הצעה לענות על מייל שכבר ענה עליו) ושלח את טבלת "New AI Roles". בראיון: "בצע: כן, קודם ראיון", "מתקן לבד ומדווח בשורה (מומלץ)", ומה נבדק: "הודעות וואטסאפ אליך, טיוטות מייל, כתיבות למסד".
 
@@ -9,7 +9,7 @@
 1. **מאיפה ממשיכים.** `bash project-files/routine-db.sh '{"op":"state_get","key":"quality_run"}'`: `{"at": <ISO של הריצה הקודמת>}`. אין = 24 השעות האחרונות; ביום ראשון 72.
 2. **מה נשלח.** שלושה מקורות, מאז `at`:
    - `bash project-files/routine-db.sh '{"op":"out_log","agent":"routine-quality","since":"<at>"}'`: כל הודעות הוואטסאפ, אליו (`wa_out`, `assistant`) וממנו (`owner_in`), לפי הסדר.
-   - `bash project-files/routine-db.sh '{"op":"state_get","key":"drafts_text"}'`: 30 הטיוטות האחרונות שהסוכנים יצרו (`at`, `agent`, `to`, `cc`, `subject`, `body` עד 2,000 תווים, `reply`, `replaces`), החדשה ראשונה. לבדוק רק את אלה שאחרי `at`. אם במקרה מחובר מחבר Microsoft 365, אפשר גם `outlook_email_search` עם `folderName` "Drafts" כדי לראות את הטיוטה כפי שנוצרה.
+   - `bash project-files/routine-db.sh '{"op":"state_get","key":"drafts_text"}'`: 30 הטיוטות האחרונות שהסוכנים יצרו (`at`, `agent`, `to`, `cc`, `subject`, `body` עד 2,000 תווים, `reply`, `replaces`), החדשה ראשונה. לבדוק רק את אלה שאחרי `at`. ובמחבר: `outlook_email_search` עם `folderName` "Drafts" ו-`order` "newest", כדי לראות את הטיוטה כפי שנוצרה ולקחת את המזהה שלה.
    - `bash project-files/routine-db.sh '{"op":"select","table":"equip_inspections","query":"select=id,n,s,d,e,deficiencies,notes&notes=ilike.*Claude*&order=e.asc&limit=100"}'` ואותו דבר ל-`docs` (עמודת הערות `nt`): שורות שהסוכנים כתבו בהן (`DD/MM/YYYY Claude (<סוכן>):` בסוף ההערות) מאז `at`.
 3. **מה בודקים בכל פריט.** כל אחד מול המקור שלו (הצלבה), לא מול הזיכרון:
    - **כלל של מיכאל שהופר:** הכללים ב-`agent-common.md`, בנוהל של הסוכן ששלח, ובמחברת (`assistant_learned`, שורות `preference` ו-`correction`). למשל תוקף של הצעת מחיר, המלצה לטעון קרדיט, מקף ארוך בטקסט לאדם, מזהה פנימי.
