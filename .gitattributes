@@ -1,0 +1,7 @@
+# 27/10/2026 (Michael: "בצע", lesson 10): two PRs that each add a line at the end of these files
+# conflicted about 7 times in one day, and each time both sides were kept by hand. union keeps both
+# sides by itself on a local `git merge origin/main`. Only append-only text files: a code file here
+# would merge two versions of one function silently (merge-union-test.py checks the list).
+DECISIONS.md merge=union
+STATUS.md merge=union
+project-files/STATUS-archive.md merge=union
