@@ -446,6 +446,36 @@ const isDay = (x) => /^\d{4}-\d{2}-\d{2}$/.test(String(x || '')) && !isNaN(Date.
 const ddmm = (x) => x ? x.slice(8, 10) + '/' + x.slice(5, 7) + '/' + x.slice(0, 4) : '-';
 const short = (x, n) => String(x === undefined || x === null ? '' : x).replace(/\s+/g, ' ').trim().slice(0, n);
 
+// equip_add (27/10/2026, Michael in the questionnaire: "do it: an op to add an equipment row"): a report for equipment
+// with no row (the 7 chain tensioners of the metal shop) waited two hours for the developer. ONE new row of
+// equip_inspections from a report that was read and filed: only "fit for work", both dates, the report number, the
+// filed file. Never a change or a delete; refused when the code or the report number is already there. Pure: the row.
+export const EQUIP_FIT = '\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4';
+export const EQUIP_FILE_DIR = '02_\u05ea\u05e1\u05e7\u05d9\u05e8\u05d9 \u05e6\u05d9\u05d5\u05d3/'; // the equipment reports folder
+export const equipFilePrefix = () => SITE.odFileUrl + 'Documents/' + OD_ROOT + EQUIP_FILE_DIR; // OD_ROOT is defined further down
+export function equipAddRow(b, today, rand) {
+  if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
+  // 27/10/2026 review: text fields only (an array ["2026-10-25"] passed String()).
+  if (['why', 'doc', 'code', 'n', 'd', 'e', 'report_number', 'file_url', 'loc', 'vendor', 'inspector'].some((k) => b[k] !== undefined && typeof b[k] !== 'string')) return { error: 'fields are text' };
+  const why = short(b.why, 300), doc = short(b.doc, 300);
+  if (why.length < 5 || doc.length < 5) return { error: 'why and doc (the report you read) required' };
+  const code = String(b.code || '');
+  if (!/^[A-Z0-9][A-Z0-9.-]{2,39}$/.test(code)) return { error: 'code: A-Z, digits, dot or dash, 3-40' };
+  const n = short(b.n, 300);
+  if (n.length < 5) return { error: 'n: what the equipment is, 5-300 characters' };
+  if (!isDay(b.d) || b.d > today || b.d < '2000-01-01') return { error: 'd: the inspection date, not in the future' };
+  const top = String(Number(b.d.slice(0, 4)) + 6) + b.d.slice(4);
+  if (!isDay(b.e) || b.e <= b.d || b.e > top) return { error: 'e: after d, at most 6 years' };
+  const rn = String(b.report_number || '');
+  if (!/^\d{3,8}\/\d{1,4}$/.test(rn)) return { error: 'report_number: like 186003/226' };
+  const file = String(b.file_url || '');
+  // 27/10/2026 review: only a report filed in the equipment folders (the handler also checks the file is there).
+  if (!file.startsWith(equipFilePrefix()) || !/\.pdf$/i.test(file) || file.length > 600 || /[\t\r\n\f\v"'<>\x00-\x1f]/.test(file) || /\/\.\.?\//.test(file)) return { error: 'file_url: a PDF under ' + equipFilePrefix() };
+  const row = { id: rand, code, n, d: b.d, e: b.e, s: EQUIP_FIT, report_number: rn, file_url: file,
+    notes: ddmm(today) + ' Claude (' + b.agent + '): \u05e9\u05d5\u05e8\u05d4 \u05d7\u05d3\u05e9\u05d4. ' + why + '. \u05de\u05e1\u05de\u05da: ' + doc }; // "new row", "document"
+  for (const [k, max] of [['loc', 80], ['vendor', 80], ['inspector', 60]]) if (b[k] !== undefined) { const v = short(b[k], max); if (v) row[k] = v; }
+  return { row };
+}
 // The PATCH for one row, or { error }. row = the row as it is now; today = YYYY-MM-DD.
 export function expiryPatch(b, row, today) {
   const t = EXPIRY_TABLES[b.table];
@@ -1837,6 +1867,28 @@ export async function onRequest(context) {
       const after = await w.json();
       if (!Array.isArray(after) || after.length !== 1) return jsonResp({ ok: false, error: 'write touched ' + (Array.isArray(after) ? after.length : '?') + ' rows' }, 200, {});
       return jsonResp({ ok: true, changed: true, before: rows[0], after: after[0] }, 200, {});
+    }
+    if (body.op === 'equip_add') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'doc', 'code', 'n', 'loc', 'vendor', 'inspector', 'd', 'e', 'report_number', 'file_url'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+      const rand = Array.from(crypto.getRandomValues(new Uint8Array(6))).map((x) => x.toString(16).padStart(2, '0')).join('');
+      const c = equipAddRow(body, today, rand);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      // the filed report is really there (a link alone proves nothing)
+      const at = await accessToken(env);
+      const rel = decodeURIComponent(c.row.file_url.slice((SITE.odFileUrl + 'Documents/').length));
+      const fr = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + rel.split('/').filter(Boolean).map(encodeURIComponent).join('/') + '?select=id,file', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) });
+      if (!fr.ok || !(await fr.json()).file) return jsonResp({ ok: false, error: 'file_url: no such file (' + fr.status + ')' }, 200, {});
+      // the same equipment under the code in any case, or the same report number (27/10/2026 review)
+      const g = await fetch(url + '/rest/v1/equip_inspections?select=id,code,report_number&or=(code.ilike.' + encodeURIComponent(c.row.code) + ',report_number.eq.' + encodeURIComponent(c.row.report_number) + ')', { headers: h, signal: tmo(SB_MS) });
+      if (!g.ok) return jsonResp({ ok: false, error: 'read ' + g.status }, 200, {});
+      const there = await g.json();
+      if (!Array.isArray(there) || there.length) return jsonResp({ ok: false, error: 'already there: ' + (Array.isArray(there) ? there.map((r) => r.id).join(',') : '?') + ' (expiry_set updates a row)' }, 200, {});
+      const w = await fetch(url + '/rest/v1/equip_inspections', { method: 'POST', headers: { ...h, Prefer: 'return=representation' }, body: JSON.stringify(c.row), signal: tmo(SB_MS) });
+      if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status, detail: (await w.text()).slice(0, 300) }, 200, {});
+      const after = await w.json();
+      if (!Array.isArray(after) || after.length !== 1) return jsonResp({ ok: false, error: 'write touched ' + (Array.isArray(after) ? after.length : '?') + ' rows' }, 200, {});
+      return jsonResp({ ok: true, id: after[0].id, row: after[0] }, 200, {});
     }
     if (body.op === 'talk_field') {
       const id = String(body.id === undefined || body.id === null ? '' : body.id);
