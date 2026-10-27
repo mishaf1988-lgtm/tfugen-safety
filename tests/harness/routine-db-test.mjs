@@ -36,6 +36,8 @@ globalThis.fetch = async (url, opt = {}) => {
     if ((opt.method || 'GET') === 'POST') { const r = JSON.parse(opt.body); rows[m[1]].push(r); return new Response(JSON.stringify([r]), { status: 201 }); }
     const any = /or=\(code\.ilike\.([^,]*),report_number\.eq\.([^)]*)\)/.exec(m[2] || '');
     if (any) { const [cd, rn] = [decodeURIComponent(any[1]), decodeURIComponent(any[2])]; return new Response(JSON.stringify(rows[m[1]].filter((r) => String(r.code).toLowerCase() === cd.toLowerCase() || r.report_number === rn)), { status: 200 }); }
+    const rq = /^select=id&report_number=eq\.(.*)$/.exec(m[2] || '');
+    if (rq) return new Response(JSON.stringify(rows[m[1]].filter((r) => r.report_number === decodeURIComponent(rq[1])).map((r) => ({ id: r.id }))), { status: 200 });
     const id = decodeURIComponent((/id=eq\.([^&]*)/.exec(m[2] || '') || [])[1] || '');
     const hit = rows[m[1]].filter((r) => String(r.id) === id);
     if ((opt.method || 'GET') === 'PATCH') { hit.forEach((r) => Object.assign(r, JSON.parse(opt.body))); return new Response(JSON.stringify(hit), { status: 200 }); }
@@ -413,6 +415,18 @@ const callIn = async (body) => {
     check('unknown id: ok false, row not found', !x.json.ok && /not found/.test(x.json.error), x.json);
     x = await call({ op: 'expiry_set', table: 'equip_inspections', id: 'q1', agent: 'routine-validity', why: 'tasqir 2026', doc: 't.pdf', e: '2027-06-01', d: '2026-06-01' });
     check('equip_inspections: e and d, note in notes', x.json.ok && rows.equip_inspections[0].e === '2027-06-01' && rows.equip_inspections[0].d === '2026-06-01' && /routine-validity/.test(rows.equip_inspections[0].notes), x.json);
+    { // 27/10/2026 (dev request): the new report's number goes with the new e
+      rows.equip_inspections[0].report_number = '182666/226';
+      const rq = { op: 'expiry_set', table: 'equip_inspections', id: 'q1', agent: 'routine-wa-assistant', why: 'new report filed' };
+      check('report_number without a document: refused', (await call({ ...rq, report_number: '185998/226' })).status === 400 && rows.equip_inspections[0].report_number === '182666/226');
+      check('report_number in another format, or on docs: refused', (await call({ ...rq, doc: 'r.pdf', report_number: '185998' })).status === 400 && (await call({ ...rq, doc: 'r.pdf', report_number: ['185998/226'] })).status === 400 && (await call({ ...base, doc: 'r.pdf', report_number: '185998/226' })).status === 400);
+      const z = await call({ ...rq, doc: 'r.pdf', report_number: '185998/226' });
+      check('report_number with a document: written, the note has old -> new', z.json.ok && z.json.changed && rows.equip_inspections[0].report_number === '185998/226' && rows.equip_inspections[0].notes.indexOf('182666/226 -> 185998/226') > 0, z.json);
+      rows.equip_inspections.push({ id: 'q2', e: null, notes: null, file_url: null, d: null, report_number: '185999/226' });
+      const dup = await call({ ...rq, doc: 'r.pdf', report_number: '185999/226' });
+      check('report_number already on another row: refused, nothing written', !dup.json.ok && /already on q2/.test(dup.json.error) && rows.equip_inspections[0].report_number === '185998/226', dup.json);
+      rows.equip_inspections.pop();
+    }
     check('equipment d in the future: refused', (await call({ op: 'expiry_set', table: 'equip_inspections', id: 'q1', agent: 'a-b', why: 'xxxxx', d: '2099-01-01' })).status === 400);
     check('expiryPatch: docs cannot set d, equipment cannot set s', !!expiryPatch({ ...base, d: '2026-01-01' }, rows.docs[0], '2026-10-11').error && !!expiryPatch({ ...base, table: 'equip_inspections', s: 'x' }, rows.equip_inspections[0], '2026-10-11').error);
     // 18/10/2026 (Michael: "בצע: לעשות את הצעות 1 עד 5"): equipment may go out of tracking, nothing else about s
