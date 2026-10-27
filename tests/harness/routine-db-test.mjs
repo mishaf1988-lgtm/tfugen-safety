@@ -1091,7 +1091,7 @@ const callIn = async (body) => {
     check('a read that times out is tried again; a move that times out but happened = ok (checked where the file landed)', x.json.ok && x.json.path === EQ + '/' + OD_EXPIRED_DIR + '/' + OLD, x.json);
     graph = mk('nothing');
     x = await call(X);
-    check('a move that times out and did not happen = said so, run it again', !x.json.ok && /still in place/.test(x.json.error), x.json);
+    check('a move that times out and is not at the destination = said so, run it again', !x.json.ok && /not confirmed/.test(x.json.error), x.json);
     graph = async () => new Response('{}', { status: 500 });
   }
 

@@ -2214,7 +2214,7 @@ export async function onRequest(context) {
         if (!isTmo(e)) throw e;
         const d = await get(destUrl);
         const dj = d.ok ? await d.json() : null;
-        if (!(dj && dj.id === sj.id)) return jsonResp({ ok: false, error: 'move timed out and the file is still in place: run it again' }, 200, {});
+        if (!(dj && dj.id === sj.id)) return jsonResp({ ok: false, error: 'move timed out and was not confirmed at the destination: run it again (safe: a moved file answers source 404)' }, 200, {});
         mv = { ok: true };
       }
       if (!mv.ok) return jsonResp({ ok: false, error: 'move ' + mv.status }, 200, {});
