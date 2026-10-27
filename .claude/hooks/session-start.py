@@ -152,6 +152,9 @@ def report(cwd):
     for n in hand:
         t = read(os.path.join(cwd, n))
         out += ["", "-- " + n + " --", t[:MAX_HANDOFF] + ("\n[...נחתך]" if len(t) > MAX_HANDOFF else "")]
+    if hand:
+        # 27/10/2026, Michael in the questionnaire: "בצע: סיכום קצר בפתיחת צ'אט", so he sees the new chat knows.
+        out += ["", "📋 לפני שאלת המטרה: 3 שורות למיכאל מה-handoff, בעברית: מה נעשה אתמול, מה מחכה לו, מה מתוזמן (CLAUDE.md, בתחילת כל שיחה 2)"]
     status = read(os.path.join(cwd, "STATUS.md")).splitlines()
     opens = [l.strip() for l in status if re.match(r"\s*- \[ \]", l)]
     out += ["", "-- STATUS.md: %d פריטים פתוחים --" % len(opens)] + [o[:200] for o in opens[:MAX_OPEN]]
