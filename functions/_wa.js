@@ -489,7 +489,8 @@ export async function sentLately(env, t, nowMs) {
 }
 export async function sendToOwner(env, to, text, opts) {
   if (!String(text || '').trim()) return { ok: false, error: 'empty text' };
-  if (await sentLately(env, ilTimes(String(text).trim()))) return { ok: true, via: 'dup', duplicate: true, push: 0 };
+  // a question with buttons is never dropped as a duplicate: its pending action is keyed to this very send (27/10/2026 retro)
+  if (!o_choices(opts).length && await sentLately(env, ilTimes(String(text).trim()))) return { ok: true, via: 'dup', duplicate: true, push: 0 };
   const r = (await chatOnly(env)) ? { ok: true, via: 'chat' } : await sendToOwnerRaw(env, to, text, opts);
   if (r.error === 'empty text') return r;
   // the buttons too, so the chat shows the same choices (a tap there sends "1. ..." like a tap on WhatsApp)

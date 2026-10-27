@@ -2164,7 +2164,7 @@ export async function onRequest(context) {
         const nr = await fetch(url + '/rest/v1/notifications_log?select=ts,payload&event_type=eq.owner_in&ts=gt.' + encodeURIComponent(since) + '&order=ts.asc&limit=5', { headers: h, signal: tmo(SB_MS) }).then((x) => (x.ok ? x.json() : [])).catch(() => []);
         stale = staleReply(body.answers, nr);
         if (stale && staleRefuses(stale, body.text)) return jsonResp({ ok: false, error: 'stale: Michael already tapped a newer message, so this approval question is not sent; ask it again from his newer message' }, 400, {});
-        if (stale) { body.text = stale.prefix + String(body.text || ''); if (stale.dropChoices) delete body.choices; }
+        if (stale) { body.text = stale.prefix + String(body.text || ''); if (stale.dropChoices) { delete body.choices; if (body.askInternal === true) delete body.ref; } }
       }
       // 26/10/2026 (Michael: "upgrade the duplicate answers"): each message of his fires its own run, and two runs
       // answered the same thing (a photo and "check the picture" 17 seconds apart, 25/10 00:44 and 00:46; the
