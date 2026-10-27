@@ -161,7 +161,9 @@ export function promiseToCheck(raw, ids, nowIso) {
 // The list for tomorrow (23/10/2026, Michael in the questionnaire: "do it: tomorrow's list in the evening"): at 15:00
 // Sunday to Thursday the server adds a promise whose check fires the assistant at once (promiseCheck), so no new
 // Routine and no new prompt header. The assistant builds the list (routine-wa-assistant.md 2ב, "evening list").
-export const EVENING_HOUR = 15, EVENING_CHECK = 'evening list: what is planned for the next working day (contractor work and permits in the mail, inspections, visits in the calendar, expiries this week) and what each one still lacks; one wa_me, then promise_done quiet';
+// 27/10/2026: the list said two inspection reports "arrived today" from the mail of that day; they were not in it.
+// The database said "waiting for the report". So the item state comes from the database.
+export const EVENING_HOUR = 15, EVENING_CHECK = 'evening list: what is planned for the next working day (contractor work and permits in the mail, inspections, visits in the calendar, expiries this week) and what each one still lacks; the state of each expiry item from the database (d, e, notes), never from a mail that arrived; one wa_me, then promise_done quiet';
 export function eveningAdd(raw, dayIL, dow, hourIL, nowIso) {
   if (!(dow >= 0 && dow <= 4) || hourIL !== EVENING_HOUR) return null;
   const list = plist(raw), id = 'p-evening-' + dayIL.replace(/-/g, '');
