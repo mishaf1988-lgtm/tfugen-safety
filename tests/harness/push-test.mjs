@@ -145,18 +145,18 @@ console.log('\n3b. how the last push went, for the watchdog (25/10/2026)');
   check('sendToOwner: the same text already sent in the last 10 minutes = not sent again, not logged', sd.ok && sd.duplicate && !calls.some((c) => c.url.includes('graph.facebook.com') || (c.url.includes('/notifications_log') && c.m === 'POST')), sd);
   // 27/10/2026 retro: a send Meta refused is logged as wa_out too (channel whatsapp_error); its retry must not count as a duplicate
   check('sentLately: the lookup leaves out failed sends (channel=neq.whatsapp_error), so a retry of a refused message goes out', lookupUrl.includes('channel=neq.whatsapp_error'), lookupUrl);
-  { // a mock that applies the filter: the earlier text was a refused send (channel whatsapp_error), the retry must go out
+  { let graphHit = false; // a mock that applies the filter: the earlier text was a refused send (channel whatsapp_error), the retry must go out
     calls = [];
-    globalThis.fetch = async (u, i) => String(u).includes('graph.facebook.com') ? new Response(JSON.stringify({ messages: [{ id: 'wamid.3' }] }), { status: 200 })
+    globalThis.fetch = async (u, i) => String(u).includes('graph.facebook.com') ? (graphHit = true, new Response(JSON.stringify({ messages: [{ id: 'wamid.3' }] }), { status: 200 }))
       : String(u).includes('/notifications_log?select=payload') ? new Response(JSON.stringify([{ text: txt, channel: 'whatsapp_error' }].filter((r) => !String(u).includes('channel=neq.' + r.channel))), { status: 200 }) : f1(u, i);
     const rt = await sendToOwner(ENV, '972500000000', txt, { windowOpen: true });
-    check('sendToOwner: a retry of a text whose first send failed goes out (27/10/2026 retro)', rt.ok && !rt.duplicate && calls.some((c) => c.url.includes('graph.facebook.com')), rt);
-    calls = [];
-    globalThis.fetch = async (u, i) => String(u).includes('graph.facebook.com') ? new Response(JSON.stringify({ messages: [{ id: 'wamid.4' }] }), { status: 200 })
+    check('sendToOwner: a retry of a text whose first send failed goes out (27/10/2026 retro)', rt.ok && !rt.duplicate && graphHit, rt);
+    graphHit = false;
+    globalThis.fetch = async (u, i) => String(u).includes('graph.facebook.com') ? (graphHit = true, new Response(JSON.stringify({ messages: [{ id: 'wamid.4' }] }), { status: 200 }))
       : String(u).includes('/notifications_log?select=payload') ? new Response(JSON.stringify([{ text: txt }]), { status: 200 }) : f1(u, i);
     const rc = await sendToOwner(ENV, '972500000000', txt, { windowOpen: true, choices: ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'] });
     globalThis.fetch = f1;
-    check('sendToOwner: a question with buttons is sent even when the same text went out a minute ago (its pending action is keyed to the send)', rc.ok && !rc.duplicate && calls.some((c) => c.url.includes('graph.facebook.com')), rc);
+    check('sendToOwner: a question with buttons is sent even when the same text went out a minute ago (its pending action is keyed to the send)', rc.ok && !rc.duplicate && graphHit, rc);
   }
   calls = [];
   globalThis.fetch = async (u, i) => String(u).includes('graph.facebook.com') ? new Response(JSON.stringify({ error: { code: 131000, message: 'x' } }), { status: 400 }) : f1(u, i);
