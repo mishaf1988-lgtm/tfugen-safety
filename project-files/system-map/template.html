@@ -1,0 +1,239 @@
+<title>מפת המערכת של מיכאל</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Secular+One&family=IBM+Plex+Sans+Hebrew:wght@400;600&display=swap">
+<style>
+/* Layout: one 3D stage filling the screen; a slim header with the two view switches; a side panel (bottom sheet on a phone)
+   that explains whatever is selected. The flat view is the same content as plain cards, for a phone or a quick read. */
+:root{
+  --bg:#e9edf0; --floor:#d7dde2; --ink:#1f2a33; --mute:#5b6a76; --panel:#ffffffee; --line:#c3ccd3;
+  --accent:#e0a800; --accent-ink:#5b4400;
+  --k-person:#d98a00; --k-agent:#0f8f84; --k-system:#3b6ea8; --k-data:#7a4fb0; --k-channel:#2f8f3f;
+  --display:'Secular One','IBM Plex Sans Hebrew',Arial,sans-serif; --body:'IBM Plex Sans Hebrew',Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141b21; --floor:#1c252d; --ink:#e4eaee; --mute:#9aa8b3; --panel:#1b242ccc; --line:#33414c;
+  --accent:#f2c230; --accent-ink:#f6d97a;
+  --k-person:#f0a733; --k-agent:#2fc0b2; --k-system:#6fa0dc; --k-data:#a885d8; --k-channel:#5cc06b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141b21; --floor:#1c252d; --ink:#e4eaee; --mute:#9aa8b3; --panel:#1b242ccc; --line:#33414c;
+  --accent:#f2c230; --accent-ink:#f6d97a;
+  --k-person:#f0a733; --k-agent:#2fc0b2; --k-system:#6fa0dc; --k-data:#a885d8; --k-channel:#5cc06b; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);direction:rtl;overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block}
+header{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;
+  padding-block:calc(10px + env(safe-area-inset-top,0px)) 10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));pointer-events:none}
+header>*{pointer-events:auto}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(20px,4.6vw,30px);margin:0;line-height:1.1}
+.sub{color:var(--mute);font-size:13px;flex:1 1 220px;min-width:0}
+button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 14px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button[aria-pressed="true"]{background:var(--accent);color:#1f1a00;border-color:var(--accent)}
+#panel{position:fixed;z-index:6;top:calc(70px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));width:min(340px,40vw);max-height:calc(100% - 90px);overflow:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;backdrop-filter:blur(8px);display:grid;gap:8px}
+#panel h2{font-family:var(--display);font-weight:400;font-size:22px;margin:0;text-wrap:balance}
+#panel .kind{font-size:12px;letter-spacing:.04em;color:var(--mute)}
+#panel p{margin:0;line-height:1.55;font-size:14px}
+#panel dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:13px}
+#panel dt{color:var(--mute)} #panel dd{margin:0;min-width:0;overflow-wrap:anywhere}
+#panel ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+#panel li button{width:100%;text-align:right;border-radius:8px;padding:6px 10px;display:flex;gap:8px;align-items:center}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.lbl{direction:rtl;font-family:var(--body);font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 7px;white-space:nowrap;cursor:pointer;user-select:none}
+.lbl.zone{font-family:var(--display);font-size:15px;padding:3px 9px}
+.lbl.small{font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+.lbl.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+#flat{position:fixed;inset:0;z-index:4;overflow:auto;background:var(--bg);padding-block:calc(84px + env(safe-area-inset-top,0px)) 24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#flat .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;max-width:1200px;margin:0 auto}
+#flat section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:6px;align-content:start;min-width:0}
+#flat h3{margin:0;font-family:var(--display);font-weight:400;font-size:19px;display:flex;gap:8px;align-items:center}
+#flat p{margin:0;font-size:13px;color:var(--mute)}
+#flat ul{margin:0;padding:0 18px 0 0;font-size:13px;line-height:1.5}
+#legend{position:fixed;z-index:5;bottom:calc(10px + env(safe-area-inset-bottom,0px));right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--mute)}
+#legend span{display:flex;gap:5px;align-items:center}
+@media (max-width:640px){
+  #panel{top:auto;bottom:calc(8px + env(safe-area-inset-bottom,0px));left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));width:auto;max-height:42%}
+  #legend{display:none}
+}
+</style>
+
+<div id="stage" aria-label="מפה תלת-ממדית של המערכת. אפשר לסובב בגרירה ולהגדיל בגלגלת או בצביטה"></div>
+<header>
+  <h1>מפת המערכת</h1>
+  <span class="sub" id="sub">גוררים כדי לסובב, לוחצים על אזור כדי להיכנס אליו</span>
+  <button id="back" hidden>חזרה למבט כללי</button>
+  <button id="flatBtn" aria-pressed="false">תצוגה שטוחה</button>
+</header>
+<aside id="panel" aria-live="polite"></aside>
+<div id="flat" hidden><div class="grid" id="flatGrid"></div></div>
+<div id="legend"></div>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+const DATA = /*DATA*/null;
+const KIND = { person: 'אדם', agent: 'סוכן', system: 'מערכת', data: 'נתונים', channel: 'ערוץ' };
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const color = (k) => new THREE.Color(css('--k-' + k) || '#888');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const el = (t, cls, txt) => { const e = document.createElement(t); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+const zoneOf = Object.fromEntries(DATA.zones.map((z) => [z.id, z]));
+const kids = (id) => DATA.nodes.filter((n) => n.zone === id);
+
+// legend
+const legend = document.getElementById('legend');
+for (const k of Object.keys(KIND)) { const s = el('span'); const d = el('i', 'dot'); d.style.background = css('--k-' + k); s.append(d, KIND[k]); legend.append(s); }
+
+// scene
+const stage = document.getElementById('stage');
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 400);
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+stage.append(renderer.domElement);
+const labels = new CSS2DRenderer();
+labels.domElement.style.position = 'absolute'; labels.domElement.style.inset = '0'; labels.domElement.style.pointerEvents = 'none';
+labels.domElement.style.direction = 'ltr'; // CSS2DRenderer places labels from the left edge; in an RTL page they would sit off screen
+stage.append(labels.domElement);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.maxPolarAngle = Math.PI * 0.47; controls.minDistance = 4; controls.maxDistance = 95;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(8, 16, 6); scene.add(sun);
+
+const floor = new THREE.Mesh(new THREE.CircleGeometry(19, 72), new THREE.MeshStandardMaterial({ color: new THREE.Color(css('--floor')), roughness: 1 }));
+floor.rotation.x = -Math.PI / 2; scene.add(floor);
+const ring = new THREE.Mesh(new THREE.RingGeometry(10.9, 11.05, 96), new THREE.MeshBasicMaterial({ color: new THREE.Color(css('--line')) }));
+ring.rotation.x = -Math.PI / 2; ring.position.y = 0.01; scene.add(ring);
+
+// zones: Michael in the middle, the rest on a ring
+const pos = {}, zoneMesh = {}, zoneLabel = {};
+const others = DATA.zones.filter((z) => z.id !== 'michael');
+pos.michael = new THREE.Vector3(0, 0, 0);
+others.forEach((z, i) => { const a = (i / others.length) * Math.PI * 2 + 0.3; pos[z.id] = new THREE.Vector3(Math.cos(a) * 11, 0, Math.sin(a) * 11); });
+const geoFor = { person: new THREE.SphereGeometry(1, 32, 20), agent: new THREE.IcosahedronGeometry(1.05, 0), system: new THREE.BoxGeometry(1.5, 1.5, 1.5), data: new THREE.CylinderGeometry(0.95, 0.95, 1.5, 32), channel: new THREE.TorusGeometry(0.75, 0.3, 16, 40) };
+const pickables = [];
+function label(text, cls, onClick) { const d = el('div', 'lbl ' + cls, text); d.style.pointerEvents = 'auto'; d.addEventListener('click', (e) => { e.stopPropagation(); onClick(); }); return new CSS2DObject(d); }
+for (const z of DATA.zones) {
+  const g = new THREE.Group(); g.position.copy(pos[z.id]);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.9, 0.25, 40), new THREE.MeshStandardMaterial({ color: new THREE.Color(css('--line')), roughness: .9 }));
+  base.position.y = 0.12; g.add(base);
+  const m = new THREE.Mesh(geoFor[z.kind], new THREE.MeshStandardMaterial({ color: color(z.kind), roughness: .45, metalness: .1 }));
+  m.position.y = 1.5; m.userData = { zone: z.id }; g.add(m); pickables.push(m);
+  const l = label(z.name, 'zone', () => openZone(z.id)); l.position.set(0, 3, 0); g.add(l);
+  zoneMesh[z.id] = m; zoneLabel[z.id] = l.element; scene.add(g);
+}
+
+// edges with a moving dot each
+const flows = [];
+for (const e of DATA.edges) {
+  const a = pos[e.from].clone().setY(1.5), b = pos[e.to].clone().setY(1.5);
+  const mid = a.clone().add(b).multiplyScalar(0.5); mid.y = 3.2 + a.distanceTo(b) * 0.12;
+  const curve = new THREE.QuadraticBezierCurve3(a, mid, b);
+  const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 40, 0.035, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(css('--mute')), transparent: true, opacity: .55 }));
+  scene.add(tube);
+  const dot = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(css('--accent')) }));
+  scene.add(dot); flows.push({ curve, dot, t: Math.random(), e, tube });
+}
+
+// level 2: the parts of one zone around it
+let open = null, partGroup = null, selected = null;
+const panel = document.getElementById('panel'), back = document.getElementById('back'), sub = document.getElementById('sub');
+function camTo(target, dist) {
+  dist *= Math.max(1, 0.95 / camera.aspect); // a narrow phone screen needs the camera further back
+  const from = controls.target.clone(), to = target.clone(), c0 = camera.position.clone();
+  const dir = c0.clone().sub(from).normalize(), c1 = to.clone().add(dir.multiplyScalar(dist)); c1.y = Math.max(c1.y, dist * 0.55);
+  if (reduce) { controls.target.copy(to); camera.position.copy(c1); return; }
+  const t0 = performance.now(), T = 700;
+  (function step(now) { const k = Math.min(1, (now - t0) / T), s = k * k * (3 - 2 * k);
+    controls.target.lerpVectors(from, to, s); camera.position.lerpVectors(c0, c1, s); if (k < 1) requestAnimationFrame(step); })(t0);
+}
+function info(title, kind, what, extra) {
+  panel.textContent = '';
+  panel.append(el('span', 'kind', kind), el('h2', null, title));
+  if (what) panel.append(el('p', null, what));
+  if (extra && extra.length) { const dl = el('dl'); for (const [k, v] of extra) if (v) dl.append(el('dt', null, k), el('dd', null, v)); panel.append(dl); }
+}
+function zoneInfo(id) {
+  const z = zoneOf[id], list = kids(id);
+  info(z.name, KIND[z.kind], z.what, [['חלקים', String(list.length)]]);
+  const ul = el('ul');
+  list.forEach((n, i) => { const li = el('li'), b = el('button'); const d = el('i', 'dot'); d.style.background = css('--k-' + (n.id ? 'agent' : z.kind));
+    b.append(d, n.name); b.addEventListener('click', () => pick(i)); li.append(b); ul.append(li); });
+  panel.append(ul);
+  const links = DATA.edges.filter((e) => e.from === id || e.to === id).map((e) => (e.from === id ? 'אל ' + zoneOf[e.to].name : 'מ' + zoneOf[e.from].name) + ': ' + e.label);
+  if (links.length) { panel.append(el('span', 'kind', 'קשרים')); const u2 = el('ul'); links.forEach((t) => u2.append(el('li', null, t))); panel.append(u2); }
+}
+function pick(i) {
+  const id = open, n = kids(id)[i]; if (!n) return;
+  if (selected) selected.classList.remove('sel');
+  selected = partGroup && partGroup.children[i] && partGroup.children[i].userData.lbl; if (selected) selected.classList.add('sel');
+  info(n.name, n.id ? 'סוכן מתוזמן' : zoneOf[id].name, n.what !== n.name ? n.what : '', [['מתי', n.when], ['הוראות', n.doc], ['מזהה', n.id]]);
+  const backZ = el('button', null, 'כל החלקים של ' + zoneOf[id].name); backZ.addEventListener('click', () => zoneInfo(id)); panel.append(backZ);
+}
+function openZone(id) {
+  if (partGroup) { scene.remove(partGroup); partGroup = null; }
+  open = id; selected = null; const list = kids(id), z = zoneOf[id];
+  partGroup = new THREE.Group(); partGroup.position.copy(pos[id]);
+  const per = 12;
+  list.forEach((n, i) => {
+    const r = 2.9 + Math.floor(i / per) * 1.3, a = (i % per) / Math.min(per, list.length) * Math.PI * 2 + Math.floor(i / per) * 0.26;
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 10), new THREE.MeshStandardMaterial({ color: color(n.id ? 'agent' : z.kind), roughness: .5 }));
+    m.position.set(Math.cos(a) * r, 1.1 + (i % 2) * 0.35, Math.sin(a) * r); m.userData = { part: i };
+    const l = label(n.name, 'small', () => pick(i)); l.position.set(0, 0.55, 0); m.add(l); m.userData.lbl = l.element;
+    partGroup.add(m); pickables.push(m);
+  });
+  scene.add(partGroup);
+  for (const f of flows) f.tube.material.opacity = (f.e.from === id || f.e.to === id) ? .9 : .15;
+  for (const k in zoneLabel) zoneLabel[k].classList.toggle('sel', k === id);
+  back.hidden = false; sub.textContent = z.name + ': ' + list.length + ' חלקים. לחיצה על חלק מסבירה אותו';
+  zoneInfo(id); camTo(pos[id].clone().setY(1.2), 10 + Math.ceil(list.length / per) * 2);
+}
+function overview() {
+  if (partGroup) { scene.remove(partGroup); partGroup = null; }
+  open = null; for (const f of flows) f.tube.material.opacity = .55; for (const k in zoneLabel) zoneLabel[k].classList.remove('sel');
+  back.hidden = true; sub.textContent = 'גוררים כדי לסובב, לוחצים על אזור כדי להיכנס אליו';
+  const agents = DATA.nodes.filter((n) => n.id).length;
+  info('המערכת כולה', 'מבט כללי', DATA.zones.length + ' אזורים, ' + DATA.nodes.length + ' חלקים, מהם ' + agents + ' סוכנים מתוזמנים. הקווים הם הדרכים שבהן מידע עובר; הנקודות הצהובות זזות בכיוון שלו.');
+  const ul = el('ul'); DATA.zones.forEach((z) => { const li = el('li'), b = el('button'); const d = el('i', 'dot'); d.style.background = css('--k-' + z.kind); b.append(d, z.name + ' (' + kids(z.id).length + ')'); b.addEventListener('click', () => openZone(z.id)); li.append(b); ul.append(li); });
+  panel.append(ul); camTo(new THREE.Vector3(0, 0, 0), 30);
+}
+back.addEventListener('click', overview);
+
+// clicks on shapes
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2(); let downAt = null;
+renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
+  const r = renderer.domElement.getBoundingClientRect(); mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(mouse, camera); const hit = ray.intersectObjects(pickables.filter((m) => m.parent), false)[0];
+  if (!hit) return; const u = hit.object.userData; if (u.zone) openZone(u.zone); else if (u.part != null) pick(u.part);
+});
+
+// flat view
+const flat = document.getElementById('flat'), flatBtn = document.getElementById('flatBtn'), grid = document.getElementById('flatGrid');
+for (const z of DATA.zones) {
+  const s = el('section'), h = el('h3'); const d = el('i', 'dot'); d.style.background = css('--k-' + z.kind); h.append(d, z.name); s.append(h, el('p', null, z.what));
+  const ul = el('ul'); for (const n of kids(z.id)) ul.append(el('li', null, n.name + (n.when ? ' (' + n.when + ')' : ''))); s.append(ul); grid.append(s);
+}
+function setFlat(on) { flat.hidden = !on; flatBtn.setAttribute('aria-pressed', String(on)); panel.hidden = on; document.getElementById('legend').hidden = on; back.hidden = on || !open;
+  try { localStorage.setItem('sysmap-flat', on ? '1' : '0'); } catch (e) {} }
+flatBtn.addEventListener('click', () => setFlat(flat.hidden));
+let startFlat = false; try { startFlat = localStorage.getItem('sysmap-flat') === '1'; } catch (e) {}
+
+// size and loop
+function resize() { const w = stage.clientWidth, h = stage.clientHeight; camera.aspect = w / h; camera.updateProjectionMatrix(); renderer.setSize(w, h); labels.setSize(w, h); }
+addEventListener('resize', resize); resize();
+camera.position.set(0, 22, 24); controls.target.set(0, 0, 0);
+overview(); if (startFlat) setFlat(true);
+renderer.setAnimationLoop((now) => {
+  if (!reduce) for (const f of flows) { f.t = (f.t + 0.0035) % 1; f.dot.position.copy(f.curve.getPoint(f.t)); }
+  else for (const f of flows) f.dot.position.copy(f.curve.getPoint(0.5));
+  if (!reduce) for (const id in zoneMesh) zoneMesh[id].rotation.y = now * 0.0002;
+  controls.update(); renderer.render(scene, camera); labels.render(scene, camera);
+});
+</script>

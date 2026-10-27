@@ -13,6 +13,8 @@
 ## 1. חשבון Claude (claude.ai, sviva@tapugan.co.il)
 
 ### Routines (טריגרים מתוזמנים)
+**מפת המערכת** (https://claude.ai/artifact/KTMVcoPJBva43nKRacSLkc, 27/10/2026): נבנית מהטבלה הזו ומזרימות Power Automate למטה. שורה שנוספה או כובתה = `python3 project-files/system-map/build-map.py` ופרסום מחדש של `project-files/system-map/system-map.html` לאותו קישור, באותו PR (`system-map-test.py` נכשל אחרת).
+
 ההוראות של כל אחד בקובץ `project-files/routine-*.md` (הטריגר רק אומר "קרא את הקובץ ובצע"). להעברה: `create_trigger` מחדש מתוך שיחה עובדת עם ה-repo, באותו cron ובאותו פרומפט קצר (התבנית: `tfugen-db` סעיף 7).
 
 | מזהה | שם | מתי (שעון ישראל) | קובץ הוראות | שיחה |
