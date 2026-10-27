@@ -96,6 +96,21 @@ try {
   check('saving with the safety manager stores null, not \'\'', r.cleared === null, r.cleared);
   check('saving with an area stores it', r.set === AREA, r.set);
   check('the item view shows the area (VIEW_CONFIG)', r.view === true);
+  // 27/10/2026 (Michael: "do it: a task with the area's responsible"): "create tasks for equipment"
+  const t = await page.evaluate(([AREA, iso1, iso2]) => {
+    DB.tasks = [];
+    DB.equip_inspections = [
+      { id: 'a1', n: 'גלאי', e: iso1, resp_area: AREA },
+      { id: 'b1', n: 'מלגזה', e: iso2, resp_area: null },
+      { id: 'c1', n: 'מדחס', e: iso2, resp_area: 'תחום שנמחק' },
+    ];
+    window.rTasks = function () {}; window.toast = function () {};
+    _eqiAutoTasksRun();
+    const by = (id) => DB.tasks.find((x) => x.source_id === id) || {};
+    return { a: by('a1'), b: by('b1'), c: by('c1') };
+  }, [AREA, iso(-3), iso(5)]);
+  check('auto tasks: equipment with an area gets who runs it as assignee, and the area in the notes', t.a.assignee === WHO && /תחום: קירור ואמוניה/.test(t.a.notes || ''), t.a);
+  check('auto tasks: no area = no assignee (as before); an area no longer in SITE = no assignee, area noted', t.b.assignee === null && t.c.assignee === null && /תחום: תחום שנמחק/.test(t.c.notes || ''), { b: t.b, c: t.c });
 } finally { await browser.close(); }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
