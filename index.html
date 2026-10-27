@@ -3636,6 +3636,7 @@ window.addEventListener('error', function(e){
     _errLog.push(rec);
     if (_errLog.length > 50) _errLog.shift();
     console.error('[err]', rec.msg, rec.src + ':' + rec.line);
+    _errReport(rec);
   } catch(_){}
 });
 window.addEventListener('unhandledrejection', function(e){
@@ -3649,8 +3650,38 @@ window.addEventListener('unhandledrejection', function(e){
     _errLog.push(rec);
     if (_errLog.length > 50) _errLog.shift();
     console.error('[rej]', rec.msg);
+    _errReport(rec);
   } catch(_){}
 });
+// 27/10/2026 (Michael in the questionnaire: "do it: to our own server"): an error on a manager's phone stayed in that phone's
+// memory, and nobody knew until someone called. Now it goes to audit_log (table_name client_error) through the same queue as
+// the web vitals, and the quality checker reads it (routine-db op client_errors). Five different errors a session at most,
+// each once; only a signed-in, non-viewer user (audit_log refuses anonymous and viewer inserts); only this site's own code
+// (an extension's or a cross-origin "Script error." is not ours). The message, file, line, page and 300 characters of
+// stack: no screen content.
+var _errSent = {}, _errN = 0;
+function _errReport(rec){
+  try {
+    // a named user only (_sbNamed also leaves out the kiosk): an anonymous trustee's insert is refused by RLS, and the op
+    // would wait in the outbox and show the trustee a "stuck action" dialog (security review 27/10/2026)
+    if (typeof _obPush !== 'function' || typeof SB_ON === 'undefined' || !SB_ON || _viewOnly() || typeof _sbNamed !== 'function' || !_sbNamed()) return;
+    var msg = String(rec.msg || ''), src = String(rec.src || '');
+    if (!msg || msg === 'Script error.' || (src && src.indexOf(location.origin) !== 0)) return;
+    // a rejection has no file: the URLs in its stack say whose code it was
+    var urls = String(rec.stack || '').match(/[a-z][a-z0-9+.-]*:\/\/[^\s)]+/gi) || [];
+    if (!src && urls.some(function(x){ return x.indexOf(location.origin) !== 0; })) return;
+    var k = msg + '|' + (rec.line || 0);
+    if (_errSent[k] || _errN >= 5) return;
+    _errSent[k] = 1; _errN++;
+    // no record content: quoted text out of the message and stack (a JSON.parse error quotes its input), and no query
+    // string or fragment in a URL (security review 27/10/2026). The user's name comes from the session, in the trigger.
+    var clean = function(x){ return String(x || '').replace(/"[^"]*"/g, '"*"').replace(/'[^']*'/g, "'*'").replace(/[?#][^\s):]*/g, ''); };
+    msg = clean(msg);
+    var t = { m: msg.slice(0, 200), f: src.split('?')[0].split('/').pop().slice(0, 60), l: rec.line || 0, c: rec.col || 0,
+      p: (typeof CUR !== 'undefined' ? String(CUR) : '').slice(0, 40), st: clean(rec.stack).slice(0, 300), w: window.innerWidth };
+    _obPush({ op: 'ins', tbl: 'audit_log', row: { user_email: null, table_name: 'client_error', record_id: null, op: 'ins', source: 'jserr', title: JSON.stringify(t) } });
+  } catch(_){}
+}
 // ============ End Phase 0 instrumentation ============
 
 // ============ Phase 2 — Generic debounce helper + search wrappers ============
