@@ -97,5 +97,23 @@ const RAW_FN_MAX = 30, rawFn = [];
 check('no emoji written as a 5-digit escape in functions/ (' + astralFn.length + ')', astralFn.length === 0, astralFn.slice(0, 8));
 check('raw Hebrew in functions/ code: ' + rawFn.length + ' lines, at most ' + RAW_FN_MAX + ' (write \\uXXXX)', rawFn.length <= RAW_FN_MAX, rawFn);
 
+// Hidden characters (27/10/2026, Michael: "do 1 and 2"): a Python edit wrote 12 raw direction and zero-width marks
+// into routine-db.js (a regex meant to say \u200b..\u2069 in escapes); no test saw them, a manual grep did. In code they
+// are invisible and can flip how a line reads. functions/: none at all. index.html: 5 on purpose (a left-to-right mark
+// before a phone number, the CSV byte-order mark for Excel); the number may only go down.
+const HIDDEN = /[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/;
+const hiddenFn = [];
+(function walk(d) {
+  for (const f of fs.readdirSync(d, { withFileTypes: true })) {
+    const p = path.join(d, f.name);
+    if (f.isDirectory()) walk(p);
+    else if (/\.js$/.test(f.name)) fs.readFileSync(p, 'utf8').split('\n').forEach((l, i) => { if (HIDDEN.test(l)) hiddenFn.push(path.relative(path.resolve(__dirname, '../..'), p) + ':' + (i + 1)); });
+  }
+})(path.resolve(__dirname, '../../functions'));
+check('no raw hidden character (direction, zero-width, BOM) in functions/ (' + hiddenFn.length + '; write \\uXXXX)', hiddenFn.length === 0, hiddenFn.slice(0, 8));
+const HIDDEN_HTML_MAX = 5, hiddenHtml = [];
+src.split('\n').forEach((l, i) => { if (HIDDEN.test(l)) hiddenHtml.push('line ' + (i + 1)); });
+check('raw hidden characters in index.html: ' + hiddenHtml.length + ', at most ' + HIDDEN_HTML_MAX, hiddenHtml.length <= HIDDEN_HTML_MAX, hiddenHtml);
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
