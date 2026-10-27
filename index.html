@@ -9376,10 +9376,14 @@ window._eqiAutoTasksRun=function(){
     if(eq.license_number)noteParts.push('\u05de\u05e1\u05f3 \u05e8\u05d9\u05e9\u05d5\u05d9: '+eq.license_number);
     else if(eq.internal_number)noteParts.push('\u05de\u05e1\u05f3 \u05e4\u05e0\u05d9\u05de\u05d9: '+eq.internal_number);
     if(eq.vendor)noteParts.push('\u05e1\u05e4\u05e7: '+eq.vendor);
+    // 27/10/2026 (Michael in the questionnaire: "do it: a task with the area's responsible"): equipment with
+    // resp_area gets the person who runs that area (SITE.equipAreas) as assignee, not an open task with none.
+    var area=String(eq.resp_area||'').trim(), who=area?(((typeof SITE!=='undefined'&&SITE.equipAreas)||{})[area]||null):null;
+    if(area)noteParts.push('\u05ea\u05d7\u05d5\u05dd: '+area);
     var task={
       id: gid(),
       title: title,
-      assignee: null,
+      assignee: who,
       due: dueDate,
       status: _TSK_OPEN,
       priority: pri,
