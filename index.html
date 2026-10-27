@@ -5057,6 +5057,9 @@ var _MANAGER_PAGES = {dash:1,tasks:1,ncr:1,inc:1,nm:1,round:1,toolbox:1,training
 // An employee who needs to report something still can: the trustee screen
 // (?emp=1) is a separate, working path that needs no account at all.
 var _REPORTER_PAGES = {dash:1,tasks:1,'emp-home':1,menu:1,view:1};
+// Viewer reads what a manager reads, except health data: the viewer_read policy on
+// hearing_tests and med was dropped on 2026-10-27 (privacy_gaps), so the page would be empty.
+var _VIEWER_HIDDEN_PAGES = {hearing:1};
 // Central permission check. Returns true if the current user is allowed to
 // see/use `feature`. Use this everywhere instead of duplicating role
 // strings \u2014 easier to audit and change.
@@ -5084,6 +5087,10 @@ function goPage(id){
   }
   // Reporter trying to open a manager/admin-only page: kick to dash.
   if(_role()==='reporter' && id && !_REPORTER_PAGES[id]){
+    try{toast('\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d4 - \u05e4\u05e0\u05d4 \u05dc\u05de\u05e0\u05d4\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea');}catch(e){}
+    id='dash';
+  }
+  if(_role()==='viewer' && _VIEWER_HIDDEN_PAGES[id]){
     try{toast('\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d4 - \u05e4\u05e0\u05d4 \u05dc\u05de\u05e0\u05d4\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea');}catch(e){}
     id='dash';
   }
@@ -14058,7 +14065,7 @@ function rUsers(){
 window._ROLE_HINTS={};
 _ROLE_HINTS['\u05de\u05d3\u05d5\u05d5\u05d7']='\u05d3\u05e9\u05d1\u05d5\u05e8\u05d3, \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d5\u05de\u05e1\u05da \u05d4\u05e2\u05d5\u05d1\u05d3 \u05d1\u05dc\u05d1\u05d3. \u05dc\u05d0 \u05e4\u05d5\u05ea\u05d7 \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d5\u05dc\u05d0 \u05e2\u05d5\u05e8\u05da. \u05e2\u05d5\u05d1\u05d3 \u05e9\u05e6\u05e8\u05d9\u05da \u05dc\u05d3\u05d5\u05d5\u05d7 \u05de\u05e9\u05ea\u05de\u05e9 \u05d1\u05de\u05e1\u05da \u05d4\u05e0\u05d0\u05de\u05df.';
 _ROLE_HINTS['\u05de\u05e0\u05d4\u05dc']='\u05db\u05dc \u05de\u05e1\u05db\u05d9 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4, \u05d4\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05d4\u05de\u05d2\u05de\u05d5\u05ea, \u05db\u05d5\u05dc\u05dc \u05e2\u05e8\u05d9\u05db\u05d4 \u05d5\u05de\u05d7\u05d9\u05e7\u05d4. \u05d1\u05dc\u05d9 \u05e0\u05d9\u05d4\u05d5\u05dc \u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd, \u05d1\u05dc\u05d9 \u05d9\u05d5\u05de\u05df \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05d5\u05d1\u05dc\u05d9 \u05db\u05dc\u05d9 AI.';
-_ROLE_HINTS['\u05e6\u05d5\u05e4\u05d4']='\u05e8\u05d5\u05d0\u05d4 \u05d0\u05ea \u05db\u05dc \u05de\u05d4 \u05e9\u05de\u05e0\u05d4\u05dc \u05e8\u05d5\u05d0\u05d4 \u05d5\u05dc\u05d0 \u05de\u05e9\u05e0\u05d4 \u05db\u05dc\u05d5\u05dd: \u05dc\u05d0 \u05e4\u05d5\u05ea\u05d7 \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05dc\u05d0 \u05e2\u05d5\u05e8\u05da \u05d5\u05dc\u05d0 \u05de\u05d5\u05d7\u05e7. \u05de\u05ea\u05d0\u05d9\u05dd \u05dc\u05e1\u05d5\u05e7\u05e8, \u05dc\u05de\u05d1\u05e7\u05e8 \u05d0\u05d5 \u05dc\u05d4\u05e0\u05d4\u05dc\u05d4.';
+_ROLE_HINTS['\u05e6\u05d5\u05e4\u05d4']='\u05e8\u05d5\u05d0\u05d4 \u05d0\u05ea \u05db\u05dc \u05de\u05d4 \u05e9\u05de\u05e0\u05d4\u05dc \u05e8\u05d5\u05d0\u05d4, \u05d7\u05d5\u05e5 \u05de\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e8\u05e4\u05d5\u05d0\u05d9\u05d5\u05ea \u05d5\u05e9\u05de\u05d9\u05e2\u05d4, \u05d5\u05dc\u05d0 \u05de\u05e9\u05e0\u05d4 \u05db\u05dc\u05d5\u05dd: \u05dc\u05d0 \u05e4\u05d5\u05ea\u05d7 \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05dc\u05d0 \u05e2\u05d5\u05e8\u05da \u05d5\u05dc\u05d0 \u05de\u05d5\u05d7\u05e7. \u05de\u05ea\u05d0\u05d9\u05dd \u05dc\u05e1\u05d5\u05e7\u05e8, \u05dc\u05de\u05d1\u05e7\u05e8 \u05d0\u05d5 \u05dc\u05d4\u05e0\u05d4\u05dc\u05d4.';
 _ROLE_HINTS['\u05d0\u05d3\u05de\u05d9\u05df']='\u05d4\u05db\u05dc, \u05db\u05d5\u05dc\u05dc \u05e0\u05d9\u05d4\u05d5\u05dc \u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd, \u05d9\u05d5\u05de\u05df \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05d5\u05d4\u05d2\u05d3\u05e8\u05d5\u05ea \u05d4\u05de\u05e2\u05e8\u05db\u05ea.';
 window._roleHint=function(selId,outId){
   var sel=g(selId),out=g(outId);if(!sel||!out)return;
@@ -20513,7 +20520,7 @@ function _applyRoleGates(){
     if(msheet)msheet.querySelectorAll('.sheet-btn').forEach(function(b){
       var mm=(b.getAttribute('onclick')||'').match(/_goFromSheet\(['"]m-modules-sheet['"]\s*,\s*['"]([^'"]+)['"]/);
       if(!mm)return;
-      if(role==='reporter' && !_REPORTER_PAGES[mm[1]]){b.dataset.roleHidden='1';b.style.display='none';}
+      if((role==='reporter' && !_REPORTER_PAGES[mm[1]])||(role==='viewer' && _VIEWER_HIDDEN_PAGES[mm[1]])){b.dataset.roleHidden='1';b.style.display='none';}
       else if(b.dataset.roleHidden==='1'){b.dataset.roleHidden='';if(b.dataset.modUserHidden!=='1')b.style.display='';}
     });
   }catch(e){}
@@ -20542,6 +20549,9 @@ function _applyRoleGates(){
   // Reporter sitting on a manager-only page (direct nav, stale hash) →
   // kick to dash. Allowed pages list lives in _REPORTER_PAGES.
   if(role==='reporter' && CUR && !_REPORTER_PAGES[CUR] && !_ADMIN_ONLY_PAGES[CUR]){
+    goPage('dash');
+  }
+  if(role==='viewer' && CUR && _VIEWER_HIDDEN_PAGES[CUR]){
     goPage('dash');
   }
   _refreshUsersDatalist();
