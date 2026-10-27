@@ -76,6 +76,8 @@ import tempfile
 check('a login file without a review line: blocked', not raw('Codes screen', R, ['functions/api/codes.js']))
 check('a login file with a review line: ok', raw('Codes screen', R + 'סקירה: סוכן נפרד בדק את ה-diff, לא נמצא דבר', ['functions/api/codes.js']))
 check('an ordinary server file: no review needed', raw('Morning brief', R, ['functions/api/wa-morning.js']))
+check('a file that takes outside input (trustee photos, a parser): blocked without review', not raw('Log', R, ['functions/api/trustee-log.js']) and not raw('PDF', R, ['functions/_pdftext.js']))
+check('every SENSITIVE path exists in the repo', all(os.path.exists(os.path.join(gate.ROOT, f)) for f in gate.SENSITIVE), [f for f in gate.SENSITIVE if not os.path.exists(os.path.join(gate.ROOT, f))])
 check('an empty review line: blocked', not raw('Codes screen', R + 'סקירה: ', ['functions/api/create-user.js']))
 mig = 'migrations/zz-gate-test-%d.sql' % os.getpid()
 open(os.path.join(gate.ROOT, mig), 'w').write('create policy p on public.x for select to anon using (true);')
