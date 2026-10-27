@@ -5,7 +5,7 @@
 // the real hazard-file.js with Graph and Supabase mocked, and reads the result.
 import fs from 'fs';
 import path from 'path';
-import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister, routedNote, applyEdits, supersede, runFileLocked, runArchive, stampMonth, mergeDropped, dropKey, subBudget, SUB_LIMIT } from './_build/hazard-file.mjs';
+import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister, routedNote, applyEdits, supersede, runFileLocked, runArchive, stampMonth, mergeDropped, dropKey, subBudget, SUB_LIMIT, storagePath, photoOf } from './_build/hazard-file.mjs';
 import { cleanAction } from './_build/_ai.mjs';
 import { readZip, writeZip, entryText, serial, patchSheetRows, readSheetRows, rowHeight } from './_build/_xlsxpatch.mjs';
 
@@ -21,7 +21,7 @@ async function deflate(u8) {
 function crc(buf) { let c = 0xFFFFFFFF; for (let i = 0; i < buf.length; i++) { c ^= buf[i]; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; } return (c ^ 0xFFFFFFFF) >>> 0; }
 // The smallest thing picInfo reads as a 64x48 JPEG.
 const JPEG = new Uint8Array([0xFF, 0xD8, 0xFF, 0xC0, 0x00, 0x11, 0x08, 0x00, 0x30, 0x00, 0x40, 3, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1, 0xFF, 0xD9]);
-const PH = (n) => SB + '/storage/v1/object/public/incidents-photos/tour/' + n + '.jpg';
+const PH = (n) => SB + '/storage/v1/object/public/incidents-photos/mf-tour-' + n + '.jpg';
 const VBA = new Uint8Array(3000).map((_, i) => (i * 37) % 251);
 const reg = (rows) => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr codeName="x" filterMode="1"/><sheetData>'
   + '<row r="1"><c r="A1" t="inlineStr"><is><t>מס"ד</t></is></c><c r="N1" t="inlineStr"><is><t>חדש/ישן</t></is></c></row>' + rows
@@ -463,7 +463,7 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   console.log('\n8b. photos in column P (29/09/2026): manager and trustee photos alike');
   {
     const HZp = HZ.map((h) => (h.id === 'th-2' ? Object.assign({}, h, { photo_url: PH('open') }) : Object.assign({}, h, { photo_url: PH('closed-old') })));
-    const TRp = TR.map((r) => (r.id === 'a' ? Object.assign({}, r, { photo_url: PH('trustee') }) : r.id === 'b' ? Object.assign({}, r, { photo_url: 'pending:abc' }) : r));
+    const TRp = TR.map((r) => (r.id === 'a' ? Object.assign({}, r, { photo_url: SB + '/storage/v1/object/public/incidents-photos/tru-ph-trustee.jpg' }) : r.id === 'b' ? Object.assign({}, r, { photo_url: 'pending:abc' }) : r));
     let pw = world({ file: await fixture(), hazards: HZp, reports: TRp });
     let pr = await runFile(ENV, 'xlsm', true);
     const main = pw.puts.find((p) => /2026\/ניהול סיורי מפגעים\.xlsm:/.test(p.path));
@@ -682,6 +682,15 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
     check('...and with none left, not even the new-hazards request', ap0.pending && ap0.calls === 0 && !ap0.created, ap0);
   }
 
+  // 27/10/2026 (security scan): a trustee report's photo_url is written anonymously; only a flat file in
+  // incidents-photos is signed, and a trustee row only its own tru- photo (not the owner signature in backups)
+  {
+    const sig = SB + '/storage/v1/object/public/backups/owner-signature/sig.png';
+    check('storagePath: another bucket refused (also a flat name in it), a flat photo kept', storagePath(sig, SB) === null && storagePath(SB + '/storage/v1/object/public/backups/sig.png', SB) === null && !!storagePath(SB + '/storage/v1/object/public/incidents-photos/mf-a-1.jpg', SB));
+    const trp = SB + '/storage/v1/object/public/incidents-photos/tru-ph-1-1.jpg', mf = SB + '/storage/v1/object/public/incidents-photos/mf-a-1.jpg';
+    check('photoOf: a trustee row only with its tru- photo; a hazard row keeps its own', photoOf('t:r1', [], [{ id: 'r1', photo_url: trp }]) === trp
+      && photoOf('t:r2', [], [{ id: 'r2', photo_url: mf }]) === null && photoOf('t:r4', [], [{ id: 'r4', photo_url: mf + '?x=/incidents-photos/tru-a' }]) === null && photoOf('t:r3', [], [{ id: 'r3', photo_url: sig }]) === null && photoOf('h:h1', [{ id: 'h1', photo_url: mf }], []) === mf);
+  }
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error('HARNESS ERROR', e); process.exit(2); });

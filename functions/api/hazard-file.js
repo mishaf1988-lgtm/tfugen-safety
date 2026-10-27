@@ -489,17 +489,27 @@ export function diffEdits(fileRows, last, hazards, reports, today) {
 // subrequests); the rest get the link only.
 export const PHOTO_COL = 15, MAX_PICS = 12, PIC_DAYS = 90, THUMB_W = 240, SIGN_SECONDS = 365 * 86400;
 const PHOTO_HEADER = '\u05ea\u05de\u05d5\u05e0\u05d4', PHOTO_TEXT = '\u05e4\u05ea\u05d9\u05d7\u05d4 \u05d1\u05d2\u05d5\u05d3\u05dc \u05de\u05dc\u05d0';
+// 27/10/2026 (security scan of the outside-input paths): photo_url of a trustee report is written by an
+// anonymous session, so a crafted URL could point at any object (e.g. the owner's signature in backups) and
+// the server would sign it with the service key and mail it. Only one flat file in the photos bucket passes.
+export const PHOTO_BUCKET = 'incidents-photos';
+const PHOTO_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,250}$/;
 export function storagePath(url, base) {
   const u = String(url || '');
   if (u.indexOf(base + '/storage/v1/object/') !== 0) return null;
   const m = u.substring(base.length).match(/^\/storage\/v1\/object\/(?:public\/|sign\/|authenticated\/)?([^/?]+)\/([^?]+)/);
-  return m ? { bucket: m[1], path: decodeURIComponent(m[2]) } : null;
+  if (!m || m[1] !== PHOTO_BUCKET) return null;
+  let path; try { path = decodeURIComponent(m[2]); } catch (e) { return null; }
+  return PHOTO_NAME.test(path) ? { bucket: m[1], path } : null;
 }
 // 'h:<id>' / 't:<id>' -> the record's photo URL, if it has one in our Storage.
 export function photoOf(id, hazards, reports) {
   const k = String(id || ''), rid = k.substring(2);
   const rec = k.charAt(0) === 'h' ? (hazards || []).find((x) => x.id === rid) : (reports || []).find((x) => x.id === rid);
-  return rec && rec.photo_url && !/^pending:/.test(rec.photo_url) ? rec.photo_url : null;
+  if (!rec || !rec.photo_url || /^pending:/.test(rec.photo_url)) return null;
+  // a trustee report ('t:') is anonymous: only its own tru- photos
+  if (k.charAt(0) === 't' && !/^[^?#]*\/incidents-photos\/tru-[^/?#]+(\?|$)/.test(rec.photo_url)) return null;
+  return rec.photo_url;
 }
 const sbBase = (env) => env.SUPABASE_URL || SB_LIVE;
 const sbHdr = (env) => ({ apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY });
