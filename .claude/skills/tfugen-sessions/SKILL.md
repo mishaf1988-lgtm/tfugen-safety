@@ -55,3 +55,5 @@ description: How Claude sessions of the tfugen-safety repo are named, synced and
 - **שורת השאלה במשרד** נכתבת עם `status: "done"` ו-`sent_at`, אחרת הדוור יעביר אותה שוב ויפעיל ריצה שנייה.
 - **מדידה:** זמן = `owner_in` עד `wa_out` ב-`notifications_log`. עלות = `list_events` עם `kinds:["result"]` על הריצה (לקח 103). לא `kinds` של assistant: הפלט ענק.
 - **בקשה שעלולה לכתוב** (טיוטה, חתימה, מחיקה) לא שולחים. סבב הסירובים של 23/10 כבר רשום ב-`notifications_log` (ערוץ office, 18:57-19:10).
+
+**יומן התוספות של מיכאל** (27/10/2026): https://claude.ai/artifact/SgaJHrTPhxf3fdHsCMguH7, אוסף `days`, מסמך לכל יום (`YYYY-MM-DD`). הריצה `routine-additions-log` כותבת כל ערב. תוספת גדולה שבנית עם שרטוטים: עמוד שרטוטים נפרד, וכתובת שלו ב-`visual` של היום (`ArtifactData update` עם `if_version`). אם הריצה דיווחה "אין ArtifactData": שיחת הפיתוח כותבת את היום בסוף המשימה, לפי `routine-additions-log.md` צעדים 2-4.
