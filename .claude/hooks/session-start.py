@@ -194,6 +194,8 @@ def install_user_hooks(cwd, home=None):
     for groups in hooks.values():
         for g in groups:
             for h in g.get("hooks", []):
+                if "command" not in h:
+                    continue  # a prompt hook (27/10/2026) has no path to fix
                 cmd = h["command"].replace('"$CLAUDE_PROJECT_DIR"', q)
                 h["command"] = '[ "$CLAUDE_PROJECT_DIR" = %s ] || CLAUDE_PROJECT_DIR=%s %s' % (q, q, cmd)
     f = os.path.join(home or os.path.expanduser("~"), ".claude", "settings.json")

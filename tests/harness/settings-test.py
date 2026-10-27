@@ -14,10 +14,15 @@ spec = importlib.util.spec_from_file_location("hc", os.path.join(R, ".github", "
 hc = importlib.util.module_from_spec(spec); spec.loader.exec_module(hc)
 check("guard-sql covers every SQL name, UUID prefix included", hc.uncovered(new) == [], hc.uncovered(new))
 check("guard-sql still covers Bash", hc.uncovered(new, names=["Bash"]) == [])
-cmds = lambda s: {h["command"].split("/.claude/hooks/")[-1] for ev in s["hooks"].values() for e in ev for h in e["hooks"]}
+cmds = lambda s: {h["command"].split("/.claude/hooks/")[-1] for ev in s["hooks"].values() for e in ev for h in e["hooks"] if "command" in h}
 missing = [c for c in cmds(new) if not any(os.path.exists(os.path.join(d, c)) for d in (os.path.join(HERE, "..", "hooks"), os.path.join(R, ".claude", "hooks")))]
 check("every hook in the settings exists", not missing, missing)
 check("no current hook dropped", cmds(old) <= cmds(new), cmds(old) - cmds(new))
 check("permissions unchanged", new.get("permissions") == old.get("permissions"))
 check("pr-gate, push-recheck, hebrew-midturn, session-start wired", {"pr-gate.py", "push-recheck.py", "hebrew-midturn.py", "session-start.py", "questionnaire-hebrew.py"} <= cmds(new))
+# The rules checker on Stop (27/10/2026, Michael: "not only language, working by the rules"): a prompt hook
+# that never loops (stop_hook_active) and names all six rules; session-start.py must skip it (no "command").
+rc = [h for g in old["hooks"].get("Stop", []) for h in g["hooks"] if h.get("type") == "prompt"]
+check("rules checker on Stop: one prompt hook, reads last_assistant_message, never loops, six rules",
+      len(rc) == 1 and all(w in rc[0]["prompt"] for w in ("$ARGUMENTS", "stop_hook_active", "last_assistant_message", "\n6. ")), rc)
 done()
