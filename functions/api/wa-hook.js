@@ -150,19 +150,23 @@ export function rateOf(m, about, prev) {
   if (m && (m.choice === 2 || m.choice === '2') || raw === RATE_CHOICES[1]) return { good: false };
   return null;
 }
-export function rateAdd(raw, good, q, nowIso) {
+// a = when the rated answer was sent (26/10/2026 retro: two different answers with the same short text, "\u05de\u05ea\u05d7\u05d9\u05dc",
+// merged into one rating). Same q and same a = the same answer, the last tap wins; no a = by q alone, as before.
+export function rateAdd(raw, good, q, nowIso, a) {
   let list = [];
   try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
   if (!Array.isArray(list)) list = [];
   const e = { at: nowIso, good: !!good, q: String(q || '').replace(/\s+/g, ' ').slice(0, 200) };
+  if (a) e.a = String(a).slice(0, 40);
   // 25/10/2026 (Michael: "I could tap accurate or not accurate many times"): one rating per answer, the last tap wins
-  if (list.length && list[list.length - 1] && list[list.length - 1].q === e.q) list[list.length - 1] = e; else list.push(e);
+  const last = list.length ? list[list.length - 1] : null;
+  if (last && last.q === e.q && (!e.a || !last.a || last.a === e.a)) list[list.length - 1] = e; else list.push(e);
   return list.slice(-RATE_MAX);
 }
-export async function rateNote(env, good, q) {
+export async function rateNote(env, good, q, a) {
   try {
     const rows = await sbJson(env, 'server_state?key=eq.' + RATE_KEY + '&select=value');
-    const list = rateAdd(rows && rows[0] ? rows[0].value : '[]', good, q, new Date().toISOString());
+    const list = rateAdd(rows && rows[0] ? rows[0].value : '[]', good, q, new Date().toISOString(), a);
     await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify([{ key: RATE_KEY, value: JSON.stringify(list), updated_at: new Date().toISOString() }]) });
   } catch (e) { /* a lost rating is not a lost message */ }
@@ -545,7 +549,7 @@ async function handle(env, raw) {
     // The fast lane first: an answer here means no "got it", no Routine. A failure on the way (read, write,
     // send) falls through to the assistant, so a message is never lost to the fast lane.
     const rt = rateOf(m, about, prev);
-    if (rt) { await rateNote(env, rt.good, about ? about.split(' | ')[1] : prev && prev.text); seen.rate = rt.good ? 'good' : 'bad'; }
+    if (rt) { await rateNote(env, rt.good, about ? about.split(' | ')[1] : prev && prev.text, about ? about.split(' | ').pop() : prev && prev.at); seen.rate = rt.good ? 'good' : 'bad'; }
     const fr0 = wa ? fastRoute(m, about, prev) : null;
     if (fr0 && await runFast(env, owner, m, fr0, seen, false)) continue;
     if (wa) { const a = await sendToOwner(env, owner, ACK_TEXT, { windowOpen: true, noTemplate: true }).catch(() => null); seen.ack = !!(a && a.ok); seen.ack_ms = Date.now() - t0; }

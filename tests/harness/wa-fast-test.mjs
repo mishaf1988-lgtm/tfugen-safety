@@ -58,6 +58,8 @@ check('ratings: the newest kept, at most ' + RATE_MAX + ', question cut to 200',
 // 25/10/2026: five taps in nine seconds on one answer were two ratings; the same answer again replaces its rating
 const r1 = rateAdd('[]', true, 'answer A', '2026-10-25T08:06:50Z'), r2 = rateAdd(JSON.stringify(r1), true, 'answer A', '2026-10-25T08:06:51Z'), r3 = rateAdd(JSON.stringify(r2), false, 'answer A', '2026-10-25T08:06:57Z');
 check('ratings: one per answer, the last tap wins', r2.length === 1 && r3.length === 1 && r3[0].good === false && r3[0].at === '2026-10-25T08:06:57Z', r3);
+{ const s1 = rateAdd('[]', true, 'מתחיל', '2026-10-26T08:00:05Z', '2026-10-26T08:00:00Z'), s2 = rateAdd(JSON.stringify(s1), false, 'מתחיל', '2026-10-26T09:00:05Z', '2026-10-26T09:00:00Z'), s3 = rateAdd(JSON.stringify(s2), true, 'מתחיל', '2026-10-26T09:00:09Z', '2026-10-26T09:00:00Z');
+  check('ratings: two answers with the same short text keep two ratings; a second tap on the same answer replaces (26/10/2026 retro)', s2.length === 2 && s2[0].good === true && s2[1].good === false && s3.length === 2 && s3[1].good === true, { s2, s3 }); }
 check('ratings: another answer is a new rating', rateAdd(JSON.stringify(r3), true, 'answer B', '2026-10-25T09:00:00Z').length === 2);
 console.log('\n5. the conversation so far (recentLine)');
 {
