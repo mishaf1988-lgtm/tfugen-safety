@@ -136,7 +136,7 @@ const ROWS = [
   check('test send: only to the connected account, no copies, subject "בדיקה - ", real recipients listed on top, not logged', c.j.ok && tm && tm.toRecipients.map((x) => x.emailAddress.address).join() === 'sviva@tapugan.co.il' && !tm.ccRecipients.length && tm.subject === 'בדיקה - דוח מפגעים פתוחים לטיפול - מחלקת חומר גלם' && tm.body.content.includes('gelem@tapugan.co.il, Igal@tapugan.co.il') && !c.w.state.hazard_report_last && c.j.sent[0].test === true, tm && tm.subject);
   check('no photos: no photo column, no attachments', !/<th[^>]*>תמונה<\/th>/.test(mail.body.content) && !mail.attachments, Object.keys(mail));
   // 29/09/2026: the hazards' photos go with the report, inline.
-  const PHU = SB + '/storage/v1/object/public/incidents-photos/tour/x.jpg';
+  const PHU = SB + '/storage/v1/object/public/incidents-photos/mf-attach-area-1.jpg';
   c = await call({ email: 'admin@tfugen.local', hz: HZ.map((h, i) => (i === 0 ? Object.assign({}, h, { photo_url: PHU }) : h)) }, { op: 'send', depts: ['חומר גלם'] });
   const pm = c.w.mails[0] && c.w.mails[0].message;
   const att = (pm && pm.attachments) || [];
