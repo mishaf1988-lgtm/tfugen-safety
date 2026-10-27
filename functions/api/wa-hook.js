@@ -566,7 +566,7 @@ async function handle(env, raw) {
     ]);
     const recent = rr ? recentLine(rr, m.id, Date.now()) : '';
     seen.recent = recent ? recent.split(' || ').length : 0;
-    try { snap = g ? buildBrief(g.items, g.failed, g.today, true, g.notes, g.weather) : null; } catch (e) { snap = null; }
+    try { snap = g ? buildBrief(g.items, g.failed, g.today, true, g.notes, g.weather, null, null, false, g.waiting, g.disq) : null; } catch (e) { snap = null; }
     // 22/10/2026 (Michael: "there is a mail with the inspection, how did you miss it"): at 1200 characters the 49 open
     // entries were cut to the newest few, and "the lifting inspection is set for 25/10" (21/10) never reached the
     // assistant, which then listed it as waiting. LEARNED_MAX keeps the open notebook whole until the retro folds it.
@@ -647,7 +647,7 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
     else if (fr0.kind === 'cal_move') { ans = await fastCalMove(env, fr0); ref = 'calmove-done'; }
     else if (fr0.kind === 'rate') { ans = RATE_THANKS; ref = 'rate'; }
     else if (fr0.kind === 'hazard') { ans = await fastHazard(env, fr0); ref = fr0.src + ' ' + fr0.id; }
-    else { const g = await gather(env, new Date()); ans = buildBrief(g.items, g.failed, g.today, false, [], null, null, null, true); ref = 'brief'; }
+    else { const g = await gather(env, new Date()); ans = buildBrief(g.items, g.failed, g.today, false, [], null, null, null, true, g.waiting, g.disq); ref = 'brief'; }
   } catch (e) { ans = null; }
   const sr = ans ? await sendToOwner(env, owner, ans, Object.assign({ windowOpen: true, noTemplate: true }, choices ? { choices } : {})).catch(() => null) : null;
   if (sr && (sr.ok || (chat && ans))) { seen.fast = fr0.kind; await noteLastOut(env, sbFrom(env), ans, ref); await logOut(env, ans, sr); return true; }
