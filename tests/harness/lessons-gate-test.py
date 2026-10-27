@@ -71,5 +71,20 @@ check('fix PR with a lesson in tfugen-dev: ok', raw('Fix: x', 'רטרו: אין\
 check('fix PR touching a skill with no lessons section: blocked', not raw('Fix: x', 'רטרו: אין\nskill: x', ['a.js', '.claude/skills/tfugen-history/SKILL.md']))
 os.chdir(_cwd)
 
+# a sensitive PR needs a security review line (27/10/2026)
+import tempfile
+check('a login file without a review line: blocked', not raw('Codes screen', R, ['functions/api/codes.js']))
+check('a login file with a review line: ok', raw('Codes screen', R + 'סקירה: סוכן נפרד בדק את ה-diff, לא נמצא דבר', ['functions/api/codes.js']))
+check('an ordinary server file: no review needed', raw('Morning brief', R, ['functions/api/wa-morning.js']))
+check('an empty review line: blocked', not raw('Codes screen', R + 'סקירה: ', ['functions/api/create-user.js']))
+mig = 'migrations/zz-gate-test-%d.sql' % os.getpid()
+open(os.path.join(gate.ROOT, mig), 'w').write('create policy p on public.x for select to anon using (true);')
+try:
+    check('a migration with a policy: blocked without review', not raw('New table', R, [mig]))
+    open(os.path.join(gate.ROOT, mig), 'w').write('create table if not exists public.y (id int);')
+    check('a migration with no permission change: no review needed', raw('New table', R, [mig]))
+finally:
+    os.remove(os.path.join(gate.ROOT, mig))
+
 print('%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)
