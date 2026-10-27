@@ -1,6 +1,6 @@
 // The morning update on WhatsApp from the server (20/10/2026): pg_cron calls /api/wa-morning twice,
 // only the call on 07:xx in Israel on Sunday-Thursday sends, once a day, to Michael's number only.
-import { areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT, splitUrgent, WAIT_DAYS } from './_build/wa-morning.mjs';
+import { areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT, splitUrgent, WAIT_DAYS, rowContradictions } from './_build/wa-morning.mjs';
 import { OD_ROOT } from './_build/routine-db.mjs';
 import fs from 'fs';
 
@@ -311,6 +311,17 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     const full = buildBrief(sp.items, [], T, false, [], null, null, null, false, sp.waiting, sp.disq), urg = buildBrief(sp.items, [], T, false, [], null, null, null, true, sp.waiting, sp.disq), cmp = buildBrief(sp.items, [], T, true, [], null, null, null, false, sp.waiting, sp.disq);
     check('brief: a line "waiting for the report" with the inspection date, and "disqualified" apart; also in "what is urgent" and the compact form', full.includes('\u05de\u05d7\u05db\u05d4 \u05dc\u05ea\u05e1\u05e7\u05d9\u05e8') && full.includes('25/10/2026') && full.includes('\u05e4\u05e1\u05d5\u05dc, \u05de\u05d7\u05db\u05d4 \u05dc\u05d4\u05d7\u05dc\u05e4\u05d4') && full.indexOf('big bag cross') > full.indexOf('\u05de\u05d7\u05db\u05d4 \u05dc\u05ea\u05e1\u05e7\u05d9\u05e8') && urg.includes('\u05de\u05d7\u05db\u05d4 \u05dc\u05ea\u05e1\u05e7\u05d9\u05e8') && urg.includes('\u05e4\u05e1\u05d5\u05dc') && cmp.includes('\u05de\u05d7\u05db\u05d4 \u05dc\u05ea\u05e1\u05e7\u05d9\u05e8'), { full, urg, cmp });
     check('brief: without the new lists it is as before', buildBrief(sp.items, [], T, false, [], null, null, null) === buildBrief(sp.items, [], T, false, [], null, null, null, false, [], []));
+  }
+  { // 27/10/2026: a row whose state passes while its latest note or deficiencies say it failed
+    const rows = [{ n: 'extenders', s: '\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4', notes: 'safe load | 27/10/2026 Claude (routine-wa-assistant): \u05e0\u05e4\u05e1\u05dc \u05d1\u05d1\u05d3\u05d9\u05e7\u05d4 25/10/2026', deficiencies: '\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4' },
+      { n: 'old fail', s: '\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4', notes: '\u05e0\u05e4\u05e1\u05dc 2024 | 27/10/2026 Claude: \u05e0\u05d1\u05d3\u05e7, \u05ea\u05e7\u05d9\u05df', deficiencies: '' },
+      { n: 'deficiency', s: '\u05de\u05d5\u05ea\u05e8 \u05dc\u05e9\u05d9\u05de\u05d5\u05e9', notes: '', deficiencies: '\u05dc\u05d0 \u05ea\u05e7\u05d9\u05df: \u05e1\u05d3\u05e7' },
+      { n: 'history', s: '\u05de\u05d5\u05ea\u05e8 \u05dc\u05e9\u05d9\u05de\u05d5\u05e9', notes: '\u05e0\u05de\u05e6\u05d0 \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df, \u05e0\u05d1\u05d3\u05e7 \u05e9\u05d5\u05d1 \u05d5\u05e0\u05de\u05e6\u05d0 \u05ea\u05e7\u05d9\u05df.', deficiencies: '' },
+      { n: 'marked', s: '\u05e4\u05e1\u05d5\u05dc', notes: '\u05e0\u05e4\u05e1\u05dc', deficiencies: '' }, { n: 'negated', s: '\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4', notes: '\u05dc\u05d0 \u05e0\u05e4\u05e1\u05dc', deficiencies: '' }];
+    const c = rowContradictions(rows);
+    check('contradiction: fit + latest note "disqualified", or fit + a failing deficiency; an older note, a free-text history note (3 false alarms live, 27/10), a row already disqualified, and "not disqualified" are not', c.join() === 'extenders,deficiency', c);
+    const b = buildBrief([], [], '2026-10-27', false, [], null, null, null, false, [], [], c), u = buildBrief([], [], '2026-10-27', false, [], null, null, null, true, [], [], c);
+    check('brief: a contradiction line in the morning update, not in "what is urgent"', b.includes('\u05e9\u05d5\u05e8\u05d4 \u05e1\u05d5\u05ea\u05e8\u05ea') && b.includes('extenders') && !u.includes('\u05e9\u05d5\u05e8\u05d4 \u05e1\u05d5\u05ea\u05e8\u05ea'), { b, u });
   }
   console.log('\nwa-morning-test: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
