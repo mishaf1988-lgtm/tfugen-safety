@@ -473,14 +473,14 @@ export async function noteOut(env, text, r, kind, extra) {
 }
 // 26/10/2026 (Michael: "upgrade the duplicate answers"): the same text twice within minutes (a dev_done called twice,
 // 5 seconds apart, on 25/10) went out twice. The same text already logged as wa_out in the last DUP_MS is not sent
-// again. A read that fails sends as before.
+// again. A read that fails sends as before. A send that failed (channel whatsapp_error) is not a send: its retry goes out (27/10/2026 retro).
 export const DUP_MS = 10 * 60000;
 export async function sentLately(env, t, nowMs) {
   if (!env || !env.SUPABASE_SERVICE_ROLE_KEY || t.length < 30) return false;
   const sbUrl = env.SUPABASE_URL || SB_LIVE, k = env.SUPABASE_SERVICE_ROLE_KEY;
   try {
     const since = new Date((nowMs || Date.now()) - DUP_MS).toISOString();
-    const r = await fetch(sbUrl + '/rest/v1/notifications_log?select=payload->>text&event_type=eq.' + WA_OUT + '&ts=gte.' + encodeURIComponent(since) + '&order=ts.desc&limit=30',
+    const r = await fetch(sbUrl + '/rest/v1/notifications_log?select=payload->>text&event_type=eq.' + WA_OUT + '&channel=neq.whatsapp_error&ts=gte.' + encodeURIComponent(since) + '&order=ts.desc&limit=30',
       { headers: { apikey: k, Authorization: 'Bearer ' + k }, signal: tmo(SB_TIMEOUT_MS) });
     if (!r || !r.ok) return false;
     const rows = await r.json();
@@ -489,7 +489,8 @@ export async function sentLately(env, t, nowMs) {
 }
 export async function sendToOwner(env, to, text, opts) {
   if (!String(text || '').trim()) return { ok: false, error: 'empty text' };
-  if (await sentLately(env, ilTimes(String(text).trim()))) return { ok: true, via: 'dup', duplicate: true, push: 0 };
+  // a question with buttons is never dropped as a duplicate: its pending action is keyed to this very send (27/10/2026 retro)
+  if (!o_choices(opts).length && await sentLately(env, ilTimes(String(text).trim()))) return { ok: true, via: 'dup', duplicate: true, push: 0 };
   const r = (await chatOnly(env)) ? { ok: true, via: 'chat' } : await sendToOwnerRaw(env, to, text, opts);
   if (r.error === 'empty text') return r;
   // the buttons too, so the chat shows the same choices (a tap there sends "1. ..." like a tap on WhatsApp)
