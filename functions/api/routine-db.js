@@ -1090,11 +1090,16 @@ export function tourCloseAskText(row, note) {
 // only change was 200 to 190 a ton; Michael: "do it" to both). A triage message (ref mail-triage) with a suggested
 // reply needs "checked" that names the thread (the whole conversation in Sent Items, not only after the mail
 // arrived), and one that mentions an updated quote needs "what changed" in the text. Pure.
+// 27/10/2026 (Michael: "I asked not to write the quote validity any more, and it shows up"; his rule of 26/10/2026:
+// "once I send a quote it is always valid, it is a formality"): a message to him or a draft that gives a quote's
+// validity date is refused, from any agent. Pure.
+export const QUOTE_VALID_RE = /(\u05d4\u05e6\u05e2|\u05d4\u05e6\u05e2\u05ea)[^\n]{0,120}(\u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3|\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3|\u05d1\u05ea\u05d5\u05e7\u05e3 \u05dc-|\u05de\u05d5\u05e2\u05d3 \u05d4\u05ea\u05d5\u05e7\u05e3)|(\u05ea\u05d5\u05e7\u05e3 \u05d4\u05d4\u05e6\u05e2\u05d4|\u05d4\u05d4\u05e6\u05e2\u05d4 \u05d1\u05ea\u05d5\u05e7\u05e3|\u05ea\u05d5\u05e7\u05e3 \u05e9\u05dc \u05d4\u05d4\u05e6\u05e2\u05d4)/;
+export function mentionsQuoteValidity(t) { return QUOTE_VALID_RE.test(String(t || '')); }
 export function triageGate(b) {
   if (String(b.ref || '') !== 'mail-triage') return null;
   const t = String(b.text || '');
   if (/\u05d4\u05e6\u05e2\u05d4:/.test(t) && !/(thread|\u05e9\u05e8\u05e9\u05d5\u05e8)/i.test(String(b.checked || ''))) return 'mail-triage with a suggested reply: search Sent Items for the whole thread (conversation), not only after this mail arrived, and say so in "checked" ("Sent Items, all the thread <subject>, HH:MM UTC"); a question that is only in the quoted part was already answered (27/10/2026)';
-  if (/(\u05e2\u05d3\u05db\u05e0\u05d9\u05ea|\u05de\u05e2\u05d5\u05d3\u05db\u05e0\u05ea|\u05de\u05ea\u05d5\u05e7\u05e0\u05ea)/.test(t) && !/\u05d4\u05e9\u05ea\u05e0\u05d4/.test(t)) return 'mail-triage mentions an updated quote: open the attachment and write what changed against the previous version (price, validity, new clauses) with "\u05d4\u05e9\u05ea\u05e0\u05d4:" (27/10/2026: the only change was 200 to 190 a ton, and an exclusivity clause)';
+  if (/(\u05e2\u05d3\u05db\u05e0\u05d9\u05ea|\u05de\u05e2\u05d5\u05d3\u05db\u05e0\u05ea|\u05de\u05ea\u05d5\u05e7\u05e0\u05ea)/.test(t) && !/\u05d4\u05e9\u05ea\u05e0\u05d4/.test(t)) return 'mail-triage mentions an updated quote: open the attachment and write what changed against the previous version (price, what is included, new clauses; never the validity date, Michael 26/10/2026) with "\u05d4\u05e9\u05ea\u05e0\u05d4:" (27/10/2026: the only change was 200 to 190 a ton, and an exclusivity clause)';
   return null;
 }
 export function claimGate(text, checked) {
@@ -1784,6 +1789,7 @@ export async function onRequest(context) {
     }
     if (body.op === 'mail_draft') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'cc', 'subject', 'body', 'attach', 'reply_to', 'checked', 'replaces'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      if (mentionsQuoteValidity(body.body)) return jsonResp({ ok: false, error: 'the draft gives a quote validity date: drop it (Michael 26/10 and 27/10/2026)' }, 400, {});
       const sentGate = draftSentGate(body);
       if (sentGate) return jsonResp({ ok: false, error: sentGate }, 400, {});
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
@@ -2172,6 +2178,7 @@ export async function onRequest(context) {
       if (/^sign/i.test(String(body.ref || ''))) return jsonResp({ ok: false, error: 'ref sign*: reserved for the server signing buttons; use another ref' }, 400, {});
       // 27/10/2026 retro: calmove:/calinvite:/tourclose: run a pending action on Michael's "\u05d1\u05e6\u05e2"; only the *_ask ops (askInternal) may carry them
       if (body.askInternal !== true && /^(calmove|calinvite|tourclose):/i.test(String(body.ref || ''))) return jsonResp({ ok: false, error: 'ref calmove:/calinvite:/tourclose: reserved for the *_ask ops; use another ref' }, 400, {});
+      if (mentionsQuoteValidity(body.text)) return jsonResp({ ok: false, error: 'the text gives a quote validity date: drop it (Michael 26/10 and 27/10/2026: "a quote I send is always valid"); write the supplier, the price, what is included and the difference' }, 400, {});
       const tg = triageGate(body);
       if (tg) return jsonResp({ ok: false, error: tg }, 400, {});
       const cg = claimGate(body.text, body.checked);
