@@ -183,7 +183,7 @@ const callIn = async (body) => {
       && !!odTrashCheck({ agent: 'dev', why: 'a test', path: OD_TRASH_DIR + '/a.pdf' }).error && !!odTrashCheck({ agent: 'dev', why: 'a test', path: '18_x/_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea/a.pdf' }).error
       && !!odTrashCheck({ agent: 'dev', why: 'a test', path: 'a.pdf' }).error && !!odTrashCheck({ agent: 'dev', why: 'a test', path: '18_x/folder' }).error;
   })());
-  check('the write list is exactly the eight keys (mail_filing, validity_run 11/10/2026; iso_tasks 24/10/2026; mail_triage 25/10/2026)', STATE_WRITE.join() === 'quote_track,nevo_versions,od_raw_token,od_raw_exp,mail_filing,validity_run,iso_tasks,mail_triage');
+  check('the write list is exactly the nine keys (mail_filing, validity_run 11/10/2026; iso_tasks 24/10/2026; mail_triage 25/10/2026; quality_run 27/10/2026)', STATE_WRITE.join() === 'quote_track,nevo_versions,od_raw_token,od_raw_exp,mail_filing,validity_run,iso_tasks,mail_triage,quality_run');
   const t0 = Date.now();
   r = await call({ op: 'state_set', key: 'mail_filing', value: [{ at: '2020-01-01T00:00:00Z', got: 1 }, { at: '2026-10-11T15:05:00Z', got: 0 }] });
   const mf = JSON.parse(state.mail_filing);
@@ -823,6 +823,14 @@ const callIn = async (body) => {
     const f = await call({ op: 'wa_me', agent: 'routine-wa-assistant', answers: T, text: '\u05dc\u05d4\u05d6\u05d9\u05d6?\n1. \u05d1\u05e6\u05e2', choices: ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'], overlap_ok: true });
     ownerIn = null;
     check('wa_me run: a newer tap of his refuses an approval question (stale); another reply and a fresh question go on (here to "whatsapp not configured")', q.status === 400 && /^stale/.test(q.json.error) && r.json.error === 'whatsapp not configured' && f.json.error === 'whatsapp not configured', { q: q.json, r: r.json, f: f.json });
+  }
+
+  console.log('\n4e4d. out_log for the quality checker (27/10/2026)');
+  {
+    const r = await call({ op: 'out_log', agent: 'routine-quality', since: new Date(Date.now() - 86400000).toISOString() });
+    const q = calls.filter((c) => /notifications_log\?select=ts,event_type/.test(c.url)).pop();
+    check('out_log: reads wa_out, owner_in and assistant since the time, oldest first; answers rows', r.json.ok && Array.isArray(r.json.rows) && q && /event_type=in\.\(wa_out,owner_in,assistant\)/.test(q.url) && /order=ts\.asc/.test(q.url), { j: r.json, url: q && q.url });
+    check('out_log: no since, more than 4 days back, or an extra field = refused', (await call({ op: 'out_log' })).status === 400 && (await call({ op: 'out_log', since: '2020-01-01T00:00:00Z' })).status === 400 && (await call({ op: 'out_log', since: new Date().toISOString(), table: 'x' })).status === 400);
   }
 
   console.log('\n4e5. tour_close_ask (26/10/2026, Michael: "do it: only after my do-it")');
