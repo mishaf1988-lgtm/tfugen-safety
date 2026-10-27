@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftSubj, draftMadeLine, quotaMode, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
+import { ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftSubj, draftMadeLine, quotaMode, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -110,6 +110,48 @@ const callIn = async (body) => {
     const got = pdfJpegs(buf, 2);
     return got.length === 2 && got[0].length === 3005 && got[1].length === 2505 && pdfJpegs(Uint8Array.from([1, 2, 3]), 3).length === 0 && OCR_MODELS.length >= 2;
   })());
+  // 27/10/2026 (inspector scans from OmniPage): each page JPEG inside /Filter [/FlateDecode /DCTDecode]. The raw FFD8 search
+  // found nothing in a filed page and one false "JPEG" in the 6-page original; and only the first 3 pages were ever read.
+  await (async () => {
+    const zlib = await import('zlib');
+    const jpg = (n, v) => Buffer.from([0xFF, 0xD8, 0xFF].concat(new Array(n).fill(v), [0xFF, 0xD9]));
+    const obj = (id, dict, data) => Buffer.concat([Buffer.from(id + ' 0 obj\r\n<</Subtype /Image ' + dict + ' >> stream\r\n', 'latin1'), data, Buffer.from('\r\nendstream\r\nendobj\r\n', 'latin1')]);
+    const pages = [1, 2, 3, 4].map((k) => jpg(3000 + k, k));
+    const flat = (k) => zlib.deflateSync(pages[k]);
+    const pdf = Buffer.concat([Buffer.from('%PDF-1.4\n9 0 obj\r\n<</Length 5>> stream\r\n\xff\xd8\xff\x00\x00\r\nendstream\r\n', 'latin1'),
+      obj(1, '/Filter [/FlateDecode /DCTDecode ] /Length ' + flat(0).length, flat(0)), obj(2, '/Filter /DCTDecode /Length 7 0 R', pages[1]),
+      Buffer.from('7 0 obj\r\n' + pages[1].length + '\r\nendobj\r\n', 'latin1'), obj(3, '/Filter [/FlateDecode /DCTDecode] /Length ' + flat(2).length, flat(2)),
+      obj(4, '/Filter /DCTDecode /Length ' + pages[3].length, pages[3]), obj(5, '/Filter [/LZWDecode /DCTDecode] /Length 4', Buffer.from('abcd'))]);
+    const got = await pdfDct(new Uint8Array(pdf));
+    check('pdfDct: page JPEGs in file order, Flate+DCT inflated, indirect /Length, other filter chains skipped (27/10/2026)',
+      got.length === 4 && got.every((g, i) => Buffer.compare(Buffer.from(g), pages[i]) === 0), got.map((g) => g.length));
+    const bomb = Buffer.concat([Buffer.from([0xFF, 0xD8, 0xFF]), Buffer.alloc(20 * 1024 * 1024)]), zb = zlib.deflateSync(bomb);
+    const bombPdf = Buffer.concat([Buffer.from('%PDF-1.4\n', 'latin1'), obj(1, '/Filter [/FlateDecode /DCTDecode] /Length ' + zb.length, zb)]);
+    const bombErr = await pdfDct(new Uint8Array(bombPdf)).then(() => '', (e) => String(e.message));
+    const many = Buffer.concat([Buffer.from('%PDF-1.4\n', 'latin1')].concat(new Array(80).fill(0).map((x, i) => obj(i + 1, '/Filter /DCTDecode /Length ' + pages[0].length, pages[0]))));
+    const capped = await pdfDct(new Uint8Array(many), 60, 0, 3);
+    const empty = await pdfDct(new Uint8Array(Buffer.concat([Buffer.from('%PDF-1.4\n', 'latin1'), obj(1, '/Filter [] /DCTDecode /Length 4', Buffer.from('abcd'))])));
+    check('pdfDct, the PDF is untrusted: a deflate bomb stops at 8 MB, at most 60 images and only the asked pages read, an empty /Filter [] does not throw (27/10/2026 review)',
+      /over 8 MB/.test(bombErr) && capped.length === 60 && capped.slice(0, 3).every(Boolean) && capped.slice(3).every((x) => x === null) && Array.isArray(empty), { bombErr, n: capped.length });
+    const saved = {}, real = globalThis.fetch;
+    globalThis.fetch = async (u, o) => {
+      const url = String(u);
+      if (o && o.method === 'PUT') { saved.text = String(o.body); return new Response('{}', { status: 201 }); }
+      if (/\.txt:\/content/.test(decodeURIComponent(url))) return new Response(saved.text || '', { status: saved.text ? 200 : 404 });
+      return new Response(pdf, { status: 200 });
+    };
+    const seen = [];
+    const env = { AI: { run: async (m, inp) => { const b64 = inp.messages[0].content[1].image_url.url.split(',')[1]; const b = Buffer.from(b64, 'base64'); seen.push(b[5]); return { response: 'p' + b[5] }; } } };
+    try {
+      const a = await ocrOne(env, 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0]);
+      const b = await ocrOne(env, 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0], a.next);
+      const c = await ocrOne(env, 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0], 9);
+      check('ocrOne: 3 pages a call with `next`, the next call appends with page headers; past the end = an error naming the page count (27/10/2026)',
+        a.ok && a.pages === 3 && a.of === 4 && a.next === 4 && b.ok && b.pages === 1 && b.next === undefined && seen.join() === '1,2,3,4'
+        && /\u05e2\u05de\u05d5\u05d3 1 ---\np1[\s\S]*\u05e2\u05de\u05d5\u05d3 3 ---\np3\n\n--- \u05e2\u05de\u05d5\u05d3 4 ---\np4$/.test(saved.text) && !c.ok && /4 pages/.test(c.error),
+        { a, b, c, text: saved.text });
+    } finally { globalThis.fetch = real; }
+  })();
   // 26/10/2026 (dev request: a copier scan, "no scanned page image"): black and white pages are CCITT Group 4.
   // SYN_G4 is a synthetic 300x200 page made by PIL (a filled box, a ring, lines, a frame), saved by ImageMagick with -compress Group4.
   await (async () => {
