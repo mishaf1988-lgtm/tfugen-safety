@@ -167,7 +167,9 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
   check('the file holds the two tables as rows, ready to insert back', f0.at === 'AT' && f0.tables.toolbox_talks.length === 2 && !('toolbox_reads' in f0.tables.toolbox_talks[0]) && f0.tables.toolbox_reads.map((x) => x.id).join() === 'r1,r2', f0);
   const TALK_ROWS = [{ id: 't1', title: 'עבודה בגובה', toolbox_reads: [{ id: 'r1', talk_id: 't1', emp_name: 'דנה', id_no: '0123' }] }];
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-  const OLDT = Array.from({ length: 16 }, (_, i) => talksName(new Date(Date.now() - (i + 1) * DAY).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' })));
+  // Calendar days back from today, not 24-hour steps: across the clock change (25/10/2026) two steps
+  // landed on the same date, so one file was missing and only one was pruned.
+  const OLDT = Array.from({ length: 16 }, (_, i) => talksName(new Date(Date.parse(today + 'T12:00:00Z') - (i + 1) * DAY).toISOString().slice(0, 10)));
   c = await call({ backups: BK, photos: PH, talks: TALK_ROWS, plan: [{ id: 'tp2026-28', yr: 2026, n: 28, t: 'x', done: [] }], od: { [TALKS]: OLDT } }, 'nsec');
   const tf = TALKS + '|' + talksName(today), body = JSON.parse(c.w.bodies[tf] || '{}');
   check('one read for both tables, today\'s file written', c.j.ok && c.w.talkReads.length === 1 && /select=\*,toolbox_reads\(\*\)/.test(c.w.talkReads[0]) && !!c.w.bodies[tf], [c.j.errors, c.w.talkReads]);
