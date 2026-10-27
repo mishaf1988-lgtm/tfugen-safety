@@ -140,7 +140,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: נכתבו באנגלית.
 הכלל: עברית תמיד.
 נאכף: `hebrew-reply.py` (Stop) בודק כל קטע טקסט לחוד, `hebrew-reply-test.py`; תזכורת בתחילת כל תור `hebrew-prompt.py`, והודעת `ci-watch.py` בעברית (`hebrew-prompt-test.py`); שאלון באנגלית נחסם ב-`questionnaire-hebrew.py` (PreToolUse על AskUserQuestion, `questionnaire-hebrew-test.py`).
-חזר: 64 (26/10: 6; 25/10: פעמיים; 21/10: אחרי הפעלה מחדש; 20/10: שאלון, ולכן `questionnaire-hebrew.py`). בלי repo כתיקיית עבודה אין hooks.
+חזר: 70 (27/10: 6, ביניים; 26/10: 6; 25/10: פעמיים; 21/10: אחרי הפעלה מחדש; 20/10: שאלון, ולכן `questionnaire-hebrew.py`). בלי repo כתיקיית עבודה אין hooks.
 
 **14. שיחה ארוכה מדי (01/10/2026).**
 מה קרה: הודעות איטיות ויקרות; "שיחה חדשה" הוטל על מיכאל.
