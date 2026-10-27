@@ -24,7 +24,7 @@ description: How to hand Michael a step he must do himself on his phone (create 
 - **בטלפון:** לציין כשצריך לגלול כדי לראות את הכפתור.
 
 ## מקרים שכבר עבדו
-- **מחבר לריצה (Routine)** (25/10/2026, C46): `create_trigger` עם `connectors` נדחה ("not available for this organization"), ובלעדיו הריצה נוצרת בלי מחבר (אזהרה "stores no MCP connectors"). מיכאל הוסיף מהטלפון: `claude.ai/code/routines/<trig_id>` בדפדפן, Edit, Connectors, Microsoft 365, Save (דף: `UAc3LoDAUYPKkyPo4yqkUi`). אימות: `get_trigger` מראה אותו ב-`mcp_connections`, ואז `fire_trigger` אחד ובדיקה של התוצאה במסד.
+- **מחבר לריצה (Routine)** (25/10/2026, C46): `create_trigger` עם `connectors` נדחה ("not available for this organization"), ובלעדיו הריצה נוצרת בלי מחבר (אזהרה "stores no MCP connectors"). מיכאל הוסיף מהטלפון: `claude.ai/code/routines/<trig_id>` בדפדפן, Edit, Connectors, Microsoft 365, Save (דף: `UAc3LoDAUYPKkyPo4yqkUi`). אימות: `get_trigger` מראה אותו ב-`mcp_connections`, ואז `fire_trigger` אחד ובדיקה של התוצאה במסד. **קודם לבדוק אם אפשר בלי המחבר** (27/10/2026, C52, מיכאל: "העשה לבד"): אם הריצה רק קוראת מה שהשרת שלנו עצמו יצר (טיוטות, בקשות), השרת שומר עותק ב-`server_state` והריצה קוראת ב-`state_get` (`drafts_text`). מחבר נשאר רק למה שלא עובר דרך השרת.
 
 ## כללי הטקסט
 רק תווים שיש במקלדת (CLAUDE.md, טקסט לאנשים): בלי מקף ארוך, בלי « », בלי חצים, בלי תו כיוון נסתר (U+200E, נמצא ונוקה ב-17/10/2026). בדיקה מהירה לפני פרסום: `python3 -c` שמדפיס כל תו מעל U+2000 בקובץ.

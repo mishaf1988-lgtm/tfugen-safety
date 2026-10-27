@@ -159,7 +159,7 @@ import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLA
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed'];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -643,6 +643,14 @@ export const DRAFTS_MADE_KEY = 'drafts_made', DRAFTS_MADE_MAX = 200, DRAFTS_TRAS
 const mailSet = (x) => String(x || '').toLowerCase().split(/[;,]/).map((a) => a.trim()).filter(Boolean).sort().join(';');
 // RE: / FW: / Fwd: and the Hebrew Outlook prefixes, repeated
 export const draftSubj = (x) => String(x || '').replace(/^\s*((re|fw|fwd|\u05d4\u05e9\u05d1|\u05d4\u05e2\u05d1\u05e8)\s*:\s*)+/i, '').replace(/\s+/g, ' ').trim().toLowerCase();
+// 27/10/2026 (C52): the quality checker's Routine cannot be given the Microsoft 365 connector (create_trigger:
+// "the connectors parameter is not available for this organization"), so it reads the drafts here: the text
+// an agent sent to mail_draft, the last DRAFTS_TEXT_MAX of them, by state_get drafts_text.
+export const DRAFTS_TEXT_KEY = 'drafts_text', DRAFTS_TEXT_MAX = 30, DRAFTS_TEXT_BODY = 2000;
+export function draftTextLine(b, nowIso) {
+  return { at: nowIso, agent: String(b.agent || ''), to: mailSet(b.to), cc: mailSet(b.cc), subject: String(b.subject || '').slice(0, 200),
+    body: String(b.body || '').slice(0, DRAFTS_TEXT_BODY), reply: !!b.reply_to, replaces: Array.isArray(b.replaces) ? b.replaces.length : 0 };
+}
 export function draftMadeLine(req, nowIso) {
   return { at: nowIso, to: mailSet(req.to), subject: String(req.subject || '').slice(0, 200), reply: !!req.reply_to };
 }
@@ -1907,6 +1915,13 @@ export async function onRequest(context) {
         await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
           body: JSON.stringify([{ key: DRAFTS_MADE_KEY, value: JSON.stringify([line].concat(Array.isArray(made) ? made : []).slice(0, DRAFTS_MADE_MAX)), updated_at: line.at }]) });
       } catch (e) { /* the draft request is written; only its later deletion needs this line */ }
+      try {
+        const xr = await stateRead([DRAFTS_TEXT_KEY]).catch(() => []);
+        let xs = []; try { xs = JSON.parse((xr && xr[0] && xr[0].value) || '[]'); } catch (e) { xs = []; }
+        const tl = draftTextLine(body, new Date().toISOString());
+        await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+          body: JSON.stringify([{ key: DRAFTS_TEXT_KEY, value: JSON.stringify([tl].concat(Array.isArray(xs) ? xs : []).slice(0, DRAFTS_TEXT_MAX)), updated_at: tl.at }]) });
+      } catch (e) { /* only the quality checker reads this */ }
       const trashed = [];
       for (const c of reps) {
         const tn = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '') + '-' + Math.random().toString(36).slice(2, 8) + '.txt';
