@@ -1069,6 +1069,32 @@ const callIn = async (body) => {
     graph = async () => new Response('{}', { status: 500 });
   }
 
+  console.log('\n4f3e. od_expire without a timeout (27/10/2026, Michael: "do it: moving files without a timeout")');
+  {
+    const EQ = '02_x/lift/T-1/periodic', V = EQ + '/' + OD_VALID_DIR, OLD = '2026-04-29 - old.pdf', NEW = '2026-10-25 - new.pdf';
+    const T = () => Object.assign(new Error('The operation was aborted due to timeout'), { name: 'TimeoutError' });
+    const mk = (patchDoes) => {
+      const have = { [OD_ROOT + EQ]: { id: 'E', folder: {} }, [OD_ROOT + EQ + '/' + OD_EXPIRED_DIR]: { id: 'EX', folder: {} }, [OD_ROOT + V + '/' + OLD]: { id: 'O', file: {} }, [OD_ROOT + V + '/' + NEW]: { id: 'N', file: {} } };
+      let firstGet = true;
+      return async (url, opt = {}) => {
+        const u = decodeURIComponent(url);
+        if (opt.method === 'PATCH') { if (patchDoes === 'moves') { delete have[OD_ROOT + V + '/' + OLD]; have[OD_ROOT + EQ + '/' + OD_EXPIRED_DIR + '/' + OLD] = { id: 'O', file: {} }; } throw T(); }
+        if (firstGet) { firstGet = false; throw T(); } // the first read times out once
+        const m = /\/root:\/(.+?)\?select=/.exec(u);
+        if (m) { const it = have[m[1]]; return it ? new Response(JSON.stringify(it), { status: 200 }) : new Response('{}', { status: 404 }); }
+        return new Response('{}', { status: 400 });
+      };
+    };
+    const X = { op: 'od_expire', agent: 'routine-wa-assistant', why: 'a newer report replaced it', path: V + '/' + OLD, replaced_by: NEW };
+    graph = mk('moves');
+    let x = await call(X);
+    check('a read that times out is tried again; a move that times out but happened = ok (checked where the file landed)', x.json.ok && x.json.path === EQ + '/' + OD_EXPIRED_DIR + '/' + OLD, x.json);
+    graph = mk('nothing');
+    x = await call(X);
+    check('a move that times out and is not at the destination = said so, run it again', !x.json.ok && /not confirmed/.test(x.json.error), x.json);
+    graph = async () => new Response('{}', { status: 500 });
+  }
+
   console.log('\n4f3d. equip_add: one new equipment row from a filed report (27/10/2026, Michael: "do it: an op to add an equipment row")');
   {
     rows = { equip_inspections: [{ id: 'q9', code: 'WASTE-49571', report_number: '185997/226' }] };

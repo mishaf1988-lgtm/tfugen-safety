@@ -2172,33 +2172,51 @@ export async function onRequest(context) {
       const gh = { Authorization: 'Bearer ' + at.token, 'Content-Type': 'application/json' };
       const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
       const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
-      const src = await fetch(G + enc(c.from) + '?select=id,file', { headers: gh, signal: tmo(GRAPH_MS) });
+      // 27/10/2026 (Michael in the questionnaire: "do it: moving files without a timeout"): one of four od_expire calls
+      // that day ended "aborted due to timeout" and moved nothing. A read that times out is tried once more; a create
+      // or a move that times out is checked by reading where the result should be, and only then reported.
+      const isTmo = (e) => e && (e.name === 'TimeoutError' || e.name === 'AbortError' || /timeout|aborted/i.test(String(e.message)));
+      const get = async (u) => { try { return await fetch(u, { headers: gh, signal: tmo(GRAPH_MS) }); } catch (e) { if (!isTmo(e)) throw e; return fetch(u, { headers: gh, signal: tmo(GRAPH_MS) }); } };
+      const src = await get(G + enc(c.from) + '?select=id,file', { headers: gh, signal: tmo(GRAPH_MS) });
       if (!src.ok) return jsonResp({ ok: false, error: 'source ' + src.status }, 200, {});
       const sj = await src.json();
       if (!sj.file) return jsonResp({ ok: false, error: 'source is not a file' }, 200, {});
-      const nb = await fetch(G + enc(c.by) + '?select=id,file', { headers: gh, signal: tmo(GRAPH_MS) });
+      const nb = await get(G + enc(c.by) + '?select=id,file');
       if (!nb.ok) return jsonResp({ ok: false, error: 'replaced_by ' + nb.status }, 200, {});
       const nj = await nb.json();
       if (!nj.file) return jsonResp({ ok: false, error: 'replaced_by is not a file' }, 200, {});
       if (nj.id === sj.id) return jsonResp({ ok: false, error: 'replaced_by is the same file' }, 200, {});
-      let arc = await fetch(G + enc(tParent + '/' + tName) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
+      const arcUrl = G + enc(tParent + '/' + tName) + '?select=id,folder';
+      let arc = await get(arcUrl);
       let aj;
       if (arc.status === 404) {
-        const par = await fetch(G + enc(tParent) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
+        const par = await get(G + enc(tParent) + '?select=id');
         if (!par.ok) return jsonResp({ ok: false, error: 'folder ' + par.status }, 200, {});
         const pj = await par.json();
-        arc = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(pj.id) + '/children', {
-          method: 'POST', headers: gh, body: JSON.stringify({ name: tName, folder: {}, '@microsoft.graph.conflictBehavior': 'fail' }), signal: tmo(GRAPH_MS),
-        });
+        try {
+          arc = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(pj.id) + '/children', {
+            method: 'POST', headers: gh, body: JSON.stringify({ name: tName, folder: {}, '@microsoft.graph.conflictBehavior': 'fail' }), signal: tmo(GRAPH_MS),
+          });
+        } catch (e) { if (!isTmo(e)) throw e; arc = await get(arcUrl); } // created or not: read it
         if (!arc.ok) return jsonResp({ ok: false, error: 'create archive ' + arc.status }, 200, {});
       } else if (!arc.ok) return jsonResp({ ok: false, error: 'archive ' + arc.status }, 200, {});
       aj = await arc.json();
       if (!aj.folder) return jsonResp({ ok: false, error: 'archive is not a folder' }, 200, {});
-      const taken = await fetch(G + enc(tParent + '/' + tName + '/' + c.name) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
+      const destUrl = G + enc(tParent + '/' + tName + '/' + c.name) + '?select=id';
+      const taken = await get(destUrl);
       if (taken.status !== 404) return jsonResp({ ok: false, error: taken.ok ? 'name taken in archive' : 'name check ' + taken.status }, 200, {});
-      const mv = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(sj.id) + '?@microsoft.graph.conflictBehavior=fail', {
-        method: 'PATCH', headers: gh, body: JSON.stringify({ parentReference: { id: aj.id } }), signal: tmo(GRAPH_MS),
-      });
+      let mv;
+      try {
+        mv = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(sj.id) + '?@microsoft.graph.conflictBehavior=fail', {
+          method: 'PATCH', headers: gh, body: JSON.stringify({ parentReference: { id: aj.id } }), signal: tmo(GRAPH_MS),
+        });
+      } catch (e) {
+        if (!isTmo(e)) throw e;
+        const d = await get(destUrl);
+        const dj = d.ok ? await d.json() : null;
+        if (!(dj && dj.id === sj.id)) return jsonResp({ ok: false, error: 'move timed out and was not confirmed at the destination: run it again (safe: a moved file answers source 404)' }, 200, {});
+        mv = { ok: true };
+      }
       if (!mv.ok) return jsonResp({ ok: false, error: 'move ' + mv.status }, 200, {});
       return jsonResp({ ok: true, path: tParent.slice(OD_ROOT.length) + '/' + tName + '/' + c.name }, 200, {});
     }
