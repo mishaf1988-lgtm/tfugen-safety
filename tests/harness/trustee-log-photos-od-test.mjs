@@ -34,7 +34,7 @@ function world(reports, o) {
     if (u.startsWith(SB + '/storage/v1/render/image/')) return new Response('no', { status: 400 });
     if (u.startsWith(SB + '/storage/v1/object/authenticated/')) {
       const n = u.split('/').pop(); w.gets.push(n);
-      if (n === 'gone.jpg') return new Response('not found', { status: 404 });
+      if (n === 'tru-ph-gone.jpg') return new Response('not found', { status: 404 });
       return new Response(JPG, { status: 200 });
     }
     if (u.startsWith('https://graph.microsoft.com/v1.0/me/drive/root:/')) {
@@ -68,7 +68,7 @@ console.log('\n1. first write copies the photos and links them');
   check('Excel links point to OneDrive copies', w.lastLog.indexOf('https://tapugancoil-my.sharepoint.com/p/1') >= 0 && w.lastLog.indexOf('https://tapugancoil-my.sharepoint.com/p/2') >= 0);
   check('the gone photo keeps the Storage link', w.lastLog.indexOf('gone.jpg?token=t') >= 0);
   check('photos folder URL saved for the home card', w.state.trustee_photos_url === 'https://tapugancoil-my.sharepoint.com/folder', w.state);
-  check('each photo downloaded once (copy bytes reused as thumbnail)', w.gets.filter((n) => n === 'p1.jpg').length === 1, w.gets);
+  check('each photo downloaded once (copy bytes reused as thumbnail)', w.gets.filter((n) => n === 'tru-ph-p1.jpg').length === 1, w.gets);
   check('thumbnails embedded', (w.lastLog.match(/xl\/media\/image\d+\.jpeg/g) || []).length === 4, (w.lastLog.match(/xl\/media\/image\d+\.jpeg/g) || []).length);
   check('signature saved (nothing pending)', !!w.state.trustee_log_sig && r.photos_pending === 0, r);
 
