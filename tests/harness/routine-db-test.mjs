@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftSubj, draftMadeLine, quotaMode, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
+import { ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftSubj, draftMadeLine, quotaMode, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -252,7 +252,8 @@ const callIn = async (body) => {
     // 25/10/2026: the one DELETE, od_dedupe (Michael in the questionnaire: "do it: to the recycle bin"); only there, and only of a Graph item
     const dels = [...src.matchAll(/method:\s*'DELETE'/g)].map((m) => (owner(m.index) || {}).op);
     check('one DELETE, in od_dedupe only, of a OneDrive item (to the recycle bin); never a table row', dels.join() === 'od_dedupe' && /graph\.microsoft\.com\/v1\.0\/me\/drive\/items\/' \+ encodeURIComponent\(item\.id\), \{ method: 'DELETE'/.test(src), dels);
-    check('no other DELETE; one PATCH each in expiry_set, hazard_choice, od_archive, od_move, od_pull and od_trash (24/10/2026, moves, not deletes) and talk_field', dels.length === 1 && patches.length === 7 && own === 'expiry_set,hazard_choice,od_archive,od_move,od_pull,od_trash,talk_field', own);
+    // 27/10/2026: od_archive and od_expire share one handler (the PATCH reads as od_expire, the second name on its line).
+    check('no other DELETE; one PATCH each in expiry_set, hazard_choice, od_archive/od_expire, od_move, od_pull and od_trash (24/10/2026, moves, not deletes) and talk_field', dels.length === 1 && patches.length === 7 && own === 'expiry_set,hazard_choice,od_expire,od_move,od_pull,od_trash,talk_field' && /body\.op === 'od_archive' \|\| body\.op === 'od_expire'/.test(src), own);
   }
 
   console.log('\n4b. agent_report: append-only run log');
@@ -1033,6 +1034,35 @@ const callIn = async (body) => {
     check('no new file beside it: refused (archiving never hides the only copy)', !x.json.ok && /^replaced_by 404/.test(x.json.error) && !patches.length, x.json);
     check('from the inbox, the drafts, an archive folder, a folder path, itself as replaced_by, a path in replaced_by, no why, or an extra field: refused',
       [{ path: OD_INBOX + '/a.pdf' }, { path: OD_DRAFT + '/a.pdf' }, { path: DIR + '/' + OD_ARCHIVE_DIR + '/a.pdf' }, { path: 'x/ARCHIVE/a.pdf' }, { path: 'a.pdf' }, { path: DIR + '/../a.pdf' }, { replaced_by: 'old.pdf' }, { replaced_by: 'x/new.pdf' }, { why: '' }, { path: DIR + '/a.exe' }].every((o) => !!odArchiveCheck({ ...A, ...o }).error) && (await call({ ...A, delete: true })).status === 400 && !patches.length);
+    graph = async () => new Response('{}', { status: 500 });
+  }
+
+  console.log('\n4f3c. od_expire: a replaced inspection report moves from valid to expired (27/10/2026, Michael: "do it: build the move")');
+  {
+    const EQ = '02_x/lift/WASTE-1/periodic', V = EQ + '/' + OD_VALID_DIR;
+    const have = { [OD_ROOT + EQ]: { id: 'E', folder: {} }, [OD_ROOT + V + '/2026-04-29 - old.pdf']: { id: 'O', file: {} }, [OD_ROOT + V + '/2026-10-25 - new.pdf']: { id: 'N', file: {} }, [OD_ROOT + V + '/2026-10-25 - OLD.pdf']: { id: 'O', file: {} } };
+    let posts = [], patches = [];
+    graph = async (url, opt = {}) => {
+      const u = decodeURIComponent(url);
+      if (opt.method === 'POST') { posts.push({ url: u, body: JSON.parse(opt.body) }); have[OD_ROOT + EQ + '/' + OD_EXPIRED_DIR] = { id: 'EX', folder: {} }; return new Response(JSON.stringify({ id: 'EX', folder: {} }), { status: 201 }); }
+      if (opt.method === 'PATCH') { patches.push({ url: u, body: JSON.parse(opt.body) }); return new Response('{}', { status: 200 }); }
+      const m = /\/root:\/(.+?)\?select=/.exec(u);
+      if (m) { const it = have[m[1]]; return it ? new Response(JSON.stringify(it), { status: 200 }) : new Response('{}', { status: 404 }); }
+      return new Response('{}', { status: 400 });
+    };
+    const X = { op: 'od_expire', agent: 'routine-wa-assistant', why: 'a newer report replaced it', path: V + '/2026-04-29 - old.pdf', replaced_by: '2026-10-25 - new.pdf' };
+    let x = await call(X);
+    check('od_expire: the expired folder beside valid is created once, the old report moves there, same name', x.json.ok && posts.length === 1 && posts[0].url.indexOf('/items/E/children') > 0 && posts[0].body.name === OD_EXPIRED_DIR && patches.length === 1 && patches[0].url.indexOf('/items/O?') > 0 && patches[0].body.parentReference.id === 'EX' && x.json.path === EQ + '/' + OD_EXPIRED_DIR + '/2026-04-29 - old.pdf', { x: x.json, posts, patches });
+    posts = []; patches = [];
+    x = await call({ ...X, replaced_by: '2026-10-25 - OLD.pdf' });
+    check('od_expire (review): a replaced_by that Graph resolves to the same item = refused, nothing moved', !x.json.ok && /same file/.test(x.json.error) && !patches.length, x.json);
+    x = await call({ ...X, replaced_by: '2026-10-26 - missing.pdf' });
+    check('od_expire: no newer report beside it in valid = refused, nothing moved', !x.json.ok && /^replaced_by 404/.test(x.json.error) && !patches.length, x.json);
+    check('od_expire: only from a folder named valid (not expired, not nested), a replacement dated after it, the same name in any case refused, and the od_archive rules too',
+      !!odExpireCheck({ ...X, replaced_by: '2026-04-29 - OLD.PDF' }).error && !!odExpireCheck({ ...X, replaced_by: '2026-01-01 - older.pdf' }).error && !!odExpireCheck({ ...X, replaced_by: 'new.pdf' }).error
+      && !!odExpireCheck({ ...X, path: EQ + '/' + OD_VALID_DIR + '/' + OD_VALID_DIR + '/2026-04-29 - old.pdf' }).error && !!odExpireCheck({ ...X, path: EQ + '/' + OD_EXPIRED_DIR + '/' + OD_VALID_DIR + '/2026-04-29 - old.pdf' }).error
+      && !!odExpireCheck({ ...X, path: EQ + '/' + OD_EXPIRED_DIR + '/old.pdf' }).error && !!odExpireCheck({ ...X, path: EQ + '/old.pdf' }).error && !!odExpireCheck({ ...X, path: OD_VALID_DIR + '/old.pdf' }).error
+      && !!odExpireCheck({ ...X, replaced_by: '2026-04-29 - old.pdf' }).error && !!odExpireCheck({ ...X, path: OD_INBOX + '/' + OD_VALID_DIR + '/a.pdf' }).error && !odExpireCheck(X).error);
     graph = async () => new Response('{}', { status: 500 });
   }
 
