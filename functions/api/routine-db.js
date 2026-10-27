@@ -980,6 +980,19 @@ export function odArchiveCheck(b) {
   const dir = OD_ROOT + parts.slice(0, -1).join('/');
   return { from: OD_ROOT + parts.join('/'), dir, by: dir + '/' + by, name: parts[parts.length - 1] };
 }
+// od_expire (27/10/2026, Michael in the questionnaire: "do it: build the move to 'expired'"): an inspection report
+// that a newer one replaced moves from ".../\u05d1\u05ea\u05d5\u05e7\u05e3/<file>" to the sibling ".../\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3/" (created if
+// missing), same name, as the equipment folders are kept since 15/09/2026. Only from a folder named valid, and only
+// when the report that replaces it (replaced_by) sits in that same folder, so the folder is never left empty. Pure.
+export const OD_VALID_DIR = '\u05d1\u05ea\u05d5\u05e7\u05e3', OD_EXPIRED_DIR = '\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3';
+export function odExpireCheck(b) {
+  const c = odArchiveCheck(b);
+  if (c.error) return c;
+  const parts = String(b.path || '').split('/').filter(Boolean);
+  if (parts.length < 3 || parts[parts.length - 2] !== OD_VALID_DIR) return { error: 'path: a file inside a folder named ' + OD_VALID_DIR };
+  const parent = OD_ROOT + parts.slice(0, -2).join('/');
+  return Object.assign(c, { targetParent: parent, targetName: OD_EXPIRED_DIR });
+}
 // od_trash (24/10/2026, Michael: "a folder for deletion, so deleting is easy"): ONE file inside the safety folder
 // moves to the folder \u05dc\u05de\u05d7\u05d9\u05e7\u05d4 at the top of "\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea" (created if missing), named "<its folder> - <name>" so
 // Michael sees where it came from. Nothing is deleted: Michael empties the folder himself (05/10/2026: deletion
@@ -2091,10 +2104,11 @@ export async function onRequest(context) {
       if (!mk.ok) return jsonResp({ ok: false, error: 'create ' + mk.status }, 200, {});
       return jsonResp({ ok: true, created: true, path: c.parent + '/' + c.name, webUrl: mj.webUrl || null }, 200, {});
     }
-    if (body.op === 'od_archive') {
+    if (body.op === 'od_archive' || body.op === 'od_expire') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path', 'replaced_by'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
-      const c = odArchiveCheck(body);
+      const c = body.op === 'od_expire' ? odExpireCheck(body) : odArchiveCheck(body);
       if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const tParent = c.targetParent || c.dir, tName = c.targetName || OD_ARCHIVE_DIR;
       const at = await accessToken(env);
       const gh = { Authorization: 'Bearer ' + at.token, 'Content-Type': 'application/json' };
       const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
@@ -2106,26 +2120,26 @@ export async function onRequest(context) {
       const nb = await fetch(G + enc(c.by) + '?select=id,file', { headers: gh, signal: tmo(GRAPH_MS) });
       if (!nb.ok) return jsonResp({ ok: false, error: 'replaced_by ' + nb.status }, 200, {});
       if (!(await nb.json()).file) return jsonResp({ ok: false, error: 'replaced_by is not a file' }, 200, {});
-      let arc = await fetch(G + enc(c.dir + '/' + OD_ARCHIVE_DIR) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
+      let arc = await fetch(G + enc(tParent + '/' + tName) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
       let aj;
       if (arc.status === 404) {
-        const par = await fetch(G + enc(c.dir) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
+        const par = await fetch(G + enc(tParent) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
         if (!par.ok) return jsonResp({ ok: false, error: 'folder ' + par.status }, 200, {});
         const pj = await par.json();
         arc = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(pj.id) + '/children', {
-          method: 'POST', headers: gh, body: JSON.stringify({ name: OD_ARCHIVE_DIR, folder: {}, '@microsoft.graph.conflictBehavior': 'fail' }), signal: tmo(GRAPH_MS),
+          method: 'POST', headers: gh, body: JSON.stringify({ name: tName, folder: {}, '@microsoft.graph.conflictBehavior': 'fail' }), signal: tmo(GRAPH_MS),
         });
         if (!arc.ok) return jsonResp({ ok: false, error: 'create archive ' + arc.status }, 200, {});
       } else if (!arc.ok) return jsonResp({ ok: false, error: 'archive ' + arc.status }, 200, {});
       aj = await arc.json();
       if (!aj.folder) return jsonResp({ ok: false, error: 'archive is not a folder' }, 200, {});
-      const taken = await fetch(G + enc(c.dir + '/' + OD_ARCHIVE_DIR + '/' + c.name) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
+      const taken = await fetch(G + enc(tParent + '/' + tName + '/' + c.name) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
       if (taken.status !== 404) return jsonResp({ ok: false, error: taken.ok ? 'name taken in archive' : 'name check ' + taken.status }, 200, {});
       const mv = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(sj.id) + '?@microsoft.graph.conflictBehavior=fail', {
         method: 'PATCH', headers: gh, body: JSON.stringify({ parentReference: { id: aj.id } }), signal: tmo(GRAPH_MS),
       });
       if (!mv.ok) return jsonResp({ ok: false, error: 'move ' + mv.status }, 200, {});
-      return jsonResp({ ok: true, path: c.dir.slice(OD_ROOT.length) + '/' + OD_ARCHIVE_DIR + '/' + c.name }, 200, {});
+      return jsonResp({ ok: true, path: tParent.slice(OD_ROOT.length) + '/' + tName + '/' + c.name }, 200, {});
     }
     if (body.op === 'od_pull') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'from', 'dir', 'dest'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
