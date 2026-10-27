@@ -275,6 +275,8 @@ alter table public.trustee_winners add constraint trustee_winners_m_key UNIQUE (
 
 alter table public.trustee_winners add constraint trustee_winners_pkey PRIMARY KEY (id);
 
+alter table public.trustees add constraint trustees_no_phone CHECK (((ph IS NULL) OR (ph = ''::text)));
+
 alter table public.trustees add constraint trustees_pkey PRIMARY KEY (id);
 
 alter table public.wst add constraint wst_pkey PRIMARY KEY (id);
@@ -1514,8 +1516,6 @@ create policy viewer_no_insert on public.hearing_tests as RESTRICTIVE for INSERT
 
 create policy viewer_no_update on public.hearing_tests as RESTRICTIVE for UPDATE to authenticated using ((NOT ( SELECT private.is_viewer() AS is_viewer)));
 
-create policy viewer_read on public.hearing_tests as PERMISSIVE for SELECT to authenticated using (( SELECT private.is_viewer() AS is_viewer));
-
 create policy hist_admin_manager_all on public.hist as PERMISSIVE for ALL to authenticated using (( SELECT private.is_admin_manager() AS is_admin_manager)) with check (( SELECT private.is_admin_manager() AS is_admin_manager));
 
 create policy mfa_required on public.hist as RESTRICTIVE for ALL to authenticated using (( SELECT private.mfa_ok() AS mfa_ok)) with check (( SELECT private.mfa_ok() AS mfa_ok));
@@ -1639,8 +1639,6 @@ create policy viewer_no_delete on public.med as RESTRICTIVE for DELETE to authen
 create policy viewer_no_insert on public.med as RESTRICTIVE for INSERT to authenticated with check ((NOT ( SELECT private.is_viewer() AS is_viewer)));
 
 create policy viewer_no_update on public.med as RESTRICTIVE for UPDATE to authenticated using ((NOT ( SELECT private.is_viewer() AS is_viewer)));
-
-create policy viewer_read on public.med as PERMISSIVE for SELECT to authenticated using (( SELECT private.is_viewer() AS is_viewer));
 
 create policy mfa_required on public.mgmt_reviews as RESTRICTIVE for ALL to authenticated using (( SELECT private.mfa_ok() AS mfa_ok)) with check (( SELECT private.mfa_ok() AS mfa_ok));
 

@@ -253,19 +253,8 @@
   דווח: מה נוצר, ה-Endpoint, מה נשמר ב-Cloudflare (שמות בלבד), ומה נעצר ולמה.
   ```
 
-- [ ] **C53. סגירת שני פערי פרטיות במסד (SQL Editor)** (27/10/2026, מיכאל בשאלון: "בצע: פערי הרשאות". `execute_sql` נתקע פעמיים על בקשת אישור שלא מגיעה למסך, כמו ב-15/10/2026. הקובץ: `migrations/2026-10-27_privacy_gaps.sql`. נבדק לפני: אין משתמש צופה, 0 טלפונים ב-`trustees`, 8 שורות). אחרי: Claude מאמת ב-`pg_policies` שאין `viewer_read` על `med`/`hearing_tests`, וב-`pg_constraint` את `trustees_no_phone`, ומסמן `[x]` ב-STATUS. טקסט להדבקה בכרום:
-  ```
-  משימה: להריץ 3 שורות SQL במסד החי של Supabase. מיכאל אישר (27/10/2026).
-  1. לפתוח https://supabase.com/dashboard/project/znhjtpcltrxxyfjczgvw/sql/new ולוודא שבראש המסך הפרויקט הוא znhjtpcltrxxyfjczgvw (לא tfugen-staging).
-  2. להדביק בתיבה בדיוק את זה:
-     drop policy if exists viewer_read on public.med;
-     drop policy if exists viewer_read on public.hearing_tests;
-     alter table public.trustees add constraint trustees_no_phone check (ph is null or ph = '');
-  3. Run. אם מופיע חלון אזהרה על פעולה הרסנית: לאשר את ההרצה (Run this query).
-  4. דווח: Success או טקסט השגיאה המלא. לא להריץ שום דבר אחר. (שגיאת "already exists" על trustees_no_phone = השורה כבר רצה בעבר, תקין.)
-  ```
-
 ## בוצע
+- [x] **C53. סגירת שני פערי פרטיות במסד (SQL Editor)** (27/10/2026, מיכאל בשאלון: "בצע: פערי הרשאות". `execute_sql` נתקע פעמיים על בקשת אישור שלא מגיעה למסך, כמו ב-15/10/2026. הקובץ: `migrations/2026-10-27_privacy_gaps.sql`. נבדק לפני: אין משתמש צופה, 0 טלפונים ב-`trustees`, 8 שורות). אחרי: Claude מאמת ב-`pg_policies` שאין `viewer_read` על `med`/`hearing_tests`, וב-`pg_constraint` את `trustees_no_phone`, ומסמן `[x]` ב-STATUS. טקסט להדבקה בכרום: **בוצע 27/10/2026** מהטלפון, אומת ב-`pg_policies`/`pg_constraint`.
 
 - [x] **C44. מפתח ההתראות של הצ'אט ב-Cloudflare** (24/10/2026, מיכאל בשאלון: "בצע: לבנות התראות". מיכאל עושה את זה בעצמו מהדף ששלחתי, כמו WA_PIN. הערך לא נכתב פה כי הוא סודי.)
   ```
