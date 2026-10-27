@@ -62,7 +62,7 @@ button[aria-pressed="true"]{background:var(--accent);color:#1f1a00;border-color:
 <div id="stage" aria-label="מפה תלת-ממדית של המערכת. אפשר לסובב בגרירה ולהגדיל בגלגלת או בצביטה"></div>
 <header>
   <h1>מפת המערכת</h1>
-  <span class="sub" id="sub">גוררים כדי לסובב, לוחצים על אזור כדי להיכנס אליו</span>
+  <span class="sub" id="sub">גוררים כדי לסובב, לוחצים על אזור או על קו</span>
   <button id="back" hidden>חזרה למבט כללי</button>
   <button id="flatBtn" aria-pressed="false">תצוגה שטוחה</button>
 </header>
@@ -136,6 +136,9 @@ for (const e of DATA.edges) {
   const curve = new THREE.QuadraticBezierCurve3(a, mid, b);
   const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 40, 0.035, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(css('--mute')), transparent: true, opacity: .55 }));
   scene.add(tube);
+  // a wide invisible tube over the line, so a finger can hit it (27/10/2026, Michael: "do it: clickable lines")
+  const hit = new THREE.Mesh(new THREE.TubeGeometry(curve, 24, 0.3, 6), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.userData = { edge: flows.length }; scene.add(hit); pickables.push(hit);
   const dot = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(css('--accent')) }));
   scene.add(dot); flows.push({ curve, dot, t: Math.random(), e, tube });
 }
@@ -165,8 +168,25 @@ function zoneInfo(id) {
   list.forEach((n, i) => { const li = el('li'), b = el('button'); const d = el('i', 'dot'); d.style.background = css('--k-' + (n.id ? 'agent' : z.kind));
     b.append(d, n.name); b.addEventListener('click', () => pick(i)); li.append(b); ul.append(li); });
   panel.append(ul);
-  const links = DATA.edges.filter((e) => e.from === id || e.to === id).map((e) => (e.from === id ? 'אל ' + zoneOf[e.to].name : 'מ' + zoneOf[e.from].name) + ': ' + e.label);
-  if (links.length) { panel.append(el('span', 'kind', 'קשרים')); const u2 = el('ul'); links.forEach((t) => u2.append(el('li', null, t))); panel.append(u2); }
+  const links = DATA.edges.map((e, k) => [e, k]).filter(([e]) => e.from === id || e.to === id);
+  if (links.length) { panel.append(el('span', 'kind', 'קשרים')); const u2 = el('ul');
+    links.forEach(([e, k]) => { const li = el('li'), b = el('button', null, (e.from === id ? 'אל ' + zoneOf[e.to].name : 'מ' + zoneOf[e.from].name) + ': ' + e.label); b.addEventListener('click', () => pickEdge(k)); li.append(b); u2.append(li); });
+    panel.append(u2); }
+}
+let edgeSel = null;
+function showEdges(only) {
+  flows.forEach((f, k) => { const on = only == null ? (open == null || f.e.from === open || f.e.to === open) : k === only;
+    f.tube.material.opacity = only == null ? (open == null ? .55 : on ? .9 : .15) : on ? 1 : .12;
+    f.tube.material.color.set(on && only != null ? css('--accent') : css('--mute')); f.dot.scale.setScalar(on && only != null ? 1.8 : 1); });
+}
+function pickEdge(k) {
+  const f = flows[k]; if (!f) return; edgeSel = k; showEdges(k);
+  const a = zoneOf[f.e.from], b = zoneOf[f.e.to];
+  info(f.e.label, 'קו: מ' + a.name + ' אל ' + b.name, f.e.what || '', [['מ', a.name], ['אל', b.name]]);
+  const row = el('div'); row.style.display = 'flex'; row.style.flexWrap = 'wrap'; row.style.gap = '6px';
+  for (const z of [a, b]) { const btn = el('button', null, 'פתח את ' + z.name); btn.addEventListener('click', () => openZone(z.id)); row.append(btn); }
+  const clr = el('button', null, 'בטל סימון'); clr.addEventListener('click', () => { edgeSel = null; showEdges(null); open ? zoneInfo(open) : overview(); }); row.append(clr);
+  panel.append(row);
 }
 function pick(i) {
   const id = open, n = kids(id)[i]; if (!n) return;
@@ -188,15 +208,15 @@ function openZone(id) {
     partGroup.add(m); pickables.push(m);
   });
   scene.add(partGroup);
-  for (const f of flows) f.tube.material.opacity = (f.e.from === id || f.e.to === id) ? .9 : .15;
+  edgeSel = null; showEdges(null);
   for (const k in zoneLabel) zoneLabel[k].classList.toggle('sel', k === id);
   back.hidden = false; sub.textContent = z.name + ': ' + list.length + ' חלקים. לחיצה על חלק מסבירה אותו';
   zoneInfo(id); camTo(pos[id].clone().setY(1.2), 10 + Math.ceil(list.length / per) * 2);
 }
 function overview() {
   if (partGroup) { scene.remove(partGroup); partGroup = null; }
-  open = null; for (const f of flows) f.tube.material.opacity = .55; for (const k in zoneLabel) zoneLabel[k].classList.remove('sel');
-  back.hidden = true; sub.textContent = 'גוררים כדי לסובב, לוחצים על אזור כדי להיכנס אליו';
+  open = null; edgeSel = null; showEdges(null); for (const k in zoneLabel) zoneLabel[k].classList.remove('sel');
+  back.hidden = true; sub.textContent = 'גוררים כדי לסובב, לוחצים על אזור או על קו';
   const agents = DATA.nodes.filter((n) => n.id).length;
   info('המערכת כולה', 'מבט כללי', DATA.zones.length + ' אזורים, ' + DATA.nodes.length + ' חלקים, מהם ' + agents + ' סוכנים מתוזמנים. הקווים הם הדרכים שבהן מידע עובר; הנקודות הצהובות זזות בכיוון שלו.');
   const ul = el('ul'); DATA.zones.forEach((z) => { const li = el('li'), b = el('button'); const d = el('i', 'dot'); d.style.background = css('--k-' + z.kind); b.append(d, z.name + ' (' + kids(z.id).length + ')'); b.addEventListener('click', () => openZone(z.id)); li.append(b); ul.append(li); });
@@ -211,7 +231,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
   const r = renderer.domElement.getBoundingClientRect(); mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(mouse, camera); const hit = ray.intersectObjects(pickables.filter((m) => m.parent), false)[0];
-  if (!hit) return; const u = hit.object.userData; if (u.zone) openZone(u.zone); else if (u.part != null) pick(u.part);
+  if (!hit) return; const u = hit.object.userData; if (u.zone) openZone(u.zone); else if (u.part != null) pick(u.part); else if (u.edge != null) pickEdge(u.edge);
 });
 
 // flat view
