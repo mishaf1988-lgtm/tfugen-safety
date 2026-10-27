@@ -3662,16 +3662,24 @@ window.addEventListener('unhandledrejection', function(e){
 var _errSent = {}, _errN = 0;
 function _errReport(rec){
   try {
-    if (typeof _obPush !== 'function' || typeof SB_ON === 'undefined' || !SB_ON || _viewOnly() || (typeof empIsOn === 'function' && empIsOn())) return;
+    // a named user only (_sbNamed also leaves out the kiosk): an anonymous trustee's insert is refused by RLS, and the op
+    // would wait in the outbox and show the trustee a "stuck action" dialog (security review 27/10/2026)
+    if (typeof _obPush !== 'function' || typeof SB_ON === 'undefined' || !SB_ON || _viewOnly() || typeof _sbNamed !== 'function' || !_sbNamed()) return;
     var msg = String(rec.msg || ''), src = String(rec.src || '');
     if (!msg || msg === 'Script error.' || (src && src.indexOf(location.origin) !== 0)) return;
+    // a rejection has no file: the URLs in its stack say whose code it was
+    var urls = String(rec.stack || '').match(/[a-z][a-z0-9+.-]*:\/\/[^\s)]+/gi) || [];
+    if (!src && urls.some(function(x){ return x.indexOf(location.origin) !== 0; })) return;
     var k = msg + '|' + (rec.line || 0);
     if (_errSent[k] || _errN >= 5) return;
     _errSent[k] = 1; _errN++;
-    var u = (typeof _currentUser !== 'undefined' && _currentUser && _currentUser.username) ? _currentUser.username + '@' + SITE.loginDomain : null;
+    // no record content: quoted text out of the message and stack (a JSON.parse error quotes its input), and no query
+    // string or fragment in a URL (security review 27/10/2026). The user's name comes from the session, in the trigger.
+    var clean = function(x){ return String(x || '').replace(/"[^"]*"/g, '"*"').replace(/'[^']*'/g, "'*'").replace(/[?#][^\s):]*/g, ''); };
+    msg = clean(msg);
     var t = { m: msg.slice(0, 200), f: src.split('?')[0].split('/').pop().slice(0, 60), l: rec.line || 0, c: rec.col || 0,
-      p: (typeof CUR !== 'undefined' ? String(CUR) : '').slice(0, 40), st: String(rec.stack || '').slice(0, 300), w: window.innerWidth };
-    _obPush({ op: 'ins', tbl: 'audit_log', row: { user_email: u, table_name: 'client_error', record_id: null, op: 'ins', source: 'jserr', title: JSON.stringify(t) } });
+      p: (typeof CUR !== 'undefined' ? String(CUR) : '').slice(0, 40), st: clean(rec.stack).slice(0, 300), w: window.innerWidth };
+    _obPush({ op: 'ins', tbl: 'audit_log', row: { user_email: null, table_name: 'client_error', record_id: null, op: 'ins', source: 'jserr', title: JSON.stringify(t) } });
   } catch(_){}
 }
 // ============ End Phase 0 instrumentation ============

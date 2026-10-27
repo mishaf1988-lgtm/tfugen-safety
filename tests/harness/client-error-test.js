@@ -12,7 +12,7 @@ const code = src.slice(at, end);
 function run(opts) {
   const pushed = [];
   const ctx = { SB_ON: true, location: { origin: 'https://tapugan-safety.pages.dev' }, window: { innerWidth: 390 }, CUR: 'ncr',
-    SITE: { loginDomain: 'x.co.il' }, _currentUser: { username: 'm' }, _viewOnly: () => !!opts.viewer, empIsOn: () => !!opts.kiosk,
+    _viewOnly: () => !!opts.viewer, _sbNamed: () => !opts.kiosk && !opts.anon,
     _obPush: (op) => { pushed.push(op); }, JSON, String };
   if (opts.signedOut) ctx.SB_ON = false;
   vm.createContext(ctx); vm.runInContext(code, ctx);
@@ -29,7 +29,12 @@ check('the same error twice is sent once', run({ recs: [rec('a', 1), rec('a', 1)
 check('five different errors a session at most', run({ recs: [1, 2, 3, 4, 5, 6, 7].map((i) => rec('e' + i, i)) }).length === 5);
 check('a viewer, the kiosk and a signed-out phone send nothing', !run({ viewer: true, recs: [rec('a')] }).length && !run({ kiosk: true, recs: [rec('a')] }).length && !run({ signedOut: true, recs: [rec('a')] }).length);
 check('an extension\'s error, or a cross-origin "Script error.", is not ours', !run({ recs: [{ msg: 'x', src: 'chrome-extension://abc/x.js', line: 1 }, { msg: 'Script error.', src: '', line: 0 }] }).length);
+check('an anonymous trustee sends nothing (RLS would refuse it and the outbox would show a stuck action)', !run({ anon: true, recs: [rec('a')] }).length);
+check('a rejection from another site\'s code (by the URLs in its stack) is not ours', !run({ recs: [{ msg: 'unhandled-rejection: x', stack: 'at f (chrome-extension://abc/x.js:1:2)' }] }).length);
+{ const q = run({ recs: [{ msg: 'Unexpected token "secret name" is not valid JSON', src: OWN, line: 5, stack: 'at g (https://tapugan-safety.pages.dev/index.html?token=abc#x:5:1)' }] }); const tt = q[0] ? JSON.parse(q[0].row.title) : {};
+  check('quoted text is cut out of the message, and query strings out of the stack', tt.m === 'Unexpected token "*" is not valid JSON' && tt.st.indexOf('token=') < 0 && tt.st.indexOf('index.html') > 0, tt); }
+check('the user name is not sent from the browser (the trigger takes it from the session)', p[0].row.user_email === null);
 check('an unhandled rejection (no file) is sent', run({ recs: [{ msg: 'unhandled-rejection: boom', stack: '' }] }).length === 1);
-check('a failing outbox does not throw out of the error handler', (() => { const c = { SB_ON: true, location: { origin: 'o' }, window: {}, _viewOnly: () => false, _obPush: () => { throw new Error('full'); }, JSON, String }; vm.createContext(c); vm.runInContext(code, c); try { c._errReport(rec('z')); return true; } catch (e) { return false; } })());
+check('a failing outbox does not throw out of the error handler', (() => { const c = { SB_ON: true, location: { origin: 'o' }, window: {}, _viewOnly: () => false, _sbNamed: () => true, _obPush: () => { throw new Error('full'); }, JSON, String }; vm.createContext(c); vm.runInContext(code, c); try { c._errReport(rec('z')); return true; } catch (e) { return false; } })());
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
