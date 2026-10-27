@@ -159,7 +159,7 @@ import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLA
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed'];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -368,7 +368,7 @@ export function waPhoneBody(step, b, pin) {
   if (!/^[0-9]{6}$/.test(p)) return { error: 'pin: 6 digits (the secret WA_PIN or pin in the request)' };
   return { body: { messaging_product: 'whatsapp', pin: p } };
 }
-export const STATE_WRITE = ['quote_track', 'nevo_versions', 'od_raw_token', 'od_raw_exp', 'mail_filing', 'validity_run', 'iso_tasks', 'mail_triage'];
+export const STATE_WRITE = ['quote_track', 'nevo_versions', 'od_raw_token', 'od_raw_exp', 'mail_filing', 'validity_run', 'iso_tasks', 'mail_triage', 'quality_run'];
 // Run reports whose "at" the server stamps (11/10/2026): a Routine wrote a guessed time 11 minutes off,
 // and the next run reads mail from that time. mail_filing: the last entry of the list; validity_run: the object.
 export const STAMP_AT = ['mail_filing', 'validity_run'];
@@ -1687,6 +1687,19 @@ export async function onRequest(context) {
       });
       if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status }, 200, {});
       return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'new').length }, 200, {});
+    }
+    // out_log (27/10/2026, Michael in the interview: the quality checker reads what the agents sent him, the drafts and
+    // the database writes, fixes and reports in one line): the WhatsApp traffic since a time, his messages included so
+    // a duplicate answer shows. Text clipped; no media.
+    if (body.op === 'out_log') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'since'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const since = Date.parse(String(body.since || ''));
+      if (isNaN(since) || Date.now() - since > 4 * 864e5) return jsonResp({ ok: false, error: 'since: an ISO time in the last 4 days' }, 400, {});
+      const r = await fetch(url + '/rest/v1/notifications_log?select=ts,event_type,payload->>text,payload->>title,payload->>ref,payload->>agent&event_type=in.(wa_out,owner_in,assistant)&ts=gte.'
+        + encodeURIComponent(new Date(since).toISOString()) + '&order=ts.asc&limit=300', { headers: h, signal: tmo(SB_MS) });
+      if (!r.ok) return jsonResp({ ok: false, error: 'read ' + r.status }, 200, {});
+      const rows = (await r.json()).map((x) => ({ ts: x.ts, type: x.event_type, ref: x.ref || undefined, agent: x.agent || undefined, text: String(x.text || x.title || '').slice(0, 1500) }));
+      return jsonResp({ ok: true, rows }, 200, {});
     }
     if (body.op === 'agent_report') {
       const e = agentEntry(body, new Date().toISOString());

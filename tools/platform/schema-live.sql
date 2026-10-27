@@ -1,4 +1,4 @@
--- dumped 2026-10-25 from the live project by tools/platform/schema-dump.sql; verified with schema-fingerprint.sql
+-- dumped 2026-10-27 from the live project by tools/platform/schema-dump.sql; verified with schema-fingerprint.sql
 create schema if not exists private;
 
 create extension if not exists "uuid-ossp" with schema extensions;
@@ -12,6 +12,8 @@ create extension if not exists pgcrypto with schema extensions;
 create sequence if not exists public.audit_log_id_seq;
 
 create sequence if not exists public.hist_id_seq;
+
+create sequence if not exists public.item_links_id_seq;
 
 create sequence if not exists public.ncr_ai_id_seq;
 
@@ -60,6 +62,8 @@ create table if not exists public.ins (id text not null, d text, a text, i text,
 create table if not exists public.inspection_types (id text not null, name text not null, scope_table text, recur_count integer default 1 not null, recur_unit text default 'year'::text not null, next_due date, responsible text, notes text, active boolean default true not null, ts timestamp with time zone default now() not null);
 
 create table if not exists public.issue_types (id text not null, name text not null, parent_id text, level smallint not null, category text, notes text, ts timestamp with time zone default now() not null);
+
+create table if not exists public.item_links (id bigint not null, item_table text not null, item_id text not null, rel text not null, ref text not null, title text not null, at timestamp with time zone default now() not null, agent text not null);
 
 create table if not exists public.leg (id text not null, s text, d text, a text, c text, u text, o text, created_at timestamp with time zone default now(), topic text, law_type text, law_num text, src_url text, summary text, full_text text, last_review date, c_date date, c_by text, c_evidence_url text);
 
@@ -176,6 +180,18 @@ alter table public.inspection_types add constraint inspection_types_pkey PRIMARY
 alter table public.issue_types add constraint issue_types_level_check CHECK (((level >= 1) AND (level <= 3)));
 
 alter table public.issue_types add constraint issue_types_pkey PRIMARY KEY (id);
+
+alter table public.item_links add constraint item_links_item_table_check CHECK ((item_table = ANY (ARRAY['equip_inspections'::text, 'docs'::text])));
+
+alter table public.item_links add constraint item_links_item_table_item_id_rel_ref_key UNIQUE (item_table, item_id, rel, ref);
+
+alter table public.item_links add constraint item_links_pkey PRIMARY KEY (id);
+
+alter table public.item_links add constraint item_links_ref_check CHECK (((length(ref) >= 3) AND (length(ref) <= 600)));
+
+alter table public.item_links add constraint item_links_rel_check CHECK ((rel = ANY (ARRAY['mail'::text, 'quote'::text, 'report'::text, 'order'::text, 'supplier'::text, 'file'::text])));
+
+alter table public.item_links add constraint item_links_title_check CHECK (((length(title) >= 2) AND (length(title) <= 200)));
 
 alter table public.leg add constraint leg_pkey PRIMARY KEY (id);
 
@@ -348,6 +364,8 @@ CREATE INDEX inspection_types_due_idx ON public.inspection_types USING btree (ne
 CREATE INDEX issue_types_level_idx ON public.issue_types USING btree (level);
 
 CREATE INDEX issue_types_parent_idx ON public.issue_types USING btree (parent_id) WHERE (parent_id IS NOT NULL);
+
+CREATE INDEX item_links_item ON public.item_links USING btree (item_table, item_id);
 
 CREATE INDEX leg_a_idx ON public.leg USING btree (a);
 
@@ -1223,6 +1241,8 @@ alter table public.ins enable row level security;
 alter table public.inspection_types enable row level security;
 
 alter table public.issue_types enable row level security;
+
+alter table public.item_links enable row level security;
 
 alter table public.leg enable row level security;
 
@@ -2205,6 +2225,12 @@ revoke all on table public.issue_types from anon, authenticated;
 grant DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE on table public.issue_types to anon;
 
 grant DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE on table public.issue_types to authenticated;
+
+revoke all on table public.item_links from anon, authenticated;
+
+grant DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE on table public.item_links to anon;
+
+grant DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE on table public.item_links to authenticated;
 
 revoke all on table public.leg from anon, authenticated;
 
