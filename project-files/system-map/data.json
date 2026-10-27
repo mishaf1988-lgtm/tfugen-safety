@@ -679,7 +679,7 @@
   },
   {
    "id": "trig_011UyDNeQ1NV72NNyXJxwxtE",
-   "zone": "dev",
+   "zone": "assistant",
    "name": "עובד לפי דרישה",
    "what": "עובד לפי דרישה: משימה מהעוזר",
    "when": "בלי תזמון: השרת מפעיל לכל worker_now חדש (WORKER_FIRE_TOKEN), שיחה חדשה בכל הפעלה",

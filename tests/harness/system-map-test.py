@@ -29,5 +29,17 @@ html = open(os.path.join(D, "system-map.html"), encoding="utf-8").read()
 check("system-map.html carries the same data", json.dumps(data, ensure_ascii=False) in html and "/*DATA*/null" not in html)
 check("the page loads three.js pinned to one version", re.search(r"three@\d+\.\d+\.\d+/build/three\.module\.js", html) is not None)
 check("every line says what goes through it (clickable lines, 27/10/2026)", all(len(e.get("what", "")) > 10 for e in data["edges"]), [e["label"] for e in data["edges"] if len(e.get("what", "")) <= 10])
+# 27/10/2026 (Michael: "do you see missing connections?", then "approved" for a check): a zone with no line, or an agent
+# whose procedure reads Microsoft 365 or works through the server with no line from its zone there, is a missing connection
+lines = {(e["from"], e["to"]) for e in data["edges"]}
+check("every zone has at least one line", all(any(z in (e["from"], e["to"]) for e in data["edges"]) for z in zones), [z for z in zones if not any(z in (e["from"], e["to"]) for e in data["edges"])])
+TOUCH = {"m365": r"outlook_|sharepoint_|Microsoft 365|read_resource", "server": r"routine-db"}
+gaps = []
+for n in data["nodes"]:
+    for f in re.findall(r"[\w./-]+\.md", n.get("doc", "")) if n.get("id") else []:
+        p = next((x for x in (os.path.join(ROOT, f), os.path.join(ROOT, "project-files", os.path.basename(f))) if os.path.exists(x)), None)
+        text = open(p, encoding="utf-8").read() if p else ""
+        gaps += ["%s: %s -> %s" % (n["name"], n["zone"], z) for z, rx in TOUCH.items() if re.search(rx, text) and (n["zone"], z) not in lines]
+check("every agent that reads Microsoft 365 or uses the server has a line there from its zone (add it to EDGES)", not gaps, gaps)
 print("%d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)

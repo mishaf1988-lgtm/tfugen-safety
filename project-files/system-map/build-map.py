@@ -80,7 +80,8 @@ def routines():
         tid, name, when, doc = c[0].strip("`"), c[1], c[2], c[3]
         if name.startswith("כבוי") or "חד-פעמי" in name:
             continue
-        zone = "assistant" if "wa-assistant" in doc else "dev" if re.search(r"dev-|worker-now", doc) else "routines"
+        # the worker on demand does the assistant's tasks (reads mail and folders), so it sits with the assistant (27/10/2026)
+        zone = "assistant" if re.search(r"wa-assistant|worker-now", doc) else "dev" if "dev-" in doc else "routines"
         out.append({"id": tid, "zone": zone, "name": short(name), "what": name[:200], "when": re.sub(r"`", "", when)[:120],
                     "doc": re.sub(r"`", "", doc)[:80]})
     return out
