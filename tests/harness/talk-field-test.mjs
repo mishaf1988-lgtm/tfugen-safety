@@ -10,7 +10,8 @@ let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const ENV = { ROUTINE_KEY: 'k-123', SUPABASE_SERVICE_ROLE_KEY: 'srv' };
-const today = new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
+// Israel's date as the server sees it; a fixed +3 was a day ahead from 21:00 UTC in winter time (27/10/2026).
+const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
 const dayAgo = (n) => new Date(Date.parse(today + 'T00:00:00Z') - n * 864e5).toISOString().slice(0, 10);
 const wid = (d) => 'w' + d.replace(/-/g, '');
 const A = 'טוגנים', B = 'אריזה', C = 'מעבדה';

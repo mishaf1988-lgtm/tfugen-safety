@@ -64,6 +64,11 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 ## בדיקות שבודקות את הדבר הנכון
 
 
+**174. בדיקה שתלויה בשעון נכשלת אחרי מעבר לשעון חורף (27/10/2026, PR של קיצור CLAUDE.md).**
+מה קרה: `talk-field-test` הניח שישראל תמיד UTC+3, ובשעון חורף מ-21:00 UTC "היום" שלו היה מחר. `backup-od-test` ירד 24 שעות כל פעם, ומעבר השעון ב-25/10 נתן את אותו תאריך פעמיים. `main` היה אדום, לא בגלל ה-PR.
+הכלל: תאריך בישראל בבדיקה = `toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' })`, וימים אחורה = חשבון ימים מהתאריך הזה (`Date.parse(today + 'T12:00:00Z') - n * DAY`), לא `Date.now()` פחות 24 שעות ולא `+ 3 * 3600e3`.
+נאכף: טקסט; התיקון בשתי הבדיקות.
+
 **57. hooks שקטים ב-Windows (05/10/2026, PR זה).**
 מה קרה: stdout ב-cp1255 ואימוג'י: session-start נפל בשקט. שיחה מחוץ לריפו: hooks לא נטענו.
 הכלל: hook קובע stdout ו-stdin ל-UTF-8, ובבדיקות `encoding="utf-8"`. בדיקה חיה רק מתיקיית הריפו, בלי `PYTHONUTF8=1`.
