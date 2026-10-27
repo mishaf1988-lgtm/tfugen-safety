@@ -211,7 +211,12 @@ def install_user_hooks(cwd, home=None):
     # group the user or the cloud put there (a Stop check, a notifier) stays.
     as_groups = lambda v: [g for g in v if isinstance(g, dict)] if isinstance(v, list) else []
     group_hooks = lambda g: g.get("hooks") if isinstance(g.get("hooks"), list) else []
-    mine = lambda g: any(isinstance(h, dict) and str(h.get("command", "")).startswith('[ "$CLAUDE_PROJECT_DIR" = ') for h in group_hooks(g))  # the wrapper added above
+    # A prompt hook has no wrapper to recognise, so it is ours when it opens like one of the repo's
+    # (27/10/2026: the rules checker was appended again on every start, nine copies, ten checks a reply).
+    heads = {h["prompt"][:80] for gs in hooks.values() for g in gs for h in g.get("hooks", []) if isinstance(h.get("prompt"), str)}
+    ours = lambda h: isinstance(h, dict) and (str(h.get("command", "")).startswith('[ "$CLAUDE_PROJECT_DIR" = ')  # the wrapper added above
+                                             or (h.get("type") == "prompt" and str(h.get("prompt", ""))[:80] in heads))
+    mine = lambda g: any(ours(h) for h in group_hooks(g))
     old = cur.get("hooks") if isinstance(cur.get("hooks"), dict) else {}
     merged = {}
     for ev, groups in old.items():

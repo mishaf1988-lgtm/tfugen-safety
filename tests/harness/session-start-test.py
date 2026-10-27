@@ -112,6 +112,20 @@ check("a Stop value that is not a list: the repo's hooks still installed", "PreT
 check("the file mode 0600 is kept", (os.stat(sf).st_mode & 0o777) == 0o600, oct(os.stat(sf).st_mode & 0o777))
 open(sf, "w").write("{ broken json"); cl("true")
 check("a broken settings file is left as it is", open(sf).read() == "{ broken json", open(sf).read())
+# 27/10/2026: a prompt hook (the rules checker) has no wrapper; it was appended again on every start,
+# nine copies in ~/.claude, ten checks on every reply. Three starts, and an older wording, leave one.
+r2 = tempfile.mkdtemp(); hm2 = tempfile.mkdtemp(); os.makedirs(os.path.join(r2, ".claude")); os.makedirs(os.path.join(hm2, ".claude"))
+PR = "You check the final reply that Claude wrote to Michael, a factory safety manager who reads it in Hebrew. Input JSON: $ARGUMENTS"
+json.dump({"hooks": {"Stop": [{"hooks": [{"type": "command", "command": 'python3 "$CLAUDE_PROJECT_DIR"/x.py'}]}, {"hooks": [{"type": "prompt", "prompt": PR + " 8 rules"}]}]}},
+          open(os.path.join(r2, ".claude", "settings.json"), "w"))
+json.dump({"hooks": {"Stop": [{"hooks": [{"type": "prompt", "prompt": PR + " 6 rules"}]}, {"hooks": [{"type": "prompt", "prompt": "someone else's check"}]}]}},
+          open(os.path.join(hm2, ".claude", "settings.json"), "w"))
+for _ in range(3):
+    subprocess.run([sys.executable, hook("session-start.py")], input="{}", capture_output=True, text=True, timeout=30,
+                   env=dict(os.environ, CLAUDE_PROJECT_DIR=r2, HOME=hm2, CLAUDE_CODE_REMOTE="true"))
+ps = [h["prompt"] for g in json.load(open(os.path.join(hm2, ".claude", "settings.json")))["hooks"]["Stop"] for h in g["hooks"] if h.get("type") == "prompt"]
+check("three starts: the repo's prompt hook once, the old wording replaced, a foreign prompt kept",
+      sorted(ps) == sorted([PR + " 8 rules", "someone else's check"]), ps)
 # Lesson 116 (18/10/2026): CLAUDE.md told a session to write ~/.claude/settings.json by hand, it kept
 # "$CLAUDE_PROJECT_DIR" in the path, and every prompt and trigger of a nine-agent session was refused.
 _cm = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "CLAUDE.md"), encoding="utf-8").read()
