@@ -98,13 +98,19 @@ const VIEWER = 'צופה';
   check('the modules entry in the bottom bar is there, as for a manager', await page.evaluate(() => { const b = document.getElementById('bn-modules'); return !b || b.style.display !== 'none'; }));
   const leaks = [];
   let reached = 0;
-  for (const p of PAGES) {
+  // Health pages are closed to the viewer (privacy_gaps, 27/10/2026): no RLS read, so no page.
+  const hidden = await page.evaluate(() => Object.keys(_VIEWER_HIDDEN_PAGES));
+  const open = PAGES.filter((p) => !hidden.includes(p));
+  for (const p of open) {
     await page.evaluate((p) => goPage(p), p);
     const r = await scan();
     if (r.cur === p) reached++;
     if (r.visible.length) leaks.push(p + ': ' + r.visible.join(' | '));
   }
-  check('the viewer reaches all ' + PAGES.length + ' manager pages (' + reached + ')', reached === PAGES.length);
+  check('the viewer reaches all ' + open.length + ' open manager pages (' + reached + ')', reached === open.length && open.length >= PAGES.length - 2);
+  const hp = await page.evaluate((h) => h.map((p) => { goPage(p); return CUR; }), hidden);
+  check('a health page (' + hidden.join(',') + ') sends the viewer home', hidden.length > 0 && hp.every((c) => c === 'dash'), hp);
+  check('and its button is hidden in the modules sheet', await page.evaluate(() => [...document.querySelectorAll('#m-modules-sheet .sheet-btn')].filter((b) => /'hearing'/.test(b.getAttribute('onclick') || '')).every((b) => b.style.display === 'none')));
   check('no edit/delete/new button visible on any of them', leaks.length === 0, leaks.slice(0, 6));
   const walk = await page.evaluate(() => ({ ob: JSON.parse(localStorage.getItem('tfgn_outbox') || '[]').length, toasts: window.__toasts.filter((t) => /צפייה/.test(t)) }));
   check('walking every page wrote nothing on its own (outbox ' + walk.ob + ')', walk.ob === 0, walk);
