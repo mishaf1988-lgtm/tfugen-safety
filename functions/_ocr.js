@@ -27,6 +27,37 @@ export async function aiOcr(env, model, jpg, mime) {
   const r = await env.AI.run(model, input);
   return String((r && (r.response || (r.choices && r.choices[0] && r.choices[0].message && r.choices[0].message.content))) || '').trim();
 }
+// 27/10/2026 (Michael's inspector scans from OmniPage: "no scanned page image" on a filed page, "read" on the 6-page
+// original): each page JPEG sat in a /Filter [/FlateDecode /DCTDecode] stream, so the raw FFD8 search above found
+// nothing, or a false FFD8 inside deflated bytes that the model then refused. Here the image streams are found by
+// their dictionary, inflated when Flate comes first, and returned in file order (= page order for a scan).
+export async function pdfDct(buf) {
+  let s = ''; for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+  const out = [];
+  let at = 0;
+  for (;;) {
+    const f = s.indexOf('/DCTDecode', at);
+    if (f < 0) break;
+    at = f + 10;
+    const st = s.lastIndexOf(' obj', f), sk = s.indexOf('stream', f);
+    if (st < 0 || sk < 0) continue;
+    const d = s.slice(st, sk);
+    if (!/\/Subtype\s*\/Image/.test(d)) continue;
+    const fm = d.match(/\/Filter\s*(\[[^\]]*\]|\/\w+)/);
+    const filters = fm ? fm[1].match(/\/\w+/g) : [];
+    if (filters[filters.length - 1] !== '/DCTDecode' || filters.slice(0, -1).some((x) => x !== '/FlateDecode')) continue;
+    let len = null; const lm = d.match(/\/Length\s+(\d+)(\s+(\d+)\s+R)?/);
+    if (lm && !lm[2]) len = Number(lm[1]);
+    else if (lm) { const r = s.match(new RegExp('(?:^|[^0-9])' + lm[1] + '\\s+' + lm[3] + '\\s+obj\\s*(\\d+)')); if (r) len = Number(r[1]); }
+    let p = sk + 6; if (s[p] === '\r') p++; if (s[p] === '\n') p++;
+    if (len === null) { const e = s.indexOf('endstream', p); if (e < 0) continue; len = e - p; }
+    let jpg = buf.subarray(p, p + len);
+    for (let k = 1; k < filters.length; k++) jpg = new Uint8Array(await new Response(new Blob([jpg]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer());
+    if (jpg[0] === 0xFF && jpg[1] === 0xD8 && jpg.length > 2000) out.push(jpg);
+    at = p + len;
+  }
+  return out;
+}
 // The lines of an Azure Read result, page by page.
 export function ocrLines(j) {
   const pages = (j && j.analyzeResult && j.analyzeResult.readResults) || [];
@@ -44,23 +75,35 @@ export function ocrAutoPick(items, done, nowMs) {
     .sort((a, b) => Date.parse(a.createdDateTime) - Date.parse(b.createdDateTime))[0] || null;
 }
 // One PDF of the drive (path under OCR_ROOT) to a txt beside the others. Never returns the text.
-export async function ocrOne(env, token, rel, name, model) {
+// from (27/10/2026): the first page of this call, 1-based. A scan longer than OCR_PAGES is read in calls of OCR_PAGES pages
+// (a 6-page inspector scan stopped at 3); from > 1 appends to the same txt. `next` = the from of the next call.
+export async function ocrOne(env, token, rel, name, model, from) {
+  from = Math.max(1, Number(from) || 1);
   const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
   const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
   const d = await fetch(G + enc(OCR_ROOT + rel) + ':/content', { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(30000) });
   if (!d.ok) return { name, ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status };
   const buf = new Uint8Array(await d.arrayBuffer());
   if (buf.length > 4 * 1024 * 1024) return { name, ok: false, error: 'too big: ' + buf.length };
-  let pages = pdfJpegs(buf, OCR_PAGES), mime = 'image/jpeg';
-  if (!pages.length) { mime = 'image/png'; pages = []; try { for (const img of pdfCcitt(buf, OCR_PAGES)) pages.push(await ccittPng(img)); } catch (e) { return { name, ok: false, error: String((e && e.message) || e).slice(0, 120) }; } }
-  if (!pages.length) return { name, ok: false, error: 'no scanned page image in this PDF (JPEG or CCITT Group 4)' };
+  const MAXP = 60;
+  let all = await pdfDct(buf), mime = 'image/jpeg', ccitt = null;
+  if (!all.length) all = pdfJpegs(buf, MAXP);
+  if (!all.length) { mime = 'image/png'; ccitt = pdfCcitt(buf, MAXP); }
+  const total = ccitt ? ccitt.length : all.length;
+  if (!total) return { name, ok: false, error: 'no scanned page image in this PDF (JPEG or CCITT Group 4)' };
+  if (from > total) return { name, ok: false, error: 'from ' + from + ': the PDF has ' + total + ' pages' };
+  const last = Math.min(total, from + OCR_PAGES - 1);
+  const pages = [];
+  try { for (let i = from - 1; i < last; i++) pages.push(ccitt ? await ccittPng(ccitt[i]) : all[i]); } catch (e) { return { name, ok: false, error: String((e && e.message) || e).slice(0, 120) }; }
   const parts = [];
-  for (const pg of pages) parts.push(await aiOcr(env, model, pg, mime));
-  const text = parts.join('\n\n').trim();
-  const txt = name.replace(/\.pdf$/i, '') + '.txt';
-  const up = await fetch(G + enc(OCR_ROOT + OD_OCR_DIR + '/' + txt) + ':/content?@microsoft.graph.conflictBehavior=replace', { method: 'PUT', signal: AbortSignal.timeout(20000),
+  for (let i = 0; i < pages.length; i++) parts.push('--- \u05e2\u05de\u05d5\u05d3 ' + (from + i) + ' ---\n' + (await aiOcr(env, model, pages[i], mime))); // עמוד
+  const txt = name.replace(/\.pdf$/i, '') + '.txt', url = G + enc(OCR_ROOT + OD_OCR_DIR + '/' + txt) + ':/content';
+  let before = '';
+  if (from > 1) { const o = await fetch(url, { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(20000) }).catch(() => null); if (o && o.ok) before = (await o.text()).trim() + '\n\n'; }
+  const text = (before + parts.join('\n\n')).trim();
+  const up = await fetch(url + '?@microsoft.graph.conflictBehavior=replace', { method: 'PUT', signal: AbortSignal.timeout(20000),
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'text/plain; charset=utf-8' }, body: text });
-  return { name, ok: up.ok && text.length > 0, txt: OD_OCR_DIR + '/' + txt, chars: text.length, pages: pages.length, engine: model, error: up.ok ? (text ? undefined : 'no text found') : 'write ' + up.status };
+  return { name, ok: up.ok && text.length > 0, txt: OD_OCR_DIR + '/' + txt, chars: text.length, pages: pages.length, of: total, next: last < total ? last + 1 : undefined, engine: model, error: up.ok ? (text ? undefined : 'no text found') : 'write ' + up.status };
 }
 // 26/10/2026 (dev request: a 5-page scan from the plant's copier, "no scanned page image in this PDF"): black and white
 // scanners keep each page as a CCITT Group 4 fax image (/CCITTFaxDecode, /K -1), not a JPEG. It is decoded here, made

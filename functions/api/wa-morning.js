@@ -410,13 +410,16 @@ async function ocrAuto(env, now) {
     { headers: { Authorization: 'Bearer ' + at.token }, signal: AbortSignal.timeout(20000) });
   if (!lr.ok) return { error: 'list ' + lr.status };
   const lj = await lr.json().catch(() => null);
-  const next = ocrAutoPick((lj && lj.value) || [], st.done, now.getTime());
+  // 27/10/2026: a scan longer than OCR_PAGES goes on next tick from st.cont, before any new PDF.
+  const cont = st.cont && st.cont.name ? st.cont : null;
+  const next = cont ? { name: cont.name } : ocrAutoPick((lj && lj.value) || [], st.done, now.getTime());
   st.at = now.toISOString();
   let res = null;
   if (next) {
     const model = env.OCR_MODEL && OCR_MODELS.indexOf(env.OCR_MODEL) >= 0 ? env.OCR_MODEL : OCR_MODELS[0];
-    res = await ocrOne(env, at.token, OCR_INBOX + '/' + next.name, next.name, model).catch((e) => ({ name: next.name, ok: false, error: 'ocr' }));
-    st.done = (st.done || []).concat([next.name]).slice(-OCR_DONE_MAX);
+    res = await ocrOne(env, at.token, OCR_INBOX + '/' + next.name, next.name, model, cont ? cont.from : 1).catch((e) => ({ name: next.name, ok: false, error: 'ocr' }));
+    st.cont = res && res.ok && res.next ? { name: next.name, from: res.next } : null;
+    if (!cont) st.done = (st.done || []).concat([next.name]).slice(-OCR_DONE_MAX);
   }
   await stateSet(env, OCR_AUTO_KEY, JSON.stringify(st));
   return res ? { name: res.name, ok: res.ok, chars: res.chars || 0, error: res.error || null } : { idle: true };
