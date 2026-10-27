@@ -4,7 +4,7 @@
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftSubj, draftMadeLine, quotaMode, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
+import { ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftSubj, draftMadeLine, quotaMode, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -34,8 +34,8 @@ globalThis.fetch = async (url, opt = {}) => {
   const m = /\/rest\/v1\/(docs|equip_inspections|tour_hazards)(?:\?(.*))?$/.exec(url);
   if (m && rows[m[1]]) {
     if ((opt.method || 'GET') === 'POST') { const r = JSON.parse(opt.body); rows[m[1]].push(r); return new Response(JSON.stringify([r]), { status: 201 }); }
-    const any = /or=\(code\.eq\.([^,]*),report_number\.eq\.([^)]*)\)/.exec(m[2] || '');
-    if (any) { const [cd, rn] = [decodeURIComponent(any[1]), decodeURIComponent(any[2])]; return new Response(JSON.stringify(rows[m[1]].filter((r) => r.code === cd || r.report_number === rn)), { status: 200 }); }
+    const any = /or=\(code\.ilike\.([^,]*),report_number\.eq\.([^)]*)\)/.exec(m[2] || '');
+    if (any) { const [cd, rn] = [decodeURIComponent(any[1]), decodeURIComponent(any[2])]; return new Response(JSON.stringify(rows[m[1]].filter((r) => String(r.code).toLowerCase() === cd.toLowerCase() || r.report_number === rn)), { status: 200 }); }
     const id = decodeURIComponent((/id=eq\.([^&]*)/.exec(m[2] || '') || [])[1] || '');
     const hit = rows[m[1]].filter((r) => String(r.id) === id);
     if ((opt.method || 'GET') === 'PATCH') { hit.forEach((r) => Object.assign(r, JSON.parse(opt.body))); return new Response(JSON.stringify(hit), { status: 200 }); }
@@ -1042,18 +1042,21 @@ const callIn = async (body) => {
   console.log('\n4f3d. equip_add: one new equipment row from a filed report (27/10/2026, Michael: "do it: an op to add an equipment row")');
   {
     rows = { equip_inspections: [{ id: 'q9', code: 'WASTE-49571', report_number: '185997/226' }] };
-    const F = FILE_URL_PREFIX + '02_x/lift/CHAIN/2026-10-25 - report.pdf';
+    const F = equipFilePrefix() + 'lift/CHAIN/2026-10-25 - report.pdf';
+    graph = async (u) => /CHAIN\/2026-10-25%20-%20report\.pdf\?select=id,file$/.test(String(u)) ? new Response(JSON.stringify({ id: 'F1', file: {} }), { status: 200 }) : new Response('{}', { status: 404 });
     const A = { op: 'equip_add', agent: 'routine-wa-assistant', why: 'a report with no row', doc: 'mail George 27/10/2026, page 3', code: 'CHAIN-TENS-1', n: '7 chain tensioners, metal shop', loc: 'metal shop', d: '2026-10-25', e: '2027-12-25', report_number: '186003/226', file_url: F, inspector: 'George' };
     let x = await call(A);
     const r = rows.equip_inspections[1];
     check('equip_add: one row, fit for work, the dates, the report number, the file and a note who and why', x.json.ok && rows.equip_inspections.length === 2 && r.s === EQUIP_FIT && r.d === '2026-10-25' && r.e === '2027-12-25' && r.report_number === '186003/226' && r.file_url === F && /^[0-9a-f]{12}$/.test(r.id) && /Claude \(routine-wa-assistant\)/.test(r.notes) && /page 3/.test(r.notes) && x.json.id === r.id, { x: x.json, r });
     x = await call({ ...A, code: 'OTHER-1' });
     check('equip_add: the same report number again = refused, no second row', !x.json.ok && /already there/.test(x.json.error) && rows.equip_inspections.length === 2, x.json);
+    x = await call({ ...A, code: 'NEW-2', report_number: '199998/226', file_url: equipFilePrefix() + 'lift/CHAIN/missing.pdf' });
+    check('equip_add (review): a file_url with no file behind it = refused, no row', !x.json.ok && /no such file/.test(x.json.error) && rows.equip_inspections.length === 2, x.json);
     x = await call({ ...A, code: 'WASTE-49571', report_number: '199999/226' });
     check('equip_add: a code already there = refused (update it with expiry_set)', !x.json.ok && /already there: q9/.test(x.json.error) && rows.equip_inspections.length === 2, x.json);
     const T = '2026-10-27';
     check('equip_add: no doc, a future d, e before d or past 6 years, a bad report number, a file outside the drive, a lower-case code, or an extra field (s, id) = refused',
-      [{ doc: '' }, { d: '2026-11-01' }, { e: '2026-10-01' }, { e: '2033-01-01' }, { report_number: '186003' }, { file_url: 'https://evil.example/x.pdf' }, { code: 'chain' }, { n: 'x' }].every((o) => !!equipAddRow({ ...A, ...o }, T, 'abcdef123456').error)
+      [{ doc: '' }, { d: ['2026-10-25'] }, { file_url: FILE_URL_PREFIX + 'Documents/other/x.pdf' }, { file_url: equipFilePrefix() + 'a/../../x.pdf' }, { file_url: equipFilePrefix() + 'a/x.docx' }, { d: '2026-11-01' }, { e: '2026-10-01' }, { e: '2033-01-01' }, { report_number: '186003' }, { file_url: 'https://evil.example/x.pdf' }, { code: 'chain' }, { n: 'x' }].every((o) => !!equipAddRow({ ...A, ...o }, T, 'abcdef123456').error)
       && !equipAddRow(A, T, 'abcdef123456').error && (await call({ ...A, s: 'x' })).status === 400 && (await call({ ...A, id: 'mine' })).status === 400 && rows.equip_inspections.length === 2);
     rows = {};
   }
