@@ -28,5 +28,6 @@ check("data.json is up to date (run project-files/system-map/build-map.py and re
 html = open(os.path.join(D, "system-map.html"), encoding="utf-8").read()
 check("system-map.html carries the same data", json.dumps(data, ensure_ascii=False) in html and "/*DATA*/null" not in html)
 check("the page loads three.js pinned to one version", re.search(r"three@\d+\.\d+\.\d+/build/three\.module\.js", html) is not None)
+check("every line says what goes through it (clickable lines, 27/10/2026)", all(len(e.get("what", "")) > 10 for e in data["edges"]), [e["label"] for e in data["edges"] if len(e.get("what", "")) <= 10])
 print("%d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)
