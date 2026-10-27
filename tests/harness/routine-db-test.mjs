@@ -998,7 +998,7 @@ const callIn = async (body) => {
   console.log('\n4f3c. od_expire: a replaced inspection report moves from valid to expired (27/10/2026, Michael: "do it: build the move")');
   {
     const EQ = '02_x/lift/WASTE-1/periodic', V = EQ + '/' + OD_VALID_DIR;
-    const have = { [OD_ROOT + EQ]: { id: 'E', folder: {} }, [OD_ROOT + V + '/old.pdf']: { id: 'O', file: {} }, [OD_ROOT + V + '/new.pdf']: { id: 'N', file: {} } };
+    const have = { [OD_ROOT + EQ]: { id: 'E', folder: {} }, [OD_ROOT + V + '/2026-04-29 - old.pdf']: { id: 'O', file: {} }, [OD_ROOT + V + '/2026-10-25 - new.pdf']: { id: 'N', file: {} }, [OD_ROOT + V + '/2026-10-25 - OLD.pdf']: { id: 'O', file: {} } };
     let posts = [], patches = [];
     graph = async (url, opt = {}) => {
       const u = decodeURIComponent(url);
@@ -1008,15 +1008,19 @@ const callIn = async (body) => {
       if (m) { const it = have[m[1]]; return it ? new Response(JSON.stringify(it), { status: 200 }) : new Response('{}', { status: 404 }); }
       return new Response('{}', { status: 400 });
     };
-    const X = { op: 'od_expire', agent: 'routine-wa-assistant', why: 'a newer report replaced it', path: V + '/old.pdf', replaced_by: 'new.pdf' };
+    const X = { op: 'od_expire', agent: 'routine-wa-assistant', why: 'a newer report replaced it', path: V + '/2026-04-29 - old.pdf', replaced_by: '2026-10-25 - new.pdf' };
     let x = await call(X);
-    check('od_expire: the expired folder beside valid is created once, the old report moves there, same name', x.json.ok && posts.length === 1 && posts[0].url.indexOf('/items/E/children') > 0 && posts[0].body.name === OD_EXPIRED_DIR && patches.length === 1 && patches[0].url.indexOf('/items/O?') > 0 && patches[0].body.parentReference.id === 'EX' && x.json.path === EQ + '/' + OD_EXPIRED_DIR + '/old.pdf', { x: x.json, posts, patches });
+    check('od_expire: the expired folder beside valid is created once, the old report moves there, same name', x.json.ok && posts.length === 1 && posts[0].url.indexOf('/items/E/children') > 0 && posts[0].body.name === OD_EXPIRED_DIR && patches.length === 1 && patches[0].url.indexOf('/items/O?') > 0 && patches[0].body.parentReference.id === 'EX' && x.json.path === EQ + '/' + OD_EXPIRED_DIR + '/2026-04-29 - old.pdf', { x: x.json, posts, patches });
     posts = []; patches = [];
-    x = await call({ ...X, replaced_by: 'missing.pdf' });
+    x = await call({ ...X, replaced_by: '2026-10-25 - OLD.pdf' });
+    check('od_expire (review): a replaced_by that Graph resolves to the same item = refused, nothing moved', !x.json.ok && /same file/.test(x.json.error) && !patches.length, x.json);
+    x = await call({ ...X, replaced_by: '2026-10-26 - missing.pdf' });
     check('od_expire: no newer report beside it in valid = refused, nothing moved', !x.json.ok && /^replaced_by 404/.test(x.json.error) && !patches.length, x.json);
-    check('od_expire: only from a folder named valid (not expired, not any folder), and the od_archive rules too',
-      !!odExpireCheck({ ...X, path: EQ + '/' + OD_EXPIRED_DIR + '/old.pdf' }).error && !!odExpireCheck({ ...X, path: EQ + '/old.pdf' }).error && !!odExpireCheck({ ...X, path: OD_VALID_DIR + '/old.pdf' }).error
-      && !!odExpireCheck({ ...X, replaced_by: 'old.pdf' }).error && !!odExpireCheck({ ...X, path: OD_INBOX + '/' + OD_VALID_DIR + '/a.pdf' }).error && !odExpireCheck(X).error);
+    check('od_expire: only from a folder named valid (not expired, not nested), a replacement dated after it, the same name in any case refused, and the od_archive rules too',
+      !!odExpireCheck({ ...X, replaced_by: '2026-04-29 - OLD.PDF' }).error && !!odExpireCheck({ ...X, replaced_by: '2026-01-01 - older.pdf' }).error && !!odExpireCheck({ ...X, replaced_by: 'new.pdf' }).error
+      && !!odExpireCheck({ ...X, path: EQ + '/' + OD_VALID_DIR + '/' + OD_VALID_DIR + '/2026-04-29 - old.pdf' }).error && !!odExpireCheck({ ...X, path: EQ + '/' + OD_EXPIRED_DIR + '/' + OD_VALID_DIR + '/2026-04-29 - old.pdf' }).error
+      && !!odExpireCheck({ ...X, path: EQ + '/' + OD_EXPIRED_DIR + '/old.pdf' }).error && !!odExpireCheck({ ...X, path: EQ + '/old.pdf' }).error && !!odExpireCheck({ ...X, path: OD_VALID_DIR + '/old.pdf' }).error
+      && !!odExpireCheck({ ...X, replaced_by: '2026-04-29 - old.pdf' }).error && !!odExpireCheck({ ...X, path: OD_INBOX + '/' + OD_VALID_DIR + '/a.pdf' }).error && !odExpireCheck(X).error);
     graph = async () => new Response('{}', { status: 500 });
   }
 

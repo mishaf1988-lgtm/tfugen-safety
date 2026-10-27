@@ -976,7 +976,8 @@ export function odArchiveCheck(b) {
   const bad = (x) => x === '.' || x === '..' || OD_BAD.test(x) || x.length > 200 || x.startsWith('.');
   if (parts.length < 2 || parts.length > OD_MKDIR_DEPTH + 1 || parts.some(bad) || !OD_EXT.test(parts[parts.length - 1])) return { error: 'bad path' };
   if (OD_NO_DIR.test(parts.join('/')) || parts[0] === OD_INBOX || isAutoTop(parts[0])) return { error: 'bad path' };
-  if (!by || by.indexOf('/') >= 0 || bad(by) || !OD_EXT.test(by) || by === parts[parts.length - 1]) return { error: 'replaced_by: the new file name in the same folder' };
+  // 27/10/2026 review: OneDrive names are case-blind, so OLD.pdf would be the file itself (the handler also compares ids).
+  if (!by || by.indexOf('/') >= 0 || bad(by) || !OD_EXT.test(by) || by.toLowerCase() === parts[parts.length - 1].toLowerCase()) return { error: 'replaced_by: the new file name in the same folder' };
   const dir = OD_ROOT + parts.slice(0, -1).join('/');
   return { from: OD_ROOT + parts.join('/'), dir, by: dir + '/' + by, name: parts[parts.length - 1] };
 }
@@ -990,6 +991,11 @@ export function odExpireCheck(b) {
   if (c.error) return c;
   const parts = String(b.path || '').split('/').filter(Boolean);
   if (parts.length < 3 || parts[parts.length - 2] !== OD_VALID_DIR) return { error: 'path: a file inside a folder named ' + OD_VALID_DIR };
+  if (parts.slice(0, -2).some((x) => x === OD_VALID_DIR || x === OD_EXPIRED_DIR)) return { error: 'path: a valid or expired folder inside another' };
+  // The replacement is a newer report: both names start with the inspection date (YYYY-MM-DD, as filed since 15/09/2026).
+  const day = (n) => (/^(\d{4}-\d{2}-\d{2}) /.exec(n) || [])[1];
+  const d0 = day(parts[parts.length - 1]), d1 = day(String(b.replaced_by || ''));
+  if (!d0 || !d1 || d1 <= d0) return { error: 'replaced_by: a report dated after the one it replaces (names start YYYY-MM-DD)' };
   const parent = OD_ROOT + parts.slice(0, -2).join('/');
   return Object.assign(c, { targetParent: parent, targetName: OD_EXPIRED_DIR });
 }
@@ -2119,7 +2125,9 @@ export async function onRequest(context) {
       if (!sj.file) return jsonResp({ ok: false, error: 'source is not a file' }, 200, {});
       const nb = await fetch(G + enc(c.by) + '?select=id,file', { headers: gh, signal: tmo(GRAPH_MS) });
       if (!nb.ok) return jsonResp({ ok: false, error: 'replaced_by ' + nb.status }, 200, {});
-      if (!(await nb.json()).file) return jsonResp({ ok: false, error: 'replaced_by is not a file' }, 200, {});
+      const nj = await nb.json();
+      if (!nj.file) return jsonResp({ ok: false, error: 'replaced_by is not a file' }, 200, {});
+      if (nj.id === sj.id) return jsonResp({ ok: false, error: 'replaced_by is the same file' }, 200, {});
       let arc = await fetch(G + enc(tParent + '/' + tName) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
       let aj;
       if (arc.status === 404) {
