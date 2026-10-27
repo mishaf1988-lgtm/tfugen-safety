@@ -20,6 +20,18 @@ ctx = o['additionalContext']
 heb = sum(1 for c in ctx if '֐' <= c <= '׿'); lat = sum(1 for c in ctx if c.isascii() and c.isalpha())
 check('the reminder itself is mostly Hebrew', heb > 3 * lat, (heb, lat))
 check('names the wait line and tool output', 'המתנה' in ctx and 'פלט כלי' in ctx, ctx)
+check('the rules card: questionnaire now, dates, verify, no long dash', all(w in ctx for w in ('שאלון', 'DD/MM/YYYY', 'לבדוק', 'מקף ארוך')), ctx)
+check('a short chat: no switch line', 'השיחה ארוכה' not in ctx, ctx)
+import tempfile
+for size, want in ((7_000_000, True), (5_000_000, False)):
+    with tempfile.NamedTemporaryFile(delete=False) as tf:
+        tf.truncate(size)
+    rc, out = run(HOOK, {'prompt': 'x', 'transcript_path': tf.name})
+    c = json.loads(out)['hookSpecificOutput']['additionalContext']
+    os.unlink(tf.name)
+    check('transcript of %.0fMB: switch line %s' % (size / 1e6, 'shown' if want else 'not shown'), ('השיחה ארוכה' in c) == want and ('tfugen-sessions' in c) == want, c)
+rc, out = run(HOOK, {'prompt': 'x', 'transcript_path': '/nonexistent/x.jsonl'})
+check('a missing transcript: still the card, exit 0', rc == 0 and 'כרטיס חוקים' in out, out)
 rc, out = run(HOOK, None)
 check('bad input: still a reminder, exit 0', rc == 0 and 'additionalContext' in out, out)
 s = json.load(open(os.path.join(ROOT, '.claude', 'settings.json'), encoding='utf-8'))
