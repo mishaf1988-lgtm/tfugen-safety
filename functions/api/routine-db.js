@@ -1408,11 +1408,12 @@ export async function onRequest(context) {
       const q = cardQuery(body.q);
       if (!q) return jsonResp({ ok: false, error: 'q: 2-60 characters, a name, a code or a supplier' }, 400, {});
       const like = encodeURIComponent('*' + q + '*');
-      const get = (path) => fetch(url + '/rest/v1/' + path, { headers: h, signal: tmo(SB_MS) }).then((r) => (r.ok ? r.json() : [])).catch(() => []);
+      const bad = []; // a failed read is not "none found" (28/10/2026 retro)
+      const get = (path) => fetch(url + '/rest/v1/' + path, { headers: h, signal: tmo(SB_MS) }).then((r) => (r.ok ? r.json() : (bad.push(path.split('?')[0]), []))).catch(() => (bad.push(path.split('?')[0]), []));
       const [equip, docs, st] = await Promise.all([
         get('equip_inspections?select=id,code,n,loc,vendor,d,e,s,deficiencies,resp_area,notes,file_url&or=(n.ilike.' + like + ',code.ilike.' + like + ',loc.ilike.' + like + ',vendor.ilike.' + like + ')&order=e.asc&limit=5'),
         get('docs?select=id,n,e,s,nt,file_url&n=ilike.' + like + '&order=e.asc&limit=5'),
-        stateRead(['assistant_learned', 'agent_log', 'vendor_contacts']).catch(() => [])]);
+        stateRead(['assistant_learned', 'agent_log', 'vendor_contacts']).catch(() => (bad.push('server_state'), []))]);
       const val = (k) => { const r = (st || []).find((x) => x && x.key === k); try { return JSON.parse((r && r.value) || '[]'); } catch (e) { return []; } };
       const vendors = (Array.isArray(val('vendor_contacts')) ? val('vendor_contacts') : []).filter((v) => Array.isArray(v) && String(v[0] || '').indexOf(q) >= 0).slice(0, 5);
       const learned = cardLines(val('assistant_learned'), q, 6, (x) => String(x.text || '') + ' ' + String(x.source || '')).map((x) => ({ at: x.at, kind: x.kind, status: x.status, text: x.text }));
@@ -1420,8 +1421,8 @@ export async function onRequest(context) {
       const contradictions = rowContradictions(equip);
       const ids = [].concat((equip || []).map((x) => x.id), (docs || []).map((x) => x.id)).filter(Boolean);
       const links = ids.length ? await get('item_links?select=item_table,item_id,rel,ref,title,at,agent&item_id=in.(' + ids.map((x) => encodeURIComponent('"' + x + '"')).join(',') + ')&order=at.desc&limit=40') : [];
-      return jsonResp({ ok: true, q, equip, docs, vendors, learned, log, contradictions, links,
-        next: 'mail: outlook_email_search by the name and by the supplier, the whole thread, newest first; open quotes and reports; compare the same fields in all (agent-common.md, cross-check); no quote validity date' }, 200, {});
+      return jsonResp({ ok: true, q, equip, docs, vendors, learned, log, contradictions, links, partial: bad.length ? bad : undefined,
+        next: (bad.length ? 'a read failed (' + bad.join(', ') + '): do not say "none found" for it, say it could not be read. ' : '') + 'mail: outlook_email_search by the name and by the supplier, the whole thread, newest first; open quotes and reports; compare the same fields in all (agent-common.md, cross-check); no quote validity date' }, 200, {});
     }
     if (body.op === 'state_get') {
       const keys = (Array.isArray(body.keys) ? body.keys : [body.key]).filter((x) => STATE_READ.indexOf(x) >= 0);

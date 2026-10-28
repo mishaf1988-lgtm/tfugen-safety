@@ -142,7 +142,8 @@ const callIn = async (body) => {
     const saved = {}, real = globalThis.fetch;
     globalThis.fetch = async (u, o) => {
       const url = String(u);
-      if (o && o.method === 'PUT') { saved.text = String(o.body); return new Response('{}', { status: 201 }); }
+      if (o && o.method === 'PUT') { saved.text = String(o.body); saved.puts = (saved.puts || 0) + 1; return new Response('{}', { status: 201 }); }
+      if (saved.readFail && /\.txt:\/content/.test(decodeURIComponent(url))) return new Response('x', { status: 500 });
       if (/\.txt:\/content/.test(decodeURIComponent(url))) return new Response(saved.text || '', { status: saved.text ? 200 : 404 });
       return new Response(pdf, { status: 200 });
     };
@@ -156,6 +157,16 @@ const callIn = async (body) => {
         a.ok && a.pages === 3 && a.of === 4 && a.next === 4 && b.ok && b.pages === 1 && b.next === undefined && seen.join() === '1,2,3,4'
         && /\u05e2\u05de\u05d5\u05d3 1 ---\np1[\s\S]*\u05e2\u05de\u05d5\u05d3 3 ---\np3\n\n--- \u05e2\u05de\u05d5\u05d3 4 ---\np4$/.test(saved.text) && !c.ok && /4 pages/.test(c.error),
         { a, b, c, text: saved.text });
+      // 28/10/2026 retro: an earlier-pages read that fails must not replace pages 1-3 with 4-6 (and the chain retries the same pages);
+      // a scan the model read as empty writes nothing: in the middle of a PDF it is not a failure (next), at the end of a short one it is
+      const before = saved.text, putsBefore = saved.puts, seenBefore = seen.length; saved.readFail = true;
+      const f1 = await ocrOne(env, 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0], 4); saved.readFail = false;
+      const emptyAi = { AI: { run: async () => ({ response: '' }) } };
+      const f2 = await ocrOne(emptyAi, 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0]);
+      const f3 = await ocrOne(emptyAi, 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0], 4);
+      check('ocrOne: a failed read of the earlier pages = an error with retry and no write; blank pages in the middle = ok, skipped, next, no write (the chain goes on); blank to the end after earlier pages = ok skipped (28/10/2026 retro)',
+        !f1.ok && f1.retry === true && f1.next === 4 && /not overwritten/.test(f1.error) && f2.ok && f2.skipped === true && f2.next === 4 && f3.ok && f3.skipped === true && f3.next === undefined
+        && saved.puts === putsBefore && saved.text === before && seen.length === seenBefore, { f1, f2, f3, puts: saved.puts, putsBefore, ai: seen.length - seenBefore });
     } finally { globalThis.fetch = real; }
   })();
   // 26/10/2026 (dev request: a copier scan, "no scanned page image"): black and white pages are CCITT Group 4.
@@ -823,10 +834,14 @@ const callIn = async (body) => {
       const r = await call({ op: 'item_card', agent: 'routine-wa-assistant', q: '\u05de\u05d0\u05e8\u05d9\u05db\u05d9\u05dd' });
       check('item_card answers with the parts and the next step (mail, cross-check, no quote validity); a bad field or a short q is refused', r.json.ok && Array.isArray(r.json.equip) && Array.isArray(r.json.learned) && Array.isArray(r.json.contradictions) && /cross-check/.test(r.json.next)
         && (await call({ op: 'item_card', q: 'x' })).status === 400 && (await call({ op: 'item_card', q: 'abc', table: 'emp' })).status === 400, r.json);
+      { const prev = globalThis.fetch; globalThis.fetch = async (u, o) => (/equip_inspections\?select=id,code/.test(String(u)) ? new Response('boom', { status: 500 }) : prev(u, o));
+        let rp; try { rp = await call({ op: 'item_card', agent: 'routine-wa-assistant', q: '\u05de\u05d0\u05e8\u05d9\u05db\u05d9\u05dd' }); } finally { globalThis.fetch = prev; }
+        check('item_card: a database read that fails is reported as partial and the next step says not to claim "none found" (28/10/2026 retro)', rp.json.ok && Array.isArray(rp.json.partial) && rp.json.partial.indexOf('equip_inspections') >= 0 && /read failed/.test(rp.json.next) && r.json.partial === undefined, rp.json); }
     }
     { // 27/10/2026 (Michael: "I asked not to write the quote validity"): refused in wa_me and in a draft
       const V1 = '\u05e0\u05d2\u05d1 \u05d0\u05e7\u05d5\u05dc\u05d5\u05d2\u05d9\u05d4 (\u05d4\u05e6\u05e2\u05d4 \u05de\u05e2\u05d5\u05d3\u05db\u05e0\u05ea, \u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 29/10/2026): 23,500 \u05e9"\u05d7', V2 = '\u05d0\u05d1\u05e7\u05e9 \u05d4\u05d7\u05dc\u05d8\u05d4 \u05e2\u05d3 \u05d7\u05de\u05d9\u05e9\u05d9, \u05db\u05d9 \u05d6\u05d4 \u05de\u05d5\u05e2\u05d3 \u05d4\u05ea\u05d5\u05e7\u05e3 \u05e9\u05dc \u05d4\u05d4\u05e6\u05e2\u05d4.', OK = '\u05e0\u05d2\u05d1 \u05d0\u05e7\u05d5\u05dc\u05d5\u05d2\u05d9\u05d4: 23,500 \u05e9"\u05d7, \u05d5\u05e2\u05d5\u05d3 190 \u05e9"\u05d7 \u05dc\u05d8\u05d5\u05df \u05d1\u05d5\u05e6\u05d4.';
       check('quote validity: "the quote is valid until", "by Thursday, the validity date" are caught; a certificate valid until and a plain quote line are not', mentionsQuoteValidity(V1) && mentionsQuoteValidity(V2) && !mentionsQuoteValidity(OK) && !mentionsQuoteValidity('\u05ea\u05e2\u05d5\u05d3\u05ea \u05d4\u05db\u05d9\u05d5\u05dc \u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 04/2027.'));
+      check('quote validity: a quote line with a colon ("\u05d4\u05e6\u05e2\u05d4: 23,500, \u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 29/10") is still caught (28/10/2026 retro: an exemption for "\u05d4\u05e6\u05e2\u05d4:" reopened Michael\'s rule)', mentionsQuoteValidity('\u05d4\u05e6\u05e2\u05d4: 23,500 \u05e9"\u05d7, \u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 29/10') && mentionsQuoteValidity('\u05d4\u05d4\u05e6\u05e2\u05d4: 23,500, \u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 29/10'));
       const r1 = await call({ op: 'wa_me', agent: 'routine-mail-triage', text: V1 }), r2 = await call({ op: 'mail_draft', agent: 'dev', why: 'test only', to: 'a@tapugan.co.il', subject: 's', body: V2 });
       check('wa_me and mail_draft refuse a quote validity date (400)', r1.status === 400 && /validity/.test(r1.json.error) && r2.status === 400 && /validity/.test(r2.json.error), { a: r1.json, b: r2.json });
     }

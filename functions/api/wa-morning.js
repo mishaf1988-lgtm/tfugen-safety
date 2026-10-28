@@ -93,7 +93,7 @@ export function splitUrgent(items, today) {
 }
 // 27/10/2026 (the extenders: the note said "disqualified" while s and deficiencies said "fit for work"; Michael: "do it"):
 // an equipment row whose state passes while its latest note or its deficiencies say it failed. Pure.
-export const PASS_RE = /^(\u05ea\u05e7\u05d9\u05df|\u05db\u05e9\u05d9\u05e8|\u05de\u05d5\u05ea\u05e8)/, FAIL_WORD = /(^|[^\u05d0-\u05ea])(?<!\u05dc\u05d0 )(\u05e0\u05e4\u05e1\u05dc|\u05e4\u05e1\u05d5\u05dc|\u05dc\u05d0 \u05db\u05e9\u05d9\u05e8|\u05dc\u05d0 \u05ea\u05e7\u05d9\u05df)/;
+export const PASS_RE = /^(\u05ea\u05e7\u05d9\u05df|\u05db\u05e9\u05d9\u05e8|\u05de\u05d5\u05ea\u05e8)/, FAIL_WORD = /(^|[^\u05d0-\u05ea])(?<!\u05dc\u05d0 )(\u05e0\u05e4\u05e1\u05dc|\u05e4\u05e1\u05d5\u05dc(?!\u05ea)|\u05dc\u05d0 \u05db\u05e9\u05d9\u05e8|\u05dc\u05d0 \u05ea\u05e7\u05d9\u05df)/;
 export function rowContradictions(rows) {
   return (rows || []).filter((r) => {
     if (!r || !PASS_RE.test(String(r.s || ''))) return false;
@@ -423,7 +423,8 @@ async function ocrAuto(env, now) {
     await stateSet(env, OCR_AUTO_KEY, JSON.stringify(st));
     const model = env.OCR_MODEL && OCR_MODELS.indexOf(env.OCR_MODEL) >= 0 ? env.OCR_MODEL : OCR_MODELS[0];
     res = await ocrOne(env, at.token, OCR_INBOX + '/' + next.name, next.name, model, cont ? cont.from : 1).catch((e) => ({ name: next.name, ok: false, error: 'ocr' }));
-    st.cont = res && res.ok && res.next && res.next <= OCR_MAX_PAGES ? { name: next.name, from: res.next } : null;
+    const tries = res && res.retry ? ((cont && cont.tries) || 0) + 1 : 0; // a read that keeps failing is dropped after 3 tries (28/10/2026 security review)
+    st.cont = res && (res.ok || (res.retry && tries < 3)) && res.next && res.next <= OCR_MAX_PAGES ? { name: next.name, from: res.next, tries } : null; // retry: the earlier txt could not be read, the same pages again (28/10/2026 retro)
   }
   await stateSet(env, OCR_AUTO_KEY, JSON.stringify(st));
   return res ? { name: res.name, ok: res.ok, chars: res.chars || 0, error: res.error || null } : { idle: true };

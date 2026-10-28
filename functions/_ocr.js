@@ -116,15 +116,20 @@ export async function ocrOne(env, token, rel, name, model, from) {
   const last = Math.min(total, from + OCR_PAGES - 1);
   const pages = [];
   try { for (let i = from - 1; i < last; i++) pages.push(ccitt ? await ccittPng(ccitt[i]) : all[i]); } catch (e) { return { name, ok: false, error: String((e && e.message) || e).slice(0, 120) }; }
-  const parts = [];
-  for (let i = 0; i < pages.length; i++) parts.push('--- \u05e2\u05de\u05d5\u05d3 ' + (from + i) + ' ---\n' + (pages[i] ? await aiOcr(env, model, pages[i], mime) : '(\u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0)')); // "page N", and "(not read)" for a page without an image
   const txt = name.replace(/\.pdf$/i, '') + '.txt', url = G + enc(OCR_ROOT + OD_OCR_DIR + '/' + txt) + ':/content';
   let before = '';
-  if (from > 1) { const o = await fetch(url, { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(20000) }).catch(() => null); if (o && o.ok) before = (await o.text()).trim() + '\n\n'; }
+  if (from > 1) { const o = await fetch(url, { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(20000) }).catch(() => null);
+    if (o && o.ok) before = (await o.text()).trim() + '\n\n';
+    else if (!o || o.status !== 404) return { name, ok: false, retry: true, next: from, error: 'could not read the earlier pages of the txt (' + (o ? o.status : 'no answer') + '): not overwritten, try again' }; } // 28/10/2026 retro: a failed read must not replace pages 1-3 with 4-6
+  // the earlier txt is read before any AI call: a read that keeps failing must not cost paid calls on every retry (28/10/2026 security review)
+  const parts = []; let readAny = false; // a page with real text; the headers alone are not text (28/10/2026 retro)
+  for (let i = 0; i < pages.length; i++) { const t1 = pages[i] ? String(await aiOcr(env, model, pages[i], mime) || '').trim() : ''; if (t1) readAny = true; parts.push('--- \u05e2\u05de\u05d5\u05d3 ' + (from + i) + ' ---\n' + (t1 || '(\u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0)')); }
+  // nothing is written when no page was read (an empty read must not replace an earlier txt). In the middle of a PDF (a blank back page) it is not a failure: `next` lets the chain go on (28/10/2026 retro)
+  if (!readAny) return from > 1 || last < total ? { name, ok: true, skipped: true, pages: pages.length, of: total, next: last < total ? last + 1 : undefined, engine: model, note: 'no text in pages ' + from + '-' + last + ', nothing written' } : { name, ok: false, pages: pages.length, of: total, engine: model, error: 'no text found' };
   const text = (before + parts.join('\n\n')).trim();
   const up = await fetch(url + '?@microsoft.graph.conflictBehavior=replace', { method: 'PUT', signal: AbortSignal.timeout(20000),
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'text/plain; charset=utf-8' }, body: text });
-  return { name, ok: up.ok && text.length > 0, txt: OD_OCR_DIR + '/' + txt, chars: text.length, pages: pages.length, of: total, next: last < total ? last + 1 : undefined, engine: model, error: up.ok ? (text ? undefined : 'no text found') : 'write ' + up.status };
+  return { name, ok: up.ok && readAny, txt: OD_OCR_DIR + '/' + txt, chars: text.length, pages: pages.length, of: total, next: last < total ? last + 1 : undefined, engine: model, error: up.ok ? (readAny ? undefined : 'no text found') : 'write ' + up.status };
 }
 // 26/10/2026 (dev request: a 5-page scan from the plant's copier, "no scanned page image in this PDF"): black and white
 // scanners keep each page as a CCITT Group 4 fax image (/CCITTFaxDecode, /K -1), not a JPEG. It is decoded here, made
