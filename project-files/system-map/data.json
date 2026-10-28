@@ -477,7 +477,7 @@
    "what": "טבלה trustee_winners"
   },
   {
-   "id": "trig_01Kam3MRxBnWSdXA4qEguFaU",
+   "id": "trig_01LfFp3qxNuyTcwjxaBhgSEZ",
    "zone": "routines",
    "name": "תיוק מהמייל ועדכון תוקף",
    "what": "תיוק מהמייל ועדכון תוקף",
@@ -485,7 +485,7 @@
    "doc": "routine-mail-filing.md"
   },
   {
-   "id": "trig_018Eo7D7nH6Cf5RcskU7A6ug",
+   "id": "trig_01BSS4f2n1vj1hYA9R6pGurs",
    "zone": "routines",
    "name": "תיוק מהמייל ועדכון תוקף 10",
    "what": "תיוק מהמייל ועדכון תוקף 10:52",
@@ -493,7 +493,7 @@
    "doc": "routine-mail-filing.md"
   },
   {
-   "id": "trig_015qsPmXxKrH1qZQvz7sy1Vw",
+   "id": "trig_01Bwk6tQq1ynNqknEAsaMcvH",
    "zone": "routines",
    "name": "תיוק מהמייל ועדכון תוקף 13",
    "what": "תיוק מהמייל ועדכון תוקף 13:52",
@@ -501,7 +501,7 @@
    "doc": "routine-mail-filing.md"
   },
   {
-   "id": "trig_01EBZ1zMxGRaDWxQieYsqhPX",
+   "id": "trig_01W1SUAwixyb77K7Vr4vys7S",
    "zone": "routines",
    "name": "בודק התוקף מול המסמכים",
    "what": "בודק התוקף מול המסמכים",
@@ -509,7 +509,7 @@
    "doc": "routine-validity.md"
   },
   {
-   "id": "trig_014okTr8aaXHFE5Df4hWWC8r",
+   "id": "trig_01DU2kgbfF66zPMDywVLt6UW",
    "zone": "routines",
    "name": "דוח ציות חודשי",
    "what": "דוח ציות חודשי",
@@ -517,7 +517,7 @@
    "doc": "routine-compliance.md"
   },
   {
-   "id": "trig_01G7MCCqLTwC9koU4X3RNcJf",
+   "id": "trig_01ERhgWGPzu6ibttZGV6EamW",
    "zone": "routines",
    "name": "סידור תעודות COA של שפכים",
    "what": "סידור תעודות COA של שפכים",
@@ -525,7 +525,7 @@
    "doc": "routine-coa.md"
   },
   {
-   "id": "trig_01HixqSvbC3aS4B9MusYaPoY",
+   "id": "trig_016jtM2MCCrQdmBahCNF8qFf",
    "zone": "routines",
    "name": "מסמכים חדשים בתיקיית הבטיחות",
    "what": "מסמכים חדשים בתיקיית הבטיחות",
@@ -533,7 +533,7 @@
    "doc": "routine-od-scan.md"
   },
   {
-   "id": "trig_01VeQDi3P8NtoXRy6QG8XdZo",
+   "id": "trig_01JuPjwQTEUGDihK8RJWxM7U",
    "zone": "routines",
    "name": "נוסח החוקים בנבו",
    "what": "נוסח החוקים בנבו",
@@ -541,7 +541,7 @@
    "doc": "routine-nevo-versions.md"
   },
   {
-   "id": "trig_011srJTFuPg1xmYH3jjQHCGA",
+   "id": "trig_01RHDbDAFU9uxPTUDnA3FTG4",
    "zone": "routines",
    "name": "מגמות מנתוני המפעל",
    "what": "מגמות מנתוני המפעל",
@@ -549,7 +549,7 @@
    "doc": "routine-factory-trends.md"
   },
   {
-   "id": "trig_01PkTviSBLf2Jkh4emTQsGtW",
+   "id": "trig_01L7gduHbG8d72fn8fDp7LUP",
    "zone": "routines",
    "name": "המפקח המדומה",
    "what": "המפקח המדומה",
@@ -557,7 +557,7 @@
    "doc": "routine-inspector.md"
   },
   {
-   "id": "trig_01G1tf44QSxVdXXtAgLY7JJr",
+   "id": "trig_013hJJjH8yFEYbNPw1Xm9Nqt",
    "zone": "routines",
    "name": "מודל ההעדפות של מיכאל",
    "what": "מודל ההעדפות של מיכאל",
@@ -605,7 +605,7 @@
    "doc": "routine-inventor.md"
   },
   {
-   "id": "trig_01VcYN6AFgRJTbxpmf3MYXdN",
+   "id": "trig_013mrn2cFrC79hD8vnTpbHd9",
    "zone": "routines",
    "name": "הדרכה שבועית מהשטח",
    "what": "הדרכה שבועית מהשטח",
@@ -645,7 +645,7 @@
    "doc": "routine-supplier-followup.md"
   },
   {
-   "id": "trig_01VtyJkVLuqYrQNVgWHhMzhV",
+   "id": "trig_015zHPtWJFZP77uqRzL5wfBA",
    "zone": "routines",
    "name": "תזכורת פרסום ההדרכה",
    "what": "תזכורת פרסום ההדרכה",

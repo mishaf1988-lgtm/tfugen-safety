@@ -1,6 +1,6 @@
 # Routine חודשי: המפקח המדומה
 
-**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_01PkTviSBLf2Jkh4emTQsGtW` (שיחה `session_01FXKjCZExakD2sbqi9eZVin`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
+**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_01L7gduHbG8d72fn8fDp7LUP` (שיחה `session_01FXKjCZExakD2sbqi9eZVin`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
 
 מיכאל, 15/10/2026 ("עשה", על רעיון 1 ב-`ideas-lab.md`): סוכן שמשחק מפקח עבודה או מפקח של המשרד להגנת הסביבה, ובודק אם אפשר **להוכיח עכשיו** את מה שהתקנות דורשות. הוא לא בודק אם מסמך בתוקף. את זה עושה `routine-validity`.
 
