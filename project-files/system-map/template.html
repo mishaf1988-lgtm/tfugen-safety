@@ -2,60 +2,98 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Secular+One&family=IBM+Plex+Sans+Hebrew:wght@400;600&display=swap">
 <style>
-/* Layout: one 3D stage filling the screen; a slim header with the two view switches; a side panel (bottom sheet on a phone)
-   that explains whatever is selected. The flat view is the same content as plain cards, for a phone or a quick read. */
+/* Layout (28/10/2026, v2): a slim header with four views (3D, list, weekly clock, permissions), search and the message trace.
+   The 3D stage fills the screen; the side panel (a bottom sheet on a phone) explains what is selected. Every agent carries a
+   status light that the page computes from live/status in the artifact's db (agent log against the trigger's last run). */
 :root{
-  --bg:#e9edf0; --floor:#d7dde2; --ink:#1f2a33; --mute:#5b6a76; --panel:#ffffffee; --line:#c3ccd3;
+  --bg:#e9edf0; --floor:#d7dde2; --ink:#1f2a33; --mute:#5b6a76; --panel:#ffffffee; --solid:#ffffff; --line:#c3ccd3;
   --accent:#e0a800; --accent-ink:#5b4400;
   --k-person:#d98a00; --k-agent:#0f8f84; --k-system:#3b6ea8; --k-data:#7a4fb0; --k-channel:#2f8f3f;
+  --s-ok:#1f8a4c; --s-warn:#c27c00; --s-bad:#c62828; --s-idle:#8a96a0;
   --display:'Secular One','IBM Plex Sans Hebrew',Arial,sans-serif; --body:'IBM Plex Sans Hebrew',Arial,sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#141b21; --floor:#1c252d; --ink:#e4eaee; --mute:#9aa8b3; --panel:#1b242ccc; --line:#33414c;
+  --bg:#141b21; --floor:#1c252d; --ink:#e4eaee; --mute:#9aa8b3; --panel:#1b242ccc; --solid:#1b242c; --line:#33414c;
   --accent:#f2c230; --accent-ink:#f6d97a;
-  --k-person:#f0a733; --k-agent:#2fc0b2; --k-system:#6fa0dc; --k-data:#a885d8; --k-channel:#5cc06b; color-scheme:dark}}
+  --k-person:#f0a733; --k-agent:#2fc0b2; --k-system:#6fa0dc; --k-data:#a885d8; --k-channel:#5cc06b;
+  --s-ok:#43c27a; --s-warn:#f0a733; --s-bad:#ff6b6b; --s-idle:#7d8a94; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#141b21; --floor:#1c252d; --ink:#e4eaee; --mute:#9aa8b3; --panel:#1b242ccc; --line:#33414c;
+  --bg:#141b21; --floor:#1c252d; --ink:#e4eaee; --mute:#9aa8b3; --panel:#1b242ccc; --solid:#1b242c; --line:#33414c;
   --accent:#f2c230; --accent-ink:#f6d97a;
-  --k-person:#f0a733; --k-agent:#2fc0b2; --k-system:#6fa0dc; --k-data:#a885d8; --k-channel:#5cc06b; color-scheme:dark}
+  --k-person:#f0a733; --k-agent:#2fc0b2; --k-system:#6fa0dc; --k-data:#a885d8; --k-channel:#5cc06b;
+  --s-ok:#43c27a; --s-warn:#f0a733; --s-bad:#ff6b6b; --s-idle:#7d8a94; color-scheme:dark}
+[hidden]{display:none!important}
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);direction:rtl;overflow:hidden}
 #stage{position:fixed;inset:0}
 #stage canvas{display:block}
-header{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;
-  padding-block:calc(10px + env(safe-area-inset-top,0px)) 10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));pointer-events:none}
+header{position:fixed;top:0;left:0;right:0;z-index:7;display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;
+  padding-block:calc(10px + env(safe-area-inset-top,0px)) 8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));pointer-events:none}
 header>*{pointer-events:auto}
-h1{font-family:var(--display);font-weight:400;font-size:clamp(20px,4.6vw,30px);margin:0;line-height:1.1}
-.sub{color:var(--mute);font-size:13px;flex:1 1 220px;min-width:0}
-button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 14px;cursor:pointer}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(20px,4.6vw,28px);margin:0;line-height:1.1}
+.sub{color:var(--mute);font-size:13px;flex:1 1 200px;min-width:0}
+button,input{font:inherit;font-size:14px}
+button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 13px;cursor:pointer}
 button:hover{border-color:var(--accent)}
-button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-button[aria-pressed="true"]{background:var(--accent);color:#1f1a00;border-color:var(--accent)}
-#panel{position:fixed;z-index:6;top:calc(70px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));width:min(340px,40vw);max-height:calc(100% - 90px);overflow:auto;
-  background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;backdrop-filter:blur(8px);display:grid;gap:8px}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button[aria-pressed="true"],button[aria-selected="true"]{background:var(--accent);color:#1f1a00;border-color:var(--accent)}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap;width:100%}
+#q{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 13px;min-width:0;flex:1 1 160px;max-width:320px}
+#hits{position:fixed;z-index:8;background:var(--solid);border:1px solid var(--line);border-radius:10px;padding:4px;display:grid;gap:2px;max-height:50vh;overflow:auto;width:min(320px,calc(100vw - 32px))}
+#hits button{border:0;border-radius:6px;text-align:right;display:flex;gap:8px;align-items:center;width:100%}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chips button{padding:3px 10px;font-size:13px}
+#panel{position:fixed;z-index:6;top:calc(118px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));width:min(350px,40vw);max-height:calc(100% - 140px);overflow:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;backdrop-filter:blur(8px);display:grid;gap:8px;align-content:start}
 #panel h2{font-family:var(--display);font-weight:400;font-size:22px;margin:0;text-wrap:balance}
-#panel .kind{font-size:12px;letter-spacing:.04em;color:var(--mute)}
+.kind{font-size:12px;letter-spacing:.04em;color:var(--mute)}
 #panel p{margin:0;line-height:1.55;font-size:14px}
 #panel dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:13px}
 #panel dt{color:var(--mute)} #panel dd{margin:0;min-width:0;overflow-wrap:anywhere}
 #panel ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}
 #panel li button{width:100%;text-align:right;border-radius:8px;padding:6px 10px;display:flex;gap:8px;align-items:center}
-.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}
+.st{display:inline-flex;gap:6px;align-items:center;font-size:13px;border-radius:999px;padding:2px 9px;border:1px solid var(--line)}
+.st.ok{color:var(--s-ok);border-color:var(--s-ok)} .st.warn{color:var(--s-warn);border-color:var(--s-warn)}
+.st.bad{color:var(--s-bad);border-color:var(--s-bad)} .st.idle{color:var(--mute)}
+.counts{display:flex;gap:8px;flex-wrap:wrap}
 .lbl{direction:rtl;font-family:var(--body);font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 7px;white-space:nowrap;cursor:pointer;user-select:none}
 .lbl.zone{font-family:var(--display);font-size:15px;padding:3px 9px}
-.lbl.small{font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+.lbl.fam{font-family:var(--display);font-size:13px;background:transparent;border:0;color:var(--mute);cursor:default}
+.lbl.small{font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis}
 .lbl.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
-#flat{position:fixed;inset:0;z-index:4;overflow:auto;background:var(--bg);padding-block:calc(84px + env(safe-area-inset-top,0px)) 24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-#flat .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;max-width:1200px;margin:0 auto}
-#flat section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:6px;align-content:start;min-width:0}
-#flat h3{margin:0;font-family:var(--display);font-weight:400;font-size:19px;display:flex;gap:8px;align-items:center}
-#flat p{margin:0;font-size:13px;color:var(--mute)}
-#flat ul{margin:0;padding:0 18px 0 0;font-size:13px;line-height:1.5}
-#legend{position:fixed;z-index:5;bottom:calc(10px + env(safe-area-inset-bottom,0px));right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--mute)}
+.lbl .n{font-family:var(--body);font-size:11px;color:var(--s-bad);margin-inline-start:6px}
+.view{position:fixed;inset:0;z-index:4;overflow:auto;background:var(--bg);padding-block:calc(124px + env(safe-area-inset-top,0px)) 24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;max-width:1200px;margin:0 auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:6px;align-content:start;min-width:0}
+.card h3{margin:0;font-family:var(--display);font-weight:400;font-size:19px;display:flex;gap:8px;align-items:center}
+.card h4{margin:6px 0 0;font-size:13px;color:var(--mute);font-weight:600}
+.card p{margin:0;font-size:13px;color:var(--mute)}
+.card ul{margin:0;padding:0;list-style:none;font-size:13px;line-height:1.5;display:grid;gap:3px}
+.card li{display:flex;gap:6px;align-items:baseline;min-width:0}
+.card li .t{min-width:0;overflow-wrap:anywhere}
+.card li .w{color:var(--mute);font-size:12px}
+.card li.hit{background:color-mix(in srgb,var(--accent) 22%,transparent);border-radius:4px}
+.wrap{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:12px;min-width:0}
+.wrap>.grid{width:100%}
+.note{font-size:13px;color:var(--mute);margin:0}
+.slot{display:flex;gap:6px;align-items:baseline}
+.slot b{font-variant-numeric:tabular-nums;font-weight:600;min-width:42px}
+.slot.clash b{color:var(--s-bad)}
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+table{border-collapse:collapse;font-size:12px;min-width:860px;width:100%}
+th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:right;vertical-align:top}
+th{position:sticky;top:0;background:var(--solid);font-weight:600}
+td.agent{white-space:nowrap;font-weight:600}
+code{font-size:11px;background:color-mix(in srgb,var(--line) 45%,transparent);border-radius:4px;padding:0 4px;margin:1px;display:inline-block;direction:ltr}
+td.warn code{background:color-mix(in srgb,var(--s-warn) 28%,transparent)}
+#legend{position:fixed;z-index:5;bottom:calc(10px + env(safe-area-inset-bottom,0px));right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--mute);max-width:60vw}
 #legend span{display:flex;gap:5px;align-items:center}
 @media (max-width:640px){
   #panel{top:auto;bottom:calc(8px + env(safe-area-inset-bottom,0px));left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));width:auto;max-height:42%}
   #legend{display:none}
+  .view{padding-top:calc(150px + env(safe-area-inset-top,0px))}
 }
 </style>
 
@@ -63,11 +101,23 @@ button[aria-pressed="true"]{background:var(--accent);color:#1f1a00;border-color:
 <header>
   <h1>מפת המערכת</h1>
   <span class="sub" id="sub">גוררים כדי לסובב, לוחצים על אזור או על קו</span>
-  <button id="back" hidden>חזרה למבט כללי</button>
-  <button id="flatBtn" aria-pressed="false">תצוגה שטוחה</button>
+  <div class="tools">
+    <div class="tabs" role="tablist" aria-label="תצוגה">
+      <button role="tab" data-v="3d" aria-selected="true">תלת-ממד</button>
+      <button role="tab" data-v="flat" aria-selected="false">רשימה</button>
+      <button role="tab" data-v="clock" aria-selected="false">שעון שבועי</button>
+      <button role="tab" data-v="perm" aria-selected="false">הרשאות</button>
+    </div>
+    <input id="q" type="search" placeholder="חיפוש: סוכן, טבלה, פעולה" aria-label="חיפוש" autocomplete="off">
+    <button id="trace">מסלול הודעה</button>
+    <button id="back" hidden>חזרה למבט כללי</button>
+  </div>
 </header>
+<div id="hits" hidden role="listbox"></div>
 <aside id="panel" aria-live="polite"></aside>
-<div id="flat" hidden><div class="grid" id="flatGrid"></div></div>
+<div id="flat" class="view" hidden></div>
+<div id="clock" class="view" hidden></div>
+<div id="perm" class="view" hidden></div>
 <div id="legend"></div>
 
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
@@ -78,18 +128,59 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 
 const DATA = /*DATA*/null;
 const KIND = { person: 'אדם', agent: 'סוכן', system: 'מערכת', data: 'נתונים', channel: 'ערוץ' };
+const ST = { ok: 'תקין', warn: 'לבדוק', bad: 'תקלה', idle: 'בלי דיווח' };
+const DAYS = ["א'", "ב'", "ג'", "ד'", "ה'", "ו'", "ש'"];
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const color = (k) => new THREE.Color(css('--k-' + k) || '#888');
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const el = (t, cls, txt) => { const e = document.createElement(t); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
 const zoneOf = Object.fromEntries(DATA.zones.map((z) => [z.id, z]));
 const kids = (id) => DATA.nodes.filter((n) => n.zone === id);
+const agents = DATA.nodes.filter((n) => n.id);
+const key = (s) => String(s || '').replace(/^routine-/, '').replace(/-prompt$/, '').replace(/\.md$/, '');
+const fmt = (iso) => { if (!iso) return ''; const d = new Date(iso); if (isNaN(d)) return '';
+  const p = (x) => String(x).padStart(2, '0');
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(d);
+  const g = (t) => (parts.find((x) => x.type === t) || {}).value || '';
+  return g('day') + '/' + g('month') + '/' + g('year') + ' ' + g('hour') + ':' + g('minute'); };
+
+// ---------- live status (db doc live/status, written by the "map lights" Routine and by Claude) ----------
+let LIVE = null;
+const statusCache = new Map();
+function statusOf(n) {
+  if (!n || !n.id) return null;
+  if (statusCache.has(n.id)) return statusCache.get(n.id);
+  const r = computeStatus(n); statusCache.set(n.id, r); return r;
+}
+function computeStatus(n) {
+  if (!LIVE) return { s: 'idle', why: 'אין עדיין נתונים חיים בתצוגה הזו' };
+  const t = (LIVE.triggers || []).find((x) => x.id === n.id);
+  const logs = LIVE.log || {};
+  const L = logs[n.key] || Object.entries(logs).find(([k]) => key(k) === n.key)?.[1];
+  const fired = t && t.last_fired_at ? new Date(t.last_fired_at).getTime() : 0;
+  const at = L && L.at ? new Date(L.at).getTime() : 0;
+  const age = Date.now() - fired;
+  if (!t) return { s: 'bad', why: 'לא נמצא בטריגרים הפעילים: המפה מצביעה על מזהה שכבר לא קיים או כבוי' };
+  if (t.enabled === false) return { s: 'bad', why: 'הטריגר כבוי' };
+  if (n.reports === false) return { s: 'idle', why: 'לא כותב ביומן הסוכנים בתכנון. רץ לאחרונה: ' + (fmt(t.last_fired_at) || 'עוד לא') };
+  if (n.reports == null && !L) return { s: 'idle', why: 'לא ידוע אם מדווח ליומן. רץ לאחרונה: ' + (fmt(t.last_fired_at) || 'עוד לא') };
+  if (L && L.ok === false) return { s: 'bad', why: 'הדיווח האחרון: נכשל (' + fmt(L.at) + ')', line: L.line };
+  if (!fired) return L ? { s: 'ok', why: 'דיווח אחרון ' + fmt(L.at) + ' (הטריגר הזה עוד לא רץ)', line: L.line } : { s: 'idle', why: 'עוד לא רץ' };
+  if (at && at >= fired - 5 * 60e3) return { s: 'ok', why: 'רץ ' + fmt(t.last_fired_at) + ' ודיווח ' + fmt(L.at), line: L.line };
+  if (age < 90 * 60e3) return { s: 'warn', why: 'הופעל ' + fmt(t.last_fired_at) + ', עוד לא דיווח (אולי עדיין רץ)', line: L && L.line };
+  if (!L && LIVE.log_oldest && new Date(LIVE.log_oldest).getTime() > fired) return { s: 'warn', why: 'רץ ' + fmt(t.last_fired_at) + '; הדיווח כבר לא ביומן' };
+  return { s: 'bad', why: 'רץ ' + fmt(t.last_fired_at) + ' ולא דיווח ביומן' + (L ? ' (הדיווח האחרון ' + fmt(L.at) + ')' : ''), line: L && L.line };
+}
+const sColor = (s) => css('--s-' + (s || 'idle'));
+function stBadge(st) { const b = el('span', 'st ' + st.s); const d = el('i', 'dot'); d.style.background = sColor(st.s); b.append(d, ST[st.s]); return b; }
+function counts() { const c = { ok: 0, warn: 0, bad: 0, idle: 0 }; for (const n of agents) c[statusOf(n).s]++; return c; }
 
 // legend
 const legend = document.getElementById('legend');
 for (const k of Object.keys(KIND)) { const s = el('span'); const d = el('i', 'dot'); d.style.background = css('--k-' + k); s.append(d, KIND[k]); legend.append(s); }
+for (const k of ['ok', 'warn', 'bad', 'idle']) { const s = el('span'); const d = el('i', 'dot'); d.style.background = sColor(k); d.style.outline = '2px solid ' + sColor(k); d.style.outlineOffset = '1px'; s.append(d, 'סוכן: ' + ST[k]); legend.append(s); }
 
-// scene
+// ---------- scene ----------
 const stage = document.getElementById('stage');
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 400);
@@ -104,31 +195,38 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.maxPolarAngle = Math.PI * 0.47; controls.minDistance = 4; controls.maxDistance = 95;
 scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.6));
 const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(8, 16, 6); scene.add(sun);
-
 const floor = new THREE.Mesh(new THREE.CircleGeometry(19, 72), new THREE.MeshStandardMaterial({ color: new THREE.Color(css('--floor')), roughness: 1 }));
 floor.rotation.x = -Math.PI / 2; scene.add(floor);
 const ring = new THREE.Mesh(new THREE.RingGeometry(10.9, 11.05, 96), new THREE.MeshBasicMaterial({ color: new THREE.Color(css('--line')) }));
 ring.rotation.x = -Math.PI / 2; ring.position.y = 0.01; scene.add(ring);
 
-// zones: Michael in the middle, the rest on a ring
-const pos = {}, zoneMesh = {}, zoneLabel = {};
+const pos = {}, zoneMesh = {}, zoneLabel = {}, zoneHalo = {};
 const others = DATA.zones.filter((z) => z.id !== 'michael');
 pos.michael = new THREE.Vector3(0, 0, 0);
 others.forEach((z, i) => { const a = (i / others.length) * Math.PI * 2 + 0.3; pos[z.id] = new THREE.Vector3(Math.cos(a) * 11, 0, Math.sin(a) * 11); });
 const geoFor = { person: new THREE.SphereGeometry(1, 32, 20), agent: new THREE.IcosahedronGeometry(1.05, 0), system: new THREE.BoxGeometry(1.5, 1.5, 1.5), data: new THREE.CylinderGeometry(0.95, 0.95, 1.5, 32), channel: new THREE.TorusGeometry(0.75, 0.3, 16, 40) };
 const pickables = [];
-function label(text, cls, onClick) { const d = el('div', 'lbl ' + cls, text); d.style.pointerEvents = 'auto'; d.addEventListener('click', (e) => { e.stopPropagation(); onClick(); }); return new CSS2DObject(d); }
+function label(text, cls, onClick) { const d = el('div', 'lbl ' + cls, text); if (onClick) { d.style.pointerEvents = 'auto'; d.addEventListener('click', (e) => { e.stopPropagation(); onClick(); }); } return new CSS2DObject(d); }
 for (const z of DATA.zones) {
   const g = new THREE.Group(); g.position.copy(pos[z.id]);
   const base = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.9, 0.25, 40), new THREE.MeshStandardMaterial({ color: new THREE.Color(css('--line')), roughness: .9 }));
   base.position.y = 0.12; g.add(base);
+  const halo = new THREE.Mesh(new THREE.RingGeometry(1.95, 2.2, 48), new THREE.MeshBasicMaterial({ color: new THREE.Color(sColor('bad')), transparent: true, opacity: 0 }));
+  halo.rotation.x = -Math.PI / 2; halo.position.y = 0.27; g.add(halo); zoneHalo[z.id] = halo;
   const m = new THREE.Mesh(geoFor[z.kind], new THREE.MeshStandardMaterial({ color: color(z.kind), roughness: .45, metalness: .1 }));
   m.position.y = 1.5; m.userData = { zone: z.id }; g.add(m); pickables.push(m);
   const l = label(z.name, 'zone', () => openZone(z.id)); l.position.set(0, 3, 0); g.add(l);
   zoneMesh[z.id] = m; zoneLabel[z.id] = l.element; scene.add(g);
 }
+function paintZones() {
+  for (const z of DATA.zones) {
+    const bad = kids(z.id).filter((n) => n.id && statusOf(n).s === 'bad').length;
+    const lab = zoneLabel[z.id]; lab.textContent = z.name;
+    if (bad) { const s = el('span', 'n', '● ' + bad); lab.append(s); }
+    zoneHalo[z.id].material.opacity = bad ? 0.9 : 0;
+  }
+}
 
-// edges with a moving dot each
 const flows = [];
 for (const e of DATA.edges) {
   const a = pos[e.from].clone().setY(1.5), b = pos[e.to].clone().setY(1.5);
@@ -136,18 +234,16 @@ for (const e of DATA.edges) {
   const curve = new THREE.QuadraticBezierCurve3(a, mid, b);
   const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 40, 0.035, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(css('--mute')), transparent: true, opacity: .55 }));
   scene.add(tube);
-  // a wide invisible tube over the line, so a finger can hit it (27/10/2026, Michael: "do it: clickable lines")
   const hit = new THREE.Mesh(new THREE.TubeGeometry(curve, 24, 0.3, 6), new THREE.MeshBasicMaterial({ visible: false }));
   hit.userData = { edge: flows.length }; scene.add(hit); pickables.push(hit);
   const dot = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(css('--accent')) }));
   scene.add(dot); flows.push({ curve, dot, t: Math.random(), e, tube });
 }
 
-// level 2: the parts of one zone around it
-let open = null, partGroup = null, selected = null;
+let open = null, partGroup = null, selected = null, edgeSel = null;
 const panel = document.getElementById('panel'), back = document.getElementById('back'), sub = document.getElementById('sub');
 function camTo(target, dist) {
-  dist *= Math.max(1, 0.95 / camera.aspect); // a narrow phone screen needs the camera further back
+  dist *= Math.max(1, 0.95 / camera.aspect);
   const from = controls.target.clone(), to = target.clone(), c0 = camera.position.clone();
   const dir = c0.clone().sub(from).normalize(), c1 = to.clone().add(dir.multiplyScalar(dist)); c1.y = Math.max(c1.y, dist * 0.55);
   if (reduce) { controls.target.copy(to); camera.position.copy(c1); return; }
@@ -161,19 +257,27 @@ function info(title, kind, what, extra) {
   if (what) panel.append(el('p', null, what));
   if (extra && extra.length) { const dl = el('dl'); for (const [k, v] of extra) if (v) dl.append(el('dt', null, k), el('dd', null, v)); panel.append(dl); }
 }
+function partButton(n, onClick) {
+  const b = el('button'); const d = el('i', 'dot'); const st = statusOf(n);
+  d.style.background = st ? sColor(st.s) : css('--k-' + zoneOf[n.zone].kind);
+  b.append(d, n.name); b.addEventListener('click', onClick); return b;
+}
 function zoneInfo(id) {
   const z = zoneOf[id], list = kids(id);
   info(z.name, KIND[z.kind], z.what, [['חלקים', String(list.length)]]);
-  const ul = el('ul');
-  list.forEach((n, i) => { const li = el('li'), b = el('button'); const d = el('i', 'dot'); d.style.background = css('--k-' + (n.id ? 'agent' : z.kind));
-    b.append(d, n.name); b.addEventListener('click', () => pick(i)); li.append(b); ul.append(li); });
-  panel.append(ul);
+  const fams = list.some((n) => n.family) ? DATA.families.filter((f) => list.some((n) => n.family === f)) : [null];
+  for (const f of fams) {
+    if (f) panel.append(el('span', 'kind', f));
+    const ul = el('ul');
+    list.forEach((n, i) => { if (f && n.family !== f) return; if (!f && n.family) return; const li = el('li'); li.append(partButton(n, () => pick(i))); ul.append(li); });
+    if (!f) list.forEach((n, i) => { if (n.family) { const li = el('li'); li.append(partButton(n, () => pick(i))); ul.append(li); } });
+    panel.append(ul);
+  }
   const links = DATA.edges.map((e, k) => [e, k]).filter(([e]) => e.from === id || e.to === id);
   if (links.length) { panel.append(el('span', 'kind', 'קשרים')); const u2 = el('ul');
     links.forEach(([e, k]) => { const li = el('li'), b = el('button', null, (e.from === id ? 'אל ' + zoneOf[e.to].name : 'מ' + zoneOf[e.from].name) + ': ' + e.label); b.addEventListener('click', () => pickEdge(k)); li.append(b); u2.append(li); });
     panel.append(u2); }
 }
-let edgeSel = null;
 function showEdges(only) {
   flows.forEach((f, k) => { const on = only == null ? (open == null || f.e.from === open || f.e.to === open) : k === only;
     f.tube.material.opacity = only == null ? (open == null ? .55 : on ? .9 : .15) : on ? 1 : .12;
@@ -188,41 +292,114 @@ function pickEdge(k) {
   const clr = el('button', null, 'בטל סימון'); clr.addEventListener('click', () => { edgeSel = null; showEdges(null); open ? zoneInfo(open) : overview(); }); row.append(clr);
   panel.append(row);
 }
+function nodeDetails(n) {
+  const st = statusOf(n);
+  const extra = [['מתי', n.when_full || n.when], ['הוראות', n.doc], ['משפחה', n.family], ['מזהה', n.id]];
+  info(n.name, n.id ? 'סוכן' : zoneOf[n.zone].name, n.what && n.what !== n.name ? n.what : '', extra);
+  if (st) {
+    const box = el('div'); box.style.display = 'grid'; box.style.gap = '4px';
+    box.append(stBadge(st), el('p', null, st.why)); if (st.line) { const p = el('p', 'note', 'שורה אחרונה ביומן: ' + st.line); box.append(p); }
+    panel.insertBefore(box, panel.children[2] || null);
+  }
+  if (n.ops && n.ops.length) { panel.append(el('span', 'kind', 'פעולות בשרת שהנוהל שלו מפעיל')); const p = el('p'); for (const o of n.ops) p.append(el('code', null, o)); panel.append(p); }
+  if (n.m365) panel.append(el('p', 'note', 'קורא Microsoft 365 (קריאה בלבד)'));
+}
 function pick(i) {
   const id = open, n = kids(id)[i]; if (!n) return;
   if (selected) selected.classList.remove('sel');
-  selected = partGroup && partGroup.children[i] && partGroup.children[i].userData.lbl; if (selected) selected.classList.add('sel');
-  info(n.name, n.id ? 'סוכן מתוזמן' : zoneOf[id].name, n.what !== n.name ? n.what : '', [['מתי', n.when], ['הוראות', n.doc], ['מזהה', n.id]]);
+  selected = partGroup && partGroup.userData.byIndex[i]; if (selected) selected.classList.add('sel');
+  nodeDetails(n);
   const backZ = el('button', null, 'כל החלקים של ' + zoneOf[id].name); backZ.addEventListener('click', () => zoneInfo(id)); panel.append(backZ);
 }
 function openZone(id) {
+  stopTrace();
   if (partGroup) { scene.remove(partGroup); partGroup = null; }
   open = id; selected = null; const list = kids(id), z = zoneOf[id];
-  partGroup = new THREE.Group(); partGroup.position.copy(pos[id]);
-  const per = 12;
-  list.forEach((n, i) => {
-    const r = 2.9 + Math.floor(i / per) * 1.3, a = (i % per) / Math.min(per, list.length) * Math.PI * 2 + Math.floor(i / per) * 0.26;
-    const m = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 10), new THREE.MeshStandardMaterial({ color: color(n.id ? 'agent' : z.kind), roughness: .5 }));
-    m.position.set(Math.cos(a) * r, 1.1 + (i % 2) * 0.35, Math.sin(a) * r); m.userData = { part: i };
-    const l = label(n.name, 'small', () => pick(i)); l.position.set(0, 0.55, 0); m.add(l); m.userData.lbl = l.element;
+  partGroup = new THREE.Group(); partGroup.position.copy(pos[id]); partGroup.userData.byIndex = {};
+  const famList = list.some((n) => n.family) ? DATA.families.filter((f) => list.some((n) => n.family === f)) : null;
+  const place = (n, i, a, r, y) => {
+    const st = statusOf(n);
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 10), new THREE.MeshStandardMaterial({ color: st ? new THREE.Color(sColor(st.s)) : color(n.id ? 'agent' : z.kind), roughness: .5 }));
+    m.position.set(Math.cos(a) * r, y, Math.sin(a) * r); m.userData = { part: i };
+    const l = label(n.name, 'small', () => pick(i)); l.position.set(0, 0.55, 0); m.add(l); partGroup.userData.byIndex[i] = l.element;
     partGroup.add(m); pickables.push(m);
-  });
+  };
+  if (famList && famList.length > 1) {
+    // five families, each on its own arc, with its name further out (28/10/2026)
+    const sector = (Math.PI * 2) / famList.length;
+    famList.forEach((f, fi) => {
+      const items = list.map((n, i) => [n, i]).filter(([n]) => n.family === f);
+      const a0 = fi * sector + sector * 0.12, span = sector * 0.76;
+      items.forEach(([n, i], k) => { const row = k % 2, a = a0 + (items.length === 1 ? span / 2 : (k / (items.length - 1)) * span); place(n, i, a, 3.4 + row * 1.25, 1.0 + row * 0.45); });
+      const fl = label(f, 'fam'); const am = a0 + span / 2; fl.position.set(Math.cos(am) * 6.2, 0.4, Math.sin(am) * 6.2); partGroup.add(fl);
+    });
+  } else {
+    const per = 12;
+    list.forEach((n, i) => { const r = 2.9 + Math.floor(i / per) * 1.3, a = (i % per) / Math.min(per, list.length) * Math.PI * 2 + Math.floor(i / per) * 0.26; place(n, i, a, r, 1.1 + (i % 2) * 0.35); });
+  }
   scene.add(partGroup);
   edgeSel = null; showEdges(null);
   for (const k in zoneLabel) zoneLabel[k].classList.toggle('sel', k === id);
   back.hidden = false; sub.textContent = z.name + ': ' + list.length + ' חלקים. לחיצה על חלק מסבירה אותו';
-  zoneInfo(id); camTo(pos[id].clone().setY(1.2), 10 + Math.ceil(list.length / per) * 2);
+  zoneInfo(id); camTo(pos[id].clone().setY(1.2), famList && famList.length > 1 ? 15 : 10 + Math.ceil(list.length / 12) * 2);
 }
 function overview() {
+  stopTrace();
   if (partGroup) { scene.remove(partGroup); partGroup = null; }
   open = null; edgeSel = null; showEdges(null); for (const k in zoneLabel) zoneLabel[k].classList.remove('sel');
   back.hidden = true; sub.textContent = 'גוררים כדי לסובב, לוחצים על אזור או על קו';
-  const agents = DATA.nodes.filter((n) => n.id).length;
-  info('המערכת כולה', 'מבט כללי', DATA.zones.length + ' אזורים, ' + DATA.nodes.length + ' חלקים, מהם ' + agents + ' סוכנים מתוזמנים. הקווים הם הדרכים שבהן מידע עובר; הנקודות הצהובות זזות בכיוון שלו.');
+  info('המערכת כולה', 'מבט כללי', DATA.zones.length + ' אזורים, ' + DATA.nodes.length + ' חלקים, מהם ' + agents.length + ' סוכנים. הקווים הם הדרכים שבהן מידע עובר; הנקודות הצהובות זזות בכיוון שלו.');
+  panel.append(healthBlock());
   const ul = el('ul'); DATA.zones.forEach((z) => { const li = el('li'), b = el('button'); const d = el('i', 'dot'); d.style.background = css('--k-' + z.kind); b.append(d, z.name + ' (' + kids(z.id).length + ')'); b.addEventListener('click', () => openZone(z.id)); li.append(b); ul.append(li); });
   panel.append(ul); camTo(new THREE.Vector3(0, 0, 0), 30);
 }
+function healthBlock() {
+  const box = el('div'); box.style.display = 'grid'; box.style.gap = '6px';
+  box.append(el('span', 'kind', 'מצב הסוכנים'));
+  if (!LIVE) { box.append(el('p', 'note', 'אין עדיין נתונים חיים בתצוגה הזו. הנורות יופיעו אחרי עדכון של סוכן "נורות המפה".')); return box; }
+  const c = counts(), row = el('div', 'counts');
+  for (const k of ['bad', 'warn', 'ok', 'idle']) { const b = stBadge({ s: k }); b.append(' ' + c[k]); row.append(b); }
+  box.append(row, el('p', 'note', 'עודכן ' + fmt(LIVE.updated_at) + '. היומן מחזיק דיווחים מ-' + (fmt(LIVE.log_oldest) || '?') + '.'));
+  const bad = agents.filter((n) => ['bad', 'warn'].includes(statusOf(n).s));
+  if (bad.length) { const ul = el('ul'); for (const n of bad) { const li = el('li'); li.append(partButton(n, () => goTo(n))); ul.append(li); } box.append(ul); }
+  const known = new Set(agents.map((n) => n.id));
+  const extra = (LIVE.triggers || []).filter((t) => t.enabled && t.cron && !known.has(t.id));
+  if (extra.length) box.append(el('p', 'note', 'פעילים שלא במפה (' + extra.length + '): ' + extra.map((t) => t.name).join(', ')));
+  return box;
+}
 back.addEventListener('click', overview);
+function goTo(n) {
+  setView('3d'); if (open !== n.zone) openZone(n.zone);
+  const i = kids(n.zone).indexOf(n); if (i >= 0) pick(i); else { nodeDetails(n); }
+}
+
+// ---------- message trace (28/10/2026, Michael: "do it: trace a message and search") ----------
+const TRACE = [
+  ['michael', 'whatsapp', 'מיכאל כותב לעוזר בוואטסאפ.'],
+  ['whatsapp', 'server', 'Meta מעביר את ההודעה לשרת, שבודק חתימה ומספר.'],
+  ['server', 'assistant', 'השרת מעיר את העוזר בריצה חדשה.'],
+  ['assistant', 'm365', 'העוזר קורא מייל, יומן ותיקיות לפי הצורך (קריאה בלבד).'],
+  ['assistant', 'server', 'העוזר מבקש פעולה מותרת: טיוטה, תיוק, עדכון תוקף.'],
+  ['server', 'db', 'השרת בודק את השדות וכותב למסד.'],
+  ['server', 'whatsapp', 'התשובה יוצאת מהשרת למספר של העוזר.'],
+  ['michael', 'whatsapp', 'מיכאל מקבל את התשובה, ומאשר ב"בצע" כשצריך.'],
+];
+let traceTimer = null; const traceBtn = document.getElementById('trace');
+function stopTrace() { if (traceTimer) { clearTimeout(traceTimer); traceTimer = null; traceBtn.setAttribute('aria-pressed', 'false'); traceBtn.textContent = 'מסלול הודעה'; } }
+function runTrace(i) {
+  if (i >= TRACE.length) { stopTrace(); showEdges(null); return; }
+  const [a, b, txt] = TRACE[i];
+  const k = DATA.edges.findIndex((e) => e.from === a && e.to === b);
+  showEdges(k);
+  info('מסלול של הודעה', 'צעד ' + (i + 1) + ' מתוך ' + TRACE.length, txt, [['מ', zoneOf[a].name], ['אל', zoneOf[b].name]]);
+  const stop = el('button', null, 'עצור'); stop.addEventListener('click', () => { stopTrace(); showEdges(null); overview(); }); panel.append(stop);
+  traceTimer = setTimeout(() => runTrace(i + 1), reduce ? 4000 : 2600);
+}
+traceBtn.addEventListener('click', () => {
+  if (traceTimer) { stopTrace(); showEdges(null); overview(); return; }
+  setView('3d'); if (partGroup) { scene.remove(partGroup); partGroup = null; open = null; }
+  camTo(new THREE.Vector3(0, 0, 0), 30); traceBtn.setAttribute('aria-pressed', 'true'); traceBtn.textContent = 'עצור מסלול'; runTrace(0);
+});
 
 // clicks on shapes
 const ray = new THREE.Raycaster(), mouse = new THREE.Vector2(); let downAt = null;
@@ -234,26 +411,183 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   if (!hit) return; const u = hit.object.userData; if (u.zone) openZone(u.zone); else if (u.part != null) pick(u.part); else if (u.edge != null) pickEdge(u.edge);
 });
 
-// flat view
-const flat = document.getElementById('flat'), flatBtn = document.getElementById('flatBtn'), grid = document.getElementById('flatGrid');
-for (const z of DATA.zones) {
-  const s = el('section'), h = el('h3'); const d = el('i', 'dot'); d.style.background = css('--k-' + z.kind); h.append(d, z.name); s.append(h, el('p', null, z.what));
-  const ul = el('ul'); for (const n of kids(z.id)) ul.append(el('li', null, n.name + (n.when ? ' (' + n.when + ')' : ''))); s.append(ul); grid.append(s);
+// ---------- search ----------
+const q = document.getElementById('q'), hits = document.getElementById('hits');
+let term = '';
+const match = (n, t) => (n.name + ' ' + (n.what || '') + ' ' + (n.doc || '') + ' ' + (n.ops || []).join(' ') + ' ' + (n.key || '')).toLowerCase().includes(t);
+q.addEventListener('input', () => {
+  term = q.value.trim().toLowerCase(); hits.textContent = '';
+  if (cur !== '3d') { renderCur(); hits.hidden = true; return; }
+  if (term.length < 2) { hits.hidden = true; return; }
+  const res = DATA.nodes.filter((n) => match(n, term)).slice(0, 12);
+  if (!res.length) hits.append(el('p', 'note', 'לא נמצא'));
+  for (const n of res) { const b = partButton(n, () => { hits.hidden = true; goTo(n); }); b.append(el('span', 'note', ' ' + zoneOf[n.zone].name)); hits.append(b); }
+  const r = q.getBoundingClientRect(); hits.style.top = (r.bottom + 4) + 'px'; hits.style.right = Math.max(16, innerWidth - r.right) + 'px'; hits.hidden = false;
+});
+q.addEventListener('keydown', (e) => { if (e.key === 'Escape') { q.value = ''; term = ''; hits.hidden = true; renderCur(); } });
+document.addEventListener('click', (e) => { if (!hits.contains(e.target) && e.target !== q) hits.hidden = true; });
+
+// ---------- list view ----------
+let filt = 'all';
+function filterChips(host) {
+  const row = el('div', 'chips');
+  for (const [k, t] of [['all', 'הכל'], ['bad', 'תקלה'], ['warn', 'לבדוק'], ['ok', 'תקין'], ['idle', 'בלי דיווח']]) {
+    const b = el('button', null, t); b.setAttribute('aria-pressed', String(filt === k)); b.addEventListener('click', () => { filt = k; renderCur(); }); row.append(b);
+  }
+  host.append(row);
 }
-function setFlat(on) { flat.hidden = !on; flatBtn.setAttribute('aria-pressed', String(on)); panel.hidden = on; document.getElementById('legend').hidden = on; back.hidden = on || !open;
-  try { localStorage.setItem('sysmap-flat', on ? '1' : '0'); } catch (e) {} }
-flatBtn.addEventListener('click', () => setFlat(flat.hidden));
-let startFlat = false; try { startFlat = localStorage.getItem('sysmap-flat') === '1'; } catch (e) {}
+function itemLi(n) {
+  const li = el('li'); const st = statusOf(n); const d = el('i', 'dot'); d.style.background = st ? sColor(st.s) : css('--k-' + zoneOf[n.zone].kind);
+  const t = el('span', 't', n.name); li.append(d, t);
+  if (n.when) li.append(el('span', 'w', n.when));
+  if (st) li.title = st.why;
+  if (term && match(n, term)) li.classList.add('hit');
+  li.style.cursor = 'pointer'; li.addEventListener('click', () => goTo(n));
+  return li;
+}
+function renderFlat() {
+  const host = document.getElementById('flat'); host.textContent = '';
+  const wrap = el('div', 'wrap'); host.append(wrap);
+  if (LIVE) { const c = counts(); wrap.append(el('p', 'note', 'סוכנים: ' + c.bad + ' בתקלה, ' + c.warn + ' לבדוק, ' + c.ok + ' תקינים, ' + c.idle + ' בלי דיווח. עודכן ' + fmt(LIVE.updated_at) + '.')); }
+  filterChips(wrap);
+  const grid = el('div', 'grid'); wrap.append(grid);
+  for (const z of DATA.zones) {
+    let list = kids(z.id);
+    if (filt !== 'all') list = list.filter((n) => n.id && statusOf(n).s === filt);
+    if (term) list = list.filter((n) => match(n, term));
+    if (!list.length && (filt !== 'all' || term)) continue;
+    const s = el('section', 'card'), h = el('h3'); const d = el('i', 'dot'); d.style.background = css('--k-' + z.kind); h.append(d, z.name); s.append(h, el('p', null, z.what));
+    const fams = list.some((n) => n.family) ? DATA.families.filter((f) => list.some((n) => n.family === f)) : [null];
+    for (const f of fams) { if (f) s.append(el('h4', null, f)); const ul = el('ul'); for (const n of list) if (!f || n.family === f) ul.append(itemLi(n)); s.append(ul); }
+    const links = DATA.edges.filter((e) => e.from === z.id || e.to === z.id);
+    if (links.length && filt === 'all' && !term) { s.append(el('h4', null, 'קשרים')); const ul = el('ul'); for (const e of links) ul.append(el('li', null, (e.from === z.id ? 'אל ' + zoneOf[e.to].name : 'מ' + zoneOf[e.from].name) + ': ' + e.label)); s.append(ul); }
+    grid.append(s);
+  }
+}
+
+// ---------- weekly clock ----------
+function expand(f, lo, hi) {
+  if (f === '*') return null;
+  const out = new Set();
+  for (const part of f.split(',')) {
+    const [r, st] = part.split('/'); const step = st ? +st : 1;
+    let a, b; if (r === '*') { a = lo; b = hi; } else if (r.includes('-')) { [a, b] = r.split('-').map(Number); } else { a = b = +r; if (st) b = hi; }
+    for (let x = a; x <= b; x += step) out.add(x % (hi === 7 ? 7 : 1e9));
+  }
+  return [...out].sort((x, y) => x - y);
+}
+function parseCron(c) {
+  if (!c) return null;
+  const f = c.replace(/^CRON_TZ=\S+\s+/, '').trim().split(/\s+/); if (f.length !== 5) return null;
+  const utc = !/^CRON_TZ=/.test(c);
+  return { min: expand(f[0], 0, 59), hr: expand(f[1], 0, 23), dom: expand(f[2], 1, 31), mon: f[3], dow: expand(f[4], 0, 7), utc };
+}
+function cronFor(n) { const t = LIVE && (LIVE.triggers || []).find((x) => x.id === n.id); return t ? t.cron : null; }
+function renderClock() {
+  const host = document.getElementById('clock'); host.textContent = '';
+  const wrap = el('div', 'wrap'); host.append(wrap);
+  if (!LIVE) { wrap.append(el('p', 'note', 'השעון נבנה מלוח הזמנים החי של הטריגרים. אין עדיין נתונים חיים בתצוגה הזו.')); return; }
+  wrap.append(el('p', 'note', 'שעון ישראל. שעה באדום = שני סוכנים או יותר באותה דקה או בדקה צמודה. ' + 'עודכן ' + fmt(LIVE.updated_at) + '.'));
+  const week = DAYS.map(() => []), monthly = [], demand = [], utcWarn = [];
+  for (const n of agents) {
+    if (term && !match(n, term)) continue;
+    const c = parseCron(cronFor(n));
+    if (!c || !c.hr || !c.min) { demand.push(n); continue; }
+    if (c.utc) utcWarn.push(n);
+    const times = []; for (const h of c.hr) for (const m of c.min) times.push(h * 60 + m);
+    if (c.dom) { monthly.push([n, c.dom, times]); continue; }
+    const days = c.dow ? c.dow.map((d) => d % 7) : [0, 1, 2, 3, 4, 5, 6];
+    for (const d of days) for (const t of times) week[d].push([t, n]);
+  }
+  const grid = el('div', 'grid'); wrap.append(grid);
+  const hm = (t) => String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
+  week.forEach((runs, d) => {
+    const s = el('section', 'card'); s.append(el('h3', null, 'יום ' + DAYS[d]));
+    runs.sort((a, b) => a[0] - b[0]);
+    const ul = el('ul');
+    runs.forEach(([t, n], i) => {
+      const clash = runs.some(([t2], j) => j !== i && Math.abs(t2 - t) < 2);
+      const li = el('li', 'slot' + (clash ? ' clash' : '')); const st = statusOf(n); const dd = el('i', 'dot'); dd.style.background = sColor(st.s);
+      li.append(el('b', null, hm(t)), dd, el('span', 't', n.name)); li.title = st.why; li.style.cursor = 'pointer'; li.addEventListener('click', () => goTo(n)); ul.append(li);
+    });
+    if (!runs.length) ul.append(el('li', 'note', 'אין ריצות'));
+    s.append(ul); grid.append(s);
+  });
+  const ms = el('section', 'card'); ms.append(el('h3', null, 'פעם בחודש'));
+  const ul2 = el('ul'); monthly.sort((a, b) => a[1][0] - b[1][0]).forEach(([n, dom, times]) => { const li = el('li', 'slot'); li.append(el('b', null, dom.join(',') + ' לחודש'), el('span', 'w', times.map(hm).join(' ')), el('span', 't', n.name)); li.style.cursor = 'pointer'; li.addEventListener('click', () => goTo(n)); ul2.append(li); });
+  ms.append(ul2); grid.append(ms);
+  const ds = el('section', 'card'); ds.append(el('h3', null, 'לפי דרישה'), el('p', null, 'בלי שעון: השרת או הודעה מפעילים אותם.'));
+  const ul3 = el('ul'); for (const n of demand) ul3.append(itemLi(n)); ds.append(ul3); grid.append(ds);
+  if (utcWarn.length) wrap.append(el('p', 'note', 'בלי CRON_TZ (השעה לפי UTC וזזה במעבר שעון): ' + utcWarn.map((n) => n.name).join(', ')));
+}
+
+// ---------- permissions ----------
+const CATS = [
+  ['קריאה', /^(select|state_get|item_card|source_read|skill_read|pdf_read|ocr_probe|ocr_txt|stt|client_errors|claims|wa_check)$/],
+  ['כתיבה למסד', /^(expiry_set|equip_add|state_set|talk_field|link_add|learn|learn_done|promise|promise_done|quota_set|claim|hazard_choice|out_log|sign_offer|sign_request|tour_close_ask|office_ask)$/],
+  ['OneDrive', /^od_(?!trash|dedupe)/],
+  ['מייל (טיוטות)', /^(mail_draft|mail_request)$/],
+  ['יומן', /^cal_/],
+  ['וואטסאפ למיכאל', /^wa_(?!check)/],
+  ['פיתוח והעברה', /^(dev_request|dev_done|worker_now|worker_done|relay_fire|agent_report)$/],
+  ['פח או מחיקה', /^(draft_trash|od_dedupe|od_trash)$/],
+];
+function renderPerm() {
+  const host = document.getElementById('perm'); host.textContent = '';
+  const wrap = el('div', 'wrap'); host.append(wrap);
+  wrap.append(el('p', 'note', 'מה כל סוכן מפעיל, לפי קובץ ההוראות שלו ב-repo. הכתיבה עוברת רק בשרת (routine-db), עם הבדיקות שבקוד. "פח או מחיקה": draft_trash מעביר טיוטה שהעוזר הכין לפריטים שנמחקו, od_dedupe מעביר כפילות זהה לסל המיחזור, od_trash מעביר קובץ לתיקייה "למחיקה" ולא מוחק.'));
+  const sc = el('div', 'scroll'); const tb = el('table'); const thead = el('tr');
+  for (const h of ['סוכן', 'משפחה', ...CATS.map((c) => c[0]), 'Microsoft 365']) thead.append(el('th', null, h));
+  tb.append(thead);
+  for (const f of DATA.families) for (const n of agents.filter((x) => x.family === f)) {
+    if (term && !match(n, term)) continue;
+    const tr = el('tr'); const a = el('td', 'agent'); const d = el('i', 'dot'); d.style.background = sColor(statusOf(n).s); a.append(d, ' ' + n.name); a.style.cursor = 'pointer'; a.addEventListener('click', () => goTo(n));
+    tr.append(a, el('td', null, f));
+    for (const [name, re] of CATS) { const td = el('td', name === 'פח או מחיקה' ? 'warn' : null); for (const o of (n.ops || []).filter((x) => re.test(x))) td.append(el('code', null, o)); tr.append(td); }
+    tr.append(el('td', null, n.m365 ? 'קריאה' : ''));
+    if (!n.ops || !n.ops.length) tr.children[2].textContent = n.reports == null ? 'ההוראות מחוץ ל-repo' : '';
+    tb.append(tr);
+  }
+  sc.append(tb); wrap.append(sc);
+}
+
+// ---------- views ----------
+let cur = '3d';
+const views = { flat: document.getElementById('flat'), clock: document.getElementById('clock'), perm: document.getElementById('perm') };
+function renderCur() { if (cur === 'flat') renderFlat(); else if (cur === 'clock') renderClock(); else if (cur === 'perm') renderPerm(); }
+function setView(v) {
+  cur = v; for (const b of document.querySelectorAll('[role=tab]')) b.setAttribute('aria-selected', String(b.dataset.v === v));
+  for (const k in views) views[k].hidden = k !== v;
+  panel.hidden = v !== '3d'; legend.hidden = v !== '3d'; back.hidden = v !== '3d' || !open; traceBtn.hidden = v !== '3d';
+  if (v !== '3d') stopTrace();
+  renderCur();
+  try { localStorage.setItem('sysmap-view', v); } catch (e) {}
+}
+for (const b of document.querySelectorAll('[role=tab]')) b.addEventListener('click', () => setView(b.dataset.v));
 
 // size and loop
 function resize() { const w = stage.clientWidth, h = stage.clientHeight; camera.aspect = w / h; camera.updateProjectionMatrix(); renderer.setSize(w, h); labels.setSize(w, h); }
 addEventListener('resize', resize); resize();
 camera.position.set(0, 22, 24); controls.target.set(0, 0, 0);
-overview(); if (startFlat) setFlat(true);
+overview();
+let startView = innerWidth < 640 ? 'flat' : '3d';
+try { const s = localStorage.getItem('sysmap-view'); if (s && (s in views || s === '3d')) startView = s; } catch (e) {}
+setView(startView);
 renderer.setAnimationLoop((now) => {
+  if (cur !== '3d') return;
   if (!reduce) for (const f of flows) { f.t = (f.t + 0.0035) % 1; f.dot.position.copy(f.curve.getPoint(f.t)); }
   else for (const f of flows) f.dot.position.copy(f.curve.getPoint(0.5));
   if (!reduce) for (const id in zoneMesh) zoneMesh[id].rotation.y = now * 0.0002;
   controls.update(); renderer.render(scene, camera); labels.render(scene, camera);
 });
+
+// live data: one subscription to live/status
+(async () => {
+  let db = null; try { db = await window.claude?.use?.('db'); } catch (e) { db = null; }
+  if (!db) return;
+  db.doc('live/status').onSnapshot((snap) => {
+    LIVE = snap.exists ? snap.data() : null; statusCache.clear(); paintZones();
+    if (cur === '3d') { if (open) { const o = open; openZone(o); } else if (!traceTimer) overview(); } else renderCur();
+  }, () => {});
+})();
 </script>
