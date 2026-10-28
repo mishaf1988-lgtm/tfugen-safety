@@ -755,7 +755,7 @@ export function draftTrashCheck(b, made, nowMs) {
 // decided twice, 22/10 and 26/10/2026, not to): a line for him that asks to load Claude API credit is refused. Pure.
 export function asksApiCredit(t) {
   const s = String(t || '');
-  return /\u05e7\u05e8\u05d3\u05d9\u05d8/.test(s) && /(\u05dc\u05d8\u05e2\u05d5\u05df|\u05dc\u05d4\u05d8\u05e2\u05d9\u05df|\u05d8\u05e2\u05d9\u05e0\u05ea|\u05ea\u05d8\u05e2\u05d9\u05df|\u05dc\u05d8\u05e2\u05d5\u05df|\u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05e7\u05e8\u05d3\u05d9\u05d8|console\.anthropic)/.test(s);
+  return /\u05e7\u05e8\u05d3\u05d9\u05d8/.test(s) && /(\u05d8\u05e2\u05d9\u05e0\u05d4|\u05dc\u05d0 \u05e2\u05d5\u05d1\u05d3|\u05dc\u05d8\u05e2\u05d5\u05df|\u05dc\u05d4\u05d8\u05e2\u05d9\u05df|\u05d8\u05e2\u05d9\u05e0\u05ea|\u05ea\u05d8\u05e2\u05d9\u05df|\u05dc\u05d8\u05e2\u05d5\u05df|\u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05e7\u05e8\u05d3\u05d9\u05d8|console\.anthropic)/.test(s);
 }
 export function calMoveCheck(b, nowMs) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
@@ -1251,6 +1251,17 @@ export function claimGate(text, checked) {
   // naming Drafts, after outlook_email_search found it there.
   if (DRAFT_READY_RE.test(t) && !/drafts|\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea/i.test(String(checked || ''))) return 'the text says a draft is ready: first outlook_email_search with folderName "Drafts" and a word of the subject (the flow takes about a minute), then send with "checked":"Drafts <subject> HH:MM". Not there after 3 minutes: write "\u05d1\u05d9\u05e7\u05e9\u05ea\u05d9 \u05d8\u05d9\u05d5\u05d8\u05d4, \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d4\u05d5\u05e4\u05d9\u05e2\u05d4" and open a promise';
   if (CLAIM_RE.test(t) && String(checked || '').trim().length < 8) return 'the text says missing / expired / waits for you: add "checked" with where you checked (outlook_email_search in Sent Items and the thread, the table and its row) (23/10/2026)';
+  return factGate(t, checked);
+}
+// 28/10/2026 (quality routine, wrong-fact twice on 27/10/2026: "invoice 47000 ... \u05d1\u05d4\u05e6\u05e2\u05d4 4,788" took another supplier's
+// quote, and a list said two inspections "\u05d4\u05d2\u05d9\u05e2\u05d5" that were not in the scan): a price compared with a quote, or a thing that
+// arrived today, needs "checked" naming the source (the same supplier's quote file, the scan, the mail). Pure.
+export const QUOTE_CMP_RE = /\u05d1\u05d4\u05e6\u05e2\u05d4[^.\n]{0,30}\d/;
+export const ARRIVED_TODAY_RE = /(\u05d4\u05d2\u05d9\u05e2|\u05d4\u05d2\u05d9\u05e2\u05d5|\u05d4\u05d2\u05d9\u05e2\u05d4|\u05d4\u05ea\u05e7\u05d1\u05dc|\u05d4\u05ea\u05e7\u05d1\u05dc\u05d5|\u05d4\u05ea\u05e7\u05d1\u05dc\u05d4)\s+\u05d4\u05d9\u05d5\u05dd/;
+export function factGate(text, checked) {
+  const t = String(text || ''), ok = String(checked || '').trim().length >= 8;
+  if (QUOTE_CMP_RE.test(t) && !ok) return 'the text compares with a quote ("\u05d1\u05d4\u05e6\u05e2\u05d4 <number>"): add "checked" naming the quote file and its supplier, the same supplier as the invoice (28/10/2026)';
+  if (ARRIVED_TODAY_RE.test(t) && !ok) return 'the text says something arrived today: add "checked" naming where you saw each one (the scan file and its page, the mail subject) (28/10/2026)';
   return null;
 }
 export function signRequestCheck(b) {
@@ -1448,6 +1459,10 @@ export async function onRequest(context) {
       // 25/10/2026 (Michael in the questionnaire: "do it: add"): a request said 13:42 for 12:43, the day the clock went back.
       // Times written as UTC ("10:43 UTC", ISO with Z) become Israel time here, as in the messages to Michael.
       if (body.op === 'dev_request') body.text = ilTimes(body.text);
+      // 28/10/2026: the note goes to Michael as is; 27/10 13:40 it said scans stop without API credit (they run on ocr_txt).
+      if (body.op === 'dev_done' && asksApiCredit(body.note)) return jsonResp({ ok: false, error: 'note: API credit is not loaded (Michael decided no); a scan is read with ocr_txt. Drop that line' }, 400, {});
+      const fn = body.op === 'dev_done' ? factGate(body.note, body.checked) : null;
+      if (fn) return jsonResp({ ok: false, error: 'note: ' + fn }, 400, {});
       const r = body.op === 'dev_request' ? devInboxAdd(raw, body, now) : devInboxDone(raw, String(body.id || ''), body.note, now);
       if (r.error) return jsonResp({ ok: false, error: r.error }, 400, {});
       const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', {
@@ -1838,6 +1853,8 @@ export async function onRequest(context) {
       const e = agentEntry(body, new Date().toISOString());
       if (!e) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
       if (asksApiCredit(e.for_michael)) return jsonResp({ ok: false, error: 'for_michael asks to load API credit: Michael decided no (22/10 and 26/10/2026). A scan is read with ocr_txt (_\u05d8\u05e7\u05e1\u05d8 \u05e1\u05e8\u05d9\u05e7\u05d5\u05ea); drop that line' }, 400, {});
+      const fg = factGate(e.for_michael, body.checked);
+      if (fg) return jsonResp({ ok: false, error: 'for_michael: ' + fg }, 400, {});
       // 21/10/2026: the WhatsApp assistant sent {status, did} three times; each became an empty ok:false row,
       // and a later run read them as "runs that fell midway". A report with nothing in it is refused.
       if (!e.line && !e.for_michael) return jsonResp({ ok: false, error: 'line required (fields: ok, line, learned, for_michael)' }, 400, {});
