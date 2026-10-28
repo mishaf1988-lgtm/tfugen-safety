@@ -90,7 +90,11 @@ const callIn = async (body) => {
   check('med order by a hidden column: refused', cleanQuery('select=e&order=w.asc', 'med') === null);
   check('hearing_tests: expiry only', cleanQuery('select=e', 'hearing_tests') !== null && cleanQuery('select=emp_name,e', 'hearing_tests') === null);
   check('trustee_reports: place, status, dates', cleanQuery('select=loc,s,ts,closed_d&ts=gte.2026-07-01', 'trustee_reports') !== null);
-  check('trustee_reports: free text and names refused', ['d', 'm', 'f', 'u', 'mgr_note', 'verified_by', 'photo_url'].every((c) => cleanQuery('select=' + c, 'trustee_reports') === null));
+  check('trustee_reports: free text, photo and notes refused', ['f', 'mgr_note', 'verified_by', 'photo_url', 'action', 'resp', 'ref', 'tour'].every((c) => cleanQuery('select=' + c, 'trustee_reports') === null));
+  check('trustee_reports: who, month, task and date for the committee (28/10/2026)', cleanQuery('select=u,m,t,d&m=eq.2026-10', 'trustee_reports') !== null);
+  check('trustees: name, department, active; phone and notes refused', cleanQuery('select=id,n,dep,active&active=is.true', 'trustees') !== null && ['ph', 'notes', '*'].every((c) => cleanQuery('select=' + c, 'trustees') === null) && cleanQuery('select=n&ph=eq.1', 'trustees') === null);
+  check('trustee_tasks and trustee_winners: only their listed columns', cleanQuery('select=n,t,active', 'trustee_tasks') !== null && cleanQuery('select=how', 'trustee_tasks') === null && cleanQuery('select=m,u,pts', 'trustee_winners') !== null && cleanQuery('select=note', 'trustee_winners') === null);
+  check('a trustee table without select= is refused (whole rows would leak the phone)', cleanQuery('', 'trustees') === null && cleanQuery('limit=5', 'trustee_winners') === null);
   check('the medical lists hold nothing but id and e', ['med', 'hearing_tests'].every((t) => COLUMNS[t].every((c) => c === 'id' || c === 'e')));
   calls = [];
   r = await call({ op: 'select', table: 'med', query: 'select=*' });
@@ -208,6 +212,11 @@ const callIn = async (body) => {
       && !!odPullCheck({ agent: 'dev', why: 'old versions', from: 'iso9001/x.pdf', dir: 'iso9001/_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea', dest: 'desktop' }).error
       && !!odPullCheck({ agent: 'dev', why: 'climb up', from: 'iso9001/x.pdf', dir: '../b', dest: 'desktop' }).error
       && !!odPullCheck({ agent: 'dev', why: 'bad dest', from: 'iso9001/x.pdf', dir: 'b', dest: 'drive' }).error;
+  })());
+  check('od_put_pdf: a .pptx (committee deck) by the zip signature; a PDF named .pptx is refused (28/10/2026)', (() => {
+    const P = { agent: 'main-chat', why: 'committee deck', dir: '16_\u05d5\u05d5\u05e2\u05d3\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea' };
+    const zip = Buffer.from('PK\x03\x04xxxx').toString('base64'), pdf = Buffer.from('%PDF-1.4').toString('base64');
+    return /presentation/.test(odPutPdfCheck({ ...P, name: 'a.pptx', b64: zip }).type || '') && !!odPutPdfCheck({ ...P, name: 'a.pptx', b64: pdf }).error;
   })());
   check('od_put_pdf: an old .doc / .xls as it is, by the OLE signature; a zip or PDF named .doc is refused (24/10/2026)', (() => {
     const ole = Buffer.from([0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1, 1, 2]).toString('base64'), zip = Buffer.from('PK\x03\x04abcd').toString('base64');
