@@ -379,7 +379,7 @@
   {
    "zone": "server",
    "name": "routine-db",
-   "what": "56 פעולות שהסוכנים מותרים בהן: agent_report, cal_invite, cal_invite_ask, cal_move, cal_move_ask, claim, claims, client_errors, dev_done, dev_request, draft_trash, equip_add, expiry_set, hazard_choice, item_card, learn, learn_done, link_add, mail_draft, mail_request, ocr_probe, ocr_txt, od_archive, od_dedupe, od_expire, od_mkdir, od_move, od_pull, od_put_pdf, od_trash, office_ask, out_log, pdf_read, promise, promise_done, quota_set, relay_fire, select, sign_offer, sign_request, skill_read, source_read, state_get, state_set, stt, talk_field, tour_close_ask, wa_check, wa_file, wa_me, wa_media, wa_phone, wa_review, wa_tpl, worker_done, worker_now"
+   "what": "57 פעולות שהסוכנים מותרים בהן: agent_report, cal_invite, cal_invite_ask, cal_move, cal_move_ask, claim, claims, client_errors, del_ask, dev_done, dev_request, draft_trash, equip_add, expiry_set, hazard_choice, item_card, learn, learn_done, link_add, mail_draft, mail_request, ocr_probe, ocr_txt, od_archive, od_dedupe, od_expire, od_mkdir, od_move, od_pull, od_put_pdf, od_trash, office_ask, out_log, pdf_read, promise, promise_done, quota_set, relay_fire, select, sign_offer, sign_request, skill_read, source_read, state_get, state_set, stt, talk_field, tour_close_ask, wa_check, wa_file, wa_me, wa_media, wa_phone, wa_review, wa_tpl, worker_done, worker_now"
   },
   {
    "zone": "db",
