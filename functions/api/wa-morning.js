@@ -35,7 +35,15 @@ const dmy = (ymd) => { const p = String(ymd || '').slice(0, 10).split('-'); retu
 // Names come from the database: their long dashes, curly quotes and ellipses become keyboard characters
 // (CLAUDE.md, text sent to people).
 export const keyboard = (s) => String(s || '').replace(/[\u2013\u2014\u05be]/g, '-').replace(/[\u201c\u201d\u05f4]/g, '"').replace(/[\u2018\u2019\u05f3]/g, "'").replace(/\u2026/g, '...');
-const clip = (s, n) => { s = keyboard(s).replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trim() + '.' : s; };
+// 28/10/2026 (review of Michael's chat): "<name> - <name> ..." printed the name twice and then cut it mid-word,
+// and a workers' note stopped mid-word. The repeated head goes, and a cut ends on a whole word with "...".
+export const clip = (s, n) => {
+  s = keyboard(s).replace(/\s+/g, ' ').trim().replace(/^(.{3,80}?) - (?=\1)/, '');
+  if (s.length <= n) return s;
+  let c = s.slice(0, n - 3); const sp = c.lastIndexOf(' ');
+  if (sp > n * 0.5) c = c.slice(0, sp);
+  return c.replace(/[\s,;:.\-]+$/, '') + '...';
+};
 
 // Agent names in agent_log are technical (routine-*); the update shows the office name.
 export const AGENT_NAMES = { 'routine-coa': '\u05e1\u05d9\u05d3\u05d5\u05e8 \u05ea\u05e2\u05d5\u05d3\u05d5\u05ea COA', 'routine-compliance': '\u05d3\u05d5\u05d7 \u05d4\u05e6\u05d9\u05d5\u05ea', 'routine-factory-trends': '\u05de\u05d2\u05de\u05d5\u05ea \u05d4\u05de\u05e4\u05e2\u05dc',

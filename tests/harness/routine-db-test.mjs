@@ -458,6 +458,7 @@ const callIn = async (body) => {
       check('report_number in another format, or on docs: refused', (await call({ ...rq, doc: 'r.pdf', report_number: '185998' })).status === 400 && (await call({ ...rq, doc: 'r.pdf', report_number: ['185998/226'] })).status === 400 && (await call({ ...base, doc: 'r.pdf', report_number: '185998/226' })).status === 400);
       const z = await call({ ...rq, doc: 'r.pdf', report_number: '185998/226' });
       check('report_number with a document: written, the note has old -> new', z.json.ok && z.json.changed && rows.equip_inspections[0].report_number === '185998/226' && rows.equip_inspections[0].notes.indexOf('182666/226 -> 185998/226') > 0, z.json);
+      check('report_number: the old number becomes previous_report_number (28/10/2026)', rows.equip_inspections[0].previous_report_number === '182666/226', rows.equip_inspections[0]);
       rows.equip_inspections.push({ id: 'q2', e: null, notes: null, file_url: null, d: null, report_number: '185999/226' });
       const dup = await call({ ...rq, doc: 'r.pdf', report_number: '185999/226' });
       check('report_number already on another row: refused, nothing written', !dup.json.ok && /already on q2/.test(dup.json.error) && rows.equip_inspections[0].report_number === '185998/226', dup.json);
