@@ -84,6 +84,13 @@ def main(src, out, spec_path):
     for v in spec['rows']:
         if '<t xml:space="preserve">' + escape(v['B']) + '</t>' in s1:
             sys.exit(f'{v["B"]} is already in the sheet')
+    # rows stay in date order (Michael, 28/10/2026): a row older than the last one is refused, not appended out of place
+    dates = [int(d) for d in re.findall(r'<c r="C\d+" s="14"><v>(\d+)</v>', s1)]
+    prev = max(dates) if dates else 0
+    for v in spec['rows']:
+        if serial(v['C']) < prev:
+            sys.exit(f'{v["C"]} is older than the last row: the table is kept in date order (ask Michael)')
+        prev = serial(v['C'])
     new = ''.join(data_row(last + 1 + i, v) for i, v in enumerate(spec['rows']))
     end = last + len(spec['rows'])
     s1 = re.sub(r'<dimension ref="A1:U\d+"/>', f'<dimension ref="A1:U{end}"/>', s1, count=1)
