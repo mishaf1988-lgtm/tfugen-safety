@@ -398,13 +398,15 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   check('a new-row item leaves once a record with those words exists in the app', mergeDropped([{ n: 'נ-9', r: 9, ci: -1, val: 'פנס', why: 'tru_new' }], [], reg0, HZ, TR, NOW).length === 0 && mergeDropped([{ n: 'נ-9', r: 9, ci: -1, val: 'משהו אחר', why: 'tru_new' }], [], reg0, HZ, TR, NOW).length === 1);
 
   // end to end: a save in Excel adds to what was listed before; a change in the app clears what it fixed
-  const oldItem = { n: 'נ-9', r: 9, ci: -1, val: 'ליקוי ישן', why: 'tru_new', at: '2026-09-28T10:00:00Z' };
-  w = world({ file: await writeZip(saved2), state: Object.assign({}, s1, { hazard_xlsm_dropped: JSON.stringify({ at: '2026-09-28T10:00:00Z', items: [oldItem] }) }), cTag: 'someone-saved', hazards: HZ.concat([{ id: 'th-3', n: 3, d: '2026-09-28', dept: 'תוצג', descr: 'חדש', s: 'פתוח' }]) });
+  // a day before the run, not a fixed date: the list drops items older than 30 days, and a fixed 28/09 crossed that on 28/10/2026
+  const RECENT = new Date(Date.now() - 86400000).toISOString();
+  const oldItem = { n: 'נ-9', r: 9, ci: -1, val: 'ליקוי ישן', why: 'tru_new', at: RECENT };
+  w = world({ file: await writeZip(saved2), state: Object.assign({}, s1, { hazard_xlsm_dropped: JSON.stringify({ at: RECENT, items: [oldItem] }) }), cTag: 'someone-saved', hazards: HZ.concat([{ id: 'th-3', n: 3, d: '2026-09-28', dept: 'תוצג', descr: 'חדש', s: 'פתוח' }]) });
   r = await runFile(ENV, 'xlsm', false);
   let st2 = JSON.parse(w.state.hazard_xlsm_dropped || '{}').items || [];
   check('a save in Excel: the new item is added, the one from before is still listed (it used to be replaced)', r.pushed && st2.length === 2 && st2.some((x) => x.val === 'ליקוי ישן') && st2.some((x) => x.ci === 6 && x.why === 'keep'), st2);
-  const fixItem = { n: '3', r: 4, ci: 5, val: 'חדש מתוקן', why: 'keep', id: 'h:th-3', at: '2026-09-28T10:00:00Z' };
-  w = world({ file: out, state: Object.assign({}, s1, { hazard_xlsm_dropped: JSON.stringify({ at: '2026-09-28T10:00:00Z', items: [oldItem, fixItem] }) }), cTag: 'c-ours-2', hazards: HZ.concat([{ id: 'th-3', n: 3, d: '2026-09-28', dept: 'תוצג', descr: 'חדש מתוקן', s: 'פתוח' }]) });
+  const fixItem = { n: '3', r: 4, ci: 5, val: 'חדש מתוקן', why: 'keep', id: 'h:th-3', at: RECENT };
+  w = world({ file: out, state: Object.assign({}, s1, { hazard_xlsm_dropped: JSON.stringify({ at: RECENT, items: [oldItem, fixItem] }) }), cTag: 'c-ours-2', hazards: HZ.concat([{ id: 'th-3', n: 3, d: '2026-09-28', dept: 'תוצג', descr: 'חדש מתוקן', s: 'פתוח' }]) });
   r = await runFile(ENV, 'xlsm', false);
   st2 = JSON.parse(w.state.hazard_xlsm_dropped || '{}').items || [];
   check('a change in the app only (no Excel save): what it fixed leaves the list, the rest stays', r.pushed && st2.length === 1 && st2[0].val === 'ליקוי ישן', st2);
