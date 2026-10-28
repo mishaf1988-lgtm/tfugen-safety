@@ -1,6 +1,6 @@
 # Routine שבועי: תפוגות שנתקעו אצל ספק
 
-**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_01RzUquedmBPwvRU8Jx8t4yh` (שיחה `session_01SNYNvuNvJZiQVL1VPDNuhF`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
+**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_01FpFJnEbCfmNuKxsXQjyfcX` (שיחה `session_01SNYNvuNvJZiQVL1VPDNuhF`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
 
 מיכאל, 18/10/2026, בשאלון: "בצע: מעקב ספקים לתפוגות". הרקע מהנתונים: בסיכום השבועי של 18/10/2026 היו 14 פריטים באיחור, כיול Drager פג לפני 106 ימים, וסוכן מעקב הצעות המחיר (`routine-quotes.md`) מצא 0 בקשות ב-90 יום. הקישור "בקש הצעת מחיר" כבר קיים במייל השבועי (`weekly-digest.js`, `QUOTE_SRC`), אבל הוא לא נלחץ, ולספק בלי כתובת ב-`vendor_contacts` הוא לא נוצר בכלל.
 

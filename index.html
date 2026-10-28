@@ -27457,14 +27457,10 @@ function _odMaybeMirror(blob,prefix,filename){
 function _odSanitizeName(s){return String(s||'').replace(/[\\*\/?"<>|:]/g,'').replace(/\s+/g,' ').trim().substring(0,80);}
 function _odSubfolderName(tbl,rec){
   if(!rec)return tbl;
-  // Suffix for items with an expiry date (rec.e). Format YYYY-MM-DD →
-  // [תוקף DD-MM-YYYY] for readability in OneDrive folder lists.
-  function expSfx(){
-    if(!rec.e)return '';
-    var s=String(rec.e);if(!/^\d{4}-\d{2}-\d{2}/.test(s))return '';
-    var p=s.substring(0,10).split('-');
-    return ' [\u05ea\u05d5\u05e7\u05e3 '+p[2]+'-'+p[1]+'-'+p[0]+']';
-  }
+  // 28/10/2026 (Michael in the questionnaire: "do it: no date in the name"): the name no longer carries
+  // [\u05ea\u05d5\u05e7\u05e3 DD-MM-YYYY]. The date was set when the folder was made and never followed a renewal, and
+  // each renewal opened a new folder. _odResolveSub keeps using a folder that still has the old suffix.
+  function expSfx(){return '';}
   if(tbl==='equip_inspections')return _odSanitizeName((rec.code||'EQI')+' - '+(rec.n||'\u05e6\u05d9\u05d5\u05d3')+expSfx());
   if(tbl==='ncr')return _odSanitizeName((rec.num||'NCR')+' - '+String(rec.d||'').substring(0,40));
   if(tbl==='inc')return _odSanitizeName('INC - '+String(rec.dt||rec.d||'').substring(0,10)+' - '+String(rec.d||'').substring(0,30));
@@ -27693,6 +27689,31 @@ function _odFetchSigned(url){
     }
   });
 }
+// 28/10/2026: the record's folder in its topic: the plain name when it exists, else one that only adds
+// [\u05ea\u05d5\u05e7\u05e3 ...] (made before that date, or cut at 80 characters), the latest date first, else the plain
+// name (created by the upload). A failed lookup falls back to the plain name. Folder names are never changed.
+var _OD_EXP_RE=/\s*\[\u05ea\u05d5\u05e7\u05e3[^\]]*\]?\s*$/;
+function _odSubPick(names,sub){
+  var best=null,bestKey='';
+  for(var i=0;i<(names||[]).length;i++){
+    var nm=String(names[i]||'');
+    if(nm===sub)return sub;
+    if(!_OD_EXP_RE.test(nm)&&nm.length<80)continue;
+    var key=nm.replace(_OD_EXP_RE,'').replace(/\s*\[[^\]]*$/,'').trim();
+    if(!(key===sub||(nm.length>=80&&key.length>=40&&sub.indexOf(key)===0)))continue;
+    var m=/(\d{2})-(\d{2})-(\d{4})/.exec(nm),k=m?m[3]+m[2]+m[1]:'';
+    if(best===null||k>bestKey){best=nm;bestKey=k;}
+  }
+  return best||sub;
+}
+function _odResolveSub(topic,sub){
+  var segs=String(topic||'').split('/').filter(function(x){return x.length;}).map(encodeURIComponent).join('/');
+  return _odEnsureToken().then(function(tok){
+    return fetch('https://graph.microsoft.com/v1.0/me/drive/special/approot:/'+segs+':/children?$select=name,folder&$top=999',{headers:{Authorization:'Bearer '+tok}});
+  }).then(function(r){return r.ok?r.json():{value:[]};}).then(function(j){
+    return _odSubPick((j.value||[]).filter(function(x){return x&&x.folder;}).map(function(x){return x.name;}),sub);
+  }).catch(function(){return sub;});
+}
 function _odMirrorRecord(tbl,rec){
   if(!rec){console.warn('[od] mirror called with no rec');return;}
   if(!_odIsConnected()){
@@ -27704,6 +27725,7 @@ function _odMirrorRecord(tbl,rec){
   var topic=_odFolderFor(prefix);
   var sub=_odSubfolderName(tbl,rec);
   var folder=topic+'/'+sub;
+  var where=_odResolveSub(topic,sub).then(function(x){folder=topic+'/'+x;});
   dlog('[od] mirror start',tbl,rec.id,'→',folder,'photo:',!!rec.photo_url,'file:',!!rec.file_url);
   try{toast('☁️ \u05de\u05e1\u05e0\u05db\u05e8\u05df \u05dc-OneDrive...');}catch(_){}
   var results={photo:null,file:null,report:null};
@@ -27720,7 +27742,7 @@ function _odMirrorRecord(tbl,rec){
         var extByMime={'application/pdf':'pdf','image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','application/msword':'doc','application/vnd.openxmlformats-officedocument.wordprocessingml.document':'docx','application/vnd.ms-excel':'xls','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'xlsx'}[mime]||'bin';
         fname=label+'.'+extByMime;
       }
-      return _odPushFile(blob,folder,fname).then(function(){
+      return where.then(function(){return _odPushFile(blob,folder,fname);}).then(function(){
         results[label]='ok';
         dlog('[od] '+label+' uploaded:',fname);
       });
@@ -27751,7 +27773,7 @@ function _odMirrorRecord(tbl,rec){
   }
   urlsToMirror.forEach(function(item){jobs.push(mirrorAttachment(item.url,item.label));});
   jobs.push(_odBuildReportPdf(tbl,rec).then(function(blob){
-    return _odPushFile(blob,folder,'report.pdf').then(function(){
+    return where.then(function(){return _odPushFile(blob,folder,'report.pdf');}).then(function(){
       results.report='pdf-ok';
       dlog('[od] report.pdf uploaded');
     });
@@ -27761,7 +27783,7 @@ function _odMirrorRecord(tbl,rec){
     var html=_odBuildReportHtml(tbl,rec);
     if(!html)return;
     var hb=new Blob([html],{type:'text/html;charset=utf-8'});
-    return _odPushFile(hb,folder,'report.html').then(function(){
+    return where.then(function(){return _odPushFile(hb,folder,'report.html');}).then(function(){
       results.report='html-fallback-ok';
       dlog('[od] report.html (fallback) uploaded');
     }).catch(function(e2){

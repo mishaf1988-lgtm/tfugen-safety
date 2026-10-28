@@ -25,6 +25,7 @@ ALLOWED = {
     'hr-tap@tapugan.co.il', 'prod@tapugan.co.il', 'safety@tapugan.co.il', 'noreply@tapugan.co.il',
     'safety@send.tapugan.co.il', 'odoo@k-t.co.il', 'info@vitre.io',
     'onboarding@resend.dev', 'powerautomatenoreply@microsoft.com',
+    'jobaccidentnotice@labor.gov.il',  # the Labor Ministry's accident-report mailbox (assistant/accidents.md, 28/10/2026), public
     'coa@il.mxns.com',  # the lab's certificate mailbox (routine-coa.md, 18/10/2026), a role address
 }
 ALLOWED_DOMAINS = ('tfugen.local', 'evil.com', 'example.com', 'b.c')
