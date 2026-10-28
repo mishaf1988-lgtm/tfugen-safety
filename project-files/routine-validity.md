@@ -1,6 +1,6 @@
 # Routine: בודק התוקף, האפליקציה מול המסמכים עצמם
 
-**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_01Mg4hEDfQKBBHw2sbZTTUAH` (שיחה `session_01HK2YJUpeGksTy3KHZ2sGCm`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
+**הטריגר הפעיל (מ-23/10/2026, נבדק ב-`list_triggers` 28/10/2026):** `trig_01EBZ1zMxGRaDWxQieYsqhPX` (שיחה `session_015fjLKy5fsn5tcsERkkN4yV`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
 
 מיכאל, 10/10/2026: "יש דברים שקיים בתיקיות בתוקף ואצלך זה עם ליקוי", "תעבור על כל הקבצים... זה יכול להיות בעוד תיקיות לא רק הבטיחות", "צריך סוכן שמנהל בשבילי הכל בצורה מקצועית ו-0 תקלות", "אתה לא יכול להחליט לבד על תוקף, יש חוקים וידע שלי".
 
