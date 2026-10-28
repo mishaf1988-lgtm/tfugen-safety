@@ -423,7 +423,7 @@ async function ocrAuto(env, now) {
     await stateSet(env, OCR_AUTO_KEY, JSON.stringify(st));
     const model = env.OCR_MODEL && OCR_MODELS.indexOf(env.OCR_MODEL) >= 0 ? env.OCR_MODEL : OCR_MODELS[0];
     res = await ocrOne(env, at.token, OCR_INBOX + '/' + next.name, next.name, model, cont ? cont.from : 1).catch((e) => ({ name: next.name, ok: false, error: 'ocr' }));
-    st.cont = res && res.ok && res.next && res.next <= OCR_MAX_PAGES ? { name: next.name, from: res.next } : null;
+    st.cont = res && (res.ok || res.retry) && res.next && res.next <= OCR_MAX_PAGES ? { name: next.name, from: res.next } : null; // retry: the earlier txt could not be read, the same pages again (28/10/2026 retro)
   }
   await stateSet(env, OCR_AUTO_KEY, JSON.stringify(st));
   return res ? { name: res.name, ok: res.ok, chars: res.chars || 0, error: res.error || null } : { idle: true };

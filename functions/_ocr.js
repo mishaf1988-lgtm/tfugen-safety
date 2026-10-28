@@ -122,8 +122,9 @@ export async function ocrOne(env, token, rel, name, model, from) {
   let before = '';
   if (from > 1) { const o = await fetch(url, { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(20000) }).catch(() => null);
     if (o && o.ok) before = (await o.text()).trim() + '\n\n';
-    else if (!o || o.status !== 404) return { name, ok: false, error: 'could not read the earlier pages of the txt (' + (o ? o.status : 'no answer') + '): not overwritten, try again' }; } // 28/10/2026 retro: a failed read must not replace pages 1-3 with 4-6
-  if (!readAny) return { name, ok: false, pages: pages.length, of: total, engine: model, error: 'no text found' }; // nothing is written: an empty read must not replace an earlier txt (28/10/2026 retro)
+    else if (!o || o.status !== 404) return { name, ok: false, retry: true, next: from, error: 'could not read the earlier pages of the txt (' + (o ? o.status : 'no answer') + '): not overwritten, try again' }; } // 28/10/2026 retro: a failed read must not replace pages 1-3 with 4-6
+  // nothing is written when no page was read (an empty read must not replace an earlier txt). In the middle of a PDF (a blank back page) it is not a failure: `next` lets the chain go on (28/10/2026 retro)
+  if (!readAny) return from > 1 || last < total ? { name, ok: true, skipped: true, pages: pages.length, of: total, next: last < total ? last + 1 : undefined, engine: model, note: 'no text in pages ' + from + '-' + last + ', nothing written' } : { name, ok: false, pages: pages.length, of: total, engine: model, error: 'no text found' };
   const text = (before + parts.join('\n\n')).trim();
   const up = await fetch(url + '?@microsoft.graph.conflictBehavior=replace', { method: 'PUT', signal: AbortSignal.timeout(20000),
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'text/plain; charset=utf-8' }, body: text });

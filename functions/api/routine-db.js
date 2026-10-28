@@ -1204,7 +1204,7 @@ export function tourCloseAskText(row, note) {
 // 27/10/2026 (Michael: "I asked not to write the quote validity any more, and it shows up"; his rule of 26/10/2026:
 // "once I send a quote it is always valid, it is a formality"): a message to him or a draft that gives a quote's
 // validity date is refused, from any agent. Pure.
-export const QUOTE_VALID_RE = /(\u05d4\u05e6\u05e2\u05d4(?!\s*:)|\u05d4\u05e6\u05e2\u05ea)[^\n]{0,120}(\u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3|\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3|\u05d1\u05ea\u05d5\u05e7\u05e3 \u05dc-|\u05de\u05d5\u05e2\u05d3 \u05d4\u05ea\u05d5\u05e7\u05e3)|(\u05ea\u05d5\u05e7\u05e3 \u05d4\u05d4\u05e6\u05e2\u05d4|\u05d4\u05d4\u05e6\u05e2\u05d4 \u05d1\u05ea\u05d5\u05e7\u05e3|\u05ea\u05d5\u05e7\u05e3 \u05e9\u05dc \u05d4\u05d4\u05e6\u05e2\u05d4)/;
+export const QUOTE_VALID_RE = /(\u05d4\u05e6\u05e2|\u05d4\u05e6\u05e2\u05ea)[^\n]{0,120}(\u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3|\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3|\u05d1\u05ea\u05d5\u05e7\u05e3 \u05dc-|\u05de\u05d5\u05e2\u05d3 \u05d4\u05ea\u05d5\u05e7\u05e3)|(\u05ea\u05d5\u05e7\u05e3 \u05d4\u05d4\u05e6\u05e2\u05d4|\u05d4\u05d4\u05e6\u05e2\u05d4 \u05d1\u05ea\u05d5\u05e7\u05e3|\u05ea\u05d5\u05e7\u05e3 \u05e9\u05dc \u05d4\u05d4\u05e6\u05e2\u05d4)/;
 export function mentionsQuoteValidity(t) { return QUOTE_VALID_RE.test(String(t || '')); }
 export function triageGate(b) {
   if (String(b.ref || '') !== 'mail-triage') return null;
