@@ -1,6 +1,6 @@
 # Routine חודשי: מודל ההעדפות של מיכאל
 
-**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_01G1tf44QSxVdXXtAgLY7JJr` (שיחה `session_01FXKjCZExakD2sbqi9eZVin`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
+**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_013hJJjH8yFEYbNPw1Xm9Nqt` (שיחה `session_01FXKjCZExakD2sbqi9eZVin`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
 
 מיכאל, 15/10/2026, בשאלון: "בצע: מודל ההעדפות שלך" (רעיון 4 ב-`ideas-lab.md`).
 

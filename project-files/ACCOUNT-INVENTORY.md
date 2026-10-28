@@ -23,13 +23,13 @@
 | `trig_018Eo7D7nH6Cf5RcskU7A6ug` | תיוק מהמייל ועדכון תוקף 10:52 | א'-ה' 10:52 | `routine-mail-filing.md` | `session_015fjLKy5fsn5tcsERkkN4yV` |
 | `trig_015qsPmXxKrH1qZQvz7sy1Vw` | תיוק מהמייל ועדכון תוקף 13:52 | א'-ה' 13:52 | `routine-mail-filing.md` | `session_015fjLKy5fsn5tcsERkkN4yV` |
 | `trig_01EBZ1zMxGRaDWxQieYsqhPX` | בודק התוקף מול המסמכים | מוצ"ש 22:44 | `routine-validity.md` | `session_015fjLKy5fsn5tcsERkkN4yV` |
-| `trig_014okTr8aaXHFE5Df4hWWC8r` | דוח ציות חודשי | 1 לחודש 08:03 | `routine-compliance.md` | `session_01P5ebhhWfQ6LGJb45cqB8Wj` |
+| `trig_01DU2kgbfF66zPMDywVLt6UW` | דוח ציות חודשי | 1 לחודש 08:03 | `routine-compliance.md` | Routine של Code, שיחה חדשה בכל ריצה, מאגרים: tfugen-safety (C55, 28/10/2026) |
 | `trig_01G7MCCqLTwC9koU4X3RNcJf` | סידור תעודות COA של שפכים | 17 לחודש 07:47 | `routine-coa.md` | `session_01P5ebhhWfQ6LGJb45cqB8Wj` |
-| `trig_01HixqSvbC3aS4B9MusYaPoY` | מסמכים חדשים בתיקיית הבטיחות | 2 לחודש 06:51 | `routine-od-scan.md` | `session_015fjLKy5fsn5tcsERkkN4yV` |
-| `trig_01VeQDi3P8NtoXRy6QG8XdZo` | נוסח החוקים בנבו | 3 לחודש 06:52 | `routine-nevo-versions.md` | `session_01P5ebhhWfQ6LGJb45cqB8Wj` |
-| `trig_011srJTFuPg1xmYH3jjQHCGA` | מגמות מנתוני המפעל | 4 לחודש 08:14 | `routine-factory-trends.md` | `session_01P5ebhhWfQ6LGJb45cqB8Wj` |
-| `trig_01PkTviSBLf2Jkh4emTQsGtW` | המפקח המדומה | 5 לחודש 08:16 | `routine-inspector.md` | `session_01P5ebhhWfQ6LGJb45cqB8Wj` |
-| `trig_01G1tf44QSxVdXXtAgLY7JJr` | מודל ההעדפות של מיכאל | 6 לחודש 08:21 | `routine-preferences.md` | `session_01P5ebhhWfQ6LGJb45cqB8Wj` |
+| `trig_016jtM2MCCrQdmBahCNF8qFf` | מסמכים חדשים בתיקיית הבטיחות | 2 לחודש 06:51 | `routine-od-scan.md` | Routine של Code, שיחה חדשה בכל ריצה, מאגרים: tfugen-safety + michael-skills (C55, 28/10/2026) |
+| `trig_01JuPjwQTEUGDihK8RJWxM7U` | נוסח החוקים בנבו | 3 לחודש 06:52 | `routine-nevo-versions.md` | Routine של Code, שיחה חדשה בכל ריצה, מאגרים: tfugen-safety + michael-skills (C55, 28/10/2026) |
+| `trig_01RHDbDAFU9uxPTUDnA3FTG4` | מגמות מנתוני המפעל | 4 לחודש 08:14 | `routine-factory-trends.md` | Routine של Code, שיחה חדשה בכל ריצה, מאגרים: tfugen-safety + michael-skills (C55, 28/10/2026) |
+| `trig_01L7gduHbG8d72fn8fDp7LUP` | המפקח המדומה | 5 לחודש 08:16 | `routine-inspector.md` | Routine של Code, שיחה חדשה בכל ריצה, מאגרים: tfugen-safety (C55, 28/10/2026) |
+| `trig_013hJJjH8yFEYbNPw1Xm9Nqt` | מודל ההעדפות של מיכאל | 6 לחודש 08:21 | `routine-preferences.md` | Routine של Code, שיחה חדשה בכל ריצה, מאגרים: tfugen-safety (C55, 28/10/2026) |
 | `trig_01Ezy5a5NCysXftdiE8xHoCo` | מעקב הצעות מחיר | מוצ"ש 22:47 | `routine-quotes.md` | `session_01HY8ceU1cNqEQAsoJ7ZRMHT` |
 | `trig_01PrGDTUzea2ewuNBTApskNc` | חוקר העוזר | א'-ה' 06:47 | `routine-researcher.md` | `session_01XecBM5b3kHkbb67kjSpmPs` |
 | `trig_01KKNK11KbArFxmStSuuawww` | רטרו יומי | א'-ה' 07:52 | `retro-prompt.md` | `session_01XecBM5b3kHkbb67kjSpmPs` |

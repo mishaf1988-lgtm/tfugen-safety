@@ -272,7 +272,7 @@
   אם אפשר לבחור רק מאגר אחד: בשורות 1-4 tfugen-safety, בשורות 5-6 michael-skills. לרשום בדוח שרק אחד נכנס.
   סיסמה או קוד אימות: לעצור ולבקש ממיכאל.
   בסוף, דוח: לכל שורה, מה רשום ב-Runs with אחרי הרענון.
-- [ ] **C55. להקים 6 משימות חודשיות מחדש כ-Routines עם מאגר** (28/10/2026, מיכאל בשאלון: "בצע: כרום מקים אותן כ-Routines". משימת צ'אט מתוזמנת לא יכולה לשמור PR, ו-michael-skills פרטי. אחרי ההקמה: Claude מעדכן את המזהים ב-ACCOUNT-INVENTORY ובמפה, ובודק את הריצה הראשונה של כל אחת ב-`get_session`: יש `sources`, ואין `config:no-git-repo`.) טקסט להדבקה בכרום:
+- [x] **C55. להקים 6 משימות חודשיות מחדש כ-Routines עם מאגר** (**✅ בוצע 28/10/2026 14:52 בכרום: 6 Routines חדשים (`trig_01DU2kgbfF66zPMDywVLt6UW`, `trig_01JuPjwQTEUGDihK8RJWxM7U`, `trig_01L7gduHbG8d72fn8fDp7LUP`, `trig_013hJJjH8yFEYbNPw1Xm9Nqt`, `trig_016jtM2MCCrQdmBahCNF8qFf`, `trig_01RHDbDAFU9uxPTUDnA3FTG4`), תזמון Custom cron בשעון ישראל, מחברים Microsoft 365 ו-Supabase בלבד, הישנות מושהות. אומת ב-`list_triggers`: 6 פעילים עם ה-cron הנכון, וב-`get_trigger` הישן `enabled: false`. המאגרים עצמם ייבדקו בריצה הראשונה, 01/11 (בדיקה מתוזמנת) ובדוח הציות 4א.** 28/10/2026, מיכאל בשאלון: "בצע: כרום מקים אותן כ-Routines". משימת צ'אט מתוזמנת לא יכולה לשמור PR, ו-michael-skills פרטי. אחרי ההקמה: Claude מעדכן את המזהים ב-ACCOUNT-INVENTORY ובמפה, ובודק את הריצה הראשונה של כל אחת ב-`get_session`: יש `sources`, ואין `config:no-git-repo`.) טקסט להדבקה בכרום:
   משימה: להעביר 6 משימות מתוזמנות של צ'אט ל-Routines של Claude Code, כדי שיהיה להן מאגר GitHub. לא למחוק שום דבר.
   לכל שורה:
   (א) לפתוח את הקישור הישן, Edit, ולהעתיק את ההוראות במלואן. לצאת ב-Cancel.
