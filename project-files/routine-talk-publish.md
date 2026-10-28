@@ -1,6 +1,6 @@
 # Routine שבועי: האם ההדרכה השבועית פורסמה
 
-**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_01CoMmnoXCbn1a3sxgtCsUca` (שיחה `session_01HK2YJUpeGksTy3KHZ2sGCm`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
+**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_01VtyJkVLuqYrQNVgWHhMzhV` (שיחה `session_01HK2YJUpeGksTy3KHZ2sGCm`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
 
 מיכאל, 18/10/2026, בשאלון: "בצע: תזכורת פרסום ביום ראשון". הרקע: הטיוטות של 11/10 ושל 18/10/2026 נוצרו לבד (`private.talk_week`, א' 02:17 UTC) ונשארו טיוטה. אף עובד לא קרא אותן. הטיוטה לא מתפרסמת לבד (DECISIONS 10/10/2026: פרסום שולח עובדים לחתום על טקסט שאיש לא קרא), ולכן הסוכן רק מזכיר.
 

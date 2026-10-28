@@ -1,6 +1,6 @@
 # Routine חודשי: מגמות מנתוני המפעל > `factory.md`
 
-**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_012v3HyJ1xpKcKE177emqtji` (שיחה `session_01FXKjCZExakD2sbqi9eZVin`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
+**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_011srJTFuPg1xmYH3jjQHCGA` (שיחה `session_01FXKjCZExakD2sbqi9eZVin`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
 
 מיכאל אישר ב-07/10/2026 (שאלון, "בצע"). פעם בחודש: מה חוזר (מחלקה, מיקום, סוג), מה נסגר באיחור, ומגמה, מתוך `tour_hazards`, `inc`, `near_miss`, `trustee_reports`, `ncr`. הממצאים, עם תאריך המדידה והספירות, נכנסים לעוזר (`factory.md`, "מגמות מהאפליקציה") דרך שיחה-בת עם `source_url` של michael-skills. באפליקציה כבר יש כרטיס "מפגעים חוזרים" (`_thzRecurring`, `_thzRepPlaces`: אותו סוג 3 פעמים ב-90 יום, אותו מקום פעמיים בשנה); ה-Routine משתמש באותם סוגים (`_THZ_KINDS`) כדי שהמספרים יתאימו למסך, ומוסיף את מה שאין שם: חמש הטבלאות יחד, איחורים, ומגמה בין רבעונים.
 
