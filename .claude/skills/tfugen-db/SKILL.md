@@ -84,6 +84,7 @@ description: How to read and change the live Supabase database of tfugen-safety,
 - גם עם אישור: מחיקת שורות מ-`ncr`, `ncr_ai`, `trustee_reports` (נאכף ב-`guard-sql.py`).
 - `public.ncr` = 0 שורות בכוונה; ההיסטוריה ב-`backup_ops_20260918.ncr`.
 - **הגנת מחיקה במסד (קיימת, תועדה 12/10/2026):** `private.protect_delete` על `ncr`, `ncr_ai`, `trustee_reports`: TRUNCATE תמיד נחסם, DELETE רק לאדמין או מנהל מחובר באפליקציה. `execute_sql` שלך נחסם גם אם ה-hook לא. הנוסח: `migrations/2026-10-12_protect_delete_record.sql`. לפני הצעת הגנה או טריגר: `pg_trigger` על הטבלה (לקח 18).
+- **מחיקת שורה בודדת מהענן = `del_ask`, לא `execute_sql` (28/10/2026, #2175):** DELETE מהענן מחכה לאישור שלא מגיע אל מיכאל (נתקע 4 פעמים על `inc` `acc26-28` ועל המלגזה). `routine-db.sh '{"op":"del_ask","agent":"<שם>","table":"inc|equip_inspections|docs","id":"<id>","why":"<משפט שמיכאל מבין>"}'` שולח לו את השורה עם "מחק" / "לא". רק הלחיצה שלו מוחקת, אחרי גיבוי ב-`undo_log`. **בקשה אחת פתוחה בכל פעם** (`DEL_ASK_KEY` אחד): בקשה שנייה דורסת את הראשונה, ולכן את הבאה שולחים רק אחרי שהוא ענה. איך בודקים שענה: `select` על השורה.
 
 ## הלקחים של התחום: `references/lessons.md`
 
