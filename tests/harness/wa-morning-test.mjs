@@ -1,6 +1,6 @@
 // The morning update on WhatsApp from the server (20/10/2026): pg_cron calls /api/wa-morning twice,
 // only the call on 07:xx in Israel on Sunday-Thursday sends, once a day, to Michael's number only.
-import { areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT, splitUrgent, WAIT_DAYS, rowContradictions } from './_build/wa-morning.mjs';
+import { clip, areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT, splitUrgent, WAIT_DAYS, rowContradictions } from './_build/wa-morning.mjs';
 import { OD_ROOT } from './_build/routine-db.mjs';
 import fs from 'fs';
 
@@ -324,6 +324,14 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
       check('contradiction: the word "waste" (\u05e4\u05e1\u05d5\u05dc\u05ea) in a deficiency is not "disqualified" (28/10/2026 retro); "\u05e4\u05e1\u05d5\u05dc" still is', waste.join() === 'real,plural,verb', waste); }
     const b = buildBrief([], [], '2026-10-27', false, [], null, null, null, false, [], [], c), u = buildBrief([], [], '2026-10-27', false, [], null, null, null, true, [], [], c);
     check('brief: a contradiction line in the morning update, not in "what is urgent"', b.includes('\u05e9\u05d5\u05e8\u05d4 \u05e1\u05d5\u05ea\u05e8\u05ea') && b.includes('extenders') && !u.includes('\u05e9\u05d5\u05e8\u05d4 \u05e1\u05d5\u05ea\u05e8\u05ea'), { b, u });
+  }
+  {
+    // 28/10/2026 (review of Michael's chat): a name written twice, and a cut in the middle of a word.
+    const twice = clip('\u05d6\u05d5\u05d2 \u05de\u05d0\u05e8\u05d9\u05da - \u05d6\u05d5\u05d2 \u05de\u05d0\u05e8\u05d9\u05da \u05d1\u05d0\u05d5\u05e8\u05da 1650', 40);
+    check('clip: a head written twice is printed once', twice === '\u05d6\u05d5\u05d2 \u05de\u05d0\u05e8\u05d9\u05da \u05d1\u05d0\u05d5\u05e8\u05da 1650', twice);
+    const long = clip('aaaa bbbb cccc dddd eeee ffff gggg', 20);
+    check('clip: a cut ends on a whole word, with ...', long === 'aaaa bbbb cccc...' && long.length <= 20, long);
+    check('clip: short text unchanged, a dash that is not a repeat stays', clip('a - b', 50) === 'a - b' && clip('VARIOGARD - x', 50) === 'VARIOGARD - x');
   }
   console.log('\nwa-morning-test: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

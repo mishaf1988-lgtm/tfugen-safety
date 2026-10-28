@@ -517,7 +517,8 @@ export function expiryPatch(b, row, today) {
     const rn = String(b.report_number || '');
     if (typeof b.report_number !== 'string' || !/^\d{3,8}\/\d{1,4}$/.test(rn)) return { error: 'report_number: like 186003/226' };
     if (!doc) return { error: 'doc required for report_number' };
-    if (rn !== row.report_number) { patch.report_number = rn; said.push('\u05ea\u05e1\u05e7\u05d9\u05e8 ' + (row.report_number || '-') + ' -> ' + rn); }
+    // 28/10/2026 (review of Michael's chat): the old number moves to previous_report_number, or the row kept one two cycles old
+    if (rn !== row.report_number) { patch.report_number = rn; if (row.report_number) patch.previous_report_number = row.report_number; said.push('\u05ea\u05e1\u05e7\u05d9\u05e8 ' + (row.report_number || '-') + ' -> ' + rn); }
   }
   // 27/10/2026 (the sibling-field check: a new report may come from another inspector): the inspector's name, with the report
   if (b.inspector !== undefined) {
@@ -2508,7 +2509,7 @@ export async function onRequest(context) {
         await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
           body: JSON.stringify([{ id: 'wa' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
             event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error',
-            payload: { title: String(body.text || '').replace(/\s+/g, ' ').slice(0, 120), text: String(body.text || '').slice(0, 1500), via: r.via || null, wamid: r.wamid || null, ref: body.ref ? String(body.ref).slice(0, 40) : 'none', answers: body.answers ? String(body.answers).slice(0, 40) : null, detail: r.error || null, push: ps.sent || 0 } }]) });
+            payload: { title: ilTimes(String(body.text || '')).replace(/\s+/g, ' ').slice(0, 120), text: ilTimes(String(body.text || '')).slice(0, 1500), via: r.via || null, wamid: r.wamid || null, ref: body.ref ? String(body.ref).slice(0, 40) : 'none', answers: body.answers ? String(body.answers).slice(0, 40) : null, detail: r.error || null, push: ps.sent || 0 } }]) });
       } catch (e) { /* the message went out; a missing log line is not a failure */ }
       return jsonResp(Object.assign({}, r, { push: ps.sent || 0 }, stale ? { stale: true, choices_dropped: !!stale.dropChoices } : {}), 200, {});
     }
