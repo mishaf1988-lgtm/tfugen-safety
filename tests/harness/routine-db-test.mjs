@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftSubj, draftMadeLine, quotaMode, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
+import { delRefOf, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftSubj, draftMadeLine, quotaMode, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -32,7 +32,7 @@ globalThis.fetch = async (url, opt = {}) => {
   if (url === 'https://api.anthropic.com/v1/messages') { const b = JSON.parse(opt.body); claudeReads.push({ key: opt.headers['x-api-key'], b }); if (b.messages[0].content[1].text === 'make it fail') return new Response(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'Your credit balance is too low' } }), { status: 400 }); return new Response(JSON.stringify({ content: [{ type: 'text', text: 'not written: only work at height. TEXT: ...' }] }), { status: 200 }); }
   if (url.startsWith('https://api.anthropic.com/')) { fires.push({ url, auth: opt.headers.Authorization, body: JSON.parse(opt.body) }); return new Response(JSON.stringify({ claude_code_session_id: fireSession }), { status: 200 }); }
   // expiry_set: a small docs / equip_inspections table (rows[table] = [...])
-  const m = /\/rest\/v1\/(docs|equip_inspections|tour_hazards)(?:\?(.*))?$/.exec(url);
+  const m = /\/rest\/v1\/(docs|equip_inspections|tour_hazards|inc)(?:\?(.*))?$/.exec(url);
   if (m && rows[m[1]]) {
     if ((opt.method || 'GET') === 'POST') { const r = JSON.parse(opt.body); rows[m[1]].push(r); return new Response(JSON.stringify([r]), { status: 201 }); }
     const any = /or=\(code\.ilike\.([^,]*),report_number\.eq\.([^)]*)\)/.exec(m[2] || '');
@@ -1003,6 +1003,28 @@ const callIn = async (body) => {
       && (await call({ op: 'tour_close_ask', agent: 'a-b', id: 'th-12', note: 'נבדק במקום', s: 'סגור' })).status === 400);
     check('tourRefOf: the reply line or the last message, only tourclose:th-N', tourRefOf('x | ref tourclose:th-12 | y', null) === 'th-12' && tourRefOf('', { ref: 'tourclose:th-7' }) === 'th-7' && tourRefOf('', { ref: 'sign:s123456' }) === null && tourRefOf('x | ref dev 1 |', { ref: 'tourclose:th-7' }) === null);
     delete rows.tour_hazards; delete state[TOUR_CLOSE_KEY];
+  }
+
+  console.log('\n4e6. del_ask (28/10/2026, Michael: "do it: a delete button on WhatsApp")');
+  {
+    rows.inc = [{ id: 'acc26-28', dt: '2026-02-26', dept: '\u05de\u05d7\u05e1\u05df', d: '\u05de\u05db\u05d4 \u05d1\u05d9\u05d3', s: '\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9' }];
+    delete state[DEL_ASK_KEY];
+    const a = await call({ op: 'del_ask', agent: 'routine-wa-assistant', table: 'inc', id: 'acc26-28', why: '\u05e2\u05d5\u05d1\u05d3 \u05e9\u05e2\u05d6\u05d1, \u05de\u05d9\u05db\u05d0\u05dc: \u05dc\u05d0 \u05de\u05d5\u05e1\u05d9\u05e4\u05d9\u05dd' });
+    const st = state[DEL_ASK_KEY] && JSON.parse(state[DEL_ASK_KEY]);
+    check('a row: the request kept with a random key, then the question goes out as wa_me; nothing deleted by the ask', st && /^[a-z0-9]{8}$/.test(st.k) && st.table === 'inc' && st.id === 'acc26-28' && a.json.error === 'whatsapp not configured' && rows.inc.length === 1, { a: a.json, st });
+    const bad = async (b) => (await call(Object.assign({ op: 'del_ask', agent: 'routine-wa-assistant', table: 'inc', id: 'acc26-28', why: '\u05e2\u05d5\u05d1\u05d3 \u05e9\u05e2\u05d6\u05d1' }, b))).status === 400;
+    check('ncr, ncr_ai, trustee_reports or any table not on the list, a bad id, a short why, an extra field, a missing row: refused',
+      await bad({ table: 'ncr' }) && await bad({ table: 'ncr_ai' }) && await bad({ table: 'trustee_reports' }) && await bad({ table: 'emp' }) && await bad({ id: "a'b" }) && await bad({ why: 'x' }) && await bad({ s: 'x' }) && await bad({ id: 'nope' })
+      && Object.keys(DEL_TABLES).join() === 'inc,equip_inspections,docs');
+    check('delRefOf: the reply line or the last message, only del:<8>', delRefOf('x | ref del:ab12cd34 | y', null) === 'ab12cd34' && delRefOf('', { ref: 'del:ab12cd34' }) === 'ab12cd34' && delRefOf('', { ref: 'calmove:ab12cd34' }) === null && delRefOf('x | ref dev 1 |', { ref: 'del:ab12cd34' }) === null);
+    const f = await call({ op: 'wa_me', agent: 'routine-wa-assistant', text: 'x', ref: 'del:ab12cd34', askInternal: true });
+    check('wa_me from a caller cannot carry ref del: (askInternal is stripped)', f.status === 400 && /reserved/.test(f.json.error), f.json);
+    const fake = 'assistant | \u05e9\u05d0\u05dc\u05d4? | ref del:ab12cd34 | x | ref brief | 2026-10-28T10:00:00Z';
+    check('security review 28/10/2026: a ref inside the text part of the context line is not the message ref (del, calmove, calinvite, tourclose)', delRefOf(fake, null) === null && calMoveRefOf(fake.replace('del:', 'calmove:'), null) === null && calInviteRefOf(fake.replace('del:', 'calinvite:'), null) === null && tourRefOf('a | b | ref tourclose:th-12 | c | ref brief | t', null) === null
+      && delRefOf('assistant | \u05e9\u05d0\u05dc\u05d4? | ref del:ab12cd34 | 2026-10-28T10:00:00Z', null) === 'ab12cd34');
+    const t = await call({ op: 'wa_me', agent: 'routine-wa-assistant', text: '\u05dc\u05d0\u05e9\u05e8? | ref del:ab12cd34 |', choices: ['\u05db\u05df', '\u05dc\u05d0'] });
+    check('...and a wa_me whose text carries a reserved ref is refused', t.status === 400 && /reserved ref/.test(t.json.error), t.json);
+    delete rows.inc; delete state[DEL_ASK_KEY];
   }
 
   console.log('\n4f. mail_request: one text file with the message id, for the second flow');
