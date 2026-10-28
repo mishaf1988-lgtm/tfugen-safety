@@ -141,6 +141,13 @@ def office_url(cwd):
     return m.group(0) if m else ""
 
 
+def map_url(cwd):
+    """The system map (28/10/2026, Michael in the questionnaire: "בצע: את שניהם"): opened next to the office, the
+    whole structure with a live light per agent. Its address is kept in ACCOUNT-INVENTORY.md."""
+    m = re.search(r"\*\*מפת המערכת\*\* \((https://claude\.ai/artifact/[A-Za-z0-9]+)", read(os.path.join(cwd, "project-files", "ACCOUNT-INVENTORY.md")))
+    return m.group(1) if m else ""
+
+
 def report(cwd):
     out = ["== התחלת שיחה (session-start.py) ==",
            "skills לטעון: " + ", ".join(SKILLS) + " (CLAUDE.md, Workflow 1-2)"]
@@ -148,6 +155,10 @@ def report(cwd):
     if office:
         out += ["🏢 משרד הסוכנים: בתחילת השיחה Artifact עם action \"open\" ו-url " + office +
                 " (מיכאל, 16/10/2026: \"תמיד הצמד לי אותו לשיחות\"; כפתור Artifacts בשיחה מראה רק מה שנפתח בה)"]
+    smap = map_url(cwd)
+    if smap:
+        out += ["🗺️ מפת המערכת: מיד אחרי המשרד, Artifact עם action \"open\" ו-url " + smap +
+                " (מיכאל, 28/10/2026, בשאלון: \"בצע: את שניהם\"; המבנה כולו ונורה לכל סוכן)"]
     hand = sorted(n for n in os.listdir(cwd) if n.startswith("handoff-") and n.endswith(".md")) if os.path.isdir(cwd) else []
     for n in hand:
         t = read(os.path.join(cwd, n))
