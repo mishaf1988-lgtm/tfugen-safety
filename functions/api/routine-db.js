@@ -15,8 +15,9 @@
 //   select     GET one table of TABLES with a PostgREST query string. No "("
 //              in select=, so no embedding of a table that is not on the list.
 //              Medical tables (med, hearing_tests) give only the expiry, and
-//              trustee_reports only where and when, never the free text or a
-//              name (Michael, 09/10/2026: "בצע: בלי טבלת רפואה"). COLUMNS.
+//              trustee_reports where, when, which task and who, never the free text
+//              (Michael, 09/10/2026: "בצע: בלי טבלת רפואה"; names and tasks for the committee
+//              deck, 28/10/2026). Trustees without phone or notes. COLUMNS.
 //   state_get  read server_state keys of STATE_READ.
 //   state_set  write one key of STATE_WRITE, then read it back (STAMP_AT keys: the server sets "at").
 //   quota_set  {util, resets_at}: the weekly quota as rate_limit_info shows it; the server decides quota_mode.
@@ -160,7 +161,8 @@ import { PDFDocument } from '../_pdflib.js';
 import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, fireUrlOf, sameSession, recentLine, ilTimes } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
-  'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads'];
+  'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads',
+  'trustees', 'trustee_tasks', 'trustee_winners'];
 export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'quota_mode'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
@@ -385,7 +387,12 @@ export function stampAt(v, nowIso) {
 export const COLUMNS = {
   med: ['id', 'e'],
   hearing_tests: ['id', 'e'],
-  trustee_reports: ['id', 'loc', 'location_id', 's', 'ok', 'ts', 'closed_d', 'num'],
+  // 28/10/2026 (Michael in the questionnaire: "do it: name, department, task and date"), for the safety committee deck:
+  // who reported which task and when (u is the trustee's name, m the month). Never the free text, photos or notes.
+  trustee_reports: ['id', 'loc', 'location_id', 's', 'ok', 'ts', 'closed_d', 'num', 'u', 'm', 't', 'd'],
+  trustees: ['id', 'n', 'dep', 'active'],
+  trustee_tasks: ['id', 'n', 't', 'active'],
+  trustee_winners: ['id', 'm', 'u', 'pts'],
   // talk_field reads this week's draft: no trainer signature, no links, no translations.
   toolbox_talks: ['id', 'd', 's', 'kind', 'dept', 'created_by', 'title', 'body'],
   // 23/10/2026 (Michael in the questionnaire: "do it: how many signed the talk"): counts only, per talk and department;
@@ -846,7 +853,8 @@ export function calMoveAskText(c, b) {
 }
 const OD_NO_DIR = /(^|\/)(_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea|\u05dc\u05de\u05d7\u05d9\u05e7\u05d4|ARCHIVE)(\/|$)/i;
 // 18/10/2026 (Michael: "גם וגם"): csv too, the data file next to a lab certificate pdf.
-const OD_EXT = /\.(pdf|docx?|xlsx|csv|jpe?g|png)$/i;
+// pptx (28/10/2026): the safety committee deck is moved to the trash folder or to old versions before the new one is saved.
+const OD_EXT = /\.(pdf|docx?|xlsx|pptx|csv|jpe?g|png)$/i;
 // Into "not filed" any file the flow saved may go (11/10/2026: a 4 MB .mp4 ad stayed in the inbox;
 // 12/10/2026: an attachment named "RAW", saved with no extension, was refused and stuck there),
 // under the same name; into a document folder only OD_EXT.
@@ -1146,13 +1154,14 @@ export function odPullCheck(b) {
 // 8 MB from 24/10/2026: procedure 01 (4.3 MB) and the factory file (4.9 MB) did not fit into the ISO binder;
 // Graph's simple PUT takes up to 250 MB.
 export const OD_PUT_MAX = 8 * 1024 * 1024;
-export const OD_PUT_TYPES = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', doc: 'application/msword', xls: 'application/vnd.ms-excel' };
+export const OD_PUT_TYPES = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', doc: 'application/msword', xls: 'application/vnd.ms-excel', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' };
 export function odPutPdfCheck(b) {
   const c = odMkdirCheck({ agent: b.agent, why: b.why, parent: b.dir, name: b.name });
   if (c.error) return { error: c.error === 'bad parent' ? 'bad dir' : c.error };
   // 24/10/2026 (Michael: "documents in the folder must be Word for editing as before; PDF later for display"):
   // a Word or Excel file too, checked by its own signature (a .docx is a zip, PK\x03\x04).
-  const ext = (/\.(pdf|docx|xlsx|doc|xls)$/i.exec(c.name) || [])[1];
+  // pptx (28/10/2026, Michael in the questionnaire: "do it: connect to the assistant"): the safety committee deck, a zip like docx.
+  const ext = (/\.(pdf|docx|xlsx|pptx|doc|xls)$/i.exec(c.name) || [])[1];
   if (!ext) return { error: 'bad name' };
   let bytes;
   try { bytes = Uint8Array.from(atob(String(b.b64 || '')), (ch) => ch.charCodeAt(0)); } catch (e) { return { error: 'bad b64' }; }
