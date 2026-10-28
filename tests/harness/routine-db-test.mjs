@@ -159,14 +159,14 @@ const callIn = async (body) => {
         { a, b, c, text: saved.text });
       // 28/10/2026 retro: an earlier-pages read that fails must not replace pages 1-3 with 4-6 (and the chain retries the same pages);
       // a scan the model read as empty writes nothing: in the middle of a PDF it is not a failure (next), at the end of a short one it is
-      const before = saved.text, putsBefore = saved.puts; saved.readFail = true;
+      const before = saved.text, putsBefore = saved.puts, seenBefore = seen.length; saved.readFail = true;
       const f1 = await ocrOne(env, 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0], 4); saved.readFail = false;
       const emptyAi = { AI: { run: async () => ({ response: '' }) } };
       const f2 = await ocrOne(emptyAi, 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0]);
       const f3 = await ocrOne(emptyAi, 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0], 4);
       check('ocrOne: a failed read of the earlier pages = an error with retry and no write; blank pages in the middle = ok, skipped, next, no write (the chain goes on); blank to the end after earlier pages = ok skipped (28/10/2026 retro)',
         !f1.ok && f1.retry === true && f1.next === 4 && /not overwritten/.test(f1.error) && f2.ok && f2.skipped === true && f2.next === 4 && f3.ok && f3.skipped === true && f3.next === undefined
-        && saved.puts === putsBefore && saved.text === before, { f1, f2, f3, puts: saved.puts, putsBefore });
+        && saved.puts === putsBefore && saved.text === before && seen.length === seenBefore, { f1, f2, f3, puts: saved.puts, putsBefore, ai: seen.length - seenBefore });
     } finally { globalThis.fetch = real; }
   })();
   // 26/10/2026 (dev request: a copier scan, "no scanned page image"): black and white pages are CCITT Group 4.
