@@ -26,7 +26,7 @@
 //              answers 403 to a plain fetch of the site; a night run compares this hash with the
 //              file it tested to prove the live site runs exactly that code (09/10/2026).
 //   agent_report  append one run report {agent, ok, line, learned} to server_state
-//              agent_log (last AGENT_LOG_MAX kept). Every Routine ends with it, so a
+//              agent_log (trimLog: last AGENT_LOG_MAX, and the last AGENT_LOG_KEEP of every agent). Every Routine ends with it, so a
 //              failed or silent run reaches the weekly mail and the daily retro
 //              (09/10/2026, review of the agents: a run's last message in a
 //              persistent session reaches nobody).
@@ -169,6 +169,21 @@ export const STATE_READ = ['undo_log', 'quote_track', 'nevo_versions', 'od_scan'
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
+// 28/10/2026 (Michael in the questionnaire: "do it: development request for the log"): the last 200 rows were
+// 116 of the WhatsApp assistant, and the oldest row was 3 days old, so a weekly or monthly agent's report was gone
+// before anyone could read it. Trimming keeps the newest AGENT_LOG_MAX rows plus the newest AGENT_LOG_KEEP of every
+// agent, in their original order. The format does not change (one array), so every reader stays as it is.
+export const AGENT_LOG_KEEP = 5;
+export function trimLog(log, max = AGENT_LOG_MAX, keep = AGENT_LOG_KEEP) {
+  if (!Array.isArray(log) || log.length <= max) return log;
+  const cut = log.length - max, seen = {}, keepIdx = new Set();
+  for (let i = log.length - 1; i >= 0; i--) {
+    const a = String((log[i] && log[i].agent) || '');
+    seen[a] = (seen[a] || 0) + 1;
+    if (i >= cut || seen[a] <= keep) keepIdx.add(i);
+  }
+  return log.filter((_, i) => keepIdx.has(i));
+}
 // One run report, cleaned: a short agent name and three short texts.
 export function agentEntry(b, nowIso) {
   const name = String(b.agent || '');
@@ -1532,7 +1547,7 @@ export async function onRequest(context) {
           if (!Array.isArray(log)) log = [];
           log.push(agentEntry({ agent: 'dev', ok: true, line: 'dev_done ' + body.id, for_michael: body.note }, now));
           await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-            body: JSON.stringify([{ key: 'agent_log', value: JSON.stringify(log.slice(-AGENT_LOG_MAX)), updated_at: now }]), signal: tmo(SB_MS) });
+            body: JSON.stringify([{ key: 'agent_log', value: JSON.stringify(trimLog(log)), updated_at: now }]), signal: tmo(SB_MS) });
         } catch (x) { /* the close is written; Michael sees it in the office */ }
       }
       // 21/10/2026 (Michael: "the assistant did a task, said it would come back to me and did not"): the
@@ -1897,7 +1912,7 @@ export async function onRequest(context) {
       try { log = JSON.parse(rows && rows[0] && rows[0].value || '[]'); } catch (x) { log = []; }
       if (!Array.isArray(log)) log = [];
       log.push(e);
-      log = log.slice(-AGENT_LOG_MAX);
+      log = trimLog(log);
       const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', {
         method: 'POST',
         headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },

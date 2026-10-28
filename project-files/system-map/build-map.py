@@ -63,7 +63,46 @@ FIXED = {
 }
 DB_LABELS = {"docs": "מסמכים ותוקף", "equip_inspections": "ציוד ותסקירים", "tr": "הדרכות", "ppe": "ציוד מגן", "ctr": "קבלנים", "tasks": "משימות",
              "leg": "חקיקה", "ncr": "אי-התאמות", "trustee_reports": "דיווחי נאמנים", "toolbox_talks": "הדרכות שבועיות", "server_state": "מצב הסוכנים",
-             "tour_hazards": "ליקויי סיור", "near_miss": "כמעט תאונה", "inc": "אירועים"}
+             "tour_hazards": "ליקויי סיור", "near_miss": "כמעט תאונה", "inc": "אירועים",
+             "med": "בדיקות רפואיות", "hearing_tests": "בדיקות שמיעה", "toolbox_reads": "קריאות הדרכה"}
+# 28/10/2026 (Michael in the questionnaire: "do it: 5 families and a weekly clock"): the agents in five families, so the ring
+# of 30 labels reads. Keyed by the doc's stem (routine-<stem>.md); anything not listed falls back by zone.
+FAMILY = {
+    "mail-filing": "תיוק ותוקף", "validity": "תיוק ותוקף", "od-scan": "תיוק ותוקף", "coa": "תיוק ותוקף",
+    "supplier-followup": "תיוק ותוקף", "quotes": "תיוק ותוקף", "mail-triage": "תיוק ותוקף",
+    "researcher": "למידה ומחקר", "radar-learn": "למידה ומחקר", "inventor": "למידה ומחקר", "retro": "למידה ומחקר",
+    "preferences": "למידה ומחקר", "nevo-versions": "למידה ומחקר", "radar": "למידה ומחקר",
+    "compliance": "דוחות ותוכן", "factory-trends": "דוחות ותוכן", "inspector": "דוחות ותוכן", "talk-field": "דוחות ותוכן",
+    "talk-publish": "דוחות ותוכן", "additions-log": "דוחות ותוכן", "marketing": "דוחות ותוכן",
+    "office": "תקשורת ומשרד", "chat-relay": "תקשורת ומשרד", "cowork-queue": "תקשורת ומשרד", "cowork-check": "תקשורת ומשרד",
+    "rotation": "תקשורת ומשרד", "wa-assistant": "תקשורת ומשרד", "worker-now": "תקשורת ומשרד",
+    "quality": "בקרה ופיתוח", "staging-e2e": "בקרה ופיתוח", "dev-runner": "בקרה ופיתוח", "dev-fire": "בקרה ופיתוח", "map-lights": "בקרה ופיתוח",
+}
+M365_TOOLS = ["outlook_email_search", "read_resource", "sharepoint_search", "sharepoint_folder_search", "outlook_calendar_search"]
+
+
+def doc_key(doc, name):
+    """The name an agent reports under in agent_log, normalised: routine-mail-filing.md -> mail-filing, retro-prompt.md -> retro.
+    The page normalises the log's names the same way (key() in template.html)."""
+    m = re.search(r"([\w-]+)\.md", doc)
+    if m:
+        return re.sub(r"^routine-", "", re.sub(r"-prompt$", "", m.group(1)))
+    if "cowork-queue" in doc:
+        return "cowork-queue"
+    return "radar" if "רדאר" in name else ""
+
+
+def doc_facts(doc, ops):
+    """What the agent's own instructions file says it does: the server's operations it names, whether it reads Microsoft 365,
+    and whether it writes the agent log (agent-common.md "סגירה"; a few say on purpose that they do not)."""
+    m = re.search(r"((?:marketing/)?[\w-]+\.md)", doc)
+    path = m and os.path.join(ROOT, "project-files", m.group(1))
+    if not path or not os.path.exists(path) or "safety-platform" in doc:
+        return {"ops": [], "m365": False, "reports": None}
+    t = open(path, encoding="utf-8").read()
+    silent = bool(re.search(r"לא כותב בלוג|ולא כותב בו", t))
+    return {"ops": [o for o in ops if re.search(r"(?<![a-z_])" + o + r"(?![a-z_])", t)],
+            "m365": any(x in t for x in M365_TOOLS), "reports": (not silent) and ("agent-common" in t or "agent_report" in t)}
 
 
 def short(name):
@@ -71,7 +110,8 @@ def short(name):
     return (n[:44] + "...") if len(n) > 47 else n
 
 
-def routines():
+def routines(ops=None):
+    ops = ops if ops is not None else server_ops()
     out = []
     for line in open(os.path.join(ROOT, "project-files", "ACCOUNT-INVENTORY.md"), encoding="utf-8"):
         if not line.startswith("| `trig_"):
@@ -82,8 +122,13 @@ def routines():
             continue
         # the worker on demand does the assistant's tasks (reads mail and folders), so it sits with the assistant (27/10/2026)
         zone = "assistant" if re.search(r"wa-assistant|worker-now", doc) else "dev" if "dev-" in doc else "routines"
-        out.append({"id": tid, "zone": zone, "name": short(name), "what": name[:200], "when": re.sub(r"`", "", when)[:120],
-                    "doc": re.sub(r"`", "", doc)[:80]})
+        key = doc_key(doc, name)
+        when = re.sub(r"`", "", when)
+        n = {"id": tid, "zone": zone, "name": short(name), "what": name[:200] if short(name) != name else "",
+             "when": re.split(r" \(", when)[0][:60], "when_full": when[:200], "doc": re.sub(r"`", "", doc)[:80],
+             "key": key, "family": FAMILY.get(key, "בקרה ופיתוח" if zone == "dev" else "תקשורת ומשרד" if zone == "assistant" else "תקשורת ומשרד")}
+        n.update(doc_facts(doc, ops))
+        out.append(n)
     return out
 
 
@@ -118,9 +163,10 @@ def build():
     nodes.append({"zone": "server", "name": "routine-db", "what": str(len(ops)) + " פעולות שהסוכנים מותרים בהן: " + ", ".join(ops)})
     for t in tables():
         nodes.append({"zone": "db", "name": DB_LABELS.get(t, t), "what": "טבלה " + t})
-    nodes += routines() + flows()
+    nodes += routines(ops) + flows()
     return {"zones": [{"id": i, "name": n, "kind": k, "what": w} for i, n, k, w in ZONES],
-            "edges": [{"from": a, "to": b, "label": l, "what": w} for a, b, l, w in EDGES], "nodes": nodes}
+            "edges": [{"from": a, "to": b, "label": l, "what": w} for a, b, l, w in EDGES], "nodes": nodes,
+            "families": ["תיוק ותוקף", "למידה ומחקר", "דוחות ותוכן", "תקשורת ומשרד", "בקרה ופיתוח"]}
 
 
 if __name__ == "__main__":

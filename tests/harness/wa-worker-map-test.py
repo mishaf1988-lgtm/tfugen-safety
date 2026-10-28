@@ -23,6 +23,7 @@ NOT_WORKER = {
     'routine-dev-runner.md': 'the on-duty developer, code requests every two hours (21/10/2026)',
     'routine-mail-triage.md': 'the daily mail scan, one message to Michael; "more mails" goes to the assistant itself (25/10/2026)',
     'routine-quality.md': 'the daily quality checker, reads what was sent and reports in the morning update (27/10/2026)',
+    'routine-map-lights.md': 'updates the system map lights three times a day, takes no tasks (28/10/2026)',
     'routine-additions-log.md': 'writes the day\'s merged additions to Michael\'s log page each evening, takes no tasks (27/10/2026)',
 }
 wa = open(os.path.join(PF, 'routine-wa-assistant.md'), encoding='utf-8').read()
