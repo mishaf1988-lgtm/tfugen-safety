@@ -462,6 +462,21 @@
    "what": "טבלה toolbox_reads"
   },
   {
+   "zone": "db",
+   "name": "trustees",
+   "what": "טבלה trustees"
+  },
+  {
+   "zone": "db",
+   "name": "trustee_tasks",
+   "what": "טבלה trustee_tasks"
+  },
+  {
+   "zone": "db",
+   "name": "trustee_winners",
+   "what": "טבלה trustee_winners"
+  },
+  {
    "id": "trig_01Kam3MRxBnWSdXA4qEguFaU",
    "zone": "routines",
    "name": "תיוק מהמייל ועדכון תוקף",
