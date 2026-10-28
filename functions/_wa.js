@@ -163,7 +163,7 @@ export function promiseToCheck(raw, ids, nowIso) {
 // Routine and no new prompt header. The assistant builds the list (routine-wa-assistant.md 2ב, "evening list").
 // 27/10/2026: the list said two inspection reports "arrived today" from the mail of that day; they were not in it.
 // The database said "waiting for the report". So the item state comes from the database.
-export const EVENING_HOUR = 15, EVENING_CHECK = 'evening list: what is planned for the next working day (contractor work and permits in the mail, inspections, visits in the calendar, expiries this week) and what each one still lacks; the state of each expiry item from the database (d, e, notes), never from a mail that arrived; one wa_me, then promise_done quiet';
+export const EVENING_HOUR = 15, EVENING_CHECK = 'evening list: what is planned for the next working day (contractor work and permits in the mail, inspections, visits in the calendar, expiries this week) and what each one still lacks; the state of each expiry item from the database (d, e, notes), never from a mail that arrived; then a section waiting-for-Michael: the open del_ask request if there is one (at most one; state del_ask, with its table and id), every dev_inbox item closed in the last 24 hours, and every promise that waits for his answer, each with the one tap or answer he needs; one wa_me, then promise_done quiet';
 export function eveningAdd(raw, dayIL, dow, hourIL, nowIso) {
   if (!(dow >= 0 && dow <= 4) || hourIL !== EVENING_HOUR) return null;
   const list = plist(raw), id = 'p-evening-' + dayIL.replace(/-/g, '');
