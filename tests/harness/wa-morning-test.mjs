@@ -320,6 +320,8 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
       { n: 'marked', s: '\u05e4\u05e1\u05d5\u05dc', notes: '\u05e0\u05e4\u05e1\u05dc', deficiencies: '' }, { n: 'negated', s: '\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4', notes: '\u05dc\u05d0 \u05e0\u05e4\u05e1\u05dc', deficiencies: '' }];
     const c = rowContradictions(rows);
     check('contradiction: fit + latest note "disqualified", or fit + a failing deficiency; an older note, a free-text history note (3 false alarms live, 27/10), a row already disqualified, and "not disqualified" are not', c.join() === 'extenders,deficiency', c);
+    { const waste = rowContradictions([{ n: 'compressor', s: '\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4', notes: '', deficiencies: '\u05d4\u05e6\u05d8\u05d1\u05e8\u05d5\u05ea \u05e4\u05e1\u05d5\u05dc\u05ea \u05d1\u05de\u05d3\u05d7\u05e1' }, { n: 'real', s: '\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4', notes: '', deficiencies: '\u05d4\u05e6\u05d9\u05d5\u05d3 \u05e4\u05e1\u05d5\u05dc' }]);
+      check('contradiction: the word "waste" (\u05e4\u05e1\u05d5\u05dc\u05ea) in a deficiency is not "disqualified" (28/10/2026 retro); "\u05e4\u05e1\u05d5\u05dc" still is', waste.join() === 'real', waste); }
     const b = buildBrief([], [], '2026-10-27', false, [], null, null, null, false, [], [], c), u = buildBrief([], [], '2026-10-27', false, [], null, null, null, true, [], [], c);
     check('brief: a contradiction line in the morning update, not in "what is urgent"', b.includes('\u05e9\u05d5\u05e8\u05d4 \u05e1\u05d5\u05ea\u05e8\u05ea') && b.includes('extenders') && !u.includes('\u05e9\u05d5\u05e8\u05d4 \u05e1\u05d5\u05ea\u05e8\u05ea'), { b, u });
   }
