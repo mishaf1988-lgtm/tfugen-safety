@@ -22,6 +22,11 @@ check('the reminder itself is mostly Hebrew', heb > 3 * lat, (heb, lat))
 check('names the wait line and tool output', 'המתנה' in ctx and 'פלט כלי' in ctx, ctx)
 check('the rules card: questionnaire now, dates, verify, no long dash', all(w in ctx for w in ('שאלון', 'DD/MM/YYYY', 'לבדוק', 'מקף ארוך')), ctx)
 check('a short chat: no switch line', 'השיחה ארוכה' not in ctx, ctx)
+check('no account-move line without the words', 'ACCOUNT-MOVE' not in ctx, ctx)
+rc, out = run(HOOK, {'prompt': 'אני עובר חשבון עכשיו'})
+c = json.loads(out)['hookSpecificOutput']['additionalContext']
+check('"עובר חשבון": the move procedure is added to the card', rc == 0 and 'ACCOUNT-MOVE.md' in c and 'כרטיס חוקים' in c, c)
+check('the move file exists', os.path.exists(os.path.join(ROOT, 'project-files', 'ACCOUNT-MOVE.md')))
 import tempfile
 for size, want in ((7_000_000, True), (5_000_000, False)):
     with tempfile.NamedTemporaryFile(delete=False) as tf:
