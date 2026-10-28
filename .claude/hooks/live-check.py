@@ -34,13 +34,14 @@ sys.stdout.reconfigure(encoding="utf-8")  # the reason is Hebrew; Windows prints
 CLAIM = re.compile(r"(הקיי(ם|מת|מים|מות)\b|כבר (קיי[םמ]|עובד|רץ|רצה|מחובר))")
 
 
-def text_of(inp):
+def text_of(inp, descriptions=True):
     parts = []
     for q in (inp or {}).get("questions") or []:
         parts.append(str(q.get("question") or ""))
         for o in q.get("options") or []:
             parts.append(str(o.get("label") or ""))
-            parts.append(str(o.get("description") or ""))
+            if descriptions:
+                parts.append(str(o.get("description") or ""))
     return "\n".join(parts)
 
 
@@ -150,7 +151,10 @@ def main():
     t = text_of(d.get("tool_input"))
     m = CLAIM.search(t)
     seen = [] if m else decided(t)
-    heads = [] if (m or seen) else heading_hits(t)
+    # 28/10/2026 (Michael in the questionnaire: "do it: tighten"): four stops in one day on unrelated decisions, the
+    # shared words all from option descriptions ("report, place, photos" against offline photos). A heading is
+    # matched against the questions and the option labels only.
+    heads = [] if (m or seen) else heading_hits(text_of(d.get("tool_input"), descriptions=False))
     arch = "" if (m or seen or heads) else archived(d.get("tool_input"))
     if not m and not seen and not heads and not arch:
         return
