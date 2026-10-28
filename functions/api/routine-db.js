@@ -133,6 +133,8 @@
 //              calendar; Graph sends the invitations. A JSON file into OD_CAL_INVITE, flow 9 "\u05d6\u05d9\u05de\u05d5\u05e0\u05d9\u05dd" POSTs it.
 //   cal_invite_ask  (26/10/2026) {the cal_invite fields but approved, and who = the names}: asks Michael "send the
 //              invite?" with buttons; only his tap runs cal_invite (wa-hook, fastCalInvite). CAL_INVITE_ASK_KEY.
+//   del_ask  (28/10/2026) {table, id, why}: asks Michael "delete this row?" with buttons; only his tap on that
+//              message deletes it (wa-hook, fastDel), after the full row is kept in undo_log. DEL_TABLES only.
 //   tour_close_ask  (26/10/2026) {id, note}: asks Michael "close tour finding <n>?" with buttons; only his "do it" on
 //              that message closes it (wa-hook, fastTourClose). TOUR_CLOSE_KEY holds the one open request.
 //   draft_trash  (26/10/2026, Michael in the questionnaire: "to the recycle bin, automatic") {id, subject, to}:
@@ -163,7 +165,7 @@ import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLA
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads',
   'trustees', 'trustee_tasks', 'trustee_winners'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'quota_mode'];
+export const STATE_READ = ['undo_log', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'quota_mode'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -819,7 +821,7 @@ export function calInviteCheck(b, nowMs) {
 export const CAL_INVITE_ASK_KEY = 'cal_invite_ask', CAL_INVITE_ASK_MS = 24 * 3600e3, CAL_INVITE_FIELDS = ['subject', 'start', 'end', 'to', 'cc', 'location', 'body', 'draft'];
 export function calInviteRefOf(about, prev) {
   const a = String(about || '');
-  if (a) { const m = /\| ref calinvite:([a-z0-9]{8}) \|/.exec(a); return m ? m[1] : null; }
+  if (a) { const m = /\| ref calinvite:([a-z0-9]{8}) \| [^|]*$/.exec(a); return m ? m[1] : null; }
   const r = /^calinvite:([a-z0-9]{8})$/.exec(String((prev && prev.ref) || ''));
   return r ? r[1] : null;
 }
@@ -840,7 +842,7 @@ export const CAL_MOVE_ASK_KEY = 'cal_move_ask', CAL_MOVE_ASK_MS = 24 * 3600e3, C
 export const CAL_SERVER_ONLY = ['cal_move', 'cal_invite'];
 export function calMoveRefOf(about, prev) {
   const a = String(about || '');
-  if (a) { const m = /\| ref calmove:([a-z0-9]{8}) \|/.exec(a); return m ? m[1] : null; }
+  if (a) { const m = /\| ref calmove:([a-z0-9]{8}) \| [^|]*$/.exec(a); return m ? m[1] : null; }
   const r = /^calmove:([a-z0-9]{8})$/.exec(String((prev && prev.ref) || ''));
   return r ? r[1] : null;
 }
@@ -1199,12 +1201,33 @@ export const TOUR_CLOSE_KEY = 'tour_close_ask', TOUR_CLOSE_MS = 24 * 3600e3, TOU
 export const TOUR_ID = /^th-[0-9]{1,6}$/;
 export function tourRefOf(about, prev) {
   const a = String(about || '');
-  if (a) { const m = /\| ref tourclose:(th-[0-9]{1,6}) \|/.exec(a); return m ? m[1] : null; }
+  if (a) { const m = /\| ref tourclose:(th-[0-9]{1,6}) \| [^|]*$/.exec(a); return m ? m[1] : null; }
   const r = /^tourclose:(th-[0-9]{1,6})$/.exec(String((prev && prev.ref) || ''));
   return r ? r[1] : null;
 }
 export function tourCloseAskText(row, note) {
   return '\u05dc\u05e1\u05d2\u05d5\u05e8 \u05d0\u05ea \u05dc\u05d9\u05e7\u05d5\u05d9 \u05d4\u05e1\u05d9\u05d5\u05e8 ' + (row.n || '') + ': ' + String(row.descr || '').replace(/\s+/g, ' ').slice(0, 120) + (row.loc ? ' (' + String(row.loc).slice(0, 60) + ')' : '') + '?\n\u05d4\u05e2\u05e8\u05ea \u05e1\u05d2\u05d9\u05e8\u05d4: ' + String(note).slice(0, 300);
+}
+// 28/10/2026 (Michael in the questionnaire: "\u05d1\u05e6\u05e2: \u05db\u05e4\u05ea\u05d5\u05e8 \u05de\u05d7\u05e7 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 (\u05de\u05d5\u05de\u05dc\u05e5)"): a DELETE from the cloud waits for an
+// approval that never reaches him (4 times on one accident row, and on a forklift that left). The assistant asks with
+// del_ask; the server keeps the request in DEL_ASK_KEY and sends the row with buttons and ref del:<k>; only Michael's
+// tap on that very message deletes it (wa-hook fastDel), after the whole row goes to UNDO_KEY. No op deletes without
+// the tap, and ncr / ncr_ai / trustee_reports are never in the list.
+export const DEL_ASK_KEY = 'del_ask', DEL_ASK_MS = 24 * 3600e3, UNDO_KEY = 'undo_log', UNDO_MAX = 50;
+export const DEL_TABLES = { inc: 'id,dt,dept,d,s', equip_inspections: 'id,code,n,s,e', docs: 'id,n,c,s,e' };
+export const DEL_ID = /^[A-Za-z0-9_.-]{1,80}$/;
+export function delRefOf(about, prev) {
+  const a = String(about || '');
+  if (a) { const m = /\| ref del:([a-z0-9]{8}) \| [^|]*$/.exec(a); return m ? m[1] : null; }
+  const r = /^del:([a-z0-9]{8})$/.exec(String((prev && prev.ref) || ''));
+  return r ? r[1] : null;
+}
+export function delAskText(table, row, why) {
+  const t = { inc: '\u05d0\u05d9\u05e8\u05d5\u05e2', equip_inspections: '\u05e6\u05d9\u05d5\u05d3', docs: '\u05de\u05e1\u05de\u05da' }[table] || table;
+  const fd = (v) => (/^\d{4}-\d{2}-\d{2}/.test(String(v || '')) ? String(v).substring(8, 10) + '/' + String(v).substring(5, 7) + '/' + String(v).substring(0, 4) : '');
+  const one = (v, n) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, n);
+  const what = table === 'inc' ? [fd(row.dt), one(row.dept, 40), one(row.d, 100)] : table === 'equip_inspections' ? [one(row.code, 40), one(row.n, 100)] : [one(row.n, 100), one(row.c, 40)];
+  return '\u05de\u05d7\u05d9\u05e7\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, ' + t + ': ' + what.filter(Boolean).join(', ') + (row.s ? ' (\u05de\u05e6\u05d1: ' + one(row.s, 30) + ')' : '') + '.\n\u05dc\u05de\u05d4: ' + String(why).slice(0, 200) + '\n\u05d4\u05e9\u05d5\u05e8\u05d4 \u05d4\u05de\u05dc\u05d0\u05d4 \u05e0\u05e9\u05de\u05e8\u05ea \u05d1\u05d2\u05d9\u05d1\u05d5\u05d9 \u05dc\u05e4\u05e0\u05d9 \u05d4\u05de\u05d7\u05d9\u05e7\u05d4.';
 }
 // 27/10/2026 (the mail triage offered Michael "I will answer by Thursday" to Negev Ecology, which he had sent the day
 // before, and "until when?" in her mail was a quote; it also said "an updated quote" without what changed, and the
@@ -2442,6 +2465,21 @@ export async function onRequest(context) {
         body: JSON.stringify([{ key: CAL_INVITE_ASK_KEY, value: JSON.stringify({ k, inv, at: new Date().toISOString() }), updated_at: new Date().toISOString() }]) });
       body = { op: 'wa_me', agent: body.agent, answers: body.answers, askInternal: true, text: calInviteAskText(c, body), choices: ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'], ref: 'calinvite:' + k };
     }
+    if (body.op === 'del_ask') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'table', 'id', 'answers'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const table = String(body.table || ''), id = String(body.id === undefined || body.id === null ? '' : body.id), why = String(body.why || '').replace(/\s+/g, ' ').trim();
+      if (!Object.prototype.hasOwnProperty.call(DEL_TABLES, table)) return jsonResp({ ok: false, error: 'table: ' + Object.keys(DEL_TABLES).join(' | ') }, 400, {});
+      if (!DEL_ID.test(id)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
+      if (why.length < 5 || why.length > 300) return jsonResp({ ok: false, error: 'why: why it goes, for Michael, 5-300 characters' }, 400, {});
+      if (hasInternalId(why) || hasPassport(why)) return jsonResp({ ok: false, error: 'no ids or personal numbers in why' }, 400, {});
+      const rr = await fetch(url + '/rest/v1/' + table + '?id=eq.' + encodeURIComponent(id) + '&select=' + DEL_TABLES[table], { headers: h, signal: tmo(SB_MS) });
+      const row = rr.ok ? ((await rr.json().catch(() => []))[0] || null) : null;
+      if (!row) return jsonResp({ ok: false, error: 'no such row' }, 400, {});
+      const k = Array.from(crypto.getRandomValues(new Uint8Array(8))).map((x) => 'abcdefghijklmnopqrstuvwxyz0123456789'[x % 36]).join('');
+      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+        body: JSON.stringify([{ key: DEL_ASK_KEY, value: JSON.stringify({ k, table, id, why, at: new Date().toISOString() }), updated_at: new Date().toISOString() }]) });
+      body = { op: 'wa_me', agent: body.agent, answers: body.answers, askInternal: true, text: delAskText(table, row, why), choices: ['\u05de\u05d7\u05e7', '\u05dc\u05d0'], ref: 'del:' + k };
+    }
     if (body.op === 'tour_close_ask') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'id', 'note', 'answers'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const id = String(body.id || ''), note = String(body.note || '').replace(/\s+/g, ' ').trim();
@@ -2469,7 +2507,10 @@ export async function onRequest(context) {
       // "reply to the sender"): sign refs belong to the server's own buttons; an assistant message cannot carry them.
       if (/^sign/i.test(String(body.ref || ''))) return jsonResp({ ok: false, error: 'ref sign*: reserved for the server signing buttons; use another ref' }, 400, {});
       // 27/10/2026 retro: calmove:/calinvite:/tourclose: run a pending action on Michael's "\u05d1\u05e6\u05e2"; only the *_ask ops (askInternal) may carry them
-      if (body.askInternal !== true && /^(calmove|calinvite|tourclose):/i.test(String(body.ref || ''))) return jsonResp({ ok: false, error: 'ref calmove:/calinvite:/tourclose: reserved for the *_ask ops; use another ref' }, 400, {});
+      // 28/10/2026 security review: the reply's context line holds the start of the text, so a text that carries
+      // "| ref del:<k> |" could pass for the real ask. The *RefOf readers take only the last field, and such a text is refused.
+      if (body.askInternal !== true && /ref\s*(calmove|calinvite|tourclose|del):/i.test(String(body.text || ''))) return jsonResp({ ok: false, error: 'the text carries a reserved ref (del:, calmove:, calinvite:, tourclose:): drop it' }, 400, {});
+      if (body.askInternal !== true && /^(calmove|calinvite|tourclose|del):/i.test(String(body.ref || ''))) return jsonResp({ ok: false, error: 'ref calmove:/calinvite:/tourclose:/del: reserved for the *_ask ops; use another ref' }, 400, {});
       if (mentionsQuoteValidity(body.text)) return jsonResp({ ok: false, error: 'the text gives a quote validity date: drop it (Michael 26/10 and 27/10/2026: "a quote I send is always valid"); write the supplier, the price, what is included and the difference' }, 400, {});
       const tg = triageGate(body);
       if (tg) return jsonResp({ ok: false, error: tg }, 400, {});

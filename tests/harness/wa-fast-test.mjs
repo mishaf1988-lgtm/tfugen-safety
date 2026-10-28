@@ -1,7 +1,7 @@
 // The server's fast lane (20/10/2026, Michael in the questionnaire: "do it: a fast lane in the server").
 // A number 1-4 that answers a hazard alert, and "what is urgent" / "expiries", are answered by wa-hook
 // itself by rules; everything else, and anything unclear, still goes to the assistant.
-import { ownerInPayload, recentLine, RECENT_MAX, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX, joinCandidates, joinedLine, hasNewer, JOIN_MS, fireText } from './_build/wa-hook.mjs';
+import { ownerInPayload, recentLine, RECENT_MAX, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX, joinCandidates, joinedLine, hasNewer, JOIN_MS, fireText, fastDel, DEL_NO, DEL_GONE } from './_build/wa-hook.mjs';
 import { HAZARD_OPTIONS, hazardAsk, assistantFire, fireUrlOf } from './_build/_wa.mjs';
 import { rateAgain } from './_build/chat.mjs';
 
@@ -133,5 +133,56 @@ console.log('\n9. move an event only on his yes to that question (26/10/2026 ret
   check('the fire text says the photo came with this message and is one request', /joined \(Michael's own messages sent together/.test(ft) && ft.indexOf('[wa_media M1]') > 0 && ft.indexOf('joined') < ft.indexOf('text: '), ft.slice(-300));
   check('no join: no joined line', fireText({ id: 'w2', text: 'x', type: 'text' }, null, null, '', '', '').indexOf('joined (') < 0);
 }
+
+console.log('\n9. del_ask: the delete button (28/10/2026, Michael: "do it: a delete button on WhatsApp")');
+{
+  const prev = { ref: 'del:ab12cd34' };
+  const y = fastRoute(m('\u05de\u05d7\u05e7', 1), '', prev), n = fastRoute(m('\u05dc\u05d0', 2), '', prev), q = fastRoute(m('\u05de\u05d4 \u05d6\u05d4?'), '', prev);
+  check('a tap on "\u05de\u05d7\u05e7" = delete, "\u05dc\u05d0" = no, a question = to the assistant', y && y.kind === 'del' && y.id === 'ab12cd34' && y.yes === true && n && n.kind === 'del' && n.yes === false && (!q || q.kind !== 'del'), { y, n, q });
+  check('"\u05de\u05d7\u05e7" with no delete question before it is not a delete', !(fastRoute(m('\u05de\u05d7\u05e7', 1), '', { ref: 'brief' }) || {}).kind || fastRoute(m('\u05de\u05d7\u05e7', 1), '', { ref: 'brief' }).kind !== 'del');
+}
+await (async () => {
+  const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv' };
+  const ROW = { id: 'acc26-28', dt: '2026-02-26', d: '\u05de\u05db\u05d4 \u05d1\u05d9\u05d3', s: '\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9' };
+  function db(o) {
+    const w = { state: { del_ask: JSON.stringify(Object.assign({ k: 'ab12cd34', table: 'inc', id: 'acc26-28', why: '\u05e2\u05d5\u05d1\u05d3 \u05e9\u05e2\u05d6\u05d1', at: new Date().toISOString() }, o.ask || {})) }, calls: [], undoBefore: null };
+    if (o.noAsk) delete w.state.del_ask;
+    globalThis.fetch = async (url, init) => {
+      const u = decodeURIComponent(String(url)), mth = (init && init.method) || 'GET';
+      w.calls.push(mth + ' ' + u.replace(/^.*\/rest\/v1\//, ''));
+      const json = (x, st = 200) => new Response(JSON.stringify(x), { status: st, headers: { 'Content-Type': 'application/json' } });
+      if (u.includes('server_state')) {
+        const key = (/key=eq\.([a-z_]+)/.exec(u) || [])[1];
+        if (mth === 'GET') return json(w.state[key] !== undefined ? [{ value: w.state[key] }] : []);
+        if (mth === 'DELETE') { delete w.state[key]; return new Response(null, { status: 204 }); }
+        if (o.undoFail) return json({ e: 1 }, 500);
+        JSON.parse(init.body).forEach((x) => { w.state[x.key] = x.value; });
+        return json(JSON.parse(init.body), 201);
+      }
+      if (u.includes('inc?id=eq.acc26-28')) {
+        if (mth === 'DELETE') { w.undoBefore = !!w.state.undo_log; return json([ROW]); }
+        return json(o.noRow ? [] : [ROW]);
+      }
+      return json({ error: 'unexpected ' + u }, 599);
+    };
+    return w;
+  }
+  let w = db({});
+  let a = await fastDel(ENV, { id: 'ab12cd34', yes: true });
+  const undo = JSON.parse(w.state.undo_log || '[]');
+  check('"\u05de\u05d7\u05e7": the whole row is kept in undo_log first, then deleted, and the request is gone', /\u05e0\u05de\u05d7\u05e7/.test(a) && w.undoBefore === true && undo.length === 1 && undo[0].row.id === 'acc26-28' && undo[0].table === 'inc' && !w.state.del_ask, { a, calls: w.calls });
+  w = db({}); a = await fastDel(ENV, { id: 'ab12cd34', yes: false });
+  check('"\u05dc\u05d0": nothing deleted, the request is gone', a === DEL_NO && !w.calls.some((c) => c.startsWith('DELETE inc')) && !w.state.del_ask, w.calls);
+  w = db({}); a = await fastDel(ENV, { id: 'zz99zz99', yes: true });
+  check('a tap on an older question (another key): nothing deleted', a === DEL_GONE && !w.calls.some((c) => c.startsWith('DELETE inc')), w.calls);
+  w = db({ ask: { at: new Date(Date.now() - 25 * 3600e3).toISOString() } }); a = await fastDel(ENV, { id: 'ab12cd34', yes: true });
+  check('a request over a day old: nothing deleted', a === DEL_GONE && !w.calls.some((c) => c.startsWith('DELETE inc')), w.calls);
+  w = db({ ask: { table: 'ncr' } }); a = await fastDel(ENV, { id: 'ab12cd34', yes: true });
+  check('a stored request for a table off the list (ncr): nothing deleted', a === DEL_GONE && !w.calls.some((c) => /^DELETE (ncr|inc)/.test(c)), w.calls);
+  w = db({ noAsk: true }); a = await fastDel(ENV, { id: 'ab12cd34', yes: true });
+  check('no request at all: nothing deleted', a === DEL_GONE && !w.calls.some((c) => c.startsWith('DELETE inc')));
+  w = db({ undoFail: true }); a = await fastDel(ENV, { id: 'ab12cd34', yes: true }).catch(() => 'threw');
+  check('the row cannot be kept: not deleted', !w.calls.some((c) => c.startsWith('DELETE inc')), { a, calls: w.calls });
+})();
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
