@@ -288,6 +288,12 @@
   אם התזמון החודשי לא קיים בטופס: לעצור בשורה הזו ולרשום מה כן יש. אם אפשר לבחור רק מאגר אחד: tfugen-safety, ולרשום את זה.
   סיסמה או קוד אימות: לעצור ולבקש ממיכאל.
   בסוף, דוח: לכל שורה, הקישור של ה-Routine החדש (claude.ai/code/routines/trig_...), מה רשום ב-Runs with, והאם הישנה מושהית.
+- [ ] **C56. בודק התוקף השבועי עובר ל-Routine עם michael-skills** (28/10/2026, מיכאל בשאלון: "בצע: הוראות לכרום". `routine-validity.md` קורא את הכללים מ-michael-skills, ומשימת צ'אט לא מגיעה למאגר פרטי. אחרי: Claude מעדכן את המזהה ב-ACCOUNT-INVENTORY, ב-`routine-validity.md` ובמפה.) טקסט להדבקה בכרום:
+  משימה: להעביר משימה מתוזמנת אחת של צ'אט ל-Routine של Claude Code. לא למחוק שום דבר.
+  (א) לפתוח https://claude.ai/scheduled-task/trig_01CgiBFEgLeQ858NKh3s9hY4 (בודק התוקף מול המסמכים, שבועי), Edit, ולהעתיק את ההוראות במלואן. לצאת ב-Cancel.
+  (ב) ב-https://claude.ai/code/routines ליצור Routine חדש: אותו שם, ההוראות כמו שהן, מודל Opus 5.5, סביבה Default. תזמון Custom: CRON_TZ=Asia/Jerusalem 44 22 * * 6. מאגרים: tfugen-safety + michael-skills. מחברים: Microsoft 365 ו-Supabase בלבד. Save.
+  (ג) לחזור לקישור הישן ולהשהות (Pause). לא Delete.
+  בסוף, דוח: הקישור של ה-Routine החדש, מה רשום ב-Runs with, והאם הישנה מושהית.
 
 - [x] **C44. מפתח ההתראות של הצ'אט ב-Cloudflare** (24/10/2026, מיכאל בשאלון: "בצע: לבנות התראות". מיכאל עושה את זה בעצמו מהדף ששלחתי, כמו WA_PIN. הערך לא נכתב פה כי הוא סודי.)
   ```
