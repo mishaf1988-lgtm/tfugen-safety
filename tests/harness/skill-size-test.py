@@ -8,6 +8,7 @@ what the skill does and when to load it, and no angle brackets in it (it goes in
 import glob, os, re, sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
 MAX_WORDS = 5000
+WARN_WORDS = 4700  # 28/10/2026: tfugen-db went from under to 5,232 in one day; warn before an .md PR has to split it
 ok = bad = 0
 
 
@@ -40,6 +41,9 @@ for f in skills:
     folder = os.path.basename(os.path.dirname(f))
     p = problems(open(f, encoding='utf-8').read(), folder)
     check(folder + ': under %d words, frontmatter by the guide' % MAX_WORDS, not p, p)
+    w = len(open(f, encoding='utf-8').read().split())
+    if WARN_WORDS < w <= MAX_WORDS:
+        print('::warning::%s/SKILL.md has about %d words, near the %d limit: move detail to references/ in this PR' % (folder, w, MAX_WORDS))
 
 # the check itself, on made-up skills
 good = '---\nname: tfugen-x\ndescription: Does a thing. Load when a task touches the thing.\n---\nbody\n'
