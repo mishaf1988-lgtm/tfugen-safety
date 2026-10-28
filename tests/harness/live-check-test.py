@@ -62,4 +62,10 @@ check("the same words without 'בצע' do not trigger it", ask("מה בדקת?",
 check("a 'בצע' option sharing fewer than 4 words passes", ask("מה לבנות?", [("בצע: אחראי חדש לתחום הקירור", "")], sid="arch3") == "")
 check("a 'בצע' option where the 4 shared words are under two thirds of its words passes",
       ask("מה לבנות?", [("בצע: אחראי בעדכון הבוקר", "שם האחראי ליד ציוד בוואטסאפ, טבלה נפרדת למנהלים, דוחות חודשיים, גרפים צבעוניים")], sid="arch4") == "")
+# 28/10/2026 (Michael: "do it: tighten"): stopped on words in an option's description, not the question.
+open(os.path.join(root, "DECISIONS.md"), "w", encoding="utf-8").write("# החלטות\n\n## 2026-09-19 — תמונות אופליין: IndexedDB, וסימון `pending:` במקום חסימת הדיווח\n")
+o = ask("מה לפתוח לעוזר בנתוני הנאמנים לוועדה?", [("בצע: שם, מחלקה, משימה ותאריך", "ומי דיווח על איזו משימה ומתי. בלי תמונות. רק מקום וזמן"), ("לא לשנות", "")], sid="desc1")
+check("words only in an option description do not match a decision heading", o == "", o)
+o = ask("לשמור תמונות אופליין במקום חסימת הדיווח?", [("בצע", ""), ("לא", "")], sid="desc2")
+check("...the same words in the question itself still do", '"deny"' in o and "DECISIONS.md:3" in o, o)
 done()
