@@ -1242,7 +1242,8 @@ export function delAskText(table, row, why) {
   const fd = (v) => (/^\d{4}-\d{2}-\d{2}/.test(String(v || '')) ? String(v).substring(8, 10) + '/' + String(v).substring(5, 7) + '/' + String(v).substring(0, 4) : '');
   const one = (v, n) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, n);
   const what = table === 'inc' ? [fd(row.dt), one(row.dept, 40), one(row.d, 100)] : table === 'equip_inspections' ? [one(row.code, 40), one(row.n, 100)] : [one(row.n, 100), one(row.c, 40)];
-  return '\u05de\u05d7\u05d9\u05e7\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, ' + t + ': ' + what.filter(Boolean).join(', ') + (row.s ? ' (\u05de\u05e6\u05d1: ' + one(row.s, 30) + ')' : '') + '.\n\u05dc\u05de\u05d4: ' + String(why).slice(0, 200) + '\n\u05d4\u05e9\u05d5\u05e8\u05d4 \u05d4\u05de\u05dc\u05d0\u05d4 \u05e0\u05e9\u05de\u05e8\u05ea \u05d1\u05d2\u05d9\u05d1\u05d5\u05d9 \u05dc\u05e4\u05e0\u05d9 \u05d4\u05de\u05d7\u05d9\u05e7\u05d4.';
+  // 28/10/2026: a forklift code (FL-FN637226) reads as a passport number and wa_me refused the whole ask; such a part is left out
+  return '\u05de\u05d7\u05d9\u05e7\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, ' + t + ': ' + what.filter((x) => x && !hasPassport(x)).join(', ') + (row.s ? ' (\u05de\u05e6\u05d1: ' + one(row.s, 30) + ')' : '') + '.\n\u05dc\u05de\u05d4: ' + String(why).slice(0, 200) + '\n\u05d4\u05e9\u05d5\u05e8\u05d4 \u05d4\u05de\u05dc\u05d0\u05d4 \u05e0\u05e9\u05de\u05e8\u05ea \u05d1\u05d2\u05d9\u05d1\u05d5\u05d9 \u05dc\u05e4\u05e0\u05d9 \u05d4\u05de\u05d7\u05d9\u05e7\u05d4.';
 }
 // 27/10/2026 (the mail triage offered Michael "I will answer by Thursday" to Negev Ecology, which he had sent the day
 // before, and "until when?" in her mail was a quote; it also said "an updated quote" without what changed, and the
