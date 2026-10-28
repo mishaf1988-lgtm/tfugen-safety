@@ -260,6 +260,18 @@
 
 ## בוצע
 - [x] **C53. סגירת שני פערי פרטיות במסד (SQL Editor)** (27/10/2026, מיכאל בשאלון: "בצע: פערי הרשאות". `execute_sql` נתקע פעמיים על בקשת אישור שלא מגיעה למסך, כמו ב-15/10/2026. הקובץ: `migrations/2026-10-27_privacy_gaps.sql`. נבדק לפני: אין משתמש צופה, 0 טלפונים ב-`trustees`, 8 שורות). אחרי: Claude מאמת ב-`pg_policies` שאין `viewer_read` על `med`/`hearing_tests`, וב-`pg_constraint` את `trustees_no_phone`, ומסמן `[x]` ב-STATUS. טקסט להדבקה בכרום: **בוצע 27/10/2026** מהטלפון, אומת ב-`pg_policies`/`pg_constraint`.
+- [ ] **C54. לחבר מאגרים ל-6 סוכנים מתוזמנים** (28/10/2026, מיכאל בשאלון: "בצע: הדחוף והחיסכון". הרקע: ב-28/10/2026 הסוכנים הוגדרו מחדש כ"שיחה חדשה בכל ריצה", וריצה כזו נפתחת בלי מאגר: ריצת התיוק `session_01HFfaw6zPgc5FLCRRXXYLYs` עם `config:no-git-repo`. ארבעה מהם שומרים PR ב-tfugen-safety ויכשלו מ-01/11. שלושה כותבים ל-michael-skills דרך שיחה-בת עם `source_url`. אותה דרך כמו C32, שעבדה. אחרי: Claude מפעיל כל אחד (`fire_trigger`), ובודק ב-`get_session` שיש `sources` ואין `config:no-git-repo`.) טקסט להדבקה בכרום:
+  משימה: לחבר מאגרי GitHub ל-6 Routines ב-claude.ai. לא לשנות שום דבר אחר (הוראות, שעה, מחברים, מודל).
+  לכל שורה: לפתוח את הקישור, Edit, ללחוץ "Select a repository" (או על המאגר שכבר רשום שם), לבחור את המאגרים שבשורה, Save, לרענן ולוודא שהם רשומים ב-Runs with.
+  1. דוח ציות חודשי: https://claude.ai/code/routines/trig_016Y6vqEXQdoy5Mk7pjXN3rd : tfugen-safety
+  2. נוסח החוקים בנבו: https://claude.ai/code/routines/trig_01QTYw9Aq1v86rvUM5a8uodc : tfugen-safety + michael-skills
+  3. המפקח המדומה: https://claude.ai/code/routines/trig_01H9gXJ47P7ZHpF3he7byvWE : tfugen-safety
+  4. מודל ההעדפות: https://claude.ai/code/routines/trig_01EQegaZ5vUjoKES3xeqq5xo : tfugen-safety
+  5. מסמכים חדשים בתיקיית הבטיחות: https://claude.ai/code/routines/trig_01PyL16emhxQBEDpETdJH7nW : tfugen-safety + michael-skills
+  6. מגמות מנתוני המפעל: https://claude.ai/code/routines/trig_01Thox4RL2WUXvicrpgEPTbj : tfugen-safety + michael-skills
+  אם אפשר לבחור רק מאגר אחד: בשורות 1-4 tfugen-safety, בשורות 5-6 michael-skills. לרשום בדוח שרק אחד נכנס.
+  סיסמה או קוד אימות: לעצור ולבקש ממיכאל.
+  בסוף, דוח: לכל שורה, מה רשום ב-Runs with אחרי הרענון.
 
 - [x] **C44. מפתח ההתראות של הצ'אט ב-Cloudflare** (24/10/2026, מיכאל בשאלון: "בצע: לבנות התראות". מיכאל עושה את זה בעצמו מהדף ששלחתי, כמו WA_PIN. הערך לא נכתב פה כי הוא סודי.)
   ```
