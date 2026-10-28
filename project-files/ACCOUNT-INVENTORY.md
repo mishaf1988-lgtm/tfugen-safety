@@ -22,7 +22,7 @@
 | `trig_01LfFp3qxNuyTcwjxaBhgSEZ` | תיוק מהמייל ועדכון תוקף | א'-ה' 17:52 | `routine-mail-filing.md` | משימת צ'אט מתוזמנת (Cowork), שיחה חדשה בכל ריצה, בלי מאגר (28/10/2026; המזהה הקודם `trig_01Kam3MRxBnWSdXA4qEguFaU` כבוי) |
 | `trig_01BSS4f2n1vj1hYA9R6pGurs` | תיוק מהמייל ועדכון תוקף 10:52 | א'-ה' 10:52 | `routine-mail-filing.md` | משימת צ'אט מתוזמנת (Cowork), שיחה חדשה בכל ריצה, בלי מאגר (28/10/2026; המזהה הקודם `trig_018Eo7D7nH6Cf5RcskU7A6ug` כבוי) |
 | `trig_01Bwk6tQq1ynNqknEAsaMcvH` | תיוק מהמייל ועדכון תוקף 13:52 | א'-ה' 13:52 | `routine-mail-filing.md` | משימת צ'אט מתוזמנת (Cowork), שיחה חדשה בכל ריצה, בלי מאגר (28/10/2026; המזהה הקודם `trig_015qsPmXxKrH1qZQvz7sy1Vw` כבוי) |
-| `trig_01CgiBFEgLeQ858NKh3s9hY4` | בודק התוקף מול המסמכים | מוצ"ש 22:44 | `routine-validity.md` | משימת צ'אט מתוזמנת (Cowork), שיחה חדשה בכל ריצה, בלי מאגר (28/10/2026; המזהה הקודם `trig_01EBZ1zMxGRaDWxQieYsqhPX` כבוי) |
+| `trig_01W1SUAwixyb77K7Vr4vys7S` | בודק התוקף מול המסמכים | מוצ"ש 22:44 | `routine-validity.md` | Routine של Code, שיחה חדשה בכל ריצה, מאגרים: tfugen-safety + michael-skills (C56, 28/10/2026) |
 | `trig_01DU2kgbfF66zPMDywVLt6UW` | דוח ציות חודשי | 1 לחודש 08:03 | `routine-compliance.md` | Routine של Code, שיחה חדשה בכל ריצה, מאגרים: tfugen-safety (C55, 28/10/2026) |
 | `trig_01ERhgWGPzu6ibttZGV6EamW` | סידור תעודות COA של שפכים | 17 לחודש 07:47 | `routine-coa.md` | משימת צ'אט מתוזמנת (Cowork), שיחה חדשה בכל ריצה, בלי מאגר (28/10/2026; המזהה הקודם `trig_01G7MCCqLTwC9koU4X3RNcJf` כבוי) |
 | `trig_016jtM2MCCrQdmBahCNF8qFf` | מסמכים חדשים בתיקיית הבטיחות | 2 לחודש 06:51 | `routine-od-scan.md` | Routine של Code, שיחה חדשה בכל ריצה, מאגרים: tfugen-safety + michael-skills (C55, 28/10/2026) |
