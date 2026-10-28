@@ -81,7 +81,7 @@ real_d = {f: domain_part(open(f, encoding='utf-8').read()) for f in sorted(glob.
 real_d = {f: t for f, t in real_d.items() if t}
 real_dt = '\n'.join(real_d.values())
 check('the real files have no problems', problems(real, real_a, real_dt) == [], problems(real, real_a, real_dt))
-check('domain lessons live in tfugen-dev (references/lessons.md, from 27/10/2026) and tfugen-db (11/10/2026)', sorted(os.path.relpath(f, SKILLS) for f in real_d if 'tfugen-dev' in f or 'tfugen-db' in f) == ['tfugen-db/SKILL.md', 'tfugen-dev/references/lessons.md'], list(real_d))
+check('domain lessons live in tfugen-dev (references/lessons.md, from 27/10/2026) and tfugen-db (references/lessons.md, from 28/10/2026)', sorted(os.path.relpath(f, SKILLS) for f in real_d if 'tfugen-dev' in f or 'tfugen-db' in f) == ['tfugen-db/references/lessons.md', 'tfugen-dev/references/lessons.md'], list(real_d))
 check('the real file has lessons', len(lessons(real)) >= 10, len(lessons(real)))
 check('the archive has lessons', len(lessons(real_a)) >= 1, len(lessons(real_a)))
 check('the archive alone has a gap (numbers are shared with the lessons file)', problems(real_a) != [])
