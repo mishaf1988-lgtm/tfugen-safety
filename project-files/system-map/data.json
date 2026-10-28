@@ -477,7 +477,7 @@
    "what": "טבלה trustee_winners"
   },
   {
-   "id": "trig_01Kam3MRxBnWSdXA4qEguFaU",
+   "id": "trig_01LfFp3qxNuyTcwjxaBhgSEZ",
    "zone": "routines",
    "name": "תיוק מהמייל ועדכון תוקף",
    "what": "תיוק מהמייל ועדכון תוקף",
@@ -485,7 +485,7 @@
    "doc": "routine-mail-filing.md"
   },
   {
-   "id": "trig_018Eo7D7nH6Cf5RcskU7A6ug",
+   "id": "trig_01BSS4f2n1vj1hYA9R6pGurs",
    "zone": "routines",
    "name": "תיוק מהמייל ועדכון תוקף 10",
    "what": "תיוק מהמייל ועדכון תוקף 10:52",
@@ -493,7 +493,7 @@
    "doc": "routine-mail-filing.md"
   },
   {
-   "id": "trig_015qsPmXxKrH1qZQvz7sy1Vw",
+   "id": "trig_01Bwk6tQq1ynNqknEAsaMcvH",
    "zone": "routines",
    "name": "תיוק מהמייל ועדכון תוקף 13",
    "what": "תיוק מהמייל ועדכון תוקף 13:52",
@@ -501,7 +501,7 @@
    "doc": "routine-mail-filing.md"
   },
   {
-   "id": "trig_01EBZ1zMxGRaDWxQieYsqhPX",
+   "id": "trig_01CgiBFEgLeQ858NKh3s9hY4",
    "zone": "routines",
    "name": "בודק התוקף מול המסמכים",
    "what": "בודק התוקף מול המסמכים",
@@ -517,7 +517,7 @@
    "doc": "routine-compliance.md"
   },
   {
-   "id": "trig_01G7MCCqLTwC9koU4X3RNcJf",
+   "id": "trig_01ERhgWGPzu6ibttZGV6EamW",
    "zone": "routines",
    "name": "סידור תעודות COA של שפכים",
    "what": "סידור תעודות COA של שפכים",
@@ -605,7 +605,7 @@
    "doc": "routine-inventor.md"
   },
   {
-   "id": "trig_01VcYN6AFgRJTbxpmf3MYXdN",
+   "id": "trig_013mrn2cFrC79hD8vnTpbHd9",
    "zone": "routines",
    "name": "הדרכה שבועית מהשטח",
    "what": "הדרכה שבועית מהשטח",
@@ -645,7 +645,7 @@
    "doc": "routine-supplier-followup.md"
   },
   {
-   "id": "trig_01VtyJkVLuqYrQNVgWHhMzhV",
+   "id": "trig_015zHPtWJFZP77uqRzL5wfBA",
    "zone": "routines",
    "name": "תזכורת פרסום ההדרכה",
    "what": "תזכורת פרסום ההדרכה",

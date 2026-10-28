@@ -19,12 +19,12 @@
 
 | מזהה | שם | מתי (שעון ישראל) | קובץ הוראות | שיחה |
 |---|---|---|---|---|
-| `trig_01Kam3MRxBnWSdXA4qEguFaU` | תיוק מהמייל ועדכון תוקף | א'-ה' 17:52 | `routine-mail-filing.md` | `session_015fjLKy5fsn5tcsERkkN4yV` |
-| `trig_018Eo7D7nH6Cf5RcskU7A6ug` | תיוק מהמייל ועדכון תוקף 10:52 | א'-ה' 10:52 | `routine-mail-filing.md` | `session_015fjLKy5fsn5tcsERkkN4yV` |
-| `trig_015qsPmXxKrH1qZQvz7sy1Vw` | תיוק מהמייל ועדכון תוקף 13:52 | א'-ה' 13:52 | `routine-mail-filing.md` | `session_015fjLKy5fsn5tcsERkkN4yV` |
-| `trig_01EBZ1zMxGRaDWxQieYsqhPX` | בודק התוקף מול המסמכים | מוצ"ש 22:44 | `routine-validity.md` | `session_015fjLKy5fsn5tcsERkkN4yV` |
+| `trig_01LfFp3qxNuyTcwjxaBhgSEZ` | תיוק מהמייל ועדכון תוקף | א'-ה' 17:52 | `routine-mail-filing.md` | משימת צ'אט מתוזמנת (Cowork), שיחה חדשה בכל ריצה, בלי מאגר (28/10/2026; המזהה הקודם `trig_01Kam3MRxBnWSdXA4qEguFaU` כבוי) |
+| `trig_01BSS4f2n1vj1hYA9R6pGurs` | תיוק מהמייל ועדכון תוקף 10:52 | א'-ה' 10:52 | `routine-mail-filing.md` | משימת צ'אט מתוזמנת (Cowork), שיחה חדשה בכל ריצה, בלי מאגר (28/10/2026; המזהה הקודם `trig_018Eo7D7nH6Cf5RcskU7A6ug` כבוי) |
+| `trig_01Bwk6tQq1ynNqknEAsaMcvH` | תיוק מהמייל ועדכון תוקף 13:52 | א'-ה' 13:52 | `routine-mail-filing.md` | משימת צ'אט מתוזמנת (Cowork), שיחה חדשה בכל ריצה, בלי מאגר (28/10/2026; המזהה הקודם `trig_015qsPmXxKrH1qZQvz7sy1Vw` כבוי) |
+| `trig_01CgiBFEgLeQ858NKh3s9hY4` | בודק התוקף מול המסמכים | מוצ"ש 22:44 | `routine-validity.md` | משימת צ'אט מתוזמנת (Cowork), שיחה חדשה בכל ריצה, בלי מאגר (28/10/2026; המזהה הקודם `trig_01EBZ1zMxGRaDWxQieYsqhPX` כבוי) |
 | `trig_01DU2kgbfF66zPMDywVLt6UW` | דוח ציות חודשי | 1 לחודש 08:03 | `routine-compliance.md` | Routine של Code, שיחה חדשה בכל ריצה, מאגרים: tfugen-safety (C55, 28/10/2026) |
-| `trig_01G7MCCqLTwC9koU4X3RNcJf` | סידור תעודות COA של שפכים | 17 לחודש 07:47 | `routine-coa.md` | `session_01P5ebhhWfQ6LGJb45cqB8Wj` |
+| `trig_01ERhgWGPzu6ibttZGV6EamW` | סידור תעודות COA של שפכים | 17 לחודש 07:47 | `routine-coa.md` | משימת צ'אט מתוזמנת (Cowork), שיחה חדשה בכל ריצה, בלי מאגר (28/10/2026; המזהה הקודם `trig_01G7MCCqLTwC9koU4X3RNcJf` כבוי) |
 | `trig_016jtM2MCCrQdmBahCNF8qFf` | מסמכים חדשים בתיקיית הבטיחות | 2 לחודש 06:51 | `routine-od-scan.md` | Routine של Code, שיחה חדשה בכל ריצה, מאגרים: tfugen-safety + michael-skills (C55, 28/10/2026) |
 | `trig_01JuPjwQTEUGDihK8RJWxM7U` | נוסח החוקים בנבו | 3 לחודש 06:52 | `routine-nevo-versions.md` | Routine של Code, שיחה חדשה בכל ריצה, מאגרים: tfugen-safety + michael-skills (C55, 28/10/2026) |
 | `trig_01RHDbDAFU9uxPTUDnA3FTG4` | מגמות מנתוני המפעל | 4 לחודש 08:14 | `routine-factory-trends.md` | Routine של Code, שיחה חדשה בכל ריצה, מאגרים: tfugen-safety + michael-skills (C55, 28/10/2026) |
@@ -35,12 +35,12 @@
 | `trig_01KKNK11KbArFxmStSuuawww` | רטרו יומי | א'-ה' 07:52 | `retro-prompt.md` | `session_01XecBM5b3kHkbb67kjSpmPs` |
 | `trig_01WzoFsHLwgUUURuhyfFDAvS` | הרדאר מלמד את העוזר | ב' 08:37 | `routine-radar-learn.md` | `session_01XecBM5b3kHkbb67kjSpmPs` |
 | `trig_01F6R3kkBFwxJMhrgVDJqvbF` | חוקר ההמצאות | ו' 08:47 | `routine-inventor.md` | `session_01XecBM5b3kHkbb67kjSpmPs` |
-| `trig_01VcYN6AFgRJTbxpmf3MYXdN` | הדרכה שבועית מהשטח | א' 05:53 | `routine-talk-field.md` | `session_015fjLKy5fsn5tcsERkkN4yV` |
+| `trig_013mrn2cFrC79hD8vnTpbHd9` | הדרכה שבועית מהשטח | א' 05:53 | `routine-talk-field.md` | משימת צ'אט מתוזמנת (Cowork), שיחה חדשה בכל ריצה, בלי מאגר (28/10/2026; המזהה הקודם `trig_01VcYN6AFgRJTbxpmf3MYXdN` כבוי) |
 | `trig_01SzAJJc2RDFcLoAeBEcWonK` | רדאר רגולציה שבועי | א' 08:17 | הפרומפט בטריגר עצמו (לא בקובץ) | שיחה חדשה בכל ריצה |
 | `trig_01BimkS5EroGgvLB1tZo6zQo` | תור משימות מ-Claude Code (Cowork) | א'-ה' 07:19-18:19, כל שעה (מ-18/10/2026; קודם כל שעה כל יום) | הפרומפט בטריגר; הכללים ב-`cowork-queue.md` | Cowork, קשור למחשב של מיכאל |
 | `trig_016Cc2xKxQ9W5AEf75yLhmtA` | משרד הסוכנים: עדכון בוקר | כל יום 07:38 | `routine-office.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
 | `trig_01FpFJnEbCfmNuKxsXQjyfcX` | תפוגות שנתקעו אצל ספק | ב' 08:17 | `routine-supplier-followup.md` | `session_01HY8ceU1cNqEQAsoJ7ZRMHT` |
-| `trig_01VtyJkVLuqYrQNVgWHhMzhV` | תזכורת פרסום ההדרכה | א' 12:13 | `routine-talk-publish.md` | `session_015fjLKy5fsn5tcsERkkN4yV` |
+| `trig_015zHPtWJFZP77uqRzL5wfBA` | תזכורת פרסום ההדרכה | א' 12:13 | `routine-talk-publish.md` | משימת צ'אט מתוזמנת (Cowork), שיחה חדשה בכל ריצה, בלי מאגר (28/10/2026; המזהה הקודם `trig_01VtyJkVLuqYrQNVgWHhMzhV` כבוי) |
 | `trig_01Hqt7G6RLWeJbKEHXFzXWHW` | בודק לתור המשימות למחשב | כל יום 09:37 | `routine-cowork-check.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
 | `trig_01AVa8RiuYtaeXLrtkUsZqKH` | בדיקת הניסוי השבועית | ד' 06:29 | `routine-staging-e2e.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
 | `trig_01Fm5346rt5BNgeF49DqGbyz` | המגייס: החלפה שבועית | ו' 13:07 (ראשונה 23/10/2026) | `routine-rotation.md` | `session_01Q3LMWMr65icNtoe5zLifqr` (המגייס, נפתחה ביד על ידי מיכאל, דור 1) |
