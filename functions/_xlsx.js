@@ -114,6 +114,20 @@ function rels(list) {
     + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + list.join('') + '</Relationships>';
 }
 
+const STYLES = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+      + '<fonts count="3"><font><sz val="11"/><name val="Arial"/></font><font><b/><sz val="11"/><name val="Arial"/></font>'
+      + '<font><u/><sz val="11"/><color rgb="FF0563C1"/><name val="Arial"/></font></fonts>'
+      + '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
+      + '<fill><patternFill patternType="solid"><fgColor rgb="FFE2E8F0"/><bgColor indexed="64"/></patternFill></fill></fills>'
+      + '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+      + '<cellStyleXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/><xf numFmtId="0" fontId="2" fillId="0" borderId="0"/></cellStyleXfs>'
+      + '<cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+      + '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
+      + '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="1" applyFont="1"/></cellXfs>'
+      + '<cellStyles count="2"><cellStyle name="Normal" xfId="0" builtinId="0"/><cellStyle name="Hyperlink" xfId="1" builtinId="8"/></cellStyles>'
+      + '</styleSheet>';
+
 function files(aoa, sheetName, widths, images) {
   const name = xmlEsc(String(sheetName || 'Sheet1').substring(0, 31));
   const pics = (images || []).map((im) => ({ ...im, info: imageInfo(im.bytes) })).filter((p) => p.info && p.info.w && p.info.h);
@@ -154,19 +168,7 @@ function files(aoa, sheetName, widths, images) {
       + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
       + '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
       + '</Relationships>'],
-    ['xl/styles.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-      + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-      + '<fonts count="3"><font><sz val="11"/><name val="Arial"/></font><font><b/><sz val="11"/><name val="Arial"/></font>'
-      + '<font><u/><sz val="11"/><color rgb="FF0563C1"/><name val="Arial"/></font></fonts>'
-      + '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
-      + '<fill><patternFill patternType="solid"><fgColor rgb="FFE2E8F0"/><bgColor indexed="64"/></patternFill></fill></fills>'
-      + '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
-      + '<cellStyleXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/><xf numFmtId="0" fontId="2" fillId="0" borderId="0"/></cellStyleXfs>'
-      + '<cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
-      + '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
-      + '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="1" applyFont="1"/></cellXfs>'
-      + '<cellStyles count="2"><cellStyle name="Normal" xfId="0" builtinId="0"/><cellStyle name="Hyperlink" xfId="1" builtinId="8"/></cellStyles>'
-      + '</styleSheet>'],
+    ['xl/styles.xml', STYLES],
     ['xl/worksheets/sheet1.xml', sheet],
     ...extra,
   ];
@@ -217,3 +219,36 @@ export function buildXlsx(aoa, sheetName, widths, images) {
   return zip(files(aoa || [], sheetName, widths, images));
 }
 export const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+// Several sheets in one workbook (28/10/2026, the control board rebuilt from the app every night): sheets is
+// [{ name, aoa, widths }], each with the same header row, links and right-to-left view as buildXlsx. No pictures.
+export function buildXlsxBook(sheets) {
+  const list = (sheets || []).map((sh, i) => {
+    const links = [], aoa = sh.aoa || [];
+    return { i: i + 1, aoa, links, name: xmlEsc(String(sh.name || 'Sheet' + (i + 1)).substring(0, 31)), xml: sheetXml(aoa, sh.widths, links, new Set(), false) };
+  });
+  const entries = [
+    ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+      + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+      + '<Default Extension="xml" ContentType="application/xml"/>'
+      + '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+      + list.map((x) => '<Override PartName="/xl/worksheets/sheet' + x.i + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('')
+      + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+      + '</Types>'],
+    ['_rels/.rels', rels(['<Relationship Id="rId1" Type="' + REL + 'officeDocument" Target="xl/workbook.xml"/>'])],
+    ['xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+      + '<sheets>' + list.map((x) => '<sheet name="' + x.name + '" sheetId="' + x.i + '" r:id="rId' + x.i + '"/>').join('') + '</sheets>'
+      + '<definedNames>' + list.filter((x) => x.aoa.length > 1).map((x) => '<definedName name="_xlnm._FilterDatabase" localSheetId="' + (x.i - 1) + '" hidden="1">\'' + x.name + '\'!$A$1:$' + colName(Math.max(0, ((x.aoa[0] || []).length || 1) - 1)) + '$' + x.aoa.length + '</definedName>').join('') + '</definedNames>'
+      + '</workbook>'],
+    ['xl/_rels/workbook.xml.rels', rels(list.map((x) => '<Relationship Id="rId' + x.i + '" Type="' + REL + 'worksheet" Target="worksheets/sheet' + x.i + '.xml"/>')
+      .concat(['<Relationship Id="rId' + (list.length + 1) + '" Type="' + REL + 'styles" Target="styles.xml"/>']))],
+    ['xl/styles.xml', STYLES],
+  ];
+  list.forEach((x) => {
+    entries.push(['xl/worksheets/sheet' + x.i + '.xml', x.xml]);
+    if (x.links.length) entries.push(['xl/worksheets/_rels/sheet' + x.i + '.xml.rels', rels(x.links.map((l, k) => '<Relationship Id="rIdL' + (k + 1) + '" Type="' + REL + 'hyperlink" Target="' + xmlEsc(l.url) + '" TargetMode="External"/>'))]);
+  });
+  return zip(entries);
+}
