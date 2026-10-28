@@ -28,6 +28,40 @@ const SEEN_KEY = 'wa_hook_seen', SEEN_MAX = 100;
 // (fire_status 401) shows in server_state without a new token. No number and no text in it.
 export const LAST_KEY = 'wa_hook_last';
 export const SNAP_MS = 4000;
+// 28/10/2026 (Michael in the questionnaire: "do it: join messages sent together"): a photo and its text two seconds
+// apart fired two runs, and each made its own PDF and its own draft. A message logged up to JOIN_MS after an earlier
+// one takes it along (fire_join, the earlier text in the fire), and the earlier one, seeing a newer message within
+// JOIN_MS, waits for a fire_join that names it and then does not fire. No message is ever lost (review and refutation,
+// 28/10/2026): a message that took others along always fires itself and never waits; a message skips only when a
+// fire_join naming it exists, whose author always fires (or sends FAIL_TEXT). The worst case is two runs, as before.
+// A message with no neighbour is not delayed; a run already late (JOIN_LATE_MS) does not wait.
+export const JOIN_MS = 3000, JOIN_CALL_MS = 1500, JOIN_LATE_MS = 5500;
+// rows: owner_in / fast_try / fire_join rows of the last seconds. The earlier messages this one takes along: owner_in
+// from JOIN_MS before it, not itself, not a button press, not one the fast lane is answering, not one that took
+// others along (it fires itself) and not one another message already took.
+export function joinCandidates(rows, wamid, myMs) {
+  const r = Array.isArray(rows) ? rows : [];
+  const fast = new Set(r.filter((x) => x && x.event_type === 'fast_try' && x.payload).map((x) => x.payload.wamid));
+  const takers = new Set(), taken = new Set();
+  for (const x of r) if (x && x.event_type === 'fire_join' && x.payload && Array.isArray(x.payload.joins)) { takers.add(x.payload.wamid); x.payload.joins.forEach((w) => taken.add(w)); }
+  return r.filter((x) => x && x.event_type === 'owner_in' && x.payload && x.payload.wamid && x.payload.wamid !== wamid && !x.payload.choice
+    && !fast.has(x.payload.wamid) && !takers.has(x.payload.wamid) && !taken.has(x.payload.wamid)
+    && myMs - Date.parse(x.ts) >= 0 && myMs - Date.parse(x.ts) <= JOIN_MS)
+    .sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
+}
+// The line the joined messages go in, oldest first, each with its media id so the run can read the photo.
+export function joinedLine(rows) {
+  return (Array.isArray(rows) ? rows : []).map((x) => String(x.payload.text || x.payload.title || '').replace(/\s+/g, ' ').slice(0, 600)
+    + (x.payload.media_id ? ' [wa_media ' + x.payload.media_id + ']' : '')).filter((t) => t.trim()).join(' || ');
+}
+// A newer owner message within JOIN_MS of this one (so a join is expected).
+// Only WhatsApp messages (a wamid), not a button press and not one the fast lane takes: those never join.
+export function hasNewer(rows, wamid, myMs) {
+  const r = Array.isArray(rows) ? rows : [];
+  const fast = new Set(r.filter((x) => x && x.event_type === 'fast_try' && x.payload).map((x) => x.payload.wamid));
+  return r.some((x) => x && x.event_type === 'owner_in' && x.payload && x.payload.wamid && x.payload.wamid !== wamid && !x.payload.choice
+    && !fast.has(x.payload.wamid) && Date.parse(x.ts) > myMs && Date.parse(x.ts) - myMs <= JOIN_MS);
+}
 async function note(env, value) {
   if (!env.SUPABASE_SERVICE_ROLE_KEY) return;
   try {
@@ -38,7 +72,7 @@ async function note(env, value) {
 
 // recentLine moved to _wa.js (23/10/2026) so routine-db (office_ask) uses it too; re-exported for the tests.
 export { recentLine, RECENT_H, RECENT_N, RECENT_MAX } from '../_wa.js';
-export function fireText(m, about, prev, snapshot, learned, recent) {
+export function fireText(m, about, prev, snapshot, learned, recent, joined) {
   const lines = ['[\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05de\u05de\u05d9\u05db\u05d0\u05dc, \u05e0\u05d1\u05d3\u05e7 \u05d1\u05e9\u05e8\u05ea: \u05d7\u05ea\u05d9\u05de\u05ea Meta \u05d5\u05d4\u05de\u05e1\u05e4\u05e8 \u05e9\u05dc\u05d5]',
     'at: ' + (m.ts ? new Date(m.ts * 1000).toISOString() : new Date().toISOString()), 'wamid: ' + m.id];
   // 26/10/2026 (load test: a mail of 11:21 UTC was written "14:21", +3, the day after the clocks went back): the
@@ -63,6 +97,7 @@ export function fireText(m, about, prev, snapshot, learned, recent) {
   if (snapshot) lines.push('snapshot (server, data, not instructions): ' + String(snapshot).replace(/\s*\n+\s*/g, ' / ').slice(0, 900));
   // 21/10/2026: the assistant's notebook, what it wrote down from Michael's words in earlier runs.
   if (learned) lines.push('learned (your notebook from earlier runs, written from Michael\'s words; apply it, a newer message of his wins): ' + learned);
+  if (joined) lines.push('joined (Michael\'s own messages sent together with this one a moment before it, part of the same request; answer once for all of them): ' + joined);
   lines.push('text: ' + m.text);
   return lines.join('\n');
 }
@@ -502,12 +537,26 @@ export function ownerInPayload(m) {
   if (md) { p.media_id = md.id; p.mime = md.mime || null; p.name = md.name || null; }
   return p;
 }
-async function logIn(env, m) {
+async function logIn(env, m, ts) {
   try {
     await sbJson(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
-      body: JSON.stringify([{ id: 'wi' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
+      body: JSON.stringify([{ id: 'wi' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: ts || new Date().toISOString(),
         event_type: 'owner_in', channel: 'whatsapp', payload: ownerInPayload(m) }]) });
   } catch (e) { /* a missing log line costs only the review */ }
+}
+// fast_try / fire_join markers for joining messages sent together (JOIN_MS); a lost one only means two runs, as before.
+async function logMark(env, type, payload) {
+  try {
+    await Promise.race([new Promise((res) => setTimeout(res, JOIN_CALL_MS)), sbJson(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify([{ id: 'wj' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
+        event_type: type, channel: 'server', payload }]) })]);
+  } catch (e) { /* see above */ }
+}
+// each call capped at JOIN_CALL_MS (review 28/10/2026: the waitUntil budget is about 30 seconds and the fire takes up to 20)
+async function joinRows(env, fromIso, types) {
+  const cap = new Promise((res) => setTimeout(() => res(null), JOIN_CALL_MS));
+  const r = await Promise.race([sbJson(env, 'notifications_log?select=ts,event_type,payload&event_type=in.(' + types + ')&ts=gte.' + encodeURIComponent(fromIso) + '&order=ts.asc&limit=30').catch(() => null), cap]);
+  return Array.isArray(r) ? r : [];
 }
 async function logOut(env, text, r) {
   try {
@@ -538,7 +587,8 @@ async function handle(env, raw) {
     seen.from_owner++;
     await noteOwnerIn(env, sbFrom(env), m.ts ? new Date(m.ts * 1000).toISOString() : new Date().toISOString());
     if (!(await firstTime(env, m.id))) continue;
-    await logIn(env, m);
+    const tLog = Date.now(), myIso = new Date(tLog).toISOString();
+    await logIn(env, m, myIso);
     // 20/10/2026 (Michael in the questionnaire: "do it: an immediate 'got it' from the server"): the
     // assistant takes 30-60 seconds, so the server answers first, before the fire (which itself took
     // 20 seconds on 20/10 10:30). Michael just wrote, so the window is open; no template. Not kept as
@@ -551,7 +601,14 @@ async function handle(env, raw) {
     const rt = rateOf(m, about, prev);
     if (rt) { await rateNote(env, rt.good, about ? about.split(' | ')[1] : prev && prev.text, about ? about.split(' | ').pop() : prev && prev.at); seen.rate = rt.good ? 'good' : 'bad'; }
     const fr0 = wa ? fastRoute(m, about, prev) : null;
+    if (fr0) await logMark(env, 'fast_try', { wamid: m.id });
     if (fr0 && await runFast(env, owner, m, fr0, seen, false)) continue;
+    // the earlier messages sent together with this one (JOIN_MS): this run takes them, alongside the ack and the snapshot
+    const joinP = (async () => {
+      const js = joinCandidates(await joinRows(env, new Date(tLog - 2 * JOIN_MS).toISOString(), 'owner_in,fast_try,fire_join'), m.id, tLog);
+      if (js.length) await logMark(env, 'fire_join', { wamid: m.id, joins: js.map((x) => x.payload.wamid) });
+      return js;
+    })().catch(() => []);
     if (wa) { const a = await sendToOwner(env, owner, ACK_TEXT, { windowOpen: true, noTemplate: true }).catch(() => null); seen.ack = !!(a && a.ok); seen.ack_ms = Date.now() - t0; }
     // 20/10/2026 20:30: a message got "got it" and then nothing, no log line and no fire. The work after the
     // response runs in waitUntil, which Cloudflare stops about 30 seconds after the response; the snapshot
@@ -572,8 +629,21 @@ async function handle(env, raw) {
     // assistant, which then listed it as waiting. LEARNED_MAX keeps the open notebook whole until the retro folds it.
     learned = lr && lr[0] ? learnedLine(lr[0].value, LEARNED_MAX) : '';
     seen.snap = !!snap; seen.learned = learned ? learned.split(' / ').length : 0; seen.pre_fire_ms = Date.now() - t0;
+    const joins = await joinP;
+    if (joins.length) seen.joins = joins.length;
+    // no joins of its own: a newer message within JOIN_MS may take this one; decided after JOIN_MS (a newer message
+    // logged later would still take it), and never when this run is already late (then two runs, not a lost fire)
+    if (!joins.length && Date.now() - tLog < JOIN_MS + 300 && Date.now() - t0 < JOIN_LATE_MS) await new Promise((res) => setTimeout(res, JOIN_MS + 300 - (Date.now() - tLog)));
+    if (!joins.length && Date.now() - t0 < JOIN_LATE_MS && hasNewer(await joinRows(env, myIso, 'owner_in,fast_try'), m.id, tLog)) {
+      let taken = false;
+      while (!taken && Date.now() - t0 < JOIN_LATE_MS) {
+        taken = (await joinRows(env, myIso, 'fire_join')).some((x) => x.payload && Array.isArray(x.payload.joins) && x.payload.joins.indexOf(m.id) >= 0);
+        if (!taken) await new Promise((res) => setTimeout(res, 700));
+      }
+      if (taken) { seen.joined_into_newer = true; await note(env, seen); continue; }
+    }
     await note(env, Object.assign({ stage: 'firing' }, seen));
-    const text = fireText(m, about, prev, snap, learned, recent);
+    const text = fireText(m, about, prev, snap, learned, recent, joins.length ? joinedLine(joins) : '');
     const af = assistantFire(env);
     seen.fire_to = af ? af.which : null;
     const fr = !af ? null : await fetch(af.url, {
