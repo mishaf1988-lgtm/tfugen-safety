@@ -12,6 +12,9 @@ is to put Hebrew in front of the model before it writes: the English lines of
 transcript passes LONG_BYTES it tells Claude to close the task and open the next main chat
 itself, so Michael never has to notice the chat got long.
 
+28/10/2026 (Michael: "כשאתה עובר חשבון, כתוב בשיחה "עובר חשבון""): those words in the
+prompt add the account-move procedure (project-files/ACCOUNT-MOVE.md).
+
 Test:  python3 tests/harness/hebrew-prompt-test.py
 """
 import json, os, sys
@@ -27,10 +30,14 @@ MSG = ("כרטיס חוקים: (1) כל טקסט למיכאל בעברית, גם
 LONG_BYTES = 6_000_000
 LONG = ("השיחה ארוכה ({mb} MB). לסיים את המשימה הנוכחית (מיזוג), ואז בלי לשאול: handoff "
         "ושיחה ראשית חדשה לפי tfugen-sessions, ולכתוב למיכאל שעברנו ולאן.")
+MOVE = ("מיכאל כתב \"עובר חשבון\": לפי project-files/ACCOUNT-MOVE.md, בלי לשאול: למזג או לדחוף את "
+        "מה שפתוח, handoff בשורש, לשחרר את claim.sh, ולכתוב לו מה להדביק בחשבון השני.")
 
 msg = MSG
 try:
     data = json.load(sys.stdin)
+    if "עובר חשבון" in (data.get("prompt") or ""):
+        msg += " " + MOVE
     size = os.path.getsize(data.get("transcript_path") or "")
     if size > LONG_BYTES:
         msg += " " + LONG.format(mb=round(size / 1e6, 1))
