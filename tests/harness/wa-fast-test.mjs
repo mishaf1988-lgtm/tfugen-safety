@@ -1,7 +1,7 @@
 // The server's fast lane (20/10/2026, Michael in the questionnaire: "do it: a fast lane in the server").
 // A number 1-4 that answers a hazard alert, and "what is urgent" / "expiries", are answered by wa-hook
 // itself by rules; everything else, and anything unclear, still goes to the assistant.
-import { ownerInPayload, recentLine, RECENT_MAX, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX } from './_build/wa-hook.mjs';
+import { ownerInPayload, recentLine, RECENT_MAX, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX, joinCandidates, joinedLine, hasNewer, JOIN_MS, fireText } from './_build/wa-hook.mjs';
 import { HAZARD_OPTIONS, hazardAsk, assistantFire, fireUrlOf } from './_build/_wa.mjs';
 import { rateAgain } from './_build/chat.mjs';
 
@@ -100,6 +100,38 @@ console.log('\n9. move an event only on his yes to that question (26/10/2026 ret
   const y = fastRoute({ text: 'בצע' }, null, prev), n = fastRoute({ text: 'לא' }, null, prev), q = fastRoute({ text: 'לא, ליום חמישי' }, null, prev);
   check('"בצע" = move, "לא" = no, a correction = to the assistant', y && y.kind === 'cal_move' && y.id === 'ab12cd34' && y.yes === true && n && n.kind === 'cal_move' && n.yes === false && (!q || q.kind !== 'cal_move'), { y, n, q });
   check('"בצע" after an invite question is an invite, not a move', fastRoute({ text: 'בצע' }, null, { ref: 'calinvite:ab12cd34' }).kind === 'cal_invite');
+}
+
+// 28/10/2026 (Michael: "do it: join messages sent together"): a photo and its text 2 seconds apart fired two runs,
+// each made its own PDF and its own draft.
+{
+  console.log('\njoining messages sent together');
+  const t = Date.parse('2026-10-28T10:59:26.000Z'), iso = (ms) => new Date(ms).toISOString();
+  const photo = { ts: iso(t), event_type: 'owner_in', payload: { wamid: 'w1', text: '\ud83d\udcce photo.jpg', media_id: 'M1' } };
+  const text = { ts: iso(t + 2000), event_type: 'owner_in', payload: { wamid: 'w2', text: 'תמיר ל-PDF' } };
+  const j = joinCandidates([photo, text], 'w2', t + 2000);
+  check('the text 2 seconds after the photo takes the photo along', j.length === 1 && j[0].payload.wamid === 'w1', j);
+  check('the joined line carries the photo id, so the run can read it', joinedLine(j) === '\ud83d\udcce photo.jpg [wa_media M1]', joinedLine(j));
+  check('the photo sees a newer message within ' + JOIN_MS + 'ms and waits for the join', hasNewer([photo, text], 'w1', t) === true);
+  check('a message alone: no newer, no join, no wait', hasNewer([photo], 'w1', t) === false && joinCandidates([photo], 'w1', t).length === 0);
+  const late = { ts: iso(t + JOIN_MS + 500), event_type: 'owner_in', payload: { wamid: 'w3', text: 'עוד דבר' } };
+  check('a message more than ' + JOIN_MS + 'ms later is its own request (both sides agree)', joinCandidates([photo, late], 'w3', t + JOIN_MS + 500).length === 0 && hasNewer([photo, late], 'w1', t) === false);
+  const btn = { ts: iso(t), event_type: 'owner_in', payload: { wamid: 'w4', text: '1. בצע', choice: '1' } };
+  check('a button press is never taken along (it has its own answer)', joinCandidates([btn, text], 'w2', t + 2000).length === 0);
+  const fast = { ts: iso(t + 100), event_type: 'fast_try', payload: { wamid: 'w1' } };
+  check('an earlier message the fast lane answers is not taken along', joinCandidates([photo, fast, text], 'w2', t + 2000).length === 0);
+  const c3 = { ts: iso(t + 4000), event_type: 'owner_in', payload: { wamid: 'w5', text: 'third' } };
+  const bJoin = { ts: iso(t + 2500), event_type: 'fire_join', payload: { wamid: 'w2', joins: ['w1'] } };
+  const j3 = joinCandidates([photo, text, bJoin, c3], 'w5', t + 4000);
+  check('three messages 2s apart: the second took the first and fires itself, so the third does not take it again', j3.length === 0, j3);
+  const c4 = { ts: iso(t + 2500), event_type: 'owner_in', payload: { wamid: 'w6', text: 'fourth' } };
+  check('a message another one already took is not taken twice', joinCandidates([photo, text, bJoin, c4], 'w6', t + 2500).length === 0);
+  const fastNew = { ts: iso(t + 1000), event_type: 'fast_try', payload: { wamid: 'w2' } };
+  check('a newer message the fast lane takes: no wait for a join that never comes', hasNewer([photo, text, fastNew], 'w1', t) === false);
+  check('an app chat line (no wamid) is not a newer WhatsApp message', hasNewer([photo, { ts: iso(t + 1000), event_type: 'owner_in', payload: { text: 'x' } }], 'w1', t) === false);
+  const ft = fireText({ id: 'w2', text: 'תמיר ל-PDF', type: 'text' }, null, null, '', '', '', joinedLine(j));
+  check('the fire text says the photo came with this message and is one request', /joined \(Michael's own messages sent together/.test(ft) && ft.indexOf('[wa_media M1]') > 0 && ft.indexOf('joined') < ft.indexOf('text: '), ft.slice(-300));
+  check('no join: no joined line', fireText({ id: 'w2', text: 'x', type: 'text' }, null, null, '', '', '').indexOf('joined (') < 0);
 }
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
