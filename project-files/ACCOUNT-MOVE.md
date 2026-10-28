@@ -10,11 +10,11 @@
 
 ## הצעדים (מיכאל, בטלפון או במחשב)
 
-1. **להיכנס לחשבון החדש** ב-claude.ai.
-2. **לחבר את ה-Connectors** (Settings > Connectors): GitHub, Supabase, Microsoft 365, Cloudflare Developer Platform, Claude Docs. ב-GitHub לאשר את שני המאגרים: `tfugen-safety` ו-`michael-skills`.
+1. **להיכנס לחשבון החדש** ב-claude.ai (מיכאל, 28/10/2026: החשבון החדש על כתובת Gmail). החשבון עצמו על Gmail, אבל כל החיבורים לעבודה נשארים על sviva@tapugan.co.il.
+2. **לחבר את ה-Connectors** (Settings > Connectors): GitHub, Supabase, Microsoft 365, Cloudflare Developer Platform, Claude Docs. **ב-Microsoft 365 להתחבר עם sviva@tapugan.co.il, לא עם ה-Gmail**: אחרת אין גישה למייל, ליומן ול-OneDrive של העבודה. ב-GitHub לאשר את שני המאגרים: `tfugen-safety` ו-`michael-skills`.
 3. **להתקין את ה-skills:** ה-plugin מהמאגר `michael-skills` (ראה `project-files/claude-ai-skill/README.md`).
 4. **סביבת ענן חדשה ל-Claude Code** (claude.ai/code > Environments):
-   - משתנה סביבה `ROUTINE_KEY`. הערך לא נשמר ב-GitHub. אם אין לך אותו: Claude יוצר מפתח חדש, ואז שמים אותו גם ב-Cloudflare (Pages > tapugan-safety > Settings > Variables, אותו שם) וגם בסביבה. בלי המפתח הסוכנים לא יכולים לכתוב למסד.
+   - משתנה סביבה `ROUTINE_KEY`. הערך לא נשמר ב-GitHub. **מפתח חדש** (מיכאל, 28/10/2026: "בצע: ליצור מפתח חדש"): Claude בחשבון החדש יוצר אותו ונותן דף עם שני המקומות להדביק: Cloudflare (Pages > tapugan-safety > Settings > Variables, אותו שם, ואז פריסה מחדש) והסביבה. ברגע שהמפתח מתחלף ב-Cloudflare, הסוכנים הישנים מפסיקים לכתוב למסד, ולכן מחליפים אותו רק באותו יום שהחדשים עולים. בלי המפתח הסוכנים לא יכולים לכתוב למסד.
    - Network secret ל-`api.cloudflare.com` (מפתח API חדש מ-Cloudflare, My Profile > API Tokens, הרשאת Pages).
    - גישת רשת: כמו בסביבה הישנה (Supabase, Cloudflare, GitHub, Graph).
 5. **לפתוח שיחה ראשונה** בסביבה החדשה עם המאגר `mishaf1988-lgtm/tfugen-safety`, ולהדביק את ההודעה שבסוף הקובץ. משם Claude ממשיך לבד.
