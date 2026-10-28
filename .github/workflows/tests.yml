@@ -72,6 +72,12 @@ jobs:
       - run: python3 tests/harness/wa-worker-map-test.py
       # Same reason: a Routine prompt file without step 0 (agent-common.md), 09/10/2026.
       - run: python3 tests/harness/routine-common-test.py
+      # Same reason (28/10/2026, #2169): an .md-only skill PR took tfugen-db over 5,000 words and main went red
+      # on the next code PR. The repo's .md files that a harness test reads are checked here too.
+      - run: python3 tests/harness/skill-size-test.py
+      - run: python3 tests/harness/account-inventory-test.py
+      - run: python3 tests/harness/system-map-test.py
+      - run: python3 tests/harness/claude-md-test.py
       # A handoff PR is .md only too (CLAUDE.md: only the latest handoff in the root).
       - run: python3 tests/harness/handoff-root-test.py
       # A decision from a questionnaire says which option was chosen (18/10/2026): a DECISIONS-only PR is .md and skips the harness.
