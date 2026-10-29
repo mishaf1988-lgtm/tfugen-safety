@@ -403,6 +403,22 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
     check('14 open: 8 lines and "ועוד 6 פעולות" (room 9)', (s5c.match(/פעולה \d+/g) || []).length === 8 && /ועוד 6 פעולות/.test(s5c), (s5c.match(/פעולה \d+/g) || []).length);
     const odd = await patchDeck(await real(REL.replace('</Relationships>', '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" Target="../notesSlides/n1.xml"/></Relationships>')), deckContent(m, ROWS, ref, { committee: com }));
     check('a slide 4 with notes is not copied: skipped and reported, nothing else broken', !readZip(odd.bytes).find((e) => e.name === 'ppt/slides/slide5.xml') && odd.report.some((x) => /committee slide not added/.test(x)), odd.report);
+    const ctl = await patchDeck(src5, deckContent(m, ROWS, ref, { committee: [{ n: 1, dept: 'אחזקה\u0007', resp: 'ה\u0001נדסה', action: 'לתקן\u000b מעקה\u001f', due: day(4), s: 'פתוח' }] }));
+    const s5ctl = await entryText(readZip(ctl.bytes).find((e) => e.name === 'ppt/slides/slide5.xml'));
+    check('control characters in an action never reach the XML (the deck would need a "repair")', !/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(s5ctl) && /לתקן מעקה|לתקן/.test(s5ctl));
+    const longDept = await patchDeck(src5, deckContent(m, ROWS, ref, { committee: [{ n: 1, dept: 'ד'.repeat(300), action: 'x', due: day(4), s: 'פתוח' }] }));
+    check('a very long department name is cut', !/ד{40}/.test(await entryText(readZip(longDept.bytes).find((e) => e.name === 'ppt/slides/slide5.xml'))));
+    // The slide is found by its shape, not by the file name (PowerPoint renumbers the parts when it saves).
+    const renamed = readZip(o1.bytes).map((e) => (e.name === 'ppt/slides/slide5.xml' ? { ...e, name: 'ppt/slides/slide9.xml' } : e));
+    const o5 = await patchDeck(await writeZip(await Promise.all(renamed.map(async (e) => (e.raw ? e : e)))), deckContent(m, ROWS, ref, { committee: com }));
+    check('the committee slide is found by its shape name even as slide9.xml: no second slide added', !readZip(o5.bytes).find((e) => e.name === 'ppt/slides/slide5.xml') && o5.report.indexOf('committee slide added') < 0, o5.report);
+    const gone = await patchDeck(src5, deckContent(m, ROWS, ref, { committee: com, addSlide: false }));
+    check('deck_s5 set (added before) and the slide gone: it stays gone, reported, nothing written for it', !readZip(gone.bytes).find((e) => e.name === 'ppt/slides/slide5.xml') && gone.report.some((x) => /not in the deck, not added again/.test(x)), gone.report);
+    check('the first add says so (the server then remembers it)', o1.report.indexOf('committee slide added') >= 0, o1.report);
+    const withSec = await real(REL);
+    const wz = readZip(withSec).map((e) => (e.name === 'ppt/presentation.xml' ? { ...e, text: '<p:presentation><p:sldIdLst><p:sldId id="563" r:id="rId2"/></p:sldIdLst><p:extLst><p14:sectionLst><p14:section><p14:sldIdLst><p14:sldId id="563"/></p14:sldIdLst></p14:section></p14:sectionLst></p:extLst></p:presentation>' } : e));
+    const osec = await patchDeck(await writeZip(wz), deckContent(m, ROWS, ref, { committee: com }));
+    check('a deck with sections: the new slide is also listed in the last section', /<p14:sldId id="563"\/><p14:sldId id="564"\/><\/p14:sldIdLst>/.test(await entryText(readZip(osec.bytes).find((e) => e.name === 'ppt/presentation.xml'))));
     const none = await patchDeck(src5, deckContent(m, ROWS, ref, {}));
     check('without committee data (a failed read) the deck is as before: no slide 5', !readZip(none.bytes).find((e) => e.name === 'ppt/slides/slide5.xml'));
   }
