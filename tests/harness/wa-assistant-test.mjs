@@ -75,6 +75,16 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   const ftm = fireText(im[1], '');
   check('the fire text tells the assistant to read it with wa_media, no "not text" line', /media: document id 9876543210 \(application\/pdf, nohal\.pdf\)/.test(ftm) && /"op":"wa_media","id":"9876543210"/.test(ftm) && !/type: document/.test(ftm), ftm);
 
+  // 29/10/2026 13:09: three photos and a line carried the same Meta second, two runs got the same at, and the
+  // overlap guard took them for one run (two answers, 13:10 and 13:11). at = the server's log time, to the ms.
+  {
+    const a1 = /at: (\S+)/.exec(fireText({ id: 'w1', ts: 1761736186, type: 'image', text: '' }, '', null, '', '', '', '', Date.parse('2026-10-29T11:09:43.793Z')))[1];
+    const a2 = /at: (\S+)/.exec(fireText({ id: 'w2', ts: 1761736186, type: 'text', text: 'x' }, '', null, '', '', '', '', Date.parse('2026-10-29T11:09:47.422Z')))[1];
+    check('two messages of the same Meta second get different at (the log time, ms)', a1 === '2026-10-29T11:09:43.793Z' && a2 === '2026-10-29T11:09:47.422Z', [a1, a2]);
+    const src = (await import('node:fs')).readFileSync(new URL('../../functions/api/wa-hook.js', import.meta.url), 'utf8');
+    check('the hook passes its log time to fireText', /fireText\(m, [^)]*joinedLine\(joins\) : '', tLog\)/.test(src));
+  }
+
   console.log('\n2. the webhook');
   const g = await hook({ request: new Request('https://x/api/wa-hook?hub.mode=subscribe&hub.verify_token=vt-1&hub.challenge=42'), env: ENV });
   check('GET with the verify token returns the challenge', g.status === 200 && (await g.text()) === '42');
