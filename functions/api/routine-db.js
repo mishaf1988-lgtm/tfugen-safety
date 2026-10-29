@@ -504,6 +504,49 @@ export function equipAddRow(b, today, rand) {
   for (const [k, max] of [['loc', 80], ['vendor', 80], ['inspector', 60]]) if (b[k] !== undefined) { const v = short(b[k], max); if (/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/.test(v)) return { error: 'bad ' + k }; if (v) row[k] = v; }
   return { row };
 }
+// inc_add (29/10/2026, Michael: "all of this has to be an automatic flow, I should not have to check it"; the accident of
+// 29/10 sat unrecorded in the app because no op wrote a row to `inc` and the dev request waited for the agents' pause to
+// end). ONE new row of `inc` for a work accident after Michael approved the row (accidents.md step 7): never a change, never
+// a delete, refused when the same worker already has an accident on that day. Pure: the row, or { error }.
+export const INC_DEPTS = { '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d5\u05d0\u05e8\u05d9\u05d6\u05d4', '\u05d0\u05e8\u05d9\u05d6\u05d4': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d5\u05d0\u05e8\u05d9\u05d6\u05d4', '\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd': '\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd', '\u05d0\u05d7\u05d6\u05e7\u05d4': '\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d5\u05d7\u05e9\u05de\u05dc', '\u05d7\u05e9\u05de\u05dc': '\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d5\u05d7\u05e9\u05de\u05dc', '\u05d4\u05e0\u05d3\u05e1\u05d4': '\u05d4\u05e0\u05d3\u05e1\u05d4 \u05d5\u05d0\u05e0\u05e8\u05d2\u05d9\u05d4', '\u05d0\u05e0\u05e8\u05d2\u05d9\u05d4': '\u05d4\u05e0\u05d3\u05e1\u05d4 \u05d5\u05d0\u05e0\u05e8\u05d2\u05d9\u05d4', '\u05de\u05e2\u05d1\u05d3\u05d4': '\u05de\u05e2\u05d1\u05d3\u05d4', '\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd': '\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd' };
+export const INC_FILE_DIR = '12_\u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05d5\u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd/\u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4/';
+export const incFilePrefix = () => SITE.odFileUrl + 'Documents/' + OD_ROOT + INC_FILE_DIR;
+// Israel local time to the UTC instant (the offset is 2 or 3 hours; the one that reads back the same wall clock wins).
+export function ilInstant(day, time) {
+  const [y, mo, d] = day.split('-').map(Number), [h, mi] = time.split(':').map(Number);
+  for (const off of [2, 3]) {
+    const t = Date.UTC(y, mo - 1, d, h, mi) - off * 3600000;
+    const back = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(t));
+    const g = (k) => back.find((x) => x.type === k).value;
+    if (g('year') + '-' + g('month') + '-' + g('day') === day && +g('hour') === h && +g('minute') === mi) return new Date(t).toISOString();
+  }
+  return null;
+}
+export function incAddRow(b, today, rand) {
+  if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
+  if (['why', 'w', 'day', 'time', 'l', 'dept', 'd', 'r', 'p', 'rc', 'src', 'file_url'].some((k) => b[k] !== undefined && typeof b[k] !== 'string')) return { error: 'fields are text' };
+  const why = short(b.why, 300);
+  if (why.length < 5) return { error: 'why (Michael\'s approval of the row) required' };
+  const w = short(b.w, 80);
+  if (w.length < 3) return { error: 'w: the worker\'s name' };
+  if (!isDay(b.day) || b.day > today || b.day < '2026-01-01') return { error: 'day: the accident date, this year, not in the future' };
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(b.time || ''))) return { error: 'time: HH:MM' };
+  const dt = ilInstant(b.day, b.time);
+  if (!dt) return { error: 'time: not a real Israel clock time' };
+  const dept = short(b.dept, 40);
+  if (!INC_DEPTS[dept]) return { error: 'dept: one of ' + Object.keys(INC_DEPTS).join(', ') };
+  const l = short(b.l, 150), d = short(b.d, 1500);
+  if (l.length < 3 || d.length < 20) return { error: 'l (place) and d (what happened, 20+ characters) required' };
+  if (b.dy !== undefined && !(Number.isInteger(b.dy) && b.dy >= 0 && b.dy <= 365)) return { error: 'dy: days of absence 0-365, or leave it out' };
+  if (b.reported !== undefined && typeof b.reported !== 'boolean') return { error: 'reported: true or false' };
+  const file = b.file_url === undefined ? null : String(b.file_url);
+  if (file !== null && (!file.startsWith(incFilePrefix()) || file.length > 600 || /[\t\r\n\f\v"'<>\x00-\x1f]/.test(file) || /\/\.\.?\//.test(file))) return { error: 'file_url: the worker\'s folder under ' + incFilePrefix() };
+  for (const k of ['l', 'd', 'r', 'p', 'rc', 'src']) if (b[k] !== undefined && /[\u0000-\u0008\u000b-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/.test(String(b[k]))) return { error: k + ': control characters' };
+  const row = { id: 'a' + b.day.slice(2).replace(/-/g, '') + '-' + rand, d, dt, ty: '\u05ea\u05d0\u05d5\u05e0\u05d4 \u05e2\u05dd \u05e4\u05e6\u05d9\u05e2\u05d4', l, w, dy: b.dy === undefined ? null : b.dy, s: '\u05e4\u05ea\u05d5\u05d7',
+    r: b.r === undefined ? null : short(b.r, 600), p: b.p === undefined ? null : short(b.p, 1200), rc: b.rc === undefined ? null : short(b.rc, 1200), file_url: file,
+    dept, dept_group: INC_DEPTS[dept], reported: b.reported === true, src: short(b.src === undefined ? 'Claude (' + b.agent + '), ' + ddmm(today) : b.src, 200) };
+  return { row };
+}
 // The PATCH for one row, or { error }. row = the row as it is now; today = YYYY-MM-DD.
 export function expiryPatch(b, row, today) {
   const t = EXPIRY_TABLES[b.table];
@@ -2054,6 +2097,29 @@ export async function onRequest(context) {
       const there = await g.json();
       if (!Array.isArray(there) || there.length) return jsonResp({ ok: false, error: 'already there: ' + (Array.isArray(there) ? there.map((r) => r.id).join(',') : '?') + ' (expiry_set updates a row)' }, 200, {});
       const w = await fetch(url + '/rest/v1/equip_inspections', { method: 'POST', headers: { ...h, Prefer: 'return=representation' }, body: JSON.stringify(c.row), signal: tmo(SB_MS) });
+      if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status, detail: (await w.text()).slice(0, 300) }, 200, {});
+      const after = await w.json();
+      if (!Array.isArray(after) || after.length !== 1) return jsonResp({ ok: false, error: 'write touched ' + (Array.isArray(after) ? after.length : '?') + ' rows' }, 200, {});
+      return jsonResp({ ok: true, id: after[0].id, row: after[0] }, 200, {});
+    }
+    if (body.op === 'inc_add') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'w', 'day', 'time', 'l', 'dept', 'd', 'r', 'p', 'rc', 'src', 'dy', 'reported', 'file_url'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+      const rand = Array.from(crypto.getRandomValues(new Uint8Array(3))).map((x) => x.toString(16).padStart(2, '0')).join('');
+      const c = incAddRow(body, today, rand);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      if (c.row.file_url) { // the worker's folder is really there
+        const at = await accessToken(env);
+        const rel = decodeURIComponent(c.row.file_url.slice((SITE.odFileUrl + 'Documents/').length));
+        const fr = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + rel.split('/').filter(Boolean).map(encodeURIComponent).join('/') + '?select=id,folder', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) });
+        if (!fr.ok || !(await fr.json()).folder) return jsonResp({ ok: false, error: 'file_url: no such folder (' + fr.status + ')' }, 200, {});
+      }
+      // the same worker, the same day (an Israel day: +-14 hours around the instant is wider than any day, then compared by date)
+      const g = await fetch(url + '/rest/v1/inc?select=id,w,dt&w=eq.' + encodeURIComponent(c.row.w) + '&dt=gte.' + encodeURIComponent(new Date(Date.parse(c.row.dt) - 14 * 3600000).toISOString()) + '&dt=lte.' + encodeURIComponent(new Date(Date.parse(c.row.dt) + 14 * 3600000).toISOString()), { headers: h, signal: tmo(SB_MS) });
+      if (!g.ok) return jsonResp({ ok: false, error: 'read ' + g.status }, 200, {});
+      const there = (await g.json()).filter((r) => new Date(r.dt).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }) === body.day);
+      if (there.length) return jsonResp({ ok: false, error: 'already there: ' + there.map((r) => r.id).join(',') }, 200, {});
+      const w = await fetch(url + '/rest/v1/inc', { method: 'POST', headers: { ...h, Prefer: 'return=representation' }, body: JSON.stringify(c.row), signal: tmo(SB_MS) });
       if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status, detail: (await w.text()).slice(0, 300) }, 200, {});
       const after = await w.json();
       if (!Array.isArray(after) || after.length !== 1) return jsonResp({ ok: false, error: 'write touched ' + (Array.isArray(after) ? after.length : '?') + ' rows' }, 200, {});
