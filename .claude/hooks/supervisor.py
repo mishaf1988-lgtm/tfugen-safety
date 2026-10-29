@@ -10,10 +10,14 @@ Before a turn ends it checks, locally and without network:
      and this reply has none -> block (Michael, 02/10/2026). Only merges
      after that reply count (05/10/2026: one merge early in a long session
      made every later short reply carry the section again)
-  4. a PR was merged in this session and no next session was opened
+  4. a PR was merged in this turn (since the last real user message) and no
+     next session was opened
      (create_session) -> block (lesson? then handoff, or the next item),
      unless the handoff in the repo root says "אין קוד" (CLAUDE.md, #1099:
-     no code item without Michael = the session stays open for his answer)
+     no code item without Michael = the session stays open for his answer).
+     Only this turn's merges count (29/10/2026, dev-20261029051858-6k6a: the
+     dev-runner session is woken by a Routine, and one old merge blocked
+     every later wake that merged nothing)
   5. a PR was merged since the last reply, project-files/chrome-queue.md has
      open tasks, and the reply has no "לכרום" line -> block (Michael, 12/10/2026)
   6. session-start.py asked to open the agents' office (🏢) and no Artifact
@@ -73,8 +77,9 @@ def git(cwd, *args):
 
 def transcript(path):
     """(text of the assistant's last turn, tool names used in the whole session,
-    tool names used since the last assistant text with the proposals section)."""
-    texts, tools, recent = [], set(), set()
+    tool names used since the last assistant text with the proposals section,
+    tool names used since the last real user message)."""
+    texts, tools, recent, turn = [], set(), set(), set()
     with open(path, encoding="utf-8") as f:
         for line in f:
             try:
@@ -85,7 +90,7 @@ def transcript(path):
             if msg.get("role") == "user":
                 if isinstance(content, list) and all(isinstance(c, dict) and c.get("type") == "tool_result" for c in content):
                     continue
-                texts = []
+                texts, turn = [], set()
             elif msg.get("role") == "assistant" and isinstance(content, list):
                 for c in content:
                     if not isinstance(c, dict):
@@ -97,7 +102,8 @@ def transcript(path):
                     elif c.get("type") == "tool_use":
                         tools.add(c.get("name", ""))
                         recent.add(c.get("name", ""))
-    return "\n".join(texts), tools, recent
+                        turn.add(c.get("name", ""))
+    return "\n".join(texts), tools, recent, turn
 
 
 OFFICE_MARK = "🏢 משרד הסוכנים"
@@ -212,7 +218,7 @@ def unchanged_claims(cwd, text):
     return sorted(f for f in claimed if f not in changed and os.path.exists(os.path.join(cwd, f)))
 
 
-def verdict(cwd, text, tools, waiting, recent=None):
+def verdict(cwd, text, tools, waiting, recent=None, turn=None):
     if text.rstrip()[-400:].count("?"):
         return None
     if waiting:
@@ -228,7 +234,7 @@ def verdict(cwd, text, tools, waiting, recent=None):
     if ghost:
         return ("המפקח: כתבת שהוספת או עדכנת את %s, והקובץ לא השתנה (לא מקומית ולא ב-main ב-12 השעות האחרונות). "
                 "לכתוב את זה עכשיו, או לתקן את התשובה (STATUS 99, לקח 19)." % ", ".join(ghost))
-    merged = any(t.endswith("merge_pull_request") for t in tools)
+    merged = any(t.endswith("merge_pull_request") for t in (tools if turn is None else turn))
     merged_since = any(t.endswith("merge_pull_request") for t in (tools if recent is None else recent))
     # Michael, 02/10/2026 ("remember we said you must recommend new skills or
     # upgrades"): a task summary after a merge carries the proposals section.
@@ -272,8 +278,8 @@ def main():
             print(json.dumps({"decision": "block", "reason": "המפקח: השיחה התחילה או הופעלה מחדש, והמשרד לא נפתח (מיכאל 16/10/2026: \"לא תמיד מציג את המשרד\"). "
                               "לקרוא ל-Artifact עם action \"open\" ו-url " + office + ", ואז לסיים."}, ensure_ascii=False))
             sys.exit(0)
-        text, tools, recent = transcript(data["transcript_path"])
-        reason = verdict(cwd, text, tools, ci_wait_running(), recent)
+        text, tools, recent, turn = transcript(data["transcript_path"])
+        reason = verdict(cwd, text, tools, ci_wait_running(), recent, turn)
     except Exception:
         sys.exit(0)
     if reason:
