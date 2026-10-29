@@ -72,9 +72,12 @@ async function note(env, value) {
 
 // recentLine moved to _wa.js (23/10/2026) so routine-db (office_ask) uses it too; re-exported for the tests.
 export { recentLine, RECENT_H, RECENT_N, RECENT_MAX } from '../_wa.js';
-export function fireText(m, about, prev, snapshot, learned, recent, joined) {
+// at = when the server logged the message, to the millisecond (atMs), not Meta's timestamp: 29/10/2026 13:09, three
+// photos and a line sent together carried the same second, two runs passed the same answers, and overlapReply took
+// the second run's reply for the first run's own message, so both answers went out (13:10 and 13:11).
+export function fireText(m, about, prev, snapshot, learned, recent, joined, atMs) {
   const lines = ['[\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05de\u05de\u05d9\u05db\u05d0\u05dc, \u05e0\u05d1\u05d3\u05e7 \u05d1\u05e9\u05e8\u05ea: \u05d7\u05ea\u05d9\u05de\u05ea Meta \u05d5\u05d4\u05de\u05e1\u05e4\u05e8 \u05e9\u05dc\u05d5]',
-    'at: ' + (m.ts ? new Date(m.ts * 1000).toISOString() : new Date().toISOString()), 'wamid: ' + m.id];
+    'at: ' + (atMs ? new Date(atMs).toISOString() : m.ts ? new Date(m.ts * 1000).toISOString() : new Date().toISOString()), 'wamid: ' + m.id];
   // 26/10/2026 (load test: a mail of 11:21 UTC was written "14:21", +3, the day after the clocks went back): the
   // Israel time now and its offset, so a time is not worked out from memory.
   { const n = new Date(), il = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(n);
@@ -682,7 +685,7 @@ async function handle(env, raw) {
       if (taken) { seen.joined_into_newer = true; await note(env, seen); continue; }
     }
     await note(env, Object.assign({ stage: 'firing' }, seen));
-    const text = fireText(m, about, prev, snap, learned, recent, joins.length ? joinedLine(joins) : '');
+    const text = fireText(m, about, prev, snap, learned, recent, joins.length ? joinedLine(joins) : '', tLog);
     const af = await assistantFireNow(env);
     seen.fire_to = af ? af.which : null;
     const fr = !af ? null : await fetch(af.url, {
