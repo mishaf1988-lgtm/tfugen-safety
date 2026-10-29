@@ -283,6 +283,24 @@ export function deckContent(m, rows, meetingDate, opts) {
         empty: ['', '', ''], room: 4, more: (n) => ['', '\u05d5\u05e2\u05d5\u05d3 ' + n + ' \u05ea\u05d7\u05e7\u05d9\u05e8\u05d9\u05dd', ''] }],
     };
   };
+  // Slide 5 (29/10/2026, Michael: "keep connecting it to the deck"): the open actions that came from an
+  // investigation or the committee (tour_hazards.src), overdue first and then by due date. The slide itself is added by
+  // addCommitteeSlide (a copy of slide 4, whose look it keeps); here only its texts. Up to COM_ROOM lines, the last
+  // one "and N more". The card is red when something is overdue, green when nothing is.
+  const buildS5 = (list) => {
+    const todayIL = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+    const late = (r) => !!r.due && String(r.due).substring(0, 10) < todayIL;
+    const rowsC = list.slice().sort((p, q) => (late(q) - late(p)) || String(p.due || '9999').localeCompare(String(q.due || '9999')) || ((+p.n || 0) - (+q.n || 0)));
+    const nLate = rowsC.filter(late).length, n = rowsC.length;
+    return {
+      CommitteeCard: [!n ? '\u05d0\u05d9\u05df \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea \u05de\u05ea\u05d7\u05e7\u05d9\u05e8\u05d9\u05dd \u05d5\u05de\u05d4\u05d5\u05d5\u05e2\u05d3\u05d4' : n === 1 ? '\u05e4\u05e2\u05d5\u05dc\u05d4 \u05d0\u05d7\u05ea \u05e4\u05ea\u05d5\u05d7\u05d4 \u05de\u05ea\u05d7\u05e7\u05d9\u05e8 \u05d0\u05d5 \u05de\u05d4\u05d5\u05d5\u05e2\u05d3\u05d4' : n + ' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea \u05de\u05ea\u05d7\u05e7\u05d9\u05e8\u05d9\u05dd \u05d5\u05de\u05d4\u05d5\u05d5\u05e2\u05d3\u05d4',
+        (nLate ? '\u05d1\u05d0\u05d9\u05d7\u05d5\u05e8: ' + nLate : '\u05d0\u05e3 \u05d0\u05d7\u05ea \u05dc\u05d0 \u05d1\u05d0\u05d9\u05d7\u05d5\u05e8') + ' | \u05e0\u05db\u05d5\u05df \u05dc-' + dmy(todayIL)],
+      cardColor: nLate ? 'C00000' : '196B24',
+      list: [{ match: /^\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05dc\u05d5\u05d5\u05e2\u05d3\u05d4/, header: n ? '\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05dc\u05d5\u05d5\u05e2\u05d3\u05d4 - ' + n + ' \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea, \u05dc\u05e4\u05d9 \u05d9\u05e2\u05d3:' : '\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05dc\u05d5\u05d5\u05e2\u05d3\u05d4:',
+        items: rowsC.map((r) => [r.due ? dmy(String(r.due).substring(0, 10)) : '-', ' - ' + (r.dept || '-') + (r.resp ? ' / ' + short(r.resp, 20) : '') + ': ', short(r.action || r.descr || '-', 58) + (late(r) ? ' (\u05d1\u05d0\u05d9\u05d7\u05d5\u05e8)' : '')]),
+        empty: ['\u05d0\u05d9\u05df \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea', '', ''], room: COM_ROOM, more: (k) => ['', '\u05d5\u05e2\u05d5\u05d3 ' + k + ' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea', ''] }],
+    };
+  };
   return {
     s1: {
       Header: [Object.assign((t) => t.replace(/20\d{2}/, y).replace(/\s*\u00b7\s*/, ', ').replace(/\d{2}[./]\d{2}[./]\d{4}/, dmy(meetingDate)), { perRun: true })],
@@ -330,9 +348,37 @@ export function deckContent(m, rows, meetingDate, opts) {
     },
     s3: opts && opts.s3Month ? buildS3(opts.s3Month) : null,
     s4: opts && opts.nearMiss && opts.repMonth ? buildS4(opts.nearMiss, opts.repMonth) : null,
+    s5: opts && opts.committee ? buildS5(opts.committee) : null,
   };
 }
 
+const COM_ROOM = 9;
+// The committee slide (29/10/2026): a copy of slide 4 (same layout, picture and look) under the name the next
+// run finds it by. Added once; only when slide 4 is the plain card + list one the deck has (no notes, no chart),
+// otherwise skipped and reported, never forced. The five parts it touches: the slide and its rels (new),
+// [Content_Types].xml, presentation.xml (slide list) and its rels.
+export async function addCommitteeSlide(entries, report) {
+  const get = (n) => entries.find((e) => e.name === n);
+  if (get(SLIDE(5))) return false;
+  const need = [SLIDE(4), 'ppt/slides/_rels/slide4.xml.rels', '[Content_Types].xml', 'ppt/presentation.xml', 'ppt/_rels/presentation.xml.rels'];
+  const miss = need.filter((n) => !get(n));
+  if (miss.length) { report.push('committee slide not added, missing ' + miss.join(',')); return false; }
+  const x4 = await entryText(get(SLIDE(4))), r4 = await entryText(get(need[1]));
+  if (!/name="Event2Card"/.test(x4) || /relationships\/(notesSlide|chart|slide)"/.test(r4)) { report.push('committee slide not added: slide 4 is not the card and list slide'); return false; }
+  const pres = await entryText(get('ppt/presentation.xml')), prels = await entryText(get('ppt/_rels/presentation.xml.rels')), ct = await entryText(get('[Content_Types].xml'));
+  const ids = [...pres.matchAll(/<p:sldId id="(\d+)"/g)].map((m) => +m[1]);
+  const rids = [...prels.matchAll(/Id="rId(\d+)"/g)].map((m) => +m[1]);
+  if (!ids.length || !rids.length || pres.indexOf('</p:sldIdLst>') < 0 || ct.indexOf('</Types>') < 0 || prels.indexOf('</Relationships>') < 0) { report.push('committee slide not added: unexpected deck structure'); return false; }
+  const rid = 'rId' + (Math.max(...rids) + 1);
+  const x5 = x4.replace(/name="Event1Card"/, 'name="CommitteeCard"').replace(/name="Event2Card"/, 'name="CommitteeList"')
+    .replace(/(<p14:creationId [^>]*val=")\d+"/, '$1' + (1000000000 + Math.floor(Math.random() * 900000000)) + '"')
+    .replace(/<a:t>\u05e1\u05e7\u05d9\u05e8\u05ea \u05ea\u05d7\u05e7\u05d9\u05e8\u05d9\u05dd[^<]*<\/a:t>/, '<a:t>\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05dc\u05d5\u05d5\u05e2\u05d3\u05d4:</a:t>');
+  entries.push({ name: SLIDE(5), text: x5 }, { name: 'ppt/slides/_rels/slide5.xml.rels', text: r4 });
+  get('[Content_Types].xml').text = ct.replace('</Types>', '<Override PartName="/ppt/slides/slide5.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>');
+  get('ppt/_rels/presentation.xml.rels').text = prels.replace('</Relationships>', '<Relationship Id="' + rid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide5.xml"/></Relationships>');
+  get('ppt/presentation.xml').text = pres.replace('</p:sldIdLst>', '<p:sldId id="' + (Math.max(...ids) + 1) + '" r:id="' + rid + '"/></p:sldIdLst>');
+  return true;
+}
 const SLIDE = (n) => 'ppt/slides/slide' + n + '.xml';
 export async function patchDeck(bytes, c) {
   const entries = readZip(bytes), report = [];
@@ -358,6 +404,16 @@ export async function patchDeck(bytes, c) {
     x = setList(x, 'HighSevPanel', c.s3.high, more, report);
     return setList(x, 'MedSevPanel', c.s3.med, more, report);
   });
+  if (c.s5) {
+    await addCommitteeSlide(entries, report);
+    if (get(SLIDE(5))) await edit(SLIDE(5), (x) => {
+      x = shapes(x, { Header: [['\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05dc\u05d5\u05d5\u05e2\u05d3\u05d4', '   |   \u05de\u05ea\u05d7\u05e7\u05d9\u05e8\u05d9\u05dd \u05d5\u05de\u05d4\u05d5\u05d5\u05e2\u05d3\u05d4']], CommitteeCard: c.s5.CommitteeCard });
+      // The card's own fill only (inside its <p:spPr>), never a text colour.
+      const card = findShape(x, 'CommitteeCard');
+      if (card) { const k = card.xml.indexOf('</p:spPr>'); if (k > 0) x = x.substring(0, card.start) + card.xml.substring(0, k).replace(/(<a:solidFill><a:srgbClr val=")[0-9A-Fa-f]{6}"/, '$1' + c.s5.cardColor + '"') + card.xml.substring(k) + x.substring(card.end); }
+      return setList(x, 'CommitteeList', c.s5.list, (k) => ['\u05d5\u05e2\u05d5\u05d3 ' + k + ' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea', ''], report);
+    });
+  }
   if (c.s4) await edit(SLIDE(4), (x) => setList(shapes(x, { Event1Card: c.s4.Event1Card }), 'Event2Card', c.s4.list, more, report));
   return { bytes: changed.length ? await writeZip(entries) : bytes, report, changed };
 }
