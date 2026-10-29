@@ -392,7 +392,8 @@ export function fastRoute(m, about, prev) {
   if (sid0) { const yes = signAnswer(m); if (yes !== null) return { kind: 'sign', id: sid0, yes }; }
   // 28/10/2026: an answer to "delete this row?" (routine-db del_ask); only a yes / no, else the assistant
   const did = delRefOf(about, prev);
-  if (did) { const yes = signAnswer(m); if (yes !== null) return { kind: 'del', id: did, yes }; }
+  // 29/10/2026 retro: a delete is confirmed only by a tap (a button choice) or a reply to that very message (about carries the ref), never by a bare "yes" that happens to follow it within 3 hours (the prev fallback)
+  if (did && (about || (m && m.choice !== undefined && m.choice !== null))) { const yes = signAnswer(m); if (yes !== null) return { kind: 'del', id: did, yes }; }
   // 26/10/2026: an answer to "close tour finding <n>?" (routine-db tour_close_ask); only a yes / no, else the assistant
   const tid = tourRefOf(about, prev);
   if (tid) { const yes = signAnswer(m); if (yes !== null) return { kind: 'tour_close', id: tid, yes }; }
