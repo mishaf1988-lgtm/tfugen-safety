@@ -46,6 +46,7 @@ check('a probe URL only from a trigger id (lesson 133)', fireUrlOf('trig_011XSXR
 console.log('\n4. which account answers, and the switch (29/10/2026)');
 const J = (x) => JSON.stringify(x);
 check('"איזה חשבון" and "על איזה חשבון אתה עובד" = the account question', J(accountCmdOf('איזה חשבון')) === J({ kind: 'account', to: null }) && J(accountCmdOf('על איזה חשבון אתה עובד?')) === J({ kind: 'account', to: null }) && J(accountCmdOf('חשבון')) === J({ kind: 'account', to: null }));
+check('"באיזה חשבון אתה עובד?" (Michael, 29/10/2026 11:30) = the account question; "איזה חשבון בנק" is not', J(accountCmdOf('באיזה חשבון אתה עובד?')) === J({ kind: 'account', to: null }) && accountCmdOf('איזה חשבון בנק') === null);
 check('"העוזר לגימייל", "עבור ל-gmail" = switch to Gmail', accountCmdOf('העוזר לגימייל').to === 'gmail' && accountCmdOf('עבור לgmail').to === 'gmail' && accountCmdOf('תעבור לחשבון gmail').to === 'gmail');
 check('"העוזר לראשי", "עבור לחשבון הראשי" = switch to main', accountCmdOf('העוזר לראשי').to === 'main' && accountCmdOf('עבור לחשבון הראשי').to === 'main');
 check('longer or different sentences go to the assistant, not the switch', accountCmdOf('מה מצב החשבון של הספק') === null && accountCmdOf('העוזר לגימייל ותשלח מייל') === null && accountCmdOf('') === null && accountCmdOf('העבר חשבונית לראשי') === null);
