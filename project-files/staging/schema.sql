@@ -86,7 +86,7 @@ create table if not exists public.ncr_ai (id bigint default nextval('ncr_ai_id_s
 
 create table if not exists public.hzm (id text not null, n text, un text, hs text, q text, loc text, ms text, em text, created_at timestamp with time zone default now(), location_id text, file_url text);
 
-create table if not exists public.tour_hazards (id text not null, n integer, d date, tour_no integer, dept text not null, loc text, location_id text, descr text not null, sev text, resp text, action text, due date, s text default 'פתוח'::text not null, closed_d date, notes text, photo_url text, ts timestamp with time zone default now() not null, resp2 text, closed_by text, close_note text, after_photo_url text, recheck_d date);
+create table if not exists public.tour_hazards (id text not null, n integer, d date, tour_no integer, dept text not null, loc text, location_id text, descr text not null, sev text, resp text, action text, due date, s text default 'פתוח'::text not null, closed_d date, notes text, photo_url text, ts timestamp with time zone default now() not null, resp2 text, closed_by text, close_note text, after_photo_url text, recheck_d date, src text, src_ref text);
 
 create table if not exists public.leg (id text not null, s text, d text, a text, c text, u text, o text, created_at timestamp with time zone default now(), topic text, law_type text, law_num text, src_url text, summary text, full_text text, last_review date, c_date date, c_by text, c_evidence_url text);
 
