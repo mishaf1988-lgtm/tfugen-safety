@@ -44,3 +44,5 @@
 ## מתג מהיר לעוזר בוואטסאפ (29/10/2026)
 
 מיכאל: "פתרון קל ומהיר לעבור בין חשבון לחשבון, כדי להשתמש במקסימום הטוקנים". השרת מחזיק שני זוגות הפעלה: `ASSISTANT_FIRE_*` (החשבון הראשי) ו-`ASSISTANT2_FIRE_*` (ה-Gmail), והדגל `assistant_account` ב-`server_state` קובע לאיזה מהם הודעה יוצאת. מעבר: `bash project-files/routine-db.sh '{"op":"assistant_account","account":"gmail"}'` (או `"main"`), בלי פריסה. הפעולה נדחית אם זוג ה-Gmail לא נשמר ב-Cloudflare. בלי דגל, או כשהזוג שנבחר חסר, ההודעה הולכת לזוג השני ולא נופלת. הקמה חד-פעמית של זוג ה-Gmail: סוכן העוזר בחשבון ה-Gmail (אותו קובץ הוראות `routine-wa-assistant.md`), ושמירת כתובת ההפעלה והמפתח שלו ב-Cloudflare בשמות `ASSISTANT2_FIRE_URL` ו-`ASSISTANT2_FIRE_TOKEN`. הסוכנים המתוזמנים עוברים בנפרד, במתג ההשהיה (`agents_pause`, `agent-common.md` צעד 0).
+
+**אחרי שמירת משתנה ב-Cloudflare** (29/10/2026, נמדד): הוא נכנס לתוקף רק בפריסה הבאה של `main`; `wa_check` מראה `fire2_url_set` ו-`fire2_key_set`. אם אחד עדיין false אחרי דקה, לא מחכים: ממזגים שינוי קטן ל-`main` (api.cloudflare.com חסום ברשת של שיחות ה-Gmail, אז אין פריסה ישירה).
