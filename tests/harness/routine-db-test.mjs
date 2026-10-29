@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { incAddRow, ilInstant, incFilePrefix, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
+import { incAddRow, thzAddRow, THZ_SRC_FROM, ilInstant, incFilePrefix, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, OD_DESKTOP } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -43,6 +43,9 @@ globalThis.fetch = async (url, opt = {}) => {
     if (wq) return new Response(JSON.stringify(rows[m[1]].filter((r) => r.w === decodeURIComponent(wq[1])).map((r) => ({ id: r.id, w: r.w, dt: r.dt }))), { status: 200 });
     const rq = /^select=id&report_number=eq\.(.*)$/.exec(m[2] || '');
     if (rq) return new Response(JSON.stringify(rows[m[1]].filter((r) => r.report_number === decodeURIComponent(rq[1])).map((r) => ({ id: r.id }))), { status: 200 });
+    const sq = /src_ref=eq\.([^&]*)/.exec(m[2] || '');
+    if (sq) return new Response(JSON.stringify(rows[m[1]].filter((r) => r.src_ref === decodeURIComponent(sq[1])).map((r) => ({ id: r.id, n: r.n, s: r.s }))), { status: 200 });
+    if (/^select=n&order=n\.desc/.test(m[2] || '')) return new Response(JSON.stringify(rows[m[1]].map((r) => ({ n: r.n })).sort((x, y) => y.n - x.n).slice(0, 1)), { status: 200 });
     const id = decodeURIComponent((/id=eq\.([^&]*)/.exec(m[2] || '') || [])[1] || '');
     const hit = rows[m[1]].filter((r) => String(r.id) === id);
     if ((opt.method || 'GET') === 'PATCH') { hit.forEach((r) => Object.assign(r, JSON.parse(opt.body))); return new Response(JSON.stringify(hit), { status: 200 }); }
@@ -1280,6 +1283,26 @@ const callIn = async (body) => {
     check('equip_add: no doc, a future d, e before d or past 6 years, a bad report number, a file outside the drive, a lower-case code, or an extra field (s, id) = refused',
       [{ doc: '' }, { d: ['2026-10-25'] }, { file_url: FILE_URL_PREFIX + 'Documents/other/x.pdf' }, { file_url: equipFilePrefix() + 'a/../../x.pdf' }, { file_url: equipFilePrefix() + 'a/x.docx' }, { d: '2026-11-01' }, { e: '2026-10-01' }, { e: '2033-01-01' }, { report_number: '186003' }, { file_url: 'https://evil.example/x.pdf' }, { code: 'chain' }, { n: 'x' }].every((o) => !!equipAddRow({ ...A, ...o }, T, 'abcdef123456').error)
       && !equipAddRow(A, T, 'abcdef123456').error && (await call({ ...A, s: 'x' })).status === 400 && (await call({ ...A, id: 'mine' })).status === 400 && rows.equip_inspections.length === 2);
+    rows = {};
+  }
+
+  console.log('\n4f3f. thz_add: an action from an investigation or the committee becomes a tour hazard (29/10/2026, Michael: "keep connecting it automatically to the investigation and the assistant")');
+  {
+    const D = SITE.depts[0], H = '\u05d2\u05d1\u05d5\u05d4\u05d4';
+    rows = { tour_hazards: [{ id: 'th-old', n: 58, s: '\u05e4\u05ea\u05d5\u05d7' }] };
+    const A = { op: 'thz_add', agent: 'routine-wa-assistant', why: 'Corrective action of the investigation of 29/10/2026', src: 'investigation', ref: 'a261029-x1', action: '\u05dc\u05d4\u05ea\u05e7\u05d9\u05df \u05de\u05e2\u05e7\u05d4', dept: D, sev: H, resp: 'x', opened: '2026-10-29' };
+    let x = await call(A);
+    const r = rows.tour_hazards[1];
+    check('thz_add: one row, open, numbered after the highest, the source marked, due by severity', x.json.ok && rows.tour_hazards.length === 2 && r.n === 59 && r.s === '\u05e4\u05ea\u05d5\u05d7' && r.src === 'investigation' && r.src_ref === 'a261029-x1|\u05dc\u05d4\u05ea\u05e7\u05d9\u05df \u05de\u05e2\u05e7\u05d4' && !!r.due && r.dept === D, x.json);
+    x = await call(A);
+    check('thz_add: the same investigation and action again = dup, no second row', x.json.ok && x.json.dup === true && rows.tour_hazards.length === 2, x.json);
+    x = await call({ ...A, ref: 'old-1', opened: '2026-10-28' });
+    check('thz_add: an action opened before 29/10/2026 = skipped, no row', x.json.ok && x.json.skip === 'old' && rows.tour_hazards.length === 2, x.json);
+    const T = '2026-10-29';
+    check('thz_add: no why, a bad source, a bad ref, no action, an unknown department, a bad severity, a future opened day, a past due, or a non-text field = refused; a good row passes',
+      [{ why: '' }, { src: 'mail' }, { ref: 'a b' }, { action: 'x' }, { dept: 'x' }, { sev: 'x' }, { opened: '2026-11-02' }, { due: '2026-10-01' }, { loc: ['x'] }].every((o) => !!thzAddRow({ ...A, ...o }, T, 'abc12345', 58, SITE.depts).error)
+      && !thzAddRow(A, T, 'abc12345', 58, SITE.depts).error && thzAddRow({ ...A, opened: '2026-10-28' }, T, 'abc12345', 58, SITE.depts).skip === 'old' && THZ_SRC_FROM === '2026-10-29'
+      && (await call({ ...A, ref: 'b2', s: '\u05e1\u05d2\u05d5\u05e8' })).status === 400 && (await call({ ...A, ref: 'b3', id: 'mine' })).status === 400 && rows.tour_hazards.length === 2);
     rows = {};
   }
 
