@@ -86,6 +86,9 @@ Microsoft 365 (קריאה: מייל, OneDrive, יומן, Teams), Supabase (`exec
 ### סביבת הענן של Claude Code
 סביבה `env_016FAHJNzmeY9hnaYA4JDs5e`. משתנה סביבה: `ROUTINE_KEY` (אותו ערך כמו ב-Cloudflare; בלעדיו ה-Routines נופלים ל-`execute_sql` שמחכה ללחיצה). להעברה: סביבה חדשה עם המשתנה, ולפתוח בה את השיחות העובדות מחדש.
 Network secret באותה סביבה (16/10/2026): מפתח API של Cloudflare, Host `api.cloudflare.com`, Bearer, הרשאת Pages בחשבון `c9d388e3a5f9ee9546e8aa6b6353ec87` (לא רואה את רשימת החשבונות, לכן המזהה רשום כאן). Claude משנה איתו משתני Preview של `tapugan-safety` בלי מחשב. להעברה: מפתח חדש ב-Cloudflare (My Profile > API Tokens) ו-Network secret בסביבה החדשה.
+
+### החשבון השני (Gmail, mishaf1988@gmail.com), נוסף 29/10/2026
+שיחות בלבד, בלי Routines (`ACCOUNT-MOVE.md`). סביבה `tapugan` (`env_01HLs9Va3CDBVLMbRCt8N284`): משתנה `ROUTINE_KEY` (אותו ערך), רשת Limited עם דומיין מותר אחד, `tapugan-safety.pages.dev` (בלעדיו `routine-db.sh` נכשל ב-`CONNECT tunnel failed, response 403`). Connectors: GitHub, Supabase, Microsoft 365 (עם sviva@tapugan.co.il), Cloudflare Developer Platform. המשרד ומפת המערכת משותפים אליו להערות ועריכה (הזמנה, תקפה עד 27/11/2026). נבדק 29/10/2026: שיחת בדיקה בסביבה החזירה `{"ok":true,"rows":[{"id":"xl1008-d9"}]}`, יציאה 0.
 Network secret שני (18/10/2026, C20): Host `api.supabase.com`, מפתח Supabase מוגבל (`claude-staging`, scoped PAT) לפרויקט הניסוי `ldzbjbsumzqjyvtpiwqo` בלבד: Project Settings קריאה, Database ו-Auth Config כתיבה. החי מחזיר 403. **תוקף 24 שעות** מ-18/10/2026: אחרי זה לא עובד, ומפתח חדש נוצר רק כשיש משימה (supabase.com/dashboard/account/tokens, אותן הרשאות). להעברה: אותו דבר בחשבון החדש.
 
 ---
