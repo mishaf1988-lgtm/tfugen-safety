@@ -12236,6 +12236,28 @@ function _mtgTrusteesHtml(t){
   return '<div class="mt-box"><b>\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea, '+esc(_truMonthLabel(t.month))+'</b><br><span style="color:'+col+';font-weight:700">'+t.reported+' \u05de\u05ea\u05d5\u05da '+t.active+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d5 \u05d4\u05d7\u05d5\u05d3\u05e9</span>'
     +(t.level==='ok'?'':' (\u05d4\u05d9\u05e2\u05d3: \u05dc\u05e4\u05d7\u05d5\u05ea \u05d7\u05e6\u05d9)')+'</div>';
 }
+// ---- the committee list (29/10/2026): the open actions that came from an investigation or the
+// committee itself, read from tour_hazards.src (thzFromSource / the assistant's thz_add). Up to
+// MTG_COM_MAX at a time, "more" shows the rest, overdue first, then the oldest. Status stays the
+// hazard's own (open / in treatment / closed), so closing it on the tours screen closes it here.
+var MTG_COM_MAX=15,_mtgComAll=false;
+function _mtgComRows(){
+  return (DB.tour_hazards||[]).filter(function(r){return r.src&&THZ_SRC[r.src]&&r.s!==_THZ_CLOSED;}).sort(function(a,b){
+    var la=_thzOverdue(a)?0:1,lb=_thzOverdue(b)?0:1;if(la!==lb)return la-lb;
+    return String(a.d||'').localeCompare(String(b.d||''))||((+a.n||0)-(+b.n||0));
+  });
+}
+function mtgComMore(){_mtgComAll=!_mtgComAll;_mtgRender();}
+function _mtgCommitteeHtml(){
+  var rows=_mtgComRows(),late=rows.filter(_thzOverdue).length,shown=_mtgComAll?rows:rows.slice(0,MTG_COM_MAX);
+  var h='<div class="mt-box"><b>&#128221; \u05dc\u05d5\u05d5\u05e2\u05d3\u05d4: \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea \u05de\u05ea\u05d7\u05e7\u05d9\u05e8\u05d9\u05dd \u05d5\u05de\u05d4\u05d5\u05d5\u05e2\u05d3\u05d4 ('+rows.length+')</b>';
+  if(!rows.length)return h+'<br>'+'\u05d0\u05d9\u05df \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea \u05de\u05ea\u05d7\u05e7\u05d9\u05e8 \u05d0\u05d5 \u05de\u05d5\u05d5\u05e2\u05d3\u05d4'+'</div>';
+  h+=' | '+'\u05d1\u05d0\u05d9\u05d7\u05d5\u05e8'+': <b>'+late+'</b><div class="mt-wrap"><table><tr><th>'+'\u05de\u05e7\u05d5\u05e8'+'</th><th>'+'\u05e4\u05e2\u05d5\u05dc\u05d4'+'</th><th>'+'\u05de\u05d7\u05dc\u05e7\u05d4'+'</th><th>'+'\u05d0\u05d7\u05e8\u05d0\u05d9'+'</th><th>'+'\u05d9\u05e2\u05d3'+'</th><th>'+'\u05e1\u05d8\u05d8\u05d5\u05e1'+'</th></tr>'
+    +shown.map(function(r){return '<tr'+(_thzOverdue(r)?' style="color:var(--er,var(--c-red-600,#b91c1c))"':'')+'><td>'+esc(THZ_SRC[r.src])+'</td><td>'+esc(r.action||r.descr||'')+'</td><td>'+esc(r.dept||'')+'</td><td>'+esc(r.resp||'-')+'</td><td>'+(r.due?fd(r.due):'-')+'</td><td>'+esc(r.s||'')+'</td></tr>';}).join('')
+    +'</table></div>';
+  if(rows.length>MTG_COM_MAX)h+='<button type="button" class="btn btn-s" onclick="mtgComMore()">'+(_mtgComAll?'\u05d4\u05e6\u05d2 \u05e4\u05d7\u05d5\u05ea':'\u05e2\u05d5\u05d3'+' ('+(rows.length-MTG_COM_MAX)+')')+'</button>';
+  return h+'</div>';
+}
 function _mtgRender(){
   var ov=g('mtg');if(!ov)return;
   var ref=(_mtg&&_mtg.ref)||_thzToday();
@@ -12263,6 +12285,7 @@ function _mtgRender(){
     +'\u05e1\u05d4"\u05db \u05d4\u05e9\u05e0\u05d4: <b>'+a.summary.total+'</b>'+(a.lastYearToDate==null?'':' (\u05d0\u05e9\u05ea\u05e7\u05d3 \u05d1\u05d0\u05d5\u05ea\u05d4 \u05ea\u05e7\u05d5\u05e4\u05d4: <b>'+a.lastYearToDate+'</b>)')+' | \u05de\u05d3\u05d5\u05d5\u05d7\u05d5\u05ea '+a.summary.reported+', \u05dc\u05d0 \u05de\u05d3\u05d5\u05d5\u05d7\u05d5\u05ea '+a.summary.notReported+' | \u05d1\u05de\u05e4\u05e2\u05dc '+a.summary.onSite+', \u05d1\u05d3\u05e8\u05da / \u05de\u05d7\u05d5\u05e5 \u05dc\u05de\u05e4\u05e2\u05dc '+a.summary.offSite+'<br>'
     +'\u05dc\u05e4\u05d9 \u05d7\u05d5\u05d3\u05e9: '+a.byMonth.map(function(m){return esc(m.month)+' '+m.count;}).join(', ')+'<br>'
     +'\u05e9\u05e0\u05d9\u05dd \u05e7\u05d5\u05d3\u05de\u05d5\u05ea: '+Object.keys(a.byYear).map(function(y){return y+': '+a.byYear[y];}).join(', ')+'</div>'
+    +_mtgCommitteeHtml()
     +_mtgTrusteesHtml(_mtg.trustees)
     +_mtgDeckHtml()
     +'<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-s" onclick="mtgDownload(\'hz\')">\u05d4\u05d5\u05e8\u05d3 weekly-hazards.json</button><button type="button" class="btn btn-s" onclick="mtgDownload(\'acc\')">\u05d4\u05d5\u05e8\u05d3 accidents_'+a.year+'.json</button></div></div>';
