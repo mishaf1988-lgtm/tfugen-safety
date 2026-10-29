@@ -11567,7 +11567,7 @@ function thzFromSource(o){
   var sev=_MF_DUE_SEV[o.sev]?o.sev:'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea',d=_thzToday();
   if(!DB.tour_hazards)DB.tour_hazards=[];
   var r={id:'th-'+gid(),n:DB.tour_hazards.reduce(function(m,x){return Math.max(m,+x.n||0);},0)+1,d:d,tour_no:null,dept:o.dept,loc:o.loc||null,
-    descr:String(o.descr||action),sev:sev,resp:o.resp||null,resp2:null,action:action,due:o.due||_thzDueFor(sev,d),s:'\u05e4\u05ea\u05d5\u05d7',
+    descr:String(o.descr||action),sev:sev,resp:o.resp||null,resp2:null,action:action,due:o.due===''?null:(o.due||_thzDueFor(sev,d)),s:'\u05e4\u05ea\u05d5\u05d7',
     closed_d:null,notes:o.notes||null,photo_url:null,ts:new Date().toISOString(),src:o.src,src_ref:key};
   DB.tour_hazards.push(r);sbIns('tour_hazards',r);
   addLog('\u05de\u05e4\u05d2\u05e2 \u05de'+THZ_SRC[o.src]+': '+action.substring(0,30));sdb();

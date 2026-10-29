@@ -1303,6 +1303,9 @@ const callIn = async (body) => {
       [{ why: '' }, { src: 'mail' }, { ref: 'a b' }, { action: 'x' }, { dept: 'x' }, { sev: 'x' }, { opened: '2026-11-02' }, { due: '2026-10-01' }, { loc: ['x'] }].every((o) => !!thzAddRow({ ...A, ...o }, T, 'abc12345', 58, SITE.depts).error)
       && !thzAddRow(A, T, 'abc12345', 58, SITE.depts).error && thzAddRow({ ...A, opened: '2026-10-28' }, T, 'abc12345', 58, SITE.depts).skip === 'old' && THZ_SRC_FROM === '2026-10-29'
       && (await call({ ...A, ref: 'b2', s: '\u05e1\u05d2\u05d5\u05e8' })).status === 400 && (await call({ ...A, ref: 'b3', id: 'mine' })).status === 400 && rows.tour_hazards.length === 2);
+    x = await call({ ...A, ref: 'nodue-1', action: '\u05d0\u05e4\u05e8 \u05d1\u05dc\u05d9 \u05d9\u05e2\u05d3', due: '' });
+    check('thz_add: due "" = no due date (the investigation gives none), not a made-up one', x.json.ok && x.json.row.due === null, x.json);
+    check('thz_add: a past due date is still refused', !!thzAddRow({ ...A, due: '2026-10-01' }, '2026-10-29', 'abc12345', 58, SITE.depts).error && thzAddRow({ ...A, due: '' }, '2026-10-29', 'abc12345', 58, SITE.depts).row.due === null);
     rows = {};
   }
 

@@ -45,6 +45,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('no id / no department refused', e2.error === 'fields' && e3.error === 'fields', [e2, e3]);
   check('unknown severity falls back to medium', (await page.evaluate((dept) => thzFromSource({ src: 'committee', ref: 'q', action: 'w', dept: dept, sev: 'אחר' }).row.sev, dept)) === 'בינונית');
 
+  const nd = await page.evaluate((dept) => thzFromSource({ src: 'investigation', ref: 'nodue-1', action: 'ללא יעד בתחקיר', dept: dept, due: '' }), dept);
+  check('due "" = no due date, not a made-up one', nd.added === true && nd.row.due === null, nd);
   console.log('\n4. only from 29/10/2026 on');
   const o1 = await page.evaluate((dept) => thzFromSource({ src: 'investigation', ref: 'old-1', action: 'ישן', dept: dept, opened: '2026-10-28' }), dept);
   const o2 = await page.evaluate((dept) => thzFromSource({ src: 'investigation', ref: 'new-1', action: 'חדש', dept: dept, opened: '2026-10-29' }), dept);
