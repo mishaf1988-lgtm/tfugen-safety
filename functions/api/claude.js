@@ -37,15 +37,29 @@ const GEMINI_FALLBACK = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 const GEMINI_MIN_OUT = 2048;
 const GEMINI_TIMEOUT_MS = 25000;
 
+const GEMINI_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+export function geminiImagePart(b) {
+  const src = b && b.source;
+  if (!src || src.type !== 'base64' || GEMINI_IMAGE_MIMES.indexOf(src.media_type) < 0) return null;
+  const data = String(src.data || '');
+  if (!data || data.length > 14000000 || !/^[A-Za-z0-9+/=\r\n]+$/.test(data)) return null;
+  return { inlineData: { mimeType: src.media_type, data: data.replace(/\s+/g, '') } };
+}
 async function runGemini(parsed, model, key) {
   const contents = [];
   for (const m of parsed.messages || []) {
     let c = m && m.content;
+    let parts;
     if (Array.isArray(c)) {
-      if (c.find((b) => b && b.type && b.type !== 'text')) throw new Error('file block not supported on the Gemini route');
-      c = c.filter((b) => b && b.type === 'text').map((b) => b.text || '').join('\n');
+      // 29/10/2026 (Michael: move the app's photo reading from Claude to Gemini; the Claude API credit ran out 22/10): a base64 photo
+      // goes as an inlineData part. A PDF or any other block is still refused, and the Llama fallback then answers 400 for it (text-only).
+      if (c.find((b) => b && b.type && b.type !== 'text' && !(b.type === 'image' && geminiImagePart(b)))) throw new Error('file block not supported on the Gemini route');
+      parts = c.filter((b) => b && (b.type === 'text' || b.type === 'image')).map((b) => (b.type === 'image' ? geminiImagePart(b) : { text: b.text || '' }));
+      if (!parts.length) parts = [{ text: '' }];
+    } else {
+      parts = [{ text: typeof c === 'string' ? c : String(c == null ? '' : c) }];
     }
-    contents.push({ role: m && m.role === 'assistant' ? 'model' : 'user', parts: [{ text: typeof c === 'string' ? c : String(c == null ? '' : c) }] });
+    contents.push({ role: m && m.role === 'assistant' ? 'model' : 'user', parts });
   }
   const reqBody = { contents, generationConfig: { maxOutputTokens: Math.max(parsed.max_tokens || 0, GEMINI_MIN_OUT) } };
   if (typeof parsed.system === 'string' && parsed.system.trim()) reqBody.systemInstruction = { parts: [{ text: parsed.system }] };
