@@ -118,15 +118,27 @@ def session(parts):
     return p
 M = "mcp__github__merge_pull_request"
 old = session([("user", "א"), ("tool", M), ("text", "מוזג. 💡 הצעות לשדרוג: אין"), ("user", "ומה עכשיו?"), ("text", "אפשר X.")])
-text, tools, recent = sup.transcript(old)
+text, tools, recent, _ = sup.transcript(old)
 check("merge before the last proposals: not in recent", M in tools and M not in recent, (tools, recent))
 r = sup.verdict(work, text, tools, False, recent)
 check("a later short reply is not asked for proposals again", r is None or "הצעות לשדרוג" not in r, r)
 new = session([("user", "א"), ("text", "💡 הצעות לשדרוג: אין"), ("user", "ב"), ("tool", M), ("text", "מוזג שוב.")])
-text, tools, recent = sup.transcript(new)
+text, tools, recent, _ = sup.transcript(new)
 r = sup.verdict(work, text, tools, False, recent)
 check("a merge after the last proposals: asked again", r is not None and "הצעות לשדרוג" in r, r)
 check("verdict without recent (old callers) still uses the whole session", "הצעות לשדרוג" in (sup.verdict(work, "מוזג.", MERGED, False) or ""))
+
+print("\nnext session only for a merge in this turn (29/10/2026, dev-20261029051858-6k6a)")
+P2 = "💡 הצעות לשדרוג: אין"
+wake = session([("user", "השכמה 1"), ("tool", M), ("text", "מוזג. " + P2), ("user", "השכמה 2"), ("tool", "Bash"), ("text", "אין עבודה. " + P2 + " ")])
+text, tools, recent, turn = sup.transcript(wake)
+check("an old merge is not in this turn", M in tools and M not in turn, (tools, turn))
+r = sup.verdict(work, text, tools, False, recent, turn)
+check("a later wake with no merge: not asked for a next session", r is None or "create_session" not in r, r)
+wake2 = session([("user", "השכמה 1"), ("text", "x"), ("user", "השכמה 2"), ("tool", M), ("text", "מוזג. " + P2)])
+text, tools, recent, turn = sup.transcript(wake2)
+r = sup.verdict(work, text, tools, False, recent, turn)
+check("a merge in this turn: still asked for a next session", r is not None and "create_session" in r, r)
 
 print("\nsquash merge: the branch is ahead by hash, main has the content (09/10/2026)")
 sh(work, "git", "checkout", "-q", "-b", "sq", "origin/main")
