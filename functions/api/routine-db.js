@@ -20,6 +20,7 @@
 //              deck, 28/10/2026). Trustees without phone or notes. COLUMNS.
 //   state_get  read server_state keys of STATE_READ.
 //   state_set  write one key of STATE_WRITE, then read it back (STAMP_AT keys: the server sets "at").
+//   agents_pause  {until: 'YYYY-MM-DD', agent?}: 29/10/2026 one switch: every Routine stops at its opening until that day (agent-common.md, 0). agents_resume clears it.
 //   quota_set  {util, resets_at}: the weekly quota as rate_limit_info shows it; the server decides quota_mode.
 //   live       the deployed commit (CF_PAGES_COMMIT_SHA) and the sha256 of the index.html this
 //              deployment serves (env.ASSETS). The cloud is outside Israel, so the country gate
@@ -165,7 +166,7 @@ import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLA
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads',
   'trustees', 'trustee_tasks', 'trustee_winners'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'quota_mode'];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'quota_mode', 'agents_pause'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -753,6 +754,18 @@ export function quotaMode(util, resetsAt, nowMs) {
   const elapsed = Math.round((1 - left / QUOTA_WEEK_MS) * 100) / 100;
   const mode = u >= 0.85 || u > elapsed + 0.15 ? 'save' : 'normal';
   return { at: new Date(nowMs).toISOString(), util: Math.round(u * 100) / 100, elapsed, resets: new Date(r * 1000).toISOString(), mode, dry: new Date(nowMs).toISOString().slice(0, 10) < QUOTA_DRY_UNTIL };
+}
+// 29/10/2026 (Michael: "all the usage from the other account to here", "one click"): one key. A Routine reads it first
+// and stops with one line while `until` (Israel date, the day it comes back at 00:00) is in the future.
+export const PAUSE_KEY = 'agents_pause', PAUSE_MAX_DAYS = 21;
+export function agentsPause(until, nowMs) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(until || ''));
+  if (!m) return { error: 'until: YYYY-MM-DD, the day the agents come back' };
+  const end = Date.UTC(+m[1], +m[2] - 1, +m[3]);
+  if (new Date(end).toISOString().slice(0, 10) !== until) return { error: 'until: not a real date' };
+  if (end <= nowMs) return { error: 'until: must be in the future' };
+  if (end > nowMs + PAUSE_MAX_DAYS * 864e5) return { error: 'until: at most ' + PAUSE_MAX_DAYS + ' days ahead' };
+  return { paused: true, until, at: new Date(nowMs).toISOString() };
 }
 export const DRAFTS_TEXT_KEY = 'drafts_text', DRAFTS_TEXT_MAX = 30, DRAFTS_TEXT_BODY = 2000;
 export function draftTextLine(b, nowIso) {
@@ -1499,6 +1512,17 @@ export async function onRequest(context) {
       q.agent = String(body.agent || '').slice(0, 40);
       const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
         body: JSON.stringify([{ key: QUOTA_KEY, value: JSON.stringify(q), updated_at: q.at }]) });
+      if (!r.ok) return jsonResp({ ok: false, error: 'write ' + r.status }, 200, {});
+      return jsonResp(Object.assign({ ok: true }, q), 200, {});
+    }
+    if (body.op === 'agents_pause' || body.op === 'agents_resume') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'until'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const now = Date.now();
+      const q = body.op === 'agents_pause' ? agentsPause(body.until, now) : { paused: false, at: new Date(now).toISOString() };
+      if (q.error) return jsonResp({ ok: false, error: q.error }, 400, {});
+      q.agent = String(body.agent || '').slice(0, 40);
+      const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+        body: JSON.stringify([{ key: PAUSE_KEY, value: JSON.stringify(q), updated_at: q.at }]) });
       if (!r.ok) return jsonResp({ ok: false, error: 'write ' + r.status }, 200, {});
       return jsonResp(Object.assign({ ok: true }, q), 200, {});
     }
