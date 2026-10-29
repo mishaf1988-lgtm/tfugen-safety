@@ -259,6 +259,8 @@ export function accountOf(raw) {
   try { const v = typeof raw === 'string' ? JSON.parse(raw) : raw; return v && v.account === 'gmail' ? 'gmail' : 'main'; } catch (e) { return 'main'; }
 }
 let acctCache = { at: 0, v: 'main' };
+export function forgetAccount() { acctCache = { at: 0, v: acctCache.v }; }
+export function accountNow() { return acctCache.v; }
 export async function assistantFireNow(env) {
   const k = env.SUPABASE_SERVICE_ROLE_KEY;
   if (k && Date.now() - acctCache.at > 15000) {

@@ -13,8 +13,8 @@
 // /api/routine-db op wa_me. A reply to a trustee alert carries what that alert was, from
 // notifications_log (payload.wamid), so the assistant knows what Michael is answering.
 // Machine path in _middleware: Meta calls from outside Israel.
-import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo, SITE } from '../_shared.js';
-import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, hasStatuses, STATUS_KEY, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, assistantFireNow, LEARN_KEY, learnedLine, recentLine } from '../_wa.js';
+import { jsonResp, sbFrom, SB_TIMEOUT_MS, SB_LIVE, tmo, SITE } from '../_shared.js';
+import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, hasStatuses, STATUS_KEY, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, assistantFireNow, pickFire, accountOf, ACCOUNT_KEY, forgetAccount, LEARN_KEY, learnedLine, recentLine } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 import { accessToken } from '../_onedrive.js';
 import { onRequest as routineDb, OD_ROOT, isAutoTop, OD_INBOX, delRefOf, DEL_ASK_KEY, DEL_ASK_MS, DEL_TABLES, UNDO_KEY, UNDO_MAX, tourRefOf, TOUR_CLOSE_KEY, TOUR_CLOSE_MS, TOUR_OPEN, TOUR_CLOSED, calInviteRefOf, CAL_INVITE_ASK_KEY, CAL_INVITE_ASK_MS, calMoveRefOf, CAL_MOVE_ASK_KEY, CAL_MOVE_ASK_MS } from './routine-db.js';
@@ -385,6 +385,15 @@ export function signReplyTask(st) {
 }
 export const SIGN_MAIL_DONE = '\u05d4\u05d8\u05d9\u05d5\u05d8\u05d4 \u05d0\u05dc\u05d9\u05da \u05e2\u05dd \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d7\u05ea\u05d5\u05dd \u05de\u05e6\u05d5\u05e8\u05e3 \u05ea\u05d5\u05e4\u05d9\u05e2 \u05d1-Drafts \u05e9\u05dc Outlook \u05ea\u05d5\u05da \u05d3\u05e7\u05d4. \u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05de\u05de\u05da.';
 export const SIGN_MAIL_GONE = '\u05dc\u05d0 \u05de\u05e6\u05d0\u05ea\u05d9 \u05de\u05e1\u05de\u05da \u05d7\u05ea\u05d5\u05dd \u05de-24 \u05d4\u05e9\u05e2\u05d5\u05ea \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d5\u05ea \u05dc\u05e6\u05e8\u05e3. \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05d0\u05d9\u05d6\u05d4 \u05e7\u05d5\u05d1\u05e5.';
+// 29/10/2026 (Michael: "how do I know which account it works on, and how do I switch"): three short phrases, no AI.
+// "account" = which account answers now; "switch to gmail" / "switch to main" move the assistant's WhatsApp fire pair.
+export function accountCmdOf(raw) {
+  const w = String(raw || '').replace(/[?!.,"']/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+  if (/^(\u05e2\u05dc \u05d0\u05d9\u05d6\u05d4 )?(\u05d0\u05d9\u05d6\u05d4 \u05d7\u05e9\u05d1\u05d5\u05df|\u05d7\u05e9\u05d1\u05d5\u05df)( \u05d0\u05ea\u05d4 \u05e2\u05d5\u05d1\u05d3)?$/.test(w)) return { kind: 'account', to: null };
+  if (/^(\u05e2\u05d1\u05d5\u05e8|\u05ea\u05e2\u05d1\u05d5\u05e8|\u05d4\u05e2\u05d5\u05d6\u05e8) (\u05dc\u05d7\u05e9\u05d1\u05d5\u05df |\u05dc-?)?(gmail|g mail|\u05d2\u05d9\u05de\u05d9\u05d9\u05dc|\u05d2\u05de\u05d9\u05d9\u05dc)$/.test(w)) return { kind: 'account', to: 'gmail' };
+  if (/^(\u05e2\u05d1\u05d5\u05e8|\u05ea\u05e2\u05d1\u05d5\u05e8|\u05d4\u05e2\u05d5\u05d6\u05e8) (\u05dc\u05d7\u05e9\u05d1\u05d5\u05df |\u05dc-?)?(\u05e8\u05d0\u05e9\u05d9|\u05d4\u05e8\u05d0\u05e9\u05d9)$/.test(w)) return { kind: 'account', to: 'main' };
+  return null;
+}
 export function fastRoute(m, about, prev) {
   const raw = String((m && m.text) || '').trim();
   // an answer to the signature question first: "\u05ea\u05d7\u05ea\u05d5\u05dd" there is a yes, not a new request
@@ -418,6 +427,8 @@ export function fastRoute(m, about, prev) {
   // only here, on Michael's own "1" / "do it" to that very request; any other word goes to the assistant.
   const sid = signRefOf(about, prev);
   if (sid) { const yes = signAnswer(m); if (yes !== null) return { kind: 'sign', id: sid, yes }; }
+  const ac = accountCmdOf(raw);
+  if (ac) return ac;
   const rt = rateOf(m, about, prev);
   if (rt) return rt.good ? { kind: 'rate' } : null;
   const hz = hazardRef(about, prev);
@@ -743,6 +754,7 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
     else if (fr0.kind === 'tour_close') { ans = await fastTourClose(env, fr0); ref = 'tourclose-done'; }
     else if (fr0.kind === 'cal_invite') { ans = await fastCalInvite(env, fr0); ref = 'calinvite-done'; }
     else if (fr0.kind === 'cal_move') { ans = await fastCalMove(env, fr0); ref = 'calmove-done'; }
+    else if (fr0.kind === 'account') { ans = await fastAccount(env, fr0); ref = 'account'; }
     else if (fr0.kind === 'rate') { ans = RATE_THANKS; ref = 'rate'; }
     else if (fr0.kind === 'hazard') { ans = await fastHazard(env, fr0); ref = fr0.src + ' ' + fr0.id; }
     else { const g = await gather(env, new Date()); ans = buildBrief(g.items, g.failed, g.today, false, [], null, null, null, true, g.waiting, g.disq); ref = 'brief'; }
@@ -751,6 +763,22 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
   if (sr && (sr.ok || (chat && ans))) { seen.fast = fr0.kind; await noteLastOut(env, sbFrom(env), ans, ref); await logOut(env, ans, sr); return true; }
   seen.fast_fail = fr0.kind;
   return false;
+}
+
+
+const ACCT_NAME = { gmail: '\u05d7\u05e9\u05d1\u05d5\u05df \u05d4-Gmail (mishaf1988@gmail.com)', main: '\u05d4\u05d7\u05e9\u05d1\u05d5\u05df \u05d4\u05e8\u05d0\u05e9\u05d9 (sviva@tapugan.co.il)' };
+async function fastAccount(env, fr) {
+  const k = env.SUPABASE_SERVICE_ROLE_KEY, base = (env.SUPABASE_URL || SB_LIVE) + '/rest/v1/server_state';
+  const h = { apikey: k, Authorization: 'Bearer ' + k };
+  const cur = async () => { const r = await fetch(base + '?select=value&key=eq.' + ACCOUNT_KEY, { headers: h, signal: tmo(SB_TIMEOUT_MS) }); const rows = r.ok ? await r.json() : []; return accountOf(rows && rows[0] && rows[0].value); };
+  if (!fr.to) return '\u05d4\u05e2\u05d5\u05d6\u05e8 \u05e2\u05d5\u05d1\u05d3 \u05e2\u05db\u05e9\u05d9\u05d5 \u05d1\u05d7\u05e9\u05d1\u05d5\u05df ' + ACCT_NAME[await cur()] + '. \u05dc\u05d4\u05d7\u05dc\u05e4\u05d4: "\u05d4\u05e2\u05d5\u05d6\u05e8 \u05dc\u05d2\u05d9\u05de\u05d9\u05d9\u05dc" \u05d0\u05d5 "\u05d4\u05e2\u05d5\u05d6\u05e8 \u05dc\u05e8\u05d0\u05e9\u05d9".';
+  const to = pickFire(env, fr.to);
+  if (!to || (fr.to === 'gmail' && to.which !== 'new')) return '\u05d0\u05d9 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05e8 \u05dc\u05e9\u05dd: \u05d4\u05de\u05e4\u05ea\u05d7 \u05e9\u05dc \u05d4\u05d7\u05e9\u05d1\u05d5\u05df \u05d4\u05d6\u05d4 \u05dc\u05d0 \u05e9\u05de\u05d5\u05e8 \u05d1\u05e9\u05e8\u05ea.';
+  const v = { account: fr.to, at: new Date().toISOString(), agent: 'whatsapp' };
+  const w = await fetch(base + '?on_conflict=key', { method: 'POST', headers: { ...h, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_TIMEOUT_MS), body: JSON.stringify([{ key: ACCOUNT_KEY, value: JSON.stringify(v), updated_at: v.at }]) });
+  if (!w.ok) return null;
+  forgetAccount();
+  return '\u05e2\u05d1\u05e8\u05ea\u05d9. \u05de\u05e2\u05db\u05e9\u05d9\u05d5 \u05d4\u05e2\u05d5\u05d6\u05e8 \u05e2\u05d5\u05e0\u05d4 \u05de\u05d4\u05d7\u05e9\u05d1\u05d5\u05df ' + ACCT_NAME[fr.to] + '. \u05d4\u05d5\u05d3\u05e2\u05d4 \u05d4\u05d1\u05d0\u05d4 \u05e9\u05dc\u05da \u05ea\u05e4\u05e2\u05d9\u05dc \u05d0\u05d5\u05ea\u05d5 \u05e9\u05dd.';
 }
 
 export async function onRequest(context) {

@@ -1079,6 +1079,7 @@
    "ops": [
     "agent_report",
     "agents_pause",
+    "assistant_account",
     "state_get"
    ],
    "m365": false,
