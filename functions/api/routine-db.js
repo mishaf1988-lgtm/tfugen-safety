@@ -825,17 +825,17 @@ export function draftTextLine(b, nowIso) {
 }
 // 29/10/2026 (Michael: "compare the approved draft to the one that was made"; handoff of 29/10): the assistant shows a draft in
 // WhatsApp, Michael says "do it", and the draft is built again from memory. draftVsLastOut puts the body of the new draft next
-// to the assistant's last WhatsApp message (wa_last_out, at most 3 hours old): of the body's lines of 15 characters or more,
+// to the assistant's last WhatsApp message (wa_last_out, at most 3 hours old): of the body's sentences and lines of 12 characters or more (a draft is often one long line, so a sentence ends a unit too),
 // how many stand in that message word for word. Under 30% = that message was about something else (no answer); 100% = the
 // same text; between = edited, and the first three lines that are not there are named. It never blocks: it only tells.
-export const DRAFT_VS_WINDOW_MS = 3 * 3600000, DRAFT_VS_MIN_LINE = 15, DRAFT_VS_MIN_LINES = 3, DRAFT_VS_UNRELATED_PCT = 30;
+export const DRAFT_VS_WINDOW_MS = 3 * 3600000, DRAFT_VS_MIN_LINE = 12, DRAFT_VS_MIN_LINES = 2, DRAFT_VS_UNRELATED_PCT = 30;
 export function draftVsLastOut(draftBody, lastText, lastAt, nowMs) {
   const norm = (x) => String(x || '').replace(/[\s"'`*_>\-\u05f3\u05f4\u201c\u201d\u2018\u2019]+/g, ' ').trim();
   const last = norm(lastText);
   if (!last) return null;
   const at = Date.parse(lastAt || '');
   if (!(at > 0) || nowMs - at > DRAFT_VS_WINDOW_MS || nowMs < at) return null;
-  const lines = String(draftBody || '').split(/\n+/).map(norm).filter((l) => l.length >= DRAFT_VS_MIN_LINE);
+  const lines = String(draftBody || '').split(/\n+|(?<=[.!?:])\s+/).map(norm).filter((l) => l.length >= DRAFT_VS_MIN_LINE);
   if (lines.length < DRAFT_VS_MIN_LINES) return null;
   const missing = lines.filter((l) => last.indexOf(l) < 0);
   const kept = lines.length - missing.length, pct = Math.round(100 * kept / lines.length);
