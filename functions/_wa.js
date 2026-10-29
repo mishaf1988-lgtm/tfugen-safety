@@ -243,10 +243,32 @@ export function sameSession(a, b) {
   const k = (s) => String(s || '').replace(/^(cse_|session_)/, '');
   return !!k(a) && k(a) === k(b);
 }
-export function assistantFire(env) {
-  if (env.ASSISTANT2_FIRE_URL && env.ASSISTANT2_FIRE_TOKEN) return { url: env.ASSISTANT2_FIRE_URL, token: env.ASSISTANT2_FIRE_TOKEN, which: 'new' };
-  if (env.ASSISTANT_FIRE_URL && env.ASSISTANT_FIRE_TOKEN) return { url: env.ASSISTANT_FIRE_URL, token: env.ASSISTANT_FIRE_TOKEN, which: 'old' };
-  return null;
+// 29/10/2026 (Michael: "an easy, fast way to move between the accounts"): two fire pairs, one per Claude account
+// (ASSISTANT_* = the main account, ASSISTANT2_* = the Gmail one). Which one a message goes to is a flag in
+// server_state (assistant_account, op assistant_account), so a switch is one write and needs no deploy.
+// No flag, or the chosen pair missing: the other pair, so a message is never dropped.
+export const ACCOUNT_KEY = 'assistant_account';
+export function pickFire(env, account) {
+  const main = env.ASSISTANT_FIRE_URL && env.ASSISTANT_FIRE_TOKEN ? { url: env.ASSISTANT_FIRE_URL, token: env.ASSISTANT_FIRE_TOKEN, which: 'old' } : null;
+  const alt = env.ASSISTANT2_FIRE_URL && env.ASSISTANT2_FIRE_TOKEN ? { url: env.ASSISTANT2_FIRE_URL, token: env.ASSISTANT2_FIRE_TOKEN, which: 'new' } : null;
+  return account === 'gmail' ? (alt || main) : (main || alt);
+}
+// Is any assistant configured (sync, for checks). To fire, use assistantFireNow.
+export function assistantFire(env) { return pickFire(env, 'main'); }
+export function accountOf(raw) {
+  try { const v = typeof raw === 'string' ? JSON.parse(raw) : raw; return v && v.account === 'gmail' ? 'gmail' : 'main'; } catch (e) { return 'main'; }
+}
+let acctCache = { at: 0, v: 'main' };
+export async function assistantFireNow(env) {
+  const k = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (k && Date.now() - acctCache.at > 15000) {
+    try {
+      const r = await fetch((env.SUPABASE_URL || SB_LIVE) + '/rest/v1/server_state?select=value&key=eq.' + ACCOUNT_KEY,
+        { headers: { apikey: k, Authorization: 'Bearer ' + k }, signal: tmo(SB_TIMEOUT_MS) });
+      if (r.ok) { const rows = await r.json(); acctCache = { at: Date.now(), v: accountOf(rows && rows[0] && rows[0].value) }; }
+    } catch (e) { /* keep the last known flag */ }
+  }
+  return pickFire(env, acctCache.v);
 }
 
 export function digits(s) { return String(s == null ? '' : s).replace(/[^0-9]/g, ''); }

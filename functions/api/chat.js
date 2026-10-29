@@ -8,7 +8,7 @@
 //   GET  ?f=<id>&e=<exp>&s=<sig>  a file the server sent him (25/10/2026): the link comes signed in GET's rows (24
 //                  hours), so the phone opens it in its own viewer without a login header; only files in the safety folder.
 import { jsonResp, requireRole, defaultAllowedOrigins, originPasses, corsHeaders, SB_LIVE, SB_TIMEOUT_MS, tmo } from '../_shared.js';
-import { assistantFire, recentLine, lastOut, hmacHex, ownerWa } from '../_wa.js';
+import { assistantFire, assistantFireNow, recentLine, lastOut, hmacHex, ownerWa } from '../_wa.js';
 import { fastRoute, runFast, rateOf, rateNote, RATE_CHOICES } from './wa-hook.js';
 import { accessToken, putFile } from '../_onedrive.js';
 import { OD_ROOT, CHAT_DIR, UP_MAX, upKind } from './routine-db.js';
@@ -184,7 +184,7 @@ export function rateAgain(m, prev) {
 
 // his line (or file) to the assistant: logged as his own on channel chat, then fired like a WhatsApp message
 async function chatSend(env, url, h, cors, text, media, choice) {
-  const af = assistantFire(env);
+  const af = await assistantFireNow(env);
   if (!af) return jsonResp({ ok: false, error: 'assistant not configured' }, 200, cors);
   const now = new Date().toISOString(), id = 'ch' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const shown = media ? '\ud83d\udcce ' + media.name + (text ? '\n' + text : '') : text;
