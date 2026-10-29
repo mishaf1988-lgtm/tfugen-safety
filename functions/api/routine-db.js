@@ -547,6 +547,39 @@ export function incAddRow(b, today, rand, known) {
     dept, dept_group: known[dept], reported: b.reported === true, src: short(b.src === undefined ? 'Claude (' + b.agent + '), ' + ddmm(today) : b.src, 200) };
   return { row };
 }
+// thz_add (29/10/2026, Michael: "keep connecting it automatically to the investigation and the assistant"; the rule: anything
+// decided in the committee or an investigation, and every corrective action opened, goes into the hazards of his weekly tours).
+// ONE new `tour_hazards` row for an action, marked src ('committee' | 'investigation') and src_ref "<ref>|<action>"; the same
+// ref + action again = dup, an action opened before the accident of 29/10/2026 = skip (same cut-off as THZ_SRC_FROM in the app).
+// Never a change or a delete of an existing row. Pure: { row, key }, { skip }, or { error }.
+export const THZ_SRC_FROM = '2026-10-29';
+export const THZ_SEV_DAYS = { '\u05d2\u05d1\u05d5\u05d4\u05d4': 3, '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea': 14, '\u05e0\u05de\u05d5\u05db\u05d4': 30 };
+export function thzAddRow(b, today, rand, maxN, depts) {
+  if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
+  if (['why', 'src', 'ref', 'action', 'descr', 'dept', 'loc', 'sev', 'resp', 'due', 'opened', 'notes'].some((k) => b[k] !== undefined && typeof b[k] !== 'string')) return { error: 'fields are text' };
+  for (const k of ['ref', 'action', 'descr', 'loc', 'resp', 'notes']) if (b[k] !== undefined && /[\u0000-\u0008\u000b-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/.test(String(b[k]))) return { error: k + ': control characters' };
+  if (short(b.why, 300).length < 5) return { error: 'why (what opened the action) required' };
+  if (b.src !== 'committee' && b.src !== 'investigation') return { error: 'src: committee or investigation' };
+  const ref = short(b.ref, 60);
+  if (!/^[A-Za-z0-9._:-]{2,60}$/.test(ref)) return { error: 'ref: the investigation or meeting id (letters, digits, . _ : -)' };
+  const action = short(b.action, 300);
+  if (action.length < 3) return { error: 'action required' };
+  const dept = short(b.dept, 40);
+  if (!Array.isArray(depts) || depts.indexOf(dept) < 0) return { error: 'dept: one of ' + (depts || []).join(', ') };
+  const sev = b.sev === undefined ? '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea' : b.sev;
+  if (!Object.prototype.hasOwnProperty.call(THZ_SEV_DAYS, sev)) return { error: 'sev: ' + Object.keys(THZ_SEV_DAYS).join(', ') };
+  if (b.opened !== undefined) {
+    if (!isDay(b.opened) || b.opened > today) return { error: 'opened: YYYY-MM-DD, not in the future' };
+    if (b.opened < THZ_SRC_FROM) return { skip: 'old' };
+  }
+  if (b.due !== undefined && (!isDay(b.due) || b.due < today)) return { error: 'due: YYYY-MM-DD, not in the past' };
+  const due = b.due !== undefined ? b.due : new Date(Date.parse(today + 'T12:00:00Z') + THZ_SEV_DAYS[sev] * 86400000).toISOString().slice(0, 10);
+  const key = ref + '|' + action;
+  const row = { id: 'th-' + rand, n: (Number.isInteger(maxN) ? maxN : 0) + 1, d: today, tour_no: null, dept, loc: b.loc === undefined ? null : short(b.loc, 150) || null,
+    descr: b.descr === undefined ? action : short(b.descr, 1000) || action, sev, resp: b.resp === undefined ? null : short(b.resp, 80) || null, resp2: null, action, due,
+    s: '\u05e4\u05ea\u05d5\u05d7', closed_d: null, notes: b.notes === undefined ? null : short(b.notes, 600) || null, photo_url: null, ts: new Date().toISOString(), src: b.src, src_ref: key };
+  return { row, key };
+}
 // The PATCH for one row, or { error }. row = the row as it is now; today = YYYY-MM-DD.
 export function expiryPatch(b, row, today) {
   const t = EXPIRY_TABLES[b.table];
@@ -2160,6 +2193,26 @@ export async function onRequest(context) {
       const after = await w.json();
       if (!Array.isArray(after) || after.length !== 1) return jsonResp({ ok: false, error: 'write touched ' + (Array.isArray(after) ? after.length : '?') + ' rows' }, 200, {});
       return jsonResp({ ok: true, id: after[0].id, row: after[0] }, 200, {});
+    }
+    if (body.op === 'thz_add') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'src', 'ref', 'action', 'descr', 'dept', 'loc', 'sev', 'resp', 'due', 'opened', 'notes'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+      const rand = Array.from(crypto.getRandomValues(new Uint8Array(4))).map((x) => x.toString(16).padStart(2, '0')).join('');
+      const mr = await fetch(url + '/rest/v1/tour_hazards?select=n&order=n.desc&limit=1', { headers: h, signal: tmo(SB_MS) });
+      if (!mr.ok) return jsonResp({ ok: false, error: 'read ' + mr.status }, 200, {});
+      const top = await mr.json();
+      const c = thzAddRow(body, today, rand, top.length ? +top[0].n || 0 : 0, SITE.depts);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      if (c.skip) return jsonResp({ ok: true, skip: c.skip }, 200, {});
+      const dr = await fetch(url + '/rest/v1/tour_hazards?select=id,n,s&src_ref=eq.' + encodeURIComponent(c.key), { headers: h, signal: tmo(SB_MS) });
+      if (!dr.ok) return jsonResp({ ok: false, error: 'read ' + dr.status }, 200, {});
+      const there = await dr.json();
+      if (there.length) return jsonResp({ ok: true, dup: true, id: there[0].id, n: there[0].n }, 200, {});
+      const w = await fetch(url + '/rest/v1/tour_hazards', { method: 'POST', headers: { ...h, Prefer: 'return=representation' }, body: JSON.stringify(c.row), signal: tmo(SB_MS) });
+      if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status, detail: (await w.text()).slice(0, 300) }, 200, {});
+      const after = await w.json();
+      if (!Array.isArray(after) || after.length !== 1) return jsonResp({ ok: false, error: 'write touched ' + (Array.isArray(after) ? after.length : '?') + ' rows' }, 200, {});
+      return jsonResp({ ok: true, id: after[0].id, n: after[0].n, row: after[0] }, 200, {});
     }
     if (body.op === 'talk_field') {
       const id = String(body.id === undefined || body.id === null ? '' : body.id);

@@ -51,6 +51,25 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('opened before the accident: skipped, nothing added', o1.skip === 'old' && !o1.added && !(await page.evaluate(() => DB.tour_hazards.some(x => x.src_ref === 'old-1|ישן'))), o1);
   check('opened on the day: added', o2.added === true, o2);
 
+  console.log('\n5. the committee list shows the open actions from an investigation or the committee');
+  await page.evaluate(() => {
+    const day = (n) => new Date(Date.parse(_thzToday() + 'T12:00:00Z') + n * 86400000).toISOString().substring(0, 10);
+    DB.tour_hazards = [{ id: 'tour', n: 1, d: day(-5), dept: 'x', descr: 'מסיור רגיל', s: 'פתוח' },
+      { id: 'cl', n: 2, d: day(-3), dept: 'x', action: 'סגורה', s: 'סגור', src: 'investigation', src_ref: 'r|c' },
+      { id: 'late', n: 3, d: day(-2), dept: 'x', action: 'באיחור', s: 'פתוח', src: 'committee', src_ref: 'r|l', due: day(-1) }];
+    for (let i = 0; i < 17; i++) DB.tour_hazards.push({ id: 'o' + i, n: 10 + i, d: day(-1), dept: 'x', action: 'פעולה ' + i, s: 'פתוח', src: 'investigation', src_ref: 'r|' + i, due: day(10) });
+  });
+  const h1 = await page.evaluate(() => _mtgCommitteeHtml());
+  const rowsN = (h1.match(/<tr/g) || []).length;
+  check('15 rows + the header, the rest behind "more (3)"', rowsN === 16 && /\(3\)<\/button>/.test(h1), rowsN);
+  check('a closed action and an ordinary tour hazard are not listed', h1.indexOf('סגורה') < 0 && h1.indexOf('מסיור רגיל') < 0);
+  check('overdue first, and counted', h1.indexOf('באיחור</td>') > 0 && h1.indexOf('באיחור</td>') < h1.indexOf('פעולה 0') && />1<\/b>/.test(h1.replace('(18)', '')), h1.slice(0, 200));
+  check('the total in the title (18 open)', /\(18\)<\/b>/.test(h1), h1.slice(0, 160));
+  await page.evaluate(() => { mtgComMore(); });
+  check('"more" shows all 18', (await page.evaluate(() => _mtgCommitteeHtml().match(/<tr/g).length)) === 19);
+  await page.evaluate(() => { DB.tour_hazards = []; _mtgComAll = false; });
+  check('nothing open: a plain line, no table', !/<table/.test(await page.evaluate(() => _mtgCommitteeHtml())));
+
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
