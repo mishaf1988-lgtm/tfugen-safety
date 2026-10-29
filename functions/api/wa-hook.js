@@ -445,8 +445,9 @@ export async function fastDel(env, r) {
   const full = await sbJson(env, q + '&select=*');
   if (!Array.isArray(full) || full.length !== 1) return DEL_GONE;
   const ur = await sbJson(env, 'server_state?key=eq.' + UNDO_KEY + '&select=value');
-  let undo = []; try { undo = JSON.parse(ur && ur[0] ? ur[0].value : '[]'); } catch (x) { undo = []; }
-  if (!Array.isArray(undo)) undo = [];
+  // 29/10/2026 retro: a log that exists and cannot be read is never replaced by one entry (that wiped the earlier backups): nothing is deleted, the assistant answers
+  let undo = []; try { undo = JSON.parse(ur && ur[0] ? ur[0].value : '[]'); } catch (x) { return null; }
+  if (!Array.isArray(undo)) return null;
   undo.push({ table: st.table, row: full[0], why: st.why, at: new Date().toISOString() });
   const kept = await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
     body: JSON.stringify([{ key: UNDO_KEY, value: JSON.stringify(undo.slice(-UNDO_MAX)), updated_at: new Date().toISOString() }]) });

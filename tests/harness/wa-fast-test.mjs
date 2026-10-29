@@ -178,6 +178,10 @@ await (async () => {
   check('"\u05de\u05d7\u05e7": the whole row is kept in undo_log first, then deleted, and the request is gone', /\u05e0\u05de\u05d7\u05e7/.test(a) && w.undoBefore === true && undo.length === 1 && undo[0].row.id === 'acc26-28' && undo[0].table === 'inc' && !w.state.del_ask, { a, calls: w.calls });
   w = db({}); a = await fastDel(ENV, { id: 'ab12cd34', yes: false });
   check('"\u05dc\u05d0": nothing deleted, the request is gone', a === DEL_NO && !w.calls.some((c) => c.startsWith('DELETE inc')) && !w.state.del_ask, w.calls);
+  { // 29/10/2026 retro: an unreadable undo_log is never overwritten by one entry, and then nothing is deleted
+    w = db({}); w.state.undo_log = '{not json'; a = await fastDel(ENV, { id: 'ab12cd34', yes: true });
+    check('an undo_log that cannot be parsed: nothing deleted, the log untouched (the earlier backups survive)', a === null && w.state.undo_log === '{not json' && !w.calls.some((c) => c.startsWith('DELETE inc')), { a, calls: w.calls });
+  }
   w = db({}); a = await fastDel(ENV, { id: 'zz99zz99', yes: true });
   check('a tap on an older question (another key): nothing deleted', a === DEL_GONE && !w.calls.some((c) => c.startsWith('DELETE inc')), w.calls);
   w = db({ ask: { at: new Date(Date.now() - 25 * 3600e3).toISOString() } }); a = await fastDel(ENV, { id: 'ab12cd34', yes: true });
