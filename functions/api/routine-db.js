@@ -823,6 +823,25 @@ export function draftTextLine(b, nowIso) {
   return { at: nowIso, agent: String(b.agent || ''), to: mailSet(b.to), cc: mailSet(b.cc), subject: String(b.subject || '').slice(0, 200),
     body: String(b.body || '').slice(0, DRAFTS_TEXT_BODY), reply: !!b.reply_to, replaces: Array.isArray(b.replaces) ? b.replaces.length : 0 };
 }
+// 29/10/2026 (Michael: "compare the approved draft to the one that was made"; handoff of 29/10): the assistant shows a draft in
+// WhatsApp, Michael says "do it", and the draft is built again from memory. draftVsLastOut puts the body of the new draft next
+// to the assistant's last WhatsApp message (wa_last_out, at most 3 hours old): of the body's lines of 15 characters or more,
+// how many stand in that message word for word. Under 30% = that message was about something else (no answer); 100% = the
+// same text; between = edited, and the first three lines that are not there are named. It never blocks: it only tells.
+export const DRAFT_VS_WINDOW_MS = 3 * 3600000, DRAFT_VS_MIN_LINE = 15, DRAFT_VS_MIN_LINES = 3, DRAFT_VS_UNRELATED_PCT = 30;
+export function draftVsLastOut(draftBody, lastText, lastAt, nowMs) {
+  const norm = (x) => String(x || '').replace(/[\s"'`*_>\-\u05f3\u05f4\u201c\u201d\u2018\u2019]+/g, ' ').trim();
+  const last = norm(lastText);
+  if (!last) return null;
+  const at = Date.parse(lastAt || '');
+  if (!(at > 0) || nowMs - at > DRAFT_VS_WINDOW_MS || nowMs < at) return null;
+  const lines = String(draftBody || '').split(/\n+/).map(norm).filter((l) => l.length >= DRAFT_VS_MIN_LINE);
+  if (lines.length < DRAFT_VS_MIN_LINES) return null;
+  const missing = lines.filter((l) => last.indexOf(l) < 0);
+  const kept = lines.length - missing.length, pct = Math.round(100 * kept / lines.length);
+  if (pct < DRAFT_VS_UNRELATED_PCT) return null;
+  return pct === 100 ? { same: true, lines: lines.length, pct } : { same: false, lines: lines.length, kept, pct, changed: missing.slice(0, 3).map((l) => l.slice(0, 80)) };
+}
 export function draftMadeLine(req, nowIso) {
   return { at: nowIso, to: mailSet(req.to), subject: String(req.subject || '').slice(0, 200), reply: !!req.reply_to };
 }
@@ -2259,6 +2278,12 @@ export async function onRequest(context) {
         await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
           body: JSON.stringify([{ key: DRAFTS_TEXT_KEY, value: JSON.stringify([tl].concat(Array.isArray(xs) ? xs : []).slice(0, DRAFTS_TEXT_MAX)), updated_at: tl.at }]) });
       } catch (e) { /* only the quality checker reads this */ }
+      let vs = null;
+      try {
+        const lr = await stateRead(['wa_last_out']).catch(() => []);
+        let lv = lr && lr[0] && lr[0].value; if (typeof lv === 'string') { try { lv = JSON.parse(lv); } catch (e) { lv = null; } }
+        if (lv && lv.text) vs = draftVsLastOut(body.body, lv.text, lv.at, Date.now());
+      } catch (e) { /* only a hint for the assistant */ }
       const trashed = [];
       for (const c of reps) {
         const tn = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '') + '-' + Math.random().toString(36).slice(2, 8) + '.txt';
@@ -2271,7 +2296,7 @@ export async function onRequest(context) {
         await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
           body: JSON.stringify([{ key: DRAFTS_TRASHED_KEY, value: JSON.stringify(trashed.filter((x) => x.file).map((x) => ({ at: now, subject: x.subject, file: x.file, agent: body.agent, why: 'replaced by ' + String(body.subject || '').slice(0, 120) })).concat(Array.isArray(tl) ? tl : []).slice(0, 100)), updated_at: now }]) }).catch(() => null);
       }
-      return jsonResp(Object.assign({ ok: true, file: OD_DRAFT + '/' + name, size: f.size || null, attachments: d.attach.length }, trashed.length ? { replaced: trashed, note: 'the replaced drafts go to Deleted Items within about 5 minutes' } : {}), 200, {});
+      return jsonResp(Object.assign({ ok: true, file: OD_DRAFT + '/' + name, size: f.size || null, attachments: d.attach.length }, trashed.length ? { replaced: trashed, note: 'the replaced drafts go to Deleted Items within about 5 minutes' } : {}, vs ? { vs_last_out: vs, vs_note: vs.same ? 'same text as the last WhatsApp message' : 'differs from the last WhatsApp message in ' + (vs.lines - vs.kept) + ' of ' + vs.lines + ' lines: say so to Michael, or fix the draft' } : {}), 200, {});
     }
     if (body.op === 'od_put_pdf') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'dir', 'name', 'b64'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
