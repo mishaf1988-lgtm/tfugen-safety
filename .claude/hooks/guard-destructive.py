@@ -10,10 +10,10 @@ database or the repository down in one call.
 
 Decision by words in the tool name, not an exact list: the connector's names change between sessions
 (a UUID prefix, a renamed server), like in guard-365.py.
-  deny: every write in the Cloudflare developer connector (create, delete, update, edit)
+  deny: every write in the Cloudflare developer connector (create, delete, update, edit, and query: D1 takes any SQL)
   deny: Supabase delete_branch, pause_project, restore_project, reset_branch, rebase_branch, merge_branch,
         create_project, deploy_edge_function, create_edge_function_secret
-  deny: GitHub delete_file
+  deny: delete_file (any server name)
   pass: everything else (reads, listing, search, the SQL tools which guard-sql.py judges)
 Not blocked on purpose: the scheduled-task tools (delete_trigger is part of moving a check between
 sessions, tfugen-sessions) and archive_session (the end of a chained session).
@@ -24,9 +24,9 @@ import json, re, sys
 sys.stdin.reconfigure(encoding="utf-8")
 sys.stdout.reconfigure(encoding="utf-8")  # Hebrew in the reason; Windows would write cp1255
 
-CLOUDFLARE_WRITE = re.compile(r"(^|_)(d1_database|kv_namespace|r2_bucket|hyperdrive_config)_(create|delete|update|edit)$", re.I)
+CLOUDFLARE_WRITE = re.compile(r"(^|_)(d1_database|kv_namespace|r2_bucket|hyperdrive_config)_(create|delete|update|edit|query)$", re.I)
 SUPABASE_INFRA = re.compile(r"(^|_)(delete_branch|pause_project|restore_project|reset_branch|rebase_branch|merge_branch|create_project|deploy_edge_function|create_edge_function_secret)$", re.I)
-GITHUB_DELETE = re.compile(r"^mcp__github__delete_file$", re.I)
+GITHUB_DELETE = re.compile(r"^mcp__.*(^|__)delete_file$", re.I)
 
 
 def out(reason):

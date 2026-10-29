@@ -28,13 +28,13 @@ def check(label, cond, detail=None):
 DENY = []
 for srv in ['Cloudflare_Developer_Platform', 'b78e97f4-33ab-440a-bf52-9987f0912dd6']:
     for t in ['d1_database_delete', 'd1_database_create', 'kv_namespace_delete', 'kv_namespace_update', 'r2_bucket_delete', 'r2_bucket_create',
-              'hyperdrive_config_delete', 'hyperdrive_config_edit']:
+              'hyperdrive_config_delete', 'hyperdrive_config_edit', 'd1_database_query']:
         DENY.append('mcp__%s__%s' % (srv, t))
 for srv in ['Supabase', '04d8a04f-6f61-4d02-bce2-b8291da71c88']:
     for t in ['delete_branch', 'pause_project', 'restore_project', 'reset_branch', 'rebase_branch', 'merge_branch', 'create_project',
               'deploy_edge_function', 'create_edge_function_secret']:
         DENY.append('mcp__%s__%s' % (srv, t))
-DENY.append('mcp__github__delete_file')
+DENY += ['mcp__github__delete_file', 'mcp__0a1b2c3d-1111-2222-3333-444455556666__delete_file']
 PASS = ['mcp__Supabase__execute_sql', 'mcp__Supabase__apply_migration', 'mcp__Supabase__list_tables', 'mcp__Supabase__get_advisors',
         'mcp__Supabase__create_branch', 'mcp__Cloudflare_Developer_Platform__d1_databases_list', 'mcp__Cloudflare_Developer_Platform__r2_bucket_get',
         'mcp__Cloudflare_Developer_Platform__kv_namespaces_list', 'mcp__Cloudflare_Developer_Platform__workers_get_worker_code',

@@ -51,7 +51,7 @@
         ]
       },
       {
-        "matcher": "mcp__.*(d1_database|kv_namespace|r2_bucket|hyperdrive_config|delete_branch|pause_project|restore_project|reset_branch|rebase_branch|merge_branch|create_project|deploy_edge_function|create_edge_function_secret|github__delete_file).*",
+        "matcher": "mcp__.*(d1_database|kv_namespace|r2_bucket|hyperdrive_config|delete_branch|pause_project|restore_project|reset_branch|rebase_branch|merge_branch|create_project|deploy_edge_function|create_edge_function_secret|delete_file).*",
         "hooks": [
           {
             "type": "command",
