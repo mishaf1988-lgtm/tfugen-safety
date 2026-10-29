@@ -165,7 +165,7 @@ import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLA
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads',
   'trustees', 'trustee_tasks', 'trustee_winners'];
-export const STATE_READ = ['undo_log', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'quota_mode'];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'quota_mode'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -1882,9 +1882,9 @@ export async function onRequest(context) {
       const since = Date.parse(String(body.since || ''));
       if (isNaN(since) || Date.now() - since > 4 * 864e5) return jsonResp({ ok: false, error: 'since: an ISO time in the last 4 days' }, 400, {});
       const r = await fetch(url + '/rest/v1/notifications_log?select=ts,event_type,payload->>text,payload->>title,payload->>ref,payload->>agent&event_type=in.(wa_out,owner_in,assistant)&ts=gte.'
-        + encodeURIComponent(new Date(since).toISOString()) + '&order=ts.asc&limit=300', { headers: h, signal: tmo(SB_MS) });
+        + encodeURIComponent(new Date(since).toISOString()) + '&order=ts.desc&limit=300', { headers: h, signal: tmo(SB_MS) }); // the newest 300, oldest first below (29/10/2026 retro, as wa_review)
       if (!r.ok) return jsonResp({ ok: false, error: 'read ' + r.status }, 200, {});
-      const rows = (await r.json()).map((x) => ({ ts: x.ts, type: x.event_type, ref: x.ref || undefined, agent: x.agent || undefined, text: String(x.text || x.title || '').slice(0, 1500) }));
+      const rows = (await r.json()).reverse().map((x) => ({ ts: x.ts, type: x.event_type, ref: x.ref || undefined, agent: x.agent || undefined, text: String(x.text || x.title || '').slice(0, 1500) }));
       return jsonResp({ ok: true, rows }, 200, {});
     }
     // 27/10/2026 (Michael in the questionnaire: "do it: to our own server"): the errors the app sends from users' browsers
@@ -2586,9 +2586,9 @@ export async function onRequest(context) {
       const days = Math.min(7, Math.max(1, Number(body.days) || 7));
       const since = new Date(Date.now() - days * 864e5).toISOString();
       const r = await fetch(url + '/rest/v1/notifications_log?select=ts,event_type,payload->>text,payload->>title,payload->>fast,payload->>via'
-        + '&event_type=in.(owner_in,assistant,watch)&channel=eq.whatsapp&ts=gte.' + encodeURIComponent(since) + '&order=ts.asc&limit=300', { headers: h, signal: tmo(SB_MS) });
+        + '&event_type=in.(owner_in,assistant,watch)&channel=eq.whatsapp&ts=gte.' + encodeURIComponent(since) + '&order=ts.desc&limit=300', { headers: h, signal: tmo(SB_MS) }); // the newest 300 (29/10/2026 retro: ascending gave the oldest 300 and the last 3 days of the week were never reviewed), turned back to ascending below
       if (!r.ok) return jsonResp({ ok: false, error: 'read ' + r.status }, 200, {});
-      const rows = (await r.json()).map((x) => ({ ts: x.ts, who: x.event_type === 'owner_in' ? 'michael' : x.event_type === 'watch' ? 'watch' : 'assistant', text: x.text || x.title || '', fast: x.fast === 'true', via: x.via || null }));
+      const rows = (await r.json()).reverse().map((x) => ({ ts: x.ts, who: x.event_type === 'owner_in' ? 'michael' : x.event_type === 'watch' ? 'watch' : 'assistant', text: x.text || x.title || '', fast: x.fast === 'true', via: x.via || null }));
       return jsonResp({ ok: true, days, rows, turns: waTurns(rows) }, 200, {});
     }
     if (body.op === 'wa_phone') {

@@ -139,6 +139,11 @@ console.log('\n9. del_ask: the delete button (28/10/2026, Michael: "do it: a del
   const prev = { ref: 'del:ab12cd34' };
   const y = fastRoute(m('\u05de\u05d7\u05e7', 1), '', prev), n = fastRoute(m('\u05dc\u05d0', 2), '', prev), q = fastRoute(m('\u05de\u05d4 \u05d6\u05d4?'), '', prev);
   check('a tap on "\u05de\u05d7\u05e7" = delete, "\u05dc\u05d0" = no, a question = to the assistant', y && y.kind === 'del' && y.id === 'ab12cd34' && y.yes === true && n && n.kind === 'del' && n.yes === false && (!q || q.kind !== 'del'), { y, n, q });
+  { // 29/10/2026 retro: a bare "yes" that happens to follow a delete question (no tap, no reply to it) must not delete
+    const bare = ['\u05db\u05df', '\u05d1\u05e1\u05d3\u05e8', '\u05de\u05d7\u05e7', 'ok'].map((t) => fastRoute(m(t), '', prev));
+    const about = 'x | ref del:ab12cd34 | \u05de\u05d7\u05e7 \u05d0\u05ea \u05d4\u05e9\u05d5\u05e8\u05d4?', viaReply = fastRoute(m('\u05db\u05df'), about, prev);
+    check('delete: a typed yes with no tap and no reply is not a delete; a tap or a reply to that message is', bare.every((r) => !r || r.kind !== 'del') && viaReply && viaReply.kind === 'del' && viaReply.yes === true, { bare, viaReply });
+  }
   check('"\u05de\u05d7\u05e7" with no delete question before it is not a delete', !(fastRoute(m('\u05de\u05d7\u05e7', 1), '', { ref: 'brief' }) || {}).kind || fastRoute(m('\u05de\u05d7\u05e7', 1), '', { ref: 'brief' }).kind !== 'del');
 }
 await (async () => {
@@ -173,6 +178,10 @@ await (async () => {
   check('"\u05de\u05d7\u05e7": the whole row is kept in undo_log first, then deleted, and the request is gone', /\u05e0\u05de\u05d7\u05e7/.test(a) && w.undoBefore === true && undo.length === 1 && undo[0].row.id === 'acc26-28' && undo[0].table === 'inc' && !w.state.del_ask, { a, calls: w.calls });
   w = db({}); a = await fastDel(ENV, { id: 'ab12cd34', yes: false });
   check('"\u05dc\u05d0": nothing deleted, the request is gone', a === DEL_NO && !w.calls.some((c) => c.startsWith('DELETE inc')) && !w.state.del_ask, w.calls);
+  { // 29/10/2026 retro: an unreadable undo_log is never overwritten by one entry, and then nothing is deleted
+    w = db({}); w.state.undo_log = '{not json'; a = await fastDel(ENV, { id: 'ab12cd34', yes: true });
+    check('an undo_log that cannot be parsed: nothing deleted, the log untouched (the earlier backups survive)', a === null && w.state.undo_log === '{not json' && !w.calls.some((c) => c.startsWith('DELETE inc')), { a, calls: w.calls });
+  }
   w = db({}); a = await fastDel(ENV, { id: 'zz99zz99', yes: true });
   check('a tap on an older question (another key): nothing deleted', a === DEL_GONE && !w.calls.some((c) => c.startsWith('DELETE inc')), w.calls);
   w = db({ ask: { at: new Date(Date.now() - 25 * 3600e3).toISOString() } }); a = await fastDel(ENV, { id: 'ab12cd34', yes: true });

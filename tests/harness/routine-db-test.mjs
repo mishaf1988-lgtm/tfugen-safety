@@ -850,6 +850,13 @@ const callIn = async (body) => {
       const r = await call({ op: 'item_card', agent: 'routine-wa-assistant', q: '\u05de\u05d0\u05e8\u05d9\u05db\u05d9\u05dd' });
       check('item_card answers with the parts and the next step (mail, cross-check, no quote validity); a bad field or a short q is refused', r.json.ok && Array.isArray(r.json.equip) && Array.isArray(r.json.learned) && Array.isArray(r.json.contradictions) && /cross-check/.test(r.json.next)
         && (await call({ op: 'item_card', q: 'x' })).status === 400 && (await call({ op: 'item_card', q: 'abc', table: 'emp' })).status === 400, r.json);
+      check('undo_log (whole deleted rows, with free text) is not readable by agents through state_get (29/10/2026 retro)', STATE_READ.indexOf('undo_log') < 0 && STATE_READ.indexOf(DEL_ASK_KEY) < 0);
+      { // 29/10/2026 retro: wa_review must keep the NEWEST 300 rows of the week (ascending gave the oldest 300: the last 3 days were never reviewed), oldest first in the answer
+        const prev = globalThis.fetch, all = Array.from({ length: 400 }, (_, i) => ({ ts: new Date(Date.UTC(2026, 9, 22) + i * 60000).toISOString(), event_type: i % 2 ? 'assistant' : 'owner_in', text: 'm' + i, title: null, fast: 'false', via: null }));
+        globalThis.fetch = async (u, o) => { const su = String(u); if (!/event_type=in\.\(owner_in,assistant,watch\)/.test(su)) return prev(u, o); const desc = /order=ts\.desc/.test(su), lim = Number((/limit=(\d+)/.exec(su) || [])[1] || 1000); const rs = all.slice().sort((a, b) => (desc ? -1 : 1) * a.ts.localeCompare(b.ts)).slice(0, lim); return new Response(JSON.stringify(rs), { status: 200 }); };
+        let rv; try { rv = await call({ op: 'wa_review', agent: 'retro' }); } finally { globalThis.fetch = prev; }
+        const rr = (rv.json && rv.json.rows) || [];
+        check('wa_review: the newest 300 rows, oldest first (the weekly review sees the last days too)', rv.json.ok && rr.length === 300 && rr[299].text === 'm399' && rr[0].text === 'm100' && rr[0].ts < rr[299].ts, { n: rr.length, first: rr[0] && rr[0].text, last: rr[299] && rr[299].text }); }
       { const prev = globalThis.fetch; globalThis.fetch = async (u, o) => (/equip_inspections\?select=id,code/.test(String(u)) ? new Response('boom', { status: 500 }) : prev(u, o));
         let rp; try { rp = await call({ op: 'item_card', agent: 'routine-wa-assistant', q: '\u05de\u05d0\u05e8\u05d9\u05db\u05d9\u05dd' }); } finally { globalThis.fetch = prev; }
         check('item_card: a database read that fails is reported as partial and the next step says not to claim "none found" (28/10/2026 retro)', rp.json.ok && Array.isArray(rp.json.partial) && rp.json.partial.indexOf('equip_inspections') >= 0 && /read failed/.test(rp.json.next) && r.json.partial === undefined, rp.json); }
@@ -978,7 +985,7 @@ const callIn = async (body) => {
   {
     const r = await call({ op: 'out_log', agent: 'routine-quality', since: new Date(Date.now() - 86400000).toISOString() });
     const q = calls.filter((c) => /notifications_log\?select=ts,event_type/.test(c.url)).pop();
-    check('out_log: reads wa_out, owner_in and assistant since the time, oldest first; answers rows', r.json.ok && Array.isArray(r.json.rows) && q && /event_type=in\.\(wa_out,owner_in,assistant\)/.test(q.url) && /order=ts\.asc/.test(q.url), { j: r.json, url: q && q.url });
+    check('out_log: reads wa_out, owner_in and assistant since the time, the newest 300 (desc, turned back to oldest first); answers rows', r.json.ok && Array.isArray(r.json.rows) && q && /event_type=in\.\(wa_out,owner_in,assistant\)/.test(q.url) && /order=ts\.desc/.test(q.url), { j: r.json, url: q && q.url });
     check('out_log: no since, more than 4 days back, or an extra field = refused', (await call({ op: 'out_log' })).status === 400 && (await call({ op: 'out_log', since: '2020-01-01T00:00:00Z' })).status === 400 && (await call({ op: 'out_log', since: new Date().toISOString(), table: 'x' })).status === 400);
   }
 

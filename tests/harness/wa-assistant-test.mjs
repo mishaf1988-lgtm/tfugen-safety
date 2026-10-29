@@ -34,7 +34,7 @@ globalThis.fetch = async (url, opt = {}) => {
   if (url.startsWith(SB + '/rest/v1/notifications_log')) {
     if (m === 'POST') { logs.push(...JSON.parse(opt.body)); return new Response('', { status: 201 }); }
     if (/event_type=in\.\(owner_in,assistant\)&/.test(url)) return new Response(JSON.stringify(logs.filter((x) => x.event_type === 'owner_in' || x.event_type === 'assistant').slice().reverse()), { status: 200 });
-    if (/event_type=in\.\(owner_in,assistant,watch\)/.test(url)) { reviewUrls.push(url); return new Response(JSON.stringify([{ ts: 't1', event_type: 'owner_in', text: 'mah hachok', title: null, fast: null, via: null }, { ts: 't2', event_type: 'assistant', text: null, title: 'answer', fast: 'true', via: 'text' }, { ts: 't3', event_type: 'watch', text: null, title: 'no answer yet', fast: null, via: null }]), { status: 200 }); }
+    if (/event_type=in\.\(owner_in,assistant,watch\)/.test(url)) { reviewUrls.push(url); return new Response(JSON.stringify([{ ts: 't3', event_type: 'watch', text: null, title: 'no answer yet', fast: null, via: null }, { ts: 't2', event_type: 'assistant', text: null, title: 'answer', fast: 'true', via: 'text' }, { ts: 't1', event_type: 'owner_in', text: 'mah hachok', title: null, fast: null, via: null }]), { status: 200 }); }
     if (/wamid=eq\.wamid\.OUTPRO/.test(url)) return new Response(JSON.stringify([{ event_type: 'assistant', payload: { title: 'answer with a source', wamid: 'wamid.OUTPRO', ref: 'pro' }, ts: 't' }]), { status: 200 });
     return new Response(JSON.stringify(/wamid=eq\.wamid\.ALERT/.test(url) ? [{ event_type: 'trustee_hazard', payload: { title: 'X - leak', id: 'r9' }, ts: 't' }] : []), { status: 200 });
   }
@@ -164,7 +164,7 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   };
   // wa_review (20/10/2026): the weekly quality review reads Michael's messages and the answers, nothing else.
   const rv = await call({ op: 'wa_review', days: 30 });
-  check('wa_review: owner_in, assistant and watch on WhatsApp, at most 7 days, as who/text', rv.ok && rv.days === 7 && reviewUrls.length === 1 && /channel=eq\.whatsapp/.test(reviewUrls[0]) && rv.rows.length === 3 && rv.rows[0].who === 'michael' && rv.rows[1].who === 'assistant' && rv.rows[1].text === 'answer' && rv.rows[1].fast === true, { rv, reviewUrls });
+  check('wa_review: owner_in, assistant and watch on WhatsApp, at most 7 days, as who/text', rv.ok && rv.days === 7 && reviewUrls.length === 1 && /channel=eq\.whatsapp/.test(reviewUrls[0]) && /order=ts\.desc/.test(reviewUrls[0]) && rv.rows.length === 3 && rv.rows[0].who === 'michael' && rv.rows[1].who === 'assistant' && rv.rows[1].text === 'answer' && rv.rows[1].fast === true, { rv, reviewUrls });
   check('wa_review: the watchdog alerts too (event_type watch, retro 7a counts them)', /event_type=in\.\(owner_in,assistant,watch\)/.test(reviewUrls[0]) && rv.rows[2].who === 'watch', reviewUrls);
   { const { waTurns } = await import('./_build/routine-db.mjs');
     const t = waTurns([{ who: 'michael', ts: 'a', text: 'q1' }, { who: 'michael', ts: 'b', text: 'q2' }, { who: 'assistant', text: 'r2' }, { who: 'assistant', text: 'r1' }, { who: 'michael', ts: 'c', text: 'q3' }, { who: 'watch', text: 'w' }]);
