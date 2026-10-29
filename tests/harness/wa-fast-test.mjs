@@ -49,6 +49,7 @@ check('"איזה חשבון" and "על איזה חשבון אתה עובד" = th
 check('"העוזר לגימייל", "עבור ל-gmail" = switch to Gmail', accountCmdOf('העוזר לגימייל').to === 'gmail' && accountCmdOf('עבור לgmail').to === 'gmail' && accountCmdOf('תעבור לחשבון gmail').to === 'gmail');
 check('"העוזר לראשי", "עבור לחשבון הראשי" = switch to main', accountCmdOf('העוזר לראשי').to === 'main' && accountCmdOf('עבור לחשבון הראשי').to === 'main');
 check('longer or different sentences go to the assistant, not the switch', accountCmdOf('מה מצב החשבון של הספק') === null && accountCmdOf('העוזר לגימייל ותשלח מייל') === null && accountCmdOf('') === null && accountCmdOf('העבר חשבונית לראשי') === null);
+check('hidden direction marks and non-breaking spaces from the phone keyboard do not break a phrase (29/10/2026: the first real phrase went to the assistant)', accountCmdOf('\u200f\u05d4\u05e2\u05d5\u05d6\u05e8 \u05dc\u05d2\u05d9\u05de\u05d9\u05d9\u05dc\u200f').to === 'gmail' && accountCmdOf('\u200e\u05d0\u05d9\u05d6\u05d4\u00a0\u05d7\u05e9\u05d1\u05d5\u05df\u200f').to === null && accountCmdOf('\u200f\u05d4\u05e2\u05d5\u05d6\u05e8\u00a0\u05dc\u05e8\u05d0\u05e9\u05d9').to === 'main');
 check('fastRoute carries it: the phrase never reaches the Routine', fastRoute({ text: 'העוזר לראשי' }, '', null).kind === 'account' && fastRoute({ text: 'איזה חשבון' }, '', null).kind === 'account');
 
 console.log('\n4. rating a professional answer (21/10/2026, Michael: "do it: accurate / not accurate buttons")');

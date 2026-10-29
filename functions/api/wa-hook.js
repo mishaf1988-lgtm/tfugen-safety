@@ -388,7 +388,7 @@ export const SIGN_MAIL_GONE = '\u05dc\u05d0 \u05de\u05e6\u05d0\u05ea\u05d9 \u05d
 // 29/10/2026 (Michael: "how do I know which account it works on, and how do I switch"): three short phrases, no AI.
 // "account" = which account answers now; "switch to gmail" / "switch to main" move the assistant's WhatsApp fire pair.
 export function accountCmdOf(raw) {
-  const w = String(raw || '').replace(/[?!.,"']/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const w = String(raw || '').replace(/[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff\u00a0]/g, ' ').replace(/[?!.,"']/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
   if (/^(\u05e2\u05dc \u05d0\u05d9\u05d6\u05d4 )?(\u05d0\u05d9\u05d6\u05d4 \u05d7\u05e9\u05d1\u05d5\u05df|\u05d7\u05e9\u05d1\u05d5\u05df)( \u05d0\u05ea\u05d4 \u05e2\u05d5\u05d1\u05d3)?$/.test(w)) return { kind: 'account', to: null };
   if (/^(\u05e2\u05d1\u05d5\u05e8|\u05ea\u05e2\u05d1\u05d5\u05e8|\u05d4\u05e2\u05d5\u05d6\u05e8) (\u05dc\u05d7\u05e9\u05d1\u05d5\u05df |\u05dc-?)?(gmail|g mail|\u05d2\u05d9\u05de\u05d9\u05d9\u05dc|\u05d2\u05de\u05d9\u05d9\u05dc)$/.test(w)) return { kind: 'account', to: 'gmail' };
   if (/^(\u05e2\u05d1\u05d5\u05e8|\u05ea\u05e2\u05d1\u05d5\u05e8|\u05d4\u05e2\u05d5\u05d6\u05e8) (\u05dc\u05d7\u05e9\u05d1\u05d5\u05df |\u05dc-?)?(\u05e8\u05d0\u05e9\u05d9|\u05d4\u05e8\u05d0\u05e9\u05d9)$/.test(w)) return { kind: 'account', to: 'main' };
