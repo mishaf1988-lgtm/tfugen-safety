@@ -766,7 +766,7 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
 }
 
 
-const ACCT_NAME = { gmail: '\u05d7\u05e9\u05d1\u05d5\u05df \u05d4-Gmail (mishaf1988@gmail.com)', main: '\u05d4\u05d7\u05e9\u05d1\u05d5\u05df \u05d4\u05e8\u05d0\u05e9\u05d9 (sviva@tapugan.co.il)' };
+const ACCT_NAME = { gmail: '\u05d7\u05e9\u05d1\u05d5\u05df \u05d4-Gmail', main: '\u05d4\u05d7\u05e9\u05d1\u05d5\u05df \u05d4\u05e8\u05d0\u05e9\u05d9' };
 async function fastAccount(env, fr) {
   const k = env.SUPABASE_SERVICE_ROLE_KEY, base = (env.SUPABASE_URL || SB_LIVE) + '/rest/v1/server_state';
   const h = { apikey: k, Authorization: 'Bearer ' + k };
