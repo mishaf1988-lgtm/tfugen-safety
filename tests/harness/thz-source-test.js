@@ -45,6 +45,12 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('no id / no department refused', e2.error === 'fields' && e3.error === 'fields', [e2, e3]);
   check('unknown severity falls back to medium', (await page.evaluate((dept) => thzFromSource({ src: 'committee', ref: 'q', action: 'w', dept: dept, sev: 'אחר' }).row.sev, dept)) === 'בינונית');
 
+  console.log('\n4. only from 29/10/2026 on');
+  const o1 = await page.evaluate((dept) => thzFromSource({ src: 'investigation', ref: 'old-1', action: 'ישן', dept: dept, opened: '2026-10-28' }), dept);
+  const o2 = await page.evaluate((dept) => thzFromSource({ src: 'investigation', ref: 'new-1', action: 'חדש', dept: dept, opened: '2026-10-29' }), dept);
+  check('opened before the accident: skipped, nothing added', o1.skip === 'old' && !o1.added && !(await page.evaluate(() => DB.tour_hazards.some(x => x.src_ref === 'old-1|ישן'))), o1);
+  check('opened on the day: added', o2.added === true, o2);
+
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
