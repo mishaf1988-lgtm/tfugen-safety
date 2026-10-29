@@ -53,8 +53,10 @@ async function runGemini(parsed, model, key) {
     if (Array.isArray(c)) {
       // 29/10/2026 (Michael: move the app's photo reading from Claude to Gemini; the Claude API credit ran out 22/10): a base64 photo
       // goes as an inlineData part. A PDF or any other block is still refused, and the Llama fallback then answers 400 for it (text-only).
-      if (c.find((b) => b && b.type && b.type !== 'text' && !(b.type === 'image' && geminiImagePart(b)))) throw new Error('file block not supported on the Gemini route');
-      parts = c.filter((b) => b && (b.type === 'text' || b.type === 'image')).map((b) => (b.type === 'image' ? geminiImagePart(b) : { text: b.text || '' }));
+      // each photo is checked once (review 29/10/2026: it was built twice, two copies of a string of up to 14 MB)
+      const conv = c.map((b) => (b && b.type === 'image' ? geminiImagePart(b) : null));
+      if (c.find((b, i) => b && b.type && b.type !== 'text' && !(b.type === 'image' && conv[i]))) throw new Error('file block not supported on the Gemini route');
+      parts = c.map((b, i) => (b && b.type === 'image' ? conv[i] : b && b.type === 'text' ? { text: b.text || '' } : null)).filter(Boolean);
       if (!parts.length) parts = [{ text: '' }];
     } else {
       parts = [{ text: typeof c === 'string' ? c : String(c == null ? '' : c) }];
@@ -70,7 +72,8 @@ async function runGemini(parsed, model, key) {
     signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS)
   });
   const t = await r.text();
-  if (!r.ok) throw new Error('Gemini ' + r.status + ': ' + t.substring(0, 200));
+  // the status and Google's own error class only: the body can echo the request, and the reason reaches the client in fallback_from (review 29/10/2026)
+  if (!r.ok) { let st = ''; try { st = String(JSON.parse(t).error.status || '').replace(/[^A-Z_]/g, '').substring(0, 40); } catch (e) { st = ''; } throw new Error('Gemini ' + r.status + (st ? ' ' + st : '')); }
   const j = JSON.parse(t);
   const cand = j && j.candidates && j.candidates[0];
   const parts = (cand && cand.content && cand.content.parts) || [];
