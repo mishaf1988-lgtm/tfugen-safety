@@ -362,6 +362,67 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
     check('catName: trims, and reads every kind of line break', catName('תוצג\r') === 'תוצג' && catName('תוצג_x000D_\nנסגרו') === 'תוצג' && catName('תוצג\nא') === 'תוצג' && catName(' תוצג ') === 'תוצג');
   }
 
+  console.log('\n7. slide 5, the committee actions (29/10/2026): a copy of slide 4 added once');
+  {
+    const REL = '<?xml version="1.0"?><Relationships xmlns="r"><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout7.xml"/></Relationships>';
+    const real = async (rels4) => writeZip([
+      { name: '[Content_Types].xml', text: '<Types><Override PartName="/ppt/slides/slide4.xml" ContentType="x"/></Types>' },
+      { name: 'ppt/presentation.xml', text: '<p:presentation><p:sldIdLst><p:sldId id="563" r:id="rId2"/><p:sldId id="527" r:id="rId5"/></p:sldIdLst></p:presentation>' },
+      { name: 'ppt/_rels/presentation.xml.rels', text: '<Relationships><Relationship Id="rId2" Type="t" Target="slides/slide1.xml"/><Relationship Id="rId10" Type="c" Target="c.xml"/></Relationships>' },
+      { name: 'ppt/slides/slide1.xml', text: slide1 }, { name: 'ppt/slides/slide2.xml', text: slide2 }, { name: 'ppt/slides/slide3.xml', text: slide3 },
+      { name: 'ppt/slides/slide4.xml', text: slide4.replace('<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>', '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="196B24"/></a:solidFill>').replace('<p:spTree>', '<p:spTree>' + SP('Header', P(R('תחקירי "כמעט ונפגע"', 2800, 1, 'C00000'), R('   |   דוח חודשי', 1400, null, '595959')))) }, { name: 'ppt/slides/_rels/slide4.xml.rels', text: rels4 },
+      { name: 'ppt/charts/chart1.xml', text: chart1 }, { name: 'ppt/charts/chart2.xml', text: chart2 },
+      { name: 'ppt/media/image1.png', method: 0, crc: 0, csize: IMG.length, usize: IMG.length, raw: IMG, time: 0, date: 0x21 },
+    ]);
+    const src5 = await real(REL);
+    const day = (n) => new Date(Date.now() + n * 86400000).toISOString().substring(0, 10);
+    const com = [{ n: 62, dept: 'אחזקה', resp: 'הנדסה', action: 'לתקן מעקה', due: day(10), s: 'פתוח' },
+      { n: 61, dept: 'ייצור טוגנים', resp: null, action: 'להחליף חיבור', due: day(-3), s: 'פתוח' }, { n: 63, dept: 'מעבדות', action: 'ללא יעד', due: null, s: 'פתוח' }];
+    const o1 = await patchDeck(src5, deckContent(m, ROWS, ref, { committee: com }));
+    const es = readZip(o1.bytes), g = (n) => es.find((e) => e.name === n);
+    check('slide 5 and its rels are new parts; the deck now lists five slides, in order', !!g('ppt/slides/slide5.xml') && !!g('ppt/slides/_rels/slide5.xml.rels') && (await entryText(g('ppt/presentation.xml'))).match(/<p:sldId /g).length === 3);
+    check('presentation.xml: the new slide id is the next free one and points at a new rId (11, as rId10 was the highest)', /<p:sldId id="564" r:id="rId11"\/><\/p:sldIdLst>/.test(await entryText(g('ppt/presentation.xml'))) && /Id="rId11"[^>]*Target="slides\/slide5.xml"/.test(await entryText(g('ppt/_rels/presentation.xml.rels'))));
+    check('[Content_Types].xml has the slide 5 override', /PartName="\/ppt\/slides\/slide5.xml"/.test(await entryText(g('[Content_Types].xml'))));
+    const s5 = await entryText(g('ppt/slides/slide5.xml'));
+    check('the copy keeps slide 4 look and picture rel, with its own shape names', /name="CommitteeCard"/.test(s5) && /name="CommitteeList"/.test(s5) && !/Event[12]Card/.test(s5) && (await entryText(g('ppt/slides/_rels/slide5.xml.rels'))) === REL);
+    check('card: 3 open, 1 overdue', /3 פעולות פתוחות מתחקירים ומהוועדה/.test(s5) && /באיחור: 1 \| נכון ל-/.test(s5), s5.match(/<a:t>[^<]*<\/a:t>/g).slice(0, 5));
+    check('card: red while something is overdue (the fill, not a text colour)', /name="CommitteeCard"[\s\S]*?<\/a:prstGeom><a:solidFill><a:srgbClr val="C00000"\/>/.test(s5));
+    check('the slide title says what it is', /<a:t>פעולות לוועדה<\/a:t>/.test(s5), s5.match(/<a:t>[^<]*<\/a:t>/g).slice(0, 3));
+    const order = [s5.indexOf('להחליף חיבור'), s5.indexOf('לתקן מעקה'), s5.indexOf('ללא יעד')];
+    check('overdue first, then by due date, no due date last; "(באיחור)" on the overdue one only', order[0] > 0 && order[0] < order[1] && order[1] < order[2] && /להחליף חיבור \(באיחור\)/.test(s5) && !/לתקן מעקה \(באיחור\)/.test(s5), order);
+    check('every other part is untouched (slide 3, the picture)', ['ppt/slides/slide3.xml', 'ppt/media/image1.png'].every((n) => { const x = readZip(src5).find((e) => e.name === n), y = g(n); return x.crc === y.crc && Buffer.from(x.raw).equals(Buffer.from(y.raw)); }));
+    const o2 = await patchDeck(o1.bytes, deckContent(m, ROWS, ref, { committee: com }));
+    const e2 = readZip(o2.bytes);
+    check('a second run adds nothing: same part list, one slide 5, nothing changed', e2.length === es.length && (await entryText(e2.find((e) => e.name === 'ppt/presentation.xml'))).match(/<p:sldId /g).length === 3 && !o2.changed.length, o2.changed);
+    const o3 = await patchDeck(o1.bytes, deckContent(m, ROWS, ref, { committee: [] }));
+    const s5b = await entryText(readZip(o3.bytes).find((e) => e.name === 'ppt/slides/slide5.xml'));
+    check('nothing open: a green card that says so, one plain line, no stale items', /אין פעולות פתוחות מתחקירים ומהוועדה/.test(s5b) && /אין פעולות פתוחות</.test(s5b) && !/לתקן מעקה/.test(s5b) && /196B24/.test(s5b));
+    const many = Array.from({ length: 14 }, (_, i) => ({ n: 70 + i, dept: 'אחזקה', action: 'פעולה ' + i, due: day(5 + i), s: 'פתוח' }));
+    const o4 = await patchDeck(src5, deckContent(m, ROWS, ref, { committee: many }));
+    const s5c = await entryText(readZip(o4.bytes).find((e) => e.name === 'ppt/slides/slide5.xml'));
+    check('14 open: 8 lines and "ועוד 6 פעולות" (room 9)', (s5c.match(/פעולה \d+/g) || []).length === 8 && /ועוד 6 פעולות/.test(s5c), (s5c.match(/פעולה \d+/g) || []).length);
+    const odd = await patchDeck(await real(REL.replace('</Relationships>', '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" Target="../notesSlides/n1.xml"/></Relationships>')), deckContent(m, ROWS, ref, { committee: com }));
+    check('a slide 4 with notes is not copied: skipped and reported, nothing else broken', !readZip(odd.bytes).find((e) => e.name === 'ppt/slides/slide5.xml') && odd.report.some((x) => /committee slide not added/.test(x)), odd.report);
+    const ctl = await patchDeck(src5, deckContent(m, ROWS, ref, { committee: [{ n: 1, dept: 'אחזקה\u0007', resp: 'ה\u0001נדסה', action: 'לתקן\u000b מעקה\u001f', due: day(4), s: 'פתוח' }] }));
+    const s5ctl = await entryText(readZip(ctl.bytes).find((e) => e.name === 'ppt/slides/slide5.xml'));
+    check('control characters in an action never reach the XML (the deck would need a "repair")', !/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(s5ctl) && /לתקן מעקה|לתקן/.test(s5ctl));
+    const longDept = await patchDeck(src5, deckContent(m, ROWS, ref, { committee: [{ n: 1, dept: 'ד'.repeat(300), action: 'x', due: day(4), s: 'פתוח' }] }));
+    check('a very long department name is cut', !/ד{40}/.test(await entryText(readZip(longDept.bytes).find((e) => e.name === 'ppt/slides/slide5.xml'))));
+    // The slide is found by its shape, not by the file name (PowerPoint renumbers the parts when it saves).
+    const renamed = readZip(o1.bytes).map((e) => (e.name === 'ppt/slides/slide5.xml' ? { ...e, name: 'ppt/slides/slide9.xml' } : e));
+    const o5 = await patchDeck(await writeZip(await Promise.all(renamed.map(async (e) => (e.raw ? e : e)))), deckContent(m, ROWS, ref, { committee: com }));
+    check('the committee slide is found by its shape name even as slide9.xml: no second slide added', !readZip(o5.bytes).find((e) => e.name === 'ppt/slides/slide5.xml') && o5.report.indexOf('committee slide added') < 0, o5.report);
+    const gone = await patchDeck(src5, deckContent(m, ROWS, ref, { committee: com, addSlide: false }));
+    check('deck_s5 set (added before) and the slide gone: it stays gone, reported, nothing written for it', !readZip(gone.bytes).find((e) => e.name === 'ppt/slides/slide5.xml') && gone.report.some((x) => /not in the deck, not added again/.test(x)), gone.report);
+    check('the first add says so (the server then remembers it)', o1.report.indexOf('committee slide added') >= 0, o1.report);
+    const withSec = await real(REL);
+    const wz = readZip(withSec).map((e) => (e.name === 'ppt/presentation.xml' ? { ...e, text: '<p:presentation><p:sldIdLst><p:sldId id="563" r:id="rId2"/></p:sldIdLst><p:extLst><p14:sectionLst><p14:section><p14:sldIdLst><p14:sldId id="563"/></p14:sldIdLst></p14:section></p14:sectionLst></p:extLst></p:presentation>' } : e));
+    const osec = await patchDeck(await writeZip(wz), deckContent(m, ROWS, ref, { committee: com }));
+    check('a deck with sections: the new slide is also listed in the last section', /<p14:sldId id="563"\/><p14:sldId id="564"\/><\/p14:sldIdLst>/.test(await entryText(readZip(osec.bytes).find((e) => e.name === 'ppt/presentation.xml'))));
+    const none = await patchDeck(src5, deckContent(m, ROWS, ref, {}));
+    check('without committee data (a failed read) the deck is as before: no slide 5', !readZip(none.bytes).find((e) => e.name === 'ppt/slides/slide5.xml'));
+  }
+
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error('HARNESS ERROR', e); process.exit(2); });

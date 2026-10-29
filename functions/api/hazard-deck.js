@@ -19,7 +19,8 @@ import { deckContent, patchDeck } from '../_deckpatch.js';
 export const DECK = { name: '\u05de\u05e6\u05d2\u05ea \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea.\u05d7\u05d5\u05d3\u05e9\u05d9\u05ea.pptx', type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' };
 // Bump when deckContent/patchDeck change what they write.
 // 14 (13/10/2026): chart categories saved by PowerPoint with \r matched again; the bars were all 0.
-export const DECK_VERSION = 14;
+// 15 (29/10/2026): slide 5, the committee's open actions (added once as a copy of slide 4).
+export const DECK_VERSION = 15;
 const DAY = 86400000;
 const addDays = (ymd, n) => new Date(Date.parse(ymd + 'T12:00:00Z') + n * DAY).toISOString().substring(0, 10);
 const dow = (ymd) => new Date(Date.parse(ymd + 'T12:00:00Z')).getUTCDay();
@@ -40,11 +41,11 @@ export async function runDeck(env, force, s3Now, opt) {
   // The deck lives next to the year's file and moves with it (upgrade review 24).
   const FOLDER = folderFor(ilYear((opt && opt.now) || Date.now()));
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-  const st = await stateGet(env, ['deck_sig', 'deck_ctag', 'deck_week', 'deck_meeting_date', 'deck_s3_month', 'deck_ver', 'deck_err_kind']).catch(() => ({}));
+  const st = await stateGet(env, ['deck_sig', 'deck_ctag', 'deck_week', 'deck_meeting_date', 'deck_s3_month', 'deck_ver', 'deck_err_kind', 'deck_s5']).catch(() => ({}));
   const val = (k) => (st[k] && st[k].value) || '';
   const date = meetingDate(today, val('deck_meeting_date'));
   const [hazards, reports, tasks, inc, nearMiss] = await Promise.all([
-    readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
+    readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes,src&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,resp,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
     readAll(env, 'inc?select=id,dt,d,l,dept,reported,r,ty&order=dt.asc'),
@@ -52,6 +53,8 @@ export async function runDeck(env, force, s3Now, opt) {
   ]);
   const rows = buildRegister(hazards, reports, tasks).rows;
   const m = { hazards: meetingHazards(rows, date), accidents: meetingAccidents(inc, date) };
+  // Slide 5 (29/10/2026): the open actions that came from an investigation or the committee itself.
+  const committee = hazards.filter((x) => x.src && x.s !== '\u05e1\u05d2\u05d5\u05e8').map((x) => ({ n: x.n, dept: x.dept, resp: x.resp, action: x.action, descr: x.descr, due: x.due, s: x.s }));
   // Slide 3 = the month that ended, written once when a new month begins
   // (Michael, 29/09), then left as it is until the next one.
   const prevMonth = addDays(today.substring(0, 7) + '-01', -1).substring(0, 7);
@@ -64,7 +67,7 @@ export async function runDeck(env, force, s3Now, opt) {
   // deck without waiting for the data to change (28/09, PR #918).
   // Slide 4 (near misses) is the month that ended, like slide 3, but written on every run.
   const repMonth = s3Now || prevMonth;
-  const sig = await sha(JSON.stringify([date, m, rows, nearMiss, DECK_VERSION, s3Month || val('deck_s3_month')]));
+  const sig = await sha(JSON.stringify([date, today, m, rows, nearMiss, committee, DECK_VERSION, s3Month || val('deck_s3_month')]));
   const now = new Date().toISOString();
   try {
     const { token } = await accessToken(env);
@@ -79,7 +82,7 @@ export async function runDeck(env, force, s3Now, opt) {
     const dl = await fetch(meta['@microsoft.graph.downloadUrl'], { signal: AbortSignal.timeout(FILE_MS) });   // 14.5
     if (!dl.ok) throw new Error('download failed (' + dl.status + ')');
     const orig = new Uint8Array(await dl.arrayBuffer());
-    const { bytes, report, changed } = await patchDeck(orig, deckContent(m, rows, date, { s3Month, s3Now, nearMiss, repMonth }));
+    const { bytes, report, changed } = await patchDeck(orig, deckContent(m, rows, date, { s3Month, s3Now, nearMiss, repMonth, committee, addSlide: val('deck_s5') !== '1' }));
     // Nothing to change in the file (OneDrive bumped the cTag after our last
     // upload, or a person saved it without touching the numbers): remember the
     // cTag, write nothing, or this would rewrite the deck every 15 minutes.
@@ -100,7 +103,7 @@ export async function runDeck(env, force, s3Now, opt) {
     const unmatched = report.filter((x) => /^chart category not matched: /.test(x)).map((x) => x.replace(/^chart category not matched: [^/]*\//, ''));
     const chartErr = unmatched.length ? '\u05d1\u05ea\u05e8\u05e9\u05d9\u05dd \u05d1\u05de\u05e6\u05d2\u05ea \u05d9\u05e9 \u05de\u05d7\u05dc\u05e7\u05d4 \u05e9\u05dc\u05d0 \u05d6\u05d5\u05d4\u05ea\u05d4, \u05d5\u05d4\u05e2\u05de\u05d5\u05d3\u05d4 \u05e9\u05dc\u05d4 \u05e0\u05db\u05ea\u05d1\u05d4 0: ' + [...new Set(unmatched)].join(', ') : '';
     const put = await graphPut(token, FOLDER, DECK.name, bytes, DECK.type);
-    await stateSet(env, { deck_sig: sig, deck_ctag: put.cTag || '', deck_week: date, deck_ver: String(DECK_VERSION), deck_at: now, ...(s3Month && !s3Now ? { deck_s3_month: s3Month } : {}), deck_err: chartErr, deck_err_kind: chartErr ? 'chart' : '', ...(chartErr ? { deck_err_at: now } : {}), deck_report: report.join('; '), deck_url: put.webUrl || meta.webUrl || '' });
+    await stateSet(env, { ...(report.indexOf('committee slide added') >= 0 ? { deck_s5: '1' } : {}), deck_sig: sig, deck_ctag: put.cTag || '', deck_week: date, deck_ver: String(DECK_VERSION), deck_at: now, ...(s3Month && !s3Now ? { deck_s3_month: s3Month } : {}), deck_err: chartErr, deck_err_kind: chartErr ? 'chart' : '', ...(chartErr ? { deck_err_at: now } : {}), deck_report: report.join('; '), deck_url: put.webUrl || meta.webUrl || '' });
     return { ok: true, pushed: true, date, kept, report, webUrl: put.webUrl || null };
   } catch (e) {
     const msg = e && e.code === 'not_connected' ? 'not connected'
