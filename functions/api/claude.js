@@ -37,15 +37,31 @@ const GEMINI_FALLBACK = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 const GEMINI_MIN_OUT = 2048;
 const GEMINI_TIMEOUT_MS = 25000;
 
+const GEMINI_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+export function geminiImagePart(b) {
+  const src = b && b.source;
+  if (!src || src.type !== 'base64' || GEMINI_IMAGE_MIMES.indexOf(src.media_type) < 0) return null;
+  const data = String(src.data || '');
+  if (!data || data.length > 14000000 || !/^[A-Za-z0-9+/=\r\n]+$/.test(data)) return null;
+  return { inlineData: { mimeType: src.media_type, data: data.replace(/\s+/g, '') } };
+}
 async function runGemini(parsed, model, key) {
   const contents = [];
   for (const m of parsed.messages || []) {
     let c = m && m.content;
+    let parts;
     if (Array.isArray(c)) {
-      if (c.find((b) => b && b.type && b.type !== 'text')) throw new Error('file block not supported on the Gemini route');
-      c = c.filter((b) => b && b.type === 'text').map((b) => b.text || '').join('\n');
+      // 29/10/2026 (Michael: move the app's photo reading from Claude to Gemini; the Claude API credit ran out 22/10): a base64 photo
+      // goes as an inlineData part. A PDF or any other block is still refused, and the Llama fallback then answers 400 for it (text-only).
+      // each photo is checked once (review 29/10/2026: it was built twice, two copies of a string of up to 14 MB)
+      const conv = c.map((b) => (b && b.type === 'image' ? geminiImagePart(b) : null));
+      if (c.find((b, i) => b && b.type && b.type !== 'text' && !(b.type === 'image' && conv[i]))) throw new Error('file block not supported on the Gemini route');
+      parts = c.map((b, i) => (b && b.type === 'image' ? conv[i] : b && b.type === 'text' ? { text: b.text || '' } : null)).filter(Boolean);
+      if (!parts.length) parts = [{ text: '' }];
+    } else {
+      parts = [{ text: typeof c === 'string' ? c : String(c == null ? '' : c) }];
     }
-    contents.push({ role: m && m.role === 'assistant' ? 'model' : 'user', parts: [{ text: typeof c === 'string' ? c : String(c == null ? '' : c) }] });
+    contents.push({ role: m && m.role === 'assistant' ? 'model' : 'user', parts });
   }
   const reqBody = { contents, generationConfig: { maxOutputTokens: Math.max(parsed.max_tokens || 0, GEMINI_MIN_OUT) } };
   if (typeof parsed.system === 'string' && parsed.system.trim()) reqBody.systemInstruction = { parts: [{ text: parsed.system }] };
@@ -56,7 +72,8 @@ async function runGemini(parsed, model, key) {
     signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS)
   });
   const t = await r.text();
-  if (!r.ok) throw new Error('Gemini ' + r.status + ': ' + t.substring(0, 200));
+  // the status and Google's own error class only: the body can echo the request, and the reason reaches the client in fallback_from (review 29/10/2026)
+  if (!r.ok) { let st = ''; try { st = String(JSON.parse(t).error.status || '').replace(/[^A-Z_]/g, '').substring(0, 40); } catch (e) { st = ''; } throw new Error('Gemini ' + r.status + (st ? ' ' + st : '')); }
   const j = JSON.parse(t);
   const cand = j && j.candidates && j.candidates[0];
   const parts = (cand && cand.content && cand.content.parts) || [];

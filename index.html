@@ -27198,7 +27198,7 @@ function _aiClaudeVisionClassify(blob,prompt){
       var b64=String(ev.target.result||'').replace(/^data:image\/[^;]+;base64,/,'');
       var mime=blob.type||'image/jpeg';
       fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},body:JSON.stringify({
-        model:'claude-haiku-4-5',
+        model:'gemini',
         max_tokens:600,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:mime,data:b64}},
@@ -27206,11 +27206,11 @@ function _aiClaudeVisionClassify(blob,prompt){
         ]}]
       })}).then(function(r){return r.text().then(function(t){return{ok:r.ok,status:r.status,txt:t};});})
         .then(function(res){
-          if(!res.ok)return reject(new Error('Claude ('+res.status+'): '+res.txt.substring(0,200)));
+          if(!res.ok)return reject(new Error('Gemini ('+res.status+'): '+res.txt.substring(0,200)));
           try{
             var dj=JSON.parse(res.txt);
             resolve(dj.content&&dj.content[0]?dj.content[0].text:'');
-          }catch(e){reject(new Error('Claude parse: '+e.message));}
+          }catch(e){reject(new Error('Gemini parse: '+e.message));}
         }).catch(reject);
     };
     rd.onerror=function(){reject(new Error('file read failed'));};
@@ -27218,7 +27218,7 @@ function _aiClaudeVisionClassify(blob,prompt){
   });
 }
 // Run the classifier with Llama Vision first; if it returns target='other'
-// or fails entirely, fall back to Claude Haiku Vision. Returns the parsed
+// or fails entirely, fall back to Gemini Vision (29/10/2026: was Claude Haiku; the Claude API credit ran out). Returns the parsed
 // suggestion object {target, label, code, ...} or null if both AIs failed.
 function _odClassifyImageWithFallback(blob,prompt){
   function parse(content){

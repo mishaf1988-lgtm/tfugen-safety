@@ -108,6 +108,24 @@ const ask = { model: 'gemini', max_tokens: 600, system: 'מערכת', messages: 
     check('400, Google never called', r.status === 400 && gCalls.length === 0, r.status);
   }
 
+  console.log('\n4b. a photo goes to Gemini as inlineData (29/10/2026, Michael: the app reads photos with Gemini, the Claude credit ran out)');
+  {
+    gemini = ok('{"target":"ppe"}'); gCalls.length = 0;
+    const { env } = mkEnv({ GEMINI_API_KEY: 'gk' });
+    const img = (mt, data) => ({ type: 'image', source: { type: 'base64', media_type: mt, data } });
+    let r = await ai.onRequest({ request: req({ model: 'gemini', max_tokens: 600, messages: [{ role: 'user', content: [img('image/jpeg', 'QUJD'), { type: 'text', text: 'what is this' }] }] }), env });
+    let j = await r.json();
+    const parts = gCalls[0] && gCalls[0].body.contents[0].parts;
+    check('200, the photo is an inlineData part with its type, then the text', r.status === 200 && parts && parts[0].inlineData && parts[0].inlineData.mimeType === 'image/jpeg' && parts[0].inlineData.data === 'QUJD' && parts[1].text === 'what is this', { s: r.status, parts });
+    check('answer in the Anthropic shape (the client reads content[0].text)', j.content && j.content[0].text === '{"target":"ppe"}', j);
+    gCalls.length = 0;
+    r = await ai.onRequest({ request: req({ model: 'gemini', max_tokens: 600, messages: [{ role: 'user', content: [img('image/gif', 'QUJD'), { type: 'text', text: 'x' }] }] }), env });
+    check('an unsupported picture type is refused, Google never called', r.status === 400 && gCalls.length === 0, r.status);
+    r = await ai.onRequest({ request: req({ model: 'gemini', max_tokens: 600, messages: [{ role: 'user', content: [img('image/png', 'not base64!!'), { type: 'text', text: 'x' }] }] }), env });
+    check('data that is not base64 is refused', r.status === 400 && gCalls.length === 0, r.status);
+    check('geminiImagePart: a PDF source or a URL source gives null', ai.geminiImagePart({ type: 'image', source: { type: 'url', url: 'https://x' } }) === null && ai.geminiImagePart({ type: 'image', source: { type: 'base64', media_type: 'application/pdf', data: 'QUJD' } }) === null);
+  }
+
   console.log('\n5. stream:true on Gemini emits SSE');
   {
     gemini = ok('שלום');

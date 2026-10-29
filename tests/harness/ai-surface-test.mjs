@@ -137,8 +137,9 @@ const req = (body) => new Request(ORIGIN + '/api/claude', {
     // it replaced, and the words "{type:'document'}" appear there.
     const code = src.split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n');
     const blocks = [...code.matchAll(/type:'(document|image)'/g)].map((m) => code.slice(Math.max(0, m.index - 1400), m.index + 600));
-    const orphan = blocks.filter((ctx) => !/model:'claude-/.test(ctx));
-    check('every remaining document/image block goes to an Anthropic model', orphan.length === 0, orphan.map((c) => c.slice(-260)));
+    // 29/10/2026: a base64 photo (not a document) may also go to model:'gemini', which the server turns into inlineData (ai-gemini-test 4b).
+    const orphan = blocks.filter((ctx) => !/model:'claude-/.test(ctx) && !(/type:'image'/.test(ctx) && /model:'gemini'/.test(ctx) && !/type:'document'/.test(ctx)));
+    check('every remaining document/image block goes to an Anthropic model (a photo may go to Gemini)', orphan.length === 0, orphan.map((c) => c.slice(-260)));
 
     const fn = (name, next) => code.slice(code.indexOf('function ' + name), code.indexOf(next));
     const eqi = fn('_eqiPdfAnalyzeOne', '// Pick records in DB');
