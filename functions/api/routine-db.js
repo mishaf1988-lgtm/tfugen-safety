@@ -694,6 +694,19 @@ export function draftSentGate(b) {
   return /sent/i.test(String(b.checked || '')) ? null
     : 'checked required: search Sent Items for this thread right before the draft, and pass "checked":"Sent Items <subject>, HH:MM UTC" (26/10/2026: a draft duplicated a mail Michael had just sent)';
 }
+// 29/10/2026 (Michael in the questionnaire: "do it: an automatic thread check before every mail draft"; he corrected the
+// assistant twice that week on a purchase order that went out as a new mail, without the thread and without who approved):
+// the assistant's draft to someone else is either a reply in the thread (reply_to = the last mail of it) or says what it
+// searched: "thread_checked":"no thread: <the search, e.g. subject words and recipient, HH:MM UTC>". The server cannot
+// search the mailbox itself, so this makes the search a step that is named and logged, not one that is skipped.
+export function draftThreadGate(b) {
+  if (String(b.agent || '') !== 'routine-wa-assistant') return null;
+  const to = String(b.to || '').toLowerCase().split(/[;,]/).map((x) => x.trim()).filter(Boolean);
+  if (to.length && to.every((x) => x === String(SITE.adminEmail || '').toLowerCase())) return null;
+  if (b.reply_to !== undefined && b.reply_to !== null && b.reply_to !== '') return null;
+  return /^no thread:\s*\S.{9,}/i.test(String(b.thread_checked || '').trim()) ? null
+    : 'thread_checked required: search the mailbox (all folders) for an existing thread with these recipients or this subject, right before the draft. Found: pass reply_to (the id of its last mail) so the draft stays in the thread with who approved. None: pass "thread_checked":"no thread: <what you searched, HH:MM UTC>" (29/10/2026: a purchase order went out as a new mail without its thread)';
+}
 // 26/10/2026: "delete it" is not a task to hand Michael. A file of yours goes to od_trash; a duplicate draft is named, not handed over.
 // 29/10/2026 (Michael: "is there a problem attaching documents to the assistant?"): the assistant made the Infrared draft
 // and wrote him "the quotes are only in the original thread, attach them by hand". A file in a mail is attached with
@@ -2227,10 +2240,12 @@ export async function onRequest(context) {
       return jsonResp({ ok: true, file: OD_DRAFT_TRASH + '/' + name, note: 'the flow moves it to Deleted Items within about 5 minutes (the OneDrive trigger); check Drafts after' }, 200, {});
     }
     if (body.op === 'mail_draft') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'cc', 'subject', 'body', 'attach', 'reply_to', 'checked', 'replaces'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'cc', 'subject', 'body', 'attach', 'reply_to', 'checked', 'thread_checked', 'replaces'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (mentionsQuoteValidity(body.body)) return jsonResp({ ok: false, error: 'the draft gives a quote validity date: drop it (Michael 26/10 and 27/10/2026)' }, 400, {});
       const sentGate = draftSentGate(body);
       if (sentGate) return jsonResp({ ok: false, error: sentGate }, 400, {});
+      const threadGate = draftThreadGate(body);
+      if (threadGate) return jsonResp({ ok: false, error: threadGate }, 400, {});
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
       if (String(body.why || '').trim().length < 5) return jsonResp({ ok: false, error: 'why required' }, 400, {});
       const d = draftRequest(body);
