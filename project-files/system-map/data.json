@@ -1078,6 +1078,7 @@
    "family": "בקרה ופיתוח",
    "ops": [
     "agent_report",
+    "agents_pause",
     "state_get"
    ],
    "m365": false,
