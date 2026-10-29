@@ -42,6 +42,10 @@ button[aria-pressed="true"],button[aria-selected="true"]{background:var(--accent
 #q{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 13px;min-width:0;flex:1 1 160px;max-width:320px}
 #pause{position:fixed;z-index:9;left:50%;transform:translateX(-50%);top:calc(6px + env(safe-area-inset-top,0px));padding:5px 14px;border-radius:999px;font-size:13px;border:1px solid var(--s-warn);background:var(--solid);color:var(--s-warn);pointer-events:none}
 #pause.on{border-color:var(--s-ok);color:var(--s-ok)}
+#acct{position:fixed;z-index:9;left:50%;transform:translateX(-50%);top:calc(40px + env(safe-area-inset-top,0px));display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 32px);font-size:13px;background:var(--solid);border:1px solid var(--line);border-radius:999px;padding:4px 6px 4px 12px}
+#acct a{border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--ink);text-decoration:none;background:var(--panel)}
+#acct a:hover{border-color:var(--accent)}
+#acct a.cur{background:var(--accent);color:#1f1a00;border-color:var(--accent);pointer-events:none}
 #hits{position:fixed;z-index:8;background:var(--solid);border:1px solid var(--line);border-radius:10px;padding:4px;display:grid;gap:2px;max-height:50vh;overflow:auto;width:min(320px,calc(100vw - 32px))}
 #hits button{border:0;border-radius:6px;text-align:right;display:flex;gap:8px;align-items:center;width:100%}
 .chips{display:flex;gap:4px;flex-wrap:wrap}
@@ -116,6 +120,7 @@ td.warn code{background:color-mix(in srgb,var(--s-warn) 28%,transparent)}
   </div>
 </header>
 <div id="pause" hidden role="status"></div>
+<div id="acct" hidden></div>
 <div id="hits" hidden role="listbox"></div>
 <aside id="panel" aria-live="polite"></aside>
 <div id="flat" class="view" hidden></div>
@@ -597,6 +602,18 @@ renderer.setAnimationLoop((now) => {
     const paused = d.paused && until && Date.parse(d.until + 'T00:00:00+02:00') > Date.now();
     pz.hidden = false; pz.className = paused ? '' : 'on';
     pz.textContent = paused ? 'הסוכנים מושהים עד ' + until[3] + '/' + until[2] + '/' + until[1] : 'הסוכנים פעילים';
+    // the assistant's account (29/10/2026, Michael: "a switch button too"): the page cannot call the server (CSP), so a button
+    // opens WhatsApp to the assistant with the switch phrase typed in; one tap on send and the server switches, with no AI.
+    const az = document.getElementById('acct'), who = d.assistant;
+    if (who === 'gmail' || who === 'main') {
+      az.textContent = ''; az.hidden = false;
+      az.append('העוזר עובד בחשבון: ' + (who === 'gmail' ? 'Gmail' : 'הראשי') + (d.assistant_at ? ' (עודכן ' + fmt(d.assistant_at) + ')' : ''));
+      for (const [k, t, phrase] of [['main', 'הראשי', 'העוזר לראשי'], ['gmail', 'Gmail', 'העוזר לגימייל']]) {
+        const a = el('a', k === who ? 'cur' : '', (k === who ? 'כאן: ' : 'העבר ל') + t);
+        if (k !== who) { a.href = 'https://wa.me/97286808365?text=' + encodeURIComponent(phrase); a.target = '_blank'; a.rel = 'noopener'; }
+        az.append(a);
+      }
+    } else az.hidden = true;
   }, () => {});
   db.doc('live/status').onSnapshot((snap) => {
     LIVE = snap.exists ? snap.data() : null; statusCache.clear(); paintZones();

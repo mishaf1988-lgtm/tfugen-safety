@@ -1,7 +1,7 @@
 // The server's fast lane (20/10/2026, Michael in the questionnaire: "do it: a fast lane in the server").
 // A number 1-4 that answers a hazard alert, and "what is urgent" / "expiries", are answered by wa-hook
 // itself by rules; everything else, and anything unclear, still goes to the assistant.
-import { ownerInPayload, recentLine, RECENT_MAX, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX, joinCandidates, joinedLine, hasNewer, JOIN_MS, fireText, fastDel, DEL_NO, DEL_GONE } from './_build/wa-hook.mjs';
+import { ownerInPayload, recentLine, RECENT_MAX, accountCmdOf, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX, joinCandidates, joinedLine, hasNewer, JOIN_MS, fireText, fastDel, DEL_NO, DEL_GONE } from './_build/wa-hook.mjs';
 import { HAZARD_OPTIONS, hazardAsk, assistantFire, pickFire, accountOf, fireUrlOf } from './_build/_wa.mjs';
 import { rateAgain } from './_build/chat.mjs';
 
@@ -42,6 +42,14 @@ check('only the Gmail pair set: it is used even on the main flag', pickFire({ AS
 check('the flag value: json, a bad value or nothing = main', accountOf('{"account":"gmail"}') === 'gmail' && accountOf('{"account":"x"}') === 'main' && accountOf('nope') === 'main' && accountOf(null) === 'main');
 check('nothing set: none', assistantFire({}) === null);
 check('a probe URL only from a trigger id (lesson 133)', fireUrlOf('trig_011XSXRjssx2uPNu1rk4P9L2') === 'https://api.anthropic.com/v1/claude_code/routines/trig_011XSXRjssx2uPNu1rk4P9L2/fire' && fireUrlOf('https://evil/x') === null && fireUrlOf('trig_../../x') === null);
+
+console.log('\n4. which account answers, and the switch (29/10/2026)');
+const J = (x) => JSON.stringify(x);
+check('"איזה חשבון" and "על איזה חשבון אתה עובד" = the account question', J(accountCmdOf('איזה חשבון')) === J({ kind: 'account', to: null }) && J(accountCmdOf('על איזה חשבון אתה עובד?')) === J({ kind: 'account', to: null }) && J(accountCmdOf('חשבון')) === J({ kind: 'account', to: null }));
+check('"העוזר לגימייל", "עבור ל-gmail" = switch to Gmail', accountCmdOf('העוזר לגימייל').to === 'gmail' && accountCmdOf('עבור לgmail').to === 'gmail' && accountCmdOf('תעבור לחשבון gmail').to === 'gmail');
+check('"העוזר לראשי", "עבור לחשבון הראשי" = switch to main', accountCmdOf('העוזר לראשי').to === 'main' && accountCmdOf('עבור לחשבון הראשי').to === 'main');
+check('longer or different sentences go to the assistant, not the switch', accountCmdOf('מה מצב החשבון של הספק') === null && accountCmdOf('העוזר לגימייל ותשלח מייל') === null && accountCmdOf('') === null && accountCmdOf('העבר חשבונית לראשי') === null);
+check('fastRoute carries it: the phrase never reaches the Routine', fastRoute({ text: 'העוזר לראשי' }, '', null).kind === 'account' && fastRoute({ text: 'איזה חשבון' }, '', null).kind === 'account');
 
 console.log('\n4. rating a professional answer (21/10/2026, Michael: "do it: accurate / not accurate buttons")');
 const pro = { text: 'answer about lifting gear, section 75', ref: 'pro' };
