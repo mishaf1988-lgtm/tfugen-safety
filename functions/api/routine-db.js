@@ -81,7 +81,8 @@
 //              attach?: [up to 5 .pdf/.docx/.xlsx paths in the safety folder, each checked to exist]}. Never sent.
 //   relay_fire  (20/10/2026) wake the postman now, without text (its own session), at most once in 2 minutes;
 //              needs POSTMAN_FIRE_TOKEN. {agent, expect_session?} -> {fired, status, session, landed?}.
-//   od_put_pdf  (20/10/2026) ONE new PDF {agent, why, dir, name, b64} into an existing folder of the safety folder; never
+//   od_put_pdf  (20/10/2026) ONE new file {agent, why, dir, name, b64} (PDF, Word, Excel, pptx, and from 29/10/2026
+//              jpg / png) into an existing folder of the safety folder; never
 //              replaces a file, never into the protected folders. odPutPdfCheck.
 //   sign_offer  (21/10/2026) {agent, why, paths[1-5], text?} PDFs offered to Michael as buttons (sign_pick); a tap asks
 //              through sign_request. Offering signs nothing.
@@ -1191,14 +1192,16 @@ export function odPullCheck(b) {
 // 8 MB from 24/10/2026: procedure 01 (4.3 MB) and the factory file (4.9 MB) did not fit into the ISO binder;
 // Graph's simple PUT takes up to 250 MB.
 export const OD_PUT_MAX = 8 * 1024 * 1024;
-export const OD_PUT_TYPES = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', doc: 'application/msword', xls: 'application/vnd.ms-excel', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' };
+export const OD_PUT_TYPES = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', doc: 'application/msword', xls: 'application/vnd.ms-excel', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png' };
 export function odPutPdfCheck(b) {
   const c = odMkdirCheck({ agent: b.agent, why: b.why, parent: b.dir, name: b.name });
   if (c.error) return { error: c.error === 'bad parent' ? 'bad dir' : c.error };
   // 24/10/2026 (Michael: "documents in the folder must be Word for editing as before; PDF later for display"):
   // a Word or Excel file too, checked by its own signature (a .docx is a zip, PK\x03\x04).
   // pptx (28/10/2026, Michael in the questionnaire: "do it: connect to the assistant"): the safety committee deck, a zip like docx.
-  const ext = (/\.(pdf|docx|xlsx|pptx|doc|xls)$/i.exec(c.name) || [])[1];
+  // jpg / png (29/10/2026, an accident's photos: accidents.md files them in the worker's folder by their own name,
+  // and the server refused them, so they could only go inside the investigation). Checked by the JPEG / PNG signature.
+  const ext = (/\.(pdf|docx|xlsx|pptx|doc|xls|jpg|jpeg|png)$/i.exec(c.name) || [])[1];
   if (!ext) return { error: 'bad name' };
   let bytes;
   try { bytes = Uint8Array.from(atob(String(b.b64 || '')), (ch) => ch.charCodeAt(0)); } catch (e) { return { error: 'bad b64' }; }
@@ -1207,7 +1210,9 @@ export function odPutPdfCheck(b) {
   // 24/10/2026 (Michael: "Excel files need no conversion at all"): an old .doc / .xls as it is, checked by the
   // OLE signature D0 CF 11 E0, so a file is filed in its own format instead of converted.
   const e = ext.toLowerCase(), ole = bytes[0] === 0xD0 && bytes[1] === 0xCF && bytes[2] === 0x11 && bytes[3] === 0xE0;
-  if (e === 'pdf' ? head !== '%PDF-' : (e === 'doc' || e === 'xls') ? !ole : head.slice(0, 4) !== 'PK\x03\x04') return { error: 'not a ' + e };
+  const jpg = bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF;
+  const png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A].every((v, i) => bytes[i] === v);
+  if (e === 'jpg' || e === 'jpeg' ? !jpg : e === 'png' ? !png : e === 'pdf' ? head !== '%PDF-' : (e === 'doc' || e === 'xls') ? !ole : head.slice(0, 4) !== 'PK\x03\x04') return { error: 'not a ' + e };
   return { dir: c.parent, name: c.name, bytes, type: OD_PUT_TYPES[ext.toLowerCase()] };
 }
 // sign_request (21/10/2026): {path} = a PDF inside the safety folder, the same folders od_put_pdf may write to

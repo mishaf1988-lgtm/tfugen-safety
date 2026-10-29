@@ -218,6 +218,13 @@ const callIn = async (body) => {
     const zip = Buffer.from('PK\x03\x04xxxx').toString('base64'), pdf = Buffer.from('%PDF-1.4').toString('base64');
     return /presentation/.test(odPutPdfCheck({ ...P, name: 'a.pptx', b64: zip }).type || '') && !!odPutPdfCheck({ ...P, name: 'a.pptx', b64: pdf }).error;
   })());
+  check('od_put_pdf: an accident photo .jpg / .jpeg / .png by its signature; a PDF or zip named .jpg, and a JPEG named .png, are refused (29/10/2026)', (() => {
+    const P = { agent: 'routine-wa-assistant', why: 'accident photos', dir: '12_x/2026/y' };
+    const jpg = Buffer.from([0xFF, 0xD8, 0xFF, 0xE0, 1, 2]).toString('base64'), png = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]).toString('base64');
+    const pdf = Buffer.from('%PDF-1.4').toString('base64'), zip = Buffer.from('PK\x03\x04abcd').toString('base64');
+    return odPutPdfCheck({ ...P, name: 'a.jpg', b64: jpg }).type === 'image/jpeg' && odPutPdfCheck({ ...P, name: 'a.JPEG', b64: jpg }).type === 'image/jpeg' && odPutPdfCheck({ ...P, name: 'a.png', b64: png }).type === 'image/png'
+      && !!odPutPdfCheck({ ...P, name: 'a.jpg', b64: pdf }).error && !!odPutPdfCheck({ ...P, name: 'a.jpg', b64: zip }).error && !!odPutPdfCheck({ ...P, name: 'a.png', b64: jpg }).error && !!odPutPdfCheck({ ...P, name: 'a.gif', b64: jpg }).error;
+  })());
   check('od_put_pdf: an old .doc / .xls as it is, by the OLE signature; a zip or PDF named .doc is refused (24/10/2026)', (() => {
     const ole = Buffer.from([0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1, 1, 2]).toString('base64'), zip = Buffer.from('PK\x03\x04abcd').toString('base64');
     const P = { agent: 'dev', why: 'file as it is', dir: '22_x' };
