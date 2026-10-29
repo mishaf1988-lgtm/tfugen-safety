@@ -2586,9 +2586,9 @@ export async function onRequest(context) {
       const days = Math.min(7, Math.max(1, Number(body.days) || 7));
       const since = new Date(Date.now() - days * 864e5).toISOString();
       const r = await fetch(url + '/rest/v1/notifications_log?select=ts,event_type,payload->>text,payload->>title,payload->>fast,payload->>via'
-        + '&event_type=in.(owner_in,assistant,watch)&channel=eq.whatsapp&ts=gte.' + encodeURIComponent(since) + '&order=ts.asc&limit=300', { headers: h, signal: tmo(SB_MS) });
+        + '&event_type=in.(owner_in,assistant,watch)&channel=eq.whatsapp&ts=gte.' + encodeURIComponent(since) + '&order=ts.desc&limit=300', { headers: h, signal: tmo(SB_MS) }); // the newest 300 (29/10/2026 retro: ascending gave the oldest 300 and the last 3 days of the week were never reviewed), turned back to ascending below
       if (!r.ok) return jsonResp({ ok: false, error: 'read ' + r.status }, 200, {});
-      const rows = (await r.json()).map((x) => ({ ts: x.ts, who: x.event_type === 'owner_in' ? 'michael' : x.event_type === 'watch' ? 'watch' : 'assistant', text: x.text || x.title || '', fast: x.fast === 'true', via: x.via || null }));
+      const rows = (await r.json()).reverse().map((x) => ({ ts: x.ts, who: x.event_type === 'owner_in' ? 'michael' : x.event_type === 'watch' ? 'watch' : 'assistant', text: x.text || x.title || '', fast: x.fast === 'true', via: x.via || null }));
       return jsonResp({ ok: true, days, rows, turns: waTurns(rows) }, 200, {});
     }
     if (body.op === 'wa_phone') {
