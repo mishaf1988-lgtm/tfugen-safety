@@ -153,6 +153,9 @@ const fmt = (iso) => { if (!iso) return ''; const d = new Date(iso); if (isNaN(d
   return g('day') + '/' + g('month') + '/' + g('year') + ' ' + g('hour') + ':' + g('minute'); };
 
 // ---------- live status (db doc live/status, written by the "map lights" Routine and by Claude) ----------
+// 29/10/2026 (Michael: "show when each light was updated"): a light is only as fresh as the agent that wrote it, which runs in the main account.
+const agoTxt = (iso) => { const t = iso ? new Date(iso).getTime() : NaN; if (isNaN(t)) return ''; const h = Math.floor((Date.now() - t) / 36e5); return h < 1 ? 'לפני פחות משעה' : h < 48 ? 'לפני ' + h + ' שעות' : 'לפני ' + Math.floor(h / 24) + ' ימים'; };
+const staleNote = () => { if (!LIVE || !LIVE.updated_at) return ''; const h = (Date.now() - new Date(LIVE.updated_at).getTime()) / 36e5; return h > 8 ? ' הנורות לא עודכנו ' + agoTxt(LIVE.updated_at) + ': סביר שהסוכן "נורות המפה" לא רץ, ולכן הן עלולות להיות ישנות.' : ''; };
 let LIVE = null;
 const statusCache = new Map();
 function statusOf(n) {
@@ -367,7 +370,7 @@ function healthBlock() {
   if (!LIVE) { box.append(el('p', 'note', 'אין עדיין נתונים חיים בתצוגה הזו. הנורות יופיעו אחרי עדכון של סוכן "נורות המפה".')); return box; }
   const c = counts(), row = el('div', 'counts');
   for (const k of ['bad', 'warn', 'ok', 'idle']) { const b = stBadge({ s: k }); b.append(' ' + c[k]); row.append(b); }
-  box.append(row, el('p', 'note', 'עודכן ' + fmt(LIVE.updated_at) + '. היומן מחזיק דיווחים מ-' + (fmt(LIVE.log_oldest) || '?') + '.'));
+  box.append(row, el('p', 'note', 'עודכן ' + fmt(LIVE.updated_at) + ' (' + agoTxt(LIVE.updated_at) + '). היומן מחזיק דיווחים מ-' + (fmt(LIVE.log_oldest) || '?') + '.' + staleNote()));
   const bad = agents.filter((n) => ['bad', 'warn'].includes(statusOf(n).s));
   if (bad.length) { const ul = el('ul'); for (const n of bad) { const li = el('li'); li.append(partButton(n, () => goTo(n))); ul.append(li); } box.append(ul); }
   const known = new Set(agents.map((n) => n.id));
@@ -448,7 +451,7 @@ function itemLi(n) {
   const li = el('li'); const st = statusOf(n); const d = el('i', 'dot'); d.style.background = st ? sColor(st.s) : css('--k-' + zoneOf[n.zone].kind);
   const t = el('span', 't', n.name); li.append(d, t);
   if (n.when) li.append(el('span', 'w', n.when));
-  if (st) li.title = st.why;
+  if (st) li.title = st.why + (LIVE && LIVE.updated_at ? ' (נורות עודכנו ' + agoTxt(LIVE.updated_at) + ')' : '');
   if (term && match(n, term)) li.classList.add('hit');
   li.style.cursor = 'pointer'; li.addEventListener('click', () => goTo(n));
   return li;
@@ -456,7 +459,7 @@ function itemLi(n) {
 function renderFlat() {
   const host = document.getElementById('flat'); host.textContent = '';
   const wrap = el('div', 'wrap'); host.append(wrap);
-  if (LIVE) { const c = counts(); wrap.append(el('p', 'note', 'סוכנים: ' + c.bad + ' בתקלה, ' + c.warn + ' לבדוק, ' + c.ok + ' תקינים, ' + c.idle + ' בלי דיווח. עודכן ' + fmt(LIVE.updated_at) + '.')); }
+  if (LIVE) { const c = counts(); wrap.append(el('p', 'note', 'סוכנים: ' + c.bad + ' בתקלה, ' + c.warn + ' לבדוק, ' + c.ok + ' תקינים, ' + c.idle + ' בלי דיווח. עודכן ' + fmt(LIVE.updated_at) + ' (' + agoTxt(LIVE.updated_at) + ').' + staleNote())); }
   filterChips(wrap);
   const grid = el('div', 'grid'); wrap.append(grid);
   for (const z of DATA.zones) {

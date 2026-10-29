@@ -93,6 +93,6 @@ cmd = "sleep 20; bash .claude/hooks/ci-wait.sh %s %s" % (ref, REPO)
 print(json.dumps({"hookSpecificOutput": {
     "hookEventName": "PostToolUse",
     "additionalContext":
-        "ci-watch (לקח 25): להריץ עכשיו ב-Bash עם run_in_background=true: `%s` . "
+        "ci-watch (לקח 25): להריץ עכשיו ב-Bash עם run_in_background=true: `%s` , בדיוק כך, בלי כלום אחרי הפקודה (לא `; echo`: זה הופך כל תוצאה ליציאה 0, לקח 200). "
         "יציאה 0 = ירוק: למזג (בלי expectedHeadSha); 1 = אדום: לתקן; 2 = לבדוק בעצמך. "
         "לא לחכות לאירוע מ-GitHub במקום. הודעת ההמתנה למיכאל: בעברית (לקח 13)." % cmd}}, ensure_ascii=False))
