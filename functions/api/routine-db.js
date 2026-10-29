@@ -508,7 +508,6 @@ export function equipAddRow(b, today, rand) {
 // 29/10 sat unrecorded in the app because no op wrote a row to `inc` and the dev request waited for the agents' pause to
 // end). ONE new row of `inc` for a work accident after Michael approved the row (accidents.md step 7): never a change, never
 // a delete, refused when the same worker already has an accident on that day. Pure: the row, or { error }.
-export const INC_DEPTS = { '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d5\u05d0\u05e8\u05d9\u05d6\u05d4', '\u05d0\u05e8\u05d9\u05d6\u05d4': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d5\u05d0\u05e8\u05d9\u05d6\u05d4', '\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd': '\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd', '\u05d0\u05d7\u05d6\u05e7\u05d4': '\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d5\u05d7\u05e9\u05de\u05dc', '\u05d7\u05e9\u05de\u05dc': '\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d5\u05d7\u05e9\u05de\u05dc', '\u05d4\u05e0\u05d3\u05e1\u05d4': '\u05d4\u05e0\u05d3\u05e1\u05d4 \u05d5\u05d0\u05e0\u05e8\u05d2\u05d9\u05d4', '\u05d0\u05e0\u05e8\u05d2\u05d9\u05d4': '\u05d4\u05e0\u05d3\u05e1\u05d4 \u05d5\u05d0\u05e0\u05e8\u05d2\u05d9\u05d4', '\u05de\u05e2\u05d1\u05d3\u05d4': '\u05de\u05e2\u05d1\u05d3\u05d4', '\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd': '\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd' };
 export const INC_FILE_DIR = '12_\u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05d5\u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd/\u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4/';
 export const incFilePrefix = () => SITE.odFileUrl + 'Documents/' + OD_ROOT + INC_FILE_DIR;
 // Israel local time to the UTC instant (the offset is 2 or 3 hours; the one that reads back the same wall clock wins).
@@ -522,7 +521,8 @@ export function ilInstant(day, time) {
   }
   return null;
 }
-export function incAddRow(b, today, rand) {
+// known = { department: group } read from the rows already in `inc` (the department names are the factory's settings, not code: the platform export fails on them).
+export function incAddRow(b, today, rand, known) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
   if (['why', 'w', 'day', 'time', 'l', 'dept', 'd', 'r', 'p', 'rc', 'src', 'file_url'].some((k) => b[k] !== undefined && typeof b[k] !== 'string')) return { error: 'fields are text' };
   const why = short(b.why, 300);
@@ -534,7 +534,7 @@ export function incAddRow(b, today, rand) {
   const dt = ilInstant(b.day, b.time);
   if (!dt) return { error: 'time: not a real Israel clock time' };
   const dept = short(b.dept, 40);
-  if (!INC_DEPTS[dept]) return { error: 'dept: one of ' + Object.keys(INC_DEPTS).join(', ') };
+  if (!known || !Object.prototype.hasOwnProperty.call(known, dept)) return { error: 'dept: one of ' + Object.keys(known || {}).join(', ') };
   const l = short(b.l, 150), d = short(b.d, 1500);
   if (l.length < 3 || d.length < 20) return { error: 'l (place) and d (what happened, 20+ characters) required' };
   if (b.dy !== undefined && !(Number.isInteger(b.dy) && b.dy >= 0 && b.dy <= 365)) return { error: 'dy: days of absence 0-365, or leave it out' };
@@ -544,7 +544,7 @@ export function incAddRow(b, today, rand) {
   for (const k of ['l', 'd', 'r', 'p', 'rc', 'src']) if (b[k] !== undefined && /[\u0000-\u0008\u000b-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/.test(String(b[k]))) return { error: k + ': control characters' };
   const row = { id: 'a' + b.day.slice(2).replace(/-/g, '') + '-' + rand, d, dt, ty: '\u05ea\u05d0\u05d5\u05e0\u05d4 \u05e2\u05dd \u05e4\u05e6\u05d9\u05e2\u05d4', l, w, dy: b.dy === undefined ? null : b.dy, s: '\u05e4\u05ea\u05d5\u05d7',
     r: b.r === undefined ? null : short(b.r, 600), p: b.p === undefined ? null : short(b.p, 1200), rc: b.rc === undefined ? null : short(b.rc, 1200), file_url: file,
-    dept, dept_group: INC_DEPTS[dept], reported: b.reported === true, src: short(b.src === undefined ? 'Claude (' + b.agent + '), ' + ddmm(today) : b.src, 200) };
+    dept, dept_group: known[dept], reported: b.reported === true, src: short(b.src === undefined ? 'Claude (' + b.agent + '), ' + ddmm(today) : b.src, 200) };
   return { row };
 }
 // The PATCH for one row, or { error }. row = the row as it is now; today = YYYY-MM-DD.
@@ -2106,7 +2106,11 @@ export async function onRequest(context) {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'w', 'day', 'time', 'l', 'dept', 'd', 'r', 'p', 'rc', 'src', 'dy', 'reported', 'file_url'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
       const rand = Array.from(crypto.getRandomValues(new Uint8Array(3))).map((x) => x.toString(16).padStart(2, '0')).join('');
-      const c = incAddRow(body, today, rand);
+      const dr = await fetch(url + '/rest/v1/inc?select=dept,dept_group&dept=not.is.null&dept_group=not.is.null&limit=1000', { headers: h, signal: tmo(SB_MS) });
+      if (!dr.ok) return jsonResp({ ok: false, error: 'read ' + dr.status }, 200, {});
+      const known = {};
+      for (const r of await dr.json()) if (r && typeof r.dept === 'string' && typeof r.dept_group === 'string') known[r.dept] = r.dept_group;
+      const c = incAddRow(body, today, rand, known);
       if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
       if (c.row.file_url) { // the worker's folder is really there
         const at = await accessToken(env);
