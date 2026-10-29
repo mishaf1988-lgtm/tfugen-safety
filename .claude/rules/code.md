@@ -12,3 +12,4 @@ paths:
 4. עזרים קיימים, לא לשכפל: `fd(d)` תצוגה DD/MM/YYYY, `du(d)` ימים עד תפוגה, `eb(d)` badge, `askDel(table, id)`, `goPage(name)`, `showView(table, id)`.
 5. בלי קבצי HTML נוספים (חריג: `/chat`, `functions/chat.js`), בלי framework, build או bundler.
 6. טקסט שאנשים קוראים (הודעה באפליקציה, מייל, PDF): רק תווים שיש במקלדת, ראה `.claude/rules/people-text.md`.
+7. סנכרון מלא ואוטומציה מלאה (CLAUDE.md חוק 4): פיתוח חדש מעדכן לבד כל מערכת שנוגעת בו, ולא נגמר בשינוי מקומי אחד.
