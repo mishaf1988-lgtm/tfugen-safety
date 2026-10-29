@@ -985,7 +985,7 @@ const callIn = async (body) => {
   {
     const r = await call({ op: 'out_log', agent: 'routine-quality', since: new Date(Date.now() - 86400000).toISOString() });
     const q = calls.filter((c) => /notifications_log\?select=ts,event_type/.test(c.url)).pop();
-    check('out_log: reads wa_out, owner_in and assistant since the time, oldest first; answers rows', r.json.ok && Array.isArray(r.json.rows) && q && /event_type=in\.\(wa_out,owner_in,assistant\)/.test(q.url) && /order=ts\.asc/.test(q.url), { j: r.json, url: q && q.url });
+    check('out_log: reads wa_out, owner_in and assistant since the time, the newest 300 (desc, turned back to oldest first); answers rows', r.json.ok && Array.isArray(r.json.rows) && q && /event_type=in\.\(wa_out,owner_in,assistant\)/.test(q.url) && /order=ts\.desc/.test(q.url), { j: r.json, url: q && q.url });
     check('out_log: no since, more than 4 days back, or an extra field = refused', (await call({ op: 'out_log' })).status === 400 && (await call({ op: 'out_log', since: '2020-01-01T00:00:00Z' })).status === 400 && (await call({ op: 'out_log', since: new Date().toISOString(), table: 'x' })).status === 400);
   }
 

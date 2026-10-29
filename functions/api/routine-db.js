@@ -1882,9 +1882,9 @@ export async function onRequest(context) {
       const since = Date.parse(String(body.since || ''));
       if (isNaN(since) || Date.now() - since > 4 * 864e5) return jsonResp({ ok: false, error: 'since: an ISO time in the last 4 days' }, 400, {});
       const r = await fetch(url + '/rest/v1/notifications_log?select=ts,event_type,payload->>text,payload->>title,payload->>ref,payload->>agent&event_type=in.(wa_out,owner_in,assistant)&ts=gte.'
-        + encodeURIComponent(new Date(since).toISOString()) + '&order=ts.asc&limit=300', { headers: h, signal: tmo(SB_MS) });
+        + encodeURIComponent(new Date(since).toISOString()) + '&order=ts.desc&limit=300', { headers: h, signal: tmo(SB_MS) }); // the newest 300, oldest first below (29/10/2026 retro, as wa_review)
       if (!r.ok) return jsonResp({ ok: false, error: 'read ' + r.status }, 200, {});
-      const rows = (await r.json()).map((x) => ({ ts: x.ts, type: x.event_type, ref: x.ref || undefined, agent: x.agent || undefined, text: String(x.text || x.title || '').slice(0, 1500) }));
+      const rows = (await r.json()).reverse().map((x) => ({ ts: x.ts, type: x.event_type, ref: x.ref || undefined, agent: x.agent || undefined, text: String(x.text || x.title || '').slice(0, 1500) }));
       return jsonResp({ ok: true, rows }, 200, {});
     }
     // 27/10/2026 (Michael in the questionnaire: "do it: to our own server"): the errors the app sends from users' browsers
