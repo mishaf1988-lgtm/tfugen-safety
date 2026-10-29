@@ -989,6 +989,7 @@
    "key": "mail-triage",
    "family": "תיוק ותוקף",
    "ops": [
+    "agent_report",
     "claim",
     "state_get",
     "state_set",
