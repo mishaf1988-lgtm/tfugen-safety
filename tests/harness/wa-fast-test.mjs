@@ -2,7 +2,7 @@
 // A number 1-4 that answers a hazard alert, and "what is urgent" / "expiries", are answered by wa-hook
 // itself by rules; everything else, and anything unclear, still goes to the assistant.
 import { ownerInPayload, recentLine, RECENT_MAX, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX, joinCandidates, joinedLine, hasNewer, JOIN_MS, fireText, fastDel, DEL_NO, DEL_GONE } from './_build/wa-hook.mjs';
-import { HAZARD_OPTIONS, hazardAsk, assistantFire, fireUrlOf } from './_build/_wa.mjs';
+import { HAZARD_OPTIONS, hazardAsk, assistantFire, pickFire, accountOf, fireUrlOf } from './_build/_wa.mjs';
 import { rateAgain } from './_build/chat.mjs';
 
 let pass = 0, fail = 0;
@@ -34,7 +34,12 @@ console.log('\n3. which Routine the server wakes (the lean session, 20/10/2026)'
 const O = { ASSISTANT_FIRE_URL: 'u1', ASSISTANT_FIRE_TOKEN: 't1' };
 check('only the old pair: the old one', assistantFire(O).which === 'old' && assistantFire(O).url === 'u1');
 check('the new URL alone (token not added yet): still the old one', assistantFire({ ...O, ASSISTANT2_FIRE_URL: 'u2' }).which === 'old');
-check('both new: the new one, URL and token together', JSON.stringify(assistantFire({ ...O, ASSISTANT2_FIRE_URL: 'u2', ASSISTANT2_FIRE_TOKEN: 't2' })) === JSON.stringify({ url: 'u2', token: 't2', which: 'new' }));
+const B = { ...O, ASSISTANT2_FIRE_URL: 'u2', ASSISTANT2_FIRE_TOKEN: 't2' };
+check('both pairs, no flag (29/10/2026): the main one, so a Gmail pair left in Cloudflare never takes over by itself', assistantFire(B).which === 'old' && pickFire(B, 'main').url === 'u1');
+check('both pairs, flag gmail: the Gmail pair, URL and token together', JSON.stringify(pickFire(B, 'gmail')) === JSON.stringify({ url: 'u2', token: 't2', which: 'new' }));
+check('flag gmail but no Gmail pair: falls back to main, a message is never dropped', pickFire(O, 'gmail').which === 'old');
+check('only the Gmail pair set: it is used even on the main flag', pickFire({ ASSISTANT2_FIRE_URL: 'u2', ASSISTANT2_FIRE_TOKEN: 't2' }, 'main').which === 'new');
+check('the flag value: json, a bad value or nothing = main', accountOf('{"account":"gmail"}') === 'gmail' && accountOf('{"account":"x"}') === 'main' && accountOf('nope') === 'main' && accountOf(null) === 'main');
 check('nothing set: none', assistantFire({}) === null);
 check('a probe URL only from a trigger id (lesson 133)', fireUrlOf('trig_011XSXRjssx2uPNu1rk4P9L2') === 'https://api.anthropic.com/v1/claude_code/routines/trig_011XSXRjssx2uPNu1rk4P9L2/fire' && fireUrlOf('https://evil/x') === null && fireUrlOf('trig_../../x') === null);
 

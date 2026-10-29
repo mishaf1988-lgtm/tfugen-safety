@@ -14,7 +14,7 @@
 // notifications_log (payload.wamid), so the assistant knows what Michael is answering.
 // Machine path in _middleware: Meta calls from outside Israel.
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo, SITE } from '../_shared.js';
-import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, hasStatuses, STATUS_KEY, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, LEARN_KEY, learnedLine, recentLine } from '../_wa.js';
+import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, hasStatuses, STATUS_KEY, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, assistantFireNow, LEARN_KEY, learnedLine, recentLine } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 import { accessToken } from '../_onedrive.js';
 import { onRequest as routineDb, OD_ROOT, isAutoTop, OD_INBOX, delRefOf, DEL_ASK_KEY, DEL_ASK_MS, DEL_TABLES, UNDO_KEY, UNDO_MAX, tourRefOf, TOUR_CLOSE_KEY, TOUR_CLOSE_MS, TOUR_OPEN, TOUR_CLOSED, calInviteRefOf, CAL_INVITE_ASK_KEY, CAL_INVITE_ASK_MS, calMoveRefOf, CAL_MOVE_ASK_KEY, CAL_MOVE_ASK_MS } from './routine-db.js';
@@ -671,7 +671,7 @@ async function handle(env, raw) {
     }
     await note(env, Object.assign({ stage: 'firing' }, seen));
     const text = fireText(m, about, prev, snap, learned, recent, joins.length ? joinedLine(joins) : '');
-    const af = assistantFire(env);
+    const af = await assistantFireNow(env);
     seen.fire_to = af ? af.which : null;
     const fr = !af ? null : await fetch(af.url, {
       method: 'POST', signal: tmo(20000),

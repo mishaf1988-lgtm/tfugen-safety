@@ -19,7 +19,7 @@
 //   body {watch: true}  the watchdog for a stuck run, every 5 minutes (watchVerdict)
 // The same run writes calendar requests for upcoming expiries (calendarStep, below).
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
-import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, PROMISE_KEY, promiseDue, promiseRemindText, promiseToCheck, eveningAdd, isoWeekAdd, promiseCheckDue, promiseCheckFireText, assistantFire } from '../_wa.js';
+import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, PROMISE_KEY, promiseDue, promiseRemindText, promiseToCheck, eveningAdd, isoWeekAdd, promiseCheckDue, promiseCheckFireText, assistantFire, assistantFireNow } from '../_wa.js';
 import { odConfigured, accessToken, putFile } from '../_onedrive.js';
 import { OCR_ROOT, OCR_INBOX, OCR_AUTO_KEY, OCR_AUTO_GAP_MS, OCR_DONE_MAX, OCR_MAX_PAGES, OCR_MODELS, ocrAutoPick, ocrOne } from '../_ocr.js';
 
@@ -387,7 +387,7 @@ async function promiseRemind(env, now) {
 export async function promiseCheck(env, now) {
   const raw = await stateGet(env, PROMISE_KEY);
   const p = promiseCheckDue(raw, now.getTime(), ilHour(now));
-  const af = p && assistantFire(env);
+  const af = p && await assistantFireNow(env);
   if (!af) return null;
   let list = []; try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
   const e = list.find((x) => x && x.id === p.id);

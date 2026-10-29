@@ -21,6 +21,7 @@
 //   state_get  read server_state keys of STATE_READ.
 //   state_set  write one key of STATE_WRITE, then read it back (STAMP_AT keys: the server sets "at").
 //   agents_pause  {until: 'YYYY-MM-DD', agent?}: 29/10/2026 one switch: every Routine stops at its opening until that day (agent-common.md, 0). agents_resume clears it.
+//   assistant_account  {account: 'main'|'gmail', agent?}: 29/10/2026 which Claude account the assistant's WhatsApp messages fire (the ASSISTANT_* or the ASSISTANT2_* pair).
 //   quota_set  {util, resets_at}: the weekly quota as rate_limit_info shows it; the server decides quota_mode.
 //   live       the deployed commit (CF_PAGES_COMMIT_SHA) and the sha256 of the index.html this
 //              deployment serves (env.ASSETS). The cloud is outside Israel, so the country gate
@@ -161,12 +162,12 @@ import { SIGN_KEY, SIGN_CHOICES, signAdd, signMark, signAskText, signPlace } fro
 import { findSignSpot } from '../_pdftext.js';
 import { rowContradictions } from './wa-morning.js';
 import { PDFDocument } from '../_pdflib.js';
-import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, fireUrlOf, sameSession, recentLine, ilTimes } from '../_wa.js';
+import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, assistantFireNow, fireUrlOf, sameSession, recentLine, ilTimes , pickFire, ACCOUNT_KEY } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads',
   'trustees', 'trustee_tasks', 'trustee_winners'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'quota_mode', 'agents_pause'];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'quota_mode', 'agents_pause', 'assistant_account'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -1515,6 +1516,17 @@ export async function onRequest(context) {
       if (!r.ok) return jsonResp({ ok: false, error: 'write ' + r.status }, 200, {});
       return jsonResp(Object.assign({ ok: true }, q), 200, {});
     }
+    if (body.op === 'assistant_account') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'account'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      if (['main', 'gmail'].indexOf(body.account) < 0) return jsonResp({ ok: false, error: "account: 'main' or 'gmail'" }, 400, {});
+      const to = pickFire(env, body.account);
+      if (!to || (body.account === 'gmail' && to.which !== 'new')) return jsonResp({ ok: false, error: 'the Gmail pair (ASSISTANT2_FIRE_URL and ASSISTANT2_FIRE_TOKEN) is not set in Cloudflare' }, 400, {});
+      const v = { account: body.account, at: new Date().toISOString(), agent: String(body.agent || '').slice(0, 40) };
+      const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+        body: JSON.stringify([{ key: ACCOUNT_KEY, value: JSON.stringify(v), updated_at: v.at }]) });
+      if (!r.ok) return jsonResp({ ok: false, error: 'write ' + r.status }, 200, {});
+      return jsonResp(Object.assign({ ok: true, fires: to.which }, v), 200, {});
+    }
     if (body.op === 'agents_pause' || body.op === 'agents_resume') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'until'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const now = Date.now();
@@ -1645,7 +1657,7 @@ export async function onRequest(context) {
       for (const k of Object.keys(body)) if (['op', 'agent', 'row', 'text'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const text = String(body.text || '').trim();
       if (!OFFICE_ROW.test(String(body.row || '')) || !text || text.length > 4000) return jsonResp({ ok: false, error: 'row id and text 1-4000' }, 400, {});
-      const af = assistantFire(env);
+      const af = await assistantFireNow(env);
       if (!af) return jsonResp({ ok: false, error: 'assistant fire not configured' }, 200, {});
       const now = new Date().toISOString();
       // the conversation so far, read before this line is logged (so it is not in it)
@@ -2707,7 +2719,7 @@ export async function onRequest(context) {
       }
       out.app_sub = s.sub; out.app_sub_err = s.err; out.messages_ok = subOk(); out.waba_has_app = w.has; out.waba_apps_err = w.err;
       if (body.fire_probe && out.fire_set) {
-        const af = assistantFire(env);
+        const af = await assistantFireNow(env);
         const fr = await g(af.url, { method: 'POST',
           headers: { Authorization: 'Bearer ' + af.token, 'anthropic-beta': 'experimental-cc-routine-2026-04-01', 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: '[\u05d1\u05d3\u05d9\u05e7\u05ea \u05d7\u05d9\u05d1\u05d5\u05e8 \u05de\u05d4\u05e9\u05e8\u05ea, \u05dc\u05d0 \u05d4\u05d5\u05d3\u05e2\u05d4 \u05de\u05de\u05d9\u05db\u05d0\u05dc] \u05dc\u05e1\u05d9\u05d9\u05dd \u05d1\u05e9\u05d5\u05e8\u05d4 \u05d0\u05d7\u05ea, \u05d1\u05dc\u05d9 wa_me.' }) });

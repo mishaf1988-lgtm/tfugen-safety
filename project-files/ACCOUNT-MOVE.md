@@ -40,3 +40,7 @@
 ```
 שיחה ראשית של תפוגן, בחשבון השני. קרא את CLAUDE.md, את project-files/ACCOUNT-MOVE.md ואת ה-handoff בשורש. בדוק שהחיבורים עובדים (שאילתה אחת במסד, routine-db.sh select, קריאת מייל אחת) ושאתה יכול לערוך את המשרד ואת מפת המערכת, ואז המשך מה-handoff. לא להקים סוכנים מתוזמנים בחשבון הזה. כל הודעה בעברית.
 ```
+
+## מתג מהיר לעוזר בוואטסאפ (29/10/2026)
+
+מיכאל: "פתרון קל ומהיר לעבור בין חשבון לחשבון, כדי להשתמש במקסימום הטוקנים". השרת מחזיק שני זוגות הפעלה: `ASSISTANT_FIRE_*` (החשבון הראשי) ו-`ASSISTANT2_FIRE_*` (ה-Gmail), והדגל `assistant_account` ב-`server_state` קובע לאיזה מהם הודעה יוצאת. מעבר: `bash project-files/routine-db.sh '{"op":"assistant_account","account":"gmail"}'` (או `"main"`), בלי פריסה. הפעולה נדחית אם זוג ה-Gmail לא נשמר ב-Cloudflare. בלי דגל, או כשהזוג שנבחר חסר, ההודעה הולכת לזוג השני ולא נופלת. הקמה חד-פעמית של זוג ה-Gmail: סוכן העוזר בחשבון ה-Gmail (אותו קובץ הוראות `routine-wa-assistant.md`), ושמירת כתובת ההפעלה והמפתח שלו ב-Cloudflare בשמות `ASSISTANT2_FIRE_URL` ו-`ASSISTANT2_FIRE_TOKEN`. הסוכנים המתוזמנים עוברים בנפרד, במתג ההשהיה (`agents_pause`, `agent-common.md` צעד 0).
