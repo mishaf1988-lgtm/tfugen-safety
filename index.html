@@ -11544,6 +11544,32 @@ function svThz(){
   toast('\u05d4\u05de\u05e4\u05d2\u05e2 \u05e0\u05e9\u05de\u05e8 \u2713');rThz();
 }
 
+// ---- A corrective action opened from the safety committee or an investigation
+// becomes a hazard of the weekly tours (29/10/2026, Michael: "anything decided in the
+// committee or an investigation, and every corrective action opened, goes into the
+// hazards of my weekly tours"). Source in tour_hazards.src ('committee' | 'investigation')
+// and src_ref = "<meeting or investigation id>|<action name>"; the same pair again adds
+// nothing (returns dup), so an investigation created twice does not double the list.
+var THZ_SRC={committee:'\u05d5\u05e2\u05d3\u05d4',investigation:'\u05ea\u05d7\u05e7\u05d9\u05e8'};
+function _thzSrcKey(ref,action){return String(ref||'').trim()+'|'+String(action||'').replace(/\s+/g,' ').trim();}
+function thzFromSource(o){
+  o=o||{};
+  if(!THZ_SRC[o.src])return {error:'src'};
+  var action=String(o.action||'').trim(),ref=String(o.ref||'').trim();
+  if(!action||!ref||!o.dept)return {error:'fields'};
+  var key=_thzSrcKey(ref,action);
+  var dup=(DB.tour_hazards||[]).filter(function(x){return x.src_ref===key;})[0];
+  if(dup)return {dup:true,row:dup};
+  var sev=_MF_DUE_SEV[o.sev]?o.sev:'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea',d=_thzToday();
+  if(!DB.tour_hazards)DB.tour_hazards=[];
+  var r={id:'th-'+gid(),n:DB.tour_hazards.reduce(function(m,x){return Math.max(m,+x.n||0);},0)+1,d:d,tour_no:null,dept:o.dept,loc:o.loc||null,
+    descr:String(o.descr||action),sev:sev,resp:o.resp||null,resp2:null,action:action,due:o.due||_thzDueFor(sev,d),s:'\u05e4\u05ea\u05d5\u05d7',
+    closed_d:null,notes:o.notes||null,photo_url:null,ts:new Date().toISOString(),src:o.src,src_ref:key};
+  DB.tour_hazards.push(r);sbIns('tour_hazards',r);
+  addLog('\u05de\u05e4\u05d2\u05e2 \u05de'+THZ_SRC[o.src]+': '+action.substring(0,30));sdb();
+  return {added:true,row:r};
+}
+
 // ---- Safety manager field mode (28/09, Michael: "on the login screen another
 // button, the safety manager's interface, where I report from, with my admin
 // password"; chose "quick hazard report on a tour"). The same account and

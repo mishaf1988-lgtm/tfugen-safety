@@ -1,4 +1,4 @@
--- dumped 2026-10-27 from the live project by tools/platform/schema-dump.sql; verified with schema-fingerprint.sql
+-- dumped 2026-10-29 from the live project by tools/platform/schema-dump.sql; verified with schema-fingerprint.sql
 create schema if not exists private;
 
 create extension if not exists "uuid-ossp" with schema extensions;
@@ -119,7 +119,7 @@ create table if not exists public.toolbox_reads (id text not null, talk_id text 
 
 create table if not exists public.toolbox_talks (id text not null, d date, title text not null, body text, body_ar text, body_ru text, body_am text, file_url text, s text default 'טיוטה'::text not null, created_by text, ts timestamp with time zone default now() not null, link_at timestamp with time zone, trainer text, trainer_qual text, trainer_sig_url text, trainer_signed_at timestamp with time zone, eff_req boolean, eff_ok boolean, eff_d date, eff_desc text, eff_next text, eff_by text, video_url text, quiz jsonb, kind text, link_v smallint default 0 not null, dept text, topic_id text, dur text, mail_cc text, subjects text, form_at timestamp with time zone, closed_at timestamp with time zone);
 
-create table if not exists public.tour_hazards (id text not null, n integer, d date, tour_no integer, dept text not null, loc text, location_id text, descr text not null, sev text, resp text, action text, due date, s text default 'פתוח'::text not null, closed_d date, notes text, photo_url text, ts timestamp with time zone default now() not null, resp2 text, closed_by text, close_note text, after_photo_url text, recheck_d date);
+create table if not exists public.tour_hazards (id text not null, n integer, d date, tour_no integer, dept text not null, loc text, location_id text, descr text not null, sev text, resp text, action text, due date, s text default 'פתוח'::text not null, closed_d date, notes text, photo_url text, ts timestamp with time zone default now() not null, resp2 text, closed_by text, close_note text, after_photo_url text, recheck_d date, src text, src_ref text);
 
 create table if not exists public.tr (id text not null, w text not null, n text not null, c text, tr_name text, d date, e date, sc integer, s text default 'completed'::text, sig boolean default false, created_at timestamp with time zone default now(), file_url text, ext_id text);
 
