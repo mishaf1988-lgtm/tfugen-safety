@@ -42,6 +42,37 @@
   ```
   אחרי הביצוע: Claude בודק את כל הפריטים: `list_environments` (מופיעה tapugan), ו-`routine-db select` מהשיחה החדשה. לא מסמן `[x]` עד שהבדיקה עוברת.
   **מצב 28/10/2026 (נבדק מהשיחה בחשבון ה-Gmail, `session_011wpGWmvM2Cf6xVEsGrAAgX`):** כבר עובד: GitHub (שני המאגרים, `can_push`), Supabase (`list_projects`), Microsoft 365 כ-sviva@tapugan.co.il (`get_me`), Claude Docs. חסר: Cloudflare Developer Platform (לא ב-`ListConnectors`), שיתוף המשרד והמפה (Artifact open: "No Artifact ... that the user can see"), סביבה tapugan (`list_environments`: רק "סוכן" ו-Default). מיכאל בחר בשאלון "בצע: דף עם צעדים לטלפון": https://claude.ai/artifact/FHw9Y1LGrt9ygjtpiQ9i5R
+  **גרסה 2 (29/10/2026, מיכאל: "תביא הראות מלאות לכרום לבצע ולבדוק"), מחליפה את הטקסט למעלה.** נבדק לפני הכתיבה מהשיחה בחשבון ה-Gmail: GitHub, Supabase, Microsoft 365 (כ-sviva) ו-Claude Docs עובדים, ולכן הם רק נבדקים. חסרים: שיתוף המשרד והמפה, Cloudflare, סביבה tapugan עם ROUTINE_KEY. **לפני ההדבקה, מיכאל:** לסגור Chrome בכל מחשב או פרופיל אחר.
+
+  ```
+  משימה: להשלים את חשבון Claude השני (mishaf1988@gmail.com) של תפוגן, ולבדוק כל צעד. עבוד בלשונית אחת בלבד. ניתוק = ניסיון אחד נוסף, ואז עצור ודווח מה נשמר, בלי לפתוח לשוניות. לפני כל צעד: בדוק אם הוא כבר נעשה, ואם כן כתוב "כבר היה" ודלג. אם מבקשים סיסמה, קוד אימות או בחירת חשבון שאתה לא בטוח בה: עצור ודווח, אל תנחש. ערך סודי (המפתח) אתה לא קורא, לא מעתיק ולא מקליד: מיכאל מדביק אותו בעצמו.
+
+  חלק א: בחשבון הראשי (sviva@tapugan.co.il)
+  1. פתח https://claude.ai/settings/account ובדוק איזו כתובת מחוברת. אם זו לא sviva@tapugan.co.il: עצור ובקש ממיכאל להחליף חשבון (תפריט החשבון בפינה, Switch account).
+  2. פתח https://claude.ai/artifact/AmxFowGHYDqyhd1sE9qphi (המשרד). לחץ Share. אם mishaf1988@gmail.com כבר ברשימה עם הרשאת עריכה: "כבר היה". אחרת: הוסף את mishaf1988@gmail.com, בחר הרשאת עריכה (Can edit / Editor), אשר. בדוק שהכתובת מופיעה ברשימה עם עריכה.
+  3. אותו דבר ב-https://claude.ai/artifact/KTMVcoPJBva43nKRacSLkc (מפת המערכת).
+
+  חלק ב: מעבר לחשבון ה-Gmail
+  4. החלף לחשבון mishaf1988@gmail.com (תפריט החשבון, Switch account / Add account). אם מבקשים סיסמה או קוד: עצור ובקש ממיכאל להיכנס, וחכה שיכתוב "נכנסתי". בדוק ב-https://claude.ai/settings/account שהכתובת היא mishaf1988@gmail.com.
+  5. פתח https://claude.ai/artifact/AmxFowGHYDqyhd1sE9qphi ו-https://claude.ai/artifact/KTMVcoPJBva43nKRacSLkc. אם כתוב שאין גישה או שהדף לא נמצא: פתח https://mail.google.com, חפש מייל הזמנה מ-Claude על השיתוף, ולחץ על הקישור שבו. אחר כך פתח שוב את שני הקישורים. דווח לכל אחד: נפתח / לא נפתח.
+
+  חלק ג: חיבורים בחשבון ה-Gmail
+  6. פתח https://claude.ai/settings/connectors. רשום מה מחובר. צריכים להיות מחוברים: GitHub, Supabase, Microsoft 365, Claude Docs. חסר אחד מהם: דווח, אל תחבר (הם עבדו אתמול).
+  7. Cloudflare Developer Platform: אם לא מחובר, Browse connectors, חפש Cloudflare, Connect. בחלון של Cloudflare: אם מבקשים להתחבר, עצור ובקש ממיכאל. אם מבקשים לבחור חשבון Cloudflare: בחר את זה שיש בו את הפרויקט tapugan-safety; לא בטוח = עצור ושאל. אשר הרשאות. בדוק שבמסך החיבורים כתוב Connected ליד Cloudflare.
+
+  חלק ד: סביבה עם המפתח
+  8. מיכאל, לפני הצעד הזה: בחשבון הראשי, https://claude.ai/code, פתח את הגדרות הסביבה שבה רצים הסוכנים, והעתק את הערך של ROUTINE_KEY ללוח (רק אתה, לא כרום). אחר כך חזור לחשבון ה-Gmail וכתוב לכרום "העתקתי".
+  9. בחשבון ה-Gmail, https://claude.ai/code. בתפריט הסביבות (ליד שם הסביבה) בדוק אם יש סביבה בשם tapugan. אם יש: פתח את ההגדרות שלה ובדוק שיש שורה שמתחילה ב-ROUTINE_KEY= (בלי לקרוא את הערך). אם יש: "כבר היה", עבור ל-11.
+  10. אם אין: New environment / Add environment. שם: tapugan. Network access: לא לשנות, להשאיר כמו שמוצע. ב-Environment variables הקלד רק ROUTINE_KEY= ועצור. כתוב למיכאל: "הדבק עכשיו את המפתח מיד אחרי הסימן = ולחץ Save, וכתוב לי שמרתי". אחרי "שמרתי": בדוק שהסביבה tapugan מופיעה ברשימה.
+
+  חלק ה: בדיקה
+  11. ב-https://claude.ai/code, בחשבון ה-Gmail: שיחה חדשה, סביבה tapugan, מאגר mishaf1988-lgtm/tfugen-safety. כתוב בה בדיוק:
+  בדיקת מפתח בלבד, בלי שום דבר אחר: הרץ bash project-files/routine-db.sh '{"op":"select","table":"docs","query":"select=id&limit=1"}' וענה "המפתח עובד" אם יצא 0, אחרת את קוד היציאה ואת השגיאה המדויקת. בלי PR ובלי שינוי קבצים.
+  חכה לתשובה (עד 5 דקות).
+
+  בסוף: דוח קצר בעברית, שורה לכל צעד 1 עד 11: נעשה / כבר היה / נכשל ולמה (המילים המדויקות שעל המסך).
+  ```
+  אחרי הדוח: Claude בודק מהשיחה בחשבון ה-Gmail: Artifact open למשרד ולמפה, `ListConnectors` (Cloudflare), `list_environments` (tapugan), ותשובת שיחת הבדיקה. `[x]` רק אחרי שכל אלה עברו.
 
 - [x] **C51. זרימה "זימונים" ב-Power Automate** **נבנתה ואומתה 26/10/2026:** Claude בכרום יצר את `_אוטומציה\_זימונים` ובנה את הזרימה (Published, On, Flow checker 0/0; ב-Code view ה-URI שלם וה-Body בדיוק הביטוי). בדיקה: `test.txt` בלי מוזמנים, הריצה ב-15:43 Succeeded, האירוע נוצר ב-31/12/2026 08:00-08:15, נמחק מהיומן (אומת גם מהענן: החיפוש ריק), והקובץ לסל המיחזור. קובץ נגרר לדף ולא "מסמך טקסט חדש" (קובץ ריק היה מפעיל את הזרימה בלי תוכן). (26/10/2026, מיכאל: "האם אפשר להוסיף זימון? למייל", ובשאלון: "בצע: זימון אמיתי אחרי בצע"). העוזר מציג את הזימון המלא, ורק אחרי "בצע" של מיכאל השרת כותב קובץ, והזרימה יוצרת את הפגישה ביומן שלו ו-Outlook שולח את ההזמנות. עד שהזרימה בנויה, הבקשות נאספות בתיקייה ולא קורה כלום. טקסט להדבקה בכרום:
 ```
