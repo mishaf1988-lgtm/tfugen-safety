@@ -11550,6 +11550,9 @@ function svThz(){
 // hazards of my weekly tours"). Source in tour_hazards.src ('committee' | 'investigation')
 // and src_ref = "<meeting or investigation id>|<action name>"; the same pair again adds
 // nothing (returns dup), so an investigation created twice does not double the list.
+// Only actions opened from the accident of 29/10/2026 on (Michael: "the actions start from today, from
+// today's accident and from this moment every action"): an older investigation or action is not added.
+var THZ_SRC_FROM='2026-10-29';
 var THZ_SRC={committee:'\u05d5\u05e2\u05d3\u05d4',investigation:'\u05ea\u05d7\u05e7\u05d9\u05e8'};
 function _thzSrcKey(ref,action){return String(ref||'').trim()+'|'+String(action||'').replace(/\s+/g,' ').trim();}
 function thzFromSource(o){
@@ -11557,6 +11560,7 @@ function thzFromSource(o){
   if(!THZ_SRC[o.src])return {error:'src'};
   var action=String(o.action||'').trim(),ref=String(o.ref||'').trim();
   if(!action||!ref||!o.dept)return {error:'fields'};
+  if(o.opened&&String(o.opened).substring(0,10)<THZ_SRC_FROM)return {skip:'old'};
   var key=_thzSrcKey(ref,action);
   var dup=(DB.tour_hazards||[]).filter(function(x){return x.src_ref===key;})[0];
   if(dup)return {dup:true,row:dup};
