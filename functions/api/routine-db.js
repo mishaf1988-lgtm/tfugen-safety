@@ -651,6 +651,12 @@ export function draftSentGate(b) {
     : 'checked required: search Sent Items for this thread right before the draft, and pass "checked":"Sent Items <subject>, HH:MM UTC" (26/10/2026: a draft duplicated a mail Michael had just sent)';
 }
 // 26/10/2026: "delete it" is not a task to hand Michael. A file of yours goes to od_trash; a duplicate draft is named, not handed over.
+// 29/10/2026 (Michael: "is there a problem attaching documents to the assistant?"): the assistant made the Infrared draft
+// and wrote him "the quotes are only in the original thread, attach them by hand". A file in a mail is attached with
+// mail_request and then mail_draft attach; the assistant does it, Michael is not asked to.
+export function asksOwnerToAttach(t) {
+  return /(^|[^\u05d0-\u05ea])(\u05dc\u05e6\u05e8\u05e3|\u05ea\u05e6\u05e8\u05e3|\u05e6\u05e8\u05e3)\s+(\u05d9\u05d3\u05e0\u05d9\u05ea|\u05d1\u05e2\u05e6\u05de\u05da)|\u05db\u05d3\u05d0\u05d9\s+\u05dc\u05e6\u05e8\u05e3/.test(String(t || ''));
+}
 export function asksOwnerToDelete(t) {
   return /(^|[^\u05d0-\u05ea])(\u05dc\u05de\u05d7\u05d5\u05e7|\u05ea\u05de\u05d7\u05e7)\s+(\u05d0\u05d5\u05ea|\u05d0\u05ea)/.test(String(t || ''));
 }
@@ -2551,6 +2557,7 @@ export async function onRequest(context) {
       if (asksRepoSetup(body.text)) return jsonResp({ ok: false, error: 'asks Michael to add a repository or edit a Routine: no such choice (C32); say the dev runner builds it at its next wake (07:17-19:17 every 2 hours) (21/10/2026)' }, 400, {});
       // 25/10/2026 (Michael in the questionnaire: "do it: block"): the assistant asked for "\u05d1\u05e6\u05e2" with no buttons, and fixed it only when he said so.
       if (asksApprovalNoButtons(body.text, body.choices)) return jsonResp({ ok: false, error: 'asks for \u05d1\u05e6\u05e2 with no buttons: send it again with "choices", e.g. ["\u05d1\u05e6\u05e2","\u05dc\u05d0"]' }, 400, {});
+      if (asksOwnerToAttach(body.text)) return jsonResp({ ok: false, error: 'asks Michael to attach a file: attach it yourself, mail_request on the mail that has it, then about a minute later mail_draft with attach (files-scans.md; 29/10/2026)' }, 400, {});
       if (asksOwnerToDelete(body.text)) return jsonResp({ ok: false, error: 'asks Michael to delete: a file you made goes to od_trash yourself; a draft you replaced: draft_trash it yourself (26/10/2026)' }, 400, {});
       // 26/10/2026 (load test: an answer ended "\u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9: \u05de\u05d0\u05d5\u05e9\u05e8."): the second checker's verdict is for you, not for Michael.
       if (/\u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9\s*:/.test(String(body.text || ''))) return jsonResp({ ok: false, error: 'the second checker\'s verdict is internal: drop the "\u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9:" line and send the answer itself (26/10/2026)' }, 400, {});
