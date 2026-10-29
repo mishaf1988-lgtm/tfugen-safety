@@ -40,9 +40,10 @@ button[aria-pressed="true"],button[aria-selected="true"]{background:var(--accent
 .tabs{display:flex;gap:4px;flex-wrap:wrap}
 .tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap;width:100%}
 #q{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 13px;min-width:0;flex:1 1 160px;max-width:320px}
-#pause{position:fixed;z-index:9;left:50%;transform:translateX(-50%);top:calc(6px + env(safe-area-inset-top,0px));padding:5px 14px;border-radius:999px;font-size:13px;border:1px solid var(--s-warn);background:var(--solid);color:var(--s-warn);pointer-events:none}
+#stat{width:100%;display:flex;gap:6px 8px;flex-wrap:wrap;align-items:center;pointer-events:auto}
+#pause{padding:3px 12px;border-radius:999px;font-size:13px;border:1px solid var(--s-warn);background:var(--solid);color:var(--s-warn)}
 #pause.on{border-color:var(--s-ok);color:var(--s-ok)}
-#acct{position:fixed;z-index:9;left:50%;transform:translateX(-50%);top:calc(40px + env(safe-area-inset-top,0px));display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 32px);font-size:13px;background:var(--solid);border:1px solid var(--line);border-radius:999px;padding:4px 6px 4px 12px}
+#acct{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;background:var(--solid);border:1px solid var(--line);border-radius:999px;padding:3px 6px 3px 12px}
 #acct a{border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--ink);text-decoration:none;background:var(--panel)}
 #acct a:hover{border-color:var(--accent)}
 #acct a.cur{background:var(--accent);color:#1f1a00;border-color:var(--accent);pointer-events:none}
@@ -50,7 +51,7 @@ button[aria-pressed="true"],button[aria-selected="true"]{background:var(--accent
 #hits button{border:0;border-radius:6px;text-align:right;display:flex;gap:8px;align-items:center;width:100%}
 .chips{display:flex;gap:4px;flex-wrap:wrap}
 .chips button{padding:3px 10px;font-size:13px}
-#panel{position:fixed;z-index:6;top:calc(118px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));width:min(350px,40vw);max-height:calc(100% - 140px);overflow:auto;
+#panel{position:fixed;z-index:6;top:calc(158px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));width:min(350px,40vw);max-height:calc(100% - 180px);overflow:auto;
   background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;backdrop-filter:blur(8px);display:grid;gap:8px;align-content:start}
 #panel h2{font-family:var(--display);font-weight:400;font-size:22px;margin:0;text-wrap:balance}
 .kind{font-size:12px;letter-spacing:.04em;color:var(--mute)}
@@ -70,7 +71,7 @@ button[aria-pressed="true"],button[aria-selected="true"]{background:var(--accent
 .lbl.small{font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis}
 .lbl.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
 .lbl .n{font-family:var(--body);font-size:11px;color:var(--s-bad);margin-inline-start:6px}
-.view{position:fixed;inset:0;z-index:4;overflow:auto;background:var(--bg);padding-block:calc(124px + env(safe-area-inset-top,0px)) 24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.view{position:fixed;inset:0;z-index:4;overflow:auto;background:var(--bg);padding-block:calc(164px + env(safe-area-inset-top,0px)) 24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;max-width:1200px;margin:0 auto}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:6px;align-content:start;min-width:0}
 .card h3{margin:0;font-family:var(--display);font-weight:400;font-size:19px;display:flex;gap:8px;align-items:center}
@@ -99,7 +100,7 @@ td.warn code{background:color-mix(in srgb,var(--s-warn) 28%,transparent)}
 @media (max-width:640px){
   #panel{top:auto;bottom:calc(8px + env(safe-area-inset-bottom,0px));left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));width:auto;max-height:42%}
   #legend{display:none}
-  .view{padding-top:calc(150px + env(safe-area-inset-top,0px))}
+  .view{padding-top:calc(196px + env(safe-area-inset-top,0px))}
 }
 </style>
 
@@ -118,9 +119,8 @@ td.warn code{background:color-mix(in srgb,var(--s-warn) 28%,transparent)}
     <button id="trace">מסלול הודעה</button>
     <button id="back" hidden>חזרה למבט כללי</button>
   </div>
+  <div id="stat"><div id="acct"></div><div id="pause" hidden role="status"></div></div>
 </header>
-<div id="pause" hidden role="status"></div>
-<div id="acct" hidden></div>
 <div id="hits" hidden role="listbox"></div>
 <aside id="panel" aria-live="polite"></aside>
 <div id="flat" class="view" hidden></div>
@@ -594,26 +594,30 @@ renderer.setAnimationLoop((now) => {
   let db = null; try { db = await window.claude?.use?.('db'); } catch (e) { db = null; }
   if (!db) return;
   // 29/10/2026 (Michael: "where do I see the switch?"): doc live/pause = {paused, until: 'YYYY-MM-DD'}, written by Claude whenever it sets agents_pause.
+  const az = document.getElementById('acct');
+  // 29/10/2026 (Michael: "I do not see where the bar is"): always shown; with no data yet the buttons still work, the label says so.
+  function renderAcct(who, at) {
+    az.textContent = ''; az.hidden = false;
+    const known = who === 'gmail' || who === 'main';
+    az.append(known ? 'העוזר עובד בחשבון: ' + (who === 'gmail' ? 'Gmail' : 'הראשי') + (at ? ' (עודכן ' + fmt(at) + ')' : '') : 'חשבון העוזר: עוד לא ידוע, יתעדכן בריצה הבאה של נורות המפה');
+    for (const [k, t, phrase] of [['main', 'ראשי', 'העוזר לראשי'], ['gmail', 'Gmail', 'העוזר לגימייל']]) {
+      const a = el('a', k === who ? 'cur' : '', (k === who ? 'כאן: ' : 'העבר ל') + t);
+      if (k !== who) { a.href = 'https://wa.me/97286808365?text=' + encodeURIComponent(phrase); a.target = '_blank'; a.rel = 'noopener'; }
+      az.append(a);
+    }
+  }
+  renderAcct(null, null);
   const pz = document.getElementById('pause');
   db.doc('live/pause').onSnapshot((snap) => {
     const d = snap.exists ? snap.data() : null; pz.className = '';
-    if (!d) { pz.hidden = true; return; }
+    if (!d) { pz.hidden = true; renderAcct(null, null); return; }
     const until = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d.until || '');
     const paused = d.paused && until && Date.parse(d.until + 'T00:00:00+02:00') > Date.now();
     pz.hidden = false; pz.className = paused ? '' : 'on';
     pz.textContent = paused ? 'הסוכנים מושהים עד ' + until[3] + '/' + until[2] + '/' + until[1] : 'הסוכנים פעילים';
     // the assistant's account (29/10/2026, Michael: "a switch button too"): the page cannot call the server (CSP), so a button
     // opens WhatsApp to the assistant with the switch phrase typed in; one tap on send and the server switches, with no AI.
-    const az = document.getElementById('acct'), who = d.assistant;
-    if (who === 'gmail' || who === 'main') {
-      az.textContent = ''; az.hidden = false;
-      az.append('העוזר עובד בחשבון: ' + (who === 'gmail' ? 'Gmail' : 'הראשי') + (d.assistant_at ? ' (עודכן ' + fmt(d.assistant_at) + ')' : ''));
-      for (const [k, t, phrase] of [['main', 'הראשי', 'העוזר לראשי'], ['gmail', 'Gmail', 'העוזר לגימייל']]) {
-        const a = el('a', k === who ? 'cur' : '', (k === who ? 'כאן: ' : 'העבר ל') + t);
-        if (k !== who) { a.href = 'https://wa.me/97286808365?text=' + encodeURIComponent(phrase); a.target = '_blank'; a.rel = 'noopener'; }
-        az.append(a);
-      }
-    } else az.hidden = true;
+    renderAcct(d.assistant, d.assistant_at);
   }, () => {});
   db.doc('live/status').onSnapshot((snap) => {
     LIVE = snap.exists ? snap.data() : null; statusCache.clear(); paintZones();
