@@ -159,6 +159,7 @@ import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SI
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
 import { OD_OCR_DIR, OCR_MODELS, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
+import { stateCas } from '../_cas.js';
 import { SIGN_KEY, SIGN_CHOICES, signAdd, signMark, signAskText, signPlace } from '../_sign.js';
 import { findSignSpot } from '../_pdftext.js';
 import { rowContradictions } from './wa-morning.js';
@@ -2021,16 +2022,15 @@ export async function onRequest(context) {
     }
     if (body.op === 'promise' || body.op === 'promise_done') {
       const now = new Date().toISOString();
-      const rows = await stateRead([PROMISE_KEY]);
-      const raw = rows && rows[0] && rows[0].value;
-      const r = body.op === 'promise' ? promiseAdd(raw, body, now) : promiseDone(raw, { id: body.id, ref: body.ref }, body.note, now);
+      // 30/10/2026 (ideas-lab 12): written only if the row is as it was read; a save in between = read again
+      let r;
+      const cas = await stateCas(url, h, PROMISE_KEY, (raw) => {
+        r = body.op === 'promise' ? promiseAdd(raw, body, now) : promiseDone(raw, { id: body.id, ref: body.ref }, body.note, now);
+        return (r.error || (body.op === 'promise_done' && !r.closed.length)) ? { write: false } : { value: JSON.stringify(r.list) };
+      }, () => tmo(SB_MS));
       if (r.error) return jsonResp({ ok: false, error: r.error }, 400, {});
       if (body.op === 'promise_done' && !r.closed.length) return jsonResp({ ok: false, error: 'no open promise with this id or ref' }, 400, {});
-      const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', {
-        method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify([{ key: PROMISE_KEY, value: JSON.stringify(r.list), updated_at: now }]), signal: tmo(SB_MS),
-      });
-      if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status }, 200, {});
+      if (!cas.written) return jsonResp({ ok: false, error: cas.conflict ? 'write conflict, try again' : 'write ' + cas.status }, 200, {});
       let wa = null;
       // quiet (23/10/2026): closing what Michael did himself, or what he already heard about, sends him nothing
       if (body.op === 'promise_done' && body.quiet !== true && env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN) {
@@ -2465,13 +2465,14 @@ export async function onRequest(context) {
           spot = signPlace(findSignSpot(doc)) || permitSpot(c.name, doc.getPageCount());
         }
       } catch (x) { spot = null; }
-      const rows = await stateRead([SIGN_KEY]);
       const now = new Date().toISOString();
-      const r = signAdd(rows[0] ? rows[0].value : '[]', { agent: body.agent, path: c.path, name: c.name, page: spot ? spot.page : c.page, x: spot ? spot.x : c.x, y: spot ? spot.y : c.y, w: spot && spot.w ? spot.w : c.w }, now);
+      let r; // 30/10/2026 (ideas-lab 12): written only if the row is as it was read
+      const cas = await stateCas(url, h, SIGN_KEY, (raw) => {
+        r = signAdd(raw === undefined ? '[]' : raw, { agent: body.agent, path: c.path, name: c.name, page: spot ? spot.page : c.page, x: spot ? spot.x : c.x, y: spot ? spot.y : c.y, w: spot && spot.w ? spot.w : c.w }, now);
+        return r.created ? { value: JSON.stringify(r.list) } : { write: false };
+      }, () => tmo(SB_MS));
       if (!r.created) return jsonResp({ ok: true, id: r.id, created: false, note: 'already waiting for Michael on this file' }, 200, {});
-      const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify([{ key: SIGN_KEY, value: JSON.stringify(r.list), updated_at: now }]), signal: tmo(SB_MS) });
-      if (!w.ok) return jsonResp({ ok: false, error: 'save ' + w.status }, 200, {});
+      if (!cas.written) return jsonResp({ ok: false, error: cas.conflict ? 'save conflict, try again' : 'save ' + cas.status }, 200, {});
       // 22/10/2026 18:36: a spot Michael approved was used, and the question still said "no signature place found".
       const text = signAskText(c.name, c.folder, spot || (c.page !== undefined ? { page: c.page, set: true } : null)), ref = 'sign:' + r.id;
       const win = await ownerWindowOpen(env, url);
@@ -2482,11 +2483,17 @@ export async function onRequest(context) {
       const s = await sendToOwner(env, to, text, { windowOpen: win, choices: SIGN_CHOICES });
       // 22/10/2026 (retro): a question that did not go out must not stay pending: the next sign_request on the same
       // file would answer "already waiting" and Michael would never be asked.
+      let markLost = false; // 5 lost races: the request stays pending, so the reply says it
       if (!s.ok) {
         try {
-          const fresh = await stateRead([SIGN_KEY]); // the document and the question took seconds: another request or Michael's answer may have been saved meanwhile
-          await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-            body: JSON.stringify([{ key: SIGN_KEY, value: JSON.stringify(signMark(fresh && fresh[0] ? fresh[0].value : JSON.stringify(r.list), r.id, 'failed', { error: String(s.error || 'send').slice(0, 100), done_at: new Date().toISOString() })), updated_at: new Date().toISOString() }]), signal: tmo(SB_MS) });
+          // the document and the question took seconds: another request or Michael's answer may have been saved meanwhile (30/10/2026: now checked, not only re-read)
+          // only a request still waiting is marked: Michael's answer that arrived meanwhile stays (security review 30/10/2026)
+          const mk = await stateCas(url, h, SIGN_KEY, (raw) => {
+            const cur = (() => { try { return JSON.parse(raw || '[]').find((x) => x && x.id === r.id); } catch (e) { return null; } })();
+            if (cur && cur.status !== 'pending') return { write: false };
+            return { value: JSON.stringify(signMark(raw === undefined ? JSON.stringify(r.list) : raw, r.id, 'failed', { error: String(s.error || 'send').slice(0, 100), done_at: new Date().toISOString() })) };
+          }, () => tmo(SB_MS));
+          if (mk.conflict) markLost = true;
         } catch (e) { /* the reply below still says it was not sent */ }
       }
       if (s.ok) await noteLastOut(env, url, text, ref);
@@ -2496,7 +2503,7 @@ export async function onRequest(context) {
             event_type: 'assistant', channel: s.ok ? 'whatsapp' : 'whatsapp_error',
             payload: { title: text.replace(/\s+/g, ' ').slice(0, 120), text, via: s.via || null, wamid: s.wamid || null, ref, detail: s.error || null } }]) });
       } catch (e) { /* the question went out; a missing log line is not a failure */ }
-      return jsonResp({ ok: s.ok, id: r.id, created: true, sent: s.ok, via: s.via || null, doc: doc && doc.ok ? 'sent' : (doc && doc.error) || null, spot: spot || null, error: s.error || undefined }, 200, {});
+      return jsonResp({ ok: s.ok, id: r.id, created: true, sent: s.ok, via: s.via || null, doc: doc && doc.ok ? 'sent' : (doc && doc.error) || null, spot: spot || null, error: s.error || undefined, mark_lost: markLost || undefined }, 200, {});
     }
     if (body.op === 'od_mkdir') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'parent', 'name'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});

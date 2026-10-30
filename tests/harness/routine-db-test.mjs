@@ -11,7 +11,7 @@ let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const ENV = { ROUTINE_KEY: 'k-123', SUPABASE_SERVICE_ROLE_KEY: 'srv' };
-let calls = [], state = {}, fires = [], fireSession = 'cse_01POSTMAN';
+let calls = [], state = {}, stateVer = {}, raceOnce = null, fires = [], fireSession = 'cse_01POSTMAN';
 let ghCalls = [], mediaMeta = null, claudeReads = [], ownerIn = null;
 globalThis.fetch = async (url, opt = {}) => {
   if (String(url).startsWith('https://www.nevo.co.il/law_html/')) { const b = new TextEncoder().encode('<html><head><meta charset="utf-8"><script>x()</script></head><body><p>75. (\u05d0) \u05dc\u05e4\u05d7\u05d5\u05ea \u05d0\u05d7\u05ea \u05dc\u05e9\u05e9\u05d4 \u05d7\u05d3\u05e9\u05d9\u05dd</p></body></html>'); const res = new Response(b, { status: 200, headers: { 'content-type': 'text/html' } }); Object.defineProperty(res, 'url', { value: String(url) }); return res; }
@@ -20,9 +20,21 @@ globalThis.fetch = async (url, opt = {}) => {
   if (String(url).startsWith('https://api.github.com/repos/mishaf1988-lgtm/michael-skills/contents/')) { ghCalls.push({ url: String(url), auth: (opt.headers || {}).Authorization }); return new Response('# law\nsection 81: 14 months', { status: 200 }); }
   calls.push({ url, method: opt.method || 'GET', body: opt.body });
   if (url.startsWith(SB + '/rest/v1/server_state')) {
-    if ((opt.method || 'GET') === 'POST') { JSON.parse(opt.body).forEach((r) => { state[r.key] = r.value; }); return new Response('', { status: 201 }); }
+    // 30/10/2026 (ideas-lab 12): a version per key (updated_at), PATCH only when it is the one read, POST that ignores a duplicate
+    if ((opt.method || 'GET') === 'PATCH') {
+      const kk = decodeURIComponent(/key=eq\.([^&]*)/.exec(url)[1]), vv = decodeURIComponent(/updated_at=eq\.([^&]*)/.exec(url)[1]);
+      if (raceOnce) { const f = raceOnce; raceOnce = null; f(kk); }
+      if (!(kk in state) || (stateVer[kk] || 'v0') !== vv) return new Response('[]', { status: 200 });
+      const b = JSON.parse(opt.body); state[kk] = b.value; stateVer[kk] = b.updated_at; return new Response(JSON.stringify([{ key: kk, value: b.value }]), { status: 200 });
+    }
+    if ((opt.method || 'GET') === 'POST') {
+      const dup = /ignore-duplicates/.test((opt.headers || {}).Prefer || '');
+      const rowsIn = JSON.parse(opt.body), out = [];
+      rowsIn.forEach((r) => { if (dup && r.key in state) return; state[r.key] = r.value; stateVer[r.key] = r.updated_at; out.push(r); });
+      return new Response(dup ? JSON.stringify(out) : '', { status: 201 });
+    }
     const keys = decodeURIComponent((/key=(?:in\.\(([^)]*)\)|eq\.(.*))/.exec(url) || []).slice(1).filter(Boolean)[0] || '').split(',');
-    return new Response(JSON.stringify(keys.filter((k) => k in state).map((k) => ({ key: k, value: state[k], updated_at: 'now' }))), { status: 200 });
+    return new Response(JSON.stringify(keys.filter((k) => k in state).map((k) => ({ key: k, value: state[k], updated_at: stateVer[k] || 'v0' }))), { status: 200 });
   }
   // ownerIn: the owner_in rows a test sets (wa_me stale, 26/10/2026 retro); null = the default row below
   if (ownerIn && url.startsWith(SB + '/rest/v1/notifications_log') && /event_type=eq\.owner_in/.test(url)) return new Response(JSON.stringify(ownerIn), { status: 200 });
@@ -1441,6 +1453,31 @@ const callIn = async (body) => {
   check('language: an English report of the assistant turns red, the reason first', (() => { const r = languageGate({ agent: 'wa-assistant', ok: true, line: 'Answered the question about the ladder inspection' }); return r.ok === false && r.line.indexOf('\u05d4\u05d3\u05d5\u05d7 \u05dc\u05d0 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea') === 0; })());
   check('language: a Hebrew report, a short one, another agent and a red one are left alone', languageGate({ agent: 'wa-assistant', ok: true, line: '\u05e0\u05e9\u05dc\u05d7\u05d4 \u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc\u05de\u05d9\u05db\u05d0\u05dc about NCR' }).ok === true && languageGate({ agent: 'wa-assistant', ok: true, line: 'done' }).ok === true && languageGate({ agent: 'routine-quotes', ok: true, line: 'English only report text here' }).ok === true && languageGate({ agent: 'wa-assistant', ok: false, line: 'English only report text here' }).line === 'English only report text here');
   check('second check: another topic, another agent and a report already red are left alone', sc('wa-assistant', true, '\u05d4\u05d3\u05e8\u05db\u05d5\u05ea').ok === true && sc('routine-quotes', true, A).ok === true && sc('wa-assistant', false, A).line === A);
+  console.log('\n4f. server_state write only if the row is as it was read (30/10/2026, ideas-lab 12)');
+  {
+    delete state.promises; delete stateVer.promises;
+    const first = await call({ op: 'promise', agent: 'wa-test', text: 'first promise text here' });
+    check('cas: a key that does not exist yet is created', first.json.ok === true && JSON.parse(state.promises).length === 1, first.json);
+    // another writer saves between our read and our write: its entry must survive and ours must be added
+    raceOnce = (k) => { const l = JSON.parse(state[k]); l.push({ id: 'p-other', at: 'x', agent: 'other', text: 'saved meanwhile by another', status: 'open' }); state[k] = JSON.stringify(l); stateVer[k] = 'v-other'; };
+    const second = await call({ op: 'promise', agent: 'wa-test', text: 'second promise text here' });
+    const ids = JSON.parse(state.promises).map((x) => x.text);
+    check('cas: a save in between is not overwritten (before: the old list was written over it)', second.json.ok === true && ids.length === 3 && ids.includes('saved meanwhile by another') && ids.includes('second promise text here'), ids);
+    raceOnce = (k) => { const l = JSON.parse(state[k]); l.push({ id: 'p-late', at: 'x', agent: 'other', text: 'late entry by another', status: 'open' }); state[k] = JSON.stringify(l); stateVer[k] = 'v-late'; };
+    const doneId = JSON.parse(state.promises)[0].id;
+    const dn = await call({ op: 'promise_done', id: doneId, note: 'closed', quiet: true });
+    const after = JSON.parse(state.promises);
+    check('cas: promise_done also keeps a save made in between', dn.json.ok === true && after.some((x) => x.id === 'p-late') && after.find((x) => x.id === doneId).status !== 'open', after.map((x) => x.id + ':' + x.status));
+    // a writer that always wins: the call gives up with a clear message instead of looping or overwriting
+    let n = 0; const keep = state.promises;
+    raceOnce = null;
+    const orig = globalThis.fetch;
+    globalThis.fetch = async (u, o = {}) => { if ((o.method || 'GET') === 'PATCH') { stateVer.promises = 'v-' + (++n); } return orig(u, o); };
+    const lost = await call({ op: 'promise', agent: 'wa-test', text: 'never gets written text' });
+    globalThis.fetch = orig;
+    check('cas: five lost races = a clear "try again", nothing written', lost.json.ok === false && /conflict/.test(lost.json.error) && state.promises === keep && n === 5, [lost.json, n]);
+  }
+
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.log('HARNESS ERROR: ' + (e && e.stack || e)); process.exit(1); });

@@ -13,16 +13,26 @@ const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co', OWNER = '972501234567';
 let fireStatus = 200;
 const ENV = { META_APP_SECRET: 'app-secret', WA_VERIFY_TOKEN: 'vt-1', ASSISTANT_FIRE_URL: 'https://api.anthropic.com/v1/claude_code/routines/trig_X/fire',
   ASSISTANT_FIRE_TOKEN: 'tok', SUPABASE_SERVICE_ROLE_KEY: 'srv', ROUTINE_KEY: 'k-1', META_PHONE_NUMBER_ID: 'P1', META_ACCESS_TOKEN: 'mt' };
-let fireSession = 'cse_01OLD', probe2Auth = [], reviewUrls = [], order = [], hz = {}, hzWrites = [], graph = null, graphCalls = [], fires = [], metas = [], logs = [], state = {}, metaReply = () => ({ ok: true, body: { messages: [{ id: 'wamid.OUT1' }] } }), owner = OWNER;
+let fireSession = 'cse_01OLD', probe2Auth = [], reviewUrls = [], order = [], hz = {}, hzWrites = [], graph = null, graphCalls = [], fires = [], metas = [], logs = [], state = {}, stateVer = {}, metaReply = () => ({ ok: true, body: { messages: [{ id: 'wamid.OUT1' }] } }), owner = OWNER;
 globalThis.fetch = async (url, opt = {}) => {
   const m = opt.method || 'GET';
   if (url.startsWith(SB + '/rest/v1/notification_prefs')) return new Response(JSON.stringify(owner ? [{ prefs: { trustee_hazard: { whatsapp_to: '+' + owner } } }] : []), { status: 200 });
   if (url.startsWith(SB + '/rest/v1/server_state')) {
-    if (m === 'POST') { JSON.parse(opt.body).forEach((r) => { state[r.key] = r.value; }); return new Response('', { status: 201 }); }
+    // 30/10/2026 (ideas-lab 12): stateCas reads a version (updated_at) and writes with PATCH only if it is unchanged
+    if (m === 'PATCH') {
+      const kk = decodeURIComponent(/key=eq\.([^&]*)/.exec(url)[1]), vv = decodeURIComponent(/updated_at=eq\.([^&]*)/.exec(url)[1]);
+      if (!(kk in state) || (stateVer[kk] || 'v0') !== vv) return new Response('[]', { status: 200 });
+      const b = JSON.parse(opt.body); state[kk] = b.value; stateVer[kk] = b.updated_at; return new Response(JSON.stringify([{ key: kk }]), { status: 200 });
+    }
+    if (m === 'POST') {
+      const dup = /ignore-duplicates/.test((opt.headers || {}).Prefer || ''), out = [];
+      JSON.parse(opt.body).forEach((r) => { if (dup && r.key in state) return; state[r.key] = r.value; stateVer[r.key] = r.updated_at; out.push(r); });
+      return new Response(dup ? JSON.stringify(out) : '', { status: 201 });
+    }
     const ks = /key=in\.\(([^)]*)\)/.exec(url);
     if (ks) return new Response(JSON.stringify(ks[1].split(',').map(decodeURIComponent).filter((k) => k in state).map((k) => ({ key: k, value: state[k] }))), { status: 200 });
     const k = /key=eq\.([^&]*)/.exec(url)[1];
-    return new Response(JSON.stringify(k in state ? [{ value: state[k] }] : []), { status: 200 });
+    return new Response(JSON.stringify(k in state ? [{ value: state[k], updated_at: stateVer[k] || 'v0' }] : []), { status: 200 });
   }
   if (url.startsWith(SB + '/rest/v1/trustee_reports') || url.startsWith(SB + '/rest/v1/near_miss')) {
     const tb = url.startsWith(SB + '/rest/v1/near_miss') ? 'near_miss' : 'trustee_reports', col = tb === 'near_miss' ? 'notes' : 'mgr_note';
