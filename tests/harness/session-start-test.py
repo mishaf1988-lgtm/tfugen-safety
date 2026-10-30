@@ -132,7 +132,7 @@ _cm = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", 
 check("CLAUDE.md turns hooks on through session-start.py, not by hand (lesson 116)",
       "python3 .claude/hooks/session-start.py" in _cm and "לפני כל פקודה" not in _cm)
 # 30/10/2026: the gap between the two accounts (accounts-expected.json): a plugin the repo expects and this account lacks.
-open(os.path.join(d, "project-files", "accounts-expected.json"), "w", encoding="utf-8").write(json.dumps({"plugins": ["token-guard"], "install": "/plugin install token-guard@tfugen-mods", "routines_main_only": ["חוקר"]}, ensure_ascii=False))
+open(os.path.join(d, "project-files", "accounts-expected.json"), "w", encoding="utf-8").write(json.dumps({"plugins": ["token-guard"], "install": "/plugin install token-guard@tfugen-mods", "routines_main_only": ["חוקר"], "connectors": ["Supabase", "GitHub"]}, ensure_ascii=False))
 rh = lambda home: subprocess.run([sys.executable, hook("session-start.py")], input="{}", capture_output=True, text=True, encoding="utf-8",
                                  timeout=30, env=dict(os.environ, CLAUDE_PROJECT_DIR=d, HOME=home)).stdout
 h1 = tempfile.mkdtemp(); h2 = tempfile.mkdtemp(); os.makedirs(os.path.join(h2, ".claude"))
@@ -140,6 +140,7 @@ open(os.path.join(h2, ".claude", "settings.json"), "w", encoding="utf-8").write(
 og1 = rh(h1)
 check("a missing plugin: the gap section names it, the install line and the main-only Routines", "פער בין חשבונות" in og1 and "token-guard" in og1 and "/plugin install" in og1 and "חוקר" in og1, og1)
 check("the plugin is installed: no gap section", "פער בין חשבונות" not in rh(h2))
+check("connectors expected: one line names them, shown even with no plugin gap", "Connectors צפויים" in rh(h2) and "Supabase" in rh(h2), rh(h2))
 os.remove(os.path.join(d, "project-files", "accounts-expected.json"))
 check("no expectations file: no gap section", "פער בין חשבונות" not in rh(h1))
 # 30/10/2026: a request open more than 12 hours says how long; a fresh one says nothing.
