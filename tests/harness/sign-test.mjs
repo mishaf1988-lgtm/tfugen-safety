@@ -156,7 +156,7 @@ console.log('\n7. a question that did not go out is not left pending (22/10/2026
   check('marked failed: the next request creates a new one', signAdd(JSON.stringify(failed), { agent: 'x', path: 'a/b.pdf', name: 'b.pdf' }, iso(1)).created === true);
   const src = (await import('node:fs')).readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
   const i = src.indexOf("const s = await sendToOwner(env, to, text, { windowOpen: win, choices: SIGN_CHOICES });");
-  check('sign_request marks the request failed when the question was not sent, through stateCas (read, then write only if unchanged; a source check: the handler itself is not run here)', i > 0 && /if \(!s\.ok\)[\s\S]{0,500}stateCas\(url, h, SIGN_KEY[\s\S]{0,300}signMark\(raw === undefined \? JSON\.stringify\(r\.list\) : raw, r\.id, 'failed'/.test(src.slice(i - 200, i + 1800)));
+  check('sign_request marks the request failed when the question was not sent, through stateCas (read, then write only if unchanged; a source check: the handler itself is not run here)', i > 0 && /if \(!s\.ok\)[\s\S]{0,500}stateCas\(url, h, SIGN_KEY[\s\S]{0,700}signMark\(raw === undefined \? JSON\.stringify\(r\.list\) : raw, r\.id, 'failed'/.test(src.slice(i - 200, i + 1800)));
 }
 
 console.log('\nsign-test: ' + pass + ' passed, ' + fail + ' failed');

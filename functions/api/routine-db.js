@@ -2483,10 +2483,17 @@ export async function onRequest(context) {
       const s = await sendToOwner(env, to, text, { windowOpen: win, choices: SIGN_CHOICES });
       // 22/10/2026 (retro): a question that did not go out must not stay pending: the next sign_request on the same
       // file would answer "already waiting" and Michael would never be asked.
+      let markLost = false; // 5 lost races: the request stays pending, so the reply says it
       if (!s.ok) {
         try {
           // the document and the question took seconds: another request or Michael's answer may have been saved meanwhile (30/10/2026: now checked, not only re-read)
-          await stateCas(url, h, SIGN_KEY, (raw) => ({ value: JSON.stringify(signMark(raw === undefined ? JSON.stringify(r.list) : raw, r.id, 'failed', { error: String(s.error || 'send').slice(0, 100), done_at: new Date().toISOString() })) }), () => tmo(SB_MS));
+          // only a request still waiting is marked: Michael's answer that arrived meanwhile stays (security review 30/10/2026)
+          const mk = await stateCas(url, h, SIGN_KEY, (raw) => {
+            const cur = (() => { try { return JSON.parse(raw || '[]').find((x) => x && x.id === r.id); } catch (e) { return null; } })();
+            if (cur && cur.status !== 'pending') return { write: false };
+            return { value: JSON.stringify(signMark(raw === undefined ? JSON.stringify(r.list) : raw, r.id, 'failed', { error: String(s.error || 'send').slice(0, 100), done_at: new Date().toISOString() })) };
+          }, () => tmo(SB_MS));
+          if (mk.conflict) markLost = true;
         } catch (e) { /* the reply below still says it was not sent */ }
       }
       if (s.ok) await noteLastOut(env, url, text, ref);
@@ -2496,7 +2503,7 @@ export async function onRequest(context) {
             event_type: 'assistant', channel: s.ok ? 'whatsapp' : 'whatsapp_error',
             payload: { title: text.replace(/\s+/g, ' ').slice(0, 120), text, via: s.via || null, wamid: s.wamid || null, ref, detail: s.error || null } }]) });
       } catch (e) { /* the question went out; a missing log line is not a failure */ }
-      return jsonResp({ ok: s.ok, id: r.id, created: true, sent: s.ok, via: s.via || null, doc: doc && doc.ok ? 'sent' : (doc && doc.error) || null, spot: spot || null, error: s.error || undefined }, 200, {});
+      return jsonResp({ ok: s.ok, id: r.id, created: true, sent: s.ok, via: s.via || null, doc: doc && doc.ok ? 'sent' : (doc && doc.error) || null, spot: spot || null, error: s.error || undefined, mark_lost: markLost || undefined }, 200, {});
     }
     if (body.op === 'od_mkdir') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'parent', 'name'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
