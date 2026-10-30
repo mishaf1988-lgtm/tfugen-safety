@@ -14,6 +14,7 @@ def check(label, cond, detail=None):
 
 NOT_WORKER = {
     'routine-wa-assistant.md': 'the assistant itself',
+    'routine-wa-core.md': 'the assistant itself, the short core split from routine-wa-assistant.md (30/10/2026, under test)',
     'routine-chat-relay.md': 'the postman, delivers only',
     'routine-rotation.md': 'the recruiter, replaces sessions',
     'routine-db-columns.md': 'replaced by a database cron (03/10/2026)',
