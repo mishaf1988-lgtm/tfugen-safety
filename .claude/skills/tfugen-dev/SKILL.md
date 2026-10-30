@@ -102,6 +102,7 @@ fetch('/api/claude', {
 - [ ] STATUS.md עודכן
 - [ ] tag נוצר
 
+- [ ] קובץ `project-files/routine-*.md` חדש: לרשום ב-`wa-worker-map-test.py` וב-`ACCOUNT-INVENTORY.md` ולהריץ את שתי הבדיקות לפני הדחיפה (לקח 186). עריכת קובץ ב-`functions/` עם עברית: להריץ `rule1-hebrew-test.js` (לקח 185).
 - [ ] קובץ ב-`functions/` שנערך בסקריפט: לאמת בהרצת הבדיקה שלו (`bash tests/harness/run.sh <שם>`), לא ב-`node --check`. ב-03/10/2026 `node --check` עבר על `talk.js` עם שגיאת תחביר (מודול ESM בקובץ `.js`), ורק `talk-test.mjs` תפס אותה.
 - [ ] העלאה ל-Storage עם `x-upsert: false` כדי לזהות כפילות: שם קיים חוזר כ-409, ובגרסאות ישנות של Supabase כ-400 עם `"statusCode":"409"` / `Duplicate` בגוף. לבדוק את שניהם (`isDuplicate` ב-`talk.js`), וקובץ שנשאר בלי שורה (insert שנכשל) לדרוס פעם אחת עם `x-upsert: true`, אחרת העובד נתקע על "כבר חתמת" בלי חתימה (03/10/2026).
 - [ ] דיבאג של בדיקת `.mjs`: `_build` נמחק בסוף `run.sh`, ו-`run.sh <שם>` מציג רק שורות `✗`. להדפיס ערך ביניים עם `console.log('  ✗ DBG ' + ...)` ולהסיר. בדיקה שמחפשת פרמטר ב-HTML (`t=1`): לחפש עם `&amp;` לפניו; `/t=1/` תפס `height=180` (05/10/2026).
