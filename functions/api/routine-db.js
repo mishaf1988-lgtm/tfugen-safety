@@ -572,8 +572,9 @@ export function thzAddRow(b, today, rand, maxN, depts) {
     if (!isDay(b.opened) || b.opened > today) return { error: 'opened: YYYY-MM-DD, not in the future' };
     if (b.opened < THZ_SRC_FROM) return { skip: 'old' };
   }
-  if (b.due !== undefined && (!isDay(b.due) || b.due < today)) return { error: 'due: YYYY-MM-DD, not in the past' };
-  const due = b.due !== undefined ? b.due : new Date(Date.parse(today + 'T12:00:00Z') + THZ_SEV_DAYS[sev] * 86400000).toISOString().slice(0, 10);
+  // due '' = the investigation gives no date ("to complete", "set a schedule"): no due date, never one made up (29/10/2026, Michael: the action is written exactly as in the investigation).
+  if (b.due !== undefined && b.due !== '' && (!isDay(b.due) || b.due < today)) return { error: 'due: YYYY-MM-DD, not in the past, or empty for no date' };
+  const due = b.due === '' ? null : b.due !== undefined ? b.due : new Date(Date.parse(today + 'T12:00:00Z') + THZ_SEV_DAYS[sev] * 86400000).toISOString().slice(0, 10);
   const key = ref + '|' + action;
   const row = { id: 'th-' + rand, n: (Number.isInteger(maxN) ? maxN : 0) + 1, d: today, tour_no: null, dept, loc: b.loc === undefined ? null : short(b.loc, 150) || null,
     descr: b.descr === undefined ? action : short(b.descr, 1000) || action, sev, resp: b.resp === undefined ? null : short(b.resp, 80) || null, resp2: null, action, due,
