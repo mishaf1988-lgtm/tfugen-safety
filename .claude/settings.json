@@ -256,5 +256,16 @@
         ]
       }
     ]
+  },
+  "extraKnownMarketplaces": {
+    "tfugen-mods": {
+      "source": {
+        "source": "github",
+        "repo": "mishaf1988-lgtm/tfugen-safety"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "token-guard@tfugen-mods": true
   }
 }
