@@ -1435,6 +1435,8 @@ const callIn = async (body) => {
   check('second check: a report that names the second checker passes as it is', sc('routine-wa-assistant', true, A + ': ' + SH + ' \u05d0\u05d5\u05e9\u05e8').ok === true);
   check('second check: "no second checker ran" is a skip, not a check', sc('wa-assistant', true, A + ', \u05dc\u05d0 \u05d4\u05e8\u05e6\u05ea\u05d9 ' + SH).ok === false);
   check('second check: "could not verify to the end" counts as an attempt', sc('wa-assistant', true, A + ' \u05dc\u05d0 \u05d0\u05d9\u05de\u05ea\u05ea\u05d9 \u05e2\u05d3 \u05d4\u05e1\u05d5\u05e3').ok === true);
+  check('second check: a law or regulation answer needs it too, "researcher" does not trigger', sc('wa-assistant', true, 'תקנות עבודה בגובה').ok === false && sc('wa-assistant', true, 'החוק קובע דבר').ok === false && sc('wa-assistant', true, 'חוקר המצאות').ok === true && sc('wa-assistant', true, 'תקנות: ' + SH).ok === true);
+  check('second check: a refusal of a request is not an answer, even when it names ammonia', sc('wa-assistant', true, 'סירבתי למחוק נהלי ' + A).ok === true && sc('wa-assistant', true, 'לא נמחק נהל ' + A).ok === true);
   check('second check: another topic, another agent and a report already red are left alone', sc('wa-assistant', true, '\u05d4\u05d3\u05e8\u05db\u05d5\u05ea').ok === true && sc('routine-quotes', true, A).ok === true && sc('wa-assistant', false, A).line === A);
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

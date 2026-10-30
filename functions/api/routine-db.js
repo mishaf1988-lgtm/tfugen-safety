@@ -205,13 +205,16 @@ export function agentEntry(b, nowIso) {
 // verify to the end). In the Haiku test of 30/10/2026 one run skipped it and said so. The report is kept but
 // turned red (ok:false), so the weekly mail and the retro show it; nothing is refused, the answer already went out.
 export const SECOND_CHECK_AGENTS = ['wa-assistant', 'routine-wa-assistant'];
-const SECOND_SENSITIVE = /\u05d0\u05de\u05d5\u05e0\u05d9|nh3|\b26\.0[34]\b|\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd|\u05d7\u05d5\u05de"\u05e1/i;
+// 30/10/2026 (handoff gaps a and b): law and regulation answers count as sensitive too ("\u05ea\u05e7\u05e0" = regulation(s),
+// "\u05d7\u05d5\u05e7" only as a whole word so "\u05d7\u05d5\u05e7\u05e8" does not match), and a refusal ("\u05e1\u05d9\u05e8\u05d1\u05ea\u05d9", "\u05dc\u05d0 \u05e0\u05de\u05d7\u05e7") is not an answer.
+const SECOND_SENSITIVE = /\u05d0\u05de\u05d5\u05e0\u05d9|nh3|\b26\.0[34]\b|\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd|\u05d7\u05d5\u05de"\u05e1|\u05ea\u05e7\u05e0|(?:^|\s)[\u05d4\u05d1\u05dc]?\u05d7\u05d5\u05e7(?=[\s,.:;)]|$)/i;
+const SECOND_REFUSAL = /\u05e1\u05d9\u05e8\u05d1\u05ea\u05d9|\u05e1\u05d9\u05e8\u05d5\u05d1|\u05dc\u05d0 \u05e0\u05de\u05d7\u05e7|\u05dc\u05d0 \u05d0\u05de\u05d7\u05e7/;
 const SECOND_DONE = /\u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9|\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e9\u05e0\u05d9\u05d9\u05d4|\u05dc\u05d0 \u05d0\u05d9\u05de\u05ea\u05ea\u05d9 \u05e2\u05d3 \u05d4\u05e1\u05d5\u05e3/;
 const SECOND_SKIPPED = /(\u05dc\u05d0|\u05d1\u05dc\u05d9|\u05dc\u05dc\u05d0|\u05d3\u05d9\u05dc\u05d2\S*) (?:\S+ )?(?:\u05e2\u05dc )?\u05d4?\u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9/;
 export function secondCheckGate(e) {
   if (!e || !e.ok || SECOND_CHECK_AGENTS.indexOf(e.agent) < 0) return e;
   const text = String(e.line || '') + ' ' + String(e.learned || '');
-  if (!SECOND_SENSITIVE.test(text)) return e;
+  if (!SECOND_SENSITIVE.test(text) || SECOND_REFUSAL.test(text)) return e;
   if (SECOND_DONE.test(text) && !SECOND_SKIPPED.test(text)) return e;
   return { ...e, ok: false, line: ('\u05d7\u05e1\u05e8 \u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9 \u05d1\u05e9\u05d0\u05dc\u05d4 \u05e8\u05d2\u05d9\u05e9\u05d4: ' + e.line).slice(0, 300) };
 }
