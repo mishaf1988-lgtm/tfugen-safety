@@ -3,6 +3,8 @@
 נכתב 30/10/2026. המטרה: לדעת אם חיפוש חכם במסמכים מוצא את הסעיף הנכון טוב יותר מהעוזר הקיים. מה נבדק: האם הכלי מחזיר את הקטע הנכון, לא איך הוא מנסח.
 
 ## הכנה
+**קיצור ל-Windows (30/10/2026):** להתקין Docker Desktop ולהפעיל אותו, ואז ללחוץ פעמיים על `project-files/rag-test/setup-dify.bat`. הוא מוריד את Dify (גרסה 1.18.0), מכין את הקבצים ומפעיל. הסקריפט לא נבדק בפועל (אין Windows בענן). מכאן ממשיכים משלב 3 למטה.
+
 1. להתקין Docker על המחשב הצדדי. RAGFlow צריך כ-16GB זיכרון ו-50GB דיסק; Dify קל יותר, מתחילים בו.
 2. Dify: `git clone https://github.com/langgenius/dify`, `cd dify/docker`, `cp .env.example .env`, `docker compose up -d`, ואז לפתוח `http://localhost/install`.
 3. מפתח מודל: Gemini (כמו העוזר הקיים), בהגדרות Model Provider. לא להדביק את המפתח בשיחה.
