@@ -218,6 +218,14 @@ export function secondCheckGate(e) {
   if (SECOND_DONE.test(text) && !SECOND_SKIPPED.test(text)) return e;
   return { ...e, ok: false, line: ('\u05d7\u05e1\u05e8 \u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9 \u05d1\u05e9\u05d0\u05dc\u05d4 \u05e8\u05d2\u05d9\u05e9\u05d4: ' + e.line).slice(0, 300) };
 }
+// languageGate (30/10/2026, handoff gap: two Haiku run summaries came out in English): the assistant's closing
+// report with no Hebrew letter at all turns red like the second-check one; the text is kept, nothing is refused.
+export function languageGate(e) {
+  if (!e || !e.ok || SECOND_CHECK_AGENTS.indexOf(e.agent) < 0) return e;
+  const line = String(e.line || '');
+  if (line.length < 15 || /[\u05d0-\u05ea]/.test(line)) return e;
+  return { ...e, ok: false, line: ('\u05d4\u05d3\u05d5\u05d7 \u05dc\u05d0 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea: ' + line).slice(0, 300) };
+}
 // dev_inbox (20/10/2026, Michael: "the assistant must know how to solve the problems it hits and hand the
 // completions and fixes to an agent"): a request to development from any agent, kept in server_state
 // (the office board refused the assistant's write as exfiltration). Every development conversation sees
@@ -2076,7 +2084,7 @@ export async function onRequest(context) {
     if (body.op === 'agent_report') {
       let e = agentEntry(body, new Date().toISOString());
       if (!e) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
-      e = secondCheckGate(e);
+      e = languageGate(secondCheckGate(e));
       if (asksApiCredit(e.for_michael)) return jsonResp({ ok: false, error: 'for_michael asks to load API credit: Michael decided no (22/10 and 26/10/2026). A scan is read with ocr_txt (_\u05d8\u05e7\u05e1\u05d8 \u05e1\u05e8\u05d9\u05e7\u05d5\u05ea); drop that line' }, 400, {});
       const fg = factGate(e.for_michael, body.checked);
       if (fg) return jsonResp({ ok: false, error: 'for_michael: ' + fg }, 400, {});
