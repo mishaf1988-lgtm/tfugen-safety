@@ -1,6 +1,18 @@
 {
   "_comment": "מה חייב להיות פעיל בכל חשבון Claude (30/10/2026). session-start.py בודק את ה-plugins; את ה-Routines בודקים ב-list_triggers.",
-  "plugins": ["token-guard"],
-  "routines_main_only": ["חוקר ההמצאות השבועי (trig_01L7t6v87o3Bv4SAsxferZZJ)", "עוזר החיסכון (project-files/savings-assistant.md, טרם נוצר)"],
-  "install": "/plugin marketplace add mishaf1988-lgtm/tfugen-safety ואז /plugin install token-guard@tfugen-mods"
+  "plugins": [
+    "token-guard"
+  ],
+  "routines_main_only": [
+    "חוקר ההמצאות השבועי (trig_01L7t6v87o3Bv4SAsxferZZJ)",
+    "עוזר החיסכון (project-files/savings-assistant.md, טרם נוצר)"
+  ],
+  "install": "/plugin marketplace add mishaf1988-lgtm/tfugen-safety ואז /plugin install token-guard@tfugen-mods",
+  "connectors": [
+    "GitHub",
+    "Supabase",
+    "Microsoft 365 (sviva@tapugan.co.il)",
+    "Cloudflare Developer Platform",
+    "Claude Docs"
+  ]
 }

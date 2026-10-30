@@ -169,9 +169,11 @@ def accounts_gap(cwd, home=None):
     for dp, _, fs in os.walk(os.path.join(root, "plugins")):
         blob += "".join(read(os.path.join(dp, f)) for f in fs if f.endswith(".json"))
     missing = [n for n in exp.get("plugins", []) if n not in blob]
+    conn = exp.get("connectors", [])
+    cline = (["-- 🔌 Connectors צפויים בכל חשבון: " + ", ".join(conn) + ". לבדוק ב-ListConnectors, ושרת שנכשל בחיבור מופיע בהודעת המערכת בתחילת השיחה (30/10/2026: Supabase נכשל ב-ProxyTunnel 403) --"] if conn else [])
     if not missing:
-        return []
-    return ["-- 🔗 פער בין חשבונות: plugin חסר בחשבון הזה: " + ", ".join(missing) + ". להתקין: " + exp.get("install", "") +
+        return cline
+    return cline + ["-- 🔗 פער בין חשבונות: plugin חסר בחשבון הזה: " + ", ".join(missing) + ". להתקין: " + exp.get("install", "") +
             ". Routines בחשבון הראשי בלבד: " + "; ".join(exp.get("routines_main_only", [])) + " (לבדוק ב-list_triggers) --"]
 
 
