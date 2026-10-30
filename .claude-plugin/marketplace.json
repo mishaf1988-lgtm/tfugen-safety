@@ -1,0 +1,7 @@
+{
+  "name": "tfugen-mods",
+  "owner": { "name": "tfugen-safety" },
+  "plugins": [
+    { "name": "token-guard", "source": "./plugins/token-guard", "description": "Status line with context fill and cost, and a guard against whole-file reads of the big state files." }
+  ]
+}

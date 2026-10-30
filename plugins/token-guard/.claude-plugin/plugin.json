@@ -1,0 +1,1 @@
+{ "name": "token-guard", "version": "0.1.0", "description": "Status line with context fill and cost, and a guard against whole-file reads of the big state files." }
