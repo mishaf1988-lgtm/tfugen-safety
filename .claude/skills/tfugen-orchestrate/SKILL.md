@@ -62,3 +62,5 @@ description: How to run several tasks of the tfugen-safety repo in parallel with
 | שיקול דעת שטעות בו יקרה | `opus` | סקירת אבטחה של PR רגיש (`security-review.md`), בודק שני לחוק או תקנה, שינוי סכמה או RLS, ארכיטקטורה |
 
 כללים: (1) סוכן haiku לא מחליט ולא כותב לשום מקום; הוא מחזיר ממצאים ואני מאמת. (2) טענה של haiku על "אין" נבדקת בקריאה אחת ישירה לפני שסומכים עליה. (3) לא פותחים סוכן לעבודה של פחות מכמה קריאות כלי: עלות הבריף עולה על החיסכון. (4) החיסכון נמדד: `list_events` עם `kinds:["result"]` על הסוכן, ושורה ב-`model-compare.md`. (5) שיחה ארוכה שמתייקרת: handoff ושיחה חדשה (`tfugen-sessions`), לא סוכן.
+
+**מ-30/10/2026 הניתוב הוא גם הגדרה, לא רק טקסט:** `.claude/agents/` מחזיק שלושה סוכנים עם מודל נעול: `scout` (חיפוש, Haiku), `ci-reader` (קריאת לוג בדיקות, Haiku), `security-reviewer` (סקירת אבטחה לפי `security-review.md`, Opus). קוראים להם ב-`Agent` עם `subagent_type` בשמם. נאכף: `subagents-config-test.py`.

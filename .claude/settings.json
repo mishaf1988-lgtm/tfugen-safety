@@ -267,5 +267,7 @@
   },
   "enabledPlugins": {
     "token-guard@tfugen-mods": true
-  }
+  },
+  "awaySummaryEnabled": false,
+  "promptSuggestionEnabled": false
 }
