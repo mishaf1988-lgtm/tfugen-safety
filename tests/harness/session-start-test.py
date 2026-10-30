@@ -142,4 +142,12 @@ check("a missing plugin: the gap section names it, the install line and the main
 check("the plugin is installed: no gap section", "פער בין חשבונות" not in rh(h2))
 os.remove(os.path.join(d, "project-files", "accounts-expected.json"))
 check("no expectations file: no gap section", "פער בין חשבונות" not in rh(h1))
+# 30/10/2026: a request open more than 12 hours says how long; a fresh one says nothing.
+import datetime as _dt
+_now = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+dv2 = json.dumps([{"id": "dev-old", "at": "2026-10-01T08:00:00Z", "agent": "a", "text": "ישן", "status": "open"},
+                  {"id": "dev-new", "at": _now, "agent": "b", "text": "חדש", "status": "open"}])
+o5 = rd(json.dumps({"ok": True, "rows": [{"key": "dev_inbox", "value": dv2}]}))
+check("an old open request carries its age in hours", "dev-old" in o5 and "⚠️ פתוחה" in o5.split("dev-new")[0], o5)
+check("a fresh request carries no age note", "⚠️" not in o5.split("dev-new")[1].split("\n")[0], o5)
 done()
