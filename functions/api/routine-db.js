@@ -200,6 +200,21 @@ export function agentEntry(b, nowIso) {
   if (t(b.for_michael)) e.for_michael = t(b.for_michael);
   return e;
 }
+// secondCheckGate (30/10/2026, Michael: "בצע: להוסיף בדיקה לבודק שני בשאלות אמוניה"): the WhatsApp assistant's
+// closing report on an ammonia or hazardous-materials answer must say a second checker ran (or that it could not
+// verify to the end). In the Haiku test of 30/10/2026 one run skipped it and said so. The report is kept but
+// turned red (ok:false), so the weekly mail and the retro show it; nothing is refused, the answer already went out.
+export const SECOND_CHECK_AGENTS = ['wa-assistant', 'routine-wa-assistant'];
+const SECOND_SENSITIVE = /\u05d0\u05de\u05d5\u05e0\u05d9|nh3|\b26\.0[34]\b|\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd|\u05d7\u05d5\u05de"\u05e1/i;
+const SECOND_DONE = /\u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9|\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e9\u05e0\u05d9\u05d9\u05d4|\u05dc\u05d0 \u05d0\u05d9\u05de\u05ea\u05ea\u05d9 \u05e2\u05d3 \u05d4\u05e1\u05d5\u05e3/;
+const SECOND_SKIPPED = /(\u05dc\u05d0|\u05d1\u05dc\u05d9|\u05dc\u05dc\u05d0|\u05d3\u05d9\u05dc\u05d2\S*) (?:\S+ )?(?:\u05e2\u05dc )?\u05d4?\u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9/;
+export function secondCheckGate(e) {
+  if (!e || !e.ok || SECOND_CHECK_AGENTS.indexOf(e.agent) < 0) return e;
+  const text = String(e.line || '') + ' ' + String(e.learned || '');
+  if (!SECOND_SENSITIVE.test(text)) return e;
+  if (SECOND_DONE.test(text) && !SECOND_SKIPPED.test(text)) return e;
+  return { ...e, ok: false, line: ('\u05d7\u05e1\u05e8 \u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9 \u05d1\u05e9\u05d0\u05dc\u05d4 \u05e8\u05d2\u05d9\u05e9\u05d4: ' + e.line).slice(0, 300) };
+}
 // dev_inbox (20/10/2026, Michael: "the assistant must know how to solve the problems it hits and hand the
 // completions and fixes to an agent"): a request to development from any agent, kept in server_state
 // (the office board refused the assistant's write as exfiltration). Every development conversation sees
@@ -2056,8 +2071,9 @@ export async function onRequest(context) {
       return jsonResp({ ok: true, rows: clientErrors(Array.isArray(rows) ? rows : []) }, 200, {});
     }
     if (body.op === 'agent_report') {
-      const e = agentEntry(body, new Date().toISOString());
+      let e = agentEntry(body, new Date().toISOString());
       if (!e) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
+      e = secondCheckGate(e);
       if (asksApiCredit(e.for_michael)) return jsonResp({ ok: false, error: 'for_michael asks to load API credit: Michael decided no (22/10 and 26/10/2026). A scan is read with ocr_txt (_\u05d8\u05e7\u05e1\u05d8 \u05e1\u05e8\u05d9\u05e7\u05d5\u05ea); drop that line' }, 400, {});
       const fg = factGate(e.for_michael, body.checked);
       if (fg) return jsonResp({ ok: false, error: 'for_michael: ' + fg }, 400, {});
