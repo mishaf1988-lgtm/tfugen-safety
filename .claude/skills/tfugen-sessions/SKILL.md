@@ -61,6 +61,7 @@ description: How Claude sessions of the tfugen-safety repo are named, synced and
 - **מדידה:** זמן = `owner_in` עד `wa_out` ב-`notifications_log`. עלות = `list_events` עם `kinds:["result"]` על הריצה (לקח 103). לא `kinds` של assistant: הפלט ענק.
 - **קובץ הוראות לניסוי בלי למזג (30/10/2026):** העוזר משכפל את `main`, לכן קובץ ניסוי נדחף לענף, ובפרומפט הזמני כתוב `git clone -b <ענף>` ואת שם הקובץ. אחרי הניסוי הקובץ יוצא מה-PR והפרומפט חוזר (`update_trigger`, לבדוק ב-`derived_state.prompt`).
 - **עלות וסיום ריצה:** `get_session` על ריצת העוזר מחזיר `usage.cost_usd` שזהה ל-`total_cost_usd` של `list_events` (נבדק: 0.26253782 בשניהם, כולל סוכני עזר), וקל יותר לקרוא. `list_events` עם `kinds:["result"]` על ריצה עם סוכן עזר ברקע מחזיר כמה `result`, והמצטבר הוא האחרון. סיום: הסטטוס `IDLE` ושורת `wa_out` ב-`notifications_log` (עמודות `ts`, `event_type`, `payload`; `routine-db.sh select` לא מרשה את הטבלה, `execute_sql` כן).
+- **ניסוח הבקשה (30/10/2026):** "לא לשלוח כלום" בטקסט של `office_ask` גורם לעוזר לא לשלוח גם את התשובה לוואטסאפ (שורה 64 בבדיקה). לכתוב "קריאה בלבד, אל תכתוב ב-365 ואל תחתום" (כך נענו שורות 62, 63 ו-65).
 - **המתנה:** `Monitor` לא חוסם. מחכים בלולאת `read -t 5 _ </dev/zero` ב-`Bash` (`sleep` חסום), 100 עד 270 שניות לשאלה.
 - **בקשה שעלולה לכתוב** (טיוטה, חתימה, מחיקה) לא שולחים. סבב הסירובים של 23/10 כבר רשום ב-`notifications_log` (ערוץ office, 18:57-19:10).
 
