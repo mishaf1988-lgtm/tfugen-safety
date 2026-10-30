@@ -23,11 +23,23 @@ Shell tools: Bash, and PowerShell on Windows (Move-Item / Remove-Item passed unc
 with literal paths and the file name kept, and appending lines to `יומן.txt`. Delete, rename,
 overwrite and a move out of the folder stay denied there too.
 
+The one delete (Michael, 30/10/2026, questionnaire: "do it: add an exception, delete a draft I made myself"):
+outlook_delete_draft, only for a draft Claude itself created in this machine's ledger (a PostToolUse on
+outlook_create_draft writes its id; reply drafts are denied before they are made, "reply" is a NEVER word). It
+moves the draft to Deleted Items (recoverable). Michael's own drafts, any other id and every other delete stay
+denied. The ledger file is closed to Write, Edit and shell commands (a prompt-injected "add this id" line).
+
 Test:  echo '{"tool_name":"mcp__Microsoft_365__outlook_send_mail","tool_input":{}}' | python3 .claude/hooks/guard-365.py
 """
-import json, re, sys
+import json, os, re, sys
 sys.stdin.reconfigure(encoding="utf-8")  # Claude Code sends UTF-8; Windows reads cp1255 (05/10/2026)
 
+LEDGER = os.environ.get("GUARD365_LEDGER") or os.path.join(os.path.expanduser("~"), ".claude", "drafts-made-by-claude.json")
+# The tool answers "Draft created ...\nid: <id>\nwebLink: ..." and never echoes the subject or body before the id,
+# so the id is read only from that fixed shape at the start of the answer (a line "id:" inside a mail cannot get in).
+DRAFT_ID = re.compile(r"\ADraft created[^\n]*\n\s*id:\s*([A-Za-z0-9+/=_-]{20,})\s*\n\s*webLink:")
+LEDGER_NAME = "drafts-made-by-claude"
+FILE_TOOLS = ("Write", "Edit", "MultiEdit", "NotebookEdit")
 SAFETY_FOLDER = "ניהול בטיחות"  # the one OneDrive folder Claude may write in
 M365 = re.compile(r"365|outlook|sharepoint|onedrive|teams|graph|mail|calendar|drive", re.I)
 READ = re.compile(r"(^|_)(read|search|list|get|find|lookup|me)(_|$)", re.I)
@@ -65,6 +77,35 @@ STATEMENTS = re.compile(r"\|\||&&|[;\n]")
 PEOPLE_WRITE = re.compile(r"(teams|chat|channel|calendar|event|meeting)", re.I)
 WRITE = re.compile(r"create|update|write|upload|put|patch|copy|draft|edit|set|add|append|replace", re.I)
 FILEISH = re.compile(r"file|folder|drive|sharepoint|onedrive|upload|item", re.I)
+
+
+def ledger():
+    try:
+        with open(LEDGER, encoding="utf-8") as f:
+            v = json.load(f)
+        return [x for x in v if isinstance(x, str)] if isinstance(v, list) else []
+    except (OSError, ValueError):
+        return []
+
+
+def remember(draft_id):
+    ids = ledger()
+    if draft_id not in ids:
+        ids.append(draft_id)
+        os.makedirs(os.path.dirname(LEDGER), exist_ok=True)
+        with open(LEDGER, "w", encoding="utf-8") as f:
+            json.dump(ids[-200:], f)
+
+
+def after_create(name, resp):
+    """PostToolUse on a draft Claude just created: keep its id, so only it can be deleted."""
+    if name.split("__")[-1] != "outlook_create_draft":
+        return
+    for t in strings(resp, []):
+        m = DRAFT_ID.match(t)
+        if m:
+            remember(m.group(1))
+            return
 
 
 def out(decision, reason):
@@ -173,8 +214,15 @@ def strings(v, acc):
 
 
 def decide(name, ti):
+    if name in FILE_TOOLS:
+        if LEDGER_NAME in " ".join(str(ti.get(k, "")) for k in ("file_path", "path", "notebook_path")):
+            return ("deny", "the ledger of drafts Claude made is written only by the hook itself (a delete is allowed for "
+                    "an id in it, so a hand-written id would be a way around Michael's rule 05/10/2026).")
+        return None
     if name in SHELLS:
         cmd = str(ti.get("command", ""))
+        if LEDGER_NAME in cmd:
+            return ("deny", "the ledger of drafts Claude made is written only by the hook itself (see Michael 05/10/2026 and 30/10/2026).")
         if GRAPH_WRITE.search(cmd):
             return ("deny", "a direct Graph write (curl / Invoke-RestMethod to graph.microsoft.com with POST/DELETE/PATCH/PUT). "
                     "Michael (05/10/2026): Microsoft 365 is written only through the connector, under its rules.")
@@ -194,6 +242,12 @@ def decide(name, ti):
                     "for this exact item, after it was shown to him." % short)
         return ("deny", "'%s' moves or copies something in Microsoft 365. Michael (05/10/2026): the only move allowed is "
                 "into a 'למחיקה' folder (with his 'בצע'); everything else stays where it is." % short)
+    if short == "outlook_delete_draft":
+        mid = str(ti.get("messageId", ""))
+        if mid and mid in ledger():
+            return ("allow", "a draft Claude created itself (Michael, 30/10/2026): moved to Deleted Items, recoverable.")
+        return ("deny", "'%s' is allowed only for a draft Claude itself created (this machine's ledger). "
+                "Michael's own drafts are never deleted (05/10/2026)." % short)
     if NEVER.search(short):
         return ("deny", "'%s' deletes, sends or moves something in Microsoft 365. Michael (05/10/2026): "
                 "never through Claude, not even with approval. A mail is a draft that he sends from Outlook; "
@@ -214,6 +268,10 @@ def decide(name, ti):
 
 if __name__ == "__main__":
     d = json.load(sys.stdin)
+    if d.get("hook_event_name") == "PostToolUse":
+        after_create(str(d.get("tool_name", "")), d.get("tool_response"))
+        print("{}")
+        sys.exit(0)
     r = decide(str(d.get("tool_name", "")), d.get("tool_input", {}) or {})
     if r:
         out(*r)

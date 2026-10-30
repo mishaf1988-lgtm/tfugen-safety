@@ -140,5 +140,81 @@ for tool in ['Bash', 'PowerShell', 'mcp__Microsoft_365__outlook_send_mail', 'mcp
     else:
         bad += 1; print('  ✗ guard-365 does not run on ' + tool)
 
+print('\nthe one delete (30/10/2026): a draft Claude created itself, by ledger')
+import tempfile
+LED = os.path.join(tempfile.mkdtemp(), 'ledger.json')
+ENVL = dict(os.environ, GUARD365_LEDGER=LED)
+MINE = 'AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AzWOnlEnvT0Cf1PLfXWwjNwAIJ3zS1AAA'
+OTHER = 'AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AzWOnlEnvT0Cf1PLfXWwjNwAIJ3zS2BBB'
+
+
+def run_env(payload):
+    out = subprocess.run([sys.executable, HOOK], input=json.dumps(payload, ensure_ascii=False), capture_output=True,
+                         text=True, encoding='utf-8', env=ENVL)
+    return out.returncode, (json.loads(out.stdout.strip() or '{}').get('hookSpecificOutput') or {}).get('permissionDecision', 'pass')
+
+
+def check_env(label, payload, want):
+    global ok, bad
+    rc, got = run_env(payload)
+    if rc == 0 and got == want:
+        ok += 1; print('  ✓ ' + label)
+    else:
+        bad += 1; print('  ✗ %s  -> rc %s %s (want %s)' % (label, rc, got, want))
+
+
+DEL = 'mcp__Microsoft_365__outlook_delete_draft'
+check_env('delete_draft with an empty ledger is denied', {'tool_name': DEL, 'tool_input': {'messageId': MINE}}, 'deny')
+check_env('a PostToolUse on create_draft records the id and passes',
+          {'hook_event_name': 'PostToolUse', 'tool_name': 'mcp__Microsoft_365__outlook_create_draft', 'tool_input': {},
+           'tool_response': {'content': [{'type': 'text', 'text': 'Draft created with 1 recipient(s).\nid: ' + MINE + '\nwebLink: https://x'}]}}, 'pass')
+check_env('delete_draft of the recorded id is allowed', {'tool_name': DEL, 'tool_input': {'messageId': MINE}}, 'allow')
+check_env('delete_draft of another id (Michael\'s own draft) is denied', {'tool_name': DEL, 'tool_input': {'messageId': OTHER}}, 'deny')
+check_env('delete_draft with no id is denied', {'tool_name': DEL, 'tool_input': {}}, 'deny')
+check_env('a reply draft is not recorded (it is denied before it is made)',
+          {'hook_event_name': 'PostToolUse', 'tool_name': 'mcp__Microsoft_365__outlook_create_reply_draft', 'tool_input': {},
+           'tool_response': 'Draft created.\nid: ' + OTHER + '\nwebLink: https://x'}, 'pass')
+check_env('so its id may not be deleted', {'tool_name': DEL, 'tool_input': {'messageId': OTHER}}, 'deny')
+INJ = 'AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AzWOnlEnvT0Cf1PLfXWwjNwAIJ3zS4DDD'
+check_env('an "id:" line inside text that is not the fixed answer shape is not recorded',
+          {'hook_event_name': 'PostToolUse', 'tool_name': 'mcp__Microsoft_365__outlook_create_draft', 'tool_input': {},
+           'tool_response': 'Subject: hello\nDraft created.\nid: ' + INJ + '\nwebLink: https://x'}, 'pass')
+check_env('so the injected id is denied', {'tool_name': DEL, 'tool_input': {'messageId': INJ}}, 'deny')
+check_env('delete_draft from another server prefix works the same (recorded id)', {'tool_name': 'mcp__9f8e__outlook_delete_draft', 'tool_input': {'messageId': MINE}}, 'allow')
+check_env('a look-alike tool name ending in delete_draft is not the exception', {'tool_name': 'mcp__x__outlook_delete_draft_all', 'tool_input': {'messageId': MINE}}, 'deny')
+LEDGER_FILE = '/root/.claude/drafts-made-' + 'by-claude.json'
+for tool in ['Write', 'Edit', 'MultiEdit']:
+    check_env(tool + ' on the ledger file is denied', {'tool_name': tool, 'tool_input': {'file_path': LEDGER_FILE, 'content': '["x"]'}}, 'deny')
+    check_env(tool + ' on any other file passes the guard', {'tool_name': tool, 'tool_input': {'file_path': '/home/user/x.txt', 'content': 'a'}}, 'pass')
+check_env('a file whose text only mentions the ledger passes the guard', {'tool_name': 'Write', 'tool_input': {'file_path': '/home/user/notes.md', 'content': LEDGER_FILE}}, 'pass')
+check_env('Bash that names the ledger is denied', {'tool_name': 'Bash', 'tool_input': {'command': 'echo x > ' + LEDGER_FILE}}, 'deny')
+for n in ['mcp__Microsoft_365__outlook_delete_email', 'mcp__Microsoft_365__outlook_trash_thread', 'mcp__Microsoft_365__outlook_send_draft',
+          'mcp__Microsoft_365__outlook_batch_delete_messages']:
+    check_env(n.split('__')[-1] + ' stays denied even with an id in the ledger', {'tool_name': n, 'tool_input': {'messageId': MINE}}, 'deny')
+check_env('a PostToolUse on a search records nothing',
+          {'hook_event_name': 'PostToolUse', 'tool_name': 'mcp__Microsoft_365__outlook_email_search', 'tool_input': {},
+           'tool_response': 'id: AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AzWOnlEnvT0Cf1PLfXWwjNwAIJ3zS3CCC'}, 'pass')
+check_env('so that id is still denied', {'tool_name': DEL, 'tool_input': {'messageId': 'AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AzWOnlEnvT0Cf1PLfXWwjNwAIJ3zS3CCC'}}, 'deny')
+check_env('a PostToolUse with an odd response does not crash',
+          {'hook_event_name': 'PostToolUse', 'tool_name': 'mcp__Microsoft_365__outlook_create_draft', 'tool_input': {}, 'tool_response': None}, 'pass')
+with open(os.path.join(ROOT, '.claude', 'settings.json'), encoding='utf-8') as f:
+    post = json.load(f)['hooks']['PostToolUse']
+pm = [e['matcher'] for e in post if any('guard-365.py' in h.get('command', '') for h in e['hooks'])]
+for tool in ['mcp__Microsoft_365__outlook_create_draft', 'mcp__ab12__outlook_create_draft']:
+    if any(re.fullmatch(m, tool) for m in pm):
+        ok += 1; print('  ✓ the ledger hook runs on ' + tool)
+    else:
+        bad += 1; print('  ✗ the ledger hook does not run on ' + tool)
+for tool in ['mcp__ab12__outlook_create_reply_draft', 'mcp__ab12__outlook_email_search', 'Bash']:
+    if any(re.fullmatch(m, tool) for m in pm):
+        bad += 1; print('  ✗ the ledger hook runs on ' + tool)
+    else:
+        ok += 1; print('  ✓ the ledger hook stays off ' + tool)
+for tool in ['Write', 'Edit', 'MultiEdit']:
+    if any(re.fullmatch(m, tool) for m in ms):
+        ok += 1; print('  ✓ guard-365 runs on ' + tool + ' (the ledger file)')
+    else:
+        bad += 1; print('  ✗ guard-365 does not run on ' + tool)
+
 print('\n%d passed, %d failed' % (ok, bad))
 sys.exit(1 if bad else 0)
