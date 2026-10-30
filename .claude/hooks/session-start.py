@@ -148,6 +148,23 @@ def map_url(cwd):
     return m.group(1) if m else ""
 
 
+def accounts_gap(cwd, home=None):
+    """Plugins the repo expects in every account but this one lacks (30/10/2026, project-files/accounts-expected.json)."""
+    try:
+        exp = json.loads(read(os.path.join(cwd, "project-files", "accounts-expected.json")) or "{}")
+    except ValueError:
+        return []
+    root = os.path.join(home or os.path.expanduser("~"), ".claude")
+    blob = read(os.path.join(root, "settings.json"))
+    for dp, _, fs in os.walk(os.path.join(root, "plugins")):
+        blob += "".join(read(os.path.join(dp, f)) for f in fs if f.endswith(".json"))
+    missing = [n for n in exp.get("plugins", []) if n not in blob]
+    if not missing:
+        return []
+    return ["-- 🔗 פער בין חשבונות: plugin חסר בחשבון הזה: " + ", ".join(missing) + ". להתקין: " + exp.get("install", "") +
+            ". Routines בחשבון הראשי בלבד: " + "; ".join(exp.get("routines_main_only", [])) + " (לבדוק ב-list_triggers) --"]
+
+
 def report(cwd):
     out = ["== התחלת שיחה (session-start.py) ==",
            "skills לטעון: " + ", ".join(SKILLS) + " (CLAUDE.md, Workflow 1-2)"]
@@ -186,6 +203,9 @@ def report(cwd):
     ideas = ideas_waiting(cwd)
     if ideas:
         out += ["", "-- 💡 רעיונות שמחכים להחלטה של מיכאל: %d (project-files/ideas-lab.md). לשאול בשאלון כשמתאים, עד 4 בכל פעם --" % len(ideas)] + ideas
+    gap = accounts_gap(cwd)
+    if gap:
+        out += [""] + gap
     rows = [l for l in read(os.path.join(cwd, "project-files", "METRICS.md")).splitlines() if l.startswith("|") and not re.match(r"\|\s*-", l)]
     if len(rows) > 1:
         out += ["", "-- METRICS (שורה אחרונה) --", rows[0], rows[-1]]
