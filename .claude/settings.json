@@ -269,5 +269,6 @@
     "token-guard@tfugen-mods": true
   },
   "awaySummaryEnabled": false,
-  "promptSuggestionEnabled": false
+  "promptSuggestionEnabled": false,
+  "idleCompaction": false
 }
