@@ -83,6 +83,16 @@ def ideas_waiting(cwd):
             if not re.search(r"\*\*מצב:\*\*\s*(נבחר|נדחה)", b)]
 
 
+def _age_note(at, now=None):
+    """30/10/2026, Michael: "בצע: להציג גם בקשות פיתוח ישנות": a request open more than 12 hours says so."""
+    try:
+        t = datetime.datetime.fromisoformat(str(at).replace("Z", "+00:00"))
+        hours = ((now or datetime.datetime.now(datetime.timezone.utc)) - t).total_seconds() / 3600
+    except Exception:
+        return ""
+    return " ⚠️ פתוחה %d שעות" % hours if hours > 12 else ""
+
+
 def dev_inbox(cwd):
     """Open requests to development (routine-db dev_request, 20/10/2026, Michael: "the assistant must
     hand the completions and fixes to an agent"). No key, offline or a bad answer: nothing, quietly.
@@ -101,7 +111,7 @@ def dev_inbox(cwd):
         rows = json.loads(raw).get("rows") or []
         v = rows[0].get("value") if rows else "[]"
         items = json.loads(v) if isinstance(v, str) else (v or [])
-        return ["%s (%s, %s): %s" % (x.get("id"), x.get("agent"), str(x.get("at"))[:10], re.sub(r"\s+", " ", str(x.get("text")))[:200])
+        return ["%s (%s, %s): %s%s" % (x.get("id"), x.get("agent"), str(x.get("at"))[:10], re.sub(r"\s+", " ", str(x.get("text")))[:200], _age_note(x.get("at")))
                 for x in items if isinstance(x, dict) and x.get("status") == "open"]
     except Exception:
         return []
