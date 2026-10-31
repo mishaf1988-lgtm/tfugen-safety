@@ -36,6 +36,8 @@ export const SITE = {
   hrEmail: 'hr-tap@tapugan.co.il',                     // induction forms go here
   odRoot: 'Apps/Tapugan Safety',                       // the app's folder in OneDrive
   odFileUrl: 'https://tapugancoil-my.sharepoint.com/personal/sviva_tapugan_co_il/',
+  isoDrive: 'b!nWRpuJjbX0u66-GvROYcn9iPAqXaM0xJs7a8orNzU8-5G07BHnKMQ59BFbbn0Mzl', // the SharePoint site "iso" (od_swap site:'iso', 31/10/2026)
+  isoSwapRoot: 'iso ' + SHORT + ' \u05d5\u05e9\u05e8/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/', // od_swap writes only under this folder there
   backupPrefix: 'tapugan-backup',                      // names of the files already in _Backups
   codeRepos: [['mishaf1988-lgtm/tfugen-safety', false], ['mishaf1988-lgtm/michael-skills', true]],
   assistantQueue: 'https://api.github.com/repos/mishaf1988-lgtm/michael-skills/contents/plugins/michael/skills/michael-assistant/references/research-queue.md', // the researcher's queue the weekly digest reads (GitHub contents API); '' = none

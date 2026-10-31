@@ -36,6 +36,8 @@ export const SITE = {
   hrEmail: 'hr@example.com',                           // induction forms go here
   odRoot: 'Apps/Safety Platform',                      // the app's folder in OneDrive
   odFileUrl: 'https://YOUR-TENANT-my.sharepoint.com/personal/YOUR_USER/', // the OneDrive owner's site, for file links
+  isoDrive: '',                                        // optional: drive id of a SharePoint site for od_swap site:'iso' (empty = off)
+  isoSwapRoot: '',                                     // optional: the only folder od_swap may write to on that site
   backupPrefix: 'safety-backup',                       // names of the backup files
   codeRepos: [],                                       // [['owner/repo', isPrivate]] the weekly code backup zips
   assistantQueue: '', // the researcher's queue the weekly digest reads (GitHub contents API); '' = none

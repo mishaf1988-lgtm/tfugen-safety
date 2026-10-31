@@ -1345,12 +1345,13 @@ export const OD_SWAP_NEW_TOPS = ['17_\u05d7\u05d9\u05e8\u05d5\u05dd', '15_\u05ea
 // site 'iso' (31/10/2026, Michael in the questionnaire: "do it: widen the permission"): the old copy lies on the SharePoint
 // site "iso", a different drive, and only under ISO_SWAP_ROOT there. Needs the server token to hold Files.ReadWrite.All
 // (a sign-in through /api/ms-auth with sites:true); until then Graph answers 403 and nothing changes.
-export const ISO_DRIVE = 'b!nWRpuJjbX0u66-GvROYcn9iPAqXaM0xJs7a8orNzU8-5G07BHnKMQ59BFbbn0Mzl';
-export const ISO_SWAP_ROOT = 'iso \u05ea\u05e4\u05d5\u05d2\u05df \u05d5\u05e9\u05e8/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/';
+export const ISO_DRIVE = SITE.isoDrive;
+export const ISO_SWAP_ROOT = SITE.isoSwapRoot;
 export function odSwapCheck(b) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
   if (b.site !== undefined && b.site !== 'iso') return { error: 'bad site' };
   const iso = b.site === 'iso';
+  if (iso && !(ISO_DRIVE && ISO_SWAP_ROOT)) return { error: 'no iso site configured' };
   if (String(b.why || '').trim().length < 5) return { error: 'why required' };
   const bad = (x) => x === '.' || x === '..' || OD_BAD.test(x) || x.length > 200 || x.startsWith('.');
   const old = String(b.old || '').split('/').filter(Boolean), nw = String(b.new || '').split('/').filter(Boolean);
