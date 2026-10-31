@@ -1,4 +1,4 @@
-{"_measured":"03/10/2026, information_schema.columns of schema public via Supabase MCP. Update after every migration that adds a column the app writes.",
+{"_measured":"03/10/2026, information_schema.columns of schema public via Supabase MCP. Update after every migration that adds a column the app writes. item_links added 31/10/2026.",
 "app_users":["active","dept","email","full_name","id","notes","phone","role","ts","username"],
 "audit_log":["changed","id","op","record_id","source","table_name","title","ts","user_email"],
 "auds":["a","created_at","d","f","f2","id","n","r","s","sc","sm"],
@@ -19,6 +19,7 @@
 "ins":["a","ac","created_at","d","fn","i","id","s","sc"],
 "inspection_types":["active","id","name","next_due","notes","recur_count","recur_unit","responsible","scope_table","ts"],
 "issue_types":["category","id","level","name","notes","parent_id","ts"],
+"item_links":["agent","at","id","item_id","item_table","ref","rel","title"],
 "leg":["a","c","c_by","c_date","c_evidence_url","created_at","d","full_text","id","last_review","law_num","law_type","o","s","src_url","summary","topic","u"],
 "locations":["id","level","name","notes","parent_id","ts"],
 "med":["created_at","d","e","ext_id","id","n","r","ty","w"],
