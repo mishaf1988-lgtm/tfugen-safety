@@ -12,6 +12,9 @@ the ones sharing words with the file name. The same command asked again passes: 
 """
 import hashlib, json, os, re, sys, tempfile
 
+sys.stdin.reconfigure(encoding="utf-8")  # Claude Code sends UTF-8; Windows reads cp1255
+sys.stdout.reconfigure(encoding="utf-8")  # the reason is Hebrew; Windows prints cp1255
+
 CREATES = re.compile(r"""['\"]op['\"]\s*:\s*['\"]od_put_pdf['\"]|(?=[\s\S]*\.save\()(?=[\s\S]*(?:\bDocument\(|\bWorkbook\(|\bPresentation\())""")
 # Headings that say how factory documents are made, whatever the file is called.
 TOPIC = re.compile("\u05de\u05e1\u05de\u05da \u05d7\u05d3\u05e9|\u05d8\u05d5\u05e4\u05e1 \u05e7\u05d9\u05d9\u05dd|\u05d4\u05e4\u05e7\u05ea \u05de\u05e1\u05de\u05db|\u05e2\u05d9\u05e6\u05d5\u05d1 \u05de\u05e1\u05de\u05db|\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05e9\u05dc \u05d4\u05de\u05e4\u05e2\u05dc|\u05d2\u05d5\u05e4\u05df")
