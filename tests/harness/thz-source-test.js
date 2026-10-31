@@ -72,6 +72,19 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   await page.evaluate(() => { DB.tour_hazards = []; _mtgComAll = false; });
   check('nothing open: a plain line, no table', !/<table/.test(await page.evaluate(() => _mtgCommitteeHtml())));
 
+  console.log('\n6. the source shows in the list and in the view (31/10/2026)');
+  const lb = await page.evaluate(() => {
+    DB.inc = [{ id: 'inc-1', dt: '2026-10-29', d: 'x' }];
+    return [_thzSrcLabel({ tour_no: 7 }), _thzSrcLabel({ src: 'investigation', src_ref: 'inc-1|a' }), _thzSrcLabel({ src: 'committee', src_ref: '2026-11-05|b' }), _thzSrcLabel({ src: 'investigation', src_ref: 'gone|c' })];
+  });
+  check('tour / investigation with the accident date / committee with the meeting date / unknown ref', lb[0] === 'סיור 7' && lb[1] === 'תחקיר 29/10/2026' && lb[2] === 'ועדה 05/11/2026' && lb[3] === 'תחקיר', lb);
+  await page.evaluate(() => { DB.tour_hazards = [{ id: 'v1', n: 1, d: '2026-10-31', dept: 'x', descr: 'מתחקיר', s: 'פתוח', src: 'investigation', src_ref: 'inc-1|a' }]; rThz(); });
+  const rowHtml = await page.evaluate(() => (document.getElementById('tb-thz') || document.body).innerHTML);
+  check('list row: a badge with the source', /class="b bB">תחקיר 29\/10\/2026</.test(rowHtml), rowHtml.slice(0, 300));
+  await page.evaluate(() => showView('tour_hazards', 'v1'));
+  const viewTxt = await page.evaluate(() => (document.getElementById('view-body') || {}).innerHTML || '');
+  check('view: "מקור" row with the source', /מקור<\/span><strong>תחקיר 29\/10\/2026</.test(viewTxt), viewTxt.slice(0, 300));
+
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
