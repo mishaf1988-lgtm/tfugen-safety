@@ -22720,9 +22720,17 @@ document.addEventListener('DOMContentLoaded',function(){setTimeout(_truMsReturn,
 // 31/10/2026: a link with ?ms_sites=1 starts the sign-in that also grants the SharePoint sites (od_swap on the iso
 // site). The server still requires an admin session and a fresh signed state, the confirm box names the account.
 function _truMsSites(){
+  // 31/10/2026: opened before signing in, the start was refused ("invalid session token"). The wish is kept in
+  // sessionStorage (it survives the sign-in) and the sign-in starts only once a session exists, for up to 15 minutes.
   var q;try{q=new URLSearchParams(location.search);}catch(e){return;}
-  if(q.get('ms_sites')!=='1')return;
-  try{q.delete('ms_sites');var qs=q.toString();history.replaceState(null,'',location.pathname+(qs?'?'+qs:'')+location.hash);}catch(e){}
+  if(q.get('ms_sites')==='1'){
+    try{sessionStorage.setItem('ms_sites_at',String(Date.now()));}catch(e){}
+    try{q.delete('ms_sites');var qs=q.toString();history.replaceState(null,'',location.pathname+(qs?'?'+qs:'')+location.hash);}catch(e){}
+  }
+  var at=0;try{at=Number(sessionStorage.getItem('ms_sites_at')||0);}catch(e){}
+  if(!at||Date.now()-at>900000){try{sessionStorage.removeItem('ms_sites_at');}catch(e){}return;}
+  if(typeof _sbToken==='undefined'||!_sbToken){setTimeout(_truMsSites,2000);return;}
+  try{sessionStorage.removeItem('ms_sites_at');}catch(e){}
   window._truSrvConnect(true);
 }
 document.addEventListener('DOMContentLoaded',function(){setTimeout(_truMsSites,2500);});
