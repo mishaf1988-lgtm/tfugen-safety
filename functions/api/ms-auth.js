@@ -1,6 +1,7 @@
 // Cloudflare Pages Function: connect OneDrive to the server, once.
 //
 //   POST /api/ms-auth {op:'start'}   admin/manager session -> {url}
+//        {op:'start', sites:true} also asks Files.ReadWrite.All (od_swap on the iso site, 31/10/2026)
 //        The app sends the browser to that Microsoft sign-in page.
 //   GET  /api/ms-auth?code&state     Microsoft sends the browser back here.
 //        We exchange the code, store the refresh token (public.oauth_tokens,
@@ -13,7 +14,7 @@
 // account to the factory's server by sending a manager a link.
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, CF_PROD, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo } from '../_shared.js';
-import { odConfigured, authorizeUrl, SCOPES, exchangeCode, saveTokens, tokenRow, hasMail, stateGet, stateSet } from '../_onedrive.js';
+import { odConfigured, authorizeUrl, SCOPES, SITES_SCOPE, exchangeCode, saveTokens, tokenRow, hasMail, stateGet, stateSet } from '../_onedrive.js';
 
 const REDIRECT = CF_PROD + '/api/ms-auth';
 const STATE_TTL_MS = 15 * 60 * 1000;
@@ -39,9 +40,11 @@ function sameStr(a, b) {
   return d === 0;
 }
 export const NONCE_KEY = 'ms_auth_nonce';
-export async function makeState(env, who, now) {
+// sites (31/10/2026): the scope wish rides inside the signed state, so the callback asks the token for exactly
+// what the admin started, and nobody can add it on the way back.
+export async function makeState(env, who, now, sites) {
   const n = b64url(crypto.getRandomValues(new Uint8Array(12)));
-  const p = b64urlText(JSON.stringify({ t: now || Date.now(), n, u: String(who || '') }));
+  const p = b64urlText(JSON.stringify(sites ? { t: now || Date.now(), n, u: String(who || ''), s: 1 } : { t: now || Date.now(), n, u: String(who || '') }));
   return p + '.' + (await hmac(env.ONEDRIVE_CLIENT_SECRET, p));
 }
 export async function checkState(env, state, now) {
@@ -82,7 +85,7 @@ export async function onRequest(context) {
     if (!want || !sameStr(want, String(sp.n || ''))) return back('err', 'this sign-in link was already used or replaced, start again');
     await stateSet(env, { [NONCE_KEY]: null }).catch(() => {});
     try {
-      const t = await exchangeCode(env, code, REDIRECT);
+      const t = await exchangeCode(env, code, REDIRECT, sp.s === 1 ? SCOPES + ' ' + SITES_SCOPE : undefined);
       if (!t.refresh_token) return back('err', 'no refresh token (offline_access missing)');
       const me = await fetch('https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName', { headers: { Authorization: 'Bearer ' + t.access_token }, signal: tmo(GRAPH_MS) });
       const mj = await me.json().catch(() => ({}));
@@ -113,13 +116,14 @@ export async function onRequest(context) {
   }
   if (op === 'start') {
     if (!odConfigured(env)) return jsonResp({ error: 'server not configured: set ONEDRIVE_CLIENT_ID and ONEDRIVE_CLIENT_SECRET in Cloudflare' }, 503, cors);
-    const state = await makeState(env, who.user && who.user.email);
+    const sites = body.sites === true;
+    const state = await makeState(env, who.user && who.user.email, undefined, sites);
     // 15/10/2026: stateSet throws on a refused write; without the nonce the sign-in would fail at the callback.
     try { await stateSet(env, { [NONCE_KEY]: JSON.parse(unb64urlText(state.split('.')[0])).n }); }
     catch (e) { return jsonResp({ error: 'state store unavailable, try again' }, 503, cors); }
     const q = new URLSearchParams({
       client_id: env.ONEDRIVE_CLIENT_ID, response_type: 'code', redirect_uri: REDIRECT,
-      response_mode: 'query', scope: SCOPES, state, prompt: 'select_account',
+      response_mode: 'query', scope: sites ? SCOPES + ' ' + SITES_SCOPE : SCOPES, state, prompt: 'select_account',
     });
     return jsonResp({ url: authorizeUrl(env) + '?' + q.toString() }, 200, cors);
   }

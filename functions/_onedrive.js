@@ -29,6 +29,10 @@ export const PROVIDER = 'onedrive_server';
 // required", taking the OneDrive log and the alert mails down with it.
 // mail-inbox.js stays dormant until an admin grants it (DECISIONS 2026-09-27).
 export const SCOPES = 'offline_access User.Read Files.ReadWrite Mail.Send';
+// Asked only by a sign-in started with {op:'start', sites:true} (31/10/2026, Michael: "do it: widen the permission"):
+// write access to the SharePoint sites sviva can reach, for od_swap on the iso site. Never part of SCOPES, so an
+// ordinary sign-in stays as it was; once granted it is kept on refresh through the stored scope (refreshScopes).
+export const SITES_SCOPE = 'Files.ReadWrite.All';
 // A refresh must ask only for what was actually granted, never for SCOPES:
 // asking a refresh for a scope nobody consented to fails the refresh, and with
 // it the OneDrive log. So it asks for the scopes stored with the token.
@@ -186,8 +190,8 @@ async function tokenCall(env, params) {
   }
   return j;
 }
-export function exchangeCode(env, code, redirectUri) {
-  return tokenCall(env, { grant_type: 'authorization_code', code, redirect_uri: redirectUri });
+export function exchangeCode(env, code, redirectUri, scope) {
+  return tokenCall(env, { grant_type: 'authorization_code', code, redirect_uri: redirectUri, ...(scope ? { scope } : {}) });
 }
 
 // A valid access token for the connected account, refreshing when needed.
