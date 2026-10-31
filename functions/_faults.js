@@ -5,10 +5,13 @@
 //   * an error in a user's browser (audit_log table_name client_error, index.html _errReport);
 //   * an agent that reported a failure (agent_log ok:false, routine-db agent_report).
 // The same fault is said once a day (Israel day), at most FAULT_LINES lines and "and N more". No agent, no quota.
-// The quality checker still fixes what it can in the morning; this only makes sure Michael hears of it in time.
+// And the fix starts at once (31/10/2026, Michael: "the moment a fault comes, does it go to be fixed too? didn't we
+// change to a developer that works the moment it gets a message?"): the same faults open ONE dev_inbox request
+// (agent fault-alert), and the server fires the immediate developer with it, as dev_request does (devFireTarget).
 import { stateGet, stateSet } from './_onedrive.js';
 import { ownerWa, sendToOwner, ownerWindowOpen } from './_wa.js';
 import { SB_LIVE, tmo } from './_shared.js';
+import { DEV_INBOX_KEY, devInboxAdd, devFireTarget, devFireText } from './api/routine-db.js';
 
 export const FAULT_KEY = 'fault_alert', FAULT_LINES = 5, FAULT_FIRST_MS = 20 * 60e3;
 const dayIL = (iso) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(iso));
@@ -36,10 +39,38 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
   items.forEach((x) => { sent[x.key] = today; });
   return { items, fault: { at: nowIso, sent } };
 }
-export function faultText(items) {
+export function faultText(items, fixing) {
   const lines = items.slice(0, FAULT_LINES).map((x) => '- ' + x.text);
   if (items.length > FAULT_LINES) lines.push('- \u05d5\u05e2\u05d5\u05d3 ' + (items.length - FAULT_LINES));
-  return '\u26a0\ufe0f \u05ea\u05e7\u05dc\u05d4 \u05d1\u05de\u05e2\u05e8\u05db\u05ea:\n' + lines.join('\n') + '\n\u05d1\u05d5\u05d3\u05e7 \u05d4\u05d0\u05d9\u05db\u05d5\u05ea \u05de\u05d8\u05e4\u05dc \u05d1\u05d6\u05d4 \u05d1\u05d1\u05d5\u05e7\u05e8. \u05d3\u05d7\u05d5\u05e3? \u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05db\u05d0\u05df.';
+  return '\u26a0\ufe0f \u05ea\u05e7\u05dc\u05d4 \u05d1\u05de\u05e2\u05e8\u05db\u05ea:\n' + lines.join('\n') + '\n' + (fixing ? '\u05d4\u05de\u05e4\u05ea\u05d7 \u05d4\u05ea\u05d5\u05e8\u05df \u05db\u05d1\u05e8 \u05e7\u05d9\u05d1\u05dc \u05d0\u05ea \u05d6\u05d4 \u05d5\u05de\u05ea\u05d7\u05d9\u05dc \u05dc\u05ea\u05e7\u05df. \u05d3\u05d7\u05d5\u05e3? \u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05db\u05d0\u05df.' : '\u05d1\u05d5\u05d3\u05e7 \u05d4\u05d0\u05d9\u05db\u05d5\u05ea \u05de\u05d8\u05e4\u05dc \u05d1\u05d6\u05d4 \u05d1\u05d1\u05d5\u05e7\u05e8. \u05d3\u05d7\u05d5\u05e3? \u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05db\u05d0\u05df.');
+}
+export function faultDevText(items) {
+  return '\u05ea\u05e7\u05dc\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05de\u05d4\u05d4\u05ea\u05e8\u05d0\u05d4 \u05d4\u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea, \u05dc\u05d7\u05e7\u05d5\u05e8 \u05d5\u05dc\u05ea\u05e7\u05df: ' + items.map((x) => x.text).join(' / ').slice(0, 1200) + '. \u05e9\u05d2\u05d9\u05d0\u05d4 \u05de\u05db\u05d5\u05d5\u05e0\u05ea \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4 (\u05d1\u05d3\u05d9\u05e7\u05ea \u05d3\u05d9\u05d5\u05d5\u05d7) = \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d1-dev_done \u05d1\u05dc\u05d9 \u05ea\u05d9\u05e7\u05d5\u05df.';
+}
+// one request for the faults of this tick, then the fire; a failure here never stops the WhatsApp
+async function openFix(env, url, k, items, nowIso) {
+  const h = { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' };
+  let st; try { st = await stateGet(env, [DEV_INBOX_KEY], true); } catch (e) { return { ok: false }; }
+  const r = devInboxAdd((st[DEV_INBOX_KEY] && st[DEV_INBOX_KEY].value) || '[]', { agent: 'fault-alert', text: faultDevText(items) }, nowIso);
+  if (r.error) return { ok: false, error: r.error };
+  const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify([{ key: DEV_INBOX_KEY, value: JSON.stringify(r.list), updated_at: nowIso }]), signal: tmo(10000) }).catch(() => null);
+  if (!w || !w.ok) return { ok: false, error: 'dev_inbox write' };
+  const ft = r.created ? devFireTarget(env) : null;
+  if (!ft) return { ok: true, id: r.id, fired: false };
+  const e = r.list.find((x) => x && x.id === r.id);
+  try {
+    const fr = await fetch(ft.url, { method: 'POST', signal: tmo(10000),
+      headers: { Authorization: 'Bearer ' + ft.token, 'anthropic-beta': 'experimental-cc-routine-2026-04-01', 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+      body: JSON.stringify(ft.body || { text: devFireText(e) }) });
+    const fj = fr.ok ? await fr.json().catch(() => ({})) : {};
+    if (fj && fj.claude_code_session_id) {
+      e.fired_session = fj.claude_code_session_id;
+      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify([{ key: DEV_INBOX_KEY, value: JSON.stringify(r.list), updated_at: nowIso }]), signal: tmo(10000) }).catch(() => null);
+    }
+    return { ok: true, id: r.id, fired: fr.ok };
+  } catch (x) { return { ok: true, id: r.id, fired: false }; }
 }
 export async function runFaultAlert(env, nowIso) {
   const k = env.SUPABASE_SERVICE_ROLE_KEY;
@@ -55,13 +86,15 @@ export async function runFaultAlert(env, nowIso) {
   if (!r || !r.ok) return { ok: false, error: 'audit_log read ' + (r ? r.status : 'failed') };
   const rows = await r.json().catch(() => []);
   const { items, fault } = faultItems(prev, rows, Array.isArray(log) ? log : [], nowIso);
-  let sentOk = true;
+  let sentOk = true, fix = null;
   if (items.length) {
+    // a fault already reported today was filtered above, so the fix is opened once a day per fault too
+    try { fix = await openFix(env, url, k, items, nowIso); } catch (e) { fix = { ok: false }; }
     const to = await ownerWa(env, url);
-    const s = to ? await sendToOwner(env, to, faultText(items), { windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
+    const s = to ? await sendToOwner(env, to, faultText(items, fix && fix.ok), { windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
     sentOk = !!(s && s.ok);
   }
   // not sent: the mark does not move, so the same faults are tried again next tick
   if (sentOk) await stateSet(env, { [FAULT_KEY]: JSON.stringify(fault) });
-  return { ok: true, items: items.length, sent: items.length ? sentOk : false };
+  return { ok: true, items: items.length, sent: items.length ? sentOk : false, fix };
 }
