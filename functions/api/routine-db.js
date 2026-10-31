@@ -212,11 +212,18 @@ const SECOND_SENSITIVE = /\u05d0\u05de\u05d5\u05e0\u05d9|nh3|\b26\.0[34]\b|\u05d
 const SECOND_REFUSAL = /\u05e1\u05d9\u05e8\u05d1\u05ea\u05d9|\u05e1\u05d9\u05e8\u05d5\u05d1|\u05dc\u05d0 \u05e0\u05de\u05d7\u05e7|\u05dc\u05d0 \u05d0\u05de\u05d7\u05e7/;
 const SECOND_DONE = /\u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9|\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e9\u05e0\u05d9\u05d9\u05d4|\u05dc\u05d0 \u05d0\u05d9\u05de\u05ea\u05ea\u05d9 \u05e2\u05d3 \u05d4\u05e1\u05d5\u05e3/;
 const SECOND_SKIPPED = /(\u05dc\u05d0|\u05d1\u05dc\u05d9|\u05dc\u05dc\u05d0|\u05d3\u05d9\u05dc\u05d2\S*) (?:\S+ )?(?:\u05e2\u05dc )?\u05d4?\u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9/;
+// 31/10/2026 (handoff item 3: a false alarm on "where is procedure 26.04 and what is its validity"): a report that
+// only says where a document is or until when it is valid (validity, edition, location, path) carries no safety
+// content to double-check, so it does not need a second checker. Any safety figure or instruction in the same
+// report (pressure in bar, ppm, SCBA, suit, leak, a distance) puts it back under the gate.
+const SECOND_DOCMETA = /\u05ea\u05d5\u05e7\u05e3|\u05de\u05d4\u05d3\u05d5\u05e8\u05d4|\u05de\u05d9\u05e7\u05d5\u05dd|\u05d0\u05d9\u05e4\u05d4|\u05e0\u05ea\u05d9\u05d1/;
+const SECOND_CONTENT = /\d+ ?\u05d1\u05e8(?![\u05d0-\u05ea])|ppm|\u05de\u05e0"\u05e4|\u05d7\u05dc\u05d9\u05e4|\u05d3\u05dc\u05d9\u05e4|\d+ ?\u05de\u05d8\u05e8/;
 export function secondCheckGate(e) {
   if (!e || !e.ok || SECOND_CHECK_AGENTS.indexOf(e.agent) < 0) return e;
   const text = String(e.line || '') + ' ' + String(e.learned || '');
   if (!SECOND_SENSITIVE.test(text) || SECOND_REFUSAL.test(text)) return e;
   if (SECOND_DONE.test(text) && !SECOND_SKIPPED.test(text)) return e;
+  if (SECOND_DOCMETA.test(text) && !SECOND_CONTENT.test(text)) return e;
   return { ...e, ok: false, line: ('\u05d7\u05e1\u05e8 \u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9 \u05d1\u05e9\u05d0\u05dc\u05d4 \u05e8\u05d2\u05d9\u05e9\u05d4: ' + e.line).slice(0, 300) };
 }
 // languageGate (30/10/2026, handoff gap: two Haiku run summaries came out in English): the assistant's closing

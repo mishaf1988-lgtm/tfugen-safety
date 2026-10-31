@@ -229,6 +229,28 @@ def env_gap():
             "(tfugen-sessions, סעיף 5 בתחילת שיחה) --"]
 
 
+def token_guard(run=subprocess.run):
+    """Installs token-guard when it is missing (31/10/2026: the setting in the project did not install it by itself,
+    and it was added by hand once). Only in a cloud session (SESSION_START_CLOUD stands in for the marker in tests).
+    Returns one line for the report: nothing when it is already there or this is not a cloud session, a warning
+    when the install failed (a blocked network)."""
+    if not (os.environ.get("SESSION_START_CLOUD") or os.environ.get("CCR_AGENT_PROXY_ENABLED")):
+        return []
+    try:
+        have = run(["claude", "plugin", "list"], capture_output=True, text=True, encoding="utf-8", timeout=30).stdout
+        if "token-guard" in have:
+            return []
+        run(["claude", "plugin", "marketplace", "add", "mishaf1988-lgtm/tfugen-safety"], capture_output=True, text=True,
+            encoding="utf-8", timeout=90)
+        out = run(["claude", "plugin", "install", "token-guard@tfugen-mods"], capture_output=True, text=True,
+                  encoding="utf-8", timeout=90)
+        if out.returncode == 0:
+            return ["-- token-guard הותקן אוטומטית בתחילת השיחה --"]
+    except Exception:
+        pass
+    return ["-- \u26a0\ufe0f token-guard חסר ולא הותקן (כנראה רשת חסומה בסביבה הזו): לכתוב למיכאל בעברית, ולא להתקין ידנית בלי לבדוק --"]
+
+
 def report(cwd):
     out = ["== התחלת שיחה (session-start.py) ==",
            "skills לטעון: " + ", ".join(SKILLS) + " (CLAUDE.md, Workflow 1-2)"]
@@ -270,6 +292,9 @@ def report(cwd):
     envg = env_gap()
     if envg:
         out += [""] + envg
+    tg = token_guard()
+    if tg:
+        out += [""] + tg
     note = live_note(cwd)
     if note:
         out += [""] + note
