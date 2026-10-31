@@ -57,5 +57,13 @@ check('commit only inside a heredoc body on main: passes', B("cat > t <<'EOF'\ng
 env = dict(os.environ, PUSH_GATE_CHANGED='functions/_wa.js'); env.pop('PUSH_GATE_TEST', None)
 r = subprocess.run([sys.executable, HOOK], input=json.dumps({'tool_name': 'Bash', 'tool_input': {'command': 'git push origin x'}}), capture_output=True, text=True, timeout=120, env=env)
 check('21/10/2026: a functions/ change runs the real rule1-hebrew test (node) and it is green on this tree', r.returncode == 0 and json.loads(r.stdout or '{}') == {}, r.stdout[-300:] + r.stderr[-300:])
+# 31/10/2026: a draft waiting for Michael is not pushed to the public repo
+o = hook('git push -u origin x', 'DECISIONS.md,project-files/business/ncr-writing-skill/README.md')
+check('a business draft: denied, with the file named', o.get('permissionDecision') == 'deny' and 'business' in o.get('permissionDecisionReason', ''), o)
+check('a SKILL.md outside .claude/skills: denied', hook('git push origin x', 'tools/x/ncr/SKILL.md').get('permissionDecision') == 'deny')
+check('a repo skill: passes', hook('git push origin x', '.claude/skills/tfugen-dev/SKILL.md,project-files/claude-ai-skill/a/SKILL.md') == {})
+check('a drafts folder: denied', hook('git push origin x', 'project-files/drafts/a.md').get('permissionDecision') == 'deny')
+check('DRAFTS_TEXT in a file name is not a folder: passes', hook('git push origin x', 'functions/api/drafts-text.js', 0) == {})
+
 print('\n%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)
