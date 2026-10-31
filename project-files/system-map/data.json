@@ -1088,6 +1088,20 @@
    "reports": true
   },
   {
+   "id": "trig_01Xjk1pEG3w1TPfmQggCjgxL",
+   "zone": "routines",
+   "name": "עוזר החיסכון השבועי",
+   "what": "עוזר החיסכון השבועי: דוח חיסכון והצעות ל-`ideas-lab.md` (31/10/2026, לפי מיכאל בשאלון 30/10/2026: \"בצע: דוח חיסכון שבועי + הצעות\"; סונט)",
+   "when": "ה' 13:37",
+   "when_full": "ה' 13:37",
+   "doc": "savings-assistant.md",
+   "key": "savings-assistant",
+   "family": "תקשורת ומשרד",
+   "ops": [],
+   "m365": false,
+   "reports": false
+  },
+  {
    "id": "trig_01FKenmRrWQ22S1566BReYri",
    "zone": "routines",
    "name": "מנהל השיווק",
