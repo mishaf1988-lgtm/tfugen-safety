@@ -169,7 +169,7 @@ import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLA
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads',
   'trustees', 'trustee_tasks', 'trustee_winners'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'quota_mode', 'agents_pause', 'assistant_account'];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -419,10 +419,13 @@ export function waPhoneBody(step, b, pin) {
   if (!/^[0-9]{6}$/.test(p)) return { error: 'pin: 6 digits (the secret WA_PIN or pin in the request)' };
   return { body: { messaging_product: 'whatsapp', pin: p } };
 }
-export const STATE_WRITE = ['quote_track', 'nevo_versions', 'od_raw_token', 'od_raw_exp', 'mail_filing', 'validity_run', 'iso_tasks', 'mail_triage', 'quality_run'];
+export const STATE_WRITE = ['quote_track', 'nevo_versions', 'od_raw_token', 'od_raw_exp', 'mail_filing', 'validity_run', 'iso_tasks', 'mail_triage', 'quality_run', 'live_note'];
 // Run reports whose "at" the server stamps (11/10/2026): a Routine wrote a guessed time 11 minutes off,
 // and the next run reads mail from that time. mail_filing: the last entry of the list; validity_run: the object.
-export const STAMP_AT = ['mail_filing', 'validity_run'];
+export const STAMP_AT = ['mail_filing', 'validity_run', 'live_note'];
+// live_note (31/10/2026, Michael: "transfer between accounts as if I talked to it a minute ago"): a short note a Stop hook writes
+// at the end of every reply, read at the start of every conversation in either account. Capped so it stays a note.
+export const LIVE_NOTE_MAX = 4000;
 export function stampAt(v, nowIso) {
   if (Array.isArray(v)) {
     const last = v[v.length - 1];
@@ -1642,6 +1645,7 @@ export async function onRequest(context) {
     if (body.op === 'state_set') {
       if (STATE_WRITE.indexOf(body.key) < 0) return jsonResp({ ok: false, error: 'key not allowed' }, 400, {});
       if (STAMP_AT.indexOf(body.key) >= 0 && body.value && typeof body.value === 'object') stampAt(body.value, new Date().toISOString());
+      if (body.key === 'live_note' && JSON.stringify(body.value || '').length > LIVE_NOTE_MAX) return jsonResp({ ok: false, error: 'live_note: over ' + LIVE_NOTE_MAX + ' characters' }, 400, {});
       const value = body.value === null || body.value === undefined ? null : (typeof body.value === 'string' ? body.value : JSON.stringify(body.value));
       const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', {
         method: 'POST',
