@@ -1243,7 +1243,10 @@ export function ocrTxtCheck(b) {
 export function ocrTxtName(rel) {
   const parts = String(rel || '').split('/').filter(Boolean), base = String(parts.pop() || '').replace(/\.pdf$/i, '');
   if (!parts.length || (parts.length === 1 && parts[0] === OD_INBOX)) return base + '.txt';
-  return base + ' (' + parts.join(' - ') + ').txt';
+  // OneDrive takes a name up to 255: the folders are cut from the left (the nearest folder stays), the PDF name is kept (31/10/2026 review)
+  let dirs = parts.join(' - '); const room = Math.max(20, 240 - base.length);
+  if (dirs.length > room) dirs = '...' + dirs.slice(dirs.length - room + 3);
+  return base + ' (' + dirs + ').txt';
 }
 export { OCR_MODELS, OCR_PAGES, OCR_PROMPT, pdfJpegs, pdfDct, pdfCcitt, g4Gray, grayPng, ccittPng, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
 // od_archive (20/10/2026, Michael: "when the assistant works on a form it must not keep the old form, move it

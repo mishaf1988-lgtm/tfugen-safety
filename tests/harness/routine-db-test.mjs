@@ -130,7 +130,7 @@ const callIn = async (body) => {
   check('ocrTxtName: the inbox keeps <name>.txt; elsewhere the folders are added, so two form.pdf do not share a txt (31/10/2026)',
     ocrTxtName(OD_INBOX + '/2026-10-22 0532 - a.pdf') === '2026-10-22 0532 - a.txt' && ocrTxtName('a.pdf') === 'a.txt'
     && ocrTxtName('X/form.pdf') === 'form (X).txt' && ocrTxtName('X/' + OD_ARCHIVE_DIR + '/form.PDF') === 'form (X - ' + OD_ARCHIVE_DIR + ').txt'
-    && ocrTxtName('X/form.pdf') !== ocrTxtName('Y/form.pdf') && ocrTxtCheck({ paths: ['X/form.pdf'] }).files[0].txt === 'form (X).txt');
+    && ocrTxtName('X/form.pdf') !== ocrTxtName('Y/form.pdf') && ocrTxtName(Array(5).fill('d'.repeat(200)).join('/') + '/f.pdf').length <= 255 && ocrTxtCheck({ paths: ['X/form.pdf'] }).files[0].txt === 'form (X).txt');
   check('ocr_txt: PDFs only, txt named after the PDF, lines joined page by page; the answer never carries the text (24/10/2026)', (() => {
     const ok = ocrTxtCheck({ paths: ['_\u05e0\u05db\u05e0\u05e1 \u05de\u05d4\u05de\u05d9\u05d9\u05dc/2026-10-22 0532 - a.pdf'] });
     const lines = ocrLines({ analyzeResult: { readResults: [{ lines: [{ text: 'x' }, { text: 'y' }] }, { lines: [{ text: 'z' }] }] } });
