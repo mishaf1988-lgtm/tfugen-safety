@@ -1105,6 +1105,10 @@ export function odMkdirCheck(b) {
 // carry, up to 5, each a .pdf/.docx/.xlsx path inside the safety folder and outside the protected
 // folders. The flow reads each by its full path ("/" + OD_ROOT + rel) and attaches it.
 export const POSTMAN_TRIGGER = 'trig_01Py8YXifD3HtnQUmFgoTRft', RELAY_FIRE_KEY = 'relay_fire_at', RELAY_FIRE_GAP_S = 120;
+// fire_probe and fire_probe_trigger each open a real, billed assistant run. At most FIRE_PROBE_MAX a day (UTC),
+// counted in server_state as "YYYY-MM-DD:n" (STATUS retro 20/10/2026, done 31/10/2026): a Routine taken over by
+// text in a mail or a file cannot fire them in a loop.
+export const FIRE_PROBE_KEY = 'fire_probe_day', FIRE_PROBE_MAX = 3;
 // 21/10/2026 (Michael: "no way you start right after the request?", then "do it: a new session per request"):
 // a new request fires the Routine "immediate development" with the request (routine-dev-fire.md). A fire
 // always opens a new session (lesson 133), which is what this wants. Only with DEV_FIRE_TOKEN, once per request.
@@ -3092,7 +3096,20 @@ export async function onRequest(context) {
         out.app_perms_err = err(pm);
       }
       out.app_sub = s.sub; out.app_sub_err = s.err; out.messages_ok = subOk(); out.waba_has_app = w.has; out.waba_apps_err = w.err;
-      if (body.fire_probe && out.fire_set) {
+      // The daily cap, checked once for both probes, and only when a probe would really fire. A read that fails = no probe.
+      const wantFire = !!(body.fire_probe && out.fire_set), wantProbe2 = !!(body.fire_probe_trigger && fireUrlOf(body.fire_probe_trigger) && env.ASSISTANT2_FIRE_TOKEN);
+      let probeOk = true;
+      if (wantFire || wantProbe2) {
+        const day = new Date().toISOString().slice(0, 10), need = (wantFire ? 1 : 0) + (wantProbe2 ? 1 : 0);
+        let cur = null, readOk = true;
+        try { cur = (await stateRead([FIRE_PROBE_KEY]))[0]; } catch (e) { readOk = false; }
+        const mm = cur && /^(\d{4}-\d{2}-\d{2}):(\d+)$/.exec(String(cur.value || ''));
+        const n = mm && mm[1] === day ? +mm[2] : 0;
+        if (!readOk || n + need > FIRE_PROBE_MAX) { probeOk = false; out.probe_capped = !readOk ? 'state read failed' : 'max ' + FIRE_PROBE_MAX + ' probes a day, used ' + n; }
+        else await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify([{ key: FIRE_PROBE_KEY, value: day + ':' + (n + need), updated_at: new Date().toISOString() }]), signal: tmo(SB_MS) });
+      }
+      if (body.fire_probe && out.fire_set && probeOk) {
         const af = await assistantFireNow(env);
         const fr = await g(af.url, { method: 'POST',
           headers: { Authorization: 'Bearer ' + af.token, 'anthropic-beta': 'experimental-cc-routine-2026-04-01', 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
@@ -3103,7 +3120,7 @@ export async function onRequest(context) {
         if (body.expect_session) out.fire_landed = sameSession(out.fire_session, body.expect_session);
       }
       // A new Routine, tested before it goes live: the new token against the trigger named here.
-      if (body.fire_probe_trigger) {
+      if (body.fire_probe_trigger && probeOk) {
         const u = fireUrlOf(body.fire_probe_trigger);
         if (!u || !env.ASSISTANT2_FIRE_TOKEN) { out.probe2_status = !u ? 'bad trigger id' : 'no new token'; }
         else {

@@ -216,6 +216,14 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   check('probe of a new trigger: its own token, the session, landed false when it went elsewhere', probe2Auth[probe2Auth.length - 1] === 'Bearer tok2' && c.probe2_session === 'cse_01FRESH' && c.probe2_landed === false && c.fire_to === 'old', c);
   delete ENV.ASSISTANT2_FIRE_TOKEN;
   check('sameSession: prefixes, empty, different', sameSession('cse_A1', 'session_A1') && !sameSession('', '') && !sameSession(null, 'x') && !sameSession('cse_A1', 'cse_A2'));
+  check('fire_probe cap: the day counter is in server_state (3 probes so far)', state.fire_probe_day === new Date().toISOString().slice(0, 10) + ':3', state.fire_probe_day);
+  { const f0 = fires.length;
+    c = await call({ op: 'wa_check', fire_probe: true });
+    check('fire_probe cap: a 4th probe the same day does not fire, and says why', fires.length === f0 && c.probe_capped && /max 3/.test(c.probe_capped) && c.fire_status === undefined, c);
+    state.fire_probe_day = '2000-01-01:3';
+    c = await call({ op: 'wa_check', fire_probe_trigger: 'trig_01NEWNEWNEWNEWNEWNEWNEWN' });
+    check('fire_probe cap: a probe with no new token is not counted', !c.probe_capped && c.probe2_status === 'no new token' && state.fire_probe_day === '2000-01-01:3', c);
+  }
   const fb = fires.length;
   c = await call({ op: 'wa_check', fire_probe: true });
   check('fire_probe: status only, and the text is not Michael\'s header line', c.fire_status === 200 && fires.length === fb + 1 && fires[fires.length - 1].body.text.indexOf('\u05de\u05de\u05d9\u05db\u05d0\u05dc, \u05e0\u05d1\u05d3\u05e7') < 0, c);
