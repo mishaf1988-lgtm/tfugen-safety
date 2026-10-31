@@ -98,7 +98,8 @@ export function ocrAutoPick(items, done, nowMs) {
 // One PDF of the drive (path under OCR_ROOT) to a txt beside the others. Never returns the text.
 // from (27/10/2026): the first page of this call, 1-based. A scan longer than OCR_PAGES is read in calls of OCR_PAGES pages
 // (a 6-page inspector scan stopped at 3); from > 1 appends to the same txt. `next` = the from of the next call.
-export async function ocrOne(env, token, rel, name, model, from) {
+// txtName (31/10/2026): the txt file name; routine-db's ocr_txt passes ocrTxtName (folders added outside the inbox).
+export async function ocrOne(env, token, rel, name, model, from, txtName) {
   from = Math.max(1, Number(from) || 1);
   const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
   const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
@@ -116,7 +117,7 @@ export async function ocrOne(env, token, rel, name, model, from) {
   const last = Math.min(total, from + OCR_PAGES - 1);
   const pages = [];
   try { for (let i = from - 1; i < last; i++) pages.push(ccitt ? await ccittPng(ccitt[i]) : all[i]); } catch (e) { return { name, ok: false, error: String((e && e.message) || e).slice(0, 120) }; }
-  const txt = name.replace(/\.pdf$/i, '') + '.txt', url = G + enc(OCR_ROOT + OD_OCR_DIR + '/' + txt) + ':/content';
+  const txt = txtName || (name.replace(/\.pdf$/i, '') + '.txt'), url = G + enc(OCR_ROOT + OD_OCR_DIR + '/' + txt) + ':/content';
   let before = '';
   if (from > 1) { const o = await fetch(url, { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(20000) }).catch(() => null);
     if (o && o.ok) before = (await o.text()).trim() + '\n\n';
