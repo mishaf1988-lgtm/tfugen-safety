@@ -18,10 +18,8 @@ import os
 import re
 import sys
 
-try:
-    sys.stdin.reconfigure(encoding="utf-8")
-except Exception:
-    pass
+sys.stdin.reconfigure(encoding="utf-8")   # Claude Code sends UTF-8; Windows reads cp1255
+sys.stdout.reconfigure(encoding="utf-8")  # the reason is Hebrew
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 _s = importlib.util.spec_from_file_location("live_check", os.path.join(HERE, "live-check.py"))
