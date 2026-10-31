@@ -89,3 +89,6 @@ description: How to read and change the live Supabase database of tfugen-safety,
 ## הלקחים של התחום: `references/lessons.md`
 
 הלקחים של תחום המסד וה-Routines עברו לקובץ נפרד ב-28/10/2026, כי `SKILL.md` עבר את 5,000 המילים (`skill-size-test.py`), כמו שנעשה ב-`tfugen-dev` ב-27/10/2026. אותו מבנה ומספור כמו ב-`tfugen-lessons`, ו-`lessons-format-test.py` בודק גם אותו. לקרוא אותו לפני שינוי ב-Routine, במסד או ב-OneDrive.
+
+
+**"אין קובץ" בתיקייה ב-OneDrive (31/10/2026, לקח):** החיפוש (`sharepoint_search`, `sharepoint_folder_search`) לא מוצא קבצי תמונה ולא תיקיות תחת "שולחן העבודה". העוזר ואני אמרנו למיכאל "אין תמונות בתיקיית אנטון", כשבתיקייה היו שלוש. לפני שאומרים "אין" או סופרים קבצים: `read_resource` עם `file:///<driveId>/שולחן העבודה/ניהול בטיחות/<נתיב התיקייה>` מחזיר את כל הקבצים עם גודל. ה-driveId מופיע בכל תוצאת חיפוש של OneDrive של מיכאל.
