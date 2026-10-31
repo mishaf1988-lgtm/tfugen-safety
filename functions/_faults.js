@@ -25,12 +25,12 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
   const sent = {};
   Object.entries((prev && prev.sent) || {}).forEach(([k, d]) => { if (d === today) sent[k] = d; });
   const items = [];
-  const add = (key, text) => { if (sent[key] || items.some((x) => x.key === key)) return; items.push({ key, text }); };
+  const add = (key, text, dev) => { if (sent[key] || items.some((x) => x.key === key)) return; items.push({ key, text, dev }); };
   (errRows || []).forEach((r) => {
     if (!r || String(r.ts || '') <= since) return;
     let t; try { t = JSON.parse(String(r.title || '')); } catch (e) { return; }
     if (!t || !t.m) return;
-    add('err:' + cut(t.m, 80) + '|' + (t.f || '') + '|' + (t.l || 0), '\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d0\u05e6\u05dc \u05de\u05e9\u05ea\u05de\u05e9: ' + cut(t.m, 120) + (t.p ? ' (\u05de\u05e1\u05da ' + cut(t.p, 30) + ')' : ''));
+    add('err:' + cut(t.m, 80) + '|' + (t.f || '') + '|' + (t.l || 0), '\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d0\u05e6\u05dc \u05de\u05e9\u05ea\u05de\u05e9: ' + cut(t.m, 120) + (t.p ? ' (\u05de\u05e1\u05da ' + cut(t.p, 30) + ')' : ''), '\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d3\u05e4\u05d3\u05e4\u05df, ' + cut(t.f || '?', 40) + ':' + (t.l || 0) + (t.p ? ' \u05de\u05e1\u05da ' + cut(t.p, 30) : '') + ' (client_errors since ' + since + ')');
   });
   (agentLog || []).forEach((r) => {
     if (!r || r.ok !== false || String(r.at || '') <= since) return;
@@ -44,8 +44,11 @@ export function faultText(items, fixing) {
   if (items.length > FAULT_LINES) lines.push('- \u05d5\u05e2\u05d5\u05d3 ' + (items.length - FAULT_LINES));
   return '\u26a0\ufe0f \u05ea\u05e7\u05dc\u05d4 \u05d1\u05de\u05e2\u05e8\u05db\u05ea:\n' + lines.join('\n') + '\n' + (fixing ? '\u05d4\u05de\u05e4\u05ea\u05d7 \u05d4\u05ea\u05d5\u05e8\u05df \u05db\u05d1\u05e8 \u05e7\u05d9\u05d1\u05dc \u05d0\u05ea \u05d6\u05d4 \u05d5\u05de\u05ea\u05d7\u05d9\u05dc \u05dc\u05ea\u05e7\u05df. \u05d3\u05d7\u05d5\u05e3? \u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05db\u05d0\u05df.' : '\u05d1\u05d5\u05d3\u05e7 \u05d4\u05d0\u05d9\u05db\u05d5\u05ea \u05de\u05d8\u05e4\u05dc \u05d1\u05d6\u05d4 \u05d1\u05d1\u05d5\u05e7\u05e8. \u05d3\u05d7\u05d5\u05e3? \u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05db\u05d0\u05df.');
 }
+// A browser error's text was typed by whoever made it happen: it goes to Michael, never into the request a developer
+// with repository rights acts on (security, 31/10/2026). The request names where it was; the developer reads the text
+// with client_errors, as data.
 export function faultDevText(items) {
-  return '\u05ea\u05e7\u05dc\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05de\u05d4\u05d4\u05ea\u05e8\u05d0\u05d4 \u05d4\u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea, \u05dc\u05d7\u05e7\u05d5\u05e8 \u05d5\u05dc\u05ea\u05e7\u05df: ' + items.map((x) => x.text).join(' / ').slice(0, 1200) + '. \u05e9\u05d2\u05d9\u05d0\u05d4 \u05de\u05db\u05d5\u05d5\u05e0\u05ea \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4 (\u05d1\u05d3\u05d9\u05e7\u05ea \u05d3\u05d9\u05d5\u05d5\u05d7) = \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d1-dev_done \u05d1\u05dc\u05d9 \u05ea\u05d9\u05e7\u05d5\u05df.';
+  return '\u05ea\u05e7\u05dc\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05de\u05d4\u05d4\u05ea\u05e8\u05d0\u05d4 \u05d4\u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea, \u05dc\u05d7\u05e7\u05d5\u05e8 \u05d5\u05dc\u05ea\u05e7\u05df: ' + items.map((x) => x.dev || x.text).join(' / ').slice(0, 1200) + '. \u05e9\u05d2\u05d9\u05d0\u05d4 \u05de\u05db\u05d5\u05d5\u05e0\u05ea \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4 (\u05d1\u05d3\u05d9\u05e7\u05ea \u05d3\u05d9\u05d5\u05d5\u05d7) = \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d1-dev_done \u05d1\u05dc\u05d9 \u05ea\u05d9\u05e7\u05d5\u05df.';
 }
 // one request for the faults of this tick, then the fire; a failure here never stops the WhatsApp
 async function openFix(env, url, k, items, nowIso) {
