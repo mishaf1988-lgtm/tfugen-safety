@@ -1081,7 +1081,8 @@
     "agent_report",
     "agents_pause",
     "assistant_account",
-    "state_get"
+    "state_get",
+    "state_set"
    ],
    "m365": false,
    "reports": true

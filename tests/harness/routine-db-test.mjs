@@ -277,7 +277,8 @@ const callIn = async (body) => {
       && !!odTrashCheck({ agent: 'dev', why: 'a test', path: OD_TRASH_DIR + '/a.pdf' }).error && !!odTrashCheck({ agent: 'dev', why: 'a test', path: '18_x/_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea/a.pdf' }).error
       && !!odTrashCheck({ agent: 'dev', why: 'a test', path: 'a.pdf' }).error && !!odTrashCheck({ agent: 'dev', why: 'a test', path: '18_x/folder' }).error;
   })());
-  check('the write list is exactly the ten keys (mail_filing, validity_run 11/10/2026; iso_tasks 24/10/2026; mail_triage 25/10/2026; quality_run 27/10/2026; live_note 31/10/2026)', STATE_WRITE.join() === 'quote_track,nevo_versions,od_raw_token,od_raw_exp,mail_filing,validity_run,iso_tasks,mail_triage,quality_run,live_note');
+  check('the write list is exactly the eleven keys (agents_registry 31/10/2026; mail_filing, validity_run 11/10/2026; iso_tasks 24/10/2026; mail_triage 25/10/2026; quality_run 27/10/2026; live_note 31/10/2026)', STATE_WRITE.join() === 'quote_track,nevo_versions,od_raw_token,od_raw_exp,mail_filing,validity_run,iso_tasks,mail_triage,quality_run,live_note,agents_registry');
+  check('agents_registry: the server stamps its time and it is readable by state_get', STAMP_AT.includes('agents_registry') && STATE_READ.includes('agents_registry'));
   check('live_note: the server stamps its time, it is readable, and its size is capped at 4000', STAMP_AT.includes('live_note') && STATE_READ.includes('live_note') && LIVE_NOTE_MAX === 4000);
   const t0 = Date.now();
   r = await call({ op: 'state_set', key: 'mail_filing', value: [{ at: '2020-01-01T00:00:00Z', got: 1 }, { at: '2026-10-11T15:05:00Z', got: 0 }] });
@@ -286,7 +287,7 @@ const callIn = async (body) => {
   r = await call({ op: 'state_set', key: 'validity_run', value: { at: 'x', checked: 3 } });
   check('state_set validity_run: "at" stamped by the server', r.json.ok && Math.abs(Date.parse(JSON.parse(state.validity_run).at) - t0) < 60000, state.validity_run);
   r = await call({ op: 'state_set', key: 'quote_track', value: { at: 'keep' } });
-  check('state_set of a key outside STAMP_AT: "at" kept as sent', JSON.parse(state.quote_track).at === 'keep' && STAMP_AT.join() === 'mail_filing,validity_run,live_note', state.quote_track);
+  check('state_set of a key outside STAMP_AT: "at" kept as sent', JSON.parse(state.quote_track).at === 'keep' && STAMP_AT.join() === 'mail_filing,validity_run,live_note,agents_registry', state.quote_track);
   r = await call({ op: 'state_set', key: 'live_note', value: { at: 'x', last_user: 'שלום', last_reply: 'היי' } });
   check('state_set live_note: stamped by the server and read back', r.json.ok && Math.abs(Date.parse(JSON.parse(state.live_note).at) - t0) < 60000, state.live_note);
   r = await call({ op: 'state_set', key: 'live_note', value: { last_reply: 'x'.repeat(LIVE_NOTE_MAX + 1) } });
