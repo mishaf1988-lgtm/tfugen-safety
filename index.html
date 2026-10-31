@@ -11485,7 +11485,7 @@ function rThz(){
     var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="tour_hazards" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button>';
     var delBtn='<button class="btn btn-d btn-sm" data-dtbl="tour_hazards" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button>';
     return '<tr><td>'+esc(r.n||'')+'</td>'
-      +'<td>'+(r.d?fd(r.d):'<span style="color:var(--t3)">\u05d7\u05e1\u05e8</span>')+'<div style="font-size:10px;color:var(--t3)">\u05e1\u05d9\u05d5\u05e8 '+esc(r.tour_no||'')+(isNew?' | \u05d7\u05d3\u05e9':'')+'</div></td>'
+      +'<td>'+(r.d?fd(r.d):'<span style="color:var(--t3)">\u05d7\u05e1\u05e8</span>')+'<div style="font-size:10px;color:var(--t3)">'+(THZ_SRC[r.src]?'<span class="b bB">'+esc(_thzSrcLabel(r))+'</span>':esc(_thzSrcLabel(r))+(isNew?' | \u05d7\u05d3\u05e9':''))+'</div></td>'
       +'<td>'+esc(r.dept||'')+'<div style="font-size:10px;color:var(--t3)">'+esc(r.loc||'')+'</div></td>'
       +'<td style="max-width:220px;word-break:break-word">'+esc(String(r.descr||'').substring(0,90))+'</td>'
       +'<td><span class="b '+sevC+'">'+esc(r.sev||'')+'</span></td>'
@@ -11554,6 +11554,16 @@ function svThz(){
 // today's accident and from this moment every action"): an older investigation or action is not added.
 var THZ_SRC_FROM='2026-10-29';
 var THZ_SRC={committee:'\u05d5\u05e2\u05d3\u05d4',investigation:'\u05ea\u05d7\u05e7\u05d9\u05e8'};
+// 31/10/2026 (STATUS, the committee list: "mark the source in the hazard view"): where a row came from,
+// for the list and the view. A tour row = "\u05e1\u05d9\u05d5\u05e8 N"; committee = the meeting date; investigation = the accident date.
+function _thzSrcLabel(r){
+  r=r||{};var lb=THZ_SRC[r.src];
+  if(!lb)return '\u05e1\u05d9\u05d5\u05e8'+(r.tour_no?' '+r.tour_no:'');
+  var ref=String(r.src_ref||'').split('|')[0],dt='';
+  if(r.src==='investigation'){var i=(DB.inc||[]).filter(function(x){return x&&x.id===ref;})[0];if(i)dt=String(i.dt||'').substring(0,10);}
+  else if(/^\d{4}-\d{2}-\d{2}$/.test(ref))dt=ref;
+  return lb+(/^\d{4}-\d{2}-\d{2}$/.test(dt)?' '+fd(dt):'');
+}
 function _thzSrcKey(ref,action){return String(ref||'').trim()+'|'+String(action||'').replace(/\s+/g,' ').trim();}
 function thzFromSource(o){
   o=o||{};
@@ -17175,7 +17185,7 @@ var VIEW_CONFIG={
   tasks:{title:'\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1',back:'tasks',fields:[
     ['\u05db\u05d5\u05ea\u05e8\u05ea','title'],['\u05d0\u05d7\u05e8\u05d0\u05d9','assignee'],['\u05d9\u05e2\u05d3','due'],['\u05e1\u05d8\u05d8\u05d5\u05e1','status'],
     ['\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea','priority'],['\u05de\u05e7\u05d5\u05e8','source_table'],['\u05de\u05d6\u05d4\u05d4 \u05de\u05e7\u05d5\u05e8','source_id'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
-  tour_hazards:{title:'\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8',back:'thz',fields:[['\u05de\u05e1"\u05d3','n'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d9\u05d5\u05e8','d'],['\u05de\u05e1\u05e4\u05e8 \u05e1\u05d9\u05d5\u05e8','tour_no'],['\u05de\u05d7\u05dc\u05e7\u05d4','dept'],['\u05de\u05d9\u05e7\u05d5\u05dd','loc'],['\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2','descr'],['\u05e8\u05de\u05ea \u05d7\u05d5\u05de\u05e8\u05d4','sev'],['\u05d0\u05d7\u05e8\u05d0\u05d9 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc','resp'],['\u05d0\u05d7\u05e8\u05d0\u05d9 \u05e0\u05d5\u05e1\u05e3','resp2'],['\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d3\u05e8\u05e9\u05ea','action'],['\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc','due'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d2\u05d9\u05e8\u05d4','closed_d'],['\u05e0\u05e1\u05d2\u05e8 \u05e2\u05dc \u05d9\u05d3\u05d9','closed_by'],['\u05de\u05d4 \u05e0\u05e2\u05e9\u05d4','close_note'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']],photo:'photo_url'},
+  tour_hazards:{title:'\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8',back:'thz',fields:[['\u05de\u05e1"\u05d3','n'],['\u05de\u05e7\u05d5\u05e8','src'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d9\u05d5\u05e8','d'],['\u05de\u05e1\u05e4\u05e8 \u05e1\u05d9\u05d5\u05e8','tour_no'],['\u05de\u05d7\u05dc\u05e7\u05d4','dept'],['\u05de\u05d9\u05e7\u05d5\u05dd','loc'],['\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2','descr'],['\u05e8\u05de\u05ea \u05d7\u05d5\u05de\u05e8\u05d4','sev'],['\u05d0\u05d7\u05e8\u05d0\u05d9 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc','resp'],['\u05d0\u05d7\u05e8\u05d0\u05d9 \u05e0\u05d5\u05e1\u05e3','resp2'],['\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d3\u05e8\u05e9\u05ea','action'],['\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc','due'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d2\u05d9\u05e8\u05d4','closed_d'],['\u05e0\u05e1\u05d2\u05e8 \u05e2\u05dc \u05d9\u05d3\u05d9','closed_by'],['\u05de\u05d4 \u05e0\u05e2\u05e9\u05d4','close_note'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']],photo:'photo_url'},
   toolbox:{title:'\u05e9\u05d9\u05d7\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',back:'toolbox',fields:[
     ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05e0\u05d5\u05e9\u05d0','topic'],['\u05de\u05e2\u05d1\u05d9\u05e8','presenter'],['\u05de\u05e9\u05ea\u05ea\u05e4\u05d9\u05dd','attendees'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05de\u05d7\u05dc\u05e7\u05d5\u05ea','dep'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes'],['\u05de\u05d6\u05d4\u05d4 Vitre','ext_id']],photo:'file_url'},
   toolbox_talks:{title:'\u05d4\u05d3\u05e8\u05db\u05d4',back:'training',fields:[['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05e0\u05d5\u05e9\u05d0','title'],['\u05de\u05d3\u05e8\u05d9\u05da','trainer'],['\u05db\u05e9\u05d9\u05e8\u05d5\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da','trainer_qual'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05ea\u05d5\u05db\u05df','body']],photo:'file_url'},
@@ -17224,6 +17234,7 @@ function showView(tbl,id){
     // legacy out-of-range value renders as "-" here too, not as "345".
     var valHtml=null;
     if(tbl==='ins'&&f[1]==='sc'&&typeof _insScore==='function')valHtml=_insScore(val);
+    if(tbl==='tour_hazards'&&f[1]==='src'&&typeof _thzSrcLabel==='function')valHtml=esc(_thzSrcLabel(rec));
     if(val===true)val='\u2713';
     else if(val===false)val='\u2717';
     else if(val===undefined||val===null||val==='')val='-';
