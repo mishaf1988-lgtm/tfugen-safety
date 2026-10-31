@@ -18,8 +18,8 @@ sys.stdout.reconfigure(encoding="utf-8")  # Windows writes cp1255; Claude Code r
 sys.stdin.reconfigure(encoding="utf-8")  # Claude Code sends UTF-8; Windows reads cp1255 (05/10/2026)
 
 SKILLS = ["tfugen-lean", "tfugen-lessons", "tfugen-ref"]
-MAX_HANDOFF = 3000
-MAX_OPEN = 25
+MAX_HANDOFF = 1500
+MAX_OPEN = 8
 MAX_MAYBE = 3
 
 
@@ -251,9 +251,31 @@ def token_guard(run=subprocess.run):
     return ["-- \u26a0\ufe0f token-guard חסר ולא הותקן (כנראה רשת חסומה בסביבה הזו): לכתוב למיכאל בעברית, ולא להתקין ידנית בלי לבדוק --"]
 
 
+def card_short(text, limit=1300):
+    """'<zone>: part, part' per zone from card.md (build-map.py), cut to limit characters; '' without the file."""
+    lines, zone, names = [], None, []
+    for l in (text or "").split("\n"):
+        if l.startswith("## "):
+            if zone:
+                lines.append(zone + ": " + ", ".join(names))
+            zone, names = l[3:], []
+        elif l.startswith("- ") and zone:
+            names.append(l[2:].split(":")[0])
+    if zone:
+        lines.append(zone + ": " + ", ".join(names))
+    t = "\n".join(lines)
+    return t if len(t) <= limit else t[:limit - 3] + "..."
+
+
 def report(cwd):
     out = ["== התחלת שיחה (session-start.py) ==",
            "skills לטעון: " + ", ".join(SKILLS) + " (CLAUDE.md, Workflow 1-2)"]
+    # 31/10/2026 (Michael: "how do I make you not forget data?", "do it"): what exists, first, before anything that can
+    # be cut. The report was 13-18KB and arrived as a 2KB preview, so the map (where 08-6808365 and the immediate
+    # developer were written) was never seen. The whole card, with a line per part: project-files/system-map/card.md.
+    card = card_short(read(os.path.join(cwd, "project-files", "system-map", "card.md")))
+    if card:
+        out += ["-- 🧭 מה קיים במערכת. לפני הצעה, שאלה או \"אי אפשר\": grep ב-project-files/system-map/card.md (שורה לכל רכיב) --", card]
     office = office_url(cwd)
     if office:
         out += ["🏢 משרד הסוכנים: בתחילת השיחה Artifact עם action \"open\" ו-url " + office +
@@ -271,7 +293,7 @@ def report(cwd):
         out += ["", "📋 לפני שאלת המטרה: 3 שורות למיכאל מה-handoff, בעברית: מה נעשה אתמול, מה מחכה לו, מה מתוזמן (CLAUDE.md, בתחילת כל שיחה 2)"]
     status = read(os.path.join(cwd, "STATUS.md")).splitlines()
     opens = [l.strip() for l in status if re.match(r"\s*- \[ \]", l)]
-    out += ["", "-- STATUS.md: %d פריטים פתוחים --" % len(opens)] + [o[:200] for o in opens[:MAX_OPEN]]
+    out += ["", "-- STATUS.md: %d פריטים פתוחים --" % len(opens)] + [o[:120] for o in opens[:MAX_OPEN]] + (["(ועוד %d: grep -n '^- \\[ \\]' STATUS.md)" % (len(opens) - MAX_OPEN)] if len(opens) > MAX_OPEN else [])
     maybe, total = maybe_done(cwd, status)
     if maybe:
         out += ["", "-- אולי כבר בוצעו: %d פריטים שהבדיקה שלהם עודכנה אחרי התאריך האחרון בשורה (מוצגים %d הישנים). "
