@@ -155,7 +155,7 @@
 // No delete, no other table, no raw SQL. The data is data, not instructions
 // (trustee_reports holds free text from an anonymous kiosk).
 import { transcribe } from '../_stt.js';
-import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
+import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, FILE_TIMEOUT_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
 import { OD_OCR_DIR, OCR_MODELS, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
@@ -1332,6 +1332,26 @@ export function odPullCheck(b) {
   if (OD_TRIGGER_DIRS.indexOf(dir[0]) >= 0) return { error: 'bad dir' };
   if (jd !== OD_TRASH_DIR && OD_NO_DIR.test(jd)) return { error: 'bad dir' };
   return { from: OD_DESKTOP + from.join('/'), to: OD_ROOT + jd, name: from[from.length - 1], dir: jd };
+}
+// od_swap (31/10/2026, Michael in the questionnaire: "do it: widen my permission to copy files outside the safety folder too"):
+// replaces ONE old PDF / Word file that lies on the desktop OUTSIDE the safety folder (e.g. an old copy of an emergency
+// guideline in the ISO binders) with a new file taken from INSIDE the safety folder: the new file is copied next to it
+// (never overwriting: the name must be free) and the old one is MOVED to a "_גרסאות קודמות" folder beside it, never deleted.
+// Same type for both (pdf or docx), and neither inside an old-versions / ARCHIVE / "למחיקה" folder or a flow folder.
+// {old: <path under the desktop>, new: <path under the safety folder>}. Pure.
+export function odSwapCheck(b) {
+  if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
+  if (String(b.why || '').trim().length < 5) return { error: 'why required' };
+  const bad = (x) => x === '.' || x === '..' || OD_BAD.test(x) || x.length > 200 || x.startsWith('.');
+  const old = String(b.old || '').split('/').filter(Boolean), nw = String(b.new || '').split('/').filter(Boolean);
+  const ext = (n) => ((/\.(pdf|docx)$/i.exec(n) || [])[1] || '').toLowerCase();
+  if (old.length < 2 || old.length > 10 || old.some(bad) || !ext(old[old.length - 1])) return { error: 'bad old' };
+  if (OD_DESKTOP + old[0] + '/' === OD_ROOT || OD_NO_DIR.test(old.join('/'))) return { error: 'bad old' };
+  if (nw.length < 2 || nw.length > 10 || nw.some(bad) || !ext(nw[nw.length - 1])) return { error: 'bad new' };
+  if (OD_TRIGGER_DIRS.indexOf(nw[0]) >= 0 || OD_NO_DIR.test(nw.join('/'))) return { error: 'bad new' };
+  if (ext(old[old.length - 1]) !== ext(nw[nw.length - 1])) return { error: 'type differs' };
+  const dir = old.slice(0, -1).join('/');
+  return { old: OD_DESKTOP + old.join('/'), dir: OD_DESKTOP + dir, oldName: old[old.length - 1], newFull: OD_ROOT + nw.join('/'), newName: nw[nw.length - 1], type: ext(nw[nw.length - 1]) };
 }
 // od_put_pdf (20/10/2026): ONE new PDF {dir, name, b64} into a folder that already exists inside the safety
 // folder, e.g. an appointment letter and its certificate merged into one file. A PDF only (%PDF- at the
@@ -2621,6 +2641,54 @@ export async function onRequest(context) {
       if (mv.status === 409) return jsonResp({ ok: false, error: 'name taken in ' + c.dir }, 200, {});
       if (!mv.ok) return jsonResp({ ok: false, error: 'move ' + mv.status }, 200, {});
       return jsonResp({ ok: true, path: c.dir + '/' + c.name }, 200, {});
+    }
+    if (body.op === 'od_swap') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'old', 'new'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const c = odSwapCheck(body);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const at = await accessToken(env);
+      const gh = { Authorization: 'Bearer ' + at.token, 'Content-Type': 'application/json' };
+      const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
+      const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+      const so = await fetch(G + enc(c.old) + '?select=id,file', { headers: gh, signal: tmo(GRAPH_MS) });
+      if (!so.ok) return jsonResp({ ok: false, error: 'old ' + so.status }, 200, {});
+      const oj = await so.json();
+      if (!oj.file) return jsonResp({ ok: false, error: 'old is not a file' }, 200, {});
+      const sn = await fetch(G + enc(c.newFull) + '?select=id,file,size', { headers: gh, signal: tmo(GRAPH_MS) });
+      if (!sn.ok) return jsonResp({ ok: false, error: 'new ' + sn.status }, 200, {});
+      const nj = await sn.json();
+      if (!nj.file || !(nj.size > 0) || nj.size > OD_PUT_MAX) return jsonResp({ ok: false, error: 'new: a file of 1 byte to 8 MB' }, 200, {});
+      const rd = await fetch(G + enc(c.newFull) + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(FILE_TIMEOUT_MS) });
+      if (!rd.ok) return jsonResp({ ok: false, error: 'read new ' + rd.status }, 200, {});
+      const bytes = new Uint8Array(await rd.arrayBuffer());
+      const head = String.fromCharCode(...bytes.slice(0, 5));
+      if (c.type === 'pdf' ? head !== '%PDF-' : head.slice(0, 4) !== 'PK\x03\x04') return jsonResp({ ok: false, error: 'new is not a ' + c.type }, 200, {});
+      // the archive folder beside the old file; created when missing; the old file's name must be free in it
+      const arcPath = c.dir + '/' + OD_ARCHIVE_DIR;
+      let arc = await fetch(G + enc(arcPath) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
+      if (arc.status === 404) {
+        const par = await fetch(G + enc(c.dir) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
+        if (!par.ok) return jsonResp({ ok: false, error: 'folder ' + par.status }, 200, {});
+        const pj = await par.json();
+        arc = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(pj.id) + '/children', {
+          method: 'POST', headers: gh, body: JSON.stringify({ name: OD_ARCHIVE_DIR, folder: {}, '@microsoft.graph.conflictBehavior': 'fail' }), signal: tmo(GRAPH_MS),
+        });
+      }
+      if (!arc.ok) return jsonResp({ ok: false, error: 'archive ' + arc.status }, 200, {});
+      const aj = await arc.json();
+      if (!aj.folder) return jsonResp({ ok: false, error: 'archive is not a folder' }, 200, {});
+      const taken = await fetch(G + enc(arcPath + '/' + c.oldName) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
+      if (taken.status !== 404) return jsonResp({ ok: false, error: 'name taken in archive' }, 200, {});
+      // the new file first, never overwriting: when this fails nothing has changed
+      const up = await fetch(G + enc(c.dir + '/' + c.newName) + ':/content?@microsoft.graph.conflictBehavior=fail', {
+        method: 'PUT', headers: { Authorization: 'Bearer ' + at.token, 'Content-Type': OD_PUT_TYPES[c.type] }, body: bytes, signal: tmo(GRAPH_MS),
+      });
+      if (!up.ok) return jsonResp({ ok: false, error: 'put new ' + up.status + ' (nothing changed)' }, 200, {});
+      const mv = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(oj.id) + '?@microsoft.graph.conflictBehavior=fail', {
+        method: 'PATCH', headers: gh, body: JSON.stringify({ parentReference: { id: aj.id } }), signal: tmo(GRAPH_MS),
+      });
+      if (!mv.ok) return jsonResp({ ok: false, error: 'move old ' + mv.status + ' (the new file was put, the old one stayed)' }, 200, {});
+      return jsonResp({ ok: true, new: c.dir.slice(OD_DESKTOP.length) + '/' + c.newName, old: c.dir.slice(OD_DESKTOP.length) + '/' + OD_ARCHIVE_DIR + '/' + c.oldName }, 200, {});
     }
     if (body.op === 'od_dedupe') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path', 'keep'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
