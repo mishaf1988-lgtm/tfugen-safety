@@ -37,6 +37,16 @@ RULES = [
 ]
 
 
+# 31/10/2026 (Michael: "\u05de\u05d0\u05e9\u05e8", after a draft skill waiting for his approval went to a public branch for a few
+# seconds): this repo is public, so a push publishes. A draft for Michael (a business folder, a drafts folder, a SKILL.md
+# outside .claude/skills/ and project-files/claude-ai-skill/) stays in the scratchpad until he says "\u05d1\u05e6\u05e2".
+DRAFT = re.compile(r"(^|/)(business|drafts?|\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea?)/", re.I)
+
+
+def draft_files(files):
+    return [f for f in files if DRAFT.search(f) or (f.endswith("/SKILL.md") and not f.startswith((".claude/skills/", "project-files/claude-ai-skill/")))]
+
+
 def changed(cwd):
     env = os.environ.get("PUSH_GATE_CHANGED")
     if env is not None:
@@ -107,6 +117,11 @@ def main():
     except Exception:
         pass
     files = changed(cwd)
+    dr = draft_files(files)
+    if dr:
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+            "permissionDecisionReason": "push-gate (31/10/2026): \u05d4\u05de\u05d0\u05d2\u05e8 \u05e6\u05d9\u05d1\u05d5\u05e8\u05d9, \u05d5-push \u05d4\u05d5\u05d0 \u05e4\u05e8\u05e1\u05d5\u05dd. \u05d8\u05d9\u05d5\u05d8\u05d4 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05de\u05d9\u05db\u05d0\u05dc \u05e0\u05e9\u05d0\u05e8\u05ea \u05d1-scratchpad \u05e2\u05d3 \u05d1\u05e6\u05e2: " + ", ".join(dr[:5])}}, ensure_ascii=False))
+        return
     for need, rel, why in RULES:
         if not any(need(f) for f in files):
             continue

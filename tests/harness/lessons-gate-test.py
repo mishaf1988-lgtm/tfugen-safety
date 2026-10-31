@@ -9,7 +9,7 @@ def check(label, cond, detail=None):
     else: failed += 1; print('  ✗ ' + label + ('  -> ' + str(detail) if detail is not None else ''))
 
 L = gate.LESSONS
-R = 'רטרו: אין\nskill: אין\n'
+R = 'רטרו: אין\nskill: אין\nמה לא נבדק: אין\n'
 ok = lambda t, b, f: gate.check(t, R + (b or ''), f)[0]
 check('not a fix PR: ok', ok('Tour screen: due date in one tap', '', ['index.html']))
 check('Fix: without lesson: blocked', not ok('Fix: the xlsm opened as damaged', '', ['functions/hazard-file.js']))
@@ -79,6 +79,11 @@ check('a login file with a review line and a refute line: ok', raw('Codes screen
 check('a review line without a refute line: blocked (27/10/2026, security-review.md)', not raw('Codes screen', R + 'סקירה: סוכן נפרד בדק את ה-diff, מאושר 1 (תוקן)', ['functions/api/codes.js']))
 check('an empty refute line: blocked', not raw('Codes screen', R + 'סקירה: סוכן נפרד בדק את ה-diff\nהפרכה: ', ['functions/api/codes.js']))
 check('an ordinary server file: no review needed', raw('Morning brief', R, ['functions/api/wa-morning.js']))
+R0 = 'רטרו: אין\nskill: אין\n'
+check('server code without an unchecked line: blocked (31/10/2026)', not raw('Morning brief', R0, ['functions/api/wa-morning.js']))
+check('...with a real unchecked line: ok', raw('Morning brief', R0 + 'מה לא נבדק: לא נבדק בטלפון אמיתי', ['functions/api/wa-morning.js']))
+check('...an empty unchecked line: blocked', not raw('Morning brief', R0 + 'מה לא נבדק: ', ['functions/api/wa-morning.js']))
+check('...not required outside functions/', raw('Tour screen', R0, ['index.html', 'STATUS.md']))
 check('a file that takes outside input (trustee photos, a parser): blocked without review', not raw('Log', R, ['functions/api/trustee-log.js']) and not raw('PDF', R, ['functions/_pdftext.js']))
 check('every SENSITIVE path exists in the repo', all(os.path.exists(os.path.join(gate.ROOT, f)) for f in gate.SENSITIVE), [f for f in gate.SENSITIVE if not os.path.exists(os.path.join(gate.ROOT, f))])
 check('an empty review line: blocked', not raw('Codes screen', R + 'סקירה: ', ['functions/api/create-user.js']))
