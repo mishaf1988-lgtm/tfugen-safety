@@ -169,7 +169,7 @@ import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLA
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads',
   'trustees', 'trustee_tasks', 'trustee_winners'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account'];
+export const STATE_READ = ['agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -419,10 +419,11 @@ export function waPhoneBody(step, b, pin) {
   if (!/^[0-9]{6}$/.test(p)) return { error: 'pin: 6 digits (the secret WA_PIN or pin in the request)' };
   return { body: { messaging_product: 'whatsapp', pin: p } };
 }
-export const STATE_WRITE = ['quote_track', 'nevo_versions', 'od_raw_token', 'od_raw_exp', 'mail_filing', 'validity_run', 'iso_tasks', 'mail_triage', 'quality_run', 'live_note'];
+export const STATE_WRITE = ['quote_track', 'nevo_versions', 'od_raw_token', 'od_raw_exp', 'mail_filing', 'validity_run', 'iso_tasks', 'mail_triage', 'quality_run', 'live_note', 'agents_registry'];
 // Run reports whose "at" the server stamps (11/10/2026): a Routine wrote a guessed time 11 minutes off,
 // and the next run reads mail from that time. mail_filing: the last entry of the list; validity_run: the object.
-export const STAMP_AT = ['mail_filing', 'validity_run', 'live_note'];
+export const STAMP_AT = ['mail_filing', 'validity_run', 'live_note', 'agents_registry'];
+// agents_registry (31/10/2026, Michael: "register all agents, shared"): {at, account, agents:[{id,name,cron,enabled,model,last_fired_at}]}, written once a day by the map-lights Routine from the main account and read in both accounts.
 // live_note (31/10/2026, Michael: "transfer between accounts as if I talked to it a minute ago"): a short note a Stop hook writes
 // at the end of every reply, read at the start of every conversation in either account. Capped so it stays a note.
 export const LIVE_NOTE_MAX = 4000;
