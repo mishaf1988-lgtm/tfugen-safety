@@ -1234,7 +1234,16 @@ export function ocrTxtCheck(b) {
   const c = draftAttach(b.paths);
   if (c.error || !c.attach.length) return { error: (c.error || 'paths: 1-' + DRAFT_ATTACH_MAX).replace('attach', 'paths') };
   if (c.attach.some((a) => !/\.pdf$/i.test(a.name))) return { error: 'paths: PDF files only' };
-  return { files: c.attach.map((a) => Object.assign({}, a, { txt: a.name.replace(/\.pdf$/i, '') + '.txt' })) };
+  return { files: c.attach.map((a) => Object.assign({}, a, { txt: ocrTxtName(a.rel) })) };
+}
+// The txt of a PDF (31/10/2026, STATUS retro 25/10/2026): a PDF in the mail inbox keeps "<name>.txt" (the 5-minute
+// watch writes the same name, the assistant finds it by the PDF name; inbox names start with the minute, so they are
+// unique). Anywhere else the folders are added, "<name> (<folder> - <sub>).txt": form.pdf in two folders, or a document
+// and its "_גרסאות קודמות" copy, no longer overwrite each other's txt.
+export function ocrTxtName(rel) {
+  const parts = String(rel || '').split('/').filter(Boolean), base = String(parts.pop() || '').replace(/\.pdf$/i, '');
+  if (!parts.length || (parts.length === 1 && parts[0] === OD_INBOX)) return base + '.txt';
+  return base + ' (' + parts.join(' - ') + ').txt';
 }
 export { OCR_MODELS, OCR_PAGES, OCR_PROMPT, pdfJpegs, pdfDct, pdfCcitt, g4Gray, grayPng, ccittPng, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
 // od_archive (20/10/2026, Michael: "when the assistant works on a form it must not keep the old form, move it
@@ -2011,7 +2020,7 @@ export async function onRequest(context) {
       const files = [];
       for (const a of c.files) {
         try {
-          if (!azure) { files.push(await ocrOne(env, at.token, a.rel, a.name, aiModel, body.from)); continue; }
+          if (!azure) { files.push(await ocrOne(env, at.token, a.rel, a.name, aiModel, body.from, a.txt)); continue; }
           const d = await fetch(G + enc(OD_ROOT + a.rel) + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(30000) });
           if (!d.ok) { files.push({ name: a.name, ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status }); continue; }
           const buf = new Uint8Array(await d.arrayBuffer());
