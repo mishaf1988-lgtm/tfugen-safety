@@ -36,6 +36,7 @@
 // itself has not run for 45 minutes.
 import { stateGet, stateSet, stateLock, stateUnlock, tokenRow, accessToken, hasMail, sendMail, odConfigured } from './_onedrive.js';
 import { SITE } from './_site.js';
+import { runFaultAlert } from './_faults.js';
 
 export const WATCH_KEY = 'sync_watch';
 // The file's prepared rows and the 80% warning (hazard-file.js MAX_ROW - 1, FULL_WARN).
@@ -314,7 +315,12 @@ async function recentErrors(env) {
 export async function runWatch(env, appUrl) {
   const tok = await stateLock(env, WATCH_LOCK, WATCH_LEASE_MS);
   if (!tok) return { ok: true, busy: true };
-  try { return await watchOnce(env, appUrl); } finally { await stateUnlock(env, WATCH_LOCK, tok); }
+  try {
+    const r = await watchOnce(env, appUrl);
+    // faults since the last tick, one WhatsApp to Michael (31/10/2026, _faults.js); never fails the watch itself
+    try { r.faults = await runFaultAlert(env, new Date().toISOString()); } catch (e) { r.faults = { ok: false, error: String((e && e.message) || e).substring(0, 120) }; }
+    return r;
+  } finally { await stateUnlock(env, WATCH_LOCK, tok); }
 }
 async function watchOnce(env, appUrl) {
   const now = new Date(), nowIso = now.toISOString();
