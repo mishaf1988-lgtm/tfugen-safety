@@ -1097,7 +1097,9 @@
    "doc": "savings-assistant.md",
    "key": "savings-assistant",
    "family": "תקשורת ומשרד",
-   "ops": [],
+   "ops": [
+    "state_get"
+   ],
    "m365": false,
    "reports": false
   },
