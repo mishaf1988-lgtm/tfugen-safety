@@ -1165,7 +1165,7 @@
    "id": "trig_01UQJ7GvXnce9wX8h2tShTQn",
    "zone": "assistant",
    "name": "העוזר בוואטסאפ בחשבון ה-Gmail",
-   "what": "העוזר בוואטסאפ בחשבון ה-Gmail (29/10/2026, מיכאל: \"פתרון קל ומהיר לעבור בין חשבון לחשבון\"). **בחשבון ה-Gmail, לא בראשי.** מחברים: Microsoft 365, Supabase, Cloudflare",
+   "what": "העוזר בוואטסאפ בחשבון ה-Gmail (29/10/2026, מיכאל: \"פתרון קל ומהיר לעבור בין חשבון לחשבון\"). **בחשבון ה-Gmail, לא בראשי. מ-31/10/2026 הדגל `assistant_account` על `main` (העוזר ב-Gmail אישר למיכאל \"עברת",
    "when": "מפעיל API בלבד, run_once_at 01/01/2036. השרת פונה אליו רק כש",
    "when_full": "מפעיל API בלבד, run_once_at 01/01/2036. השרת פונה אליו רק כשהדגל assistant_account = gmail (routine-db op assistant_account); ברירת המחדל הראשי",
    "doc": "routine-wa-assistant.md (הפרומפט שבטריגר קצר ומפנה אליו)",
