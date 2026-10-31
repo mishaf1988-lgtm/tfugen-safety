@@ -786,6 +786,14 @@ export function draftThreadGate(b) {
 export function asksOwnerToAttach(t) {
   return /(^|[^\u05d0-\u05ea])(\u05dc\u05e6\u05e8\u05e3|\u05ea\u05e6\u05e8\u05e3|\u05e6\u05e8\u05e3)\s+(\u05d9\u05d3\u05e0\u05d9\u05ea|\u05d1\u05e2\u05e6\u05de\u05da)|\u05db\u05d3\u05d0\u05d9\s+\u05dc\u05e6\u05e8\u05e3/.test(String(t || ''));
 }
+// 31/10/2026 (Michael: "both the assistant and you must know all the automations, and if some work needs another
+// automation you have to say so. this is a law"): "cannot" / "no permission" / "needs the system admin" to Michael is refused
+// unless the same message says which automation does it (an existing flow, or a new one handed on with dev_request), or
+// why no automation helps. Power Automate runs as Michael and needs no admin (flows 7, 9, 10).
+export function refusesWithoutFlow(t) {
+  const s = String(t || '');
+  return /\u05d0\u05d9\s+\u05d0\u05e4\u05e9\u05e8|\u05d0\u05d9\u05df\s+\u05dc\u05d9\s+\u05d4\u05e8\u05e9\u05d0\u05d4|\u05d0\u05d9\u05df\s+\u05d4\u05e8\u05e9\u05d0\u05d4|\u05d0\u05d9\u05df\s+\u05dc\u05d9\s+\u05d2\u05d9\u05e9\u05d4|\u05de\u05e0\u05d4\u05dc\s+\u05de\u05e2\u05e8\u05db\u05ea|\u05de\u05e0\u05d4\u05dc\s+\u05d4\u05de\u05e2\u05e8\u05db\u05ea|\u05dc\u05d0\s+\u05de\u05d5\u05e8\u05e9\u05d4/.test(s) && !/\u05d6\u05e8\u05d9\u05de|\u05d0\u05d5\u05d8\u05d5\u05de\u05e6\u05d9|power\s*automate/i.test(s);
+}
 export function asksOwnerToDelete(t) {
   return /(^|[^\u05d0-\u05ea])(\u05dc\u05de\u05d7\u05d5\u05e7|\u05ea\u05de\u05d7\u05e7)\s+(\u05d0\u05d5\u05ea|\u05d0\u05ea)/.test(String(t || ''));
 }
@@ -2916,6 +2924,7 @@ export async function onRequest(context) {
       // 25/10/2026 (Michael in the questionnaire: "do it: block"): the assistant asked for "\u05d1\u05e6\u05e2" with no buttons, and fixed it only when he said so.
       if (asksApprovalNoButtons(body.text, body.choices)) return jsonResp({ ok: false, error: 'asks for \u05d1\u05e6\u05e2 with no buttons: send it again with "choices", e.g. ["\u05d1\u05e6\u05e2","\u05dc\u05d0"]' }, 400, {});
       if (asksOwnerToAttach(body.text)) return jsonResp({ ok: false, error: 'asks Michael to attach a file: attach it yourself, mail_request on the mail that has it, then about a minute later mail_draft with attach (files-scans.md; 29/10/2026)' }, 400, {});
+      if (refusesWithoutFlow(body.text)) return jsonResp({ ok: false, error: 'says it cannot / no permission with no automation: name the flow that does it (power-automate-mail.md; routine-wa-assistant.md 0b4), or say a new flow would and send dev_request, or write why no automation helps ("\u05d0\u05d5\u05d8\u05d5\u05de\u05e6\u05d9\u05d4 \u05dc\u05d0 \u05ea\u05e2\u05d6\u05d5\u05e8 \u05db\u05d0\u05df: ...") (31/10/2026, Michael: a law)' }, 400, {});
       if (asksOwnerToDelete(body.text)) return jsonResp({ ok: false, error: 'asks Michael to delete: a file you made goes to od_trash yourself; a draft you replaced: draft_trash it yourself (26/10/2026)' }, 400, {});
       // 26/10/2026 (load test: an answer ended "\u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9: \u05de\u05d0\u05d5\u05e9\u05e8."): the second checker's verdict is for you, not for Michael.
       if (/\u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9\s*:/.test(String(body.text || ''))) return jsonResp({ ok: false, error: 'the second checker\'s verdict is internal: drop the "\u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9:" line and send the answer itself (26/10/2026)' }, 400, {});
