@@ -90,6 +90,22 @@ Microsoft 365 (קריאה: מייל, OneDrive, יומן, Teams), Supabase (`exec
 Network secret באותה סביבה (16/10/2026): מפתח API של Cloudflare, Host `api.cloudflare.com`, Bearer, הרשאת Pages בחשבון `c9d388e3a5f9ee9546e8aa6b6353ec87` (לא רואה את רשימת החשבונות, לכן המזהה רשום כאן). Claude משנה איתו משתני Preview של `tapugan-safety` בלי מחשב. להעברה: מפתח חדש ב-Cloudflare (My Profile > API Tokens) ו-Network secret בסביבה החדשה.
 
 ### החשבון השני (Gmail, mishaf1988@gmail.com), נוסף 29/10/2026
+
+**השוואת סביבות (31/10/2026, מיכאל בשאלון: "בצע: להשוות עכשיו"; נבדק מהצד הראשי, הצד השני לפי הרישום כאן בלבד):**
+
+| | ראשי, `Default` (`env_016FAHJNzmeY9hnaYA4JDs5e`) | Gmail, `tapugan` (`env_01HLs9Va3CDBVLMbRCt8N284`) |
+|---|---|---|
+| `ROUTINE_KEY` | יש (נבדק) | יש (רשום) |
+| השרת שלנו (`routine-db.sh`) | עובד (נבדק) | רק דרך דומיין מותר אחד (רשום) |
+| Meta (`graph.facebook.com`) | נגיש (נבדק) | חסום, דומיין אחד בלבד (רשום) |
+| Supabase | מחבר עובד, שני פרויקטים (נבדק `list_projects`) | מחובר (רשום) |
+| Microsoft 365 | עובד, יומן ומייל (נבדק) | מחובר (רשום) |
+| GitHub | עובד, PRs (נבדק) | מחובר (רשום) |
+| Cloudflare | מפתח בפרוקסי `api.cloudflare.com` ומחבר ישן | מחבר (רשום) |
+| token-guard | הותקן ידנית 31/10/2026 (`claude plugin install`); ההגדרה בפרויקט לא התקינה לבד | לא ידוע |
+| Routines | 37 | אין (העוזר הושהה 31/10/2026) |
+
+בראשי יש גם סביבות `tapugan` (`env_01EfZkV5jCAf2J7zmryWphU3`) ו-`Micael` (`env_016QDsTJ6R7ze3EtVWpKHpW4`) שהרשת בהן חסומה: שם זהה לסביבה העובדת בחשבון השני, ולכן שיחה של תפוגן בראשי נפתחת רק ב-`Default`.
 שיחות בלבד, בלי Routines (`ACCOUNT-MOVE.md`). סביבה `tapugan` (`env_01HLs9Va3CDBVLMbRCt8N284`): משתנה `ROUTINE_KEY` (אותו ערך), רשת Limited עם דומיין מותר אחד, `tapugan-safety.pages.dev` (בלעדיו `routine-db.sh` נכשל ב-`CONNECT tunnel failed, response 403`). Connectors: GitHub, Supabase, Microsoft 365 (עם sviva@tapugan.co.il), Cloudflare Developer Platform. המשרד ומפת המערכת משותפים אליו להערות ועריכה (הזמנה, תקפה עד 27/11/2026). נבדק 29/10/2026: שיחת בדיקה בסביבה החזירה `{"ok":true,"rows":[{"id":"xl1008-d9"}]}`, יציאה 0.
 Network secret שני (18/10/2026, C20): Host `api.supabase.com`, מפתח Supabase מוגבל (`claude-staging`, scoped PAT) לפרויקט הניסוי `ldzbjbsumzqjyvtpiwqo` בלבד: Project Settings קריאה, Database ו-Auth Config כתיבה. החי מחזיר 403. **תוקף 24 שעות** מ-18/10/2026: אחרי זה לא עובד, ומפתח חדש נוצר רק כשיש משימה (supabase.com/dashboard/account/tokens, אותן הרשאות). להעברה: אותו דבר בחשבון החדש.
 
