@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, ilInstant, incFilePrefix, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT } from './_build/routine-db.mjs';
+import { secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, ilInstant, incFilePrefix, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT, isoSwapRequest, isoUpCheck, OD_ISO_SWAP, ISO_SITE_URL } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -213,7 +213,7 @@ const callIn = async (body) => {
   })();
   check('od_pull never into the mail-flow folders (draft, file request, inbox, calendar queue, OCR text): those take files through mail_draft / mail_request only (25/10/2026 retro)', (() => {
     const t = (d) => odPullCheck({ agent: 'dev', why: 'to a flow folder', from: 'x/a.txt', dir: d });
-    return OD_TRIGGER_DIRS.length === 9 && OD_TRIGGER_DIRS.every((d) => !!t(d).error) && !!t(OD_DRAFT + '/sub').error && !t('22_x/09_y').error;
+    return OD_TRIGGER_DIRS.length === 10 && OD_TRIGGER_DIRS.every((d) => !!t(d).error) && !!t(OD_DRAFT + '/sub').error && !t('22_x/09_y').error;
   })());
   check('od_pull: one file from the desktop INTO a folder of the safety folder; never from inside it, never into old versions, never above the desktop (24/10/2026)', (() => {
     const ok = odPullCheck({ agent: 'dev', why: 'to the binder', from: 'תקני ISO/2026/a.docx', dir: '22_x/09_y' });
@@ -256,6 +256,30 @@ const callIn = async (body) => {
       && !!odSwapCheck({ ...P, old: ISO_SWAP_ROOT + '_גרסאות קודמות/a.pdf' }).error
       && !!odSwapCheck({ ...P, old: ISO_SWAP_ROOT + '../a.pdf' }).error
       && !!odSwapCheck({ ...P, site: 'hr' }).error && !!odSwapCheck({ ...P, site: true }).error;
+  })());
+  check('flow 10 (iso swaps): the request file holds an add into the iso folder and a move into its old-versions folder, with absolute and server-relative urls; a quote is doubled (31/10/2026)', (() => {
+    const N = '17_\u05d7\u05d9\u05e8\u05d5\u05dd/b.pdf';
+    const c = odSwapCheck({ agent: 'main-chat', why: 'new emergency guideline', site: 'iso', old: ISO_SWAP_ROOT + "a'x.pdf", new: N });
+    const r = isoSwapRequest(c), o = new URL(ISO_SITE_URL).origin;
+    return c.iso === true && r.kind === 'swap' && r.add_src === '/' + OD_ROOT + N && r.add_name === 'b.pdf'
+      && r.add_dir === '/sites/iso/Shared Documents/' + ISO_SWAP_ROOT.slice(0, -1)
+      && r.move_from === o + "/sites/iso/Shared Documents/" + ISO_SWAP_ROOT + "a'x.pdf"
+      && r.move_to === o + '/sites/iso/Shared Documents/' + ISO_SWAP_ROOT + OD_ARCHIVE_DIR + "/a'x.pdf"
+      && OD_ISO_SWAP.endsWith('/_\u05d4\u05d7\u05dc\u05e4\u05d5\u05ea iso') && OD_TRIGGER_DIRS.indexOf('_\u05d4\u05d7\u05dc\u05e4\u05d5\u05ea iso') >= 0
+      && odSwapCheck({ agent: 'main-chat', why: 'new emergency guideline', old: '2026/a.pdf', new: N }).iso === false
+      && !!isoSwapRequest(odSwapCheck({ agent: 'main-chat', why: 'new emergency guideline', site: 'iso', old: ISO_SWAP_ROOT + 'a#1.pdf', new: N })).error;
+  })());
+  check('iso_up: one pdf / docx from <folder>/old-versions/ back up to <folder>, only under the iso safety folder; anything else refused (31/10/2026)', (() => {
+    const P = { agent: 'main-chat', why: 'new file was put into the archive', file: ISO_SWAP_ROOT + OD_ARCHIVE_DIR + '/\u200e\u2068n\u2069.pdf' };
+    const ok = isoUpCheck(P), o = new URL(ISO_SITE_URL).origin + '/sites/iso/Shared Documents/';
+    return ok.kind === 'up' && ok.move_from === o + P.file && ok.move_to === o + ISO_SWAP_ROOT + '\u200e\u2068n\u2069.pdf'
+      && !!isoUpCheck({ ...P, file: ISO_SWAP_ROOT + 'n.pdf' }).error
+      && !!isoUpCheck({ ...P, file: ISO_SWAP_ROOT + OD_ARCHIVE_DIR + '/n.exe' }).error
+      && !!isoUpCheck({ ...P, file: 'other/' + OD_ARCHIVE_DIR + '/x/n.pdf' }).error
+      && !!isoUpCheck({ ...P, file: ISO_SWAP_ROOT + '../' + OD_ARCHIVE_DIR + '/n.pdf' }).error
+      && !!isoUpCheck({ ...P, file: ISO_SWAP_ROOT + OD_ARCHIVE_DIR + '/' + OD_ARCHIVE_DIR + '/n.pdf' }).error
+      && !!isoUpCheck({ ...P, file: ISO_SWAP_ROOT + OD_ARCHIVE_DIR + '/a%20.pdf' }).error
+      && !!isoUpCheck({ ...P, why: 'x' }).error && !!isoUpCheck({ ...P, agent: 'Bad Agent' }).error;
   })());
   check('od_put_pdf: a .pptx (committee deck) by the zip signature; a PDF named .pptx is refused (28/10/2026)', (() => {
     const P = { agent: 'main-chat', why: 'committee deck', dir: '16_\u05d5\u05d5\u05e2\u05d3\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea' };
@@ -1038,7 +1062,7 @@ const callIn = async (body) => {
       for (const m of src.matchAll(/(OD_ROOT \+ '_|\\u05d1\\u05d8\\u05d9\\u05d7\\u05d5\\u05ea\/_(?!\\u05d0\\u05d5\\u05d8\\u05d5|\\u05e0\\u05db\\u05e0\\u05e1|\\u05d8\\u05e7\\u05e1\\u05d8|\\u05d2\\u05e8\\u05e1))/g)) direct.push(pth.basename(f));
     }
     check('no new "_" folder straight under the safety folder: a folder a flow reads is OD_AUTO + "/" + its name (add it to OD_AUTO_DIRS)', tops.length === 0 && direct.length === 0, { tops, direct });
-    check('the six flow folders are inside OD_AUTO', [OD_REQ, OD_DRAFT, OD_CAL_MOVE, OD_DRAFT_TRASH, OD_CAL_INVITE].every((x) => x.indexOf(OD_AUTO + '/') === 0) && OD_AUTO_DIRS.length === 6);
+    check('the seven flow folders are inside OD_AUTO (flow 10, iso swaps: 31/10/2026)', [OD_REQ, OD_DRAFT, OD_CAL_MOVE, OD_DRAFT_TRASH, OD_CAL_INVITE, OD_ISO_SWAP].every((x) => x.indexOf(OD_AUTO + '/') === 0) && OD_AUTO_DIRS.length === 7);
   }
 
   console.log('\n4e4b. a promise check-in waits while Michael is in a conversation (26/10/2026)');

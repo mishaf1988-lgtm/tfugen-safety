@@ -86,6 +86,17 @@
 - **נבנתה 26/10/2026** (C51, Claude בכרום): On, Flow checker 0/0, ריצת בדיקה בלי מוזמנים Succeeded ב-15:43. קובץ בדיקה: לגרור קובץ מוכן לדף, לא "מסמך טקסט חדש" (קובץ ריק מפעיל את הזרימה, והמילוי נרשם כעריכה).
 - **הבדיקה העצמית:** אחרי `cal_invite`, `outlook_calendar_search` על היום מראה את האירוע עם המוזמנים (כ-5 דקות).
 
+## זרימה 10: החלפות באתר iso (31/10/2026, C67)
+מיכאל, 31/10/2026: "יש אוטומציות איתם לא יכול?", ובשאלון: "בצע: עמוד שלבים לזרימה עכשיו". לחיבור של השרת אין הרשאת כתיבה לאתר iso (`Files.ReadWrite.All` דורש אישור מנהל מערכת, DECISIONS 31/10/2026). Power Automate רץ בשם מיכאל, עם מחבר SharePoint, בלי אישור מנהל.
+- **השרת:** `od_swap` עם `site:'iso'`, כשאין `Files.ReadWrite.All` בחיבור, בודק את הקובץ החדש ב-OneDrive וכותב קובץ `.txt` עם JSON: `{kind:'swap', add_src, add_dir, add_name, move_from, move_to}`. `iso_up` (`file` = `iso תפוגן ושר/ניהול בטיחות/.../_גרסאות קודמות/<שם>`) כותב `{kind:'up', move_from, move_to}`: מחזיר קובץ שהועלה בטעות ל"_גרסאות קודמות" תיקייה אחת למעלה. בשמות אין `#` ו-`%` (השרת מסרב), ו-`'` מוכפל ב-`add_dir` ו-`add_name`.
+- **התיקייה:** `ניהול בטיחות\_אוטומציה\_החלפות iso` (השרת יוצר אותה בכתיבה הראשונה).
+- **הזרימה** "החלפות באתר iso": טריגר `When a file is created (properties only)` של OneDrive for Business על `/שולחן העבודה/ניהול בטיחות/_אוטומציה/_החלפות iso`; `Get file content` (Id מהטריגר); `Compose` עם `json(trim(string(body('Get_file_content'))))`.
+  - `Condition` "יש הוספה": `empty(outputs('Compose')?['add_name'])` is equal to `false`. ב-True: OneDrive for Business `Get file content using path`, File Path = `outputs('Compose')?['add_src']`; ואז SharePoint `Send an HTTP request to SharePoint`: Site Address `https://tapugancoil.sharepoint.com/sites/iso`, Method POST, Uri `_api/web/GetFolderByServerRelativePath(decodedurl='@{outputs('Compose')?['add_dir']}')/Files/AddUsingPath(decodedurl='@{outputs('Compose')?['add_name']}',overwrite=false)`, Body = `body('Get_file_content_using_path')`. `overwrite=false`: קובץ באותו שם = שגיאה, שום דבר לא נדרס.
+  - `Condition` "יש העברה" (אחרי הראשון, כך שכשל בהוספה עוצר לפני ההעברה): `empty(outputs('Compose')?['move_from'])` is equal to `false`. ב-True: SharePoint `Send an HTTP request to SharePoint`, אותו אתר, POST, Uri `_api/SP.MoveCopyUtil.MoveFileByPath()`, Headers `Accept` ו-`Content-Type` = `application/json;odata=nometadata`, Body: `{"srcPath":{"DecodedUrl":"@{outputs('Compose')?['move_from']}"},"destPath":{"DecodedUrl":"@{outputs('Compose')?['move_to']}"},"overwrite":false,"options":{"KeepBoth":false,"ResetAuthorAndCreatedOnCopy":false,"ShouldBypassSharedLocks":false}}`. שם תפוס ביעד = שגיאה, לא דריסה.
+- **מה הזרימה לא עושה:** לא מוחקת, לא דורסת, לא יוצרת את `_גרסאות קודמות` (תיקייה חסרה = ההעברה נכשלת אחרי שהחדש כבר הועלה, והישן נשאר במקום).
+- **הבדיקה העצמית:** `read_resource` על התיקייה באתר iso ועל `_גרסאות קודמות` שלה, 2-5 דקות אחרי הבקשה.
+- **הבדיקה הראשונה:** `iso_up` על `הנחיות לצוות חירום - דליפת אמוניה - 31.10.2026.pdf` (עם תווי הכיוון בשם, כמו ש-`read_resource` מחזיר), C66.
+
 ## ניקוי "לא לתיוק" (11/10/2026, מיכאל בשאלון: "בצע: מחיקה אחרי 30 יום (מומלץ)")
 `backup-od.js` (כל בוקר 06:30), צעד 5: קבצים בתיקייה `_נכנס מהמייל/לא לתיוק` שנוצרו לפני יותר מ-30 יום נמחקים (לסל המחזור של OneDrive, 93 יום), עד 20 ביום, ורק כשנשאר תקציב אחרי הגיבויים. רק התיקייה הזו, רק קבצים. הכול שם עותקים: המקור נשאר במייל. חריג יחיד לכלל "מחיקה אף פעם" ב-365, כמו ניקוי הגיבויים.
 

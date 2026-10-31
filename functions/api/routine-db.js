@@ -722,7 +722,7 @@ export const OD_SKIP = '\u05dc\u05d0 \u05dc\u05ea\u05d9\u05d5\u05e7';
 // in one folder, OD_AUTO. Each flow keeps its own subfolder. OD_AUTO_DIRS = their names; the old top-level
 // names stay refused as destinations too, in case an old folder is still there.
 export const OD_AUTO = '_\u05d0\u05d5\u05d8\u05d5\u05de\u05e6\u05d9\u05d4';
-export const OD_AUTO_DIRS = ['_\u05d1\u05e7\u05e9\u05d5\u05ea \u05de\u05d4\u05de\u05d9\u05d9\u05dc', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d9\u05d9\u05dc', '_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df', '_\u05d4\u05d6\u05d6\u05d5\u05ea \u05d1\u05d9\u05d5\u05de\u05df', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d7\u05d9\u05e7\u05d4', '_\u05d6\u05d9\u05de\u05d5\u05e0\u05d9\u05dd'];
+export const OD_AUTO_DIRS = ['_\u05d1\u05e7\u05e9\u05d5\u05ea \u05de\u05d4\u05de\u05d9\u05d9\u05dc', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d9\u05d9\u05dc', '_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df', '_\u05d4\u05d6\u05d6\u05d5\u05ea \u05d1\u05d9\u05d5\u05de\u05df', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d7\u05d9\u05e7\u05d4', '_\u05d6\u05d9\u05de\u05d5\u05e0\u05d9\u05dd', '_\u05d4\u05d7\u05dc\u05e4\u05d5\u05ea iso'];
 export const isAutoTop = (x) => x === OD_AUTO || OD_AUTO_DIRS.indexOf(x) >= 0;
 export const OD_REQ = OD_AUTO + '/' + OD_AUTO_DIRS[0];
 // A Graph / Outlook message id: base64url-ish, as outlook_email_search returns it.
@@ -1364,7 +1364,39 @@ export function odSwapCheck(b) {
   if (ext(old[old.length - 1]) !== ext(nw[nw.length - 1])) return { error: 'type differs' };
   const dir = old.slice(0, -1).join('/');
   const base = iso ? '' : OD_DESKTOP;
-  return { drive: iso ? 'drives/' + ISO_DRIVE : 'me/drive', base, old: base + old.join('/'), dir: base + dir, oldName: old[old.length - 1], newFull: OD_ROOT + nw.join('/'), newName: nw[nw.length - 1], type: ext(nw[nw.length - 1]) };
+  return { iso, drive: iso ? 'drives/' + ISO_DRIVE : 'me/drive', base, old: base + old.join('/'), dir: base + dir, oldName: old[old.length - 1], newFull: OD_ROOT + nw.join('/'), newName: nw[nw.length - 1], type: ext(nw[nw.length - 1]) };
+}
+// flow 10 "iso swaps" (31/10/2026, Michael in the questionnaire: "do it: a steps page for the flow now"): the server's
+// sign-in may not write on the iso site (Files.ReadWrite.All needs the tenant admin), so on that site the server only writes a
+// request file into OD_ISO_SWAP and the flow, running as Michael in Power Automate, does the work there. One request = an
+// optional add (a file from the own OneDrive into add_dir, never overwriting) and then an optional move (never overwriting).
+// The flow puts add_dir / add_name inside '...' of a SharePoint REST url, so a ' is doubled here. Pure.
+export const OD_ISO_SWAP = OD_AUTO + '/' + OD_AUTO_DIRS[6];
+export const ISO_SITE_URL = SITE.isoSiteUrl || '';
+export const ISO_LIB = SITE.isoLib || 'Shared Documents';
+const isoRel = (p) => new URL(ISO_SITE_URL).pathname.replace(/\/$/, '') + '/' + ISO_LIB + '/' + p;
+const odq = (x) => String(x).replace(/'/g, "''");
+export function isoSwapRequest(c) {
+  if (!ISO_SITE_URL) return { error: 'no iso site url' };
+  // the flow puts these raw into a REST url: # and % would cut or re-decode it
+  if (/[#%]/.test(c.dir + c.newName + c.old)) return { error: 'no # or % in iso names' };
+  return { kind: 'swap', add_src: '/' + c.newFull, add_dir: odq(isoRel(c.dir)), add_name: odq(c.newName),
+    move_from: new URL(ISO_SITE_URL).origin + isoRel(c.old), move_to: new URL(ISO_SITE_URL).origin + isoRel(c.dir + '/' + OD_ARCHIVE_DIR + '/' + c.oldName) };
+}
+// iso_up (31/10/2026): the other way, for a new file that was put by hand into the old-versions folder by mistake: ONE pdf / docx
+// from <folder>/<OD_ARCHIVE_DIR>/<name> back up to <folder>/<name>, only under ISO_SWAP_ROOT, never overwriting. {agent, why, file}. Pure.
+export function isoUpCheck(b) {
+  if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
+  if (!(ISO_SITE_URL && ISO_SWAP_ROOT)) return { error: 'no iso site configured' };
+  if (String(b.why || '').trim().length < 5) return { error: 'why required' };
+  const bad = (x) => x === '.' || x === '..' || OD_BAD.test(x) || x.length > 200 || x.startsWith('.');
+  const f = String(b.file || '').split('/').filter(Boolean);
+  if (f.length < 4 || f.length > 10 || f.some(bad) || !/\.(pdf|docx)$/i.test(f[f.length - 1])) return { error: 'bad file' };
+  if (f[f.length - 2] !== OD_ARCHIVE_DIR || OD_NO_DIR.test(f.slice(0, -2).join('/'))) return { error: 'bad file' };
+  if (!(f.join('/') + '/').startsWith(ISO_SWAP_ROOT)) return { error: 'bad file' };
+  if (/[#%]/.test(f.join('/'))) return { error: 'no # or % in iso names' };
+  const o = new URL(ISO_SITE_URL).origin;
+  return { kind: 'up', move_from: o + isoRel(f.join('/')), move_to: o + isoRel(f.slice(0, -2).concat(f[f.length - 1]).join('/')), name: f[f.length - 1] };
 }
 // od_put_pdf (20/10/2026): ONE new PDF {dir, name, b64} into a folder that already exists inside the safety
 // folder, e.g. an appointment letter and its certificate merged into one file. A PDF only (%PDF- at the
@@ -2662,6 +2694,19 @@ export async function onRequest(context) {
       const at = await accessToken(env);
       const gh = { Authorization: 'Bearer ' + at.token, 'Content-Type': 'application/json' };
       const GM = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
+      // the iso site without the site permission: check the new file on the own drive, then hand the work to flow 10
+      if (c.iso && !/Files\.ReadWrite\.All/.test(String(at.scope || ''))) {
+        const r = isoSwapRequest(c);
+        if (r.error) return jsonResp({ ok: false, error: r.error }, 200, {});
+        const encN = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+        const sn0 = await fetch(GM + encN(c.newFull) + '?select=id,file,size', { headers: gh, signal: tmo(GRAPH_MS) });
+        if (!sn0.ok) return jsonResp({ ok: false, error: 'new ' + sn0.status }, 200, {});
+        const nj0 = await sn0.json();
+        if (!nj0.file || !(nj0.size > 0) || nj0.size > OD_PUT_MAX) return jsonResp({ ok: false, error: 'new: a file of 1 byte to 8 MB' }, 200, {});
+        const name = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '') + '-' + Math.random().toString(36).slice(2, 8) + '.txt';
+        await putFile(at.token, OD_ROOT + OD_ISO_SWAP, name, JSON.stringify(r), 'text/plain');
+        return jsonResp({ ok: true, via: 'flow 10', file: OD_ISO_SWAP + '/' + name, new: c.dir + '/' + c.newName, old: c.dir + '/' + OD_ARCHIVE_DIR + '/' + c.oldName }, 200, {});
+      }
       // the old copy's drive: the user's own, or the iso site's (site:'iso'); the new file always comes from the own drive
       const D = 'https://graph.microsoft.com/v1.0/' + c.drive, G = D + '/root:/';
       const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
@@ -2709,6 +2754,15 @@ export async function onRequest(context) {
       });
       if (!mv.ok) return jsonResp({ ok: false, error: 'move old ' + mv.status + ' (the new file was put, the old one stayed)' }, 200, {});
       return jsonResp({ ok: true, new: c.dir.slice(c.base.length) + '/' + c.newName, old: c.dir.slice(c.base.length) + '/' + OD_ARCHIVE_DIR + '/' + c.oldName }, 200, {});
+    }
+    if (body.op === 'iso_up') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'file'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const c = isoUpCheck(body);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const at = await accessToken(env);
+      const name = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '') + '-' + Math.random().toString(36).slice(2, 8) + '.txt';
+      await putFile(at.token, OD_ROOT + OD_ISO_SWAP, name, JSON.stringify({ kind: c.kind, move_from: c.move_from, move_to: c.move_to }), 'text/plain');
+      return jsonResp({ ok: true, via: 'flow 10', file: OD_ISO_SWAP + '/' + name, name: c.name }, 200, {});
     }
     if (body.op === 'od_dedupe') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path', 'keep'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
