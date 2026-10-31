@@ -233,14 +233,15 @@ const callIn = async (body) => {
       && !!odPullCheck({ agent: 'dev', why: 'bad dest', from: 'iso9001/x.pdf', dir: 'b', dest: 'drive' }).error;
   })());
   check('od_swap: replaces ONE old pdf / docx on the desktop OUTSIDE the safety folder with a file from INSIDE it; the old goes to a versions folder, never deleted (31/10/2026)', (() => {
-    const P = { agent: 'main-chat', why: 'new emergency guideline', old: '2026/iso/ISO x/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/a.pdf', new: '17_x/\u05d0\u05de\u05d5\u05e0\u05d9\u05d4/b.pdf' };
+    const P = { agent: 'main-chat', why: 'new emergency guideline', old: '2026/iso/ISO x/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/a.pdf', new: '17_\u05d7\u05d9\u05e8\u05d5\u05dd/\u05d0\u05de\u05d5\u05e0\u05d9\u05d4/b.pdf' };
     const ok = odSwapCheck(P);
     return ok.old === OD_DESKTOP + P.old && ok.dir === OD_DESKTOP + '2026/iso/ISO x/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea' && ok.newFull === OD_ROOT + P.new && ok.oldName === 'a.pdf' && ok.newName === 'b.pdf' && ok.type === 'pdf'
       && !!odSwapCheck({ ...P, old: '\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/x/a.pdf' }).error
       && !!odSwapCheck({ ...P, old: '2026/_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea/a.pdf' }).error
       && !!odSwapCheck({ ...P, old: '2026/\u05dc\u05de\u05d7\u05d9\u05e7\u05d4/a.pdf' }).error
       && !!odSwapCheck({ ...P, old: '../a.pdf' }).error && !!odSwapCheck({ ...P, old: 'a.pdf' }).error && !!odSwapCheck({ ...P, old: '2026/a.exe' }).error
-      && !!odSwapCheck({ ...P, new: OD_TRIGGER_DIRS[0] + '/b.pdf' }).error && !!odSwapCheck({ ...P, new: '17_x/b.docx' }).error
+      && !!odSwapCheck({ ...P, new: OD_TRIGGER_DIRS[0] + '/b.pdf' }).error && !!odSwapCheck({ ...P, new: '17_\u05d7\u05d9\u05e8\u05d5\u05dd/b.docx' }).error
+      && !!odSwapCheck({ ...P, new: '08_\u05e8\u05e4\u05d5\u05d0\u05d4/b.pdf' }).error && !!odSwapCheck({ ...P, new: '99_x/b.pdf' }).error
       && !!odSwapCheck({ ...P, new: '../b.pdf' }).error && !!odSwapCheck({ ...P, new: 'b.pdf' }).error && !!odSwapCheck({ ...P, why: 'x' }).error && !!odSwapCheck({ ...P, agent: 'Bad Agent' }).error;
   })());
   check('od_put_pdf: a .pptx (committee deck) by the zip signature; a PDF named .pptx is refused (28/10/2026)', (() => {

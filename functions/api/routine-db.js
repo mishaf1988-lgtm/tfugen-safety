@@ -1339,6 +1339,9 @@ export function odPullCheck(b) {
 // (never overwriting: the name must be free) and the old one is MOVED to a "_גרסאות קודמות" folder beside it, never deleted.
 // Same type for both (pdf or docx), and neither inside an old-versions / ARCHIVE / "למחיקה" folder or a flow folder.
 // {old: <path under the desktop>, new: <path under the safety folder>}. Pure.
+// the new file may come only from these top folders (security review 31/10/2026: not medical, hearing or employee folders, since the
+// target folder on the desktop may be shared); widening this list is a decision of Michael's
+export const OD_SWAP_NEW_TOPS = ['17_\u05d7\u05d9\u05e8\u05d5\u05dd', '15_\u05ea\u05d9\u05e7 \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05e0\u05d4\u05dc\u05d9\u05dd', '22_ISO \u05d5\u05de\u05d1\u05d3\u05e7\u05d9\u05dd'];
 export function odSwapCheck(b) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
   if (String(b.why || '').trim().length < 5) return { error: 'why required' };
@@ -1348,7 +1351,7 @@ export function odSwapCheck(b) {
   if (old.length < 2 || old.length > 10 || old.some(bad) || !ext(old[old.length - 1])) return { error: 'bad old' };
   if (OD_DESKTOP + old[0] + '/' === OD_ROOT || OD_NO_DIR.test(old.join('/'))) return { error: 'bad old' };
   if (nw.length < 2 || nw.length > 10 || nw.some(bad) || !ext(nw[nw.length - 1])) return { error: 'bad new' };
-  if (OD_TRIGGER_DIRS.indexOf(nw[0]) >= 0 || OD_NO_DIR.test(nw.join('/'))) return { error: 'bad new' };
+  if (OD_SWAP_NEW_TOPS.indexOf(nw[0]) < 0 || OD_TRIGGER_DIRS.indexOf(nw[0]) >= 0 || OD_NO_DIR.test(nw.join('/'))) return { error: 'bad new' };
   if (ext(old[old.length - 1]) !== ext(nw[nw.length - 1])) return { error: 'type differs' };
   const dir = old.slice(0, -1).join('/');
   return { old: OD_DESKTOP + old.join('/'), dir: OD_DESKTOP + dir, oldName: old[old.length - 1], newFull: OD_ROOT + nw.join('/'), newName: nw[nw.length - 1], type: ext(nw[nw.length - 1]) };
@@ -2680,10 +2683,15 @@ export async function onRequest(context) {
       const taken = await fetch(G + enc(arcPath + '/' + c.oldName) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
       if (taken.status !== 404) return jsonResp({ ok: false, error: 'name taken in archive' }, 200, {});
       // the new file first, never overwriting: when this fails nothing has changed
-      const up = await fetch(G + enc(c.dir + '/' + c.newName) + ':/content?@microsoft.graph.conflictBehavior=fail', {
-        method: 'PUT', headers: { Authorization: 'Bearer ' + at.token, 'Content-Type': OD_PUT_TYPES[c.type] }, body: bytes, signal: tmo(GRAPH_MS),
-      });
-      if (!up.ok) return jsonResp({ ok: false, error: 'put new ' + up.status + ' (nothing changed)' }, 200, {});
+      // a retry after a failed move: the same file (same size) is already there, so only the move is left
+      const there = await fetch(G + enc(c.dir + '/' + c.newName) + '?select=id,size', { headers: gh, signal: tmo(GRAPH_MS) });
+      const thereJ = there.ok ? await there.json().catch(() => ({})) : {};
+      if (!(there.ok && thereJ.size === bytes.length)) {
+        const up = await fetch(G + enc(c.dir + '/' + c.newName) + ':/content?@microsoft.graph.conflictBehavior=fail', {
+          method: 'PUT', headers: { Authorization: 'Bearer ' + at.token, 'Content-Type': OD_PUT_TYPES[c.type] }, body: bytes, signal: tmo(FILE_TIMEOUT_MS),
+        });
+        if (!up.ok) return jsonResp({ ok: false, error: 'put new ' + up.status + ' (nothing changed)' }, 200, {});
+      }
       const mv = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(oj.id) + '?@microsoft.graph.conflictBehavior=fail', {
         method: 'PATCH', headers: gh, body: JSON.stringify({ parentReference: { id: aj.id } }), signal: tmo(GRAPH_MS),
       });
