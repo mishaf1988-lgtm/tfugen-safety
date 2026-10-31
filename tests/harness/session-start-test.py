@@ -151,4 +151,11 @@ dv2 = json.dumps([{"id": "dev-old", "at": "2026-10-01T08:00:00Z", "agent": "a", 
 o5 = rd(json.dumps({"ok": True, "rows": [{"key": "dev_inbox", "value": dv2}]}))
 check("an old open request carries its age in hours", "dev-old" in o5 and "⚠️ פתוחה" in o5.split("dev-new")[0], o5)
 check("a fresh request carries no age note", "⚠️" not in o5.split("dev-new")[1].split("\n")[0], o5)
+# 31/10/2026: a cloud session without ROUTINE_KEY says so at the start (Default instead of tapugan).
+re_ = lambda cloud, key: subprocess.run([sys.executable, hook("session-start.py")], input="{}", capture_output=True, text=True, encoding="utf-8",
+                                        timeout=30, env={**{k: v for k, v in os.environ.items() if k not in ("ROUTINE_KEY", "CCR_AGENT_PROXY_ENABLED", "SESSION_START_CLOUD")},
+                                                         "CLAUDE_PROJECT_DIR": d, **({"SESSION_START_CLOUD": "1"} if cloud else {}), **({"ROUTINE_KEY": "x"} if key else {})}).stdout
+check("cloud, no key: warns in Hebrew, names tapugan", "בלי ROUTINE_KEY" in re_(True, False) and "tapugan" in re_(True, False), re_(True, False))
+check("cloud with a key: no warning", "בלי ROUTINE_KEY" not in re_(True, True))
+check("not the cloud (a laptop, CI): no warning", "בלי ROUTINE_KEY" not in re_(False, False))
 done()

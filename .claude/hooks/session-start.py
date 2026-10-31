@@ -177,6 +177,18 @@ def accounts_gap(cwd, home=None):
             ". Routines בחשבון הראשי בלבד: " + "; ".join(exp.get("routines_main_only", [])) + " (לבדוק ב-list_triggers) --"]
 
 
+def env_gap():
+    """A cloud session without ROUTINE_KEY (31/10/2026: a chat opened by hand in the Default environment could not
+    reach the site, the database or the assistant, and nothing said so; Michael: both accounts must work the same).
+    SESSION_START_CLOUD stands in for the cloud marker in tests."""
+    cloud = os.environ.get("SESSION_START_CLOUD") or os.environ.get("CCR_AGENT_PROXY_ENABLED")
+    if not cloud or os.environ.get("ROUTINE_KEY"):
+        return []
+    return ["-- ⚠️ הסביבה הזו בלי ROUTINE_KEY (כנראה Default ולא tapugan): אין גישה לעוזר, ל-routine-db ולמסד. "
+            "לכתוב למיכאל מיד בעברית, ולהעביר את העבודה לשיחת בן: create_session על הסביבה tapugan "
+            "(tfugen-sessions, סעיף 5 בתחילת שיחה) --"]
+
+
 def report(cwd):
     out = ["== התחלת שיחה (session-start.py) ==",
            "skills לטעון: " + ", ".join(SKILLS) + " (CLAUDE.md, Workflow 1-2)"]
@@ -215,6 +227,9 @@ def report(cwd):
     ideas = ideas_waiting(cwd)
     if ideas:
         out += ["", "-- 💡 רעיונות שמחכים להחלטה של מיכאל: %d (project-files/ideas-lab.md). לשאול בשאלון כשמתאים, עד 4 בכל פעם --" % len(ideas)] + ideas
+    envg = env_gap()
+    if envg:
+        out += [""] + envg
     gap = accounts_gap(cwd)
     if gap:
         out += [""] + gap
