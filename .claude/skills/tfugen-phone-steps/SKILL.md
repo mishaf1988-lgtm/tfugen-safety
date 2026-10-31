@@ -48,3 +48,6 @@ description: How to hand Michael a step he must do himself on his phone (create 
 
 ## שינוי שמיכאל עושה בדף חיצוני: מאמתים בשיחה חדשה (31/10/2026)
 מיכאל כתב "בוצע" על החלפת הפרומפט בדף ה-Routine ועל פתיחת רשת בסביבה, ובבדיקה מיד אחר כך (`get_trigger`, `curl`) שניהם נראו כלא-שונים. שיחה שכבר פתוחה לא רואה שינוי בהגדרות סביבה, ושמירה בדף יכולה להתעכב או להישמר במקום אחר. לכן: לאמת ב-`get_trigger` (`derived_state.prompt`, `updated_at`) ובשיחת בדיקה חדשה בסביבה, ולא להסיק "לא נעשה" משיחה פתוחה. את סביבת `Default` צריך לבדוק בנפרד: הרשת שם פתוחה גם כש-`tapugan` חסומה, והעוזר רץ ב-`Default`.
+
+
+**טריגר שנוצר דרך `http_api` (31/10/2026, לקח):** `update_trigger` נחסם עליו ("Agents can only update routines they created"); רק בדף ה-Routine של מיכאל אפשר לשנות מודל או פרומפט. לפני שמבטיחים החלפת מודל לקבוצת טריגרים: `list_triggers` ולבדוק `created_via`: `meta_mcp` = אפשר מכאן, `http_api` = הוראה לטלפון של מיכאל.
