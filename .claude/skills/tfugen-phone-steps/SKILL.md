@@ -51,3 +51,6 @@ description: How to hand Michael a step he must do himself on his phone (create 
 
 
 **טריגר שנוצר דרך `http_api` (31/10/2026, לקח):** `update_trigger` נחסם עליו ("Agents can only update routines they created"); רק בדף ה-Routine של מיכאל אפשר לשנות מודל או פרומפט. לפני שמבטיחים החלפת מודל לקבוצת טריגרים: `list_triggers` ולבדוק `created_via`: `meta_mcp` = אפשר מכאן, `http_api` = הוראה לטלפון של מיכאל.
+
+
+**מחבר ל-Routine מהדף (31/10/2026, לקח):** בדף ה-Routine של מיכאל, תחת Connectors, מופיעים רק Cloudflare Developer Platform, Microsoft 365 ו-Supabase. Claude Code Remote לא נבחר משם, גם כשהוא מופיע ב-`mcp_connections` של טריגרים אחרים. לפני דף הוראות להוספת מחבר, לוודא שהוא ברשימה הזו. אם הוא לא שם, מתאימים את ההוראות של הסוכן כך שיעבוד בלעדיו (עוזר החיסכון: מדידה משורות העלות ב-handoff ומ-`agent_log`).
