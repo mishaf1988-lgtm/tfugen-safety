@@ -48,6 +48,22 @@ def main():
     except Exception:
         print("{}"); return        # the gate is missing or broken: CI still checks
     if ok:
+        # 31/10/2026 (retro, PR 2334): a mobile number in a .md file passed the merge and failed pii-md-test only in CI.
+        # A PR that changes a .md file runs the same test here, before it is opened. PR_GATE_PII_CMD replaces the command in tests.
+        if any(f.endswith(".md") for f in changed(cwd)):
+            cmd = os.environ.get("PR_GATE_PII_CMD") or "%s -I tests/harness/pii-md-test.py" % sys.executable
+            try:
+                r = subprocess.run(cmd, shell=True, cwd=cwd, capture_output=True, text=True, encoding="utf-8", timeout=60)
+                bad = r.returncode != 0
+                out = (r.stdout or "")[-600:]
+            except Exception:
+                bad, out = False, ""        # the test is missing or slow: CI still checks
+            if bad:
+                print(json.dumps({"hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": "pr-gate: בדיקת הפרטיות (pii-md-test) נכשלה, מספר נייד או אימייל אישי בקובץ md. להחליף בתיאור ('הנייד של מיכאל') ולדחוף שוב:\n" + out}}, ensure_ascii=False))
+                return
         print("{}"); return
     print(json.dumps({"hookSpecificOutput": {
         "hookEventName": "PreToolUse",
