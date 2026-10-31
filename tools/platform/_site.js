@@ -38,6 +38,8 @@ export const SITE = {
   odFileUrl: 'https://YOUR-TENANT-my.sharepoint.com/personal/YOUR_USER/', // the OneDrive owner's site, for file links
   isoDrive: '',                                        // optional: drive id of a SharePoint site for od_swap site:'iso' (empty = off)
   isoSwapRoot: '',                                     // optional: the only folder od_swap may write to on that site
+  isoSiteUrl: '',                                      // optional: that site's URL, for flow 10 (Power Automate) when the server has no site permission
+  isoLib: 'Shared Documents',                          // optional: that site's document library
   backupPrefix: 'safety-backup',                       // names of the backup files
   codeRepos: [],                                       // [['owner/repo', isPrivate]] the weekly code backup zips
   assistantQueue: '', // the researcher's queue the weekly digest reads (GitHub contents API); '' = none

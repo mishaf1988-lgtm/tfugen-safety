@@ -124,9 +124,10 @@ Network secret שני (18/10/2026, C20): Host `api.supabase.com`, מפתח Supab
 | הזזות ביומן (25/10/2026, C47) | קובץ חדש ב-`_אוטומציה\_הזזות ביומן` | קורא JSON מהקובץ ומזיז אירוע ביומן של מיכאל (PATCH של start ו-end בלבד, `power-automate-mail.md` זרימה 7) |
 | טיוטות למחיקה (26/10/2026, C49) | קובץ חדש ב-`_אוטומציה\_טיוטות למחיקה` | קורא JSON, בודק שזו עדיין טיוטה עם אותו נושא, ומעביר אותה לפריטים שנמחקו (`power-automate-mail.md` זרימה 8) |
 | זימונים (26/10/2026, C51, נבנתה ואומתה) | קובץ חדש ב-`_אוטומציה\_זימונים` | קורא JSON ויוצר פגישה ביומן של מיכאל עם מוזמנים (אירוע Graph); Outlook שולח את ההזמנות (`power-automate-mail.md` זרימה 9) |
+| החלפות באתר iso (31/10/2026, C67) | קובץ חדש ב-`_אוטומציה\_החלפות iso` | קורא JSON, מעלה קובץ מ-OneDrive לאתר iso בלי דריסה ומעביר קובץ שם בלי דריסה (SharePoint REST, `power-automate-mail.md` זרימה 10) |
 | קבצים ממיילים ששלחתי (20/10/2026, C24) | מייל חדש עם קובץ ב-Sent Items | אותן החרגות (על הנמענים) ואותם סוגים כמו הזרימה הראשונה; שומר ב-`_נכנס מהמייל` עם "נשלח" בשם |
 
-להעברה: לבנות מחדש לפי `power-automate-mail.md` (Claude בכרום עשה את זה ב-11/10/2026). החיבורים: Office 365 Outlook ו-OneDrive for Business של החשבון, בלי אישור מנהל.
+להעברה: לבנות מחדש לפי `power-automate-mail.md` (Claude בכרום עשה את זה ב-11/10/2026). החיבורים: Office 365 Outlook, OneDrive for Business ו-SharePoint (זרימה 10) של החשבון, בלי אישור מנהל.
 
 ### תיקיות ש-אוטומציה תלויה בהן (OneDrive, `שולחן העבודה\ניהול בטיחות`)
 | תיקייה | מי כותב | מי קורא |
@@ -138,6 +139,7 @@ Network secret שני (18/10/2026, C20): Host `api.supabase.com`, מפתח Supab
 | `_אוטומציה\_תורים ליומן` | `wa-morning.js` (השרת, `calendarStep`; מה נכתב: `server_state.cal_sent`) | זרימה 4 |
 | `_אוטומציה\_הזזות ביומן` | `cal_move` (השרת; מה נכתב: `server_state.cal_moved`) | זרימה 7 |
 | `_אוטומציה\_טיוטות למחיקה` | `draft_trash` (השרת; מה נכתב: `server_state.drafts_trashed`, ומה מותר: `drafts_made`) | זרימה 8 |
+| `_אוטומציה\_החלפות iso` | `od_swap` עם `site:'iso'` ו-`iso_up` (השרת) | זרימה 10 |
 | `_אוטומציה\_זימונים` | `cal_invite` (השרת; מה נכתב: `server_state.cal_invited`) | זרימה 9 |
 | `00_דוחות ומעקב\קטלוג מסמכים.xlsx`, גיליון Claude Log | Cowork | מיכאל |
 | `Apps/Tapugan Safety/_Backups` (cron, monthly, photos, talks, code) | `backup-od` | שחזור. `code`: zip של שני המאגרים פעם בשבוע, 8 אחרונים (17/10/2026) |
