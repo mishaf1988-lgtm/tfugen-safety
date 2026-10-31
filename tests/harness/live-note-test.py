@@ -15,7 +15,7 @@ def write_transcript(lines):
 
 
 def run(data=None, env=None, stdin=None):
-    e = {k: v for k, v in os.environ.items() if k not in ("ROUTINE_KEY", "LIVE_NOTE_DRY", "CLAUDE_CODE_USER_EMAIL")}
+    e = {k: v for k, v in os.environ.items() if k not in ("ROUTINE_KEY", "LIVE_NOTE_DRY", "CLAUDE_CODE_USER_EMAIL", "CLAUDE_CODE_SESSION_ATTENDED")}
     e.update(env or {})
     e["CLAUDE_PROJECT_DIR"] = d
     if os.path.exists(dry):
@@ -57,4 +57,18 @@ p, body = run(stdin="not json", env={"LIVE_NOTE_DRY": dry})
 check("bad stdin: no crash, nothing written", p.returncode == 0 and body is None, p.stderr)
 p, body = run({"transcript_path": os.path.join(d, "missing.jsonl")}, {"LIVE_NOTE_DRY": dry})
 check("a missing transcript: no crash, nothing written", p.returncode == 0 and body is None, p.stderr)
+# security review 31/10/2026: only a conversation with a person in it writes to the server; more secret shapes are scrubbed.
+sh = os.path.join(d, "project-files"); os.makedirs(sh, exist_ok=True)
+log = os.path.join(d, "called.txt")
+open(os.path.join(sh, "routine-db.sh"), "w").write('#!/usr/bin/env bash\necho called > "%s"\n' % log)
+write_transcript([{"message": {"role": "user", "content": "בקשה"}}, {"message": {"role": "assistant", "content": [{"type": "text", "text": "תשובה"}]}}])
+if os.path.exists(log): os.remove(log)
+run({"transcript_path": tr}, {"ROUTINE_KEY": "k"})
+check("an unattended run (a Routine) with the key does not write", not os.path.exists(log))
+run({"transcript_path": tr}, {"ROUTINE_KEY": "k", "CLAUDE_CODE_SESSION_ATTENDED": "1"})
+check("a conversation with a person writes", os.path.exists(log))
+write_transcript([{"message": {"role": "user", "content": "ghp_" + "a" * 30 + " ו-sb_secret_" + "b" * 30 + " הסיסמה: abc12345"}}, {"message": {"role": "assistant", "content": [{"type": "text", "text": "טוב"}]}}])
+p, body = run({"transcript_path": tr}, {"LIVE_NOTE_DRY": dry})
+raw = json.dumps(body, ensure_ascii=False)
+check("github, supabase and Hebrew password shapes are scrubbed", "ghp_" + "a" * 30 not in raw and "b" * 30 not in raw and "abc12345" not in raw, raw)
 done()

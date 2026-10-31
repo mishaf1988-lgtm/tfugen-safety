@@ -22,6 +22,8 @@ SECRETS = [
     (re.compile(r"sk-[A-Za-z0-9_\-]{10,}"), "[מפתח הוסר]"),
     (re.compile(r"eyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]*"), "[טוקן הוסר]"),
     (re.compile(r"(?i)(bearer|token|key|password|secret)[\"'=: ]+[A-Za-z0-9_\-\.]{16,}"), "[סוד הוסר]"),
+    (re.compile(r"\b(?:ghp|gho|ghs|github_pat|sb_secret|sb_publishable|xox[abp])_[A-Za-z0-9_\-]{10,}"), "[מפתח הוסר]"),
+    (re.compile(r"(?:סיסמה|סיסמא|קוד גישה|מפתח|טוקן)[\"'=: ]+[^\s,.;]{6,}"), "[סוד הוסר]"),
     (re.compile(r"\b[0-9a-fA-F]{32,}\b"), "[מזהה ארוך הוסר]"),
 ]
 
@@ -90,6 +92,10 @@ def main():
     except Exception:
         return
     dry = os.environ.get("LIVE_NOTE_DRY")
+    # Only a conversation with a person in it writes the note (security review 31/10/2026: a Routine run has the key and the
+    # hooks too, and its last message is the trigger's prompt or text from a mail, not what Michael asked).
+    if not dry and os.environ.get("CLAUDE_CODE_SESSION_ATTENDED") != "1":
+        return
     if not dry and not os.environ.get("ROUTINE_KEY"):
         return
     cwd = os.environ.get("CLAUDE_PROJECT_DIR") or data.get("cwd") or "."
