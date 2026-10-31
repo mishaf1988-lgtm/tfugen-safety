@@ -521,28 +521,6 @@
    "reports": true
   },
   {
-   "id": "trig_01Bwk6tQq1ynNqknEAsaMcvH",
-   "zone": "routines",
-   "name": "תיוק מהמייל ועדכון תוקף 13",
-   "what": "תיוק מהמייל ועדכון תוקף 13:52",
-   "when": "א'-ה' 13:52",
-   "when_full": "א'-ה' 13:52",
-   "doc": "routine-mail-filing.md",
-   "key": "mail-filing",
-   "family": "תיוק ותוקף",
-   "ops": [
-    "agent_report",
-    "expiry_set",
-    "mail_request",
-    "od_move",
-    "select",
-    "state_get",
-    "state_set"
-   ],
-   "m365": true,
-   "reports": true
-  },
-  {
    "id": "trig_01W1SUAwixyb77K7Vr4vys7S",
    "zone": "routines",
    "name": "בודק התוקף מול המסמכים",
@@ -1072,8 +1050,8 @@
    "zone": "routines",
    "name": "נורות המפה",
    "what": "נורות המפה: מעדכן את מצב הסוכנים במפת המערכת (https://claude.ai/code/artifact/957276a1-d1e7-4076-854f-cb1f50cebc45, מסמך `live/status`)",
-   "when": "א'-ה' 07:58, 12:58, 17:58",
-   "when_full": "א'-ה' 07:58, 12:58, 17:58 (28/10/2026, מיכאל בשאלון: \"בצע: נורה חיה ובנייה אוטומטית\")",
+   "when": "א'-ה' 07:58",
+   "when_full": "א'-ה' 07:58 (28/10/2026, מיכאל בשאלון: \"בצע: נורה חיה ובנייה אוטומטית\"; פעם ביום מ-31/10/2026, מיכאל: \"בצע: נורות המפה פעם ביום\")",
    "doc": "routine-map-lights.md",
    "key": "map-lights",
    "family": "בקרה ופיתוח",
