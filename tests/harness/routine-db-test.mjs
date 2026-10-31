@@ -269,6 +269,10 @@ const callIn = async (body) => {
       && odSwapCheck({ agent: 'main-chat', why: 'new emergency guideline', old: '2026/a.pdf', new: N }).iso === false
       && !!isoSwapRequest(odSwapCheck({ agent: 'main-chat', why: 'new emergency guideline', site: 'iso', old: ISO_SWAP_ROOT + 'a#1.pdf', new: N })).error;
   })());
+  check('od_move never into a flow folder: a mailed csv / txt there would run as a flow request (security review 31/10/2026)', (() => {
+    const t = (d) => odMoveCheck({ agent: 'routine-mail-filing', why: 'filing a mail', from: 'x.csv', to_dir: d, name: 'x.csv' });
+    return OD_AUTO_DIRS.every((d) => !!t(OD_AUTO + '/' + d).error) && !!t(OD_AUTO).error && !!t(OD_OCR_DIR).error && !t('22_x/09_y').error;
+  })());
   check('iso_up: one pdf / docx from <folder>/old-versions/ back up to <folder>, only under the iso safety folder; anything else refused (31/10/2026)', (() => {
     const P = { agent: 'main-chat', why: 'new file was put into the archive', file: ISO_SWAP_ROOT + OD_ARCHIVE_DIR + '/\u200e\u2068n\u2069.pdf' };
     const ok = isoUpCheck(P), o = new URL(ISO_SITE_URL).origin + '/sites/iso/Shared Documents/';

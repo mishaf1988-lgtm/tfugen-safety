@@ -1073,7 +1073,8 @@ export function odMoveCheck(b) {
   }
   if (from.length !== 1 || bad(from) || !(skipTo || OD_EXT.test(from[0]))) return { error: 'from: one file inside the inbox folder' };
   const skip = dir.length === 2 && dir[0] === OD_INBOX && dir[1] === OD_SKIP;
-  if (!dir.length || bad(dir) || OD_NO_DIR.test(dir.join('/')) || (dir[0] === OD_INBOX && !skip)) return { error: 'bad to_dir' };
+  // never into a flow folder (security review 31/10/2026, flow 10): a mailed file there would run as a flow request
+  if (!dir.length || bad(dir) || OD_NO_DIR.test(dir.join('/')) || (dir[0] === OD_INBOX && !skip) || (dir[0] !== OD_INBOX && OD_TRIGGER_DIRS.indexOf(dir[0]) >= 0)) return { error: 'bad to_dir' };
   if (!name || name.indexOf('/') >= 0 || OD_BAD.test(name) || name.length > 180 || !(skipTo ? skipNameOk(from[0], name) : OD_EXT.test(name))) return { error: 'bad name' };
   return { from: OD_ROOT + OD_INBOX + '/' + from[0], toDir: OD_ROOT + dir.join('/'), name, skip: skipTo };
 }
