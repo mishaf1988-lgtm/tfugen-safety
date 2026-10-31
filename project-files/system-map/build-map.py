@@ -81,6 +81,37 @@ FAMILY = {
 M365_TOOLS = ["outlook_email_search", "read_resource", "sharepoint_search", "sharepoint_folder_search", "outlook_calendar_search"]
 
 
+def card_text(data):
+    """card.md: '## <zone>' then '- <part>: <what>' per part. Generated, never edited by hand."""
+    zones = {z["id"]: z["name"] for z in data["zones"]}
+    out = ["# מה קיים במערכת (נוצר מ-build-map.py, לא לערוך ביד)", ""]
+    for zid in [z["id"] for z in data["zones"]]:
+        parts = [n for n in data["nodes"] if n["zone"] == zid]
+        if not parts:
+            continue
+        out.append("## " + zones[zid])
+        for n in parts:
+            w = re.sub(r"\s+", " ", str(n.get("what") or "")).strip()
+            out.append("- " + n["name"] + (": " + w[:160] if w else ""))
+        out.append("")
+    return "\n".join(out)
+
+
+def card_short(text, limit=1600):
+    """The first-screen form: '<zone>: part, part, ...' per zone, cut to limit characters."""
+    lines, zone, names = [], None, []
+    for l in text.split("\n"):
+        if l.startswith("## "):
+            if zone:
+                lines.append(zone + ": " + ", ".join(names))
+            zone, names = l[3:], []
+        elif l.startswith("- ") and zone:
+            names.append(l[2:].split(":")[0])
+    if zone:
+        lines.append(zone + ": " + ", ".join(names))
+    t = "\n".join(lines)
+    return t if len(t) <= limit else t[:limit - 3] + "..."
+
 def doc_key(doc, name):
     """The name an agent reports under in agent_log, normalised: routine-mail-filing.md -> mail-filing, retro-prompt.md -> retro.
     The page normalises the log's names the same way (key() in template.html)."""
@@ -175,4 +206,8 @@ if __name__ == "__main__":
     open(os.path.join(HERE, "data.json"), "w", encoding="utf-8").write(js + "\n")
     tpl = open(os.path.join(HERE, "template.html"), encoding="utf-8").read()
     open(os.path.join(HERE, "system-map.html"), "w", encoding="utf-8").write(tpl.replace("/*DATA*/null", json.dumps(data, ensure_ascii=False)))
+    # 31/10/2026 (Michael: "how do I make you not forget data? find an efficient way", then "do it" on all three): a card
+    # of everything that exists, one line per part, for session-start.py (short form, first thing in every conversation),
+    # for live-check.py (a "do it" option that matches a part) and for the WhatsApp assistant (routine-wa-assistant.md 0b4).
+    open(os.path.join(HERE, "card.md"), "w", encoding="utf-8").write(card_text(data))
     print("zones %d, parts %d (%d agents), flows %d" % (len(data["zones"]), len(data["nodes"]), sum(1 for n in data["nodes"] if "id" in n), sum(1 for n in data["nodes"] if n["name"].startswith("זרימה"))))

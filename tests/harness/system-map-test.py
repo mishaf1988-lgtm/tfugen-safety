@@ -26,6 +26,9 @@ check("every zone has at least one part (two levels)", all(any(n["zone"] == z fo
 committed = json.load(open(os.path.join(D, "data.json"), encoding="utf-8"))
 check("data.json is up to date (run project-files/system-map/build-map.py and republish)", committed == data)
 html = open(os.path.join(D, "system-map.html"), encoding="utf-8").read()
+import importlib.util as _u
+_s = _u.spec_from_file_location("bm", os.path.join(D, "build-map.py")); _m = _u.module_from_spec(_s); _s.loader.exec_module(_m)
+check("card.md is up to date: what exists, for session-start, live-check and the assistant (31/10/2026)", open(os.path.join(D, "card.md"), encoding="utf-8").read() == _m.card_text(data))
 check("system-map.html carries the same data", json.dumps(data, ensure_ascii=False) in html and "/*DATA*/null" not in html)
 check("the page loads three.js pinned to one version", re.search(r"three@\d+\.\d+\.\d+/build/three\.module\.js", html) is not None)
 check("every line says what goes through it (clickable lines, 27/10/2026)", all(len(e.get("what", "")) > 10 for e in data["edges"]), [e["label"] for e in data["edges"] if len(e.get("what", "")) <= 10])

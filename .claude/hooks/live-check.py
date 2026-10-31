@@ -141,6 +141,34 @@ def archived(inp):
     return ""
 
 
+def map_hits(inp):
+    """Parts of the system (project-files/system-map/card.md) that a "do it" option looks like: ['card.md:12 name']."""
+    root = os.environ.get("LIVE_CHECK_ROOT") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    try:
+        with open(os.path.join(root, "project-files", "system-map", "card.md"), encoding="utf-8") as f:
+            parts = [(i + 1, l[2:]) for i, l in enumerate(f.read().split("\n")) if l.startswith("- ")]
+    except OSError:
+        return []
+    hits = []
+    for q in (inp or {}).get("questions") or []:
+        for o in q.get("options") or []:
+            label = str(o.get("label") or "")
+            if not label.startswith("\u05d1\u05e6\u05e2"):  # בצע
+                continue
+            ow = words(label[3:] + " " + str(o.get("description") or ""))
+            for n, l in parts:
+                pw = words(l)
+                c = len(ow & pw)
+                if c >= 3 and c * 3 >= len(pw):
+                    hits.append((c, n, l.split(":")[0]))
+    seen, out = set(), []
+    for c, n, name in sorted(hits, reverse=True):
+        if name not in seen:
+            seen.add(name)
+            out.append("card.md:" + str(n) + " " + name[:60])
+    return out[:3]
+
+
 def main():
     try:
         d = json.load(sys.stdin)
@@ -156,7 +184,9 @@ def main():
     # matched against the questions and the option labels only.
     heads = [] if (m or seen) else heading_hits(text_of(d.get("tool_input"), descriptions=False))
     arch = "" if (m or seen or heads) else archived(d.get("tool_input"))
-    if not m and not seen and not heads and not arch:
+    # 31/10/2026 (Michael: "do it: search the map before a question"): a "do it" that looks like a part that exists
+    parts = [] if (m or seen or heads or arch) else map_hits(d.get("tool_input"))
+    if not m and not seen and not heads and not arch and not parts:
         return
     # 22/10/2026: the key is the questions alone, so a retry that reworded an option still passes.
     qs = "\n".join(str(q.get("question") or "") for q in ((d.get("tool_input") or {}).get("questions") or []))
@@ -170,6 +200,10 @@ def main():
         return
     if arch:
         why = "live-check (לקח 10): הצעת \"בצע\" דומה לפריט שכבר נסגר (" + arch + "). לקרוא אותו ולבדוק בקוד אם זה כבר קיים, לפני שמציעים למיכאל לבנות. הצעה שבאמת חדשה עוברת בפעם השנייה."
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": why}}, ensure_ascii=False))
+        return
+    if parts:
+        why = "live-check (מפת המערכת): הצעת \"בצע\" דומה לרכיב שכבר קיים (" + "; ".join(parts) + "). לקרוא את השורה ב-project-files/system-map/card.md ולבדוק בקוד אם זה כבר עושה את מה שמוצע, ולומר את זה למיכאל בשאלה. הצעה שבאמת חדשה עוברת בפעם השנייה."
         print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": why}}, ensure_ascii=False))
         return
     if heads:
