@@ -774,11 +774,18 @@ export function mailFilingLine(raw, nowMs) {
   if (!runs.length) return { text: MF.head + MF.never, red: false, unknown: true };
   const last = Math.max.apply(null, runs.map((r) => Date.parse(r.at)));
   if (nowMs - last > MF_STALE_DAYS * DAY) return { text: MF.head + MF.stale + ilTime(new Date(last).toISOString()), red: true };
+  // 31/10/2026 (Michael: "בצע: לתקן את הספירה"): a file left waiting in the inbox is counted again in
+  // "got" by every later run (28-31/10/2026: 76 counted, about 34 came in). New files of a run = its
+  // got minus the previous run's wait; "waiting" = the last run's wait, not a sum of runs.
+  const n = (r, k) => (r && Number.isFinite(+r[k]) && +r[k] > 0 ? Math.floor(+r[k]) : 0);
+  runs.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  runs.forEach((r, i) => { r._new = Math.max(0, n(r, 'got') - (i ? n(runs[i - 1], 'wait') : 0)); });
   const wk = runs.filter((r) => nowMs - Date.parse(r.at) <= 7 * DAY);
-  const sum = (k) => wk.reduce((a, r) => a + (Number.isFinite(+r[k]) && +r[k] > 0 ? Math.floor(+r[k]) : 0), 0);
-  const got = sum('got'), noise = [];
+  const sum = (k) => wk.reduce((a, r) => a + n(r, k), 0);
+  const waitNow = n(runs[runs.length - 1], 'wait');
+  const got = sum('_new'), noise = [];
   wk.forEach((r) => (Array.isArray(r.noise) ? r.noise : []).forEach((x) => { const a = String(x || '').trim().toLowerCase().substring(0, 80); if (a && noise.indexOf(a) < 0) noise.push(a); }));
-  let t = MF.head + got + MF.got + ', ' + sum('filed') + MF.filed + ', ' + sum('skip') + MF.skip + ', ' + sum('wait') + MF.wait + ', ' + sum('exp') + MF.exp;
+  let t = MF.head + got + MF.got + ', ' + sum('filed') + MF.filed + ', ' + sum('skip') + MF.skip + ', ' + waitNow + MF.wait + ', ' + sum('exp') + MF.exp;
   if (!got) t += MF.none;
   if (noise.length) t += MF.noise + noise.slice(0, 5).join(', ');
   // 11/10/2026 (Michael: "מאשר את ההצעה"): the Routine reads Power Automate's "have failed" mails and
@@ -786,7 +793,7 @@ export function mailFilingLine(raw, nowMs) {
   const ff = [];
   wk.forEach((r) => (Array.isArray(r.flow_fail) ? r.flow_fail : []).forEach((x) => { const a = String(x || '').trim().substring(0, 60); if (a && ff.indexOf(a) < 0) ff.push(a); }));
   if (ff.length) t += '. \u05d6\u05e8\u05d9\u05de\u05d4 \u05d1-Power Automate \u05e0\u05db\u05e9\u05dc\u05d4 \u05d4\u05e9\u05d1\u05d5\u05e2: ' + ff.slice(0, 3).join(', ');
-  return { text: t, red: !got || sum('wait') > 0 || ff.length > 0, label: '\u05ea\u05d9\u05d5\u05e7 \u05de\u05d4\u05de\u05d9\u05d9\u05dc (' + sum('filed') + ' \u05ea\u05d5\u05d9\u05e7\u05d5)' };
+  return { text: t, red: !got || waitNow > 0 || ff.length > 0, label: '\u05ea\u05d9\u05d5\u05e7 \u05de\u05d4\u05de\u05d9\u05d9\u05dc (' + sum('filed') + ' \u05ea\u05d5\u05d9\u05e7\u05d5)' };
 }
 
 // 11/10/2026 (Michael: "מאשר גם את שתי ההצעות"): the weekly validity Routine writes

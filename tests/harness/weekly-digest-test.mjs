@@ -423,6 +423,9 @@ const ROWS = [
       check('a flow failed this week: red, named once each', ff.red && /זרימה ב-Power Automate נכשלה השבוע: flow A, flow B/.test(ff.text), ff);
       check('a flow failure older than a week: not red', !mailFilingLine(j([{ at: ago(1), got: 5, filed: 5 }, { at: ago(9), got: 1, flow_fail: ['old'] }]), now).red);
       check('broken JSON: never ran', /עוד לא רץ/.test(mailFilingLine('{oops', now).text));
+      const rep = mailFilingLine(j([{ at: ago(1), got: 34, filed: 13, skip: 20, wait: 1 }, { at: ago(3), got: 11, wait: 11 }, { at: ago(4), got: 14, skip: 3, wait: 11 }, { at: ago(5), got: 17, skip: 6, wait: 11 }]), now);
+      check('a file waiting over several runs is counted once, waiting = last run', /43 קבצים נקלטו, 13 תויקו, 29 ב"לא לתיוק", 1 מחכים לך/.test(rep.text) && rep.red, rep);
+      check('waited earlier, nothing waits now: not red', !mailFilingLine(j([{ at: ago(1), got: 4, filed: 4, wait: 0 }, { at: ago(2), got: 4, wait: 4 }]), now).red);
       const h = digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [], mf: zero });
       check('in the mail, red', /color:#b91c1c;font-weight:bold">\S+ תיוק מהמייל השבוע/.test(h), h.substring(0, 0));
     }
