@@ -448,6 +448,27 @@ const callIn = async (body) => {
           draftThreadGate({ ...base, thread_checked: 'michael chose a new mail: questionnaire 11:33 UTC, בצע: מייל חדש עם הקובץ' }) === null
           && !!draftThreadGate({ ...base, thread_checked: 'michael chose a new mail: because' }) && !!draftThreadGate({ ...base, thread_checked: 'flow is broken' }));
       }
+      { // 01/11/2026 (mechanism 2): a Word file the assistant saved keeps the controlled form's marks
+        const { docMarks, docMarksError } = await import('./_build/routine-db.mjs');
+        const { readZip, entryText } = await import('./_build/_xlsxpatch.mjs');
+        const partsOf = async (f) => { const o = {}; for (const e of readZip(new Uint8Array(readFileSync(new URL('../../f/' + f, import.meta.url))))) if (/^word\/(document|header\d*|footer\d*)\.xml$/.test(e.name)) o[e.name] = await entryText(e); return o; };
+        const real = ['\u05e0\u05d5\u05d4\u05dc 08 - \u05d4\u05d3\u05e8\u05db\u05d4 \u05d4\u05e1\u05de\u05db\u05d4 \u05d5\u05db\u05e9\u05d9\u05e8\u05d5\u05ea - 19.04.2026.docx', '\u05e0\u05d5\u05d4\u05dc 35 - \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd - 12.03.2025.docx'];
+        let realOk = true;
+        for (const f of real) if (docMarksError(docMarks(await partsOf(f), f))) realOk = false;
+        check('docMarks: the factory\'s own procedures (f/) pass: logo, and no form number asked of a procedure', realOk);
+        const p8 = await partsOf(real[0]);
+        const noLogo = Object.fromEntries(Object.entries(p8).map(([k, v]) => [k, v.replace(/<a:blip\b/g, '<a:x').replace(/<v:imagedata\b/g, '<v:x')]));
+        check('docMarks: the same file with the logo removed is refused, and the message names the logo', /logo/.test(docMarksError(docMarks(noLogo, real[0])) || ''));
+        const hdr = (t) => ({ 'word/header1.xml': '<w:hdr><w:p><a:blip r:embed="x"/></w:p><w:p><w:r><w:t>' + t + '</w:t></w:r></w:p></w:hdr>', 'word/document.xml': '<w:document><w:body><w:p><w:r><w:t>x</w:t></w:r></w:p></w:body></w:document>' });
+        const form = '\u05d8\u05d5\u05e4\u05e1 08.01 - \u05d4\u05d3\u05e8\u05db\u05d4.docx';
+        check('docMarks: a form (name says \u05d8\u05d5\u05e4\u05e1) needs NN.NN and \u05e2\u05de\u05d5\u05d3 in the header; with both it passes',
+          /form number/.test(docMarksError(docMarks(hdr('\u05e2\u05de\u05d5\u05d3 1 \u05de\u05ea\u05d5\u05da 1'), form)) || '')
+          && /\u05e2\u05de\u05d5\u05d3/.test(docMarksError(docMarks(hdr('\u05d8\u05d5\u05e4\u05e1 08.01'), form)) || '')
+          && docMarksError(docMarks(hdr('\u05d8\u05d5\u05e4\u05e1 08.01 \u05e2\u05de\u05d5\u05d3 1 \u05de\u05ea\u05d5\u05da 1'), form)) === null);
+        const src = readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
+        const wm = src.slice(src.indexOf("if (body.op === 'wa_me') {"));
+        check('wa_me reads a saved .docx and refuses it without the marks (docMarksError after savedFresh)', wm.indexOf('docMarksError(') > wm.indexOf('savedFresh(') && wm.indexOf('docMarksError(') < 25000);
+      }
       { // 01/11/2026 (mechanism 1): "saved" is checked in OneDrive, not only in the text
         const { savedNeeded, savedPath, savedFresh, SAVED_FRESH_MS } = await import('./_build/routine-db.mjs');
         const now = Date.parse('2026-11-01T12:00:00Z');
