@@ -442,6 +442,14 @@ const callIn = async (body) => {
     { const { permitSpot } = await import('./_build/routine-db.mjs');
       check('a scanned 2-page safety permit gets the safety officer row, anything else nothing (23/10/2026)', permitSpot('2026-10-22 0943 - \u05d4\u05e8\u05e9\u05d0\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e0\u05d2\u05d1.pdf', 2).page === 2 && permitSpot('\u05d4\u05e8\u05e9\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 x.pdf', 2).x === 225 && permitSpot('\u05d4\u05e8\u05e9\u05d0\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.pdf', 3) === null && permitSpot('\u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8.pdf', 2) === null); }
     { const { claimGate } = await import('./_build/routine-db.mjs');
+      { // 01/11/2026 (Michael: "find a way not to make mistakes"): "the new version is saved" about a file needs checked naming it
+        const said = 'הגרסה החדשה של 08.01 כבר נשמרה בתיקייה 11_הדרכות.';
+        check('claim gate: a file "saved / new version" with no checked is refused; with the file read it passes; a database row is not touched',
+          /read_resource/.test(claimGate(said) || '') && !/read_resource/.test(claimGate(said, 'read_resource: 08.01 אחזקה 02-11-2026.pdf, נוספה עמודת מס זהות') || '')
+          && !/read_resource/.test(claimGate('התוקף נשמר במסד: 12/2027.', 'docs row') || ''), claimGate(said));
+        const w = await call({ op: 'wa_me', agent: 'routine-wa-assistant', text: said });
+        check('...and wa_me refuses it (400)', w.status === 400 && /read_resource/.test(w.json.error), w.json);
+      }
       check('claim gate: "missing" / "expired" / "waits for you" needs where it was checked (23/10/2026)', !!claimGate('\u05d0\u05d9\u05e9\u05d5\u05e8 \u05d4\u05d2\u05d6 \u05e4\u05d2.') && !!claimGate('\u05de\u05d7\u05db\u05d4 \u05dc\u05da: \u05d4\u05d8\u05d9\u05d5\u05d8\u05d4') && claimGate('\u05d0\u05d9\u05e9\u05d5\u05e8 \u05d4\u05d2\u05d6 \u05e4\u05d2.', 'outlook Sent Items + docs row 12') === null);
       check('claim gate: "I prepared 2 drafts" / "the draft is ready" needs checked naming Drafts; "will appear in Drafts" passes (26/10/2026)',
         !!claimGate('\u05d4\u05db\u05e0\u05ea\u05d9 2 \u05d8\u05d9\u05d5\u05d8\u05d5\u05ea, \u05db\u05dc \u05d0\u05d7\u05ea \u05d1\u05e9\u05e8\u05e9\u05d5\u05e8') && !!claimGate('\u05d4\u05d8\u05d9\u05d5\u05d8\u05d4 \u05de\u05d5\u05db\u05e0\u05d4 \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4') && !!claimGate('\u05d4\u05db\u05e0\u05ea\u05d9 \u05d8\u05d9\u05d5\u05d8\u05d4', 'Sent Items x')

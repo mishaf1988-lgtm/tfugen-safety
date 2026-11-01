@@ -1585,6 +1585,9 @@ export function cardLines(list, q, n, pick) {
   return (Array.isArray(list) ? list : []).filter((x) => x && pick(x).toLowerCase().indexOf(k) >= 0)
     .sort((a, b) => String(b.at || '').localeCompare(String(a.at || ''))).slice(0, n);
 }
+export const SAVED_RE = /(\u05e0\u05e9\u05de\u05e8|\u05e0\u05e9\u05de\u05e8\u05d4|\u05e0\u05e9\u05de\u05e8\u05d5|\u05e9\u05de\u05e8\u05ea\u05d9|\u05ea\u05d5\u05e7\u05df|\u05ea\u05d5\u05e7\u05e0\u05d4|\u05ea\u05d9\u05e7\u05e0\u05ea\u05d9|\u05d4\u05d2\u05e8\u05e1\u05d4 \u05d4\u05d7\u05d3\u05e9\u05d4|\u05d2\u05e8\u05e1\u05d4 \u05de\u05ea\u05d5\u05e7\u05e0\u05ea)/;
+// Only about a file (a row saved in the database is not this gate's business).
+export const SAVED_FILE_RE = /(\u05e7\u05d5\u05d1\u05e5|\u05d4\u05e7\u05d5\u05d1\u05e5|PDF|\.pdf|\u05d8\u05d5\u05e4\u05e1|\u05d2\u05e8\u05e1\u05d4|\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4|\u05de\u05e1\u05de\u05da)/i;
 export function claimGate(text, checked) {
   const t = String(text || '');
   if (SENT_RE.test(t)) return 'the text says you sent a mail: you only make drafts. Write "\u05d4\u05db\u05e0\u05ea\u05d9 \u05d8\u05d9\u05d5\u05d8\u05d4" or "\u05e0\u05e9\u05dc\u05d7 \u05de\u05de\u05da \u05d1-<\u05e9\u05e2\u05d4>" (after Sent Items)';
@@ -1592,6 +1595,10 @@ export function claimGate(text, checked) {
   // Drafts, the request went to a folder no flow read): "prepared a draft" / "the draft is ready" needs "checked"
   // naming Drafts, after outlook_email_search found it there.
   if (DRAFT_READY_RE.test(t) && !/drafts|\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea/i.test(String(checked || ''))) return 'the text says a draft is ready: first outlook_email_search with folderName "Drafts" and a word of the subject (the flow takes about a minute), then send with "checked":"Drafts <subject> HH:MM". Not there after 3 minutes: write "\u05d1\u05d9\u05e7\u05e9\u05ea\u05d9 \u05d8\u05d9\u05d5\u05d8\u05d4, \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d4\u05d5\u05e4\u05d9\u05e2\u05d4" and open a promise';
+  // 01/11/2026 (Michael: "find a way not to make mistakes, and learn"; at 12:19 the assistant wrote "the new version is
+  // already saved" about the same file it made at 12:15, without the ID column he asked for): saved / fixed / a new
+  // version needs "checked" naming the file and what changed in it, after reading it (read_resource, folder listing).
+  if (SAVED_RE.test(t) && SAVED_FILE_RE.test(t) && !/(read_resource|\u05e7\u05e8\u05d0\u05ea\u05d9|\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4|od_put_pdf|\.pdf|\.docx|\.xlsx)/i.test(String(checked || ''))) return 'the text says a file was saved / fixed / a new version: read it first (read_resource on the file, or the folder listing for a new name), then send with "checked":"<file name>: <what changed in it>" (01/11/2026)';
   if (CLAIM_RE.test(t) && String(checked || '').trim().length < 8) return 'the text says missing / expired / waits for you: add "checked" with where you checked (outlook_email_search in Sent Items and the thread, the table and its row) (23/10/2026)';
   return factGate(t, checked);
 }
