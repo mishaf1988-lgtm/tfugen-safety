@@ -1146,8 +1146,9 @@ export function odMkdirCheck(b) {
   const name = String(b.name === undefined || b.name === null ? '' : b.name);
   const bad = (x) => x === '.' || x === '..' || OD_BAD.test(x) || x.length > 120 || x !== x.trim() || x.startsWith('.');
   if (!parent.length || parent.length > OD_MKDIR_DEPTH || parent.some(bad)) return { error: 'bad parent' };
-  if (OD_NO_DIR.test(parent.join('/')) || parent[0] === OD_INBOX || isAutoTop(parent[0])) return { error: 'bad parent' };
-  if (!name || name.indexOf('/') >= 0 || bad(name) || OD_NO_DIR.test(name) || name === OD_INBOX || isAutoTop(name)) return { error: 'bad name' };
+  // 01/11/2026 (STATUS, retro 25/10): every flow-trigger folder, the OCR text folder included, not only the inbox and _אוטומציה.
+  if (OD_NO_DIR.test(parent.join('/')) || parent[0] === OD_INBOX || isAutoTop(parent[0]) || OD_TRIGGER_DIRS.indexOf(parent[0]) >= 0) return { error: 'bad parent' };
+  if (!name || name.indexOf('/') >= 0 || bad(name) || OD_NO_DIR.test(name) || name === OD_INBOX || isAutoTop(name) || OD_TRIGGER_DIRS.indexOf(name) >= 0) return { error: 'bad name' };
   return { parent: OD_ROOT + parent.join('/'), name };
 }
 // 20/10/2026 (Michael: "you have a tool to make a draft, attach the unsigned draft"): files a draft may

@@ -229,6 +229,16 @@ const callIn = async (body) => {
     const t = (d) => odPullCheck({ agent: 'dev', why: 'to a flow folder', from: 'x/a.txt', dir: d });
     return OD_TRIGGER_DIRS.length === 10 && OD_TRIGGER_DIRS.every((d) => !!t(d).error) && !!t(OD_DRAFT + '/sub').error && !t('22_x/09_y').error;
   })());
+  check('od_mkdir and od_put_pdf refuse every flow-trigger folder, OCR text folder included (01/11/2026, STATUS retro 25/10)', (() => {
+    const mk = (parent, name) => odMkdirCheck({ agent: 'dev', why: 'to a flow folder', parent, name });
+    const put = (d) => odPutPdfCheck({ agent: 'dev', why: 'to a flow folder', dir: d, name: 'a.pdf' }).error;
+    return OD_TRIGGER_DIRS.every((d) => mk(d, 'x').error === 'bad parent' && mk('22_x', d).error === 'bad name' && put(d) === 'bad dir') && !mk('22_x', 'new').error && put('22_x') !== 'bad dir';
+  })());
+  check('every OneDrive trigger folder in power-automate-mail.md is in OD_TRIGGER_DIRS (01/11/2026, STATUS retro 25/10)', (() => {
+    const doc = readFileSync(new URL('../../project-files/power-automate-mail.md', import.meta.url), 'utf8');
+    const dirs = [...doc.matchAll(/\u05e2\u05dc `\/[^`]*\/(_[^`/]+)`/g)].map((m) => m[1]);
+    return dirs.length >= 7 && dirs.every((d) => OD_TRIGGER_DIRS.indexOf(d) >= 0);
+  })());
   check('od_pull: one file from the desktop INTO a folder of the safety folder; never from inside it, never into old versions, never above the desktop (24/10/2026)', (() => {
     const ok = odPullCheck({ agent: 'dev', why: 'to the binder', from: 'תקני ISO/2026/a.docx', dir: '22_x/09_y' });
     return ok.from === OD_DESKTOP + 'תקני ISO/2026/a.docx' && ok.to === OD_ROOT + '22_x/09_y' && ok.name === 'a.docx'
