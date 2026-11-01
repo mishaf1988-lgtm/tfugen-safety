@@ -58,6 +58,8 @@ const ROWS = [
   check('a group heading per responsible party with its count, the delay in red', h.includes('אחזקה (2)') && h.includes('עבר היעד ב-20 ימים') && /color:#b91c1c[^>]*>עבר היעד ב-10 ימים/.test(h));
   check('the near targets say "today" / "in 3 days"', h.includes('>היום<') && h.includes('בעוד 3 ימים'));
   check('trustee findings: the report date and how long open', h.includes('פתוח 12 ימים') && h.includes(T.trustee + ' (1)'));
+  { const ts = h.substring(h.indexOf(T.trustee + ' (1)')), row = ts.substring(0, ts.indexOf('</table>'));
+    check('01/11/2026: the "reported" column shows the report date (22/09), not the target (25/09)', row.includes(plus(-12).split('-').reverse().join('/')) && !row.includes(plus(-9).split('-').reverse().join('/')), row.substring(0, 600)); }
   check('the committee block: meeting date, the deck older than a week in red, the open sync problem, 3 topics', h.includes(T.meeting + '06/10/2026') && /color:#b91c1c[^>]*>המצגת עודכנה לאחרונה: 25\/09\/2026 08:00 \(לפני יותר משבוע\)/.test(h)
     && h.includes(T.sync + 'מצגת הוועדה: לא התעדכן') && (h.match(/<li>/g) || []).length === 3 && /<li>33 - חומר גלם - רצפות שבורות \(גבוהה\), <span[^>]*>עבר היעד ב-3 ימים/.test(h), h.substring(h.indexOf(T.committee), h.indexOf(T.committee) + 700));
   const h2 = digestHtml(e, TODAY, { meeting: '2026-10-06', deckAt: '', watchOpen: [] });

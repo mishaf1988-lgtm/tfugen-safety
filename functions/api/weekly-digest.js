@@ -96,7 +96,7 @@ const isTrustee = (r) => /^\u05e0-/.test(String(r[0] || ''));
 function item(r, today) {
   const due = ymd(r[9]), d = ymd(r[1]);
   return { n: r[0], dept: r[3] || '', loc: r[4] || '', descr: r[5] || '', sev: r[6] || '', resp: r[7] || '', status: r[10] || '',
-    due, days: due ? dayDiff(due, today) : null, age: d ? dayDiff(d, today) : null, trustee: isTrustee(r) };
+    due, rep: d, days: due ? dayDiff(due, today) : null, age: d ? dayDiff(d, today) : null, trustee: isTrustee(r) };
 }
 
 // Pure. rows = buildRegister(...).rows; today = YYYY-MM-DD (Israel).
@@ -478,7 +478,8 @@ export function digestHtml(d, today, meta) {
   d.overdue.forEach((g) => { h += '<p style="margin:8px 0 4px;font-weight:bold">' + esc(g.resp || '-') + ' (' + g.items.length + ')</p>' + table(g.items); });
   h += h2(H.soon, d.soon.length) + table(d.soon);
   h += h2(H.noDue, d.noDue.length) + table(d.noDue);
-  h += h2(H.trustee, d.trustee.length) + table(d.trustee.map((x) => Object.assign({}, x, { dueRep: x.due })), { age: true });
+  // the column says "\u05d3\u05d5\u05d5\u05d7" (reported): the report date, not the target (01/11/2026, Michael: 26/09 said open 39 days)
+  h += h2(H.trustee, d.trustee.length) + table(d.trustee.map((x) => Object.assign({}, x, { dueRep: x.rep })), { age: true });
   if (m.talk) h += '<p style="margin:8px 0' + (m.talk.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.talk.text) + '</p>';
   if (m.deptTalks && m.deptTalks.length) h += '<p style="margin:10px 0 2px;font-weight:bold">\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e9\u05d1\u05d5\u05e2\u05d9\u05d5\u05ea \u05dc\u05e4\u05d9 \u05de\u05d7\u05dc\u05e7\u05d4</p>' + m.deptTalks.map((x) => '<p style="margin:2px 0' + (x.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(x.text) + '</p>').join('');
   if (m.openTyped && m.openTyped.length) h += m.openTyped.map((x) => '<p style="margin:4px 0;color:#b91c1c;font-weight:bold">' + esc(x.text) + '</p>').join('');
