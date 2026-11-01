@@ -88,6 +88,7 @@ check('chatFireText keeps a newline out of the one text line', !/\n.*\n.*\n.*\nt
 // 24/10/2026 (lesson 154): Michael's first chat messages went unanswered, since step 1 of the procedure and the
 // trigger prompt listed only three headers. The header the server sends must be in step 1 (the prompt is outside the repo).
 const proc = readFileSync(new URL('../../project-files/routine-wa-assistant.md', import.meta.url), 'utf8');
+check('chatFireText: the notebook rides along like from WhatsApp, and only when there is one (01/11/2026, the coach drill)', (() => { const w = chatFireText('x', 't', '', null, null, 'correction: \u05e1\u05e2\u05d9\u05e3 38'); return /^learned \(/m.test(w) && w.indexOf('learned (') < w.indexOf('text: x') && chatFireText('x', 't', '', null).indexOf('learned (') < 0; })());
 const head = chatFireText('x', 't', '', null).split('\n')[0];
 const step1 = (proc.split('\n').find((l) => /^1\. \*\*/.test(l)) || '');
 check('step 1 of the assistant procedure accepts the exact header the chat sends', step1.indexOf('`' + head + '`') >= 0, head);
