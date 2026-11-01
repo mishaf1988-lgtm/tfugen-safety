@@ -84,6 +84,10 @@
 //   od_put_pdf  (20/10/2026) ONE new file {agent, why, dir, name, b64} (PDF, Word, Excel, pptx, and from 29/10/2026
 //              jpg / png) into an existing folder of the safety folder; never
 //              replaces a file, never into the protected folders. odPutPdfCheck.
+//   od_pdf  (01/11/2026, Michael: a form filled from the factory's Word template always as Word AND PDF) {agent, why, path}:
+//              ONE .docx inside the safety folder; Microsoft renders it to PDF (Graph ?format=pdf, as Word prints it, the
+//              logo kept: DECISIONS 24/10/2026) and the PDF is put beside it under the same name. Never replaces a file,
+//              never in the protected or flow folders. odPdfCheck. tools/form-fill.py fills the Word file first.
 //   sign_offer  (21/10/2026) {agent, why, paths[1-5], text?} PDFs offered to Michael as buttons (sign_pick); a tap asks
 //              through sign_request. Offering signs nothing.
 //   sign_request  (21/10/2026, Michael: "sign in my name" only after his "do it") {agent, why, path, page?, x?, y?}: one PDF
@@ -1483,6 +1487,22 @@ export function odPutPdfCheck(b) {
   if (e === 'jpg' || e === 'jpeg' ? !jpg : e === 'png' ? !png : e === 'pdf' ? head !== '%PDF-' : (e === 'doc' || e === 'xls') ? !ole : head.slice(0, 4) !== 'PK\x03\x04') return { error: 'not a ' + e };
   return { dir: c.parent, name: c.name, bytes, type: OD_PUT_TYPES[ext.toLowerCase()] };
 }
+// od_pdf (01/11/2026, Michael: the assistant twice built form 08.01 from scratch and lost the factory logo, and once
+// gave only a PDF without the Word file): {path} = ONE .docx inside the safety folder, the folders od_put_pdf may write
+// to (not old versions / to-delete / ARCHIVE, not the inbox or a flow folder). The PDF goes beside it, same name, .pdf.
+// Pure: { src, dir, name } as Graph paths under the drive root, or { error }.
+export function odPdfCheck(b) {
+  if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
+  if (String(b.why || '').trim().length < 5) return { error: 'why required' };
+  const parts = String(b.path || '').split('/').filter(Boolean);
+  const bad = (x) => x === '.' || x === '..' || OD_BAD.test(x) || x.length > 200 || x !== x.trim() || x.startsWith('.');
+  if (parts.length < 2 || parts.length > OD_MKDIR_DEPTH + 1 || parts.some(bad)) return { error: 'bad path' };
+  const file = parts[parts.length - 1];
+  if (!/^.+\.docx$/i.test(file)) return { error: 'path: a .docx file' };
+  if (OD_NO_DIR.test(parts.slice(0, -1).join('/')) || parts[0] === OD_INBOX || isAutoTop(parts[0]) || OD_TRIGGER_DIRS.indexOf(parts[0]) >= 0) return { error: 'bad path' };
+  const dir = OD_ROOT + parts.slice(0, -1).join('/');
+  return { src: OD_ROOT + parts.join('/'), dir, name: file.replace(/\.docx$/i, '.pdf') };
+}
 // sign_request (21/10/2026): {path} = a PDF inside the safety folder, the same folders od_put_pdf may write to
 // (not the protected ones, not the inbox, the requests or the drafts folder), not a file that is already a
 // signed copy. page 1-200, x / y 0-2000 points, all optional. Pure.
@@ -2590,6 +2610,30 @@ export async function onRequest(context) {
       const uj = await up.json().catch(() => ({}));
       if (!up.ok) return jsonResp({ ok: false, error: 'put ' + up.status }, 200, {});
       return jsonResp({ ok: true, path: c.dir.slice(OD_ROOT.length) + '/' + c.name, size: uj.size || null, webUrl: uj.webUrl || null }, 200, {});
+    }
+    if (body.op === 'od_pdf') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const c = odPdfCheck(body);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const at = await accessToken(env);
+      const gh = { Authorization: 'Bearer ' + at.token };
+      const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
+      const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+      const src = await fetch(G + enc(c.src) + '?select=id,file', { headers: gh, signal: tmo(GRAPH_MS) });
+      if (!src.ok) return jsonResp({ ok: false, error: src.status === 404 ? 'file not found' : 'file ' + src.status }, 200, {});
+      if (!(await src.json().catch(() => ({}))).file) return jsonResp({ ok: false, error: 'not a file' }, 200, {});
+      const taken = await fetch(G + enc(c.dir + '/' + c.name) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
+      if (taken.status !== 404) return jsonResp({ ok: false, error: taken.ok ? 'pdf name taken' : 'name check ' + taken.status }, 200, {});
+      const r = await fetch(G + enc(c.src) + ':/content?format=pdf', { headers: gh, signal: tmo(FILE_TIMEOUT_MS) });
+      if (!r.ok) return jsonResp({ ok: false, error: 'convert ' + r.status }, 200, {});
+      const pdf = new Uint8Array(await r.arrayBuffer());
+      if (pdf.length < 5 || String.fromCharCode(...pdf.slice(0, 5)) !== '%PDF-') return jsonResp({ ok: false, error: 'convert: not a pdf' }, 200, {});
+      if (pdf.length > OD_PUT_MAX) return jsonResp({ ok: false, error: 'pdf over ' + OD_PUT_MAX }, 200, {});
+      // conflictBehavior=fail as od_put_pdf, not putFile: a PDF made between the check and the PUT is never replaced
+      const up = await fetch(G + enc(c.dir + '/' + c.name) + ':/content?@microsoft.graph.conflictBehavior=fail', { method: 'PUT', headers: { ...gh, 'Content-Type': 'application/pdf' }, body: pdf, signal: tmo(FILE_TIMEOUT_MS) });
+      const uj = await up.json().catch(() => ({}));
+      if (!up.ok) return jsonResp({ ok: false, error: 'put ' + up.status }, 200, {});
+      return jsonResp({ ok: true, path: c.dir.slice(OD_ROOT.length) + '/' + c.name, size: uj.size || pdf.length }, 200, {});
     }
     // sign_offer (21/10/2026, Michael: "the assistant gets tangled", it kept asking him to type exact words): the
     // assistant offers 1-5 PDFs as buttons; a tap reaches wa-hook's sign_pick, and only then the server asks
