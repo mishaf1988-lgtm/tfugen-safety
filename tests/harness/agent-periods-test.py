@@ -15,7 +15,8 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
 ok = bad = 0
 NOT_RECURRING = {'routine-night': 'one night run (10/10/2026), no schedule',
                  'dev-fire': 'fired by the server per dev request (21/10/2026), silence is normal',
-                 'worker-now': 'fired by the server per worker task (21/10/2026), silence is normal'}
+                 'worker-now': 'fired by the server per worker task (21/10/2026), silence is normal',
+                 'dev-runner': 'the on-duty developer, disabled 01/11/2026 (savings check), dev-safety replaces it'}
 
 
 def check(label, cond, detail=None):
