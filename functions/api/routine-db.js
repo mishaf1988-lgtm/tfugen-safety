@@ -211,7 +211,7 @@ export const SECOND_CHECK_AGENTS = ['wa-assistant', 'routine-wa-assistant'];
 const SECOND_SENSITIVE = /\u05d0\u05de\u05d5\u05e0\u05d9|nh3|\b26\.0[34]\b|\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd|\u05d7\u05d5\u05de"\u05e1|\u05ea\u05e7\u05e0|(?:^|\s)[\u05d4\u05d1\u05dc]?\u05d7\u05d5\u05e7(?=[\s,.:;)]|$)/i;
 const SECOND_REFUSAL = /\u05e1\u05d9\u05e8\u05d1\u05ea\u05d9|\u05e1\u05d9\u05e8\u05d5\u05d1|\u05dc\u05d0 \u05e0\u05de\u05d7\u05e7|\u05dc\u05d0 \u05d0\u05de\u05d7\u05e7/;
 const SECOND_DONE = /\u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9|\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e9\u05e0\u05d9\u05d9\u05d4|\u05dc\u05d0 \u05d0\u05d9\u05de\u05ea\u05ea\u05d9 \u05e2\u05d3 \u05d4\u05e1\u05d5\u05e3/;
-const SECOND_SKIPPED = /(?:לא(?! דילג)|בלי|ללא|(?<!לא )דילג\S*) (?:\S+ )?(?:על )?ה?(?:בודק ה?שני|בדיקה ה?שניי?ה)/;
+const SECOND_SKIPPED = /(?:\u05dc\u05d0(?! \u05d3\u05d9\u05dc\u05d2)|\u05d1\u05dc\u05d9|\u05dc\u05dc\u05d0|(?<!\u05dc\u05d0 )\u05d3\u05d9\u05dc\u05d2\S*) (?:\S+ )?(?:\u05e2\u05dc )?\u05d4?(?:\u05d1\u05d5\u05d3\u05e7 \u05d4?\u05e9\u05e0\u05d9|\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4?\u05e9\u05e0\u05d9\u05d9?\u05d4)/;
 // 31/10/2026 (handoff item 3: a false alarm on "where is procedure 26.04 and what is its validity"): a report that
 // only says where a document is or until when it is valid (validity, edition, location, path) carries no safety
 // content to double-check, so it does not need a second checker. Any safety figure or instruction in the same
