@@ -48,6 +48,7 @@
 - הדוור של הצ'אט במשרד
 - סריקת מיילים יומית: סריקת מיילים יומית: מיילים שמחכים לתשובה ממיכאל, עם נוסח וכפתורים
 - בודק האיכות היומי: בודק האיכות היומי: קורא מה שהסוכנים שלחו למיכאל, טיוטות וכתיבות למסד, מתקן ומדווח בשורה
+- המאמן של העוזר: המאמן של העוזר: בונה תרגילים מהתיקונים של מיכאל בשבוע, שולח לעוזר ב-`drill_ask` (תשובה רק במשרד), שופט מול המקור, מלמד ב-`learn` ומריץ שוב (01/11/2026, מיכאל בש
 - יומן תוספות: יומן תוספות: כותב כל ערב את מה שמוזג באותו יום לעמוד https://claude.ai/artifact/SgaJHrTPhxf3fdHsCMguH7 (אוסף `days`)
 - נורות המפה: נורות המפה: מעדכן את מצב הסוכנים במפת המערכת (https://claude.ai/code/artifact/957276a1-d1e7-4076-854f-cb1f50cebc45, מסמך `live/status`)
 - עוזר החיסכון השבועי: עוזר החיסכון השבועי: דוח חיסכון והצעות ל-`ideas-lab.md` (31/10/2026, לפי מיכאל בשאלון 30/10/2026: "בצע: דוח חיסכון שבועי + הצעות"; סונט)
@@ -68,7 +69,7 @@
 - od-read: קריאת קבצים מ-OneDrive
 - OCR: קריאת סריקות, חינמי (Workers AI)
 - claude.js: ה-AI באפליקציה
-- routine-db: 68 פעולות שהסוכנים מותרים בהן: agent_report, agents_pause, agents_resume, assistant_account, cal_invite, cal_invite_ask, cal_move, cal_move_ask, claim, claims, 
+- routine-db: 69 פעולות שהסוכנים מותרים בהן: agent_report, agents_pause, agents_resume, assistant_account, cal_invite, cal_invite_ask, cal_move, cal_move_ask, claim, claims, 
 
 ## המסד
 - מסמכים ותוקף: טבלה docs
