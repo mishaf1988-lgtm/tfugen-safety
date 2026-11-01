@@ -163,6 +163,7 @@ import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, FILE_TI
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
 import { readZip, entryText } from '../_xlsxpatch.js';
+import { DOMAIN_FORMS } from '../_domains.js';
 import { OD_OCR_DIR, OCR_MODELS, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
 import { stateCas } from '../_cas.js';
 import { SIGN_KEY, SIGN_CHOICES, signAdd, signMark, signAskText, signPlace } from '../_sign.js';
@@ -1683,6 +1684,14 @@ export function docMarks(parts, name) {
 export function docMarksError(m) {
   return m && m.missing && m.missing.length ? 'saved: the Word file is not on the factory\'s controlled form, missing: ' + m.missing.join('; ') + '. Fill the original form (tools/od-get.sh + tools/form-fill.py, the domain file, step 2), do not build one (01/11/2026)' : null;
 }
+// Pure: Graph's answers for the branch forms. 404 = missing (a branch points to a form that is gone); any other
+// failure = not checked, so a Graph outage is never read as "all forms there" (28/10/2026 retro).
+export function formsVerdict(res) {
+  const list = Array.isArray(res) ? res : [];
+  const missing = list.filter((x) => x.status === 404).map((x) => ({ domain: x.domain, path: x.path }));
+  const unchecked = list.filter((x) => x.status !== 404 && x.status !== 200).map((x) => ({ domain: x.domain, path: x.path, status: x.status }));
+  return { ok: unchecked.length === 0, total: list.length, found: list.filter((x) => x.status === 200).length, missing, unchecked };
+}
 export function claimGate(text, checked) {
   const t = String(text || '');
   if (SENT_RE.test(t)) return 'the text says you sent a mail: you only make drafts. Write "\u05d4\u05db\u05e0\u05ea\u05d9 \u05d8\u05d9\u05d5\u05d8\u05d4" or "\u05e0\u05e9\u05dc\u05d7 \u05de\u05de\u05da \u05d1-<\u05e9\u05e2\u05d4>" (after Sent Items)';
@@ -2319,6 +2328,19 @@ export async function onRequest(context) {
     }
     // 01/11/2026 (lesson 189): every responsible-party wording in the database that the hazard report would not
     // recognise (hazard-report.js respUnknown). Read only; the daily quality check turns a hit into a dev_request.
+    // 01/11/2026 (Michael in the questionnaire: "do it: a weekly check of the forms"; STATUS "branches"): every controlled
+    // form a branch names (project-files/domains/index.json "forms") must still be where the branch says, or the agents
+    // will build a document from scratch again. Read-only metadata; the list is fixed in code, not taken from the request.
+    if (body.op === 'forms_check') {
+      for (const k of Object.keys(body)) if (['op', 'agent'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const at = await accessToken(env);
+      const res = await Promise.all(DOMAIN_FORMS.map(async (f) => {
+        const seg = (OD_DESKTOP + f.path).split('/').filter(Boolean).map(encodeURIComponent).join('/');
+        const r = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + seg + '?select=size,lastModifiedDateTime', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) }).catch(() => null);
+        return { domain: f.domain, path: f.path, status: r ? r.status : 0 };
+      }));
+      return jsonResp(formsVerdict(res), 200, {});
+    }
     if (body.op === 'resp_check') {
       for (const k of Object.keys(body)) if (['op', 'agent'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const get = (path) => fetch(url + '/rest/v1/' + path, { headers: h, signal: tmo(SB_MS) }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
