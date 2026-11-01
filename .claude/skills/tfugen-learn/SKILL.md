@@ -71,11 +71,11 @@ description: How the skills of the tfugen-safety repo keep learning from every t
 
 - **לעדכן** כשיש skill שהנושא שלו מתאים. עדיף שורה בקובץ קיים מאשר קובץ חדש.
 - **חדש** כשאותו נושא חזר פעמיים ואין לו בית: שתי משימות שבהן חיפשתי את אותו דבר, או תהליך של יותר מ-3 צעדים שעשיתי מהזיכרון.
-- מבנה: תיקייה `.claude/skills/<שם>/SKILL.md`, frontmatter עם `name` ו-`description` באנגלית שאומר **מתי לטעון** (זה מה שמפעיל אותו), גוף קצר בעברית. להוסיף שורה ל"הפניות" ב-CLAUDE.md.
+- מבנה: תיקייה `.claude/skills/<שם>/SKILL.md`, frontmatter עם `name` ו-`description` באנגלית שאומר **מתי לטעון** (זה מה שמפעיל אותו), גוף קצר בעברית. אין ב-CLAUDE.md סעיף "הפניות": ה-skill נטען לפי ה-`description`.
 
 ## איך לא לנפח
 
 - skill הוא הוראות, לא יומן. מה שקרה ולמה: `DECISIONS.md` או `tfugen-history`.
 - כשמשהו נאכף ב-hook או בבדיקה, הטקסט מתקצר לשורה ("נאכף: ...").
-- `tfugen-lessons` מוגבל ל-14KB (`lessons-format-test.py`); לקח שנאכף בקוד ולא חזר מתקצר לשורה אחת ועובר ל-`project-files/lessons-archive.md` (המספור משותף, הבדיקה מונה את שני הקבצים). לא מעלים את התקרה.
+- `tfugen-lessons` מוגבל ל-16KB (`lessons-format-test.py`, `MAX`); לקח שנאכף בקוד ולא חזר מתקצר לשורה אחת ועובר ל-`project-files/lessons-archive.md` (המספור משותף, הבדיקה מונה את שני הקבצים). לא מעלים את התקרה.
 - לא לכתוב "נלמד" על משהו שלא נבדק. כלל שמבוסס על הנחה = עוד טעות שמחכה.

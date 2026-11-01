@@ -1,14 +1,14 @@
 ---
 name: tfugen-dev
-description: Use when developing features for the TFUGEN Safety Management System (tfugen-safety repo). Enforces project-specific conventions - single-file HTML app, Hebrew text as \uXXXX unicode escapes, Supabase integration with 17 tables, empty-dates-to-null rule, and the askDel + showView + VIEW_CONFIG pattern. Trigger when editing index.html, ncr-agent.js, api/claude.js, or adding new agents/modules/views to the safety system.
+description: Use when developing features for the TFUGEN Safety Management System (tfugen-safety repo). Enforces project-specific conventions - single-file HTML app, Hebrew text as \uXXXX unicode escapes, Supabase integration with 35+ tables, empty-dates-to-null rule, and the askDel + showView + VIEW_CONFIG pattern. Trigger when editing index.html, ncr-agent.js, functions/api/claude.js, or adding new agents/modules/views to the safety system.
 ---
 
-# TFUGEN Safety — Development Skill
+# TFUGEN Safety - Development Skill
 
 ## פרויקט Overview
 - **Repo**: `mishaf1988-lgtm/tfugen-safety`
-- **Live**: https://tfugen-safety.vercel.app
-- **Architecture**: Single-file HTML app (`index.html`) + Vercel serverless API (`api/claude.js`) + Supabase backend (17 tables)
+- **Live**: https://tapugan-safety.pages.dev (Cloudflare Pages מ-`main`, אין Vercel)
+- **Architecture**: Single-file HTML app (`index.html`) + Cloudflare Pages Functions (`functions/api/*.js`) + Supabase backend (35+ tables)
 - **Language**: JavaScript vanilla, no build step, no framework
 
 ## חוקי פיתוח קריטיים (Critical Dev Rules)
@@ -30,22 +30,22 @@ description: Use when developing features for the TFUGEN Safety Management Syste
 - תמיד: `date_field: value || null`
 
 ### 4. Pattern: askDel + showView + VIEW_CONFIG
-- מחיקות: השתמש בפונקציה הגלובלית `askDel(id, table, callback)`
-- ניווט views: `showView(viewName)`
+- מחיקות: השתמש בפונקציה הגלובלית `askDel(tbl, id)`
+- תצוגת רשומה: `showView(tbl, id)`; מעבר בין דפים: `goPage(name)`
 - הגדרת view חדשה: הוסף entry ל-`VIEW_CONFIG` object
 - אל תיצור modals/forms custom - השתמש בתבניות הקיימות
 
 ### 5. Supabase Conventions
 - Base URL: `https://znhjtpcltrxxyfjczgvw.supabase.co`
 - Headers: `apikey` + `Authorization: Bearer <key>`
-- 17 טבלאות; אחרי כל שינוי schema - וודא שכל ה-17 מחזירות `200 OK`
-- Key table: `ncr` (375 records)
+- 35+ טבלאות; אחרי שינוי schema - לוודא שהטבלאות שנגעת בהן מחזירות `200 OK`
+- Key table: `ncr` (0 שורות בכוונה, 375 ב-`backup_ops_20260918.ncr`)
 - **פונקציית שרת (`functions/api/*.js`): כל `fetch` החוצה עם `signal: tmo(...)`** מ-`_shared.js` (16/10/2026, BACKLOG 14.12): `SB_TIMEOUT_MS` 10 שניות למסד, `GRAPH_TIMEOUT_MS` 20 ל-Graph, `FILE_TIMEOUT_MS` 60 לקובץ שלם. בלי זה שירות תקוע משאיר את הטלפון מסתובב. הקריאה צריכה להיות בתוך `try` שמחזיר תשובה (דף או JSON), כי מגבלה שנגמרת זורקת שגיאה. `fetch-timeout-test.mjs` נועל: קובץ שתוקן נשאר 0, ושאר הקבצים לא עולים מהמספר הרשום ב-`LEFT`.
 - **כתובת המסד מ-`env.SUPABASE_URL`, לא כקבוע** (BACKLOG 14.13): בתוך פונקציה `sbFrom(env)` מ-`_shared.js`; קבוע ברמת הקובץ רק כ-`let`, שמוצב מ-`sbFrom(env)` בשורה הראשונה של `onRequest`. קבוע שעוקף את ההגדרה פונה למסד החי גם מגרסת תצוגה. `sb-url-env-test.mjs` נועל.
 
 ### 6. AI Agents
 - כל agent חדש צריך endpoint דרך `/api/claude`
-- מודל: Claude Sonnet/Opus (ראה `api/claude.js`)
+- מודל: `gemini` (נופל ל-Llama) או `@cf/meta/llama-*` (ראה `functions/api/claude.js`)
 - שמור prompts בעברית כ-`\uXXXX`
 - **שער לטענה של סוכן בודק את התוצאה, לא רק את המילים** (01/11/2026): כשהשרת יכול לקרוא את הדבר עצמו (קובץ ב-OneDrive, מייל ב-Graph), הוא קורא אותו לפני שההודעה יוצאת: `savedFresh` (קובץ שנאמר עליו "נשמר" השתנה בשעה האחרונה), `replyToCheck` (`reply_to` אינו טיוטה). `docMarks` (Word שנשמר שומר את סימני הטופס המבוקר). **לפני שער כזה: להריץ אותו על הקבצים האמיתיים של המפעל** (`f/*.docx`, ומ-OneDrive ב-`tools/od-get.sh`); בפעם הראשונה הוא היה חוסם את כל הנהלים, כי לנוהל אין מספר טופס. שגיאה של Graph לא חוסמת; השער הטקסטואלי (`claimGate`) נשאר כגיבוי.
 
@@ -59,7 +59,7 @@ description: Use when developing features for the TFUGEN Safety Management Syste
 3. **פתח/ערוך** את `index.html` או module רלוונטי
 4. **בדוק local** - פתח index.html בדפדפן
 5. **בדיקות סיום**:
-   - [ ] כל 17 הטבלאות מחזירות 200 OK
+   - [ ] הטבלאות שנגעת בהן מחזירות 200 OK
    - [ ] האפליקציה נטענת ללא שגיאות console
    - [ ] עברית מוצגת נכון (לא \uXXXX raw)
 6. **עדכן STATUS.md** - פריט שנסגר עובר ל-`project-files/STATUS-archive.md` באותו PR
@@ -89,8 +89,8 @@ VIEW_CONFIG['new_view'] = {
 
 ### קריאה ל-Supabase
 ```js
-fetch(_SB+'/rest/v1/TABLE?select=*&limit=500',{
-  headers:{apikey:_SK, Authorization:'Bearer '+_SK}
+fetch(SBU+'/rest/v1/TABLE?select=*&limit=500',{  // _SB/_SK = כינויים של SBU/SBK
+  headers:{apikey:SBK, Authorization:'Bearer '+SBK}
 })
 .then(r=>r.json())
 ```
@@ -100,7 +100,7 @@ fetch(_SB+'/rest/v1/TABLE?select=*&limit=500',{
 fetch('/api/claude', {
   method:'POST',
   headers:{'Content-Type':'application/json'},
-  body: JSON.stringify({prompt: '...', model:'claude-sonnet-4-6'})
+  body: JSON.stringify({prompt: '...', model:'gemini'})  // נופל ל-Llama לבד; בפועל gemini או @cf/meta/llama-*
 })
 ```
 

@@ -3,7 +3,7 @@ name: tfugen-ref
 description: Reference sheet for TFUGEN Safety (tfugen-safety repo). Load this BEFORE grepping index.html for tables, helper functions, or Hebrew strings. Contains all 21 table schemas, helper function line numbers, pre-converted Hebrew-to-\\uXXXX dictionary, and copy-paste skeletons for new views/modals/saves. Trigger whenever editing index.html or adding a new module, table, view, or Hebrew UI string.
 ---
 
-# TFUGEN Safety — Quick Reference (token-saver)
+# TFUGEN Safety - Quick Reference (token-saver)
 
 Use this file as the FIRST source of truth. Only grep `index.html` if the answer is not here.
 
@@ -16,7 +16,7 @@ Use this file as the FIRST source of truth. Only grep `index.html` if the answer
 - Storage bucket for photos/files: `incidents-photos` (via `_PHOTO_BUCKET`)
 - Outbox keys: `OB_KEY`, `OB_ERR_KEY` (localStorage)
 
-## Tables (21) — field map
+## Tables (21) - field map
 
 Stored as `DB.{name}[]` in localStorage key `tfgn2`. `var DB=` is at line 3318 of index.html (measured 02/10/2026).
 
@@ -52,7 +52,7 @@ Stored as `DB.{name}[]` in localStorage key `tfgn2`. `var DB=` is at line 3318 o
 - Empty dates → `null` (never `''`).
 - Boolean checklist items in `rounds`: true/false.
 
-## Helper functions — line numbers in index.html
+## Helper functions - line numbers in index.html
 
 Line numbers measured 02/10/2026 with `grep -n`; they drift with every PR, so `grep -n` before relying on one.
 
@@ -97,7 +97,7 @@ Line numbers measured 02/10/2026 with `grep -n`; they drift with every PR, so `g
 | `showView(tbl,id)` | 14652 | generic detail view |
 | `_PHOTO_BUCKET` | 22556 | `'incidents-photos'` |
 | `_imgCompress` | 22557 | canvas-based image resize |
-| `_attachUrls` | 22693 | keyed by areaId — save `photo_url` from here |
+| `_attachUrls` | 22693 | keyed by areaId - save `photo_url` from here |
 | `_fileUpload` | 24852 | upload to Storage |
 | `_attachPick(areaId,prefix)` | 24887 | file picker + upload |
 | `_eqiQrLib(cb)` / `_eqiQrSvg(text,size)` | 8435 / 8448 | load qrcode-generator once (global `qrcode`), then any text as inline SVG QR. Used by equipment stickers and the weekly talk link (`m-tbt-link`); in a harness the CDN is blocked, so stub `window.qrcode` |
@@ -106,7 +106,7 @@ Line numbers measured 02/10/2026 with `grep -n`; they drift with every PR, so `g
 
 ## Hebrew → \\uXXXX dictionary
 
-**Pre-converted — copy-paste directly.**
+**Pre-converted - copy-paste directly.**
 
 | Word | Escape |
 |---|---|
@@ -158,7 +158,7 @@ Line numbers measured 02/10/2026 with `grep -n`; they drift with every PR, so `g
 node -e "console.log([...'טקסט'].map(c=>'\\\\u'+c.charCodeAt(0).toString(16).padStart(4,'0')).join(''))"
 ```
 
-## Code skeletons — copy & adapt
+## Code skeletons - copy & adapt
 
 ### 1. New VIEW_CONFIG entry (for `showView`)
 ```js
@@ -195,18 +195,16 @@ function svMy(){
 </div>
 ```
 
-### 5. Migration skeleton (SQL Editor → run manually)
+### 5. Migration skeleton (Claude מריץ דרך Supabase MCP ומאמת, `.claude/rules/migrations.md`)
 ```sql
 -- migrations/YYYY-MM-DD_<name>.sql
 ALTER TABLE tbl ADD COLUMN IF NOT EXISTS col TEXT;
 -- rollback: ALTER TABLE tbl DROP COLUMN IF EXISTS col;
 ```
 
-## Known manual steps (user must do in Supabase dashboard)
+## Known manual steps (הוחלף 01/11/2026)
 
-1. SQL Editor → paste migration → Run
-2. Storage → New bucket `incidents-photos` → Public: ON
-3. Storage → bucket → Policies → New policy → name `allow_anon_insert`, operation INSERT, role anon, USING `true`, WITH CHECK `true`
+migration: Claude מריץ דרך Supabase MCP ומאמת (`.claude/rules/migrations.md`), לא SQL Editor ביד. ה-bucket `incidents-photos` פרטי מ-21/04, אין קישור `/object/public/` (`tfugen-lessons` לקח על "Bucket not found").
 
 ## Gotchas: `references/gotchas.md`
 
