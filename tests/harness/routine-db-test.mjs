@@ -549,6 +549,8 @@ const callIn = async (body) => {
       check('wa_file: a path out of the safety folder, a .exe, or too many: 400', (await call({ op: 'wa_file', agent: 'routine-wa-assistant', paths: ['../x.pdf'] })).status === 400
         && (await call({ op: 'wa_file', agent: 'routine-wa-assistant', paths: ['a/b.exe'] })).status === 400
         && (await call({ op: 'wa_file', agent: 'routine-wa-assistant', paths: ['a/1.pdf', 'a/2.pdf', 'a/3.pdf', 'a/4.pdf', 'a/5.pdf', 'a/6.pdf'] })).status === 400);
+      check('draftAttach: a mail draft refuses .doc/.xls, wa_file (old) takes them (01/11/2026)', !!draftAttach(['a/b.doc']).error && !!draftAttach(['a/b.xls']).error
+        && !draftAttach(['a/b.doc'], true).error && !draftAttach(['a/b.xls'], true).error && !!draftAttach(['a/b.exe'], true).error && !!draftAttach(['../b.doc'], true).error);
       check('wa_file: an unknown field (a recipient) is refused', (await call({ op: 'wa_file', agent: 'routine-wa-assistant', paths: ['a/b.pdf'], to: '972500000000' })).status === 400);
       check('wa_file: nothing fetched for a refused call', calls.length === before, calls.slice(before)); }
     { const { workerJobAdd, workerJobDone, workerFireText, WORKERS, WORKER_FIRE_HEAD } = await import('./_build/routine-db.mjs');

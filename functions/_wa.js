@@ -322,7 +322,7 @@ export async function metaPost(env, payload) {
 export const DOC_MAX = 15 * 1024 * 1024;
 // mime (22/10/2026, wa_file): a Word or Excel file goes out as itself; the default stays PDF (the signing flow).
 export const DOC_MIME = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', doc: 'application/msword', xls: 'application/vnd.ms-excel' };
 export function docMime(name) { const m = /\.([a-z0-9]+)$/i.exec(String(name || '')); return (m && DOC_MIME[m[1].toLowerCase()]) || DOC_MIME.pdf; }
 async function sendDocRaw(env, to, bytes, filename, caption, windowOpen) {
   if (windowOpen === false) return { ok: false, error: 'window closed' };
