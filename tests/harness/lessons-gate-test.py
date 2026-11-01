@@ -12,6 +12,11 @@ L = gate.LESSONS
 R = 'רטרו: אין\nskill: אין\nמה לא נבדק: אין\n'
 ok = lambda t, b, f: gate.check(t, R + (b or ''), f)[0]
 check('not a fix PR: ok', ok('Tour screen: due date in one tap', '', ['index.html']))
+Rm = lambda r: 'רטרו: ' + r + '\nskill: אין\nמה לא נבדק: אין\n'
+check('01/11/2026: a retro that names a mistake, without a lesson: blocked even without a Fix title', not gate.check('Tour screen', Rm('כתובת מייל נכתבה בקובץ md'), ['index.html'])[0])
+check('...with a lesson: ok', gate.check('Tour screen', Rm('כתובת מייל נכתבה בקובץ md'), ['index.html', L])[0])
+check('...with no-lesson and a reason: ok', gate.check('Tour screen', Rm('כתובת מייל נכתבה') + 'בלי לקח: כבר לקח 170, חזר נרשם שם', ['index.html'])[0])
+check('"רטרו: אין טעות." is no mistake: ok', gate.check('Tour screen', Rm('אין טעות.'), ['index.html'])[0])
 check('Fix: without lesson: blocked', not ok('Fix: the xlsm opened as damaged', '', ['functions/hazard-file.js']))
 check('fix lower case: blocked', not ok('fix rootHasR', '', ['x.js']))
 check('Hebrew title: blocked', not ok('תיקון: הקובץ נפתח פגום', '', ['x.js']))
@@ -31,7 +36,7 @@ check('no retro line: blocked', not raw('Tour screen', 'some text', ['index.html
 check('None body: blocked (no retro)', not raw(None, None, []))
 check('retro none (Hebrew): ok', raw('Tour screen', 'text\nרטרו: אין\nskill: אין', ['index.html']))
 check('retro none (English): ok', raw('Tour screen', 'retro: none\nskill: אין', ['index.html']))
-check('retro with a finding: ok', raw('Tour screen', 'רטרו: מיכאל אמר שהכפתור לא במקום\nskill: אין', ['index.html']))
+check('retro with a finding (Michael corrected): needs a lesson since 01/11/2026', not raw('Tour screen', 'רטרו: מיכאל אמר שהכפתור לא במקום\nskill: אין', ['index.html']) and raw('Tour screen', 'רטרו: מיכאל אמר שהכפתור לא במקום\nskill: אין', ['index.html', L]))
 check('empty retro: blocked', not raw('Tour screen', 'רטרו:   ', ['index.html']))
 check('retro inside a sentence does not count', not raw('Tour screen', 'we skipped the retro: later', ['x']))
 check('retro does not replace the lesson on a fix PR', not raw('Fix: x', 'רטרו: אין', ['x.js']))
