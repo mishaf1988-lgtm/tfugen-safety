@@ -448,6 +448,20 @@ const callIn = async (body) => {
           draftThreadGate({ ...base, thread_checked: 'michael chose a new mail: questionnaire 11:33 UTC, בצע: מייל חדש עם הקובץ' }) === null
           && !!draftThreadGate({ ...base, thread_checked: 'michael chose a new mail: because' }) && !!draftThreadGate({ ...base, thread_checked: 'flow is broken' }));
       }
+      { // 01/11/2026: the weekly check that the branches' controlled forms still exist
+        const { formsVerdict } = await import('./_build/routine-db.mjs');
+        const { DOMAIN_FORMS } = await import('./_build/_domains.mjs');
+        const v = formsVerdict([{ domain: 'a', path: 'x', status: 200 }, { domain: 'b', path: 'y', status: 404 }]);
+        check('formsVerdict: a 404 is a missing form, a 200 is found', v.ok && v.found === 1 && v.missing.length === 1 && v.missing[0].path === 'y');
+        check('formsVerdict: a Graph failure is "not checked" (ok false), never "all there"', formsVerdict([{ domain: 'a', path: 'x', status: 503 }]).ok === false && formsVerdict([{ domain: 'a', path: 'x', status: 0 }]).unchecked.length === 1);
+        check('DOMAIN_FORMS: every branch that has controlled forms lists them (training, iso, height, risk), with no ".." in a path',
+          ['training', 'iso', 'height', 'risk'].every((k) => DOMAIN_FORMS.some((f) => f.domain === k)) && DOMAIN_FORMS.every((f) => !f.path.split('/').includes('..')));
+        const src = readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
+        const fc = src.slice(src.indexOf("body.op === 'forms_check'"), src.indexOf("body.op === 'resp_check'"));
+        check('forms_check takes only op and agent, reads metadata of DOMAIN_FORMS, and answers with formsVerdict', /\['op', 'agent'\]/.test(fc) && /DOMAIN_FORMS\.map/.test(fc) && /formsVerdict\(/.test(fc) && !/:\/content/.test(fc));
+        const q = readFileSync(new URL('../../project-files/routine-quality.md', import.meta.url), 'utf8');
+        check('the quality checker runs forms_check on Sundays', /forms_check/.test(q));
+      }
       { // 01/11/2026 (mechanism 2): a Word file the assistant saved keeps the controlled form's marks
         const { docMarks, docMarksError } = await import('./_build/routine-db.mjs');
         const { readZip, entryText } = await import('./_build/_xlsxpatch.mjs');
