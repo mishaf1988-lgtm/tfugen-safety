@@ -23,9 +23,23 @@ def main():
         idx = json.load(open(os.path.join(root, "project-files/domains/index.json"), encoding="utf-8"))
     except Exception:
         print("{}"); return
-    out = []
+    # 01/11/2026: with 12 branches one long message (or an agent's report) matched many and loaded 25KB. A system
+    # notification is not Michael's task: nothing. Otherwise the two branches with the most word hits load their head;
+    # any other match is named in one line, to read if it is relevant.
+    if "system notification" in text or "<task-notification>" in text or "[subagent hand-back]" in text:
+        print("{}"); return
+    hits = []
     for k, v in idx.items():
-        if k.startswith("_") or not any(w.lower() in text for w in v.get("words", [])):
+        if k.startswith("_"):
+            continue
+        n = sum(1 for w in v.get("words", []) if w.lower() in text)
+        if n:
+            hits.append((-n, k, v))
+    hits.sort(key=lambda x: (x[0], x[1]))
+    out = []
+    for i, (_, k, v) in enumerate(hits):
+        if i >= 2:
+            out.append("ענף נוסף שנגעו בו: " + v["name"] + " (" + v["file"] + ")")
             continue
         try:
             head = "".join(open(os.path.join(root, v["file"]), encoding="utf-8").readlines()[:40])
