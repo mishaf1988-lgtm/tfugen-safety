@@ -45,7 +45,7 @@
 | `trig_01Hqt7G6RLWeJbKEHXFzXWHW` | בודק לתור המשימות למחשב | כל יום 09:37 | `routine-cowork-check.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
 | `trig_01AVa8RiuYtaeXLrtkUsZqKH` | בדיקת הניסוי השבועית | ד' 06:29 | `routine-staging-e2e.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
 | `trig_01Fm5346rt5BNgeF49DqGbyz` | המגייס: החלפה שבועית | ו' 13:07 (ראשונה 23/10/2026) | `routine-rotation.md` | `session_01Q3LMWMr65icNtoe5zLifqr` (המגייס, נפתחה ביד על ידי מיכאל, דור 1) |
-| `trig_01Py8YXifD3HtnQUmFgoTRft` | הדוור של הצ'אט במשרד | א'-ה' 08:11, 12:11, 16:11 | `routine-chat-relay.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
+| `trig_01Py8YXifD3HtnQUmFgoTRft` | הדוור של הצ'אט במשרד | א'-ה' 09:11, 14:11 (מ-01/11/2026, בדיקת החיסכון; קודם 08:11, 12:11, 16:11) | `routine-chat-relay.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
 | `trig_0114iVUybrBb6vRqZt1EyoyL` | פיתוח מיידי: בקשה מהעוזר | בלי תזמון: השרת מפעיל לכל `dev_request` חדש (`DEV_FIRE_TOKEN`), שיחה חדשה בכל הפעלה | `routine-dev-fire.md` | אין (שיחה חדשה כל פעם) |
 | `trig_011UyDNeQ1NV72NNyXJxwxtE` | עובד לפי דרישה: משימה מהעוזר | בלי תזמון: השרת מפעיל לכל `worker_now` חדש (`WORKER_FIRE_TOKEN`), שיחה חדשה בכל הפעלה | `routine-worker-now.md` | אין (שיחה חדשה כל פעם). מחבר Microsoft 365 מוסיפים בדף ה-Routine |
 | `trig_01MB92o4ptUuC2a42SyP5S4e` | סריקת מיילים יומית: מיילים שמחכים לתשובה ממיכאל, עם נוסח וכפתורים | א'-ה' 08:13 (25/10/2026, מיכאל בשאלון: "בצע: פעם ביום, 08:30") | `routine-mail-triage.md` | אין (שיחה חדשה בכל ריצה); מחבר Microsoft 365 (מיכאל הוסיף ב-25/10/2026, C46) |
