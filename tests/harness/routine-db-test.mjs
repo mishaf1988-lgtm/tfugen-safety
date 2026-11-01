@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, ilInstant, incFilePrefix, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, refusesWithoutFlow, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrTxtName, taskAddCheck, TASK_ADD_MAX, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT, isoSwapRequest, isoUpCheck, OD_ISO_SWAP, ISO_SITE_URL } from './_build/routine-db.mjs';
+import { secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, ilInstant, incFilePrefix, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, refusesWithoutFlow, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, odPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrTxtName, taskAddCheck, TASK_ADD_MAX, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT, isoSwapRequest, isoUpCheck, OD_ISO_SWAP, ISO_SITE_URL } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -1319,6 +1319,41 @@ const callIn = async (body) => {
     { const zip = Buffer.concat([Buffer.from([0x50, 0x4b, 3, 4]), Buffer.alloc(20, 1)]).toString('base64');
       const w = odPutPdfCheck({ ...P, name: 'b.docx', b64: zip }), x2 = odPutPdfCheck({ ...P, name: 'b.xlsx', b64: zip });
       check('od_put_pdf takes Word and Excel too, each by its own signature and type (24/10/2026)', !w.error && /wordprocessingml/.test(w.type) && !x2.error && /spreadsheetml/.test(x2.type) && !!odPutPdfCheck({ ...P, name: 'b.doc', b64: zip }).error && !!odPutPdfCheck({ ...P, name: 'b.pdf', b64: zip }).error, [w.error, x2.error]); }
+    graph = async () => new Response('{}', { status: 500 });
+  }
+
+  console.log('\n4f3a. od_pdf: a filled Word form gets its PDF from Microsoft beside it (01/11/2026, Michael: always Word and PDF)');
+  {
+    const DIR = '11_x/2026', have = { [OD_ROOT + DIR + '/f.docx']: { id: 'F', file: {} }, [OD_ROOT + DIR + '/g.docx']: { id: 'G', file: {} }, [OD_ROOT + DIR + '/g.pdf']: { id: 'GP', file: {} } };
+    let puts = [], conv = [];
+    graph = async (url, opt = {}) => {
+      const u = decodeURIComponent(url);
+      if (opt.method === 'PUT') { puts.push({ url: u, body: opt.body }); return new Response(JSON.stringify({ size: opt.body.length }), { status: 201 }); }
+      if (/:\/content\?format=pdf$/.test(u)) { conv.push(u); return new Response(Buffer.from('%PDF-1.7 rendered by word'), { status: 200 }); }
+      const m = /\/root:\/(.+?)\?select=/.exec(u);
+      if (m) { const it = have[m[1]]; return it ? new Response(JSON.stringify(it), { status: 200 }) : new Response('{}', { status: 404 }); }
+      return new Response('{}', { status: 400 });
+    };
+    const P = { op: 'od_pdf', agent: 'dev', why: 'form 08.01 filled from the template', path: DIR + '/f.docx' };
+    let x = await call(P);
+    check('od_pdf: Graph renders the .docx (format=pdf) and one PUT puts f.pdf beside it, conflictBehavior=fail, the PDF bytes',
+      x.json.ok && x.json.path === DIR + '/f.pdf' && conv.length === 1 && conv[0].indexOf(OD_ROOT + DIR + '/f.docx:/content?format=pdf') > 0
+      && puts.length === 1 && puts[0].url.indexOf(OD_ROOT + DIR + '/f.pdf:/content?@microsoft.graph.conflictBehavior=fail') > 0 && String.fromCharCode(...puts[0].body.slice(0, 5)) === '%PDF-', { x: x.json, puts: puts.map((p) => p.url) });
+    puts = []; conv = [];
+    x = await call({ ...P, path: DIR + '/g.docx' });
+    check('od_pdf: a PDF with that name already there: refused, nothing converted or written', !x.json.ok && x.json.error === 'pdf name taken' && !puts.length && !conv.length, x.json);
+    x = await call({ ...P, path: DIR + '/none.docx' });
+    check('od_pdf: a .docx that is not there: refused', !x.json.ok && x.json.error === 'file not found' && !puts.length, x.json);
+    const refused = await Promise.all([DIR + '/f.pdf', DIR + '/f.doc', DIR + '/f.xlsx', DIR + '/f'].map((p) => call({ ...P, path: p })));
+    check('od_pdf: not a .docx (pdf, doc, xlsx, no extension): 400, nothing written', refused.every((r) => r.status === 400 && /docx/.test(r.json.error)) && !puts.length, refused.map((r) => r.json));
+    const outside = ['../x/f.docx', 'f.docx', '11_x/../../f.docx', '11_x/\u05dc\u05de\u05d7\u05d9\u05e7\u05d4/f.docx', '11_x/ARCHIVE/f.docx', '11_x/_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea/f.docx', OD_INBOX + '/f.docx', OD_AUTO + '/f.docx', 'a/b/c/d/e/f/g.docx'];
+    check('od_pdf: a path outside the safety folder, at its top, in a protected, inbox or flow folder, or too deep: refused', outside.every((p) => !!odPdfCheck({ ...P, path: p }).error) && (await call({ ...P, path: '../x/f.docx' })).status === 400 && !puts.length, outside.map((p) => odPdfCheck({ ...P, path: p })));
+    x = await call({ ...P, name: 'other.pdf' });
+    check('od_pdf: an extra field (name, overwrite): refused with 400, nothing written', x.status === 400 && /field not allowed: name/.test(x.json.error) && (await call({ ...P, overwrite: true })).status === 400 && !puts.length, x.json);
+    check('od_pdf: no why or a bad agent: refused', !!odPdfCheck({ ...P, why: '' }).error && !!odPdfCheck({ ...P, agent: 'A B' }).error);
+    graph = async (url, opt = {}) => /format=pdf/.test(decodeURIComponent(url)) ? new Response('<html>', { status: 200 }) : /\?select=/.test(url) && /f\.docx/.test(decodeURIComponent(url)) ? new Response(JSON.stringify({ file: {} }), { status: 200 }) : opt.method === 'PUT' ? (puts.push(1), new Response('{}', { status: 201 })) : new Response('{}', { status: 404 });
+    x = await call(P);
+    check('od_pdf: Graph answering something that is not a PDF: refused, nothing written', !x.json.ok && /not a pdf/.test(x.json.error) && !puts.length, x.json);
     graph = async () => new Response('{}', { status: 500 });
   }
 
