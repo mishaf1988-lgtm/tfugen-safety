@@ -1238,7 +1238,10 @@ export const OFFICE_ROW = /^[A-Za-z0-9_-]{4,80}$/;
 // stopped on the contradiction. A drill has its own head, which the assistant's step 0-alef-2 knows: answer in the office only.
 // It is logged as drill_in, so it is neither in recent nor in wa_review, and carries the notebook but not the conversation.
 export const DRILL_ROW = /^drill-[A-Za-z0-9_-]{2,70}$/;
-export const DRILL_HEAD = '[\u05ea\u05e8\u05d2\u05d9\u05dc \u05e9\u05dc \u05d4\u05de\u05d0\u05de\u05df, \u05d3\u05e8\u05da \u05d4\u05e9\u05e8\u05ea: \u05e9\u05d5\u05e8\u05d4 ';
+// 01/11/2026 (Michael: "the developer does it alone"): the routine's own prompt lists the first lines it accepts and can
+// be changed only from its own conversation, so a drill rides on the office head it already accepts; the drill- row
+// is what step 0\u05d01 of the assistant reads as a drill (step 0\u05d02).
+export const DRILL_HEAD = '[\u05de\u05d4\u05de\u05e9\u05e8\u05d3 \u05e9\u05dc \u05de\u05d9\u05db\u05d0\u05dc, \u05d3\u05e8\u05da \u05d4\u05d3\u05d5\u05d5\u05e8: \u05e9\u05d5\u05e8\u05d4 ';
 export function drillFireText(row, text, at, learned) {
   return [DRILL_HEAD + row + ']', 'at: ' + at,
     'text: ' + String(text).replace(/\s*\n+\s*/g, ' / ').slice(0, 2000),
