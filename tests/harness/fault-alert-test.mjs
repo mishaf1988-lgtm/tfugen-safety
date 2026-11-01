@@ -45,6 +45,7 @@ const NOW = '2026-10-31T14:50:00.000Z';
   check('a test error is closed without a fix (the request says so)', d.indexOf('dev_done') > 0);
   check('the message says the fix already started when it did, and the morning check when it did not', faultText(items, true) !== faultText(items, false) && /\u05d4\u05de\u05e4\u05ea\u05d7/.test(faultText(items, true)));
   const fsrc = fs.readFileSync(new URL('../../functions/_faults.js', import.meta.url), 'utf8');
+  check('the message says the fix started only when the developer was really fired (not already-open, not no-fire)', /faultText\(items, fix && fix\.ok && fix\.fired\)/.test(fsrc));
   check('the fire goes through devFireTarget, only for a new request, once a day', /const ft = r\.created && fireOk \? devFireTarget\(env\) : null/.test(fsrc) && /fired_day/.test(fsrc));
   check('one open fault-alert request at a time', /x\.agent === 'fault-alert'/.test(fsrc) && /already: true/.test(fsrc));
 }
