@@ -2,7 +2,7 @@
 // The recipients sheet below is the real layout of "נמענים" (read with
 // od-read on 28/09); the חומר גלם case is the one the macro itself showed in
 // "דוח לשליחה" that day: אל gelem, Igal, vitaly, shlomi; עותק sviva, tzachi.
-import { onRequest, parseRecipients, buildReport } from './_build/hazard-report.mjs';
+import { onRequest, parseRecipients, buildReport, respKey, sourceOf } from './_build/hazard-report.mjs';
 import { writeZip, sheetsDigest } from './_build/_xlsxpatch.mjs';
 
 let pass = 0, fail = 0;
@@ -34,6 +34,13 @@ const ROWS = [
   const rc = parseRecipients(RCPT_ROWS);
   check('department managers, several addresses in one cell', rc.depts['חומר גלם'].join() === 'gelem@tapugan.co.il,Igal@tapugan.co.il' && Object.keys(rc.depts).length === 5, rc.depts);
   check('responsible parties by the start of the label (הנדסה row = שלומי)', rc.resp['אחזקה'][0] === 'vitaly@tapugan.co.il' && rc.resp['חשמל'][0] === 'tech_manager@tapugan.co.il' && rc.resp['הנדסה'][0] === 'shlomi@tapugan.co.il', rc.resp);
+  // 01/11/2026: an investigation's "מנהל אחזקה" counts as אחזקה (the production report missed the maintenance team).
+  check('respKey: "מנהל אחזקה" = אחזקה, "חשמל" = חשמל, "מנהל הייצור" = none', respKey('מנהל אחזקה') === 'אחזקה' && respKey('חשמל') === 'חשמל' && respKey('מנהל הייצור') === null);
+  const inv = ROWS.map((r) => (r[7] === 'אחזקה' ? Object.assign(r.slice(), { 7: 'מנהל אחזקה' }) : r));
+  check('...so a "מנהל אחזקה" hazard brings the maintenance team as before', buildReport('חומר גלם', inv, parseRecipients(RCPT_ROWS), {}).to.join() === buildReport('חומר גלם', ROWS, parseRecipients(RCPT_ROWS), {}).to.join());
+  check('sourceOf: tour number, trustee, investigation, committee', sourceOf([5, '', 3]) === 'סיור 3' && sourceOf(['נ-12', '', '']) === 'דיווח נאמן' && sourceOf([61, '', ''], 'investigation') === 'תחקיר תאונה' && sourceOf([7, '', ''], 'committee') === 'ועדת בטיחות' && sourceOf([8, '', '']) === '');
+  const gs = buildReport('חומר גלם', ROWS, parseRecipients(RCPT_ROWS), {});
+  check('the report has a מקור column after מס"ד', /<th[^>]*>מס&quot;ד<\/th><th[^>]*>מקור<\/th>/.test(gs.html), gs.html.slice(0, 600));
   const X = { 'אחזקה': ['maint2@example.com', 'bad address', 'VITALY@tapugan.co.il'], 'לא קיים': ['x@example.com'], 'חשמל': 'not-a-list' };
   const rx = parseRecipients(RCPT_ROWS, X);
   check('rcpt_extra (server_state, 01/11/2026): added after the sheet\'s אחזקה address; a bad address, a sheet duplicate, an unknown key and a non-list are ignored', rx.resp['אחזקה'].join() === 'vitaly@tapugan.co.il,maint2@example.com' && rx.resp['חשמל'].join() === 'tech_manager@tapugan.co.il' && !('לא קיים' in rx.resp), rx.resp);
@@ -63,7 +70,7 @@ const ROWS = [
 
   // 06/10/2026 (Michael): the open date, and the severity as a traffic light.
   const gm = buildReport('חומר גלם', ROWS, parseRecipients(RCPT_ROWS), {}, '2026-10-01');
-  check('a "תאריך פתיחה" column right after מס"ד, DD/MM/YYYY', /<th[^>]*>מס&quot;ד<\/th><th[^>]*>תאריך פתיחה<\/th><th[^>]*>מיקום/.test(gm.html) && gm.html.includes('>17/08/2026</td>') && gm.rows[0].opened === '17/08/2026', gm.html.slice(gm.html.indexOf('<table'), gm.html.indexOf('<table') + 700));
+  check('a "תאריך פתיחה" column after מס"ד and מקור (01/11/2026), DD/MM/YYYY', /<th[^>]*>מס&quot;ד<\/th><th[^>]*>מקור<\/th><th[^>]*>תאריך פתיחה<\/th><th[^>]*>מיקום/.test(gm.html) && gm.html.includes('>17/08/2026</td>') && gm.rows[0].opened === '17/08/2026', gm.html.slice(gm.html.indexOf('<table'), gm.html.indexOf('<table') + 700));
   check('severity cell as a traffic light: orange for בינונית, white bold text', /background:#e8710a;color:#ffffff;font-weight:bold[^"]*">&#9679; בינונית<\/td>/.test(gm.html), gm.html.match(/<td[^>]*>[^<]*בינונית<\/td>/));
   const gh = buildReport('חומר גלם', ROWS.map((r) => (r[0] === 31 ? Object.assign(r.slice(), { 6: 'גבוהה' }) : r[0] === 33 ? Object.assign(r.slice(), { 6: 'נמוכה' }) : r)), parseRecipients(RCPT_ROWS), {}, '2026-10-01');
   check('red for גבוהה, green for נמוכה', /background:#c00000[^"]*">&#9679; גבוהה</.test(gh.html) && /background:#2e7d32[^"]*">&#9679; נמוכה</.test(gh.html));
