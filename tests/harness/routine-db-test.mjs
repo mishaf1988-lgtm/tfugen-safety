@@ -448,6 +448,16 @@ const callIn = async (body) => {
           draftThreadGate({ ...base, thread_checked: 'michael chose a new mail: questionnaire 11:33 UTC, בצע: מייל חדש עם הקובץ' }) === null
           && !!draftThreadGate({ ...base, thread_checked: 'michael chose a new mail: because' }) && !!draftThreadGate({ ...base, thread_checked: 'flow is broken' }));
       }
+      { // 01/11/2026 (C70): reply_to that is a draft is refused, a real mail passes, other Graph failures do not block
+        const { replyToCheck } = await import('./_build/routine-db.mjs');
+        check('replyToCheck: a draft or a missing message is refused; a real mail or a Graph error passes',
+          /draft/.test(replyToCheck(200, { isDraft: true }) || '') && /not found/.test(replyToCheck(404, {}) || '')
+          && replyToCheck(200, { isDraft: false }) === null && replyToCheck(500, {}) === null && replyToCheck(0, {}) === null);
+        const src = readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
+        const md = src.slice(src.indexOf("body.op === 'mail_draft'"));
+        check('mail_draft reads reply_to in Graph (isDraft) before writing the draft request',
+          md.indexOf('replyToCheck(') > 0 && md.indexOf('replyToCheck(') < md.indexOf('putFile(at.token, OD_ROOT + OD_DRAFT,'));
+      }
       { // 01/11/2026 (Michael: "but you did not attach the quote"): a draft that points to the quote in another mail, with no attach
         const { draftAttachGate } = await import('./_build/routine-db.mjs');
         const said = 'ההצעה המעודכנת נמצאת במייל "אישור הזמנה - SO26Z001584" מ-01/11/2026.';
