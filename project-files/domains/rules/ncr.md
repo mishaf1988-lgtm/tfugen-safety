@@ -8,6 +8,7 @@
 - קטגוריית הסיבה (אדם, נוהל, ציוד, סביבה) היא סיווג; הטקסט צריך להסביר (`.claude/skills/tfugen-ncr-writing/SKILL.md:21`)
 - שינוי prompt: להעביר את כל הקשר הטופס, לאסור ניסוחים כלליים, תווי מקלדת, ולבדוק מה נשלח (`.claude/skills/tfugen-ncr-writing/SKILL.md:37`)
 - כפתור AI חדש: `_aiThin`, `_AI_THIN_RULE`, `_AI_THIN_ANS` (5-Why: `_AI_FW_RULE`), ושורה ב-`ai-thin-guard-test.js` (`.claude/skills/tfugen-ncr-writing/SKILL.md:43`)
+- בשאלת מצב: `ncr` ריקה בכוונה מאז 18/09/2026, התשובה "אין NCR פתוחים", לא "תקלה" (`project-files/routine-wa-core.md:63`)
 
 ## כל ההחלטות של הענף
 `grep -P "\tncr$" project-files/domains/decisions-map.tsv` (מספר שורה ב-DECISIONS.md וכותרת).
@@ -20,6 +21,7 @@
 - `.claude/skills/tfugen-ref/SKILL.md`: מפת טבלאות, עזרים, מילון עברית ושלדי קוד.
 - `.claude/skills/tfugen-ref/references/gotchas.md`: מלכודות בקוד ובנתונים לפי אזור (תפוגות, מצגת, נאמנים, טפסי כבאות, נבו).
 - `.claude/skills/tfugen-screen-review/SKILL.md`: רשימת בדיקה לצילום מסך ולתשובות העוזר.
+- `project-files/routine-factory-trends.md`: מגמות חודשיות ומדד מקדים מחמש הטבלאות, ותיק המקרים.
 - `project-files/BACKLOG.md`: תור השדרוגים 09/2026 (75 פריטים, כולם סגורים) וסבבי בדיקה 9-14.
 - `project-files/CLAUDE-detail.md`: הגרסה הארוכה של CLAUDE.md עם הנימוקים.
 - `project-files/OVERNIGHT-2026-05-02.md`: סשן לילה 05/2026 (היסטורי).

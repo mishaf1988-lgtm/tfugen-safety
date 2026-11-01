@@ -6,6 +6,11 @@
 - טופס 14: המדריך חייב הסמכות שהטופס מונה; לא לסמן מסלול הסמכה במקום מיכאל (`.claude/skills/tfugen-ref/references/gotchas.md:31`)
 - גפיר: דוח הבדיקה החודשי והחשבונית הם שני מיילים נפרדים; חיפוש לפי הדומיין, חשבונית אינה דוח (`.claude/skills/tfugen-ref/references/gotchas.md:46`)
 - כותרת בכותרת העליונה של Word לא נראית בוואטסאפ ובטלפון: להעביר לגוף; שמות אנשי קשר מתיק המפעל העדכני (`.claude/skills/tfugen-dev/references/lessons.md:405`)
+- אירוע עכשיו: מיד שורה "להרחיק אנשים, 101/102, פינוי לפי נוהל החירום" לפני כל בדיקה; לא לרשום אירוע במסד, רק "לפתוח אירוע באפליקציה" (`project-files/routine-wa-assistant.md:61`)
+- שמות אנשי קשר במסמך חירום רק מתיק המפעל העדכני (`תיק מפעל - 31.03.2026`), לא מהעתק ישן; סתירה = לשאול (`project-files/routine-wa-assistant.md:34`)
+- בקשת מפה: רק PDF מ-`00_תוכניות_אש_אדריכליות`, לא dwg; להסביר מה המפה רק לפי השם ולומר שהתוכן לא נקרא (`project-files/wa-topics/maps.md:9`)
+- תוכנית ישנה (2013) או מועמדת שלא נפתחה: לשאול את מיכאל לפני שמצרפים (`project-files/wa-topics/maps.md:31`)
+- ספרות ותאריכים ב-PDF של כבאות מתהפכים ב-`read_resource`: לאמת מול מייל או מסמך אחר (`project-files/agent-log.md:43`)
 - 26.04 סעיף 11: מנעול ותג של מנהל הקירור, 0 ppm לפני פתיחה, רק מנהל הקירור מסיר (`project-files/model-compare.md:120`)
 - ריקון אמוניה גזית: אישור מנהל המפעל אחרי תיאום עם הממונה במחוז (26.04 סעיפים 7, 10) (`project-files/model-compare.md:123`)
 - הפלת כל מערכת הקירור: מנהל האירוע מחליט, בלי זמן קבוע (`project-files/nh3-emergency-equipment.md:106`)
@@ -24,6 +29,12 @@
 - `.claude/skills/tfugen-db/SKILL.md`: עבודה מול המסד החי, migration, routine-db, שלוש רמות גישה ל-OneDrive, מחיקה ב-del_ask.
 - `.claude/skills/tfugen-dev/references/lessons.md`: לקחי הפיתוח, כולל מסמכי מפעל, טיוטות, זרימות, שעון ישראל.
 - `.claude/skills/tfugen-ref/references/gotchas.md`: מלכודות בקוד ובנתונים לפי אזור (תפוגות, מצגת, נאמנים, טפסי כבאות, נבו).
+- `project-files/agent-common.md`: הידע המשותף, הפתיחה והסגירה של כל סוכן, העברת משימות, הצלבת מידע וגרף הקישורים.
+- `project-files/assistant/iso-docs.md`: ISO ומסמכים מבוקרים: `iso_tasks`, תבנית 13.07, סימון שינויים, המאשר, תיק המבדק.
+- `project-files/routine-researcher.md`: חוקר העוזר: פערי ידע, סקאוט, אירוע מהענף, מבחן חודשי.
+- `project-files/routine-wa-assistant.md`: הנוהל הראשי והמלא של העוזר בוואטסאפ.
+- `project-files/wa-topics/maps.md`: מפות ותוכניות האש של המפעל.
+- `project-files/wa-topics/prof.md`: שאלה מקצועית: נבו, מקור רשמי, בודק שני, דירוג.
 - `project-files/ideas-lab.md`: מעבדת הרעיונות וטבלאות החיסכון.
 - `project-files/iso-audit-prep.md`: ידע להתעדה מחדש 2027: תעודות, פערים, סטטוס IQC.
 - `project-files/model-compare.md`: השוואת סונט/אופוס/Haiku, כולל שאלות אמוניה וקבלנים.

@@ -10,6 +10,8 @@
 - שורת נאמן היא ליקוי רק עם `ok:false`; `showView('trustee_reports')` נופל לרשימה המלאה (`.claude/skills/tfugen-ref/references/gotchas.md:36`)
 - נקודה אמצעית ב-`trustee_reports.loc` וב-`mgr_note` היא מפריד נתונים, לא להחליף בפסיק (`.claude/skills/tfugen-ref/references/gotchas.md:61`)
 - בצילומי המדריך: שמות בדויים, תוכן אמיתי; עכבר לפינה לפני צילום (`.claude/skills/tfugen-guides/SKILL.md:28`)
+- ליקוי נאמן (`trustee_reports`) נסגר רק מהאפליקציה, לא ב-`tour_close_ask` (`project-files/wa-topics/ops.md:17`)
+- דיווח נאמן עם `s` סגור ו-`closed_d` ריק לא נכנס ל"אמרתם, עשינו" (`project-files/agent-log.md:33`)
 - ניקוד: 10 לכל משימה, 2 לכל מפגע שנסגר (עד 20), זכאות מ-5 משימות; שינוי קבוע = עדכון המדריך (`project-files/guide-trustees/README.md:145`)
 - דיווח נאמן לעולם לא נזקף לחובת הנאמן או המחלקה (`project-files/SPEC-trustees-2026-09-18.md:51`)
 - ליקוי בלי תמונה לא נשלח (`project-files/SPEC-trustees-2026-09-18.md:23`)
@@ -33,6 +35,10 @@
 - `.claude/skills/tfugen-guides/SKILL.md`: בניית מדריכי המשתמש (נאמנים, משאבי אנוש ומנהלים, הדרכה שנתית) עם צילומים.
 - `.claude/skills/tfugen-ref/references/gotchas.md`: מלכודות בקוד ובנתונים לפי אזור (תפוגות, מצגת, נאמנים, טפסי כבאות, נבו).
 - `.claude/skills/tfugen-screen-review/SKILL.md`: רשימת בדיקה לצילום מסך ולתשובות העוזר.
+- `project-files/assistant/committee.md`: נוהל ועדת הבטיחות: איסוף, הצלבות, מצגת, פרוטוקול, שמירה, והתאמה לענן.
+- `project-files/routine-factory-trends.md`: מגמות חודשיות ומדד מקדים מחמש הטבלאות, ותיק המקרים.
+- `project-files/routine-talk-field.md`: "מה קרה אצלנו השבוע" ו"אמרתם, עשינו" בטיוטת ההדרכה השבועית.
+- `project-files/wa-topics/ops.md`: משימת עובד, מפגעים, ציוד, תאונה, פיתוח, כרטיס פריט, סגירת ליקוי סיור.
 - `project-files/BACKLOG.md`: תור השדרוגים 09/2026 (75 פריטים, כולם סגורים) וסבבי בדיקה 9-14.
 - `project-files/CLAUDE-detail.md`: הגרסה הארוכה של CLAUDE.md עם הנימוקים.
 - `project-files/HANDOFF-2026-09-19.md`: העברת הקשר אחרי בניית פלטפורמת הנאמנים.

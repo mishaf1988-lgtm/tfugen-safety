@@ -23,6 +23,14 @@
 - מלכודות RTL בפרוטוקול: `bidi` בלי `jc right`, סדר ילדי `pPr`, בלי מעברי עמוד כפויים, EMF מוחלף ב-PNG רק ב-PDF (`.claude/skills/safety-committee-builder/SKILL.md:97`)
 - בסוף כל בנייה למיכאל: מה במצגת, מה הונח בלי אישור, מה השתנה, מה חסר וממי (`.claude/skills/safety-committee-builder/SKILL.md:106`)
 - מצגת המפגעים: שינוי מראה = להעלות `DECK_VERSION`; שלד טקסט שמשתנה = `.perRun`; לפני מיזוג להוריד את המצגת החיה ולרנדר (עם carlito) (`.claude/skills/tfugen-ref/references/gotchas.md:48`)
+- `trustee_reports` בשאילתה: לא להשתמש ב-`t` כ-alias של הטבלה (מתנגש בעמודה) (`project-files/assistant/committee.md:82`)
+- בשמות קבצים תאריך DD-MM-YYYY; גיבוי לפני דריסה "<שם> - גרסה DD-MM-YYYY" ב-`גרסאות קודמות`; בתיקיית הוועדה קובץ מצגת אחד (`project-files/assistant/committee.md:237`)
+- שליחה בצ'אט אינה שמירה: אחרי "בצע" לשמור לתיקייה ולאמת ברשימה גודל ותאריך (`project-files/assistant/committee.md:230`)
+- עברית ב-pptx: פוסט-עיבוד שממלא `<a:cs typeface="Arial"/>` ו-`lang="he-IL"`; טבלאות בלי `firstRow`/`bandRow`; ציר `major_unit=1` (`project-files/assistant/committee.md:192`)
+- בדיקת איכות: חיתוך מוגדל לכל סוג רכיב (טבלה, כרטיס, גרף), לא רק צילום שקופית מלאה (`project-files/assistant/committee.md:215`)
+- הכלל המרכזי: לחפש את מה שלא קרה (תחקיר שלא הגיע, החלטה שלא בוצעה); הצלבות ש-1 עד 6 תמיד (`project-files/assistant/committee.md:107`)
+- מניעת כפילויות: נתון שמופיע ביותר משקופית אחת, או שהוצג ולא השתנה, יורד (`project-files/assistant/committee.md:126`)
+- בפרוטוקול לעדכן גם את התאריך ב-`word/header2.xml`; לא מעברי עמוד כפויים (`project-files/assistant/committee.md:259`)
 - שקף 3 הוא תמונת סוף חודש, כותרת "נכון ל-DD/MM/YYYY" ולא "נתונים מעודכנים" (`STATUS.md:156`)
 - הכתיבה הראשונה במצגת החיה מעבירה קודם עותק לארכיון (`STATUS.md:13`)
 
@@ -33,6 +41,8 @@
 - `.claude/skills/safety-committee-builder/SKILL.md`: בניית מצגת הוועדה והפרוטוקול: מקורות, הצלבות, חוקי תוכן, תבנית, מלכודות pptx/docx.
 - `.claude/skills/tfugen-dev/references/lessons.md`: לקחי הפיתוח, כולל מסמכי מפעל, טיוטות, זרימות, שעון ישראל.
 - `.claude/skills/tfugen-ref/references/gotchas.md`: מלכודות בקוד ובנתונים לפי אזור (תפוגות, מצגת, נאמנים, טפסי כבאות, נבו).
+- `project-files/assistant/accidents.md`: נוהל תאונת עבודה מקצה לקצה: תיקייה, תחקיר, 250, קובץ מנוהל, `inc`, `thz_add`, מעקב.
+- `project-files/assistant/committee.md`: נוהל ועדת הבטיחות: איסוף, הצלבות, מצגת, פרוטוקול, שמירה, והתאמה לענן.
 - `project-files/BACKLOG.md`: תור השדרוגים 09/2026 (75 פריטים, כולם סגורים) וסבבי בדיקה 9-14.
 - `project-files/COWORK-HAZARD-TOURS.md`: הוראות ל-Cowork במעבר סיורי המפגעים לאפליקציה (28/09/2026).
 - `project-files/iso-audit-prep.md`: ידע להתעדה מחדש 2027: תעודות, פערים, סטטוס IQC.

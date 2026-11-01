@@ -17,6 +17,13 @@
 - חתימה מחוץ לרשימת העובדים = `x:<ת"ז או דרכון>:<שם>`, חתימה אחת למספר בהדרכה (`.claude/skills/tfugen-ref/SKILL.md:105`)
 - עובד שעזב (`emp.left_d`) לא נספר בהדרכה השבועית; הגרסה שנחתמה = `text_hash` (`.claude/skills/tfugen-ref/references/gotchas.md:40`)
 - תזכורת מ"מי חתם": לא לקרוא ל-op `link` בתצוגה (מזיז את התפוגה ומשתיק את האזהרה) (`.claude/skills/tfugen-ref/references/gotchas.md:54`)
+- "מה קרה אצלנו השבוע": עד 1200 תווים, בלי שמות, ת"ז או תאריך מלא, רק תווי מקלדת, רק מה שכתוב באירוע; הכותרת השרת מוסיף (`project-files/routine-talk-field.md:34`)
+- "אמרתם, עשינו": ברמת מחלקה בלבד, בלי יום, מספר או מקום; רק מה ש-`s` שלו סגור; מקצרים את "מה קרה" ולא אותו (`project-files/routine-talk-field.md:35`)
+- הטיוטה השבועית לא מתפרסמת לבד; הסוכנים רק מזכירים למיכאל לפרסם (`project-files/routine-talk-publish.md:5`)
+- כמה חתמו על הדרכה שבועית: `toolbox_reads` לפי `talk_id`, מספר ומחלקה בלבד, בלי שמות (`project-files/routine-wa-core.md:63`)
+- שאלה על הסמכות, אישורים והדרכות: שני מקורות רשמיים, נבו ומינהל הבטיחות ב-gov.il; gov.il חסום = לבקש צילום (`project-files/wa-topics/prof.md:7`)
+- טופס 08.01 ריק להדפסה: `dev_request` למחולל (`form0801Html`), לא PDF ידני; לוודא עמודת מס' זהות לפני שליחה (`project-files/assistant/files-scans.md:18`)
+- אישור הדרכה לעובד: `tr` ריק, ולכן מחפשים רק בתיקייה; מיילי טפסי קליטה מכילים ת"ז ולא נקראים לדוגמה (`project-files/agent-log.md:40`)
 - הדרכה שבועית: טיוטה אחת משותפת לכל המחלקות, העובד בוחר מחלקה; ייצור עובר על כל הנושאים (`STATUS.md:78`)
 - תקנות 16/10/2026: מדריך וכשירות חובה לפרסום הדרכה, ולכל משתתף ת"ז או דרכון (`STATUS.md:49`)
 - בדיקת אפקטיביות: "לא אפקטיבי" מחייב המשך טיפול (`STATUS.md:50`)
@@ -40,6 +47,13 @@
 - `.claude/skills/tfugen-guides/SKILL.md`: בניית מדריכי המשתמש (נאמנים, משאבי אנוש ומנהלים, הדרכה שנתית) עם צילומים.
 - `.claude/skills/tfugen-ref/SKILL.md`: מפת טבלאות, עזרים, מילון עברית ושלדי קוד.
 - `.claude/skills/tfugen-ref/references/gotchas.md`: מלכודות בקוד ובנתונים לפי אזור (תפוגות, מצגת, נאמנים, טפסי כבאות, נבו).
+- `project-files/agent-log.md`: יומן "למדתי" של כל ריצת סוכן.
+- `project-files/assistant/files-scans.md`: קבצים מחוץ לתיקייה, סריקות, `ocr_txt`, מילוי טפסים, חשבוניות בודק, טופס 08.01.
+- `project-files/assistant/iso-docs.md`: ISO ומסמכים מבוקרים: `iso_tasks`, תבנית 13.07, סימון שינויים, המאשר, תיק המבדק.
+- `project-files/routine-inspector.md`: המפקח המדומה: 5 דרישות חוק והוכחה בתוך 3 חיפושים.
+- `project-files/routine-talk-field.md`: "מה קרה אצלנו השבוע" ו"אמרתם, עשינו" בטיוטת ההדרכה השבועית.
+- `project-files/routine-talk-publish.md`: תזכורת אם ההדרכה השבועית פורסמה.
+- `project-files/wa-topics/prof.md`: שאלה מקצועית: נבו, מקור רשמי, בודק שני, דירוג.
 - `handoff-01-11-2026-13.33.md`: ה-handoff האחרון: ענפים, טופס 08.01 לאחזקה, קובץ 08.01 שנעלם, טיוטת אינפרה רד.
 - `project-files/VITRE-API.md`: תמצית ה-API של Vitre.
 - `project-files/guide-training/README.md`: מקור מדריכי משאבי אנוש והמנהלים (קליטה, הדרכה שבועית).
