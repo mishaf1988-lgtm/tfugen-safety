@@ -1,4 +1,4 @@
-# TFUGEN — תבניות קוד
+# TFUGEN - תבניות קוד
 
 דוגמאות מוכנות להעתקה.
 
@@ -60,8 +60,8 @@ fetch(_SB+'/rest/v1/TABLE?id=eq.'+id, {
   body: JSON.stringify({ status: '\u05e1\u05d2\u05d5\u05e8' })
 });
 
-// DELETE — תמיד דרך askDel
-askDel(id, 'TABLE', function(){ /* reload */ });
+// DELETE - תמיד דרך askDel
+askDel('TABLE', id);
 ```
 
 ## 3. קריאה ל-Claude API
@@ -72,7 +72,7 @@ fetch('/api/claude', {
   headers: {'Content-Type': 'application/json'},
   body: JSON.stringify({
     prompt: '\u05e0\u05ea\u05d7 \u05d0\u05ea \u05d4-NCR',  // 'נתח את ה-NCR'
-    model: 'claude-sonnet-4-6',
+    model: 'gemini',  // נופל ל-Llama לבד; או '@cf/meta/llama-3.3-70b-instruct-fp8-fast'
     max_tokens: 1024
   })
 })

@@ -23,7 +23,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-dev.
 1. **מה נטען להקשר.** `CLAUDE.md` נשלח בכל הודעה. `STATUS.md` + `DECISIONS.md` +
    `BACKLOG.md` הם 600KB ביחד: לקרוא לפי כלל «קרא חכם» ב-CLAUDE.md, לא בשלמותם.
 2. **אורך השיחה.** כל הודעה שולחת את כל ההיסטוריה מחדש. שאלה של שורה אחת בשיחה
-   שפתוחה כל היום עולה כמו כל השיחה. **כשמשימה נסגרה ומוזגה, להציע שיחה חדשה.**
+   שפתוחה כל היום עולה כמו כל השיחה. **כשמשימה נסגרה ומוזגה, Claude פותח בעצמו שיחה חדשה** (skill `tfugen-sessions`, Workflow).
    המצב כבר ב-STATUS, לא צריך לגרור אותו.
 
 ומה שכבר נאכף בקוד ולא צריך לזכור: `.claude/hooks/` (SQL הרסני על `ncr`, עברית

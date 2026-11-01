@@ -1,10 +1,10 @@
 # Routine חודשי: דוח הציות מהמסד
 
-**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_01DU2kgbfF66zPMDywVLt6UW` (שיחה `session_01FXKjCZExakD2sbqi9eZVin`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
+**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_01DU2kgbfF66zPMDywVLt6UW` (Routine של Code, שיחה חדשה בכל ריצה, `ACCOUNT-INVENTORY.md` C55/C56 28/10/2026). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
 
 מיכאל אישר ב-08/10/2026 (handoff, "בצע"): הדוח החודשי קורא מהמסד ולא מה-Excel. באותו יום יובאו ללוח הבקרה המרכזי 29 מסמכים, 30 בדיקות ציוד ו-16 משימות (STATUS, "ייבוא ה-Excel"), כך שהמסד מכיל את כל מה שהדוח הקודם קרא משלושת הקבצים. ה-Excel נשאר רק לבדיקת פערים: מה שעודכן שם ולא באפליקציה.
 
-**ה-Routine:** `trig_01Uq6xdHwgr3ymq1xqbMUhca`, ב-1 לחודש 08:03 (`CRON_TZ=Asia/Jerusalem 3 8 1 * *`), לתוך השיחה העובדת `session_01JT8Fct6Z6Qv2GbaBBqxtQT` (מ-09/10/2026, לפי STATUS). פרומפט הטריגר קצר וקורא את הפרומפט מהקובץ הזה. הישן (`trig_01RfrXXyZNz6sLrC7HagnHpP`, שיחה `session_017Y8t6gZc26ysueKySAi7zV`) נמחק.
+(היסטוריה; הטריגר הפעיל: ראש הקובץ ו-`ACCOUNT-INVENTORY.md`) **ה-Routine:** `trig_01Uq6xdHwgr3ymq1xqbMUhca`, ב-1 לחודש 08:03 (`CRON_TZ=Asia/Jerusalem 3 8 1 * *`), לתוך השיחה העובדת `session_01JT8Fct6Z6Qv2GbaBBqxtQT` (מ-09/10/2026, לפי STATUS). פרומפט הטריגר קצר וקורא את הפרומפט מהקובץ הזה. הישן (`trig_01RfrXXyZNz6sLrC7HagnHpP`, שיחה `session_017Y8t6gZc26ysueKySAi7zV`) נמחק.
 
 **המסד (09/10/2026):** דרך `routine-db.sh` (select לכל טבלה וחישוב ב-python, בלי SQL); `execute_sql` רק כשהסקריפט יוצא ב-3. ההערה הקודמת כאן ("שאילתה אחת ב-execute_sql") בוטלה: היא סתרה את הפרומפט.
 
@@ -35,4 +35,4 @@ order by 1, 5 nulls last;
 ---
 
 
-**18/10/2026: עבר לרכז הדוחות** (מיכאל בשאלון: "בצע: עובד חדש 'רכז הדוחות'"): `trig_01EuLgTAknYEbauZ7YpxXRwK` לתוך `session_01HPcF58y98mzJ19wJ27EDn5`; הקודם `trig_01Uq6xdHwgr3ymq1xqbMUhca` כובה.
+(היסטוריה; הטריגר הפעיל: ראש הקובץ ו-`ACCOUNT-INVENTORY.md`) **18/10/2026: עבר לרכז הדוחות** (מיכאל בשאלון: "בצע: עובד חדש 'רכז הדוחות'"): `trig_01EuLgTAknYEbauZ7YpxXRwK` לתוך `session_01HPcF58y98mzJ19wJ27EDn5`; הקודם `trig_01Uq6xdHwgr3ymq1xqbMUhca` כובה.
