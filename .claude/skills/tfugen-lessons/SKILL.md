@@ -9,7 +9,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 ## הכללים של הקובץ הזה
 
-1. **טעות שמתגלה, של Claude או של מיכאל = לקח חדש באותו PR של התיקון.** נאכף: כותרת Fix / Hotfix / תיקון
+1. **טעות שמתגלה, של Claude או של מיכאל = לקח חדש באותו PR של התיקון.** נאכף: כותרת Fix / Hotfix / תיקון, או `רטרו:` עם טעות (01/11/2026)
    בלי שינוי כאן ובלי שורת `בלי לקח: <סיבה>` בתיאור = `tests` אדום (`lessons-gate.py`).
 2. **טעות שחזרה:** `חזר:` עולה, עם איך התגלתה. חזר עם `נאכף: טקסט` = hook או בדיקה,
    או `נאכף: טקסט (אין דרך בקוד: <למה>)` (`lessons-format-test.py` אוכף).
@@ -62,8 +62,6 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 חזר: 1 (05/10: "mods לא נטענים בענן" נכתב בלי ניסוי)
 
 ## בדיקות שבודקות את הדבר הנכון
-
-
 
 **57. hooks שקטים ב-Windows (05/10/2026, PR זה).**
 מה קרה: stdout ב-cp1255 ואימוג'י: session-start נפל בשקט. שיחה מחוץ לריפו: hooks לא נטענו.

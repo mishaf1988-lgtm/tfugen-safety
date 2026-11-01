@@ -33,6 +33,10 @@ LESSONS = ".claude/skills/tfugen-lessons/SKILL.md"
 FIX = re.compile(r"^\s*(fix|hotfix|תיקון)\b", re.I)
 RETRO = re.compile(r"^\s*(retro|רטרו)\s*:\s*(\S.*)$", re.I | re.M)
 RETRO_NONE = re.compile(r"^(אין|none|-)\W*$", re.I)
+# 01/11/2026 (Michael: "I should not have had to tell you. You should have written it down yourself"): two PRs said
+# "רטרו: <a mistake>" and carried no lesson, because only a Fix title asked for one. A retro that names a mistake
+# now asks for a lesson like a Fix PR. "אין" / "אין טעות" = no mistake.
+RETRO_CLEAN = re.compile(r"^(אין|none|-)(\s+טעות)?\W*$", re.I)
 SKILL = re.compile(r"^\s*(skill|סקייל)\s*:\s*(\S.*)$", re.I | re.M)
 SKILL_DIRS = (".claude/skills/", "project-files/claude-ai-skill/")
 EXT = re.compile(r"michael-skills(#\d+|/pull/\d+|@[0-9a-f]{7,40}\b)")
@@ -123,14 +127,15 @@ def check(title, body, files):
     if any(f.startswith(UNCHECKED_DIRS) for f in files) and not UNCHECKED.search(body or ""):
         return False, ("this PR changes server code (functions/). Add a line 'מה לא נבדק: <what was skipped or not tried, "
                        "and a risk Michael should know>' or 'מה לא נבדק: אין' (tfugen-dev, the ladder).")
-    if not FIX.search(title or ""):
+    retro_mistake = not RETRO_CLEAN.match(RETRO.search(body or "").group(2).strip())
+    if not FIX.search(title or "") and not retro_mistake:
         return True, "not a fix PR"
     if LESSONS in files or any(has_domain_lessons(f) for f in files):
         return True, "fix PR with a lesson"
     m = WAIVER.search(body or "")
     if m:
         return True, "fix PR, no lesson: " + m.group(2).strip()
-    return False, ("fix PR without a lesson. Add an entry to %s in this PR, or a line "
+    return False, (("the retro line names a mistake, " if not FIX.search(title or "") else "") + "fix PR without a lesson. Add an entry to %s in this PR, or a line "
                    "'no-lesson: <reason>' (or 'בלי לקח: <סיבה>') to the PR description." % LESSONS)
 
 
