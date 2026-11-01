@@ -47,6 +47,7 @@ description: Use when developing features for the TFUGEN Safety Management Syste
 - כל agent חדש צריך endpoint דרך `/api/claude`
 - מודל: Claude Sonnet/Opus (ראה `api/claude.js`)
 - שמור prompts בעברית כ-`\uXXXX`
+- **שער לטענה של סוכן בודק את התוצאה, לא רק את המילים** (01/11/2026): כשהשרת יכול לקרוא את הדבר עצמו (קובץ ב-OneDrive, מייל ב-Graph), הוא קורא אותו לפני שההודעה יוצאת: `savedFresh` (קובץ שנאמר עליו "נשמר" השתנה בשעה האחרונה), `replyToCheck` (`reply_to` אינו טיוטה). שגיאה של Graph לא חוסמת; השער הטקסטואלי (`claimGate`) נשאר כגיבוי.
 
 ### 7. שם המפעל וכתובות בשרת = `SITE` (17/10/2026)
 שם, חברה, כתובת האתר והמסד, דומיין הכניסה, מיילים ותיקיית OneDrive יושבים רק ב-`functions/_site.js` (המוצר, שלב 1). קובץ ב-`functions/api` מקבל `SITE` / `SB_LIVE` מ-`'../_shared.js'`; קובץ בשורש `functions/` מייבא `'./_site.js'`. ערך חדש של המפעל = שדה חדש ב-`SITE`, לא קבוע בקובץ. `site-config-test.mjs` נכשל על `tapugan`/`tfugen`/`תפוגן`/מזהה המסד מחוץ ל-`_site.js` ו-`_logo.js`.

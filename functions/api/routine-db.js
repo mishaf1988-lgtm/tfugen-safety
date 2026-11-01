@@ -1631,6 +1631,27 @@ export function draftAttachGate(b) {
   if (!has && ATTACH_SAID_RE.test(t)) return 'the draft says a file is attached, or points to another mail for it, with no attach: get the file with mail_request on the mail that has it (or od path), then mail_draft with attach (files-scans.md; 01/11/2026)';
   return null;
 }
+// 01/11/2026 (Michael in the questionnaire: "do it: the server checks 'saved' in OneDrive"; mechanism 1 of the research,
+// Anthropic "demystifying evals": grade the outcome, not the transcript): at 12:19 the assistant wrote "the new version is
+// saved" about a file it had not changed. A WhatsApp text that says a file was saved / fixed / a new version names it in
+// "saved" (its path under the safety folder), and the server reads it in OneDrive: it must exist, be non-empty, and have
+// changed in the last SAVED_FRESH_MS. Pure parts: savedNeeded (the text), savedPath (the path), savedFresh (Graph's answer).
+export const SAVED_FRESH_MS = 60 * 60000;
+export function savedNeeded(text) { const t = String(text || ''); return SAVED_RE.test(t) && SAVED_FILE_RE.test(t); }
+export function savedPath(p) {
+  if (p === undefined || p === null || p === '') return { error: 'saved required: the text says a file was saved / fixed / a new version. Pass "saved":"<path under the safety folder, e.g. 11_x/2026/name.pdf>" of that file; the server checks in OneDrive that it changed in the last hour (01/11/2026)' };
+  const a = draftAttach([String(p).replace(/\.doc$/i, '.docx')]);
+  if (a.error) return { error: 'saved: bad path (a .pdf, .docx or .xlsx under the safety folder, no .. and no automation folder)' };
+  return { rel: String(p).split('/').filter(Boolean).join('/') };
+}
+export function savedFresh(status, j, nowMs) {
+  if (status === 404) return 'saved: no such file in OneDrive. Check the name (folder listing) before writing that it was saved';
+  if (status !== 200 || !j) return null;
+  if (!(Number(j.size) > 0)) return 'saved: the file is empty in OneDrive, it was not saved';
+  const m = Date.parse(j.lastModifiedDateTime || '');
+  if (m > 0 && nowMs - m > SAVED_FRESH_MS) return 'saved: the file did not change in the last hour (last change ' + new Date(m).toISOString().slice(0, 16) + ' UTC), so it was not saved now. Save it (od_put_pdf, od_swap) and read it, or write what was really done';
+  return null;
+}
 export function claimGate(text, checked) {
   const t = String(text || '');
   if (SENT_RE.test(t)) return 'the text says you sent a mail: you only make drafts. Write "\u05d4\u05db\u05e0\u05ea\u05d9 \u05d8\u05d9\u05d5\u05d8\u05d4" or "\u05e0\u05e9\u05dc\u05d7 \u05de\u05de\u05da \u05d1-<\u05e9\u05e2\u05d4>" (after Sent Items)';
@@ -3116,6 +3137,19 @@ export async function onRequest(context) {
       if (tg) return jsonResp({ ok: false, error: tg }, 400, {});
       const cg = claimGate(body.text, body.checked);
       if (cg) return jsonResp({ ok: false, error: cg }, 400, {});
+      // the assistant only: another agent's summary ("3 files filed in the folder") names many files, not one it saved
+      if (String(body.agent || '') === 'routine-wa-assistant' && body.askInternal !== true && savedNeeded(body.text)) {
+        const sp = savedPath(body.saved);
+        if (sp.error) return jsonResp({ ok: false, error: sp.error }, 400, {});
+        try {
+          const at = await accessToken(env);
+          const seg = (OD_ROOT + sp.rel).split('/').filter(Boolean).map(encodeURIComponent).join('/');
+          const r = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + seg + '?select=size,lastModifiedDateTime,file', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) }).catch(() => null);
+          const j = r && r.ok ? await r.json().catch(() => null) : null;
+          const sf = savedFresh(r ? r.status : 0, j, Date.now());
+          if (sf) return jsonResp({ ok: false, error: sf }, 400, {});
+        } catch (e) { /* OneDrive not reachable: the text-level gate above still holds */ }
+      }
       let stale = null;
       if (body.answers && !isNaN(Date.parse(body.answers))) {
         const since = new Date(Date.parse(body.answers) + STALE_GAP_MS).toISOString();

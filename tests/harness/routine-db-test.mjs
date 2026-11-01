@@ -448,6 +448,21 @@ const callIn = async (body) => {
           draftThreadGate({ ...base, thread_checked: 'michael chose a new mail: questionnaire 11:33 UTC, בצע: מייל חדש עם הקובץ' }) === null
           && !!draftThreadGate({ ...base, thread_checked: 'michael chose a new mail: because' }) && !!draftThreadGate({ ...base, thread_checked: 'flow is broken' }));
       }
+      { // 01/11/2026 (mechanism 1): "saved" is checked in OneDrive, not only in the text
+        const { savedNeeded, savedPath, savedFresh, SAVED_FRESH_MS } = await import('./_build/routine-db.mjs');
+        const now = Date.parse('2026-11-01T12:00:00Z');
+        check('savedNeeded: "\u05d4\u05e7\u05d5\u05d1\u05e5 \u05e0\u05e9\u05de\u05e8" yes; a plain answer no',
+          savedNeeded('\u05d4\u05e7\u05d5\u05d1\u05e5 \u05e0\u05e9\u05de\u05e8 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4') && !savedNeeded('\u05de\u05d4 \u05e9\u05dc\u05d5\u05de\u05da'));
+        check('savedPath: missing or with .. is refused; a pdf under the safety folder passes',
+          !!savedPath(undefined).error && !!savedPath('../x.pdf').error && savedPath('11_x/2026/a.pdf').rel === '11_x/2026/a.pdf');
+        check('savedFresh: missing, empty or older than an hour is refused; changed now, or a Graph error, passes',
+          /no such file/.test(savedFresh(404, null, now) || '') && /empty/.test(savedFresh(200, { size: 0, lastModifiedDateTime: '2026-11-01T11:59:00Z' }, now) || '')
+          && /did not change/.test(savedFresh(200, { size: 10, lastModifiedDateTime: new Date(now - SAVED_FRESH_MS - 60000).toISOString() }, now) || '')
+          && savedFresh(200, { size: 10, lastModifiedDateTime: '2026-11-01T11:50:00Z' }, now) === null && savedFresh(500, null, now) === null);
+        const src = readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
+        const wm = src.slice(src.indexOf("if (body.op === 'wa_me') {"));
+        check('wa_me checks savedFresh for the assistant before sending', /routine-wa-assistant[^\n]*savedNeeded/.test(wm.slice(0, 20000)) && wm.indexOf('savedFresh(') > 0 && wm.indexOf('savedFresh(') < 20000);
+      }
       { // 01/11/2026 (C70): reply_to that is a draft is refused, a real mail passes, other Graph failures do not block
         const { replyToCheck } = await import('./_build/routine-db.mjs');
         check('replyToCheck: a draft or a missing message is refused; a real mail or a Graph error passes',
