@@ -88,6 +88,10 @@ export function stripInternalIds(t) {
 // (routine-db learn) and the server puts the open entries into every next fire. The daily retro folds them
 // into the assistant's rules and knowledge (learn_done), and they leave the fire text.
 export const LEARN_KEY = 'assistant_learned', LEARN_KINDS = ['correction', 'preference', 'fact', 'source'];
+// 01/11/2026 (the coach's first drill: from the office the assistant gave the 19:37 wrong form again, because
+// only the WhatsApp fire carried the notebook): one label and one size for every path that fires the assistant.
+export const LEARNED_MAX = 16000;
+export const learnedLabel = (l) => 'learned (your notebook from earlier runs, written from Michael\'s words; apply it, a newer message of his wins): ' + l;
 export function learnedLine(raw, max) {
   let list = [];
   try { list = typeof raw === 'string' ? JSON.parse(raw || '[]') : (raw || []); } catch (e) { list = []; }
