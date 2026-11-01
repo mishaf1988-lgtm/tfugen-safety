@@ -219,7 +219,7 @@ const SECOND_SKIPPED = /(?:\u05dc\u05d0(?! \u05d3\u05d9\u05dc\u05d2)|\u05d1\u05d
 // 01/11/2026: the weekly ISO round (iso_tasks status: "calibration of the ammonia detectors scheduled 12/11") is status, not
 // an answer; it turned red, and the dev runner closed the alert as a test. A figure or instruction still puts it back under the gate.
 const SECOND_DOCMETA = /\u05ea\u05d5\u05e7\u05e3|\u05de\u05d4\u05d3\u05d5\u05e8\u05d4|\u05de\u05d9\u05e7\u05d5\u05dd|\u05d0\u05d9\u05e4\u05d4|\u05e0\u05ea\u05d9\u05d1|\u05e1\u05e7\u05d9\u05e8\u05ea ISO|iso_tasks/;
-const SECOND_CONTENT = /\d+ ?\u05d1\u05e8(?![\u05d0-\u05ea])|ppm|\u05de\u05e0"\u05e4|\u05d7\u05dc\u05d9\u05e4|\u05d3\u05dc\u05d9\u05e4|\d+ ?\u05de\u05d8\u05e8/;
+const SECOND_CONTENT = /\d+ ?\u05d1\u05e8(?![\u05d0-\u05ea])|ppm|\u05de\u05e0"\u05e4|\u05d7\u05dc\u05d9\u05e4|\u05d3\u05dc\u05d9\u05e4|\d+ ?\u05de\u05d8\u05e8|\u05e4\u05d9\u05e0\u05d5\u05d9|\u05dc\u05e4\u05e0\u05d5\u05ea|\u05dc\u05dc\u05d1\u05d5\u05e9/;
 export function secondCheckGate(e) {
   if (!e || !e.ok || SECOND_CHECK_AGENTS.indexOf(e.agent) < 0) return e;
   const text = String(e.line || '') + ' ' + String(e.learned || '');
