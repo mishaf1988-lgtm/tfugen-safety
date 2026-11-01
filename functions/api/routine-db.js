@@ -102,6 +102,7 @@
 //              the note to Michael on WhatsApp. server_state.worker_jobs. workerJobAdd / workerJobDone.
 //   wa_file  (22/10/2026) {agent, paths[1-5], caption?} files from the safety folder (draftAttach rules) sent to Michael on
 //              WhatsApp as documents, inside the 24-hour window only. Logged as an assistant line.
+//   drill_ask   (01/11/2026) {agent, row: drill-<id>, text} the coach's exercise; answered in the office only (step 0-alef-2).
 //   office_ask  (22/10/2026) {agent, row, text} a line Michael typed at the assistant's desk in the office: fired to the
 //              WhatsApp assistant (assistantFire) with officeFireText; it answers on WhatsApp. Logged as owner_in, channel office.
 //   source_read  (21/10/2026) {url} the text of one page of nevo.co.il or gov.il, read from the server (both refuse
@@ -1232,6 +1233,18 @@ export function workerJobDone(raw, id, note, nowIso) {
 // The assistant answers on WhatsApp (wa_me), and since 22/10/2026 (Michael: "why is there no answer in the office too")
 // writes the same answer to the office (chat/ans-<row>). Pure: the fire text.
 export const OFFICE_ROW = /^[A-Za-z0-9_-]{4,80}$/;
+// drill_ask (01/11/2026, Michael in the questionnaire: "do it: drill mode + weekly coach"): the coach's exercise. The office
+// path said "answer on WhatsApp" while the drill said "send nothing": four drill answers reached Michael and one run
+// stopped on the contradiction. A drill has its own head, which the assistant's step 0-alef-2 knows: answer in the office only.
+// It is logged as drill_in, so it is neither in recent nor in wa_review, and carries the notebook but not the conversation.
+export const DRILL_ROW = /^drill-[A-Za-z0-9_-]{2,70}$/;
+export const DRILL_HEAD = '[\u05ea\u05e8\u05d2\u05d9\u05dc \u05e9\u05dc \u05d4\u05de\u05d0\u05de\u05df, \u05d3\u05e8\u05da \u05d4\u05e9\u05e8\u05ea: \u05e9\u05d5\u05e8\u05d4 ';
+export function drillFireText(row, text, at, learned) {
+  return [DRILL_HEAD + row + ']', 'at: ' + at,
+    'text: ' + String(text).replace(/\s*\n+\s*/g, ' / ').slice(0, 2000),
+    '\u05ea\u05e8\u05d2\u05d9\u05dc (\u05e6\u05e2\u05d3 0\u05d02): \u05dc\u05e2\u05e0\u05d5\u05ea \u05d1\u05d3\u05d9\u05d5\u05e7 \u05db\u05de\u05d5 \u05dc\u05de\u05d9\u05db\u05d0\u05dc, \u05d0\u05d1\u05dc \u05e8\u05e7 \u05d1\u05de\u05e9\u05e8\u05d3: ArtifactData set \u05e2\u05dc https://claude.ai/artifact/AmxFowGHYDqyhd1sE9qphi, collection chat, doc_id ans-' + row + ', {worker: "\u05d4\u05e2\u05d5\u05d6\u05e8 \u05e9\u05dc\u05da", from: "worker", text, at, reply_to: "' + row + '"}. \u05d1\u05dc\u05d9 wa_me \u05d5\u05d1\u05dc\u05d9 wa_file, \u05d1\u05dc\u05d9 \u05db\u05ea\u05d9\u05d1\u05d4 \u05d1-365 \u05d0\u05d5 \u05d1\u05de\u05e1\u05d3, \u05d1\u05dc\u05d9 promise \u05d5\u05d1\u05dc\u05d9 learn. \u05e7\u05e8\u05d9\u05d0\u05d4 \u05d5\u05d7\u05d9\u05e4\u05d5\u05e9 \u05de\u05d5\u05ea\u05e8\u05d9\u05dd, \u05db\u05de\u05d5 \u05d1\u05e9\u05d0\u05dc\u05d4 \u05d0\u05de\u05d9\u05ea\u05d9\u05ea.']
+    .concat(learned ? [learnedLabel(learned)] : []).join('\n');
+}
 // recent (23/10/2026, a test round: "and the gas piping too" and "2" from the office came with no conversation,
 // so the follow-up was misread): the same line a WhatsApp fire carries (_wa.js recentLine).
 export function officeFireText(row, text, at, recent, learned) {
@@ -2046,6 +2059,28 @@ export async function onRequest(context) {
           payload: { title: ('[' + ok.length + '/' + sent.length + ' files] ' + sent.map((x) => x.name).join(', ')).slice(0, 120), text: sent.map((x) => x.name + (x.ok ? '' : ' (' + x.error + ')')).join('\n').slice(0, 1500), via: 'document', agent: body.agent } }]) }).catch(() => null);
       if (win === false) return jsonResp({ ok: false, sent, chat: true, error: 'window closed: Michael has not written in 23 hours, the WhatsApp copy did not go out; the files are in his app chat (/chat), tell him so' }, 200, {});
       return jsonResp({ ok: ok.length === sent.length, sent, chat: true }, 200, {});
+    }
+    if (body.op === 'drill_ask') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'row', 'text'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const text = String(body.text || '').trim();
+      if (!DRILL_ROW.test(String(body.row || '')) || !text || text.length > 4000) return jsonResp({ ok: false, error: 'row drill-<id> and text 1-4000' }, 400, {});
+      const af = await assistantFireNow(env);
+      if (!af) return jsonResp({ ok: false, error: 'assistant fire not configured' }, 200, {});
+      const now = new Date().toISOString();
+      const lr = await fetch(url + '/rest/v1/server_state?key=eq.' + LEARN_KEY + '&select=value', { headers: h, signal: tmo(SB_MS) }).then((x) => x.ok ? x.json() : null).catch(() => null);
+      const learned = lr && lr[0] ? learnedLine(lr[0].value, LEARNED_MAX) : '';
+      await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
+        body: JSON.stringify([{ id: 'dr' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now,
+          event_type: 'drill_in', channel: 'drill', payload: { title: text.replace(/\s+/g, ' ').slice(0, 120), text: text.slice(0, 1500), row: body.row, agent: String(body.agent || '') } }]) }).catch(() => null);
+      let fired;
+      try {
+        const fr = await fetch(af.url, { method: 'POST', signal: tmo(GRAPH_MS),
+          headers: { Authorization: 'Bearer ' + af.token, 'anthropic-beta': 'experimental-cc-routine-2026-04-01', 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: drillFireText(body.row, text, now, learned) }) });
+        const fj = fr.ok ? await fr.json().catch(() => ({})) : {};
+        fired = { status: fr.status, session: (fj && fj.claude_code_session_id) || null };
+      } catch (x) { fired = { status: 'network', session: null }; }
+      return jsonResp({ ok: fired.status === 200 || fired.status === 201, fired }, 200, {});
     }
     if (body.op === 'office_ask') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'row', 'text'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
