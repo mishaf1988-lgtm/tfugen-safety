@@ -55,7 +55,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
 
   console.log('\n5. the committee list shows the open actions from an investigation or the committee');
   await page.evaluate(() => {
-    const day = (n) => new Date(Date.parse(_thzToday() + 'T12:00:00Z') + n * 86400000).toISOString().substring(0, 10);
+    // the browser's own day, like du() (02/11/2026: Israel's day failed here between 00:00 and 02:00 Israel time, the CI browser is UTC)
+    const day = (n) => { const t = new Date(); t.setHours(12, 0, 0, 0); t.setDate(t.getDate() + n); return t.toLocaleDateString('en-CA'); };
     DB.tour_hazards = [{ id: 'tour', n: 1, d: day(-5), dept: 'x', descr: 'מסיור רגיל', s: 'פתוח' },
       { id: 'cl', n: 2, d: day(-3), dept: 'x', action: 'סגורה', s: 'סגור', src: 'investigation', src_ref: 'r|c' },
       { id: 'late', n: 3, d: day(-2), dept: 'x', action: 'באיחור', s: 'פתוח', src: 'committee', src_ref: 'r|l', due: day(-1) }];
