@@ -28,5 +28,6 @@
 
 - **התחלה:** `session-start.py` מדפיס מה לקרוא ואילו skills לטעון. לבדוק שה-hooks פעילים: `echo "DELETE FROM ncr WHERE false"` חייב להיחסם. לא נחסם = לכתוב למיכאל ולהריץ רק את זה, לא לכתוב settings ביד (לקח 116): `cd /home/user/tfugen-safety && echo '{"cwd":"/home/user/tfugen-safety"}' | CLAUDE_PROJECT_DIR=/home/user/tfugen-safety python3 .claude/hooks/session-start.py`. אחר כך 3 שורות סיכום מה-handoff ושאלון על מטרת השיחה.
 - **לפני עריכה:** `git fetch origin main && git reset --hard origin/main` (`fresh-main.py`), ואז `bash project-files/claim.sh <פריט> "<מה>"` (יציאה 5 = שיחה אחרת מחזיקה בו) ו-branch `routine/<name>-YYYY-MM-DD`.
+- **ענף:** כל משימה שייכת לענף (`project-files/domains/`, נטען לבד לפי מילים). משימה לא ברורה או בלי ענף = שאלון: ענף קיים או "בצע: ענף חדש" (מיכאל, 01/11/2026, "זה חלק מהחוקים").
 - **קריאה חכמה:** `STATUS.md`, `DECISIONS.md`, `BACKLOG.md` ו-`index.html` גדולים: רק `grep` וטווח, אף פעם לא `Read` על הקובץ כולו. `index.html` דרך skill `tfugen-ref` קודם.
 - **סוף:** handoff בשורש ושיחה הבאה לפי skill `tfugen-sessions`. פעולה לדפדפן של מיכאל: `project-files/chrome-queue.md`. משהו חדש מחוץ ל-repo: `project-files/ACCOUNT-INVENTORY.md`. "עובר חשבון": `project-files/ACCOUNT-MOVE.md` (הסוכנים רק בחשבון הנוכחי).
