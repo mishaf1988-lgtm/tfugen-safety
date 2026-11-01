@@ -116,6 +116,24 @@ export function parseRecipients(rows, extra) {
 // 01/11/2026 (Michael: the production report did not reach Nahum): an investigation writes the responsible party as in
 // the investigation ("\u05de\u05e0\u05d4\u05dc \u05d0\u05d7\u05d6\u05e7\u05d4"), not the bare key. A part that contains a key counts as that key; the first key wins.
 export function respKey(x) { const t = String(x || '').trim(); return RESP_KEYS.find((k) => t === k) || RESP_KEYS.find((k) => t.indexOf(k) >= 0) || null; }
+// 01/11/2026 (lesson 189, handoff "next in line" 1): a daily look at every responsible-party wording in the database
+// (tour_hazards resp/resp2, trustee_reports resp). A part that is neither a form choice, nor a known plain wording,
+// nor recognised by respKey may be a maintenance team that the report silently skips. routine-db op:'resp_check'.
+// "\u05de\u05e0\u05d4\u05dc \u05d4\u05d9\u05d9\u05e6\u05d5\u05e8" (an investigation, 29/10/2026) is a known wording with no routing of its own.
+export const RESP_PLAIN = RESP_CHOICES.concat(['\u05de\u05e0\u05d4\u05dc \u05d4\u05d9\u05d9\u05e6\u05d5\u05e8']);
+export function respUnknown(rows, table) {
+  const out = new Map();
+  (Array.isArray(rows) ? rows : []).forEach((r) => ['resp', 'resp2'].forEach((f) => String((r && r[f]) || '').split(/\s*\+\s*/).forEach((x) => {
+    const t = x.trim();
+    if (!t || RESP_PLAIN.indexOf(t) >= 0 || respKey(t)) return;
+    const o = out.get(t) || { value: t, table: table || '', n: 0, open: 0, ids: [] };
+    o.n++;
+    if (r.s !== S_DONE && r.s !== '\u05e0\u05e1\u05d2\u05e8') o.open++;
+    if (o.ids.length < 5 && r.id) o.ids.push(String(r.id));
+    out.set(t, o);
+  })));
+  return [...out.values()];
+}
 // 01/11/2026 (Michael: "how do we know the source of the finding?"): the source column of the report.
 const SRC_LABEL = { investigation: '\u05ea\u05d7\u05e7\u05d9\u05e8 \u05ea\u05d0\u05d5\u05e0\u05d4', committee: '\u05d5\u05e2\u05d3\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea' };
 export function sourceOf(r, src) {

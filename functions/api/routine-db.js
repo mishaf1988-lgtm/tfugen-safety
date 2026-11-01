@@ -163,6 +163,7 @@ import { stateCas } from '../_cas.js';
 import { SIGN_KEY, SIGN_CHOICES, signAdd, signMark, signAskText, signPlace } from '../_sign.js';
 import { findSignSpot } from '../_pdftext.js';
 import { rowContradictions } from './wa-morning.js';
+import { respUnknown } from './hazard-report.js';
 import { PDFDocument } from '../_pdflib.js';
 import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, assistantFireNow, fireUrlOf, sameSession, recentLine, ilTimes , pickFire, ACCOUNT_KEY } from '../_wa.js';
 
@@ -981,9 +982,12 @@ export function draftTrashCheck(b, made, nowMs) {
 }
 // 27/10/2026 (the morning update said "load credit at console.anthropic.com" from the mail filing, after Michael
 // decided twice, 22/10 and 26/10/2026, not to): a line for him that asks to load Claude API credit is refused. Pure.
+// 01/11/2026 (Michael: "teach the assistant so it does not happen again"): "\u05d0\u05d9\u05df \u05d9\u05ea\u05e8\u05ea \u05e7\u05e8\u05d3\u05d9\u05d8 \u05dc-API" went to him from pdf_read; any line that puts
+// credit with API or Claude is refused too (a supplier's credit on an invoice still passes), and wa_me is checked as well (a scan is read with ocr_txt).
 export function asksApiCredit(t) {
   const s = String(t || '');
-  return /\u05e7\u05e8\u05d3\u05d9\u05d8/.test(s) && /(\u05d8\u05e2\u05d9\u05e0\u05d4|\u05dc\u05d0 \u05e2\u05d5\u05d1\u05d3|\u05dc\u05d8\u05e2\u05d5\u05df|\u05dc\u05d4\u05d8\u05e2\u05d9\u05df|\u05d8\u05e2\u05d9\u05e0\u05ea|\u05ea\u05d8\u05e2\u05d9\u05df|\u05dc\u05d8\u05e2\u05d5\u05df|\u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05e7\u05e8\u05d3\u05d9\u05d8|console\.anthropic)/.test(s);
+  return /\u05e7\u05e8\u05d3\u05d9\u05d8/.test(s) && /(\u05d8\u05e2\u05d9\u05e0\u05d4|\u05dc\u05d0 \u05e2\u05d5\u05d1\u05d3|\u05dc\u05d8\u05e2\u05d5\u05df|\u05dc\u05d4\u05d8\u05e2\u05d9\u05df|\u05d8\u05e2\u05d9\u05e0\u05ea|\u05ea\u05d8\u05e2\u05d9\u05df|\u05dc\u05d8\u05e2\u05d5\u05df|\u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05e7\u05e8\u05d3\u05d9\u05d8|console\.anthropic)/.test(s)
+    || (/\u05e7\u05e8\u05d3\u05d9\u05d8/.test(s) && /(API|anthropic|claude|\u05e7\u05dc\u05d5\u05d3)/i.test(s));
 }
 export function calMoveCheck(b, nowMs) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
@@ -2098,7 +2102,8 @@ export async function onRequest(context) {
               { type: 'text', text: c.question }] }] }) });
           const j = await r.json().catch(() => null);
           // 22/10/2026: a bare 'claude 400' left the assistant guessing; Anthropic's own message says why (model, size, credit)
-          if (!r.ok || !j) return { name: a.name, ok: false, error: ('claude ' + r.status + ' ' + String((j && j.error && j.error.message) || '')).trim().slice(0, 300) };
+          // 01/11/2026: with no credit the assistant told Michael "no API credit" and stopped. The answer now says what to do instead.
+          if (!r.ok || !j) { const m = String((j && j.error && j.error.message) || ''); return { name: a.name, ok: false, error: /credit|billing|balance/i.test(m) ? 'pdf_read is not available now: read this file with ocr_txt (paths: [' + JSON.stringify(a.rel) + ']), then its txt, and go on. Do not tell Michael about credit' : ('claude ' + r.status + ' ' + m).trim().slice(0, 300) }; }
           const answer = (j.content || []).filter((x) => x.type === 'text').map((x) => x.text).join('\n').trim();
           return { name: a.name, ok: !!answer, answer: answer.slice(0, 3000), error: answer ? undefined : 'empty answer' };
         } catch (x) { return { name: a.name, ok: false, error: 'read' }; }
@@ -2209,6 +2214,17 @@ export async function onRequest(context) {
       if (!r.ok) return jsonResp({ ok: false, error: 'read ' + r.status }, 200, {});
       const rows = await r.json();
       return jsonResp({ ok: true, rows: clientErrors(Array.isArray(rows) ? rows : []) }, 200, {});
+    }
+    // 01/11/2026 (lesson 189): every responsible-party wording in the database that the hazard report would not
+    // recognise (hazard-report.js respUnknown). Read only; the daily quality check turns a hit into a dev_request.
+    if (body.op === 'resp_check') {
+      for (const k of Object.keys(body)) if (['op', 'agent'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const get = (path) => fetch(url + '/rest/v1/' + path, { headers: h, signal: tmo(SB_MS) }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      const [th, tr] = await Promise.all([get('tour_hazards?select=id,resp,resp2,s&limit=5000'), get('trustee_reports?select=id,resp,s&limit=5000')]);
+      // A failed read is not "all recognised" (28/10/2026 retro).
+      if (!Array.isArray(th) || !Array.isArray(tr)) return jsonResp({ ok: false, error: 'read failed: ' + [!Array.isArray(th) ? 'tour_hazards' : '', !Array.isArray(tr) ? 'trustee_reports' : ''].filter(Boolean).join(', ') }, 200, {});
+      const unknown = respUnknown(th, 'tour_hazards').concat(respUnknown(tr, 'trustee_reports'));
+      return jsonResp({ ok: true, checked: th.length + tr.length, unknown }, 200, {});
     }
     if (body.op === 'agent_report') {
       let e = agentEntry(body, new Date().toISOString());
@@ -2990,6 +3006,7 @@ export async function onRequest(context) {
     }
     if (body.op === 'wa_me') {
       if (hasPassport(body.text)) return jsonResp({ ok: false, error: 'passport number in text: write "4 workers from the list", no ids (20/10/2026)' }, 400, {});
+      if (asksApiCredit(body.text)) return jsonResp({ ok: false, error: 'mentions API credit: Michael decided no credit (22/10, 26/10/2026). Read the PDF with ocr_txt (paths) and its txt, and go on with the task; do not tell him about credit (01/11/2026)' }, 400, {});
       if (asksRepoSetup(body.text)) return jsonResp({ ok: false, error: 'asks Michael to add a repository or edit a Routine: no such choice (C32); say the dev runner builds it at its next wake (07:17-19:17 every 2 hours) (21/10/2026)' }, 400, {});
       // 25/10/2026 (Michael in the questionnaire: "do it: block"): the assistant asked for "\u05d1\u05e6\u05e2" with no buttons, and fixed it only when he said so.
       if (asksApprovalNoButtons(body.text, body.choices)) return jsonResp({ ok: false, error: 'asks for \u05d1\u05e6\u05e2 with no buttons: send it again with "choices", e.g. ["\u05d1\u05e6\u05e2","\u05dc\u05d0"]' }, 400, {});

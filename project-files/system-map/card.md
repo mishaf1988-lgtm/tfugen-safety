@@ -68,7 +68,7 @@
 - od-read: קריאת קבצים מ-OneDrive
 - OCR: קריאת סריקות, חינמי (Workers AI)
 - claude.js: ה-AI באפליקציה
-- routine-db: 65 פעולות שהסוכנים מותרים בהן: agent_report, agents_pause, agents_resume, assistant_account, cal_invite, cal_invite_ask, cal_move, cal_move_ask, claim, claims, 
+- routine-db: 66 פעולות שהסוכנים מותרים בהן: agent_report, agents_pause, agents_resume, assistant_account, cal_invite, cal_invite_ask, cal_move, cal_move_ask, claim, claims, 
 
 ## המסד
 - מסמכים ותוקף: טבלה docs

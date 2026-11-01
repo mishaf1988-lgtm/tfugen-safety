@@ -44,7 +44,7 @@ globalThis.fetch = async (url, opt = {}) => {
   if (url === 'https://api.anthropic.com/v1/messages') { const b = JSON.parse(opt.body); claudeReads.push({ key: opt.headers['x-api-key'], b }); if (b.messages[0].content[1].text === 'make it fail') return new Response(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'Your credit balance is too low' } }), { status: 400 }); return new Response(JSON.stringify({ content: [{ type: 'text', text: 'not written: only work at height. TEXT: ...' }] }), { status: 200 }); }
   if (url.startsWith('https://api.anthropic.com/')) { fires.push({ url, auth: opt.headers.Authorization, body: JSON.parse(opt.body) }); return new Response(JSON.stringify({ claude_code_session_id: fireSession }), { status: 200 }); }
   // expiry_set: a small docs / equip_inspections table (rows[table] = [...])
-  const m = /\/rest\/v1\/(docs|equip_inspections|tour_hazards|inc|tasks)(?:\?(.*))?$/.exec(url);
+  const m = /\/rest\/v1\/(docs|equip_inspections|tour_hazards|trustee_reports|inc|tasks)(?:\?(.*))?$/.exec(url);
   if (m && rows[m[1]]) {
     if ((opt.method || 'GET') === 'POST') { const r = JSON.parse(opt.body); const rs = m[1] === 'tasks' && Array.isArray(r) ? r : [r]; rs.forEach((x) => rows[m[1]].push(x)); return new Response(JSON.stringify(rs), { status: 201 }); }
     const any = /or=\(code\.ilike\.([^,]*),report_number\.eq\.([^)]*)\)/.exec(m[2] || '');
@@ -59,6 +59,7 @@ globalThis.fetch = async (url, opt = {}) => {
     if (tq) return new Response(JSON.stringify(rows[m[1]].filter((r) => r.source_table === decodeURIComponent(tq[1]) && r.source_id === decodeURIComponent(tq[2])).map((r) => ({ id: r.id, status: r.status }))), { status: 200 });
     const sq = /src_ref=eq\.([^&]*)/.exec(m[2] || '');
     if (sq) return new Response(JSON.stringify(rows[m[1]].filter((r) => r.src_ref === decodeURIComponent(sq[1])).map((r) => ({ id: r.id, n: r.n, s: r.s }))), { status: 200 });
+    if (/^select=id,resp/.test(m[2] || '')) return new Response(JSON.stringify(rows[m[1]].map((r) => ({ id: r.id, resp: r.resp, resp2: r.resp2, s: r.s }))), { status: 200 });
     if (/^select=n&order=n\.desc/.test(m[2] || '')) return new Response(JSON.stringify(rows[m[1]].map((r) => ({ n: r.n })).sort((x, y) => y.n - x.n).slice(0, 1)), { status: 200 });
     const id = decodeURIComponent((/id=eq\.([^&]*)/.exec(m[2] || '') || [])[1] || '');
     const hit = rows[m[1]].filter((r) => String(r.id) === id);
@@ -513,6 +514,19 @@ const callIn = async (body) => {
     check('bad item or session: 400, nothing written', (await call({ op: 'claim', item: 'a b; drop', session: A })).status === 400 && (await call({ op: 'claim', item: 'ok-item', session: 'x' })).status === 400 && claimSession('cse_abcdefgh') === 'session_abcdefgh');
   }
 
+  console.log('\n4c9b. resp_check (01/11/2026, lesson 189): responsible-party wordings the hazard report would not recognise');
+  {
+    rows = { tour_hazards: [{ id: 'th-1', resp: 'מנהל אחזקה', s: 'פתוח' }, { id: 'th-2', resp: 'צוות מכונאות', s: 'פתוח' }], trustee_reports: [{ id: 'tr-1', resp: 'בטיחות', s: 'פתוח' }, { id: 'tr-2', resp: 'קבלן חוץ', s: 'נסגר' }] };
+    const x = await call({ op: 'resp_check', agent: 'routine-quality' });
+    check('resp_check: both tables read, only the unknown wordings back, with table and open count', x.json.ok && x.json.checked === 4 && x.json.unknown.map((u) => u.table + ':' + u.value + ':' + u.open).join() === 'tour_hazards:צוות מכונאות:1,trustee_reports:קבלן חוץ:0', x.json);
+    const f0 = globalThis.fetch;
+    globalThis.fetch = async (u, o) => (/\/rest\/v1\/trustee_reports/.test(String(u)) ? new Response('err', { status: 500 }) : f0(u, o));
+    const y = await call({ op: 'resp_check', agent: 'routine-quality' });
+    globalThis.fetch = f0;
+    check('resp_check: a failed read is an error, never "all recognised"', y.json.ok === false && /trustee_reports/.test(y.json.error), y.json);
+    check('resp_check: a field outside the list is refused', (await call({ op: 'resp_check', agent: 'routine-quality', table: 'med' })).status === 400);
+    rows = {};
+  }
   console.log('\n4c9. client_errors (27/10/2026): errors from users\' browsers, grouped, no user name');
   {
     const T = (o) => JSON.stringify(o);
@@ -1012,8 +1026,14 @@ const callIn = async (body) => {
       const r1 = await call({ op: 'wa_me', agent: 'routine-mail-triage', text: V1 }), r2 = await call({ op: 'mail_draft', agent: 'dev', why: 'test only', to: 'a@tapugan.co.il', subject: 's', body: V2 });
       check('wa_me and mail_draft refuse a quote validity date (400)', r1.status === 400 && /validity/.test(r1.json.error) && r2.status === 400 && /validity/.test(r2.json.error), { a: r1.json, b: r2.json });
     }
+    { // 01/11/2026 (Michael: "teach the assistant so it does not happen again"): "no API credit balance" reached him on WhatsApp
+      const said = '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e7\u05e8\u05d5\u05d0: \u05d4\u05e9\u05d9\u05e8\u05d5\u05ea \u05d4\u05d7\u05d6\u05d9\u05e8 \u05e9\u05d0\u05d9\u05df \u05d9\u05ea\u05e8\u05ea \u05e7\u05e8\u05d3\u05d9\u05d8 \u05dc-API.';
+      const w = await call({ op: 'wa_me', agent: 'routine-wa-assistant', text: said });
+      check('wa_me: the 01/11 line about API credit is refused, and the error points to ocr_txt', asksApiCredit(said) && w.status === 400 && /ocr_txt/.test(w.json.error), w.json);
+      check('...a supplier\'s credit on an invoice is not touched', !asksApiCredit('\u05d9\u05ea\u05e8\u05ea \u05e7\u05e8\u05d3\u05d9\u05d8 \u05d0\u05e6\u05dc \u05d4\u05e1\u05e4\u05e7: 1,200 \u05e9\u05d7.'));
+    }
     { // 27/10/2026: a line for Michael that asks to load API credit is refused (he decided no on 22/10 and 26/10)
-      const ask = '\u05e7\u05e8\u05d3\u05d9\u05d8 \u05d4-API \u05e0\u05de\u05d5\u05da. \u05db\u05d3\u05d0\u05d9 \u05dc\u05d8\u05e2\u05d5\u05df \u05e7\u05e8\u05d3\u05d9\u05d8 \u05d1-console.anthropic.com.', fine = '\u05e7\u05e8\u05d3\u05d9\u05d8 \u05dc-API \u05dc\u05d0 \u05e0\u05d8\u05e2\u05df, \u05dc\u05e4\u05d9 \u05d4\u05d4\u05d7\u05dc\u05d8\u05d4 \u05e9\u05dc\u05da.';
+      const ask = '\u05e7\u05e8\u05d3\u05d9\u05d8 \u05d4-API \u05e0\u05de\u05d5\u05da. \u05db\u05d3\u05d0\u05d9 \u05dc\u05d8\u05e2\u05d5\u05df \u05e7\u05e8\u05d3\u05d9\u05d8 \u05d1-console.anthropic.com.', fine = '\u05d4\u05e1\u05e4\u05e7 \u05e0\u05ea\u05df \u05e7\u05e8\u05d3\u05d9\u05d8 \u05e9\u05dc 30 \u05d9\u05d5\u05dd \u05e2\u05dc \u05d4\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05ea.';
       const r = await call({ op: 'agent_report', agent: 'routine-mail-filing', ok: true, line: 'x', for_michael: ask });
       check('agent_report: for_michael asking to load API credit = 400; a line that only mentions credit passes the pure check', r.status === 400 && /ocr_txt/.test(r.json.error) && asksApiCredit(ask) && asksApiCredit('top up at console.anthropic.com \u05e7\u05e8\u05d3\u05d9\u05d8') && !asksApiCredit(fine) && !asksApiCredit(''), r.json);
       const r2 = await call({ op: 'agent_report', agent: 'routine-quality', ok: true, line: 'x', for_michael: '2 \u05ea\u05e1\u05e7\u05d9\u05e8\u05d9\u05dd \u05d4\u05d2\u05d9\u05e2\u05d5 \u05d4\u05d9\u05d5\u05dd' });
@@ -1484,7 +1504,7 @@ const callIn = async (body) => {
       && claudeReads[0].b.messages[0].content[0].type === 'document' && claudeReads[0].b.messages[0].content[0].source.data === 'JVBERg==' && claudeReads[0].b.messages[0].content[1].text === 'is confined space written?', { j: x.json, c: claudeReads.length });
     check('pdf_read: a file over the cap is not sent, and ok is false', big && !big.ok && /too big/.test(big.error) && x.json.ok === false && claudeReads.length === 1);
     x = await call({ op: 'pdf_read', agent: 'a-b', why: 'test', paths: ['a/one.pdf'], question: 'make it fail' }, 'k-123', 'POST', E);
-    check('pdf_read: a refusal from Claude carries its message', x.json.files && /claude 400 Your credit balance is too low/.test(x.json.files[0].error), x.json);
+    check('pdf_read: no credit = the error says to read it with ocr_txt on that path, never the credit message (01/11/2026)', x.json.files && /ocr_txt \(paths: \["a\/one\.pdf"\]\)/.test(x.json.files[0].error) && !/balance/.test(x.json.files[0].error), x.json);
     check('pdf_read: an extra field refused', (await call({ op: 'pdf_read', agent: 'a-b', why: 'test', paths: ['a/one.pdf'], question: 'is it there?', model: 'x' }, 'k-123', 'POST', E)).status === 400);
     x = await call({ op: 'pdf_read', agent: 'a-b', why: 'test', paths: ['a/one.pdf'], question: 'is it there?' });
     check('pdf_read without ANTHROPIC_KEY: a clear error', x.json.ok === false && /ANTHROPIC_KEY/.test(x.json.error));

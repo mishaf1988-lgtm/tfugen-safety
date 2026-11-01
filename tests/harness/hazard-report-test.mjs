@@ -2,7 +2,7 @@
 // The recipients sheet below is the real layout of "נמענים" (read with
 // od-read on 28/09); the חומר גלם case is the one the macro itself showed in
 // "דוח לשליחה" that day: אל gelem, Igal, vitaly, shlomi; עותק sviva, tzachi.
-import { onRequest, parseRecipients, buildReport, respKey, sourceOf } from './_build/hazard-report.mjs';
+import { onRequest, parseRecipients, buildReport, respKey, sourceOf, respUnknown } from './_build/hazard-report.mjs';
 import { writeZip, sheetsDigest } from './_build/_xlsxpatch.mjs';
 
 let pass = 0, fail = 0;
@@ -36,6 +36,12 @@ const ROWS = [
   check('responsible parties by the start of the label (הנדסה row = שלומי)', rc.resp['אחזקה'][0] === 'vitaly@tapugan.co.il' && rc.resp['חשמל'][0] === 'tech_manager@tapugan.co.il' && rc.resp['הנדסה'][0] === 'shlomi@tapugan.co.il', rc.resp);
   // 01/11/2026: an investigation's "מנהל אחזקה" counts as אחזקה (the production report missed the maintenance team).
   check('respKey: "מנהל אחזקה" = אחזקה, "חשמל" = חשמל, "מנהל הייצור" = none', respKey('מנהל אחזקה') === 'אחזקה' && respKey('חשמל') === 'חשמל' && respKey('מנהל הייצור') === null);
+  // 01/11/2026 (lesson 189): the daily check (routine-db op:'resp_check') flags only a wording nothing recognises.
+  const RU = [{ id: 'th-1', resp: 'מנהל המחלקה', s: 'פתוח' }, { id: 'th-2', resp: 'מנהל אחזקה + בטיחות', resp2: 'חשמל', s: 'פתוח' }, { id: 'th-3', resp: 'מנהל הייצור', s: 'סגור' },
+    { id: 'th-4', resp: 'צוות מכונאות', s: 'פתוח' }, { id: 'th-5', resp: 'צוות מכונאות + הנדסה', s: 'סגור' }, { id: 'th-6', resp: '', resp2: null, s: 'פתוח' }];
+  const ru = respUnknown(RU, 'tour_hazards');
+  check('respUnknown: the form choices, "מנהל הייצור", "מנהל אחזקה" and empty pass; "צוות מכונאות" is flagged twice, one open', ru.length === 1 && ru[0].value === 'צוות מכונאות' && ru[0].n === 2 && ru[0].open === 1 && ru[0].ids.join() === 'th-4,th-5' && ru[0].table === 'tour_hazards', ru);
+  check('respUnknown: not a list = nothing, no throw', respUnknown(null).length === 0);
   const inv = ROWS.map((r) => (r[7] === 'אחזקה' ? Object.assign(r.slice(), { 7: 'מנהל אחזקה' }) : r));
   check('...so a "מנהל אחזקה" hazard brings the maintenance team as before', buildReport('חומר גלם', inv, parseRecipients(RCPT_ROWS), {}).to.join() === buildReport('חומר גלם', ROWS, parseRecipients(RCPT_ROWS), {}).to.join());
   check('sourceOf: tour number, trustee, investigation, committee', sourceOf([5, '', 3]) === 'סיור 3' && sourceOf(['נ-12', '', '']) === 'דיווח נאמן' && sourceOf([61, '', ''], 'investigation') === 'תחקיר תאונה' && sourceOf([7, '', ''], 'committee') === 'ועדת בטיחות' && sourceOf([8, '', '']) === '');
