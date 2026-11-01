@@ -1588,6 +1588,17 @@ export function cardLines(list, q, n, pick) {
 export const SAVED_RE = /(\u05e0\u05e9\u05de\u05e8|\u05e0\u05e9\u05de\u05e8\u05d4|\u05e0\u05e9\u05de\u05e8\u05d5|\u05e9\u05de\u05e8\u05ea\u05d9|\u05ea\u05d5\u05e7\u05df|\u05ea\u05d5\u05e7\u05e0\u05d4|\u05ea\u05d9\u05e7\u05e0\u05ea\u05d9|\u05d4\u05d2\u05e8\u05e1\u05d4 \u05d4\u05d7\u05d3\u05e9\u05d4|\u05d2\u05e8\u05e1\u05d4 \u05de\u05ea\u05d5\u05e7\u05e0\u05ea)/;
 // Only about a file (a row saved in the database is not this gate's business).
 export const SAVED_FILE_RE = /(\u05e7\u05d5\u05d1\u05e5|\u05d4\u05e7\u05d5\u05d1\u05e5|PDF|\.pdf|\u05d8\u05d5\u05e4\u05e1|\u05d2\u05e8\u05e1\u05d4|\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4|\u05de\u05e1\u05de\u05da)/i;
+// 01/11/2026 (Michael: "but you did not attach the quote"; the assistant's draft to purchasing said "the updated quote
+// is in the mail 'אישור הזמנה - SO26Z001584'" instead of attaching it): a draft that says a file is attached, or sends
+// the reader to find it in another mail, must carry it in attach (files-scans.md: mail_request on the mail that has it,
+// then about a minute later mail_draft with attach). Pure.
+export const ATTACH_SAID_RE = /(\u05de\u05e6\u05d5\u05e8\u05e4|\u05e8\u05e6"\u05d1|\u05e8\u05e6\u05f4\u05d1|\u05d1\u05e7\u05d5\u05d1\u05e5 \u05d4\u05de\u05e6\u05d5\u05e8\u05e3|\u05e0\u05de\u05e6\u05d0\u05ea \u05d1\u05de\u05d9\u05d9\u05dc|\u05e0\u05de\u05e6\u05d0 \u05d1\u05de\u05d9\u05d9\u05dc|\u05e0\u05de\u05e6\u05d0\u05d9\u05dd \u05d1\u05de\u05d9\u05d9\u05dc|\u05e9\u05d1\u05de\u05d9\u05d9\u05dc \u05de\u05d4|\u05e8\u05d0\u05d5 \u05d1\u05de\u05d9\u05d9\u05dc)/;
+export function draftAttachGate(b) {
+  const t = String((b && b.body) || '');
+  const has = Array.isArray(b && b.attach) ? b.attach.length > 0 : !!(b && b.attach);
+  if (!has && ATTACH_SAID_RE.test(t)) return 'the draft says a file is attached, or points to another mail for it, with no attach: get the file with mail_request on the mail that has it (or od path), then mail_draft with attach (files-scans.md; 01/11/2026)';
+  return null;
+}
 export function claimGate(text, checked) {
   const t = String(text || '');
   if (SENT_RE.test(t)) return 'the text says you sent a mail: you only make drafts. Write "\u05d4\u05db\u05e0\u05ea\u05d9 \u05d8\u05d9\u05d5\u05d8\u05d4" or "\u05e0\u05e9\u05dc\u05d7 \u05de\u05de\u05da \u05d1-<\u05e9\u05e2\u05d4>" (after Sent Items)';
@@ -2502,6 +2513,8 @@ export async function onRequest(context) {
     if (body.op === 'mail_draft') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'cc', 'subject', 'body', 'attach', 'reply_to', 'checked', 'thread_checked', 'replaces'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (mentionsQuoteValidity(body.body)) return jsonResp({ ok: false, error: 'the draft gives a quote validity date: drop it (Michael 26/10 and 27/10/2026)' }, 400, {});
+      const attGate = draftAttachGate(body);
+      if (attGate) return jsonResp({ ok: false, error: attGate }, 400, {});
       const sentGate = draftSentGate(body);
       if (sentGate) return jsonResp({ ok: false, error: sentGate }, 400, {});
       const threadGate = draftThreadGate(body);
