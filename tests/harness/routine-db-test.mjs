@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, ilInstant, incFilePrefix, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, refusesWithoutFlow, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrTxtName, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT, isoSwapRequest, isoUpCheck, OD_ISO_SWAP, ISO_SITE_URL } from './_build/routine-db.mjs';
+import { secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, ilInstant, incFilePrefix, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, refusesWithoutFlow, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrTxtName, taskAddCheck, TASK_ADD_MAX, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT, isoSwapRequest, isoUpCheck, OD_ISO_SWAP, ISO_SITE_URL } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -44,9 +44,9 @@ globalThis.fetch = async (url, opt = {}) => {
   if (url === 'https://api.anthropic.com/v1/messages') { const b = JSON.parse(opt.body); claudeReads.push({ key: opt.headers['x-api-key'], b }); if (b.messages[0].content[1].text === 'make it fail') return new Response(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'Your credit balance is too low' } }), { status: 400 }); return new Response(JSON.stringify({ content: [{ type: 'text', text: 'not written: only work at height. TEXT: ...' }] }), { status: 200 }); }
   if (url.startsWith('https://api.anthropic.com/')) { fires.push({ url, auth: opt.headers.Authorization, body: JSON.parse(opt.body) }); return new Response(JSON.stringify({ claude_code_session_id: fireSession }), { status: 200 }); }
   // expiry_set: a small docs / equip_inspections table (rows[table] = [...])
-  const m = /\/rest\/v1\/(docs|equip_inspections|tour_hazards|inc)(?:\?(.*))?$/.exec(url);
+  const m = /\/rest\/v1\/(docs|equip_inspections|tour_hazards|inc|tasks)(?:\?(.*))?$/.exec(url);
   if (m && rows[m[1]]) {
-    if ((opt.method || 'GET') === 'POST') { const r = JSON.parse(opt.body); rows[m[1]].push(r); return new Response(JSON.stringify([r]), { status: 201 }); }
+    if ((opt.method || 'GET') === 'POST') { const r = JSON.parse(opt.body); const rs = m[1] === 'tasks' && Array.isArray(r) ? r : [r]; rs.forEach((x) => rows[m[1]].push(x)); return new Response(JSON.stringify(rs), { status: 201 }); }
     const any = /or=\(code\.ilike\.([^,]*),report_number\.eq\.([^)]*)\)/.exec(m[2] || '');
     if (any) { const [cd, rn] = [decodeURIComponent(any[1]), decodeURIComponent(any[2])]; return new Response(JSON.stringify(rows[m[1]].filter((r) => String(r.code).toLowerCase() === cd.toLowerCase() || r.report_number === rn)), { status: 200 }); }
     const wq = /^select=id,w,dt&w=eq\.([^&]*)&/.exec(m[2] || '');
@@ -55,6 +55,8 @@ globalThis.fetch = async (url, opt = {}) => {
     if (wq) return new Response(JSON.stringify(rows[m[1]].filter((r) => r.w === decodeURIComponent(wq[1])).map((r) => ({ id: r.id, w: r.w, dt: r.dt }))), { status: 200 });
     const rq = /^select=id&report_number=eq\.(.*)$/.exec(m[2] || '');
     if (rq) return new Response(JSON.stringify(rows[m[1]].filter((r) => r.report_number === decodeURIComponent(rq[1])).map((r) => ({ id: r.id }))), { status: 200 });
+    const tq = /source_table=eq\.([^&]*)&source_id=eq\.([^&]*)/.exec(m[2] || '');
+    if (tq) return new Response(JSON.stringify(rows[m[1]].filter((r) => r.source_table === decodeURIComponent(tq[1]) && r.source_id === decodeURIComponent(tq[2])).map((r) => ({ id: r.id, status: r.status }))), { status: 200 });
     const sq = /src_ref=eq\.([^&]*)/.exec(m[2] || '');
     if (sq) return new Response(JSON.stringify(rows[m[1]].filter((r) => r.src_ref === decodeURIComponent(sq[1])).map((r) => ({ id: r.id, n: r.n, s: r.s }))), { status: 200 });
     if (/^select=n&order=n\.desc/.test(m[2] || '')) return new Response(JSON.stringify(rows[m[1]].map((r) => ({ n: r.n })).sort((x, y) => y.n - x.n).slice(0, 1)), { status: 200 });
@@ -127,6 +129,13 @@ const callIn = async (body) => {
   check('state_set: written and read back equal', r.json.ok && JSON.parse(state.quote_track)['Q-eq-1-261101'].stage === 'sent', r.json);
   check('state_set of another key (weekly_digest): refused, untouched', (await call({ op: 'state_set', key: 'weekly_digest', value: 'y' })).status === 400 && state.weekly_digest === 'x');
   check('wa_phone: SMS in Hebrew, a 6-digit code only, the PIN from the secret first, else the request (24/10/2026)', WA_PHONE_STEPS.join() === 'request_code,verify_code,register,deregister' && JSON.stringify(waPhoneBody('deregister', {}).body) === '{}' && waPhoneBody('request_code', {}).body.code_method === 'SMS' && waPhoneBody('request_code', {}).body.language === 'he' && waPhoneBody('verify_code', { code: '123-456' }).body.code === '123456' && !!waPhoneBody('verify_code', { code: '12345' }).error && waPhoneBody('register', { pin: '111111' }, undefined).body.pin === '111111' && !!waPhoneBody('register', {}, undefined).error && waPhoneBody('register', { pin: '111111' }, '654321').body.pin === '654321');
+  { const T0 = '2026-11-01', ok = { op: 'task_add', agent: 'routine-validity', why: 'בדיקה מתוכננת בינואר', source_table: 'equip_inspections', source_id: 'eq-1', title: 'נצילות TO-23919: לתאם בדיקה', due: '2027-01-15' };
+    const r = taskAddCheck(ok, T0);
+    check('task_add: an expiry row, title, due within a year; open, normal, the reason in notes (01/11/2026)', r.row && r.row.status === 'פתוח' && r.row.priority === 'רגיל' && r.row.source_id === 'eq-1' && r.row.due === '2027-01-15' && /routine-validity 2026-11-01: בדיקה מתוכננת/.test(r.row.notes), r);
+    check('task_add: refuses a table that is not an expiry table, a past or far due, an extra field, a two-line title, no why',
+      !!taskAddCheck({ ...ok, source_table: 'trustee_reports' }, T0).error && !!taskAddCheck({ ...ok, due: '2026-10-01' }, T0).error && !!taskAddCheck({ ...ok, due: '2028-01-01' }, T0).error
+      && !!taskAddCheck({ ...ok, status: 'הושלם' }, T0).error && !!taskAddCheck({ ...ok, title: 'שורה\nשנייה ארוכה' }, T0).error && !!taskAddCheck({ ...ok, why: '' }, T0).error && TASK_ADD_MAX === 10);
+    check('task_add: no assignee from an agent, no prototype key as table, hidden characters cleaned from notes (security review)', !!taskAddCheck({ ...ok, assignee: 'יוסי' }, T0).error && !!taskAddCheck({ ...ok, source_table: 'constructor' }, T0).error && r.row.assignee === null && !/[\u202e<]/.test(taskAddCheck({ ...ok, notes: 'a\u202eb<c' }, T0).row.notes)); }
   check('ocrTxtName: the inbox keeps <name>.txt; elsewhere the folders are added, so two form.pdf do not share a txt (31/10/2026)',
     ocrTxtName(OD_INBOX + '/2026-10-22 0532 - a.pdf') === '2026-10-22 0532 - a.txt' && ocrTxtName('a.pdf') === 'a.txt'
     && ocrTxtName('X/form.pdf') === 'form (X).txt' && ocrTxtName('X/' + OD_ARCHIVE_DIR + '/form.PDF') === 'form (X - ' + OD_ARCHIVE_DIR + ').txt'
@@ -522,6 +531,24 @@ const callIn = async (body) => {
     const u = (calls.find((c) => /audit_log/.test(c.url)) || {}).url || '';
     check('the read: audit_log, only client_error rows, only ts and title (no user name)', x.json.ok && /table_name=eq\.client_error/.test(u) && /select=ts,title&/.test(u) && !/user_email/.test(u), u);
     check('since older than 8 days, or a field outside the list: refused', (await call({ op: 'client_errors', agent: 'a-b', since: '2026-01-01T00:00:00Z' })).status === 400 && (await call({ op: 'client_errors', agent: 'a-b', since: new Date().toISOString(), table: 'med' })).status === 400);
+  }
+
+  console.log('\n4c2. task_add: one open task per expiry row (01/11/2026)');
+  {
+    rows = { equip_inspections: [{ id: 'q9', e: '2025-06-26' }], tasks: [] };
+    delete state.task_add_day;
+    const tb = { op: 'task_add', agent: 'routine-validity', why: 'בדיקה מתוכננת בינואר', source_table: 'equip_inspections', source_id: 'q9', title: 'נצילות TO-23919: לתאם בדיקה', due: '2027-01-15' };
+    let x = await call({ ...tb, source_id: 'nope' });
+    check('task_add: a row that does not exist: refused, nothing written', !x.json.ok && /not found/.test(x.json.error) && !rows.tasks.length, x.json);
+    x = await call(tb);
+    check('task_add: written, open, linked to the row, the day counter at 1', x.json.ok && x.json.added && rows.tasks.length === 1 && rows.tasks[0].source_id === 'q9' && rows.tasks[0].status === 'פתוח' && /:1$/.test(state.task_add_day), { j: x.json, t: rows.tasks, st: state.task_add_day });
+    x = await call(tb);
+    check('task_add: the same row again: not a second task, names the open one', x.json.ok && !x.json.added && x.json.exists === rows.tasks[0].id && rows.tasks.length === 1, x.json);
+    rows.equip_inspections.push({ id: 'q10', e: '2026-08-25' });
+    state.task_add_day = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }) + ':10';
+    x = await call({ ...tb, source_id: 'q10' });
+    check('task_add: the eleventh of the day: refused', !x.json.ok && /max 10/.test(x.json.error) && rows.tasks.length === 1, x.json);
+    delete state.task_add_day;
   }
 
   console.log('\n4d. expiry_set: one row, after a document was read, with the reason in the note');

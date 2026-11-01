@@ -496,6 +496,31 @@ export function talkFieldApply(row, b, today) {
   return { body, replaced: h >= 0 };
 }
 // expiry_set: the tables, the note column of each, and the one extra field it may set.
+// task_add (01/11/2026, Michael in the questionnaire: "\u05d1\u05e6\u05e2: \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05de\u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3"): the validity checker wrote
+// "planned in January" / "waiting for a quote" in its report, and the weekly mail still said "no task" for the same row.
+// One open task per expiry row (tasks.source_table + source_id), at most TASK_ADD_MAX a day for all agents, text only.
+export const TASK_ADD_MAX = 10, TASK_ADD_KEY = 'task_add_day', TASK_OPEN = '\u05e4\u05ea\u05d5\u05d7', TASK_NORMAL = '\u05e8\u05d2\u05d9\u05dc';
+export function taskAddCheck(b, today) {
+  for (const k of Object.keys(b || {})) if (['op', 'agent', 'why', 'source_table', 'source_id', 'title', 'due', 'notes'].indexOf(k) < 0) return { error: 'field not allowed: ' + k };
+  if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
+  if (String(b.why || '').trim().length < 5) return { error: 'why required' };
+  if (!Object.prototype.hasOwnProperty.call(EXPIRY_TABLES, String(b.source_table || ''))) return { error: 'source_table: an expiry table' };
+  const sid = String(b.source_id === undefined || b.source_id === null ? '' : b.source_id);
+  if (!/^[A-Za-z0-9_.-]{1,80}$/.test(sid)) return { error: 'bad source_id' };
+  const title = String(b.title || '').trim();
+  if (title.length < 5 || title.length > 200 || /[\u0000-\u001f<>]/.test(title)) return { error: 'title: 5-200 characters, one line' };
+  let due = null;
+  if (b.due !== undefined && b.due !== null) {
+    const max = String(Number(today.slice(0, 4)) + 1) + today.slice(4);
+    if (!isDay(b.due) || b.due < today || b.due > max) return { error: 'due: YYYY-MM-DD, from today up to a year' };
+    due = b.due;
+  }
+  // no assignee from an agent (01/11/2026 security review): an assignee gets a WhatsApp on task_overdue, so a run steered
+  // by a mail could message a worker. Michael assigns in the app.
+  const clean = (x) => String(x || '').replace(/[\u0000-\u001f\u200e\u200f\u202a-\u202e\u2066-\u2069<>]/g, ' ').trim();
+  const notes = (clean(b.notes).slice(0, 300) + ' | ' + b.agent + ' ' + today + ': ' + clean(b.why).slice(0, 200)).replace(/^ \| /, '');
+  return { row: { title, due, assignee: null, status: TASK_OPEN, priority: TASK_NORMAL, source_table: b.source_table, source_id: sid, notes } };
+}
 export const EXPIRY_TABLES = {
   docs: { note: 'nt', extra: 's' },
   equip_inspections: { note: 'notes', extra: 'd' },
@@ -2246,6 +2271,33 @@ export async function onRequest(context) {
       const after = await w.json();
       if (!Array.isArray(after) || after.length !== 1) return jsonResp({ ok: false, error: 'write touched ' + (Array.isArray(after) ? after.length : '?') + ' rows' }, 200, {});
       return jsonResp({ ok: true, changed: true, note: c.note }, 200, {});
+    }
+    if (body.op === 'task_add') {
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+      const c = taskAddCheck(body, today);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const r = c.row;
+      const g = await fetch(url + '/rest/v1/' + r.source_table + '?select=id&id=eq.' + encodeURIComponent(r.source_id), { headers: h, signal: tmo(SB_MS) });
+      const src = g.ok ? await g.json() : null;
+      if (!Array.isArray(src)) return jsonResp({ ok: false, error: 'read ' + g.status }, 200, {});
+      if (src.length !== 1) return jsonResp({ ok: false, error: 'source row not found' }, 200, {});
+      const q = await fetch(url + '/rest/v1/tasks?select=id,status&source_table=eq.' + encodeURIComponent(r.source_table) + '&source_id=eq.' + encodeURIComponent(r.source_id), { headers: h, signal: tmo(SB_MS) });
+      const ex = q.ok ? await q.json() : null;
+      if (!Array.isArray(ex)) return jsonResp({ ok: false, error: 'read ' + q.status }, 200, {});
+      const open = ex.find((x) => ['\u05d4\u05d5\u05e9\u05dc\u05dd', '\u05d1\u05d5\u05d8\u05dc'].indexOf(x.status) < 0);
+      if (open) return jsonResp({ ok: true, added: false, exists: open.id }, 200, {});
+      let cur = null;
+      try { cur = (await stateRead([TASK_ADD_KEY]))[0]; } catch (e) { return jsonResp({ ok: false, error: 'state read failed' }, 200, {}); }
+      const mm = cur && /^(\d{4}-\d{2}-\d{2}):(\d+)$/.exec(String(cur.value || ''));
+      const n = mm && mm[1] === today ? +mm[2] : 0;
+      if (n >= TASK_ADD_MAX) return jsonResp({ ok: false, error: 'max ' + TASK_ADD_MAX + ' tasks a day' }, 200, {});
+      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify([{ key: TASK_ADD_KEY, value: today + ':' + (n + 1), updated_at: new Date().toISOString() }]), signal: tmo(SB_MS) });
+      const id = 'tsk-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      const w = await fetch(url + '/rest/v1/tasks', { method: 'POST', headers: { ...h, Prefer: 'return=representation' },
+        body: JSON.stringify([Object.assign({ id, ts: new Date().toISOString() }, r)]), signal: tmo(SB_MS) });
+      if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status, detail: (await w.text()).slice(0, 300) }, 200, {});
+      return jsonResp({ ok: true, added: true, id }, 200, {});
     }
     if (body.op === 'expiry_set') {
       const t = EXPIRY_TABLES[body.table];
