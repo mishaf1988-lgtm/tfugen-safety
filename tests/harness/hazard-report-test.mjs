@@ -34,6 +34,11 @@ const ROWS = [
   const rc = parseRecipients(RCPT_ROWS);
   check('department managers, several addresses in one cell', rc.depts['חומר גלם'].join() === 'gelem@tapugan.co.il,Igal@tapugan.co.il' && Object.keys(rc.depts).length === 5, rc.depts);
   check('responsible parties by the start of the label (הנדסה row = שלומי)', rc.resp['אחזקה'][0] === 'vitaly@tapugan.co.il' && rc.resp['חשמל'][0] === 'tech_manager@tapugan.co.il' && rc.resp['הנדסה'][0] === 'shlomi@tapugan.co.il', rc.resp);
+  const X = { 'אחזקה': ['maint2@example.com', 'bad address', 'VITALY@tapugan.co.il'], 'לא קיים': ['x@example.com'], 'חשמל': 'not-a-list' };
+  const rx = parseRecipients(RCPT_ROWS, X);
+  check('rcpt_extra (server_state, 01/11/2026): added after the sheet\'s אחזקה address; a bad address, a sheet duplicate, an unknown key and a non-list are ignored', rx.resp['אחזקה'].join() === 'vitaly@tapugan.co.il,maint2@example.com' && rx.resp['חשמל'].join() === 'tech_manager@tapugan.co.il' && !('לא קיים' in rx.resp), rx.resp);
+  check('...and it reaches the department mail: חומר גלם with a maintenance hazard', buildReport('חומר גלם', ROWS, rx, {}).to.includes('maint2@example.com'));
+  check('...no rcpt_extra = the sheet alone, as before', parseRecipients(RCPT_ROWS, null).resp['אחזקה'].join() === 'vitaly@tapugan.co.il');
   check('copies: part 3; header and note rows ignored', rc.cc.join() === 'sviva@tapugan.co.il,tzachi@tapugan.co.il', rc.cc);
   const texts = { open: 'שלום, להלן המפגעים.', sign: 'בברכה, ממונה בטיחות' };
   const g = buildReport('חומר גלם', ROWS, rc, texts);

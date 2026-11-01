@@ -79,8 +79,14 @@ async function readBook(token) {
 const RCPT_SHEET = { sheet: '\u05e0\u05de\u05e2\u05e0\u05d9\u05dd', minRow: 1, maxRow: 80, lastCol: 3, dateCols: [] };
 // The department managers of the department report, for another mail to the same people
 // (talk.js "who did not sign", 14/10/2026).
-export async function readRecipients(token) { return parseRecipients(await readSheetRows(await readBook(token), RCPT_SHEET)); }
-export function parseRecipients(rows) {
+export async function readRecipients(token, env) { return parseRecipients(await readSheetRows(await readBook(token), RCPT_SHEET), env ? await rcptExtra(env) : null); }
+// server_state 'rcpt_extra' as an object; a missing or broken row = none (the sheet alone, as before 01/11/2026).
+async function rcptExtra(env) {
+  const st = await stateGet(env, ['rcpt_extra']).catch(() => ({}));
+  const v = st.rcpt_extra && st.rcpt_extra.value;
+  try { const o = typeof v === 'string' ? JSON.parse(v) : v; return o && typeof o === 'object' && !Array.isArray(o) ? o : null; } catch (e) { return null; }
+}
+export function parseRecipients(rows, extra) {
   const out = { depts: {}, resp: {}, cc: [] };
   let part = 0;
   (rows || []).forEach(({ v }) => {
@@ -89,6 +95,15 @@ export function parseRecipients(rows) {
     if (part === 1) { const d = REPORT_DEPTS.find((x) => x === a); const e = emails(v[2]); if (d && e.length) out.depts[d] = e; }
     else if (part === 2) { const k = RESP_KEYS.find((x) => a.indexOf(x) === 0); const e = emails(v[1]); if (k && e.length) out.resp[k] = e; }
     else if (part === 3) { emails(v[1]).forEach((x) => out.cc.push(x)); }
+  });
+  // Extra addresses per responsible party, after the sheet's own (01/11/2026, Michael: the maintenance manager gets
+  // every maintenance hazard too). Kept in server_state 'rcpt_extra' ({"<resp key>": ["a@b"]}), not in this public
+  // repo; only known keys and well-formed addresses are taken.
+  Object.keys(extra || {}).forEach((k) => {
+    if (RESP_KEYS.indexOf(k) < 0 || !Array.isArray(extra[k])) return;
+    const have = out.resp[k] || [], low = have.map((x) => x.toLowerCase());
+    const add = extra[k].map((x) => String(x).trim()).filter((x) => /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[a-z]{2,}$/i.test(x) && low.indexOf(x.toLowerCase()) < 0);
+    if (have.length || add.length) out.resp[k] = have.concat(add);
   });
   return out;
 }
@@ -196,7 +211,7 @@ async function loadAll(env, token) {
   const st = await stateGet(env, ['hazard_xlsm_sheets']).catch(() => ({}));
   const ours = st.hazard_xlsm_sheets && st.hazard_xlsm_sheets.value;
   const unsynced = !!ours && ours !== await sheetsDigest(book).catch(() => ours);
-  return { rows: reg.rows, urls, idOf, raw, rcpt: parseRecipients(rc), texts: { open: t1 && t1.v[11], sign: t2 && t2.v[11] }, unsynced };
+  return { rows: reg.rows, urls, idOf, raw, rcpt: parseRecipients(rc, await rcptExtra(env)), texts: { open: t1 && t1.v[11], sign: t2 && t2.v[11] }, unsynced };
 }
 
 // When each department last got a status mail (14/10/2026, Michael: "when I
