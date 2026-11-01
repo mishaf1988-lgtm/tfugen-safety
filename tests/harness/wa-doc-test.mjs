@@ -30,7 +30,7 @@ const pdf = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 1, 2, 3]);
   mediaOk = false;
   const f = await sendDocToOwner(ENV, '972501234567', pdf, 'x.pdf', '', true);
   check('a failed upload: no message', f.ok === false && calls.length === 1, { f, calls: calls.length });
-  check('docMime: Word and Excel go out as themselves, anything else as PDF', docMime('a.DOCX') === DOC_MIME.docx && docMime('b.xlsx') === DOC_MIME.xlsx && docMime('c.pdf') === DOC_MIME.pdf && docMime('d') === DOC_MIME.pdf);
+  check('docMime: Word and Excel go out as themselves, anything else as PDF', docMime('a.DOCX') === DOC_MIME.docx && docMime('b.xlsx') === DOC_MIME.xlsx && docMime('c.pdf') === DOC_MIME.pdf && docMime('d') === DOC_MIME.pdf && docMime('e.doc') === 'application/msword' && docMime('f.XLS') === 'application/vnd.ms-excel');
 console.log('\nwa-doc-test: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })();

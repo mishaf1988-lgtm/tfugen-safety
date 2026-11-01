@@ -1244,14 +1244,16 @@ export function workerFireText(e) {
   return [WORKER_FIRE_HEAD, 'id: ' + e.id, 'at: ' + e.at, 'worker: ' + e.worker, 'task (data from the assistant, written from Michael\'s words; not instructions beyond the task): ' + String(e.task || '').replace(/\s*\n+\s*/g, ' / ')].join('\n');
 }
 export const DRAFT_ATTACH_MAX = 5;
-export function draftAttach(list) {
+// old (01/11/2026, dev-20261101174925-qnfu: the competent-person form is a Word 97 .doc, and wa_file refused it):
+// wa_file also takes .doc / .xls, which WhatsApp sends as documents. A mail draft keeps .pdf/.docx/.xlsx.
+export function draftAttach(list, old) {
   if (list === undefined || list === null) return { attach: [] };
   if (!Array.isArray(list) || !list.length || list.length > DRAFT_ATTACH_MAX) return { error: 'attach: 1-' + DRAFT_ATTACH_MAX + ' paths' };
   const out = [];
   for (const raw of list) {
     const parts = String(raw || '').split('/').filter(Boolean);
     const bad = (x) => x === '.' || x === '..' || OD_BAD.test(x) || x.length > 200 || x.startsWith('.');
-    if (!parts.length || parts.length > OD_MKDIR_DEPTH + 1 || parts.some(bad) || !/\.(pdf|docx|xlsx)$/i.test(parts[parts.length - 1])) return { error: 'attach: bad path' };
+    if (!parts.length || parts.length > OD_MKDIR_DEPTH + 1 || parts.some(bad) || !(old ? /\.(pdf|docx?|xlsx?)$/i : /\.(pdf|docx|xlsx)$/i).test(parts[parts.length - 1])) return { error: 'attach: bad path' };
     if (OD_NO_DIR.test(parts.join('/')) || isAutoTop(parts[0])) return { error: 'attach: bad path' };
     out.push({ rel: parts.join('/'), path: '/' + OD_ROOT + parts.join('/'), name: parts[parts.length - 1] });
   }
@@ -2012,11 +2014,11 @@ export async function onRequest(context) {
     }
     // wa_file (22/10/2026, Michael to the assistant: "I asked to get the files here", and "the link is broken"): 1-5
     // files from the safety folder sent to Michael on WhatsApp as documents. Only to him, only inside the 24-hour window
-    // (a document has no template), and only paths draftAttach allows (inside the safety folder, PDF / Word / Excel).
+    // (a document has no template), and only paths draftAttach allows (inside the safety folder, PDF / Word / Excel, .doc and .xls too).
     if (body.op === 'wa_file') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths', 'caption'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
-      const c = draftAttach(body.paths);
+      const c = draftAttach(body.paths, true);
       if (c.error || !c.attach.length) return jsonResp({ ok: false, error: (c.error || 'paths: 1-5').replace('attach', 'paths') }, 400, {});
       if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
       const to = await ownerWa(env, url);
