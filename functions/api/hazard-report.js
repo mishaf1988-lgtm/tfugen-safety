@@ -90,6 +90,11 @@ export function parseRecipients(rows) {
     else if (part === 2) { const k = RESP_KEYS.find((x) => a.indexOf(x) === 0); const e = emails(v[1]); if (k && e.length) out.resp[k] = e; }
     else if (part === 3) { emails(v[1]).forEach((x) => out.cc.push(x)); }
   });
+  // Fixed extra addresses per responsible party (SITE.extraResp, 01/11/2026: Nahum, maintenance manager), after the sheet's own.
+  Object.keys((SITE && SITE.extraResp) || {}).forEach((k) => {
+    const have = out.resp[k] || [], low = have.map((x) => x.toLowerCase());
+    out.resp[k] = have.concat(SITE.extraResp[k].filter((x) => low.indexOf(x.toLowerCase()) < 0));
+  });
   return out;
 }
 

@@ -34,12 +34,14 @@ const ROWS = [
   const rc = parseRecipients(RCPT_ROWS);
   check('department managers, several addresses in one cell', rc.depts['חומר גלם'].join() === 'gelem@tapugan.co.il,Igal@tapugan.co.il' && Object.keys(rc.depts).length === 5, rc.depts);
   check('responsible parties by the start of the label (הנדסה row = שלומי)', rc.resp['אחזקה'][0] === 'vitaly@tapugan.co.il' && rc.resp['חשמל'][0] === 'tech_manager@tapugan.co.il' && rc.resp['הנדסה'][0] === 'shlomi@tapugan.co.il', rc.resp);
+  check('Nahum (SITE.extraResp, 01/11/2026) after the sheet\'s אחזקה address, once', rc.resp['אחזקה'].join() === 'vitaly@tapugan.co.il,nahum@tapugan.co.il' && parseRecipients(RCPT_ROWS.concat([])).resp['אחזקה'].length === 2, rc.resp['אחזקה']);
+  check('...and when the sheet already has him, not twice', parseRecipients(RCPT_ROWS.map((r) => (String(r.v[0]).indexOf('אחזקה') === 0 ? { r: r.r, v: [r.v[0], 'vitaly@tapugan.co.il,Nahum@tapugan.co.il', r.v[2]] } : r))).resp['אחזקה'].length === 2);
   check('copies: part 3; header and note rows ignored', rc.cc.join() === 'sviva@tapugan.co.il,tzachi@tapugan.co.il', rc.cc);
   const texts = { open: 'שלום, להלן המפגעים.', sign: 'בברכה, ממונה בטיחות' };
   const g = buildReport('חומר גלם', ROWS, rc, texts);
   // 30/09/2026 (Michael): a maintenance hazard goes to Vitaly, Slava and Shlomi, the
   // three maintenance rows of the sheet; the macro sent it to Vitaly and Shlomi only.
-  check('חומר גלם: אל = the managers, then the maintenance team (vitaly, shlomi, tech_manager = Slava)', g.to.join() === 'gelem@tapugan.co.il,Igal@tapugan.co.il,vitaly@tapugan.co.il,shlomi@tapugan.co.il,tech_manager@tapugan.co.il', g.to);
+  check('חומר גלם: אל = the managers, then the maintenance team (vitaly, shlomi, tech_manager = Slava)', g.to.join() === 'gelem@tapugan.co.il,Igal@tapugan.co.il,vitaly@tapugan.co.il,nahum@tapugan.co.il,shlomi@tapugan.co.il,tech_manager@tapugan.co.il', g.to);
   check('עותק sviva + tzachi', g.cc.join() === 'sviva@tapugan.co.il,tzachi@tapugan.co.il', g.cc);
   check('a closed hazard is not in the report', g.count === 3 && !g.rows.some((r) => r.n === 34), g.rows.map((r) => r.n));
   const onlyClosedElec = buildReport('חומר גלם', ROWS.filter((r) => r[7] !== 'אחזקה'), rc, texts);
@@ -110,7 +112,7 @@ const ROWS = [
   check('viewer: refused, nothing sent', c.status === 403 && !c.w.mails.length, c);
   c = await call({ email: 'admin@tfugen.local' }, { op: 'preview' });
   const pg = c.j && c.j.reports && c.j.reports.find((x) => x.dept === 'חומר גלם');
-  check('preview: 6 departments (5 + אחזקה), recipients from the workbook, nothing sent', c.j.ok && c.j.reports.length === 6 && c.j.reports[5].dept === 'אחזקה' && pg.count === 2 && pg.to.join() === 'gelem@tapugan.co.il,Igal@tapugan.co.il,vitaly@tapugan.co.il,shlomi@tapugan.co.il,tech_manager@tapugan.co.il' && !c.w.mails.length && c.j.canSend, c.j);
+  check('preview: 6 departments (5 + אחזקה), recipients from the workbook, nothing sent', c.j.ok && c.j.reports.length === 6 && c.j.reports[5].dept === 'אחזקה' && pg.count === 2 && pg.to.join() === 'gelem@tapugan.co.il,Igal@tapugan.co.il,vitaly@tapugan.co.il,nahum@tapugan.co.il,shlomi@tapugan.co.il,tech_manager@tapugan.co.il' && !c.w.mails.length && c.j.canSend, c.j);
   check('the maintenance department with no row of its own in part 1: the maintenance team of part 2 (Vitaly, Slava, Shlomi)', c.j.reports[5].to.join() === 'vitaly@tapugan.co.il,tech_manager@tapugan.co.il,shlomi@tapugan.co.il', c.j.reports[5].to);
   check('reads the folder-13 xlsm', /13_סיורי מפגעים\/2026\/ניהול סיורי מפגעים\.xlsm:\/content/.test(c.w.read || ''), c.w.read);
   c = await call({ email: 'admin@tfugen.local' }, { op: 'send', depts: ['חומר גלם', 'תוצג'] });
