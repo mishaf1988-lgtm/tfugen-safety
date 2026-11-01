@@ -50,8 +50,9 @@ export const APP_URL = SITE.appUrl;
 export const SOON_DAYS = 7, EXP_DAYS = 30, EXP_SHOW = 40, TOPICS = 3, REPEAT_MS = 20 * 3600 * 1000;
 const DAY = 86400000;
 // The same four as _REQ_REGS in index.html: [table, label].
-export const REQ_REGS = [['equip_inspections', '\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3'], ['hearing_tests', '\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e9\u05de\u05d9\u05e2\u05d4'], ['tr', '\u05d4\u05d3\u05e8\u05db\u05d5\u05ea'], ['hzm', '\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd']];
+export const REQ_REGS = [['equip_inspections', '\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3'], ['hearing_tests', '\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e9\u05de\u05d9\u05e2\u05d4'], ['tr', '\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e2\u05dd \u05ea\u05d5\u05e7\u05e3 (\u05ea\u05e2\u05d5\u05d3\u05d5\u05ea \u05d5\u05d4\u05e1\u05de\u05db\u05d5\u05ea)'], ['hzm', '\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd']];
 // The tables _expCollect in index.html scans: [table, label, name columns, owner columns].
+export const EXP_OFF = /^\s*\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9/, EXP_S_TABLES = ['docs', 'equip_inspections'];
 export const EXP_SRC = [
   ['docs', '\u05de\u05e1\u05de\u05da', ['n'], ['o']],
   ['tr', '\u05d4\u05d3\u05e8\u05db\u05d4', ['n'], ['w']],
@@ -139,10 +140,11 @@ const H = {
   qVendor: '\u05e1\u05e4\u05e7:',
   odNew: '\u05e7\u05d1\u05e6\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (7 \u05d9\u05de\u05d9\u05dd)',
   eqf: '\u05e6\u05d9\u05d5\u05d3 \u05dc\u05d0 \u05db\u05e9\u05d9\u05e8, \u05dc\u05d0 \u05dc\u05e9\u05d9\u05de\u05d5\u05e9 \u05e2\u05d3 \u05ea\u05d9\u05e7\u05d5\u05df: ', eqfMore: ' \u05d5\u05e2\u05d5\u05d3 ',
-  ag: '\u05d4\u05e1\u05d5\u05db\u05e0\u05d9\u05dd \u05d4\u05d0\u05d5\u05d8\u05d5\u05e0\u05d5\u05de\u05d9\u05d9\u05dd: ', agOk: ' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2', agFail: '\u05e0\u05db\u05e9\u05dc\u05d5: ', agLate: '\u05dc\u05d0 \u05d3\u05d9\u05d5\u05d5\u05d7\u05d5 \u05d1\u05d6\u05de\u05df: ', agNever: '\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d3\u05d9\u05d5\u05d5\u05d7\u05d5: ',
+  ag: '\u05d4\u05e1\u05d5\u05db\u05e0\u05d9\u05dd \u05d4\u05d0\u05d5\u05d8\u05d5\u05e0\u05d5\u05de\u05d9\u05d9\u05dd: ', agOk: ' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2', agFail: '\u05e0\u05db\u05e9\u05dc\u05d5: ', agLate: '\u05dc\u05d0 \u05d3\u05d9\u05d5\u05d5\u05d7\u05d5 \u05d1\u05d6\u05de\u05df: ', agNever: '\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e8\u05e6\u05d5 \u05d0\u05e3 \u05e4\u05e2\u05dd (\u05ea\u05e7\u05d9\u05df \u05dc\u05e1\u05d5\u05db\u05df \u05d7\u05d5\u05d3\u05e9\u05d9 \u05e9\u05ea\u05d5\u05e8\u05d5 \u05dc\u05d0 \u05d4\u05d2\u05d9\u05e2): ',
   nevo: '\u05de\u05e2\u05e7\u05d1 \u05e0\u05d1\u05d5 (\u05de\u05e8\u05e9\u05dd \u05d4\u05d7\u05d5\u05e7\u05d9\u05dd): ', nevoChanged: '\u05d4\u05ea\u05e2\u05d3\u05db\u05e0\u05d5 \u05d1\u05e0\u05d1\u05d5, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05de\u05d4 \u05d4\u05e9\u05ea\u05e0\u05d4: ', nevoNone: '\u05d0\u05d9\u05df \u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05e0\u05d5\u05e1\u05d7, \u05e0\u05d1\u05d3\u05e7 ', nevoNever: '\u05dc\u05d0 \u05e8\u05e5 \u05e2\u05d3\u05d9\u05d9\u05df', nevoStale: '\u05dc\u05d0 \u05e8\u05e5 \u05de\u05d0\u05d6 ', nevoFail: '\u05e0\u05db\u05e9\u05dc \u05d1-', asst: '\u05d4\u05e2\u05d5\u05d6\u05e8 \u05d4\u05e9\u05d1\u05d5\u05e2: ', asstClosed: '\u05d4\u05d7\u05d5\u05e7\u05e8 \u05e1\u05d2\u05e8 ', asstGaps: ' \u05e4\u05e2\u05e8\u05d9\u05dd', asstNone: '\u05d4\u05d7\u05d5\u05e7\u05e8 \u05dc\u05d0 \u05e1\u05d2\u05e8 \u05d0\u05e3 \u05e4\u05e2\u05e8 \u05d1-7 \u05d4\u05d9\u05de\u05d9\u05dd \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd', asstQs: ' \u05e9\u05d0\u05dc\u05d5\u05ea \u05de\u05d7\u05db\u05d5\u05ea \u05dc\u05da: ', asstNoQs: '\u05d0\u05d9\u05df \u05e9\u05d0\u05dc\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea', xg: '\u05dc\u05d5\u05d7 \u05d4\u05d1\u05e7\u05e8\u05d4 \u05d1-Excel: ', xgNever: '\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05d1\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4', xgStale: '\u05dc\u05d0 \u05e0\u05d1\u05e0\u05d4 \u05de\u05d0\u05d6 ', xgFail: '\u05d4\u05d1\u05e0\u05d9\u05d9\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4 \u05d1-', asstFail: '\u05d4\u05ea\u05d5\u05e8 \u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0 ',
   emptyRegs: '\u05de\u05e8\u05e9\u05de\u05d9 \u05d7\u05d5\u05d1\u05d4 \u05e8\u05d9\u05e7\u05d9\u05dd: ',
-  never: '\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2 \u05d0\u05e3 \u05e4\u05e2\u05dd: ',
+  never: '\u05dc\u05d0 \u05e0\u05e8\u05e9\u05dd \u05d1\u05de\u05e2\u05e8\u05db\u05ea \u05d0\u05e3 \u05e4\u05e2\u05dd: ',
+  unfit: '\u05dc\u05d0 \u05db\u05e9\u05d9\u05e8, \u05dc\u05d4\u05d7\u05dc\u05e4\u05d4',
   neverWhy: '. \u05d0\u05d9\u05df \u05dc\u05d6\u05d4 \u05de\u05d5\u05e2\u05d3, \u05d5\u05dc\u05db\u05df \u05d6\u05d4 \u05dc\u05d0 \u05de\u05d5\u05e4\u05d9\u05e2 \u05d1\u05d8\u05d1\u05dc\u05ea \u05d4\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05dc\u05de\u05d8\u05d4.',
   emptyWhy: '. \u05d0\u05d9\u05df \u05de\u05d4\u05dd \u05d0\u05e3 \u05d4\u05ea\u05e8\u05d0\u05ea \u05ea\u05e4\u05d5\u05d2\u05d4 \u05e2\u05d3 \u05e9\u05d9\u05d5\u05d6\u05e0\u05d5 \u05d1\u05d4\u05dd \u05e8\u05e9\u05d5\u05de\u05d5\u05ea.',
 };
@@ -310,9 +312,14 @@ export function expiringOf(lists, today) {
   const pick = (r, cols) => cols.map((k) => r[k]).find((v) => v != null && String(v).trim() !== '') || '';
   const out = [];
   (lists || []).forEach(([label, nc, oc, rows, t, src]) => (rows || []).forEach((r) => {
+    // 01/11/2026 (Michael: a disqualified item read "expired" and asked a quote for its inspection), as
+    // _expOff/_eqiFail in index.html: "\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9" is not listed; a failed inspection is "not fit, to replace".
+    if (EXP_OFF.test(String((r && r.s) || ''))) return;
+    const fail = src === 'equip_inspections' && EQI_FAIL.test(String((r && r.s) || ''));
     const e = ymd(r && r.e); if (!e) return;
     const days = dayDiff(today, e); if (days > EXP_DAYS) return;
-    const x = { label, name: String(pick(r, nc)), owner: String(pick(r, oc)), e, days };
+    const x = { label, name: String(pick(r, nc)), owner: fail ? H.unfit : String(pick(r, oc)), e, days };
+    if (fail) x.fail = true;
     const area = String((r && r.resp_area) || '').trim();
     if (area) { x.area = area; x.who = String((SITE.equipAreas || {})[area] || ''); }
     if (t) { x.t = t; x.row = r; }
@@ -384,6 +391,8 @@ export function attachQuotes(list, contacts, track, today) {
     // Equipment of another area (resp_area, 20/10/2026): its people deal with the supplier. No quote
     // mail from Michael; the row is only marked (Michael in the questionnaire: "only marked").
     if (x.area) return;
+    // A failed item is replaced, not inspected: no quote request for its inspection (01/11/2026).
+    if (x.fail) return;
     const vendor = vendorOf(x.t, x.row);
     // A document with no supplier (a license from an authority) has no one to ask for a quote (08/10/2026).
     if (x.t === 'docs' && !vendor) return;
@@ -554,7 +563,7 @@ export async function expiries(env, today) {
   const failed = [];
   const lists = await Promise.all(EXP_SRC.map(async ([t, label, nc, oc]) => {
     try {
-      const sel = Array.from(new Set(['id', 'e'].concat(nc, oc, QUOTE_SRC[t] ? QUOTE_SRC[t][1] : [], t === 'equip_inspections' ? ['resp_area'] : []))).join(',');
+      const sel = Array.from(new Set(['id', 'e'].concat(nc, oc, QUOTE_SRC[t] ? QUOTE_SRC[t][1] : [], t === 'equip_inspections' ? ['resp_area'] : [], EXP_S_TABLES.indexOf(t) >= 0 ? ['s'] : []))).join(',');
       const r = await fetch(base + t + '?select=' + sel + '&e=lte.' + lim + '&order=e.asc&limit=500', { headers: { apikey: key, Authorization: 'Bearer ' + key }, signal: tmo(SB_MS) });
       if (!r.ok) { failed.push(label); return [label, nc, oc, []]; }
       const j = await r.json();
