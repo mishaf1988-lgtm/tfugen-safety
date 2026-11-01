@@ -443,11 +443,11 @@ const callIn = async (body) => {
       check('office_ask: the notebook rides along like from WhatsApp, and only when there is one (01/11/2026, the coach drill)', tl.split('\n').pop().startsWith('learned (') && tl.includes('סעיף 38') && !t.includes('learned ('), tl);
       { const { drillFireText, DRILL_ROW, DRILL_HEAD } = await import('./_build/routine-db.mjs');
         const dr = drillFireText('drill-0111-1', 'טופס אדם כשיר', '2026-11-01T18:00:00.000Z', 'correction: סעיף 38');
-        check('drill_ask: its own head (not the office one), office answer only, no wa_me, the notebook rides along, no conversation (01/11/2026)', dr.startsWith(DRILL_HEAD + 'drill-0111-1]') && dr.indexOf('מהמשרד של מיכאל') < 0 && dr.includes('ans-drill-0111-1') && dr.includes('בלי wa_me') && dr.split('\n').pop().startsWith('learned (') && dr.indexOf('recent (') < 0, dr);
+        check('drill_ask: the office head with a drill- row (accepted by the routine prompt), office answer only, no wa_me, the notebook rides along, no conversation (01/11/2026)', dr.startsWith(DRILL_HEAD + 'drill-0111-1]') && dr.split('\n')[0] === officeFireText('drill-0111-1', 'x', 't').split('\n')[0] && dr.indexOf('לענות לו בוואטסאפ') < 0 && dr.includes('ans-drill-0111-1') && dr.includes('בלי wa_me') && dr.split('\n').pop().startsWith('learned (') && dr.indexOf('recent (') < 0, dr);
         for (const f of ['routine-wa-core.md', 'routine-wa-assistant.md']) {
           const md = readFileSync(new URL('../../project-files/' + f, import.meta.url), 'utf8');
           const step1 = (md.split('\n').find((l) => l.startsWith('1. **')) || '');
-          check('drill_ask: ' + f + ' accepts the drill head in step 1 (the list of first lines) and has step 0\u05d02 (01/11/2026: a drill stopped as an unknown block)', step1.includes('`' + DRILL_HEAD + 'drill-`') && md.includes('0\u05d02. **'), step1.slice(0, 200));
+          check('drill_ask: the drill rides on the office head that ' + f + ' step 1 already accepts, and step 0\u05d02 reads a drill- row as a drill (01/11/2026: the routine prompt lists its first lines and cannot be changed from here)', step1.includes('`' + DRILL_HEAD + '`') && /0\u05d02\. \*\*[^\n]*`drill-`/.test(md), step1.slice(0, 200));
         }
         check('drill_ask: only a drill- row, so a real office line can never go out as a drill', DRILL_ROW.test('drill-0111-2b') && !DRILL_ROW.test('t3010-27') && !DRILL_ROW.test('drill-') && !DRILL_ROW.test('drill-a b')); }
       check('office_ask: a row id is a db id, not free text', OFFICE_ROW.test('k9Xz_12-ab') && !OFFICE_ROW.test('a b') && !OFFICE_ROW.test('x')); }
