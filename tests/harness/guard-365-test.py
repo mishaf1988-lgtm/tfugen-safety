@@ -188,6 +188,7 @@ for tool in ['Write', 'Edit', 'MultiEdit']:
     check_env(tool + ' on any other file passes the guard', {'tool_name': tool, 'tool_input': {'file_path': '/home/user/x.txt', 'content': 'a'}}, 'pass')
 check_env('a file whose text only mentions the ledger passes the guard', {'tool_name': 'Write', 'tool_input': {'file_path': '/home/user/notes.md', 'content': LEDGER_FILE}}, 'pass')
 check_env('Bash that names the ledger is denied', {'tool_name': 'Bash', 'tool_input': {'command': 'echo x > ' + LEDGER_FILE}}, 'deny')
+check_env('Bash that reaches the ledger through a shell glob is denied too (retro 01/11/2026)', {'tool_name': 'Bash', 'tool_input': {'command': 'echo [] > /root/.claude/drafts-made-' + 'by-c[l]aude.json'}}, 'deny')
 for n in ['mcp__Microsoft_365__outlook_delete_email', 'mcp__Microsoft_365__outlook_trash_thread', 'mcp__Microsoft_365__outlook_send_draft',
           'mcp__Microsoft_365__outlook_batch_delete_messages']:
     check_env(n.split('__')[-1] + ' stays denied even with an id in the ledger', {'tool_name': n, 'tool_input': {'messageId': MINE}}, 'deny')

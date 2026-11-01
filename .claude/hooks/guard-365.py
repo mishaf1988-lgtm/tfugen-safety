@@ -221,7 +221,7 @@ def decide(name, ti):
         return None
     if name in SHELLS:
         cmd = str(ti.get("command", ""))
-        if LEDGER_NAME in cmd:
+        if LEDGER_NAME in cmd or re.search(r"drafts-?made", cmd):
             return ("deny", "the ledger of drafts Claude made is written only by the hook itself (see Michael 05/10/2026 and 30/10/2026).")
         if GRAPH_WRITE.search(cmd):
             return ("deny", "a direct Graph write (curl / Invoke-RestMethod to graph.microsoft.com with POST/DELETE/PATCH/PUT). "

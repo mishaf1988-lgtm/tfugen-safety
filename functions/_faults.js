@@ -102,7 +102,7 @@ export async function runFaultAlert(env, nowIso) {
     // a fault already reported today was filtered above, so the fix is opened once a day per fault too
     try { fix = await openFix(env, url, k, items, nowIso, !(prev && prev.fired_day === dayIL(nowIso))); } catch (e) { fix = { ok: false }; }
     const to = await ownerWa(env, url);
-    const s = to ? await sendToOwner(env, to, faultText(items, fix && fix.ok), { windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
+    const s = to ? await sendToOwner(env, to, faultText(items, fix && (fix.fired || fix.already)), { windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
     sentOk = !!(s && s.ok);
   }
   // not sent: the mark does not move, so the same faults are tried again next tick
