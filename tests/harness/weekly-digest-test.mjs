@@ -126,6 +126,10 @@ const ROWS = [
   check('a single item: its name in the subject, no numbering', decodeURIComponent(qf9.quote.href).includes('subject=בקשת הצעת מחיר - תעשיות תפוגן: טופס 9א') && !decodeURIComponent(qf9.quote.href).includes('1. '));
   check('the mail text is keyboard characters only (sent to a person)', !/[—–־«»“”…•→←]/.test(qall), qall.match(/[—–־«»“”…•→←]/));
   const longList = Array.from({ length: 30 }, (_, i) => ({ id: 'L' + i, n: 'אביזר הרמה מורכב על מלגזה מספר ' + i + ' עם שם ארוך מאוד שממשיך וממשיך הלאה עד הסוף', vendor: "ג'ורג' פריד מהנדסים", serial_number: 'SER-' + i, e: plus(-2) }));
+  { const R2 = [{ id: 'k1', n: 'מאריך קלשונים', vendor: 'ג׳ורג׳ פריד', s: 'פסול', e: plus(-3) }, { id: 'k2', n: 'מלגזה ישנה', vendor: 'ג׳ורג׳ פריד', s: 'לא רלוונטי', e: plus(-3) }, { id: 'k3', n: 'עגורן', vendor: 'ג׳ורג׳ פריד', s: 'כשיר לעבודה', e: plus(5) }];
+    const L2 = attachQuotes(expiringOf([['בדיקת ציוד', ['n'], ['vendor'], R2, 'equip_inspections', 'equip_inspections']], TODAY), CT, {}, TODAY);
+    check('01/11/2026: "לא רלוונטי" is not listed; a failed item reads "לא כשיר, להחלפה" and gets no inspection quote', L2.length === 2 && !L2.some((x) => x.name === 'מלגזה ישנה')
+      && L2[0].name === 'מאריך קלשונים' && L2[0].fail && L2[0].owner === 'לא כשיר, להחלפה' && !L2[0].quote && L2[1].quote, L2.map((x) => [x.name, x.owner, !!x.quote])); }
   const QM2 = attachQuotes(expiringOf([["בדיקת ציוד", ["n"], ["vendor"], longList, "equip_inspections"]], TODAY), CT, {}, TODAY);
   const qhrefs = [...new Set(QM2.map((x) => x.quote.href))];
   check('a long supplier list is split: every link under ' + QUOTE_HREF_MAX + ' characters, every item in exactly one mail, long names cut', qhrefs.length > 1 && qhrefs.every((h) => h.length <= QUOTE_HREF_MAX) && QM2.reduce((a, x) => a + 1 / x.quote.n, 0) > qhrefs.length - 0.01 && decodeURIComponent(qhrefs[0]).includes('...'), qhrefs.map((h) => h.length));
@@ -165,7 +169,7 @@ const ROWS = [
   const RE = expiringOf(recurringOf({ env: [{ id: 'v1', ty: 'דיגום שפכים חודשי', d: plus(-40) }, { id: 'v2', ty: 'דיגום שפכים שנתי', d: plus(-200) }, { id: 'v3', ty: 'בדיקת פליטות בארובות', d: (+TODAY.substring(0, 4) - 2) + '-06-01' }, { id: 'v4', ty: 'צריכת מים', d: plus(-900) }] }), TODAY);
   check('factory measurements (04/10/2026): monthly sewage 40 days ago is due, stacks two years ago overdue since 31/12 last year, yearly sewage 200 days ago not yet, other types never', RE.map((x) => x.name).sort().join() === ['בדיקת פליטות בארובות', 'דיגום שפכים חודשי'].sort().join() && RE.find((x) => x.name === 'בדיקת פליטות בארובות').e === (+TODAY.substring(0, 4) - 1) + '-12-31', RE);
   const hn = digestHtml(e, TODAY, { meeting: '2026-10-06', deckAt: '', watchOpen: [], emptyRegs: [], expiring: [], expFail: [], never: ['סקירת הנהלה'] });
-  check('never done: a red line before the expiry block', /<p style="color:#b91c1c;font-weight:bold">לא בוצע אף פעם: סקירת הנהלה\./.test(hn) && hn.indexOf('לא בוצע אף פעם') < hn.indexOf(T.exp), hn.substring(0, 600));
+  check('never done: a red line before the expiry block', /<p style="color:#b91c1c;font-weight:bold">לא נרשם במערכת אף פעם: סקירת הנהלה\./.test(hn) && hn.indexOf('לא נרשם במערכת אף פעם') < hn.indexOf(T.exp), hn.substring(0, 600));
 
   console.log('\n3. the endpoint');
   const HZ = [
@@ -232,11 +236,11 @@ const ROWS = [
     && c.j.counts.open === 3 && c.j.counts.overdue === 2 && c.j.counts.trustee === 1, c.j);
   check('the mail: the overdue hazard under אחזקה, the trustee finding, the committee block with a real meeting date', /אחזקה \(1\)/.test(m.body.content) && /נ-1/.test(m.body.content) && new RegExp(T.meeting + '\\d{2}/\\d{2}/\\d{4}').test(m.body.content), m.subject);
   check('every register has rows: no empty-register line, count 0', !/מרשמי חובה ריקים/.test(m.body.content) && c.j.counts.emptyRegs === 0, c.j.counts);
-  check('no review in the table (read, empty): the never-done line, counted', /לא בוצע אף פעם: סקירת הנהלה\./.test(m.body.content) && c.j.counts.never === 1, c.j.counts);
+  check('no review in the table (read, empty): the never-done line, counted', /לא נרשם במערכת אף פעם: סקירת הנהלה\./.test(m.body.content) && c.j.counts.never === 1, c.j.counts);
   c = await call({ rec: { mgmt_reviews: [{ id: 'm1', ts: plus(-30) + 'T09:00:00Z' }] } }, { force: true }, 'nsec');
-  check('a review done: no never-done line, count 0', c.w.mails[0] && !/לא בוצע אף פעם/.test(c.w.mails[0].message.body.content) && c.j.counts.never === 0, c.j.counts);
+  check('a review done: no never-done line, count 0', c.w.mails[0] && !/לא נרשם במערכת אף פעם/.test(c.w.mails[0].message.body.content) && c.j.counts.never === 0, c.j.counts);
   c = await call({ recFail: 'mgmt_reviews' }, { force: true }, 'nsec');
-  check('the review read fails: not called never done, named as not read', c.w.mails[0] && !/לא בוצע אף פעם/.test(c.w.mails[0].message.body.content) && /לא נקרא, לבדוק באפליקציה: [^<]*סקירת הנהלה/.test(c.w.mails[0].message.body.content), c.j.counts);
+  check('the review read fails: not called never done, named as not read', c.w.mails[0] && !/לא נרשם במערכת אף פעם/.test(c.w.mails[0].message.body.content) && /לא נקרא, לבדוק באפליקציה: [^<]*סקירת הנהלה/.test(c.w.mails[0].message.body.content), c.j.counts);
   check('the run is recorded: ok, to, at, counts', rec && rec.ok && rec.to === 'sviva@tapugan.co.il' && rec.at && rec.counts.overdue === 2, rec);
   c = await call({ state: { [STATE_KEY]: JSON.stringify({ at: new Date(Date.now() - 3600e3).toISOString(), ok: true }) } }, {}, 'nsec');
   check('the second cron slot an hour later: skipped, no second mail', c.j.ok && /^sent /.test(c.j.skipped || '') && !c.w.mails.length, c.j);
@@ -267,7 +271,7 @@ const ROWS = [
   check('two registers empty: the red line in the mail, in the order of the app, counted', m2 && /מרשמי חובה ריקים: בדיקות שמיעה, חומרים מסוכנים\./.test(m2.body.content) && c.j.counts.emptyRegs === 2, c.j.counts);
   c = await call({ emptyRegs: ['tr'], regFail: 'equip_inspections' }, {}, 'nsec');
   const m3 = c.w.mails[0] && c.w.mails[0].message;
-  check('a register read that fails is not called empty, and does not stop the mail', c.j.ok && c.j.sent && m3 && /מרשמי חובה ריקים: הדרכות\./.test(m3.body.content) && !/בדיקות ציוד/.test(m3.body.content.split('מרשמי חובה ריקים')[1].split('</p>')[0]), c.j);
+  check('a register read that fails is not called empty, and does not stop the mail', c.j.ok && c.j.sent && m3 && /מרשמי חובה ריקים: הדרכות עם תוקף \(תעודות והסמכות\)\./.test(m3.body.content) && !/בדיקות ציוד/.test(m3.body.content.split('מרשמי חובה ריקים')[1].split('</p>')[0]), c.j);
   c = await call({ email: 'admin@tfugen.local' }, {});
   check('admin without op: a preview too', c.j.ok && !c.w.mails.length);
   c = await call({ email: 'admin@tfugen.local' }, { op: 'send' });
@@ -469,7 +473,7 @@ const ROWS = [
       const late = agentsLine(JSON.stringify(lateLog), now);
       check('silent longer than its period after reporting once: red', late.red && /לא דיווחו בזמן: routine-researcher/.test(late.text), late);
       const first = agentsLine(JSON.stringify([{ agent: 'routine-quotes', at: ago(1), ok: true }]), now);
-      check('never reported: listed, not red', !first.red && /עוד לא דיווחו: .*routine-compliance/.test(first.text), first);
+      check('never reported: listed, not red', !first.red && /עוד לא רצו אף פעם \(תקין לסוכן חודשי שתורו לא הגיע\): .*routine-compliance/.test(first.text), first);
       check('an old failure (over 8 days) is not red', !agentsLine(JSON.stringify(all.concat([{ agent: 'retro', at: ago(10), ok: false }])), now).red);
       check('broken JSON: no crash, nobody reported', /0 דיווחו השבוע/.test(agentsLine('{oops', now).text));
       const h = digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [], agents: failed });
