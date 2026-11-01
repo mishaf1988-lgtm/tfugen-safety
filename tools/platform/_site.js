@@ -58,8 +58,6 @@ export const SITE = {
   // equipAreas: an equipment area that is not the safety manager's -> who runs it, e.g.
   // { 'Infrastructure': 'Dana and Avi' }. equip_inspections.resp_area holds the key.
   equipAreas: {},
-  // extraResp: fixed extra addresses per responsible party of the recipients sheet, e.g. { maintenance: ['x@...'] }.
-  extraResp: {},
   tbtDepts: [['\u05d9\u05d9\u05e6\u05d5\u05e8', ['\u05d9\u05d9\u05e6\u05d5\u05e8']], ['\u05d0\u05e8\u05d9\u05d6\u05d4', ['\u05d0\u05e8\u05d9\u05d6\u05d4']], ['\u05de\u05d7\u05e1\u05e0\u05d9\u05dd', ['\u05de\u05d7\u05e1\u05e0\u05d9\u05dd']], ['\u05d0\u05d7\u05d6\u05e7\u05d4', ['\u05d0\u05d7\u05d6\u05e7\u05d4']]],
   tbtReport: {'\u05d9\u05d9\u05e6\u05d5\u05e8': '\u05d9\u05d9\u05e6\u05d5\u05e8', '\u05d0\u05e8\u05d9\u05d6\u05d4': '\u05d0\u05e8\u05d9\u05d6\u05d4', '\u05de\u05d7\u05e1\u05e0\u05d9\u05dd': '\u05de\u05d7\u05e1\u05e0\u05d9\u05dd', '\u05d0\u05d7\u05d6\u05e7\u05d4': '\u05d0\u05d7\u05d6\u05e7\u05d4'},
   // The annual training plan a new year starts from: [item, subject, who trains, audience].

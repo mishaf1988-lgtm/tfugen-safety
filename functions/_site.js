@@ -61,10 +61,6 @@ export const SITE = {
   // sits here, one line, so a change of staff is one edit). equip_inspections.resp_area holds the
   // key; empty = the safety manager's own. First names only: this file is public. 20/10/2026, Michael:
   // Yuri only refrigeration and ammonia, Shlomi the plant engineer over everything.
-  // 01/11/2026 (Michael: "Nahum is responsible for all maintenance faults", and in the questionnaire: the tasks
-  // I send to departments go to Nahum too, no weekly summary). Added to the recipients sheet's row of the same key
-  // (hazard-report.js parseRecipients), so every maintenance hazard in every department reaches him. DECISIONS 01/11/2026.
-  extraResp: { '\u05d0\u05d7\u05d6\u05e7\u05d4': ['nahum@tapugan.co.il'] },
   equipAreas: { '\u05ea\u05e9\u05ea\u05d9\u05d5\u05ea': '\u05e9\u05dc\u05d5\u05de\u05d9 (\u05de\u05d4\u05e0\u05d3\u05e1 \u05d4\u05de\u05e4\u05e2\u05dc)', '\u05e7\u05d9\u05e8\u05d5\u05e8 \u05d5\u05d0\u05de\u05d5\u05e0\u05d9\u05d4': '\u05d9\u05d5\u05e8\u05d9, \u05d5\u05e9\u05dc\u05d5\u05de\u05d9 \u05de\u05e2\u05dc\u05d9\u05d5' },
   tbtReport: { '\u05d8\u05d5\u05d2\u05e0\u05d9\u05dd': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd': '\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05d0\u05e8\u05d9\u05d6\u05d4': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd': '\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd', '\u05ea\u05d5\u05e6"\u05d2 \u05d5\u05de\u05d7\u05e1\u05e0\u05d9\u05dd': '\u05ea\u05d5\u05e6\u05d2', '\u05de\u05e2\u05d1\u05d3\u05d4': '\u05de\u05e2\u05d1\u05d3\u05d5\u05ea', '\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d5\u05d7\u05e9\u05de\u05dc': '\u05d0\u05d7\u05d6\u05e7\u05d4' },
   // The annual training plan (form 08.01) a new year starts from: [item, subject, who trains, audience].
