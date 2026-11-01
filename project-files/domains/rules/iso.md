@@ -12,7 +12,7 @@
 - שם בעל תפקיד במסמך חדש מהמסמך העדכני ביותר, לא מהמקור שמעתיקים (`.claude/skills/tfugen-dev/references/lessons.md:150`)
 - קובץ Office שכלי בנה נבדק בפתיחה אצל Microsoft (`od-read` `format: pdf`), לא רק ב-LibreOffice (`.claude/skills/tfugen-dev/references/lessons.md:262`)
 - אחרי `track_docx`: להדפיס את רשימת `delText`/`ins` ולוודא שרק מה ששונה מסומן (`.claude/skills/tfugen-dev/references/lessons.md:268`)
-- מסמך של העוזר: קובץ אחד לכל מסמך, Arial (לא David), PDF לצפייה לצידו (`.claude/skills/tfugen-dev/references/lessons.md:341`)
+- מסמך של העוזר: קובץ אחד לכל מסמך חדש או טיוטה (שינוי במסמך מבוקר קיים: נקי וגם סימון שינויים, `assistant/iso-docs.md`), Arial (לא David), PDF לצפייה לצידו (`.claude/skills/tfugen-dev/references/lessons.md:341`)
 - "עמוד X מתוך Y" תואם `pdfinfo`, אחרת `page_fields.py` (`.claude/skills/tfugen-dev/references/lessons.md:406`)
 - איתור חוק בנבו: WebSearch עם `allowed_domains` ובלי `site:`; סעיף או מועד = WebFetch שני "מילה במילה" (`.claude/skills/tfugen-ref/references/gotchas.md:30`)
 - כותרת התבנית (לוגו וטבלה) בתחילת גוף המסמך, לא בכותרת העליונה של Word, כי הטלפון לא מציג אותה (`project-files/routine-wa-assistant.md:34`)
