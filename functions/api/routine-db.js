@@ -808,6 +808,9 @@ export function draftThreadGate(b) {
   const to = String(b.to || '').toLowerCase().split(/[;,]/).map((x) => x.trim()).filter(Boolean);
   if (to.length && to.every((x) => x === String(SITE.adminEmail || '').toLowerCase())) return null;
   if (b.reply_to !== undefined && b.reply_to !== null && b.reply_to !== '') return null;
+  // 01/11/2026 (Michael in the questionnaire: "do it: a new mail with the file"; flow 3 failed twice on a thread reply with
+  // an attachment): a new mail on purpose, when Michael chose it, quoted with his "\u05d1\u05e6\u05e2". Never a made-up "no thread".
+  if (/^michael chose a new mail:.*\u05d1\u05e6\u05e2/i.test(String(b.thread_checked || '').trim())) return null;
   return /^no thread:\s*\S.{9,}/i.test(String(b.thread_checked || '').trim()) ? null
     : 'thread_checked required: search the mailbox (all folders) for an existing thread with these recipients or this subject, right before the draft. Found: pass reply_to (the id of its last mail) so the draft stays in the thread with who approved. None: pass "thread_checked":"no thread: <what you searched, HH:MM UTC>" (29/10/2026: a purchase order went out as a new mail without its thread)';
 }

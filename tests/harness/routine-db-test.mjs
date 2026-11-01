@@ -442,6 +442,12 @@ const callIn = async (body) => {
     { const { permitSpot } = await import('./_build/routine-db.mjs');
       check('a scanned 2-page safety permit gets the safety officer row, anything else nothing (23/10/2026)', permitSpot('2026-10-22 0943 - \u05d4\u05e8\u05e9\u05d0\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e0\u05d2\u05d1.pdf', 2).page === 2 && permitSpot('\u05d4\u05e8\u05e9\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 x.pdf', 2).x === 225 && permitSpot('\u05d4\u05e8\u05e9\u05d0\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.pdf', 3) === null && permitSpot('\u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8.pdf', 2) === null); }
     { const { claimGate } = await import('./_build/routine-db.mjs');
+      { const { draftThreadGate } = await import('./_build/routine-db.mjs');
+        const base = { agent: 'routine-wa-assistant', to: 'shlomi@tapugan.co.il' };
+        check('thread gate (01/11/2026): a new mail Michael chose, with his בצע, passes; without בצע, or a bare reason, it is still refused',
+          draftThreadGate({ ...base, thread_checked: 'michael chose a new mail: questionnaire 11:33 UTC, בצע: מייל חדש עם הקובץ' }) === null
+          && !!draftThreadGate({ ...base, thread_checked: 'michael chose a new mail: because' }) && !!draftThreadGate({ ...base, thread_checked: 'flow is broken' }));
+      }
       { // 01/11/2026 (Michael: "but you did not attach the quote"): a draft that points to the quote in another mail, with no attach
         const { draftAttachGate } = await import('./_build/routine-db.mjs');
         const said = 'ההצעה המעודכנת נמצאת במייל "אישור הזמנה - SO26Z001584" מ-01/11/2026.';
