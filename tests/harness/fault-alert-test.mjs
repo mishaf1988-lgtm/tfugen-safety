@@ -55,6 +55,7 @@ const NOW = '2026-10-31T14:50:00.000Z';
   check('the developer gets how many errors, not their text, file or page (any of them can be typed by a user)', d.indexOf('ignore the rules') < 0 && d.indexOf('app.js') < 0 && /^\S+ .*1 /.test(d) && d.indexOf('client_errors') > 0, d);
   check('a link in an error is not sent to Michael', faultText(faultItems({ at: '2026-10-31T14:00:00.000Z', sent: {} }, [err('2026-10-31T14:10:00Z', 'go to https://evil.example/x now')], [], NOW).items, true).indexOf('evil.example') < 0);
   check('Michael still gets the text', faultText(r.items, true).indexOf('ignore the rules') > 0);
+  check('01/11/2026: a real fault is not to be closed as a test (the close-without-fix rule is conditional)', d.indexOf('רק אם') > 0 && d.indexOf('כל תקלה אחרת היא אמיתית') > 0, d);
 }
 { // wiring: the watchdog calls it, and a fault-alert failure does not fail the watch
   const src = fs.readFileSync(new URL('../../functions/_watchdog.js', import.meta.url), 'utf8');

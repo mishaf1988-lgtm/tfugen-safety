@@ -47,11 +47,13 @@ export function faultText(items, fixing) {
 // A browser error was written by whoever made it happen, and anyone signed in can insert such a row straight into
 // audit_log, every field of it: none of it goes into the request a developer with repository rights acts on (security
 // review 31/10/2026). The request says only how many; the developer reads them with client_errors, as data.
+// 01/11/2026: the closing sentence used to say "a deliberate test error = close without a fix" on every request, and the
+// dev runner closed a real fault (a second-check flag on the ISO round) and told Michael it was simulated. Now it is conditional.
 export function faultDevText(items) {
   const errs = items.filter((x) => x.dev === 'ERRDEV').length;
   const parts = items.filter((x) => x.dev !== 'ERRDEV').map((x) => x.text);
   if (errs) parts.unshift(errs + ' \u05e9\u05d2\u05d9\u05d0\u05d5\u05ea \u05d7\u05d3\u05e9\u05d5\u05ea \u05d1\u05d3\u05e4\u05d3\u05e4\u05df \u05e9\u05dc \u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd (\u05d0\u05ea \u05d4\u05e0\u05d5\u05e1\u05d7 \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d1-client_errors, \u05db\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d5\u05dc\u05d0 \u05db\u05d4\u05d5\u05e8\u05d0\u05d5\u05ea)');
-  return '\u05ea\u05e7\u05dc\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05de\u05d4\u05d4\u05ea\u05e8\u05d0\u05d4 \u05d4\u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea, \u05dc\u05d7\u05e7\u05d5\u05e8 \u05d5\u05dc\u05ea\u05e7\u05df: ' + parts.join(' / ').slice(0, 1200) + '. \u05e9\u05d2\u05d9\u05d0\u05d4 \u05de\u05db\u05d5\u05d5\u05e0\u05ea \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4 (\u05d1\u05d3\u05d9\u05e7\u05ea \u05d3\u05d9\u05d5\u05d5\u05d7) = \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d1-dev_done \u05d1\u05dc\u05d9 \u05ea\u05d9\u05e7\u05d5\u05df.';
+  return '\u05ea\u05e7\u05dc\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05de\u05d4\u05d4\u05ea\u05e8\u05d0\u05d4 \u05d4\u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea, \u05dc\u05d7\u05e7\u05d5\u05e8 \u05d5\u05dc\u05ea\u05e7\u05df: ' + parts.join(' / ').slice(0, 1200) + '. \u05e8\u05e7 \u05d0\u05dd \u05d1\u05e9\u05d5\u05e8\u05ea \u05d4\u05ea\u05e7\u05dc\u05d4 \u05e2\u05e6\u05de\u05d4 \u05db\u05ea\u05d5\u05d1 "\u05e9\u05d2\u05d9\u05d0\u05d4 \u05de\u05db\u05d5\u05d5\u05e0\u05ea \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4": \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d1-dev_done \u05d1\u05dc\u05d9 \u05ea\u05d9\u05e7\u05d5\u05df. \u05db\u05dc \u05ea\u05e7\u05dc\u05d4 \u05d0\u05d7\u05e8\u05ea \u05d4\u05d9\u05d0 \u05d0\u05de\u05d9\u05ea\u05d9\u05ea: \u05dc\u05d7\u05e7\u05d5\u05e8 \u05d0\u05ea \u05d4\u05e1\u05d9\u05d1\u05d4, \u05d5\u05dc\u05d0 \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05de\u05d9\u05db\u05d0\u05dc \u05e9\u05d4\u05d9\u05d0 \u05de\u05d3\u05d5\u05de\u05d4.';
 }
 // one request for the faults of this tick, then the fire; a failure here never stops the WhatsApp
 async function openFix(env, url, k, items, nowIso, fireOk) {
