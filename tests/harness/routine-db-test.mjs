@@ -442,6 +442,14 @@ const callIn = async (body) => {
     { const { permitSpot } = await import('./_build/routine-db.mjs');
       check('a scanned 2-page safety permit gets the safety officer row, anything else nothing (23/10/2026)', permitSpot('2026-10-22 0943 - \u05d4\u05e8\u05e9\u05d0\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e0\u05d2\u05d1.pdf', 2).page === 2 && permitSpot('\u05d4\u05e8\u05e9\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 x.pdf', 2).x === 225 && permitSpot('\u05d4\u05e8\u05e9\u05d0\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.pdf', 3) === null && permitSpot('\u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8.pdf', 2) === null); }
     { const { claimGate } = await import('./_build/routine-db.mjs');
+      { // 01/11/2026 (Michael: "but you did not attach the quote"): a draft that points to the quote in another mail, with no attach
+        const { draftAttachGate } = await import('./_build/routine-db.mjs');
+        const said = 'ההצעה המעודכנת נמצאת במייל "אישור הזמנה - SO26Z001584" מ-01/11/2026.';
+        check('attach gate: "the quote is in the mail" or "מצורפת" with no attach is refused; with attach it passes; a plain draft passes',
+          !!draftAttachGate({ body: said }) && !!draftAttachGate({ body: 'מצורפת הצעת המחיר.' }) && !draftAttachGate({ body: 'מצורפת הצעת המחיר.', attach: ['x/a.pdf'] }) && !draftAttachGate({ body: 'הזמנת הרכש אושרה ונשלחה ב-28/10.' }));
+        const w = await call({ op: 'mail_draft', agent: 'routine-wa-assistant', why: 'test only', to: 'a@tapugan.co.il', subject: 's', body: said });
+        check('...and mail_draft refuses it (400)', w.status === 400 && /attach/.test(w.json.error), w.json);
+      }
       { // 01/11/2026 (Michael: "find a way not to make mistakes"): "the new version is saved" about a file needs checked naming it
         const said = 'הגרסה החדשה של 08.01 כבר נשמרה בתיקייה 11_הדרכות.';
         check('claim gate: a file "saved / new version" with no checked is refused; with the file read it passes; a database row is not touched',
@@ -1265,7 +1273,7 @@ const callIn = async (body) => {
       if (m) { const it = have[m[1]]; return it ? new Response(JSON.stringify(it), { status: 200 }) : new Response('{}', { status: 404 }); }
       return new Response('{}', { status: 400 });
     };
-    const D = { op: 'mail_draft', agent: 'dev', why: 'certificates to HR', to: 'Geny@tapugan.co.il;tzachi@tapugan.co.il', subject: 'הסמכות', body: 'מצורפות ההסמכות' };
+    const D = { op: 'mail_draft', agent: 'dev', why: 'certificates to HR', to: 'Geny@tapugan.co.il;tzachi@tapugan.co.il', subject: 'הסמכות', body: 'עדכון על ההסמכות' };
     let x = await call({ ...D, attach: [DIR + '/a.pdf'] });
     const fj = puts[0] ? JSON.parse(puts[0].body) : {};
     check('an attachment that exists: in the request as its full path and name', x.json.ok && x.json.attachments === 1 && fj.attachments.length === 1 && fj.attachments[0].path === '/' + OD_ROOT + DIR + '/a.pdf' && fj.attachments[0].name === 'a.pdf', { x: x.json, fj });
