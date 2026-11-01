@@ -113,6 +113,16 @@ export function parseRecipients(rows, extra) {
 // {link} (a link to it), 29/09/2026: the report carries the hazards' photos.
 // links (optional): Map register row -> the signed "mark as handled" URL
 // (close-hazard.js; upgrade review 13, 30/09/2026). Only in a real send.
+// 01/11/2026 (Michael: the production report did not reach Nahum): an investigation writes the responsible party as in
+// the investigation ("\u05de\u05e0\u05d4\u05dc \u05d0\u05d7\u05d6\u05e7\u05d4"), not the bare key. A part that contains a key counts as that key; the first key wins.
+export function respKey(x) { const t = String(x || '').trim(); return RESP_KEYS.find((k) => t === k) || RESP_KEYS.find((k) => t.indexOf(k) >= 0) || null; }
+// 01/11/2026 (Michael: "how do we know the source of the finding?"): the source column of the report.
+const SRC_LABEL = { investigation: '\u05ea\u05d7\u05e7\u05d9\u05e8 \u05ea\u05d0\u05d5\u05e0\u05d4', committee: '\u05d5\u05e2\u05d3\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea' };
+export function sourceOf(r, src) {
+  if (/^\u05e0-/.test(String(r[0] || ''))) return '\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df';
+  if (r[2] !== '' && r[2] != null) return '\u05e1\u05d9\u05d5\u05e8 ' + r[2];
+  return SRC_LABEL[src] || (src ? String(src) : '');
+}
 export function buildReport(dept, rows, rcpt, texts, today, photos, links) {
   const mine = rows.filter((r) => r[3] === dept);
   const latest = mine.reduce((m, r) => Math.max(m, +r[2] || 0), 0);
@@ -122,7 +132,7 @@ export function buildReport(dept, rows, rcpt, texts, today, photos, links) {
     const overdue = !!today && !!dueY && dueY < today;
     const ph = photos && photos.get(r) ? photos.get(r) : null;
     // src: the register row it came from (not sent to the page), to find its photo.
-    return Object.defineProperty({ n: r[0], opened: fd(r[1]), loc: r[4] || '', descr: r[5] || '', sev: r[6] || '', resp: r[7] || '', action: r[8] || '', due: fd(r[9]), status: (r[10] || '') + (old ? OLD : ''), old, overdue, photo: ph, close: (links && links.get(r)) || null }, 'src', { value: r });
+    return Object.defineProperty({ n: r[0], source: sourceOf(r, r._src), opened: fd(r[1]), loc: r[4] || '', descr: r[5] || '', sev: r[6] || '', resp: r[7] || '', action: r[8] || '', due: fd(r[9]), status: (r[10] || '') + (old ? OLD : ''), old, overdue, photo: ph, close: (links && links.get(r)) || null }, 'src', { value: r });
   });
   const seen = new Set(), to = [];
   const add = (list) => (list || []).forEach((x) => { const k = x.toLowerCase(); if (!seen.has(k)) { seen.add(k); to.push(x); } });
@@ -134,14 +144,14 @@ export function buildReport(dept, rows, rcpt, texts, today, photos, links) {
   add(rcpt.depts[dept]);
   if (dept === '\u05d0\u05d7\u05d6\u05e7\u05d4' && !(rcpt.depts[dept] || []).length) MAINT_TEAM.forEach((k) => add(rcpt.resp[k]));
   const who = new Set();
-  open.forEach((r) => String(r.resp).split(/\s*\+\s*/).forEach((x) => { if (RESP_KEYS.indexOf(x) >= 0) who.add(x); }));
+  open.forEach((r) => String(r.resp).split(/\s*\+\s*/).forEach((x) => { const k = respKey(x); if (k) who.add(k); }));
   RESP_KEYS.forEach((k) => { if (who.has(k)) add(rcpt.resp[k]); });
   if (who.has('\u05d0\u05d7\u05d6\u05e7\u05d4')) MAINT_TEAM.forEach((k) => add(rcpt.resp[k]));
   if (who.has('\u05d0\u05d7\u05d6\u05e7\u05d4') || who.has('\u05d7\u05e9\u05de\u05dc')) add(rcpt.resp['\u05d4\u05e0\u05d3\u05e1\u05d4']);
   const cc = [];
   (rcpt.cc || []).forEach((x) => { const k = x.toLowerCase(); if (!seen.has(k)) { seen.add(k); cc.push(x); } });
   const title = '\u05d3\u05d5\u05d7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc - \u05de\u05d7\u05dc\u05e7\u05ea ' + dept;
-  const th = ['\u05de\u05e1"\u05d3', '\u05ea\u05d0\u05e8\u05d9\u05da \u05e4\u05ea\u05d9\u05d7\u05d4', '\u05de\u05d9\u05e7\u05d5\u05dd', '\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2', '\u05d7\u05d5\u05de\u05e8\u05d4', '\u05de\u05d7\u05dc\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea', '\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d3\u05e8\u05e9\u05ea', '\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc', '\u05e1\u05d8\u05d8\u05d5\u05e1'];
+  const th = ['\u05de\u05e1"\u05d3', '\u05de\u05e7\u05d5\u05e8', '\u05ea\u05d0\u05e8\u05d9\u05da \u05e4\u05ea\u05d9\u05d7\u05d4', '\u05de\u05d9\u05e7\u05d5\u05dd', '\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2', '\u05d7\u05d5\u05de\u05e8\u05d4', '\u05de\u05d7\u05dc\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea', '\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d3\u05e8\u05e9\u05ea', '\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc', '\u05e1\u05d8\u05d8\u05d5\u05e1'];
   const cell = 'border:1px solid #ccc;padding:6px;vertical-align:top';
   const anyPhoto = open.some((r) => r.photo);
   const anyClose = open.some((r) => r.close);
@@ -152,7 +162,7 @@ export function buildReport(dept, rows, rcpt, texts, today, photos, links) {
     + '<p>' + esc(texts.open || DEFAULT_OPEN).replace(/\n/g, '<br>') + '</p>'
     + (open.some((r) => r.old) ? '<p style="color:#8a6d00">\u05d4\u05e9\u05d5\u05e8\u05d5\u05ea \u05d4\u05de\u05e1\u05d5\u05de\u05e0\u05d5\u05ea \u05d1\u05e6\u05d1\u05e2 \u05d6\u05d4\u05d1 \u05d4\u05df \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05de\u05e1\u05d9\u05d5\u05e8\u05d9\u05dd \u05e7\u05d5\u05d3\u05de\u05d9\u05dd \u05e9\u05d8\u05e8\u05dd \u05e0\u05e1\u05d2\u05e8\u05d5.</p>' : '')
     + '<table style="border-collapse:collapse;width:100%"><tr>' + th.concat(anyPhoto ? [PHOTO_TH] : [], anyClose ? [CLOSE_TH] : []).map((h) => '<th style="' + cell + ';background:#1f3864;color:#fff">' + esc(h) + '</th>').join('') + '</tr>'
-    + open.map((r) => '<tr style="background:' + (r.old ? '#fff2cc' : '#fff') + '">' + [r.n, r.opened, r.loc, r.descr, r.sev, r.resp, r.action, r.due, r.status].map((x, i) => '<td style="' + cell + (i === 4 && SEV_COLOR[x] ? ';background:' + SEV_COLOR[x] + ';color:#ffffff;font-weight:bold;text-align:center;white-space:nowrap' : i === 1 ? ';white-space:nowrap' : '') + '">' + (i === 4 && SEV_COLOR[x] ? '&#9679; ' : '') + esc(x).replace(/\n/g, '<br>') + (i === 7 && r.overdue ? '<br><b style="color:#b91c1c">\u05e2\u05d1\u05e8 \u05d4\u05d9\u05e2\u05d3</b>' : '') + '</td>').join('') + photoTd(r) + closeTd(r) + '</tr>').join('')
+    + open.map((r) => '<tr style="background:' + (r.old ? '#fff2cc' : '#fff') + '">' + [r.n, r.source, r.opened, r.loc, r.descr, r.sev, r.resp, r.action, r.due, r.status].map((x, i) => '<td style="' + cell + (i === 5 && SEV_COLOR[x] ? ';background:' + SEV_COLOR[x] + ';color:#ffffff;font-weight:bold;text-align:center;white-space:nowrap' : i === 1 || i === 2 ? ';white-space:nowrap' : '') + '">' + (i === 5 && SEV_COLOR[x] ? '&#9679; ' : '') + esc(x).replace(/\n/g, '<br>') + (i === 8 && r.overdue ? '<br><b style="color:#b91c1c">\u05e2\u05d1\u05e8 \u05d4\u05d9\u05e2\u05d3</b>' : '') + '</td>').join('') + photoTd(r) + closeTd(r) + '</tr>').join('')
     + '</table>' + (texts.sign && !REGARDS.test(texts.sign) ? '<p>' + esc(texts.sign).replace(/\n/g, '<br>') + '</p>' : '') + SIGNATURE + '</div>';
   return { dept, title, to, cc, rows: open, count: open.length, old: open.filter((r) => r.old).length, overdue: open.filter((r) => r.overdue).length, html };
 }
@@ -190,7 +200,7 @@ export function buildStatus(dept, rows, rcpt, note, since, today, links, photos)
 
 async function loadAll(env, token) {
   const [hazards, reports, tasks] = await Promise.all([
-    readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes,photo_url&order=n.asc'),
+    readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,src,descr,sev,resp,resp2,action,due,s,closed_d,notes,photo_url&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,resp,ts,photo_url&order=ts.asc'),
     readAll(env, TASKS_Q),
   ]);
@@ -203,6 +213,9 @@ async function loadAll(env, token) {
   const reg = buildRegister(hazards, reports, tasks);
   const urls = new Map(); reg.ids.forEach((id, i) => { const u = photoOf(id, hazards, reports); if (u) urls.set(reg.rows[i], u); });
   const idOf = new Map(); reg.ids.forEach((id, i) => idOf.set(reg.rows[i], id));
+  // The source column (01/11/2026): a hidden field on the register row, so the workbook columns do not move.
+  const srcById = new Map(); hazards.forEach((h) => srcById.set('h:' + h.id, h.src || ''));
+  reg.rows.forEach((r, i) => Object.defineProperty(r, '_src', { value: srcById.get(reg.ids[i]) || '', configurable: true }));
   // The action as typed (a trustee row's column also says who reported it): empty = to suggest.
   const raw = new Map(); hazards.forEach((h) => raw.set('h:' + h.id, h.action || '')); reports.forEach((t) => raw.set('t:' + t.id, t.action || ''));
   // A save in Excel the server has not taken yet (upgrade review 16, 29/09): the
