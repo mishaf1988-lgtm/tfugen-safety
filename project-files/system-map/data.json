@@ -490,6 +490,9 @@
     "agent_report",
     "expiry_set",
     "mail_request",
+    "ocr_txt",
+    "od_expire",
+    "od_mkdir",
     "od_move",
     "select",
     "state_get",
@@ -512,6 +515,9 @@
     "agent_report",
     "expiry_set",
     "mail_request",
+    "ocr_txt",
+    "od_expire",
+    "od_mkdir",
     "od_move",
     "select",
     "state_get",
@@ -533,6 +539,7 @@
    "ops": [
     "agent_report",
     "expiry_set",
+    "ocr_txt",
     "state_set",
     "task_add"
    ],
@@ -609,6 +616,7 @@
    "ops": [
     "agent_report",
     "select",
+    "source_read",
     "state_get",
     "state_set"
    ],
@@ -731,7 +739,8 @@
    "family": "למידה ומחקר",
    "ops": [
     "agent_report",
-    "learn"
+    "learn",
+    "source_read"
    ],
    "m365": false,
    "reports": true
