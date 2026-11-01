@@ -14,6 +14,7 @@ import { accessToken, putFile } from '../_onedrive.js';
 import { OD_ROOT, CHAT_DIR, UP_MAX, upKind } from './routine-db.js';
 import { ttsUpstream, sayParts, speechText } from './talk.js';
 import { vapidKeys, pushSubOk, pushSave, sendPush, pushPayload } from '../_push.js';
+import { domainLine } from '../_domains.js';
 
 export const CHAT_MAX = 2000, CHAT_ROWS = 100;
 const FIRE_MS = 20000;
@@ -24,6 +25,8 @@ export function chatFireText(text, at, recent, prev, media) {
   // a photo or a PDF he sent from the chat: the same line as from WhatsApp, so step 2c reads it with wa_media
   if (media) lines.push('media: ' + media.type + ' id ' + media.id + ' (' + media.mime + ', ' + media.name + ') read it: routine-db {"op":"wa_media","id":"' + media.id + '"}');
   lines.push('text: ' + String(text).replace(/\s*\n+\s*/g, ' / ').slice(0, CHAT_MAX));
+  // 01/11/2026: the branch file to read first, as from WhatsApp (wa-hook.js fireText).
+  { const dl = domainLine(text); if (dl) lines.push(dl); }
   lines.push('\u05e2\u05e0\u05d4 \u05db\u05e8\u05d2\u05d9\u05dc \u05d1-wa_me: \u05db\u05dc wa_me \u05de\u05d5\u05e4\u05d9\u05e2 \u05d2\u05dd \u05d1\u05e6\'\u05d0\u05d8 \u05e9\u05dc\u05d5 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, \u05d2\u05dd \u05db\u05e9\u05d4\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05d7\u05e1\u05d5\u05dd. \u05d4"\u05e7\u05d9\u05d1\u05dc\u05ea\u05d9" \u05db\u05d1\u05e8 \u05d4\u05d5\u05e6\u05d2 \u05dc\u05d5 \u05d1\u05e6\'\u05d0\u05d8, \u05d0\u05dc \u05ea\u05e9\u05dc\u05d7 \u05d0\u05d5\u05ea\u05d5 \u05e9\u05d5\u05d1.');
   return lines.join('\n');
 }

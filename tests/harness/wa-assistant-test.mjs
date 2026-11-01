@@ -83,6 +83,8 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   check('an image: media id and type kept, caption as text', im[0].media && im[0].media.id === '1234567890' && im[0].media.mime === 'image/jpeg' && im[0].text === 'the gov page', im[0]);
   check('a document: media id and file name kept', im[1].media && im[1].media.name === 'nohal.pdf' && im[1].text === '', im[1]);
   const ftm = fireText(im[1], '');
+  // 01/11/2026 (Michael: work branches "for you and for the assistant"): a branch word = the branch file to read first.
+  check('fireText: "08.01" in the message adds the training branch line; an unrelated message adds none', /domain \(read first[^\n]*project-files\/domains\/training\.md/.test(fireText({ id: 'wd', type: 'text', text: '\u05d8\u05d5\u05e4\u05e1 08.01 \u05dc\u05de\u05d7\u05e8' }, '')) && !/domain \(read first/.test(fireText({ id: 'we', type: 'text', text: '\u05de\u05d4 \u05e9\u05dc\u05d5\u05de\u05da' }, '')));
   check('the fire text tells the assistant to read it with wa_media, no "not text" line', /media: document id 9876543210 \(application\/pdf, nohal\.pdf\)/.test(ftm) && /"op":"wa_media","id":"9876543210"/.test(ftm) && !/type: document/.test(ftm), ftm);
 
   // 29/10/2026 13:09: three photos and a line carried the same Meta second, two runs got the same at, and the
