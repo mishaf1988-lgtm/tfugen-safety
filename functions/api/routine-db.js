@@ -814,6 +814,15 @@ export function draftThreadGate(b) {
   return /^no thread:\s*\S.{9,}/i.test(String(b.thread_checked || '').trim()) ? null
     : 'thread_checked required: search the mailbox (all folders) for an existing thread with these recipients or this subject, right before the draft. Found: pass reply_to (the id of its last mail) so the draft stays in the thread with who approved. None: pass "thread_checked":"no thread: <what you searched, HH:MM UTC>" (29/10/2026: a purchase order went out as a new mail without its thread)';
 }
+// 01/11/2026 (C70, checked in Chrome: flow 3 failed with ErrorInvalidReferenceItem): the assistant passed as reply_to
+// the id of its own earlier draft, not of a real mail in the thread, and a draft cannot be replied to. The server
+// reads the message in Graph before writing the request. Pure: status = the Graph HTTP status, j = its JSON
+// ({isDraft}). A draft or a missing message is refused; any other Graph failure does not block (the flow will say).
+export function replyToCheck(status, j) {
+  if (status === 404) return 'reply_to not found in the mailbox: pass the id of the last real mail in the thread (outlook_email_search, Inbox or Sent Items), not of a draft';
+  if (status === 200 && j && j.isDraft === true) return 'reply_to is a draft (Drafts): a draft cannot be replied to (C70, 01/11/2026). Pass the id of the last real mail in the thread (Inbox or Sent Items); to replace your earlier draft, pass it in replaces';
+  return null;
+}
 // 26/10/2026: "delete it" is not a task to hand Michael. A file of yours goes to od_trash; a duplicate draft is named, not handed over.
 // 29/10/2026 (Michael: "is there a problem attaching documents to the assistant?"): the assistant made the Infrared draft
 // and wrote him "the quotes are only in the original thread, attach them by hand". A file in a mail is attached with
@@ -2562,6 +2571,13 @@ export async function onRequest(context) {
         }
       }
       const at = await accessToken(env);
+      const rq = JSON.parse(d.file);
+      if (rq.reply_to) {
+        const rr = await fetch('https://graph.microsoft.com/v1.0/me/messages/' + encodeURIComponent(rq.reply_to) + '?$select=isDraft', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) }).catch(() => null);
+        const rj = rr && rr.ok ? await rr.json().catch(() => ({})) : {};
+        const rc = replyToCheck(rr ? rr.status : 0, rj);
+        if (rc) return jsonResp({ ok: false, error: rc }, 400, {});
+      }
       // Every attachment must be there now: a missing one would stop the flow with no draft at all.
       for (const a of d.attach) {
         const seg = (OD_ROOT + a.rel).split('/').filter(Boolean).map(encodeURIComponent).join('/');
