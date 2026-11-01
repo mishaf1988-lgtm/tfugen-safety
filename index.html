@@ -8307,7 +8307,7 @@ function _drlNext(){
       var dd=Math.min(+p[2],new Date(y,m+1,0).getDate());
       e=y+'-'+('0'+(m+1)).slice(-2)+'-'+('0'+dd).slice(-2);
     }
-    return {name:ty,owner:last?'\u05d0\u05d7\u05e8\u05d5\u05df: '+fd(last.d):'\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2 \u05d0\u05e3 \u05e4\u05e2\u05dd',mod:'drl',modLabel:'\u05ea\u05e8\u05d2\u05d9\u05dc \u05d7\u05d9\u05e8\u05d5\u05dd',e:e,id:last?last.id:null};
+    return {name:ty,owner:last?'\u05d0\u05d7\u05e8\u05d5\u05df: '+fd(last.d):'\u05dc\u05d0 \u05e0\u05e8\u05e9\u05dd \u05d1\u05de\u05e2\u05e8\u05db\u05ea \u05d0\u05e3 \u05e4\u05e2\u05dd',mod:'drl',modLabel:'\u05ea\u05e8\u05d2\u05d9\u05dc \u05d7\u05d9\u05e8\u05d5\u05dd',e:e,id:last?last.id:null};
   });
 }
 // New drill of a given type, from the expiry page. Every field starts empty.
@@ -8336,7 +8336,7 @@ function _audNext(){
       var dd=Math.min(+p[2],new Date(y,m+1,0).getDate());
       e=y+'-'+('0'+(m+1)).slice(-2)+'-'+('0'+dd).slice(-2);
     }
-    return {name:ar,owner:last?'\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: '+fd(last.d):'\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2\u05d4 \u05d0\u05e3 \u05e4\u05e2\u05dd',mod:'aud',modLabel:'\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd',e:e,id:last?last.id:null};
+    return {name:ar,owner:last?'\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: '+fd(last.d):'\u05dc\u05d0 \u05e0\u05e8\u05e9\u05de\u05d4 \u05d1\u05de\u05e2\u05e8\u05db\u05ea \u05d0\u05e3 \u05e4\u05e2\u05dd',mod:'aud',modLabel:'\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd',e:e,id:last?last.id:null};
   });
 }
 // Default auditor of a new internal audit (DECISIONS 02/10/2026).
@@ -8364,7 +8364,7 @@ function _mrNext(){
   var last=null;
   (DB.mgmt_reviews||[]).forEach(function(r){if(r.ts&&(!last||String(r.ts)>String(last.ts)))last=r;});
   if(!last&&!SB_ON)return [];
-  return [{name:'\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4',owner:last?'\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: '+fd(last.ts):'\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2\u05d4 \u05d0\u05e3 \u05e4\u05e2\u05dd',mod:'mr',modLabel:'\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4',e:last?_plusMonths(last.ts,_MR_FREQ_M):null,id:last?last.id:null}];
+  return [{name:'\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4',owner:last?'\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: '+fd(last.ts):'\u05dc\u05d0 \u05e0\u05e8\u05e9\u05de\u05d4 \u05d1\u05de\u05e2\u05e8\u05db\u05ea \u05d0\u05e3 \u05e4\u05e2\u05dd',mod:'mr',modLabel:'\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4',e:last?_plusMonths(last.ts,_MR_FREQ_M):null,id:last?last.id:null}];
 }
 // 07/10/2026 (Michael, "בצע"): the yearly safety management programme (תקנות התכנית לניהול
 // הבטיחות 3(ב), "מדי שנה", law.md in the assistant). It lives in docs like any document, with
@@ -8393,7 +8393,7 @@ function _envNext(){
     var ty=du_[0],last=null;
     (DB.env||[]).forEach(function(r){if(r.ty===ty&&r.d&&(!last||String(r.d)>String(last.d)))last=r;});
     var e=last?(du_[1]?_plusMonths(last.d,du_[1]):(+String(last.d).substring(0,4)+1)+'-12-31'):null;
-    return {name:ty,owner:last?'\u05d0\u05d7\u05e8\u05d5\u05df: '+fd(last.d):'\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2 \u05d0\u05e3 \u05e4\u05e2\u05dd',mod:'env',modLabel:'\u05e0\u05d9\u05d8\u05d5\u05e8 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9',e:e,id:last?last.id:null};
+    return {name:ty,owner:last?'\u05d0\u05d7\u05e8\u05d5\u05df: '+fd(last.d):'\u05dc\u05d0 \u05e0\u05e8\u05e9\u05dd \u05d1\u05de\u05e2\u05e8\u05db\u05ea \u05d0\u05e3 \u05e4\u05e2\u05dd',mod:'env',modLabel:'\u05e0\u05d9\u05d8\u05d5\u05e8 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9',e:e,id:last?last.id:null};
   });
 }
 function _envNew(ty){

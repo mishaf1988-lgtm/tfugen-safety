@@ -37,7 +37,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('before sync: no management review row (the local copy may just be empty)', !r.dated.length && !r.none.length, r);
   await page.evaluate(() => { SB_ON = true; });
   r = await of('mr');
-  check('after sync, no review saved: one row "never done", no date', !r.dated.length && r.none.length === 1 && r.none[0].owner === 'לא בוצעה אף פעם', r);
+  check('after sync, no review saved: one row "never recorded" (01/11/2026, the weekly summary wording, maybe done on paper), no date', !r.dated.length && r.none.length === 1 && r.none[0].owner === 'לא נרשמה במערכת אף פעם', r);
   r = await of('leg');
   check('empty legal register: no rows at all (9.1.2 is na)', !r.dated.length && !r.none.length, r);
 
@@ -119,7 +119,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const by = (l, n) => l.find((x) => x.name === n);
   check('stacks: the latest counts, due 31/12 of the next year', by(r.dated, 'בדיקת פליטות בארובות') && by(r.dated, 'בדיקת פליטות בארובות').e === '2027-12-31' && by(r.dated, 'בדיקת פליטות בארובות').id === 'e2', r.dated);
   check('monthly sewage: one month on, 31/01 to 28/02', by(r.dated, 'דיגום שפכים חודשי') && by(r.dated, 'דיגום שפכים חודשי').e === '2026-02-28', r.dated);
-  check('yearly sewage never measured: a no-date row "never done"', r.none.length === 1 && r.none[0].name === 'דיגום שפכים שנתי' && r.none[0].owner === 'לא בוצע אף פעם', r.none);
+  check('yearly sewage never measured: a no-date row "never done"', r.none.length === 1 && r.none[0].name === 'דיגום שפכים שנתי' && r.none[0].owner === 'לא נרשם במערכת אף פעם', r.none);
   check('an ordinary measurement type is not a duty', r.dated.length === 2, r.dated);
   r = await page.evaluate(() => {
     goPage('exp'); expFilter('all'); rExp();
@@ -164,6 +164,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('not relevant, no date: not in "no date"; another status still is', !off.none.includes('o1') && !off.none.includes('q1') && off.none.includes('o2') && off.none.includes('q2'), off);
   check('not relevant with an old date: not counted as expired', !off.dated.includes('o3') && !off.dated.includes('q3'), off);
   check('no page errors', !errs.length, errs);
+  // 01/11/2026 (#2379 retro: the summary and the app drifted apart): the weekly summary says "never recorded" too.
+  const dg = require('fs').readFileSync(path.join(__dirname, '../../functions/api/weekly-digest.js'), 'utf8');
+  check('the weekly summary uses the same "never recorded" wording as this screen', dg.indexOf(JSON.stringify('לא נרשם במערכת אף פעם').slice(1, -1).replace(/[\u0590-\u05ff]/g, (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'))) >= 0);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
