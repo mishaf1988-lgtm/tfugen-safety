@@ -162,6 +162,7 @@ import { transcribe } from '../_stt.js';
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, FILE_TIMEOUT_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
+import { readZip, entryText } from '../_xlsxpatch.js';
 import { OD_OCR_DIR, OCR_MODELS, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
 import { stateCas } from '../_cas.js';
 import { SIGN_KEY, SIGN_CHOICES, signAdd, signMark, signAskText, signPlace } from '../_sign.js';
@@ -1651,6 +1652,36 @@ export function savedFresh(status, j, nowMs) {
   const m = Date.parse(j.lastModifiedDateTime || '');
   if (m > 0 && nowMs - m > SAVED_FRESH_MS) return 'saved: the file did not change in the last hour (last change ' + new Date(m).toISOString().slice(0, 16) + ' UTC), so it was not saved now. Save it (od_put_pdf, od_swap) and read it, or write what was really done';
   return null;
+}
+// 01/11/2026 (Michael in the questionnaire: "do it: continue", mechanism 2 of the research: a second checker that only
+// reads): a Word file the assistant says it saved is read by the server before the message goes out, and must keep the
+// marks of the factory's controlled form (DECISIONS 24/10/2026; the domains' checklist, step 2; tools/form-fill.py checks
+// the same when Claude fills a form): the logo (an image in a header or the body), a form number NN.NN in a header or the
+// first table, and "\u05e2\u05de\u05d5\u05d3" (page X of Y). Pure: parts = {name: xml} of word/document.xml, headers, footers.
+export const DOC_MAX_BYTES = 10 * 1048576; export const DOC_PART_MAX = 20 * 1048576;
+export function docMarks(parts, name) {
+  // 01/11/2026, run on the factory's own files: procedures carry "\u05e0\u05d5\u05d4\u05dc \u05de\u05e1'" and no NN.NN, the policy has no page-of. So the logo
+  // is required in every Word file, and the form number and page-of only in a form (its name says \u05d8\u05d5\u05e4\u05e1 or NN.NN).
+  const isForm = /\u05d8\u05d5\u05e4\u05e1|(^|[^\d.])\d{2}\.\d{2}(?![\d.])/.test(String(name || ''));
+  const txt = (x) => String(x || '').replace(/<w:tab\/>/g, ' ').replace(/<\/w:p>/g, '\n').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&');
+  let images = 0, head = '';
+  for (const [n, x] of Object.entries(parts || {})) {
+    images += (String(x).match(/<a:blip\b|<v:imagedata\b/g) || []).length;
+    if (!/document\.xml$/.test(n)) head += txt(x) + '\n';
+  }
+  const doc = String((parts || {})['word/document.xml'] || '');
+  const t0 = doc.indexOf('<w:tbl>') >= 0 ? doc.indexOf('<w:tbl>') : doc.indexOf('<w:tbl ');
+  const firstTbl = t0 >= 0 ? txt(doc.slice(t0, doc.indexOf('</w:tbl>', t0) + 8)) : '';
+  const both = head + '\n' + firstTbl;
+  const formNo = (both.match(/(^|[^\d.])(\d{2}\.\d{2})(?![\d.])/) || [])[2] || null;
+  const missing = [];
+  if (!images) missing.push('the logo (no image in the header or the body)');
+  if (isForm && !formNo) missing.push('the form number NN.NN in the header');
+  if (isForm && both.indexOf('\u05e2\u05de\u05d5\u05d3') < 0) missing.push('"\u05e2\u05de\u05d5\u05d3 X \u05de\u05ea\u05d5\u05da Y" in the header');
+  return { images, formNo, isForm, missing };
+}
+export function docMarksError(m) {
+  return m && m.missing && m.missing.length ? 'saved: the Word file is not on the factory\'s controlled form, missing: ' + m.missing.join('; ') + '. Fill the original form (tools/od-get.sh + tools/form-fill.py, the domain file, step 2), do not build one (01/11/2026)' : null;
 }
 export function claimGate(text, checked) {
   const t = String(text || '');
@@ -3148,6 +3179,21 @@ export async function onRequest(context) {
           const j = r && r.ok ? await r.json().catch(() => null) : null;
           const sf = savedFresh(r ? r.status : 0, j, Date.now());
           if (sf) return jsonResp({ ok: false, error: sf }, 400, {});
+          if (/\.docx$/i.test(sp.rel) && j && Number(j.size) > 0 && Number(j.size) <= DOC_MAX_BYTES) {
+            const fr = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + seg + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(FILE_TIMEOUT_MS) }).catch(() => null);
+            if (fr && fr.ok) {
+              // security review 01/11/2026: the body is checked again, and a part that inflates past DOC_PART_MAX is not
+              // opened (a zip bomb would end the Worker outside the try/catch); at most 12 parts.
+              const buf = new Uint8Array(await fr.arrayBuffer());
+              const parts = {};
+              if (buf.byteLength <= DOC_MAX_BYTES) {
+                const es = readZip(buf).filter((e) => /^word\/(document|header\d*|footer\d*)\.xml$/.test(e.name) && e.usize <= DOC_PART_MAX).slice(0, 12);
+                for (const e of es) parts[e.name] = await entryText(e);
+              }
+              const de = Object.keys(parts).length &&  docMarksError(docMarks(parts, sp.rel.split('/').pop()));
+              if (de) return jsonResp({ ok: false, error: de }, 400, {});
+            }
+          }
         } catch (e) { /* OneDrive not reachable: the text-level gate above still holds */ }
       }
       let stale = null;
