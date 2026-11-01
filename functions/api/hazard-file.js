@@ -42,6 +42,7 @@ import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_LIVE, SIT
 import { odConfigured, accessToken, stateGet, stateSet, tokenRow, runLeased } from '../_onedrive.js';
 import { patchSheetRows, sheetsDigest, readSheetRows, picInfo, PIC_ROW_PT } from '../_xlsxpatch.js';
 import { runWatch, WATCH_KEY } from '../_watchdog.js';
+import { CLAUDE_LOG_Q, queuePending } from '../_claudelog.js';
 // 16/10/2026 (BACKLOG 14.5): every outbound call has a time limit, as in _onedrive.js. A Graph or
 // database call that hung held the run (and its lease) until Cloudflare gave up. The requests this
 // file sends to itself in waitUntil are the exception: they are other runs, not calls to wait on.
@@ -664,8 +665,10 @@ export async function runFile(env, which, force, opt) {
   let sig = await sha(JSON.stringify([FILE_VERSION, reg.rows, reg.ids.map((id) => (photoOf(id, hazards, reports) ? 1 : 0))]));
   const K = 'hazard_' + which + '_';
   B.spend(1);
-  const st = await stateGet(env, [K + 'sig', K + 'ctag', K + 'sheets', K + 'last', K + 'dropped', K + 'dismissed']).catch(() => ({}));
+  const st = await stateGet(env, [K + 'sig', K + 'ctag', K + 'sheets', K + 'last', K + 'dropped', K + 'dismissed', K + 'logq', CLAUDE_LOG_Q]).catch(() => ({}));
   const val = (k) => (st[K + k] && st[K + k].value) || '';
+  // Lines routine-db queued for the Claude Log (_claudelog.js): a reason to rewrite the file on their own.
+  const logq = queuePending((st[CLAUDE_LOG_Q] && st[CLAUDE_LOG_Q].value) || '', val('logq'));
   const now = new Date().toISOString();
   try {
     B.spend(4 + 4);
@@ -676,7 +679,7 @@ export async function runFile(env, which, force, opt) {
     const meta = await mr.json();
     const ours = val('ctag');
     // Nothing new on either side: one metadata read, nothing downloaded.
-    if (!force && ours && ours === meta.cTag && val('sig') === sig) return { ok: true, file: which, pushed: false, reason: 'unchanged', rows: reg.rows.length };
+    if (!force && !logq.rows.length && ours && ours === meta.cTag && val('sig') === sig) return { ok: true, file: which, pushed: false, reason: 'unchanged', rows: reg.rows.length };
     B.spend(1);
     const dl = await fetch(meta['@microsoft.graph.downloadUrl'], { signal: tmo(FILE_MS) });
     if (!dl.ok) throw new Error('download failed (' + dl.status + ')');
@@ -686,7 +689,7 @@ export async function runFile(env, which, force, opt) {
     // גרסאות שנדרסו with nobody touching the file), so the sheets are compared too.
     const changed = !!ours && ours !== meta.cTag;
     const personSaved = changed && (!val('sheets') || val('sheets') !== await sheetsDigest(orig).catch(() => ''));
-    if (!force && !personSaved && val('sig') === sig) {
+    if (!force && !logq.rows.length && !personSaved && val('sig') === sig) {
       if (changed) { B.spend(1); await stateSet(env, { [K + 'ctag']: meta.cTag || '' }); }
       return { ok: true, file: which, pushed: false, reason: 'unchanged', rows: reg.rows.length };
     }
@@ -747,7 +750,7 @@ export async function runFile(env, which, force, opt) {
     // patchSheetRows' English one (upgrade review 24).
     if (reg.rows.length > MAX_ROW - 1) throw new Error('\u05d4\u05e7\u05d5\u05d1\u05e5 \u05de\u05dc\u05d0: ' + reg.rows.length + ' \u05e9\u05d5\u05e8\u05d5\u05ea, \u05d5\u05d1\u05d2\u05d9\u05dc\u05d9\u05d5\u05df \u05de\u05d5\u05db\u05e0\u05d5\u05ea ' + (MAX_ROW - 1) + '. \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05e9\u05d5\u05e8\u05d5\u05ea \u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05d1\u05ea\u05d1\u05e0\u05d9\u05ea.');
     const out = await patchSheetRows(orig, reg.rows, { sheet: SHEET, lastCol: LAST_COL, maxRow: MAX_ROW, dateCols: DATE_COLS, show: { col: 10, vals: [S_OPEN, S_WIP] }, fitRows: true,
-      log: entry ? { sheet: LOG_SHEET, rows: [entry] } : null, minHeights,
+      log: entry || logq.rows.length ? { sheet: LOG_SHEET, rows: logq.rows.concat(entry ? [entry] : []) } : null, minHeights,
       pictures: { col: PHOTO_COL, header: PHOTO_HEADER, width: 17, text: PHOTO_TEXT, pics, links: ph.all.filter((x) => links[x.url]).map((x) => ({ row: x.row, link: links[x.url] })) } });
     B.spend(1);
     const put = await graphPut(token, FOLDER, f.name, out, f.type);
@@ -755,7 +758,7 @@ export async function runFile(env, which, force, opt) {
     B.spend(1);
     // Pictures left for later: no signature, so the next run writes again.
     await stateSet(env, { [K + 'sig']: later.pics ? '' : sig, [K + 'ctag']: put.cTag || '', [K + 'sheets']: outSheets, [K + 'last']: JSON.stringify({ rows: reg.rows, ids: reg.ids, old: supersede(last, reg, now) }),
-      [K + 'at']: now, [K + 'err']: '', [K + 'url']: put.webUrl || meta.webUrl || '', [K + 'rows']: String(reg.rows.length), [K + 'year']: String(year) });
+      [K + 'at']: now, [K + 'err']: '', [K + 'logq']: logq.last, [K + 'url']: put.webUrl || meta.webUrl || '', [K + 'rows']: String(reg.rows.length), [K + 'year']: String(year) });
     return { ok: true, file: which, pushed: true, rows: reg.rows.length, managers: hazards.length, trustees: reg.rows.length - hazards.length, kept, pulled, webUrl: put.webUrl || null, budget: Object.assign({ used: B.used - put0 }, later) };
   } catch (e) {
     const msg = e && e.code === 'not_connected' ? 'not connected'

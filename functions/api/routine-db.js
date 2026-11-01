@@ -167,6 +167,7 @@ import { readZip, entryText } from '../_xlsxpatch.js';
 import { DOMAIN_FORMS } from '../_domains.js';
 import { OD_OCR_DIR, OCR_MODELS, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
 import { stateCas } from '../_cas.js';
+import { CLAUDE_LOG_Q, logLine, queueAdd } from '../_claudelog.js';
 import { SIGN_KEY, SIGN_CHOICES, signAdd, signMark, signAskText, signPlace } from '../_sign.js';
 import { findSignSpot } from '../_pdftext.js';
 import { rowContradictions } from './wa-morning.js';
@@ -1837,7 +1838,29 @@ export async function liveInfo(request, env) {
   return out;
 }
 
+// Every successful write op also queues a line for the "Claude Log" sheet (02/11/2026, _claudelog.js; CLAUDE.md rule 9).
+// A failure to queue never changes the answer the caller gets.
 export async function onRequest(context) {
+  const copy = context.request.method === 'POST' ? context.request.clone() : null;
+  const res = await routineDbHandle(context);
+  if (copy && res.status === 200) {
+    try {
+      const out = await res.clone().json();
+      const body = out && out.ok === true ? await copy.json() : null;
+      const row = body && logLine(body, new Date().toISOString());
+      const env = context.env;
+      if (row && env.SUPABASE_SERVICE_ROLE_KEY) {
+        const url = env.SUPABASE_URL || SB_DEFAULT, k = env.SUPABASE_SERVICE_ROLE_KEY;
+        const h = { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' };
+        const now = new Date().toISOString();
+        await stateCas(url, h, CLAUDE_LOG_Q, (raw) => ({ value: queueAdd(raw, row, now) }), () => tmo(SB_MS));
+      }
+    } catch (e) { /* the write itself succeeded; the log line is best effort */ }
+  }
+  return res;
+}
+
+async function routineDbHandle(context) {
   const { request, env } = context;
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, {});
   if (!(await keyOk(request.headers.get('x-routine-key') || '', env.ROUTINE_KEY))) return jsonResp({ error: 'forbidden' }, 403, {});
