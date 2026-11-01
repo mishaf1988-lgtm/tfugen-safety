@@ -22,7 +22,7 @@ mkdir -p "$(dirname "$out")"
 code=$(curl -sS --max-time 120 -o "$out" -w '%{http_code}' -X POST https://tapugan-safety.pages.dev/api/od-read \
   -H "x-raw-token: $tok" -H 'content-type: application/json' --data "$body") || code=000
 # the token ends now, whatever happened (it would end by itself within 10 minutes)
-bash "$here/project-files/routine-db.sh" "{\"op\":\"state_set\",\"key\":\"od_raw_exp\",\"value\":\"$now\"}" >/dev/null 2>&1 || true
+bash "$here/project-files/routine-db.sh" "{\"op\":\"state_set\",\"key\":\"od_raw_exp\",\"value\":\"$now\"}" >/dev/null 2>&1 || echo "od-get: WARNING: revoking the one-off token failed; it stays valid until its expiry (10 minutes). Do not run two od-get.sh at once." >&2
 size=$(stat -c %s "$out" 2>/dev/null || echo 0)
 echo "HTTP $code, $size bytes, $out"
 if [ "$code" != "200" ] || [ "$size" -eq 0 ]; then echo "download failed: $(head -c 300 "$out" 2>/dev/null)" >&2; exit 5; fi

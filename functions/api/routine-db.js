@@ -2619,13 +2619,17 @@ export async function onRequest(context) {
       const gh = { Authorization: 'Bearer ' + at.token };
       const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
       const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
-      const src = await fetch(G + enc(c.src) + '?select=id,file', { headers: gh, signal: tmo(GRAPH_MS) });
+      const src = await fetch(G + enc(c.src) + '?select=id,file,size', { headers: gh, signal: tmo(GRAPH_MS) });
       if (!src.ok) return jsonResp({ ok: false, error: src.status === 404 ? 'file not found' : 'file ' + src.status }, 200, {});
-      if (!(await src.json().catch(() => ({}))).file) return jsonResp({ ok: false, error: 'not a file' }, 200, {});
+      const sj = await src.json().catch(() => ({}));
+      if (!sj.file) return jsonResp({ ok: false, error: 'not a file' }, 200, {});
+      // security review 01/11/2026: a huge source would be read whole into the Worker's memory; refuse it before converting
+      if (+sj.size > OD_PUT_MAX) return jsonResp({ ok: false, error: 'docx over ' + OD_PUT_MAX }, 200, {});
       const taken = await fetch(G + enc(c.dir + '/' + c.name) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
       if (taken.status !== 404) return jsonResp({ ok: false, error: taken.ok ? 'pdf name taken' : 'name check ' + taken.status }, 200, {});
       const r = await fetch(G + enc(c.src) + ':/content?format=pdf', { headers: gh, signal: tmo(FILE_TIMEOUT_MS) });
       if (!r.ok) return jsonResp({ ok: false, error: 'convert ' + r.status }, 200, {});
+      if (+(r.headers.get('content-length') || 0) > OD_PUT_MAX) return jsonResp({ ok: false, error: 'pdf over ' + OD_PUT_MAX }, 200, {});
       const pdf = new Uint8Array(await r.arrayBuffer());
       if (pdf.length < 5 || String.fromCharCode(...pdf.slice(0, 5)) !== '%PDF-') return jsonResp({ ok: false, error: 'convert: not a pdf' }, 200, {});
       if (pdf.length > OD_PUT_MAX) return jsonResp({ ok: false, error: 'pdf over ' + OD_PUT_MAX }, 200, {});
