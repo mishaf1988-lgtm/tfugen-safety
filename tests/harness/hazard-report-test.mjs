@@ -113,12 +113,12 @@ const ROWS = [
   c = await call({ email: 'admin@tfugen.local' }, { op: 'preview' });
   const pg = c.j && c.j.reports && c.j.reports.find((x) => x.dept === 'חומר גלם');
   check('preview: 6 departments (5 + אחזקה), recipients from the workbook, nothing sent', c.j.ok && c.j.reports.length === 6 && c.j.reports[5].dept === 'אחזקה' && pg.count === 2 && pg.to.join() === 'gelem@tapugan.co.il,Igal@tapugan.co.il,vitaly@tapugan.co.il,nahum@tapugan.co.il,shlomi@tapugan.co.il,tech_manager@tapugan.co.il' && !c.w.mails.length && c.j.canSend, c.j);
-  check('the maintenance department with no row of its own in part 1: the maintenance team of part 2 (Vitaly, Slava, Shlomi)', c.j.reports[5].to.join() === 'vitaly@tapugan.co.il,tech_manager@tapugan.co.il,shlomi@tapugan.co.il', c.j.reports[5].to);
+  check('the maintenance department with no row of its own in part 1: the maintenance team of part 2 (Vitaly + Nahum, Slava, Shlomi)', c.j.reports[5].to.join() === 'vitaly@tapugan.co.il,nahum@tapugan.co.il,tech_manager@tapugan.co.il,shlomi@tapugan.co.il', c.j.reports[5].to);
   check('reads the folder-13 xlsm', /13_סיורי מפגעים\/2026\/ניהול סיורי מפגעים\.xlsm:\/content/.test(c.w.read || ''), c.w.read);
   c = await call({ email: 'admin@tfugen.local' }, { op: 'send', depts: ['חומר גלם', 'תוצג'] });
   const mail = c.w.mails[0] && c.w.mails[0].message;
   check('send: one mail per department asked, empty department skipped', c.j.ok && c.w.mails.length === 1 && c.j.sent[0].dept === 'חומר גלם' && c.j.skipped[0].dept === 'תוצג', c.j);
-  check('the mail: אל + עותק, subject, the sheet\'s own opening and closing', mail && mail.toRecipients.length === 5 && mail.ccRecipients.map((x) => x.emailAddress.address).join() === 'sviva@tapugan.co.il,tzachi@tapugan.co.il' && mail.subject === 'דוח מפגעים פתוחים לטיפול - מחלקת חומר גלם' && mail.body.content.includes('פתיחה מהקובץ') && mail.body.content.includes('חתימה מהקובץ'), mail && mail.subject);
+  check('the mail: אל + עותק, subject, the sheet\'s own opening and closing', mail && mail.toRecipients.length === 6 && mail.ccRecipients.map((x) => x.emailAddress.address).join() === 'sviva@tapugan.co.il,tzachi@tapugan.co.il' && mail.subject === 'דוח מפגעים פתוחים לטיפול - מחלקת חומר גלם' && mail.body.content.includes('פתיחה מהקובץ') && mail.body.content.includes('חתימה מהקובץ'), mail && mail.subject);
   check('not kept in Sent Items (Michael, 14/10/2026: no outgoing copy)', c.w.mails[0] && c.w.mails[0].saveToSentItems === false, c.w.mails[0] && c.w.mails[0].saveToSentItems);
   check('the send is logged', /חומר גלם/.test(c.w.state.hazard_report_last || ''), c.w.state);
   // Upgrade review 13 (30/09/2026): a "mark as handled" link on every row of a
@@ -213,7 +213,7 @@ const ROWS = [
   c = await call({ email: 'admin@tfugen.local', hz: HZS }, { op: 'statusSend', depts: ['חומר גלם', 'תוצג'], note: 'היום <b>נבדק</b>\nשורה שנייה' });
   const sm = c.w.mails[0], smm = sm && sm.message;
   check('status: one mail per department ticked, empty department skipped', c.j.ok && c.w.mails.length === 1 && c.j.sent[0].dept === 'חומר גלם' && c.j.skipped[0].dept === 'תוצג', c.j);
-  check('status: the same recipients as the department report', smm && smm.toRecipients.map((x) => x.emailAddress.address).join() === 'gelem@tapugan.co.il,Igal@tapugan.co.il,vitaly@tapugan.co.il,shlomi@tapugan.co.il,tech_manager@tapugan.co.il' && smm.ccRecipients.map((x) => x.emailAddress.address).join() === 'sviva@tapugan.co.il,tzachi@tapugan.co.il', smm && [smm.toRecipients, smm.ccRecipients]);
+  check('status: the same recipients as the department report', smm && smm.toRecipients.map((x) => x.emailAddress.address).join() === 'gelem@tapugan.co.il,Igal@tapugan.co.il,vitaly@tapugan.co.il,nahum@tapugan.co.il,shlomi@tapugan.co.il,tech_manager@tapugan.co.il' && smm.ccRecipients.map((x) => x.emailAddress.address).join() === 'sviva@tapugan.co.il,tzachi@tapugan.co.il', smm && [smm.toRecipients, smm.ccRecipients]);
   check('status: subject, his text escaped with its line break', smm && /^סטטוס מפגעים - מחלקת חומר גלם - \d\d\/\d\d\/\d{4}$/.test(smm.subject) && smm.body.content.includes('היום &lt;b&gt;נבדק&lt;/b&gt;<br>שורה שנייה'), smm && smm.subject);
   check('status: closed since a week back listed, one closed long ago not', smm && smm.body.content.includes('מעקה רופף') && !smm.body.content.includes('מדף ישן'), c.j);
   check('status: still open listed, past target marked', smm && smm.body.content.includes('רצפות') && smm.body.content.includes('עבר היעד') && c.j.sent[0].count === 2 && c.j.sent[0].closed === 1, c.j.sent);
@@ -258,7 +258,7 @@ const ROWS = [
     check('send with a key: mailed, the department kept under the key', c.j.ok && c.w.mails.length === 1 && /"key":"k1abcdefgh"/.test(mark || '') && /חומר גלם/.test(mark || ''), mark);
     const row = { key: 'hazard_send_key', value: mark, updated_at: 'x' };
     c = await call({ email: 'admin@tfugen.local', stateRows: [row] }, { op: 'send', depts: ['חומר גלם'], key: 'k1abcdefgh' });
-    check('the same key again: nothing mailed, answered as sent again', c.j.ok && !c.w.mails.length && c.j.sent.length === 1 && c.j.sent[0].again === true && c.j.sent[0].to.length === 5 && !c.w.state.hazard_report_last, c.j);
+    check('the same key again: nothing mailed, answered as sent again', c.j.ok && !c.w.mails.length && c.j.sent.length === 1 && c.j.sent[0].again === true && c.j.sent[0].to.length === 6 && !c.w.state.hazard_report_last, c.j);
     c = await call({ email: 'admin@tfugen.local', stateRows: [row] }, { op: 'send', depts: ['חומר גלם'], key: 'k2abcdefgh' });
     check('a new key (a new press): mailed', c.j.ok && c.w.mails.length === 1 && !c.j.sent[0].again, c.j.sent);
     c = await call({ email: 'admin@tfugen.local', stateRows: [row] }, { op: 'send', depts: ['חומר גלם'], key: 'k1abcdefgh', test: true });
