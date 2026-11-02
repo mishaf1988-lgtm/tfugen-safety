@@ -1539,6 +1539,12 @@ const callIn = async (body) => {
     check('od_expire (review): a replaced_by that Graph resolves to the same item = refused, nothing moved', !x.json.ok && /same file/.test(x.json.error) && !patches.length, x.json);
     x = await call({ ...X, replaced_by: '2026-10-26 - missing.pdf' });
     check('od_expire: no newer report beside it in valid = refused, nothing moved', !x.json.ok && /^replaced_by 404/.test(x.json.error) && !patches.length, x.json);
+    // retro 28/10/2026 (c): a replacement dated after today (Israel, one day of slack) = refused
+    {
+      const N = Date.parse('2026-11-02T10:00:00Z');
+      check('od_expire: a replaced_by dated in the future is refused; today and tomorrow (slack) pass',
+        /after today/.test(odExpireCheck({ ...X, replaced_by: '2027-11-02 - next.pdf' }, N).error || '') && !odExpireCheck({ ...X, replaced_by: '2026-11-02 - today.pdf' }, N).error && !odExpireCheck({ ...X, replaced_by: '2026-11-03 - t.pdf' }, N).error && !!odExpireCheck({ ...X, replaced_by: '2026-11-04 - t.pdf' }, N).error);
+    }
     check('od_expire: only from a folder named valid (not expired, not nested), a replacement dated after it, the same name in any case refused, and the od_archive rules too',
       !!odExpireCheck({ ...X, replaced_by: '2026-04-29 - OLD.PDF' }).error && !!odExpireCheck({ ...X, replaced_by: '2026-01-01 - older.pdf' }).error && !!odExpireCheck({ ...X, replaced_by: 'new.pdf' }).error
       && !!odExpireCheck({ ...X, path: EQ + '/' + OD_VALID_DIR + '/' + OD_VALID_DIR + '/2026-04-29 - old.pdf' }).error && !!odExpireCheck({ ...X, path: EQ + '/' + OD_EXPIRED_DIR + '/' + OD_VALID_DIR + '/2026-04-29 - old.pdf' }).error
