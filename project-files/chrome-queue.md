@@ -627,6 +627,6 @@
   4. Office 365 Outlook > "Send an HTTP request". Method: POST. URI (Expression): concat('https://graph.microsoft.com/v1.0/me/messages/', outputs('Compose')?['id'], '/createForward'). Body (Expression): outputs('Compose')?['forward_body']. Content-Type: application/json.
      בדוק ב-Code view שה-URI נכון (בעורך החדש "/" פותח תפריט ונבלע).
   5. שמור, ודא שהזרימה On, ושה-Flow checker נקי.
-  חשוב: אל תוסיף שום פעולת "Send". createForward יוצר טיוטה בלבד, עם כל הקבצים המצורפים של המייל המקורי.
+  חשוב (סקירת אבטחה 02/11/2026): ה-URI חייב להסתיים בדיוק ב-/createForward, לא /forward ולא /send, וה-Body הוא forward_body כמו שהוא. אל תוסיף שום פעולת "Send". createForward יוצר טיוטה בלבד, עם כל הקבצים המצורפים של המייל המקורי.
   דווח: שם הזרימה, שהיא On, ה-URI כפי שמופיע ב-Code view, ומה נעצר ולמה.
   ```

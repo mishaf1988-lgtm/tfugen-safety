@@ -1866,13 +1866,13 @@ const callIn = async (body) => {
     console.log('\nmail_forward: a forward draft with every attachment (flow 11)');
     const { forwardRequest, OD_FORWARD, OD_AUTO_DIRS: DIRS } = await import('./_build/routine-db.mjs');
     const ID = 'AAMkADNmMjhjNWNiLTk4ZTItNDA4Ny1hYTM4LWM3MWJjMTc2MzUyMwBGAAAAAAAa1234567890abcdef';
-    const r = forwardRequest({ message_id: ID, to: 'sharon.a@tapugan.co.il', comment: 'שרון, מצורף.\nמיכאל <x>' });
+    const r = forwardRequest({ message_id: ID, subject: 'RE: x', to: 'sharon.a@tapugan.co.il', comment: 'שרון, מצורף.\nמיכאל <x>' });
     const j = r.file && JSON.parse(r.file);
     check('forwardRequest: the file holds the mail id, the recipients for createForward and the comment as rtl html (escaped)',
       j && j.id === ID && j.forward_body.toRecipients[0].emailAddress.address === 'sharon.a@tapugan.co.il' && /^<div dir="rtl">/.test(j.forward_body.comment) && /<br>/.test(j.forward_body.comment) && /&lt;x&gt;/.test(j.forward_body.comment), j);
-    check('forwardRequest: a bad id, no recipient, more than 5, or a 2001-character comment = refused',
-      !!forwardRequest({ message_id: 'short', to: 'a@b.co' }).error && !!forwardRequest({ message_id: ID, to: '' }).error
-      && !!forwardRequest({ message_id: ID, to: 'a@b.co;c@d.co;e@f.co;g@h.co;i@j.co;k@l.co' }).error && !!forwardRequest({ message_id: ID, to: 'a@b.co', comment: 'x'.repeat(2001) }).error);
+    check('forwardRequest: a bad id, an id with "/", no subject, no recipient, more than 5, or a 2001-character comment = refused',
+      !!forwardRequest({ message_id: 'short', subject: 'x y', to: 'a@b.co' }).error && !!forwardRequest({ message_id: ID, subject: 'x y', to: '' }).error && !!forwardRequest({ message_id: ID + '/x', subject: 'x y', to: 'a@b.co' }).error && !!forwardRequest({ message_id: ID, to: 'a@b.co' }).error
+      && !!forwardRequest({ message_id: ID, subject: 'x y', to: 'a@b.co;c@d.co;e@f.co;g@h.co;i@j.co;k@l.co' }).error && !!forwardRequest({ message_id: ID, subject: 'x y', to: 'a@b.co', comment: 'x'.repeat(2001) }).error);
     check('the forward folder is its own automation folder (the last one), so no other op writes there', OD_FORWARD.endsWith(DIRS[DIRS.length - 1]) && /העברות/.test(OD_FORWARD));
     const g0 = graph, puts = [];
     graph = async (u, o = {}) => {
@@ -1881,12 +1881,14 @@ const callIn = async (body) => {
       return new Response('{}', { status: 404 });
     };
     try {
-      const A = { op: 'mail_forward', agent: 'routine-wa-assistant', why: 'Michael asked to forward the maps to Sharon', message_id: ID, to: 'sharon.a@tapugan.co.il' };
+      const A = { op: 'mail_forward', agent: 'routine-wa-assistant', why: 'Michael asked to forward the maps to Sharon', message_id: ID, subject: 'RE: x', to: 'sharon.a@tapugan.co.il' };
       const ok1 = await call(A);
       check('mail_forward: one request file in the forward folder, the subject and attachments in the answer', ok1.json.ok === true && puts.length === 1 && puts[0].includes(OD_FORWARD) && ok1.json.attachments === true && ok1.json.subject === 'RE: x', { j: ok1.json, puts });
       const noWhy = await call(Object.assign({}, A, { why: '' }));
       const extra = await call(Object.assign({}, A, { approved: 'בצע' }));
       const missing = await call(Object.assign({}, A, { message_id: ID.replace('a1234', 'b9999') }));
+      const wrongSub = await call(Object.assign({}, A, { subject: 'something else' }));
+      check('mail_forward: a subject that is not this mail\'s = refused, nothing written', wrongSub.json.ok === false && /subject does not match/.test(wrongSub.json.error), wrongSub.json);
       check('mail_forward: no why = 400, an "approved" field = 400 (it only drafts; lesson 169), a mail that is not there = refused, and nothing written', noWhy.status === 400 && extra.status === 400 && missing.json.ok === false && /not found/.test(missing.json.error) && puts.length === 1, { noWhy: noWhy.json, missing: missing.json });
     } finally { graph = g0; }
   }

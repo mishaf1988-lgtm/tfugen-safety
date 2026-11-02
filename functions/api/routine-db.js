@@ -77,7 +77,7 @@
 //              with conflictBehavior=fail: an existing name is never touched, nothing is moved,
 //              replaced or deleted. Never inside the old-versions / to-delete / ARCHIVE folders
 //              or the mail inbox. Michael's computer is not needed. odMkdirCheck.
-//   mail_forward (02/11/2026) {agent, why, message_id, to, comment?}: a forward of the mail with every attachment
+//   mail_forward (02/11/2026) {agent, why, message_id, subject, to, comment?}: a forward of the mail with every attachment
 //              (zip too) as a draft in Michael's Drafts, through flow 11 (createForward). Never sends.
 //   mail_draft  (20/10/2026) a draft in Michael's Outlook via the third Power Automate flow: {agent, why, to, subject, body,
 //              attach?: [up to 5 .pdf/.docx/.xlsx paths in the safety folder, each checked to exist]}. Never sent.
@@ -938,7 +938,9 @@ export const MAIL_REQ_ID = /^[A-Za-z0-9_=+\/-]{40,400}$/;
 export const OD_FORWARD = OD_AUTO + '/' + OD_AUTO_DIRS[OD_AUTO_DIRS.length - 1];
 export function forwardRequest(b) {
   const id = String(b.message_id || '');
-  if (!MAIL_REQ_ID.test(id)) return { error: 'message_id: the id as outlook_email_search returns it' };
+  // no "/" (security review 02/11/2026): the flow puts the id in the Graph URL as it is
+  if (!MAIL_REQ_ID.test(id) || id.indexOf('/') >= 0) return { error: 'message_id: the id as outlook_email_search returns it' };
+  if (String(b.subject || '').trim().length < 2) return { error: 'subject: the mail\'s subject as in the search (checked against the mail, and logged)' };
   const list = String(b.to || '').split(/[;,]/).map((x) => x.trim()).filter(Boolean);
   if (!list.length || list.length > 5 || !draftListOk(list)) return { error: 'to: 1-5 addresses, "a@x; b@y"' };
   const comment = String(b.comment == null ? '' : b.comment).replace(/\r\n/g, '\n').trim();
@@ -2789,7 +2791,7 @@ async function routineDbHandle(context) {
     if (body.op === 'mail_forward') {
       // no "approved" field: like mail_draft it only makes a draft, and Michael sends it himself from Outlook (lesson 169: an
       // op that takes "approved" must be server-only, behind a button)
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'message_id', 'to', 'comment'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'message_id', 'subject', 'to', 'comment'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
       if (String(body.why || '').trim().length < 5) return jsonResp({ ok: false, error: 'why required' }, 400, {});
       const d = forwardRequest(body);
@@ -2799,6 +2801,10 @@ async function routineDbHandle(context) {
       const mr = await fetch('https://graph.microsoft.com/v1.0/me/messages/' + encodeURIComponent(body.message_id) + '?$select=subject,hasAttachments', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) }).catch(() => null);
       if (!mr || !mr.ok) return jsonResp({ ok: false, error: 'mail not found (' + (mr ? mr.status : 'network') + ')' }, 200, {});
       const mj = await mr.json().catch(() => ({}));
+      // the subject must be this mail's (security review 02/11/2026: any mail in the box can be forwarded, medical too; the
+      // subject goes to the Claude Log line, so Michael sees what was forwarded)
+      const ns = (t) => String(t || '').replace(/\s+/g, ' ').trim().toLowerCase();
+      if (ns(mj.subject) !== ns(body.subject)) return jsonResp({ ok: false, error: 'subject does not match this mail: ' + String(mj.subject || '').slice(0, 120) }, 200, {});
       // the day and the content's hash: a retry the same day overwrites its own file and the flow does not run twice
       const name = new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + (await digest(d.file)).slice(0, 16) + '.txt';
       const f = await putFile(at.token, OD_ROOT + OD_FORWARD, name, d.file, 'text/plain');
