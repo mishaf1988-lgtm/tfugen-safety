@@ -946,7 +946,9 @@ export function forwardRequest(b) {
   const comment = String(b.comment == null ? '' : b.comment).replace(/\r\n/g, '\n').trim();
   if (comment.length > 2000) return { error: 'comment: up to 2000 characters' };
   const html = '<div dir="rtl">' + comment.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>') + '</div>';
-  const file = JSON.stringify({ id, to: list.join(';'), forward_body: { toRecipients: list.map((a) => ({ emailAddress: { address: a } })), comment: html } });
+  // subject in the file (02/11/2026): the server has no Mail.Read (DECISIONS 27/09/2026), so flow 11 compares it with the
+  // mail it reads and stops when they differ (C73)
+  const file = JSON.stringify({ id, subject: String(b.subject).trim(), to: list.join(';'), forward_body: { toRecipients: list.map((a) => ({ emailAddress: { address: a } })), comment: html } });
   return { file, to: list };
 }
 // mail_got (02/11/2026): {agent, since} -> the files the flows saved into OD_INBOX since then (a mail_request's
@@ -1915,6 +1917,8 @@ export async function onRequest(context) {
       const out = row0 ? await res.clone().json() : null;
       const body = out && out.ok === true ? reqBody : null;
       const row = body && row0;
+      // security review 02/11/2026: a forward the server could not check (403) is not "done" yet; flow 11 checks the subject
+      if (row && out.subject_checked === 'flow 11') row[4] = '\u05e0\u05e9\u05dc\u05d7 \u05dc\u05d6\u05e8\u05d9\u05de\u05d4, \u05d4\u05e0\u05d5\u05e9\u05d0 \u05e0\u05d1\u05d3\u05e7 \u05e9\u05dd';
       const env = context.env;
       if (row && env.SUPABASE_SERVICE_ROLE_KEY) {
         const url = env.SUPABASE_URL || SB_DEFAULT, k = env.SUPABASE_SERVICE_ROLE_KEY;
@@ -2799,16 +2803,20 @@ async function routineDbHandle(context) {
       const at = await accessToken(env);
       // the mail must be there (a wrong id would stop the flow with no draft at all)
       const mr = await fetch('https://graph.microsoft.com/v1.0/me/messages/' + encodeURIComponent(body.message_id) + '?$select=subject,hasAttachments', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) }).catch(() => null);
-      if (!mr || !mr.ok) return jsonResp({ ok: false, error: 'mail not found (' + (mr ? mr.status : 'network') + ')' }, 200, {});
-      const mj = await mr.json().catch(() => ({}));
+      // 02/11/2026, live: 403. The server's token has no Mail.Read (DECISIONS 27/09/2026: it needs admin consent), so the
+      // first real call was refused and no forward could ever be made. 403 = the server cannot look; the subject check moves
+      // to flow 11 (it reads the mail and stops on a different subject, C73). Any other failure still refuses.
+      const noRead = !!mr && mr.status === 403;
+      if (!noRead && (!mr || !mr.ok)) return jsonResp({ ok: false, error: 'mail not found (' + (mr ? mr.status : 'network') + ')' }, 200, {});
+      const mj = noRead ? null : await mr.json().catch(() => ({}));
       // the subject must be this mail's (security review 02/11/2026: any mail in the box can be forwarded, medical too; the
       // subject goes to the Claude Log line, so Michael sees what was forwarded)
       const ns = (t) => String(t || '').replace(/\s+/g, ' ').trim().toLowerCase();
-      if (ns(mj.subject) !== ns(body.subject)) return jsonResp({ ok: false, error: 'subject does not match this mail: ' + String(mj.subject || '').slice(0, 120) }, 200, {});
+      if (mj && ns(mj.subject) !== ns(body.subject)) return jsonResp({ ok: false, error: 'subject does not match this mail: ' + String(mj.subject || '').slice(0, 120) }, 200, {});
       // the day and the content's hash: a retry the same day overwrites its own file and the flow does not run twice
       const name = new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + (await digest(d.file)).slice(0, 16) + '.txt';
       const f = await putFile(at.token, OD_ROOT + OD_FORWARD, name, d.file, 'text/plain');
-      return jsonResp({ ok: true, file: OD_FORWARD + '/' + name, size: f.size || null, subject: mj.subject || null, attachments: !!mj.hasAttachments, note: 'the forward draft with every attachment appears in Drafts within about 5 minutes; Michael sends it from Outlook' }, 200, {});
+      return jsonResp({ ok: true, file: OD_FORWARD + '/' + name, size: f.size || null, subject: mj ? (mj.subject || null) : String(body.subject).trim(), subject_checked: mj ? 'server' : 'flow 11', attachments: mj ? !!mj.hasAttachments : null, note: 'the forward draft with every attachment appears in Drafts within about 5 minutes; Michael sends it from Outlook' }, 200, {});
     }
     if (body.op === 'mail_draft') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'cc', 'subject', 'body', 'attach', 'reply_to', 'checked', 'thread_checked', 'replaces'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});

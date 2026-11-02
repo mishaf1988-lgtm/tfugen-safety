@@ -618,15 +618,18 @@
 
   **31/10/2026 (כרום):** נעצר במסך הכניסה, אף משתמש לא מחובר בדפדפן. מחכה שמיכאל יתחבר.
 
-- [ ] **C73. זרימה 11: "העברות מייל כטיוטה" עם כל הקבצים (02/11/2026, מיכאל בשאלון בצ'אט "עבודה על העוזר": "בצע: כן, לבנות (מומלץ)"; DECISIONS 02/11/2026).** השרת (`mail_forward`) כבר כותב קובץ בקשה. הזרימה מכינה טיוטת העברה ב-Drafts, ואף פעם לא שולחת. אחרי הבנייה Claude מאמת לבד: בקשת ניסיון על מייל של מיכאל לעצמו, והטיוטה מופיעה ב-Drafts עם הקבצים.
+- [ ] **C73. זרימה 11: "העברות מייל כטיוטה" עם כל הקבצים (02/11/2026, מיכאל בשאלון בצ'אט "עבודה על העוזר": "בצע: כן, לבנות (מומלץ)"; DECISIONS 02/11/2026).** השרת (`mail_forward`) כבר כותב קובץ בקשה. הזרימה מכינה טיוטת העברה ב-Drafts, ואף פעם לא שולחת. אחרי הבנייה Claude מאמת לבד: בקשת ניסיון על מייל של מיכאל לעצמו, והטיוטה מופיעה ב-Drafts עם הקבצים; ובקשה שנייה עם נושא שגוי נעצרת ב-Terminate בלי טיוטה (סקירת אבטחה 02/11/2026).
   ```
   ב-Power Automate (make.powerautomate.com), בחשבון sviva@tapugan.co.il, צור זרימה אוטומטית חדשה בשם "העברות מייל כטיוטה":
   1. טריגר: OneDrive for Business > "When a file is created (properties only)". Folder: /שולחן העבודה/ניהול בטיחות/_אוטומציה/_העברות מייל (אם התיקייה לא קיימת, צור אותה ב-OneDrive קודם).
   2. OneDrive for Business > "Get file content". File: Id מהטריגר.
   3. Data Operation > "Compose". Inputs (Expression): json(trim(string(body('Get_file_content'))))
+  3א. (נוסף 02/11/2026, לשרת אין הרשאת קריאת מייל) Office 365 Outlook > "Get email (V2)". Message Id (Expression): outputs('Compose')?['id'].
+  3ב. Control > "Condition": (Expression) equals(toLower(trim(body('Get_email_(V2)')?['subject'])), toLower(trim(outputs('Compose')?['subject']))) is equal to true. שלב 4 נכנס ל-"True" בלבד; ב-"False" רק Control > "Terminate" עם Status: Failed ו-Message: "subject mismatch". אם הזרימה כבר בנויה עם שלב 4, גרור אותו לתוך "True".
   4. Office 365 Outlook > "Send an HTTP request". Method: POST. URI (Expression): concat('https://graph.microsoft.com/v1.0/me/messages/', outputs('Compose')?['id'], '/createForward'). Body (Expression): outputs('Compose')?['forward_body']. Content-Type: application/json.
      בדוק ב-Code view שה-URI נכון (בעורך החדש "/" פותח תפריט ונבלע).
   5. שמור, ודא שהזרימה On, ושה-Flow checker נקי.
   חשוב (סקירת אבטחה 02/11/2026): ה-URI חייב להסתיים בדיוק ב-/createForward, לא /forward ולא /send, וה-Body הוא forward_body כמו שהוא. אל תוסיף שום פעולת "Send". createForward יוצר טיוטה בלבד, עם כל הקבצים המצורפים של המייל המקורי.
-  דווח: שם הזרימה, שהיא On, ה-URI כפי שמופיע ב-Code view, ומה נעצר ולמה.
+  התיקייה לטריגר: אם עוד לא קיימת, Claude יוצר אותה (בקשת ניסיון מהשרת, מיכאל בשאלון 02/11/2026). לא ליצור ידנית.
+  דווח: שם הזרימה, שהיא On, ה-URI כפי שמופיע ב-Code view, שהתנאי של 3ב קיים ושלב 4 בתוכו, ומה נעצר ולמה.
   ```

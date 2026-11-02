@@ -1890,6 +1890,19 @@ const callIn = async (body) => {
       const wrongSub = await call(Object.assign({}, A, { subject: 'something else' }));
       check('mail_forward: a subject that is not this mail\'s = refused, nothing written', wrongSub.json.ok === false && /subject does not match/.test(wrongSub.json.error), wrongSub.json);
       check('mail_forward: no why = 400, an "approved" field = 400 (it only drafts; lesson 169), a mail that is not there = refused, and nothing written', noWhy.status === 400 && extra.status === 400 && missing.json.ok === false && /not found/.test(missing.json.error) && puts.length === 1, { noWhy: noWhy.json, missing: missing.json });
+      // 02/11/2026, live: the server has no Mail.Read, Graph answers 403. The request is written with the subject in it, and
+      // flow 11 checks it; a 404 or a 500 still refuses.
+      check('forwardRequest: the subject is in the file, so flow 11 can compare it with the mail', j && j.subject === 'RE: x', j);
+      graph = async (u, o = {}) => {
+        if (/\/me\/messages\//.test(u)) return new Response('{"error":{"code":"ErrorAccessDenied"}}', { status: 403 });
+        if ((o.method || 'GET') === 'PUT') { puts.push(decodeURIComponent(u)); return new Response(JSON.stringify({ size: 300 }), { status: 201 }); }
+        return new Response('{}', { status: 404 });
+      };
+      const no = await call(Object.assign({}, A, { comment: 'second' }));
+      check('mail_forward: no Mail.Read (403) = written anyway, the subject as given, subject_checked "flow 11"', no.json.ok === true && puts.length === 2 && no.json.subject === 'RE: x' && no.json.subject_checked === 'flow 11' && no.json.attachments === null, no.json);
+      graph = async (u) => /\/me\/messages\//.test(u) ? new Response('{}', { status: 500 }) : new Response('{}', { status: 404 });
+      const e5 = await call(A);
+      check('mail_forward: a 500 from Graph still refuses, nothing written', e5.json.ok === false && puts.length === 2, e5.json);
     } finally { graph = g0; }
   }
 
