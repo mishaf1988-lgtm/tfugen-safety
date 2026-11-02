@@ -221,6 +221,13 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
     check('a near-miss already notified is not sent twice', j.skipped === 'already notified' && !w.calls.some(c => c.u.includes('graph.facebook.com')), j); }
   { const w = world({ nm: { ...nmFresh(), sev: '', typ: '' }, prefs: prefsOn }); const j = await (await onRequest({ request: req({ id: 'n1', src: 'near_miss' }), env })).json(); const resend = w.calls.find(c => c.u.includes('resend'));
     check('with no severity and no type it still sends, with a plain line', j.email === 'sent' && /כמעט ונפגע/.test(resend.body.html), j); }
+  // retro 28/10/2026 (a): a near-miss photo is signed only under the names the app uploads it with
+  { const PHB = SB + '/storage/v1/object/public/incidents-photos/';
+    const signs = async (ph) => { const w = world({ nm: { ...nmFresh(), photo_url: ph }, prefs: prefsOn }); await onRequest({ request: req({ id: 'n1', src: 'near_miss' }), env }); return w.calls.filter((c) => c.u.includes('/storage/v1/object/sign/')).length; };
+    const a = await signs(PHB + 'tru-ph-nm-1762000000.jpg'), b = await signs(PHB + 'nm-1762000000.jpg'), c = await signs(PHB + 'mf-tour-x.jpg'), d = await signs(PHB + 'tru-ph-5-a-1758.jpg');
+    check('near_miss photo: tru-ph-nm- and nm- are signed; another file in the bucket (a tour photo, a trustee photo) is not', a === 1 && b === 1 && c === 0 && d === 0, [a, b, c, d]);
+    const src = (await import('fs')).readFileSync(new URL('../../functions/api/trustee-notify.js', import.meta.url), 'utf8');
+    check('a source with no prefix rule signs nothing (default closed)', /if \(!m \|\| !prefix \|\| !prefix\.test\(m\[2\]\)\) return null;/.test(src)); }
   // src reaches the query string. It is looked up as a key in a fixed map, so
   // anything else must be refused rather than concatenated into a URL.
   { const w = world({ nm: nmFresh(), prefs: prefsOn }); const r = await onRequest({ request: req({ id: 'n1', src: 'app_users' }), env });
