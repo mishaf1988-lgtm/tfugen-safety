@@ -325,6 +325,16 @@ export function devInboxTold(raw, ref, nowIso) {
   x.told_at = nowIso;
   return list;
 }
+// The session a request fired is kept on the request, written with stateCas on the inbox as it is now (security review
+// 02/11/2026: writing the list read before the fire dropped a request saved during it). null = nothing to write. Pure.
+export function devInboxFired(raw, id, session) {
+  let list = [];
+  try { list = JSON.parse(raw || '[]'); } catch (e) { return null; }
+  const x = Array.isArray(list) && list.find((y) => y && y.id === id);
+  if (!x || !session) return null;
+  x.fired_session = session;
+  return list;
+}
 export function devInboxDone(raw, id, note, nowIso) {
   let list = [];
   try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
@@ -2078,13 +2088,16 @@ async function routineDbHandle(context) {
       if (body.op === 'dev_done' && asksApiCredit(body.note)) return jsonResp({ ok: false, error: 'note: API credit is not loaded (Michael decided no); a scan is read with ocr_txt. Drop that line' }, 400, {});
       const fn = body.op === 'dev_done' ? factGate(body.note, body.checked) : null;
       if (fn) return jsonResp({ ok: false, error: 'note: ' + fn }, 400, {});
-      const r = body.op === 'dev_request' ? devInboxAdd(raw, body, now) : devInboxDone(raw, String(body.id || ''), body.note, now);
+      // retro 21/10/2026 (c): two requests at once read the same inbox and the second write dropped the first. The write
+      // goes through stateCas: only if the row is still the one read, else read again and redo (ideas-lab 12).
+      let r = body.op === 'dev_request' ? devInboxAdd(raw, body, now) : devInboxDone(raw, String(body.id || ''), body.note, now);
       if (r.error) return jsonResp({ ok: false, error: r.error }, 400, {});
-      const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', {
-        method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify([{ key: DEV_INBOX_KEY, value: JSON.stringify(r.list), updated_at: now }]), signal: tmo(SB_MS),
-      });
-      if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status }, 200, {});
+      const cw = await stateCas(url, h, DEV_INBOX_KEY, (cur) => {
+        r = body.op === 'dev_request' ? devInboxAdd(cur, body, now) : devInboxDone(cur, String(body.id || ''), body.note, now);
+        return r.error ? { write: false } : { value: JSON.stringify(r.list) };
+      }, () => tmo(SB_MS));
+      if (r.error) return jsonResp({ ok: false, error: r.error }, 400, {});
+      if (!cw.written) return jsonResp({ ok: false, error: 'write ' + (cw.status || (cw.conflict ? 'conflict' : 'failed')) }, 200, {});
       let fired = null;
       const ft = body.op === 'dev_request' && r.created ? devFireTarget(env) : null;
       if (ft) {
@@ -2099,8 +2112,7 @@ async function routineDbHandle(context) {
         // kept on the request, so the postman does not hand it to the dev session as well (routine-chat-relay.md 2c)
         if (fired.session) {
           e.fired_session = fired.session;
-          await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-            body: JSON.stringify([{ key: DEV_INBOX_KEY, value: JSON.stringify(r.list), updated_at: now }]), signal: tmo(SB_MS) }).catch(() => null);
+          await stateCas(url, h, DEV_INBOX_KEY, (cur) => { const l = devInboxFired(cur, r.id, fired.session); return l ? { value: JSON.stringify(l) } : { write: false }; }, () => tmo(SB_MS)).catch(() => null);
         }
       }
       // 20/10/2026 (Michael in the questionnaire: "do it: development done = a message to you"): the note goes to
@@ -2108,12 +2120,13 @@ async function routineDbHandle(context) {
       // failure of the close.
       if (body.op === 'dev_done' && String(body.note || '').trim()) {
         try {
-          const lr = await stateRead(['agent_log']);
-          let log = []; try { log = JSON.parse(lr && lr[0] && lr[0].value || '[]'); } catch (x) { log = []; }
-          if (!Array.isArray(log)) log = [];
-          log.push(agentEntry({ agent: 'dev', ok: true, line: 'dev_done ' + body.id, for_michael: body.note }, now));
-          await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-            body: JSON.stringify([{ key: 'agent_log', value: JSON.stringify(trimLog(log)), updated_at: now }]), signal: tmo(SB_MS) });
+          const ent = agentEntry({ agent: 'dev', ok: true, line: 'dev_done ' + body.id, for_michael: body.note }, now);
+          await stateCas(url, h, 'agent_log', (cur) => {
+            let log = []; try { log = JSON.parse(cur || '[]'); } catch (x) { log = []; }
+            if (!Array.isArray(log)) log = [];
+            log.push(ent);
+            return { value: JSON.stringify(trimLog(log)) };
+          }, () => tmo(SB_MS));
         } catch (x) { /* the close is written; Michael sees it in the office */ }
       }
       // 21/10/2026 (Michael: "the assistant did a task, said it would come back to me and did not"): the
@@ -2534,18 +2547,16 @@ async function routineDbHandle(context) {
       // 21/10/2026: the WhatsApp assistant sent {status, did} three times; each became an empty ok:false row,
       // and a later run read them as "runs that fell midway". A report with nothing in it is refused.
       if (!e.line && !e.for_michael) return jsonResp({ ok: false, error: 'line required (fields: ok, line, learned, for_michael)' }, 400, {});
-      const rows = await stateRead(['agent_log']);
+      // retro 21/10/2026 (c): two reports at once lost one; the append goes through stateCas (ideas-lab 12)
       let log = [];
-      try { log = JSON.parse(rows && rows[0] && rows[0].value || '[]'); } catch (x) { log = []; }
-      if (!Array.isArray(log)) log = [];
-      log.push(e);
-      log = trimLog(log);
-      const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', {
-        method: 'POST',
-        headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify([{ key: 'agent_log', value: JSON.stringify(log), updated_at: e.at }]), signal: tmo(SB_MS),
-      });
-      if (!r.ok) return jsonResp({ ok: false, error: 'write ' + r.status }, 200, {});
+      const cw = await stateCas(url, h, 'agent_log', (cur) => {
+        try { log = JSON.parse(cur || '[]'); } catch (x) { log = []; }
+        if (!Array.isArray(log)) log = [];
+        log.push(e);
+        log = trimLog(log);
+        return { value: JSON.stringify(log) };
+      }, () => tmo(SB_MS));
+      if (!cw.written) return jsonResp({ ok: false, error: 'write ' + (cw.status || (cw.conflict ? 'conflict' : 'failed')) }, 200, {});
       return jsonResp({ ok: true, entry: e, kept: log.length }, 200, {});
     }
     if (body.op === 'claim' || body.op === 'claims') {
@@ -3497,10 +3508,7 @@ async function routineDbHandle(context) {
       if (r.duplicate) return jsonResp({ ok: true, duplicate: true, note: 'the same text went out in the last 10 minutes; not sent again' }, 200, {});
       if (r.ok) await noteLastOut(env, url, body.text, body.ref);
       if (r.ok && DEV_REF.test(String(body.ref || ''))) {
-        const rows = await stateRead([DEV_INBOX_KEY]).catch(() => []);
-        const told = devInboxTold(rows && rows[0] && rows[0].value, body.ref, new Date().toISOString());
-        if (told) await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
-          body: JSON.stringify([{ key: DEV_INBOX_KEY, value: JSON.stringify(told), updated_at: new Date().toISOString() }]) }).catch(() => null);
+        await stateCas(url, h, DEV_INBOX_KEY, (cur) => { const told = devInboxTold(cur, body.ref, new Date().toISOString()); return told ? { value: JSON.stringify(told) } : { write: false }; }, () => tmo(SB_MS)).catch(() => null);
       }
       // the pop-up on his phone and the wa_out line for /chat: sendToOwner does both, for every message (25/10/2026)
       const ps = { sent: r.push || 0 };
