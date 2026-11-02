@@ -4,6 +4,7 @@
 
 ## כללים מכל הקבצים
 - קובץ שקיים רק במייל: ישר `mail_request`; `mailAtt` ב-od-read תמיד 403 (`.claude/skills/tfugen-db/references/lessons.md:123`)
+- אחרי `mail_request`: בודקים שהקובץ הגיע ב-`mail_got` עם ה-`at` מהתשובה, לא בחיפוש SharePoint (מתעדכן באיחור); השם מתחיל בשעת המייל ב-UTC (`project-files/agent-common.md`, "קובץ ממייל ישן"; 02/11/2026)
 - לשרת אין `Mail.Read`: כל מה שצריך לקרוא מייל (שולח, שרשור, `reply_to`) עובר לעוזר; לבדוק `hasMailRead` לפני תכנון (`.claude/skills/tfugen-cloud-connect/SKILL.md:32`)
 - חיפוש שלא מצא: לפחות שלוש דרכים (שולח, טווח תאריכים, שם קובץ) לפני "חסר"; חשבונית אינה דוח (`.claude/skills/tfugen-dev/references/lessons.md:207`)
 - "אין" או "לא נשלח": חיפוש עם `afterDateTime` בכל התיקיות, ולכל טענה המקור (`.claude/skills/tfugen-screen-review/SKILL.md:61`)

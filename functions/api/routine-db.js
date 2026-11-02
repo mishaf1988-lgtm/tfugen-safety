@@ -129,6 +129,8 @@
 //              mail and saves its attachments into the inbox folder. Neither the cloud, the
 //              server (no Mail.Read) nor Cowork can get an attachment's bytes; the flow can.
 //              A new file each time (time + random), never replacing one. MAIL_REQ_ID.
+//   mail_got  (02/11/2026) {agent, since}: which files reached the inbox folder since a mail_request's "at"
+//              (names, sizes, times; OneDrive itself, not the search index). mailGotCheck / mailGotList.
 //   cal_move  (25/10/2026, Michael in the questionnaire: "בצע: דרך Power Automate", after the assistant
 //              could only read the calendar) {id, subject, start, end, approved}: move one event of Michael's
 //              calendar. Like mail_request: a JSON file into OD_CAL_MOVE, and the flow "הזזות ביומן"
@@ -928,6 +930,28 @@ export { hasInternalId };
 // rewriting its message. PQ is a quote prefix, never a passport.
 export function hasPassport(t) { return /(^|[^A-Za-z0-9])(?!PQ)[A-Z]{1,2}[0-9]{6,8}(?![A-Za-z0-9])/.test(String(t || '')); }
 export const MAIL_REQ_ID = /^[A-Za-z0-9_=+\/-]{40,400}$/;
+// mail_got (02/11/2026): {agent, since} -> the files the flows saved into OD_INBOX since then (a mail_request's
+// "at"). Up to 48 hours back, top level only (not the "not filed" folder), newest first, at most MAIL_GOT_MAX.
+export const MAIL_GOT_MAX = 50;
+export const MAIL_GOT_HOURS = 48;
+export const MAIL_GOT_HINT = 'in about a minute: {"op":"mail_got","agent":"<you>","since":"<at>"} lists what the flow saved; the name starts with the mail receive time in UTC, not Israel time. since=';
+export const MAIL_GOT_EMPTY = 'nothing yet: the flow takes 20 seconds to 10 minutes. Still nothing after 10 minutes: the mail has no attachment the flow keeps (a link, .zip, .gif, .ics, a video, a small image or under 1 KB), or the flow failed';
+export function mailGotCheck(b, now) {
+  if (!/^[a-z0-9-]{2,40}$/.test(String((b && b.agent) || ''))) return { error: 'bad agent name' };
+  for (const k of Object.keys(b)) if (['op', 'agent', 'why', 'since'].indexOf(k) < 0) return { error: 'field not allowed: ' + k };
+  const raw = String(b.since || '');
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?Z$/.test(raw)) return { error: 'since: a UTC time like 2026-11-02T05:26:29Z (the "at" of mail_request)' };
+  const t = Date.parse(raw);
+  if (!isFinite(t) || t > now + 60000 || t < now - MAIL_GOT_HOURS * 3600000) return { error: 'since: within the last ' + MAIL_GOT_HOURS + ' hours' };
+  return { since: t };
+}
+export function mailGotList(items, since) {
+  return (Array.isArray(items) ? items : [])
+    .filter((x) => x && x.file && typeof x.name === 'string' && Date.parse(x.createdDateTime) >= since - 5000)
+    .sort((a, b) => Date.parse(b.createdDateTime) - Date.parse(a.createdDateTime))
+    .slice(0, MAIL_GOT_MAX)
+    .map((x) => ({ name: x.name, size: x.size || 0, at: x.createdDateTime }));
+}
 export const OD_CAL_MOVE = OD_AUTO + '/' + OD_AUTO_DIRS[3], CAL_MOVED_KEY = 'cal_moved', CAL_MOVED_MAX = 30;
 const CAL_T = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 // Pure. Israel wall clock "YYYY-MM-DDTHH:MM" for start and end, from today up to a year ahead, at most 14 days long.
@@ -2667,7 +2691,31 @@ async function routineDbHandle(context) {
       const at = await accessToken(env);
       const name = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '') + '-' + Math.random().toString(36).slice(2, 8) + '.txt';
       const f = await putFile(at.token, OD_ROOT + OD_REQ, name, id, 'text/plain');
-      return jsonResp({ ok: true, file: OD_REQ + '/' + name, size: f.size || null }, 200, {});
+      const reqAt = new Date().toISOString();
+      return jsonResp({ ok: true, file: OD_REQ + '/' + name, size: f.size || null, at: reqAt, next: MAIL_GOT_HINT + reqAt }, 200, {});
+    }
+    // 02/11/2026 (dev-20261102053215-jiln): the assistant searched SharePoint for the files of a mail_request, found
+    // nothing after 8 minutes and asked for a fix, while the flow had saved the file 23 seconds after the request.
+    // Search is indexed minutes late, and the name starts with the mail's receive time in UTC (a mail of 00:43 on
+    // 02/11 in Israel is "2026-11-01 2243 - ..."). mail_got lists what reached the inbox folder since a time, from
+    // OneDrive itself: names, sizes and times only, never the content.
+    if (body.op === 'mail_got') {
+      const c = mailGotCheck(body, Date.now());
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const at = await accessToken(env);
+      const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
+      const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+      const items = [];
+      let next = G + enc(OD_ROOT + OD_INBOX) + ':/children?$select=name,size,file,createdDateTime&$top=200';
+      for (let i = 0; next && i < 5; i++) {
+        const r = await fetch(next, { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) });
+        if (!r.ok) return jsonResp({ ok: false, error: 'onedrive ' + r.status }, 200, {});
+        const j = await r.json();
+        (j.value || []).forEach((x) => items.push(x));
+        next = j['@odata.nextLink'] || null;
+      }
+      const files = mailGotList(items, c.since);
+      return jsonResp({ ok: true, since: new Date(c.since).toISOString(), count: files.length, files, note: files.length ? '' : MAIL_GOT_EMPTY }, 200, {});
     }
     if (CAL_SERVER_ONLY.indexOf(body.op) >= 0 && context.internal !== true) return jsonResp({ ok: false, error: body.op + ' runs only on Michael\'s tap: use ' + body.op + '_ask (26/10/2026)' }, 403, {});
     if (body.op === 'cal_move') {
