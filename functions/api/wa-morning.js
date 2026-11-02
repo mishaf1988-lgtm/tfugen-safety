@@ -111,6 +111,23 @@ export function rowContradictions(rows) {
     return (/Claude \(/.test(last) && FAIL_WORD.test(last)) || FAIL_WORD.test(String(r.deficiencies || ''));
   }).map((r) => r.n);
 }
+// 02/11/2026 (the assistant's chat, Michael: "do it: fix it in the server"): the update of 02/11/2026 07:47 showed the
+// assistant's "the .doc form cannot go, the developer will fix it" under the developer's newer "fixed: the assistant can
+// now send .doc". A note is left out when a newer one on the same subject (2+ shared words of 4+ letters) says it is
+// done. notes: newest first, each with at. Pure.
+export const NOTE_DONE_RE = /(^|[^\u05d0-\u05ea])(\u05ea\u05d5\u05e7\u05df|\u05d1\u05d5\u05e6\u05e2|\u05e0\u05e9\u05dc\u05d7|\u05e0\u05e1\u05d2\u05e8|\u05d4\u05d5\u05e9\u05dc\u05dd)/;
+const noteWords = (t) => new Set(String(t || '').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter((w) => w.length >= 4));
+export function notesOpen(notes) {
+  const list = (notes || []).filter((x) => x && x.text);
+  return list.filter((x, i) => {
+    const w = noteWords(x.text);
+    return !list.slice(0, i).some((y) => NOTE_DONE_RE.test(String(y.text)) && !NOTE_DONE_RE.test(String(x.text))
+      && Array.from(noteWords(y.text)).filter((v) => w.has(v)).length >= 2);
+  });
+}
+// The expiry name as the database holds it ended with "same as above" (it was copied from a list): alone in the update
+// it points at the line before, which is another item. Pure.
+export const itemName = (n) => String(n == null ? '' : n).replace(/[,\s]*\u05db\u05e0["\u05f4\u201d]\u05dc\s*$/, '');
 export function buildBrief(items, failed, today, compact, notes, weather, devDone, learnOpen, urgent, waiting, disq, contra) {
   contra = urgent ? [] : (contra || []);
   const contraLine = contra.length ? '\u05e9\u05d5\u05e8\u05d4 \u05e1\u05d5\u05ea\u05e8\u05ea \u05d1\u05de\u05e1\u05d3 (\u05d4\u05de\u05e6\u05d1 \u05ea\u05e7\u05d9\u05df \u05d5\u05d4\u05d4\u05e2\u05e8\u05d4 \u05d0\u05d5\u05de\u05e8\u05ea \u05e9\u05e0\u05e4\u05e1\u05dc): ' + contra.slice(0, 3).map((n) => clip(n, 40)).join('; ') + (contra.length > 3 ? '; \u05d5\u05e2\u05d5\u05d3 ' + (contra.length - 3) : '') + '. \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d5\u05dc\u05ea\u05e7\u05df.' : '';
@@ -121,7 +138,7 @@ export function buildBrief(items, failed, today, compact, notes, weather, devDon
   const wx = weatherLine(weather, today);
   failed = failed.map(agentName);
   // A worker's note goes out as written, so an internal id is cut out here (21/10/2026, hasInternalId).
-  notes = (notes || []).map((x) => ({ agent: x.agent, text: stripPrRefs(stripInternalIds(x.text)) })).filter((x) => x.text).slice(0, 3);
+  notes = notesOpen(notes).map((x) => ({ agent: x.agent, text: stripPrRefs(stripInternalIds(x.text)) })).filter((x) => x.text).slice(0, 3);
   // compact (20/10/2026, Michael's screenshot): outside the 24 hour window the template carries one
   // line between its own "update from the assistant:" and "to answer, write here", so no heading, no
   // closing line, and items joined by "; " instead of new lines that would turn into " | ".
@@ -135,7 +152,7 @@ export function buildBrief(items, failed, today, compact, notes, weather, devDon
     const parts = [];
     if (wx) parts.push(wx);
     if (notes.length) parts.push('\u05de\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd: ' + notes.map((x) => agentName(x.agent) + ': ' + clip(x.text, 160)).join('; ') + '.');
-    if (items.length) parts.push('\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea: ' + items.slice(0, 3).map((x) => clip(x.n, 50) + due(x, today)).join('; ')
+    if (items.length) parts.push('\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea: ' + items.slice(0, 3).map((x) => clip(itemName(x.n), 50) + due(x, today)).join('; ')
       + (items.length > 3 ? '; \u05d5\u05e2\u05d5\u05d3 ' + (items.length - 3) : '') + '.');
     if (waitLine) parts.push(waitLine);
     if (disqLine) parts.push(disqLine);
@@ -149,7 +166,7 @@ export function buildBrief(items, failed, today, compact, notes, weather, devDon
   if (wx) lines.push(wx);
   if (items.length) {
     lines.push('\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea:');
-    items.slice(0, 3).forEach((x) => lines.push('- ' + clip(x.n, 60) + due(x, today)));
+    items.slice(0, 3).forEach((x) => lines.push('- ' + clip(itemName(x.n), 60) + due(x, today)));
     if (items.length > 3) lines.push('\u05d5\u05e2\u05d5\u05d3 ' + (items.length - 3) + ' \u05d1\u05de\u05e1\u05da \u05d4\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea.');
   }
   if (waitLine) lines.push(waitLine);
@@ -209,7 +226,7 @@ export async function gather(env, now) {
   // for_michael since the previous update: 24 hours, and on Sunday since Thursday's update (72 hours).
   const nsince = now.getTime() - (ilDow(now) === 0 ? 3 : 1) * 86400000;
   const notes = (Array.isArray(log) ? log : []).filter((x) => x && x.agent && x.for_michael && Date.parse(x.at) >= nsince)
-    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).map((x) => ({ agent: x.agent, text: x.for_michael }));
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).map((x) => ({ agent: x.agent, text: x.for_michael, at: x.at }));
   let weather = null;
   try { weather = JSON.parse((await stateGet(env, 'weather_tomorrow')) || 'null'); } catch (e) { weather = null; }
   let devDone = null;
