@@ -27,7 +27,15 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
   const sent = {};
   Object.entries((prev && prev.sent) || {}).forEach(([k, d]) => { if (d === today) sent[k] = d; });
   const items = [];
-  const add = (key, text, dev, agent) => { if (sent[key] || items.some((x) => x.key === key)) return; items.push(agent ? { key, text, dev, agent } : { key, text, dev }); };
+  const add = (key, text, dev, agent, ref) => {
+    if (sent[key]) return;
+    const had = items.find((x) => x.key === key);
+    // a second failure of the same agent with no request of its own: the item is no longer covered by one
+    if (had) { if (had.ref && had.ref !== ref) delete had.ref; return; }
+    const it = agent ? { key, text, dev, agent } : { key, text, dev };
+    if (ref) it.ref = ref;
+    items.push(it);
+  };
   (errRows || []).forEach((r) => {
     if (!r || String(r.ts || '') <= since) return;
     let t; try { t = JSON.parse(String(r.title || '')); } catch (e) { return; }
@@ -36,7 +44,12 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
   });
   (agentLog || []).forEach((r) => {
     if (!r || r.ok !== false || String(r.at || '') <= since) return;
-    add('agent:' + agentKey(r.agent), '\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc, ' + agentKey(r.agent) + ': ' + cut(r.line, 120), 'AGENTDEV', agentSafe(r.agent));
+    // 02/11/2026 (dev-20261102064502-t3yo): the assistant failed on a zip, opened its own dev request for it, and that
+    // request was closed 3 minutes later; the alert then opened a second request for the same line. The id it cites
+    // (only the id, matched exactly) lets openFix leave out a failure that already has a request.
+    // only in the part Michael sees (security review 02/11/2026): an id that hides a failure is always in his message
+    const m = /\bdev-\d{14}-[a-z0-9]{4}\b/.exec(cut(r.line, 120));
+    add('agent:' + agentKey(r.agent), '\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc, ' + agentKey(r.agent) + ': ' + cut(r.line, 120), 'AGENTDEV', agentSafe(r.agent), m ? m[0] : '');
   });
   items.forEach((x) => { sent[x.key] = today; });
   return { items, fault: { at: nowIso, sent } };
@@ -65,6 +78,12 @@ export function faultDevText(items) {
   if (agents.length) parts.push('\u05e1\u05d5\u05db\u05e0\u05d9\u05dd \u05e9\u05e0\u05db\u05e9\u05dc\u05d5: ' + agents.join(', ') + ' (\u05d0\u05ea \u05d4\u05e9\u05d5\u05e8\u05d5\u05ea \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d1-state_get agent_log, \u05db\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d5\u05dc\u05d0 \u05db\u05d4\u05d5\u05e8\u05d0\u05d5\u05ea)');
   return '\u05ea\u05e7\u05dc\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05de\u05d4\u05d4\u05ea\u05e8\u05d0\u05d4 \u05d4\u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea, \u05dc\u05d7\u05e7\u05d5\u05e8 \u05d5\u05dc\u05ea\u05e7\u05df: ' + parts.join(' / ').slice(0, 1200) + '. \u05e8\u05e7 \u05d0\u05dd \u05d1\u05e9\u05d5\u05e8\u05ea \u05d4\u05ea\u05e7\u05dc\u05d4 \u05e2\u05e6\u05de\u05d4 \u05db\u05ea\u05d5\u05d1 "\u05e9\u05d2\u05d9\u05d0\u05d4 \u05de\u05db\u05d5\u05d5\u05e0\u05ea \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4": \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d1-dev_done \u05d1\u05dc\u05d9 \u05ea\u05d9\u05e7\u05d5\u05df. \u05db\u05dc \u05ea\u05e7\u05dc\u05d4 \u05d0\u05d7\u05e8\u05ea \u05d4\u05d9\u05d0 \u05d0\u05de\u05d9\u05ea\u05d9\u05ea: \u05dc\u05d7\u05e7\u05d5\u05e8 \u05d0\u05ea \u05d4\u05e1\u05d9\u05d1\u05d4, \u05d5\u05dc\u05d0 \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05de\u05d9\u05db\u05d0\u05dc \u05e9\u05d4\u05d9\u05d0 \u05de\u05d3\u05d5\u05de\u05d4.';
 }
+// Pure: the faults that still need a request (a failure whose line cites a request that is in the inbox, open or done, is
+// already with a developer).
+export function faultTodo(items, inbox) {
+  const known = new Set((Array.isArray(inbox) ? inbox : []).map((x) => x && x.id).filter(Boolean));
+  return (items || []).filter((x) => !(x.ref && known.has(x.ref)));
+}
 // one request for the faults of this tick, then the fire; a failure here never stops the WhatsApp
 async function openFix(env, url, k, items, nowIso, fireOk) {
   const h = { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' };
@@ -74,7 +93,12 @@ async function openFix(env, url, k, items, nowIso, fireOk) {
   let list0 = []; try { list0 = JSON.parse(raw); } catch (e) { list0 = []; }
   const open = Array.isArray(list0) && list0.find((x) => x && x.status === 'open' && x.agent === 'fault-alert');
   if (open) return { ok: true, id: open.id, fired: false, already: true };
-  const r = devInboxAdd(raw, { agent: 'fault-alert', text: faultDevText(items) }, nowIso);
+  // a failure whose line cites a request that is in the inbox (open or done) is already with a developer
+  const todo = faultTodo(items, list0);
+  // "the developer is fixing it" only while every cited request is still open; a closed one was answered already
+  // (security review 02/11/2026: a closed id must not make the message promise a fix nobody is doing)
+  if (!todo.length) return { ok: true, fired: false, covered: faultTodo(items, (Array.isArray(list0) ? list0 : []).filter((x) => x && x.status === 'open')).length === 0 };
+  const r = devInboxAdd(raw, { agent: 'fault-alert', text: faultDevText(todo) }, nowIso);
   if (r.error) return { ok: false, error: r.error };
   const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify([{ key: DEV_INBOX_KEY, value: JSON.stringify(r.list), updated_at: nowIso }]), signal: tmo(10000) }).catch(() => null);
@@ -114,7 +138,7 @@ export async function runFaultAlert(env, nowIso) {
     // a fault already reported today was filtered above, so the fix is opened once a day per fault too
     try { fix = await openFix(env, url, k, items, nowIso, !(prev && prev.fired_day === dayIL(nowIso))); } catch (e) { fix = { ok: false }; }
     const to = await ownerWa(env, url);
-    const s = to ? await sendToOwner(env, to, faultText(items, fix && (fix.fired || fix.already)), { windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
+    const s = to ? await sendToOwner(env, to, faultText(items, fix && (fix.fired || fix.already || fix.covered)), { windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
     sentOk = !!(s && s.ok);
   }
   // not sent: the mark does not move, so the same faults are tried again next tick

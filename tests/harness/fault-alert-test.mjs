@@ -1,6 +1,6 @@
 // Fault alert (31/10/2026, functions/_faults.js): every watchdog tick tells Michael, in ONE WhatsApp, about errors in
 // users' browsers and agents that reported a failure since the last tick; the same fault once a day.
-import { faultItems, faultText, faultDevText, FAULT_LINES, FAULT_FIRST_MS } from './_build/_faults.mjs';
+import { faultItems, faultText, faultDevText, faultTodo, FAULT_LINES, FAULT_FIRST_MS } from './_build/_faults.mjs';
 import { devInboxAdd } from './_build/routine-db.mjs';
 import fs from 'node:fs';
 let pass = 0, fail = 0;
@@ -45,7 +45,7 @@ const NOW = '2026-10-31T14:50:00.000Z';
   check('a test error is closed without a fix (the request says so)', d.indexOf('dev_done') > 0);
   check('the message says the fix already started when it did, and the morning check when it did not', faultText(items, true) !== faultText(items, false) && /\u05d4\u05de\u05e4\u05ea\u05d7/.test(faultText(items, true)));
   const fsrc = fs.readFileSync(new URL('../../functions/_faults.js', import.meta.url), 'utf8');
-  check('the message says the fix started only when the developer was really fired (not already-open, not no-fire)', /faultText\(items, fix && \(fix\.fired \|\| fix\.already\)\)/.test(fsrc));
+  check('the message says the fix started only when the developer was really fired (fired, already open, or the failure cites its own request; not no-fire)', /faultText\(items, fix && \(fix\.fired \|\| fix\.already \|\| fix\.covered\)\)/.test(fsrc));
   check('the fire goes through devFireTarget, only for a new request, once a day', /const ft = r\.created && fireOk \? devFireTarget\(env\) : null/.test(fsrc) && /fired_day/.test(fsrc));
   check('one open fault-alert request at a time', /x\.agent === 'fault-alert'/.test(fsrc) && /already: true/.test(fsrc));
 }
@@ -69,6 +69,22 @@ const NOW = '2026-10-31T14:50:00.000Z';
   const many = faultItems(prev, [], Array.from({ length: 9 }, (_, i) => ({ agent: 'word' + i, at: '2026-10-31T14:1' + i + ':00Z', ok: false, line: 'x' })), NOW);
   const dm = faultDevText(many.items);
   check('at most 5 agent names reach the developer, then a count', dm.indexOf('word4') > 0 && dm.indexOf('word5') < 0 && dm.indexOf(' 4 (') > 0, dm);
+}
+{ // 02/11/2026 (dev-20261102064502-t3yo): a failure that already opened its own dev request does not open a second one
+  const prev = { at: '2026-10-31T14:00:00.000Z', sent: {} };
+  const line = 'zip not saved. sent a dev request (dev-20261102063806-oszd). asked Michael';
+  const inbox = [{ id: 'dev-20261102063806-oszd', status: 'done' }];
+  const r = faultItems(prev, [], [{ agent: 'routine-wa-assistant', at: '2026-10-31T14:10:00Z', ok: false, line }], NOW);
+  check('the cited request id is kept on the item', r.items[0] && r.items[0].ref === 'dev-20261102063806-oszd', JSON.stringify(r.items));
+  check('a failure whose request is in the inbox (even done) needs no new request', faultTodo(r.items, inbox).length === 0);
+  check('Michael still gets the line', faultText(r.items, true).indexOf('zip not saved') > 0);
+  check('an id that is not in the inbox does not hide the failure', faultTodo(r.items, [{ id: 'dev-20261102000000-zzzz' }]).length === 1);
+  const r2 = faultItems(prev, [], [{ agent: 'routine-wa-assistant', at: '2026-10-31T14:10:00Z', ok: false, line },
+    { agent: 'routine-wa-assistant', at: '2026-10-31T14:20:00Z', ok: false, line: 'another real failure' }], NOW);
+  check('a second failure of the same agent without a request is not hidden', faultTodo(r2.items, inbox).length === 1);
+  const r3 = faultItems(prev, [], [{ agent: 'mail-file', at: '2026-10-31T14:10:00Z', ok: false, line: 'failed, no request' }], NOW);
+  check('a failure with no id still opens a request', faultTodo(r3.items, inbox).length === 1 && !('ref' in r3.items[0]));
+  check('the id never reaches the developer text', faultDevText(r.items).indexOf('oszd') < 0);
 }
 { // wiring: the watchdog calls it, and a fault-alert failure does not fail the watch
   const src = fs.readFileSync(new URL('../../functions/_watchdog.js', import.meta.url), 'utf8');
