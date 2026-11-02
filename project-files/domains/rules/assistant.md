@@ -1,4 +1,4 @@
-# כל כללי הענף: העוזר והסוכנים
+# כל כללי הענף: העוזר, הסוכנים והאוטומציות
 
 נפתח 02/11/2026 (מיכאל בשאלון: "בצע: ענף חדש העוזר"). כל שורה: הכלל בקצרה, והמקור שבו הוא כתוב במלואו. התיק הקצר: `project-files/domains/assistant.md`. כלל חדש בענף נכנס גם לכאן.
 
@@ -14,6 +14,10 @@
 - ניסוי בעוזר משיחה אחרת: `office_ask` עם "קריאה בלבד, אל תכתוב ב-365 ואל תחתום" (`.claude/skills/tfugen-sessions/SKILL.md`)
 - עלות ריצה: `get_session` `usage.cost_usd` (`.claude/skills/tfugen-sessions/SKILL.md`; `agent-costs.md`)
 - הוראות העוזר: שינוי ב-`routine-wa-core.md` מסונכרן ל-`routine-wa-assistant.md` ולקבצי `wa-topics/` (`tests/harness/wa-core-sync-test.py`)
+
+- זרימות Power Automate: רק טיוטות, אין שליחה; כל כתיבה של השרת ב-OneDrive נרשמת ב-Claude Log (`project-files/power-automate-mail.md`; `CLAUDE.md` חוק 9)
+- כל דבר חדש מחוץ ל-repo (Routine, זרימה, תיקייה, pg_cron, connector) נרשם ב-`ACCOUNT-INVENTORY.md` (`project-files/ACCOUNT-INVENTORY.md` שורה 9)
+- לפני "אי אפשר" או "צריך מנהל מערכת": כלי קיים או זרימה חדשה בשם מיכאל (`CLAUDE.md` חוק 5)
 
 ## פריטים פתוחים
 - STATUS "🧠 העוזר בוואטסאפ על אופוס": בדיקת עלות ואורך תשובות 09/11/2026.
