@@ -17,9 +17,22 @@ export const DOMAINS = [
   { key: 'assistant', file: 'project-files/domains/assistant.md', name: '\u05d4\u05e2\u05d5\u05d6\u05e8, \u05d4\u05e1\u05d5\u05db\u05e0\u05d9\u05dd \u05d5\u05d4\u05d0\u05d5\u05d8\u05d5\u05de\u05e6\u05d9\u05d5\u05ea', words: ['\u05d4\u05e2\u05d5\u05d6\u05e8', '\u05e2\u05d5\u05d6\u05e8 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4', '\u05d4\u05e1\u05d5\u05db\u05e0\u05d9\u05dd', '\u05e1\u05d5\u05db\u05df \u05de\u05ea\u05d5\u05d6\u05de\u05df', '\u05d0\u05d5\u05e4\u05d5\u05e1', '\u05e1\u05d5\u05e0\u05d8', 'Haiku', '\u05e2\u05dc\u05d5\u05ea \u05d4\u05e1\u05d5\u05db\u05e0\u05d9\u05dd', '\u05de\u05db\u05e1\u05d4', '\u05d0\u05d5\u05d8\u05d5\u05de\u05e6\u05d9\u05d4', '\u05d0\u05d5\u05d8\u05d5\u05de\u05e6\u05d9\u05d5\u05ea', 'Power Automate', '\u05d6\u05e8\u05d9\u05de\u05d4', '\u05d6\u05e8\u05d9\u05de\u05d5\u05ea', '_\u05d0\u05d5\u05d8\u05d5\u05de\u05e6\u05d9\u05d4', '\u05e2\u05d3\u05db\u05d5\u05df \u05d4\u05d1\u05d5\u05e7\u05e8', '\u05dc\u05e4\u05d9\u05ea\u05d5\u05d7', '\u05d4\u05e1\u05d5\u05db\u05df', '\u05e2\u05d5\u05d6\u05e8\u05d9\u05dd', '\u05ea\u05d6\u05db\u05d9\u05e8', '\u05ea\u05d6\u05db\u05d5\u05e8\u05ea', '\u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4', 'whatsapp', '\u05de\u05e4\u05ea \u05d4\u05de\u05e2\u05e8\u05db\u05ea', '\u05d1\u05d9\u05d5\u05de\u05df', '\u05dc\u05d4\u05d6\u05d9\u05d6', '\u05d6\u05d9\u05de\u05d5\u05df'], forms: [] },
 ];
 // Pure: the branches a text touches, in list order (a word is matched case-insensitively, anywhere).
+// 02/11/2026 (Michael: "do it: smart ranking and spelling mistakes"): a one-word branch word of 5 letters or more
+// also counts one letter away from a word of the text (tools/domain_match.py, the same rule for Claude).
+export function lev1(a, b) {
+  if (a === b) return true;
+  if (Math.abs(a.length - b.length) > 1) return false;
+  if (a.length > b.length) [a, b] = [b, a];
+  let i = 0;
+  while (i < a.length && a[i] === b[i]) i++;
+  return a.length === b.length ? a.slice(i + 1) === b.slice(i + 1) : a.slice(i) === b.slice(i + 1);
+}
 export function domainsOf(text) {
   const t = String(text || '').toLowerCase();
-  return DOMAINS.filter((d) => d.words.some((w) => t.indexOf(w.toLowerCase()) >= 0));
+  const toks = [];
+  for (let w of (t.match(/[\w\u0590-\u05ff.-]+/g) || [])) { w = w.replace(/^[.-]+|[.-]+$/g, ''); for (let i = 0; i < 3 && w.length >= 4; i++) { toks.push(w); if ('\u05d5\u05d4\u05d1\u05dc\u05de\u05e9\u05db'.indexOf(w[0]) < 0) break; w = w.slice(1); } }
+  const hit = (w) => { w = w.toLowerCase(); return t.indexOf(w) >= 0 || (w.indexOf(' ') < 0 && w.length >= 5 && toks.some((x) => lev1(w, x))); };
+  return DOMAINS.filter((d) => d.words.some(hit));
 }
 // The line for the assistant's fire text; empty when no branch matches.
 export function domainLine(text) {

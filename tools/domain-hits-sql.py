@@ -3,7 +3,7 @@
 check in a month"). Prints one SQL query for the Supabase MCP (execute_sql): for each branch in
 project-files/domains/index.json, how many of Michael's own messages to the assistant (notifications_log owner_in,
 WhatsApp and the app chat) in the last N days contain one of its words, the same match the server uses
-(functions/_domains.js, lower-case substring; here one regex of the words per branch), and how many matched no branch. Tests and drills ("[..." at the
+(functions/_domains.js, lower-case substring; here one regex of the words per branch; without the one-letter typo match, so a little lower than the server; tools/domain-gaps.py has it), and how many matched no branch. Tests and drills ("[..." at the
 start) are left out. A branch with 0 hits has words that never come up; a branch hit by most messages has a word
 that is too common. Usage: python3 tools/domain-hits-sql.py [days, default 30] [min length, default 0; 30 = real requests, not buttons]
 """

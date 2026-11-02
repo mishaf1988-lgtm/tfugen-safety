@@ -16,9 +16,22 @@ def build():
             '// A word of a branch in Michael\'s message = the assistant is told to read that branch\'s file first.\n'
             'export const DOMAINS = [\n' + '\n'.join(rows) + '\n];\n'
             '// Pure: the branches a text touches, in list order (a word is matched case-insensitively, anywhere).\n'
+            '// 02/11/2026 (Michael: "do it: smart ranking and spelling mistakes"): a one-word branch word of 5 letters or more\n'
+            '// also counts one letter away from a word of the text (tools/domain_match.py, the same rule for Claude).\n'
+            'export function lev1(a, b) {\n'
+            '  if (a === b) return true;\n'
+            '  if (Math.abs(a.length - b.length) > 1) return false;\n'
+            '  if (a.length > b.length) [a, b] = [b, a];\n'
+            '  let i = 0;\n'
+            '  while (i < a.length && a[i] === b[i]) i++;\n'
+            '  return a.length === b.length ? a.slice(i + 1) === b.slice(i + 1) : a.slice(i) === b.slice(i + 1);\n'
+            '}\n'
             'export function domainsOf(text) {\n'
             "  const t = String(text || '').toLowerCase();\n"
-            '  return DOMAINS.filter((d) => d.words.some((w) => t.indexOf(w.toLowerCase()) >= 0));\n'
+            "  const toks = [];\n"
+            "  for (let w of (t.match(/[\\w\\u0590-\\u05ff.-]+/g) || [])) { w = w.replace(/^[.-]+|[.-]+$/g, ''); for (let i = 0; i < 3 && w.length >= 4; i++) { toks.push(w); if ('\\u05d5\\u05d4\\u05d1\\u05dc\\u05de\\u05e9\\u05db'.indexOf(w[0]) < 0) break; w = w.slice(1); } }\n"
+            "  const hit = (w) => { w = w.toLowerCase(); return t.indexOf(w) >= 0 || (w.indexOf(' ') < 0 && w.length >= 5 && toks.some((x) => lev1(w, x))); };\n"
+            '  return DOMAINS.filter((d) => d.words.some(hit));\n'
             '}\n'
             '// The line for the assistant\'s fire text; empty when no branch matches.\n'
             'export function domainLine(text) {\n'

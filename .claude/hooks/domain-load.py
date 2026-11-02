@@ -8,6 +8,8 @@ Prints the branch checklist and only the lines of the branch and its rules that 
 Test:  python3 tests/harness/domains-test.py
 """
 import json, os, re, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "tools"))
+import domain_match as dm  # tools/domain_match.py: the branch match, typo tolerance and BM25 (02/11/2026)
 sys.stdout.reconfigure(encoding="utf-8")  # Windows writes cp1255; Claude Code reads UTF-8 (05/10/2026)
 sys.stdin.reconfigure(encoding="utf-8")
 
@@ -15,26 +17,6 @@ sys.stdin.reconfigure(encoding="utf-8")
 # branch, but its checklist (the top, up to "## תיקיות") and only the lines of the branch file and of rules/<key>.md that
 # hold words of this message, the best RELEVANT_MAX by how many of its words they share. The whole file stays one Read away.
 RELEVANT_MAX = 12
-STOP = set("את של עם על אני רוצה צריך לי זה זו יש אם גם מה כל לא כן הוא היא הם אתה תכין הכן תבדוק בדוק שלח תשלח לגבי איך למה מתי איפה אבל או רק עוד כבר שלי שלך אותו אותה אחרי לפני היום מחר אתמול".split())
-PREFIX = "והבלמשכ"
-
-
-def tokens(text):
-    out = set()
-    for w in re.findall(r"[\w\u0590-\u05ff.-]+", text.lower()):
-        w = w.strip(".-")
-        for _ in range(2):
-            if len(w) > 3 and w[0] in PREFIX and w not in STOP:
-                w2 = w[1:]
-                if len(w2) >= 3:
-                    out.add(w2)
-                w = w2
-        if len(w) >= 3 and w not in STOP:
-            out.add(w)
-    for w in re.findall(r"[\w\u0590-\u05ff.-]+", text.lower()):
-        if len(w) >= 3 and w not in STOP:
-            out.add(w)
-    return out
 
 
 def branch_text(root, k, v, text):
@@ -49,17 +31,10 @@ def branch_text(root, k, v, text):
         rules = open(os.path.join(root, rules_path), encoding="utf-8").read().split("\n")
     except Exception:
         rules = []
-    toks = tokens(text)
-    scored = []
-    for src, ls in ((v["file"], rest), (rules_path, rules)):
-        for l in ls:
-            t = l.strip()
-            if not t.startswith("- "):
-                continue
-            n = sum(1 for w in toks if w in t.lower())
-            if n:
-                scored.append((-n, len(scored), src, t))
-    scored.sort()
+    toks = dm.tokens(text)
+    cand = [(src, l.strip()) for src, ls in ((v["file"], rest), (rules_path, rules)) for l in ls if l.strip().startswith("- ")]
+    # 02/11/2026 (Michael: "do it: smart ranking and spelling mistakes"): BM25, a rare word weighs more, one letter off still counts
+    scored = [(-sc, i, cand[i][0], t) for sc, i, t in dm.rank([t for _, t in cand], toks)]
     picked = scored[:RELEVANT_MAX]
     body = "\n".join(head).rstrip()
     if picked:
@@ -84,13 +59,7 @@ def main():
     # any other match is named in one line, to read if it is relevant.
     if "system notification" in text or "<task-notification>" in text or "[subagent hand-back]" in text:
         print("{}"); return
-    hits = []
-    for k, v in idx.items():
-        if k.startswith("_"):
-            continue
-        n = sum(1 for w in v.get("words", []) if w.lower() in text)
-        if n:
-            hits.append((-n, k, v))
+    hits = [(-n, k, v) for k, v, n in dm.branches(text, idx)]
     hits.sort(key=lambda x: (x[0], x[1]))
     out = []
     for i, (_, k, v) in enumerate(hits):

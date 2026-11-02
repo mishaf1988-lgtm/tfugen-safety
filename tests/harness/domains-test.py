@@ -75,5 +75,26 @@ check("domain-gaps: counts only Michael's real requests and lists the one with n
 check("domain-gaps: a word that would load one branch on more than 40% exits 3", r1.returncode == 3, r1.stdout[:200])
 os.unlink(tf.name)
 check("retro-prompt: the weekly words step runs domain-gaps", "tools/domain-gaps.py" in open(os.path.join(ROOT, "project-files/retro-prompt.md"), encoding="utf-8").read())
+# 02/11/2026 (Michael: "do it: smart ranking and spelling mistakes"): one letter off still finds the branch, here, in the
+# server and in domain-gaps; BM25 puts the line with the rare word first
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+import domain_match as dm
+check("domain_match.lev1: one edit yes, two no", dm.lev1("abcde", "abxde") and dm.lev1("abcde", "abde") and not dm.lev1("abcde", "axcxe"))
+ty = hook("\u05d9\u05e9 \u05e7\u05d1\u05dc\u05e0\u05d9\u05de \u05d7\u05d3\u05e9\u05d9\u05dd \u05d1\u05e9\u05d1\u05d5\u05e2 \u05d4\u05d1\u05d0")
+check("hook: a one-letter typo (\u05e7\u05d1\u05dc\u05e0\u05d9\u05de) still loads its branch (height)", "height.md" in str(ty))
+check("hook: a short word one letter off loads nothing (no fuzzy under 5 letters)", hook("\u05de\u05d4 \u05e9\u05dc\u05d5\u05de\u05da \u05d4\u05d9\u05d5\u05dd") == {})
+rk = dm.rank(["- \u05d8\u05d5\u05e4\u05e1 \u05d0\u05d7\u05d3", "- \u05d8\u05d5\u05e4\u05e1 \u05e9\u05e0\u05d9", "- \u05d8\u05d5\u05e4\u05e1 146.03 \u05dc\u05e7\u05d1\u05dc\u05df", "- \u05d8\u05d5\u05e4\u05e1 \u05e9\u05dc\u05d9\u05e9\u05d9"], dm.tokens("\u05d8\u05d5\u05e4\u05e1 146.03"))
+check("domain_match.rank (BM25): the line with the rare word (146.03) comes first", rk and "146.03" in rk[0][2], rk[:2])
+js = subprocess.run(["node", "-e", "import(process.argv[1]).then((m) => console.log(JSON.stringify([m.domainsOf('\u05d9\u05e9 \u05e7\u05d1\u05dc\u05e0\u05d9\u05de \u05d7\u05d3\u05e9\u05d9\u05dd').map((d) => d.key), m.domainsOf('\u05de\u05d4 \u05e9\u05dc\u05d5\u05de\u05da').length])))", "file://" + os.path.join(ROOT, "functions/_domains.js")], capture_output=True, text=True)
+check("server domainsOf: the same typo finds height, a greeting finds nothing", js.stdout.strip() == '[["height"],0]', js.stdout + js.stderr[:200])
+# 02/11/2026, pairs (lessons-gate "\u05d6\u05d5\u05d2\u05d5\u05ea:"): 3 real-shaped lines with a one-letter typo that must find their branch, 3 real
+# lines of Michael (02/11/2026, wa_review) that must find none; the hook's module and the server give the same answer
+PAIRS = [("\u05d9\u05e9 \u05e7\u05d1\u05dc\u05e0\u05d9\u05de \u05d7\u05d3\u05e9\u05d9\u05dd \u05de\u05d7\u05e8", ["height"]), ("\u05de\u05d4 \u05e2\u05dd \u05d4\u05db\u05d1\u05d0\u05d5\u05d8", ["emergency"]), ("\u05ea\u05e9\u05dc\u05d7 \u05dc\u05d9 \u05d0\u05ea \u05d4\u05d8\u05e4\u05e1\u05d9\u05de", ["iso"]),
+         ("\u05de\u05d4 \u05e9\u05dc\u05d5\u05de\u05da", []), ("\u05db\u05df \u05dc\u05d4\u05db\u05d9\u05df \u05d0\u05d1\u05dc \u05d6\u05d4 \u05e4\u05e0\u05d9\u05de\u05d9 \u05dc\u05e6\u05d5\u05d5\u05ea \u05e9\u05dc\u05e0\u05d5 \u05d1\u05e7\u05e9\u05d4 \u05e9\u05dc\u05d9 \u05dc\u05e7\u05d1\u05dc \u05e4\u05e8\u05d8\u05d9\u05dd", []), ("\u05e2\u05dc \u05d0\u05d9\u05d6\u05d4 \u05d7\u05e9\u05d1\u05d5\u05df \u05d0\u05ea\u05d4 \u05e2\u05d5\u05d1\u05d3?", [])]
+idx = json.load(open(os.path.join(ROOT, "project-files/domains/index.json"), encoding="utf-8"))
+py = [[k for k, _, _ in dm.branches(t, idx)] for t, _ in PAIRS]
+jsr = subprocess.run(["node", "-e", "import(process.argv[1]).then((m) => console.log(JSON.stringify(JSON.parse(process.argv[2]).map((t) => m.domainsOf(t).map((d) => d.key)))))", "file://" + os.path.join(ROOT, "functions/_domains.js"), json.dumps([t for t, _ in PAIRS])], capture_output=True, text=True)
+check("pairs: 3 typo lines find their branch and 3 real lines find none (domain_match)", py == [e for _, e in PAIRS], py)
+check("pairs: the server's domainsOf gives the same 6 answers", jsr.stdout.strip() and json.loads(jsr.stdout) == [e for _, e in PAIRS], jsr.stdout + jsr.stderr[:200])
 print("\n%d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)
