@@ -408,7 +408,8 @@ export function accountCmdOf(raw) {
   return null;
 }
 // 02/11/2026: the tapped message is the newest one the server sent (prev): the same start of text. Pure.
-export const tapHead = (t) => String(t || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+// 150, not 40 (security review 02/11/2026): two delete questions open with the same fixed words and differ only after them
+export const tapHead = (t) => String(t || '').replace(/\s+/g, ' ').trim().slice(0, 150);
 export function tapIsPrev(m, prev) {
   if (!m || m.choice === undefined || m.choice === null || typeof m.tapped !== 'string' || !prev) return false;
   const a = tapHead(m.tapped), b = tapHead(prev.text);

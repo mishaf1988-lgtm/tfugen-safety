@@ -169,6 +169,11 @@ console.log('\n9. del_ask: the delete button (28/10/2026, Michael: "do it: a del
     const chatDel = fastRoute(tap('\u05de\u05d7\u05e7', 1, prev.text), '', prev);
     const chatNo = fastRoute(tap('\u05dc\u05d0', 2, '  ' + prev.text.replace(/ /g, '  ') + ' '), '', prev);
     const chatShort = fastRoute(tap('\u05de\u05d7\u05e7', 1, '\u05dc\u05de\u05d7\u05d5\u05e7'), '', { ref: 'del:ab12cd34', text: '\u05dc\u05de\u05d7\u05d5\u05e7' });
+    { // security review 02/11/2026: an older delete question with the same first 40 letters is not the newest one
+      const same = prev.text.slice(0, 45);
+      const older = fastRoute(tap('\u05de\u05d7\u05e7', 1, same + ' \u05de\u05e1\u05de\u05da \u05d0\u05d7\u05e8 \u05dc\u05d2\u05de\u05e8\u05d9'), '', prev);
+      check('delete tap in /chat: an older delete question that shares the first 40 letters does not delete the newest one', !older || older.kind !== 'del', older);
+    }
     check('delete tap: a WhatsApp tap on an older message, or one whose message was not found, does not delete',
       (!waOld || waOld.kind !== 'del') && (!waLost || waLost.kind !== 'del'), { waOld, waLost });
     check('delete tap in /chat: only a tap on the delete question itself (same start of text, spaces aside); an old message\'s button and a typed-less tap do not',
