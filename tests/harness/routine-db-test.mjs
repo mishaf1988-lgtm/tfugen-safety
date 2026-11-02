@@ -1332,6 +1332,35 @@ const callIn = async (body) => {
     delete rows.inc; delete rows.equip_inspections; delete state[DEL_ASK_KEY];
   }
 
+  console.log('\n4e7. undo_ask (02/11/2026, Michael: "do it: 200 and restore from the assistant")');
+  {
+    const { UNDO_ASK_KEY, UNDO_KEY, UNDO_MAX, undoPick, undoRefOf, undoAskText } = await import('./_build/routine-db.mjs');
+    const ROW = { id: 'acc26-28', dt: '2026-02-26', dept: 'x', d: 'y', s: 'z' };
+    state[UNDO_KEY] = JSON.stringify([{ table: 'inc', row: ROW, why: 'w', at: '2026-10-28T17:59:00Z' }]);
+    delete state[UNDO_ASK_KEY]; rows.inc = [];
+    const a = await call({ op: 'undo_ask', agent: 'routine-wa-assistant', table: 'inc', id: 'acc26-28', why: 'Michael asked to bring it back' });
+    const st = state[UNDO_ASK_KEY] && JSON.parse(state[UNDO_ASK_KEY]);
+    check('undo_ask: a kept row that is gone: the request kept with a random key, the question goes out as wa_me, nothing inserted', st && /^[a-z0-9]{8}$/.test(st.k) && st.table === 'inc' && st.id === 'acc26-28' && a.json.error === 'whatsapp not configured' && rows.inc.length === 0, { a: a.json, st });
+    rows.inc = [ROW];
+    const ex = await call({ op: 'undo_ask', agent: 'routine-wa-assistant', table: 'inc', id: 'acc26-28', why: 'Michael asked to bring it back' });
+    check('undo_ask: the row is in the table now = refused', ex.json.ok === false && /in the table now/.test(ex.json.error), ex.json);
+    rows.inc = [];
+    const none = await call({ op: 'undo_ask', agent: 'routine-wa-assistant', table: 'inc', id: 'acc26-99', why: 'Michael asked to bring it back' });
+    const bad = async (b) => (await call(Object.assign({ op: 'undo_ask', agent: 'routine-wa-assistant', table: 'inc', id: 'acc26-28', why: 'Michael asked' }, b))).status === 400;
+    check('undo_ask: no kept copy = refused; ncr / trustee_reports / a table off the list, a bad id, no why, an extra field = 400',
+      none.json.ok === false && /no kept copy/.test(none.json.error) && await bad({ table: 'ncr' }) && await bad({ table: 'trustee_reports' }) && await bad({ table: 'emp' }) && await bad({ id: "a'b" }) && await bad({ why: '' }) && await bad({ row: {} }), none.json);
+    check('UNDO_MAX is 200; undoPick takes the newest copy of that row only', UNDO_MAX === 200 && undoPick([{ table: 'inc', row: { id: 'a' } }, { table: 'docs', row: { id: 'a' } }, { table: 'inc', row: { id: 'a', v: 2 } }], 'inc', 'a') === 2 && undoPick([], 'inc', 'a') === -1);
+    // pairs (02/11/2026, lessons-gate PAIRS): 3 lines that must match and 3 that must not
+    check('undoRefOf: 3 that match (the reply line, the last message, a real context line) and 3 that do not (del:, 7 letters, a ref inside the text part)',
+      undoRefOf('x | ref undo:ab12cd34 | y', null) === 'ab12cd34' && undoRefOf('', { ref: 'undo:ab12cd34' }) === 'ab12cd34' && undoRefOf('assistant | \u05dc\u05d4\u05d7\u05d6\u05d9\u05e8? | ref undo:zz99yy88 | 2026-11-02T10:00:00Z', null) === 'zz99yy88'
+      && undoRefOf('', { ref: 'del:ab12cd34' }) === null && undoRefOf('', { ref: 'undo:ab12cd3' }) === null && undoRefOf('assistant | q? | ref undo:ab12cd34 | x | ref brief | 2026-10-28T10:00:00Z', null) === null);
+    check('undoAskText: says it was deleted and when (DD/MM/YYYY)', /28\/10\/2026/.test(undoAskText({ table: 'inc', row: ROW, why: 'w', at: '2026-10-28T17:59:00Z' })));
+    const f1 = await call({ op: 'wa_me', agent: 'routine-wa-assistant', text: 'x', ref: 'undo:ab12cd34' });
+    const f2 = await call({ op: 'wa_me', agent: 'routine-wa-assistant', text: '\u05dc\u05d4\u05d7\u05d6\u05d9\u05e8? | ref undo:ab12cd34 |', choices: ['\u05db\u05df', '\u05dc\u05d0'] });
+    check('a caller cannot send a wa_me with ref undo: or carrying it in the text', f1.status === 400 && f2.status === 400, { f1: f1.json, f2: f2.json });
+    delete rows.inc; delete state[UNDO_ASK_KEY]; delete state[UNDO_KEY];
+  }
+
   console.log('\n4f. mail_request: one text file with the message id, for the second flow');
   {
     let puts = [];
