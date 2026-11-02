@@ -9,10 +9,10 @@ def check(label, cond, detail=None):
     else: failed += 1; print('  ✗ ' + label + ('  -> ' + str(detail) if detail is not None else ''))
 
 L = gate.LESSONS
-R = 'רטרו: אין\nskill: אין\nמה לא נבדק: אין\n'
+R = 'רטרו: אין\nskill: אין\nמה לא נבדק: אין\nאחים: grep של הדפוס, אין אחר\n'
 ok = lambda t, b, f: gate.check(t, R + (b or ''), f)[0]
 check('not a fix PR: ok', ok('Tour screen: due date in one tap', '', ['index.html']))
-Rm = lambda r: 'רטרו: ' + r + '\nskill: אין\nמה לא נבדק: אין\n'
+Rm = lambda r: 'רטרו: ' + r + '\nskill: אין\nמה לא נבדק: אין\nאחים: grep של הדפוס, אין אחר\n'
 check('01/11/2026: a retro that names a mistake, without a lesson: blocked even without a Fix title', not gate.check('Tour screen', Rm('כתובת מייל נכתבה בקובץ md'), ['index.html'])[0])
 check('...with a lesson: ok', gate.check('Tour screen', Rm('כתובת מייל נכתבה בקובץ md'), ['index.html', L])[0])
 check('...with no-lesson and a reason: ok', gate.check('Tour screen', Rm('כתובת מייל נכתבה') + 'בלי לקח: כבר לקח 170, חזר נרשם שם', ['index.html'])[0])
@@ -72,7 +72,7 @@ check('skill inside a sentence does not count', not raw('Tour screen', 'רטרו
 
 # a lesson in a field skill counts (11/10/2026); run from the repo root
 _cwd = os.getcwd(); os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
-check('fix PR with a lesson in tfugen-dev: ok', raw('Fix: x', 'רטרו: אין\nskill: לקח 23', ['a.js', '.claude/skills/tfugen-dev/references/lessons.md']))
+check('fix PR with a lesson in tfugen-dev: ok', raw('Fix: x', 'רטרו: אין\nskill: לקח 23\nאחים: grep, אין אחר', ['a.js', '.claude/skills/tfugen-dev/references/lessons.md']))
 check('tfugen-dev SKILL.md itself no longer holds the lessons (moved 27/10/2026)', not raw('Fix: x', 'רטרו: אין\nskill: x', ['a.js', '.claude/skills/tfugen-dev/SKILL.md']))
 check('fix PR touching a skill with no lessons section: blocked', not raw('Fix: x', 'רטרו: אין\nskill: x', ['a.js', '.claude/skills/tfugen-history/SKILL.md']))
 os.chdir(_cwd)
@@ -104,6 +104,27 @@ try:
     check('routine-db with a check changed: blocked without review', not raw('Morning brief', R, ['functions/api/routine-db.js']))
     gate.file_diff = lambda f: None
     check('routine-db whose diff cannot be read: blocked without review', not raw('Morning brief', R, ['functions/api/routine-db.js']))
+finally:
+    gate.file_diff = _fd
+# 02/11/2026 (Michael: "do it: required in every fix"): a fix PR carries an "אחים:" line
+R_noSib = 'רטרו: אין\nskill: אין\nמה לא נבדק: אין\n'
+check('a Fix PR without a siblings line: blocked, even with its lesson', not gate.check('Fix: x', R_noSib, ['a.js', L])[0])
+check('...with "אחים: <what was searched and found>": ok', gate.check('Fix: x', R_noSib + 'אחים: grep tapIsPrev, 4 אחים, תוקנו', ['a.js', L])[0])
+check('...an empty siblings line: blocked', not gate.check('Fix: x', R_noSib + 'אחים: ', ['a.js', L])[0])
+check('not a fix PR: no siblings line needed', gate.check('Tour screen', R_noSib, ['index.html'])[0])
+# 02/11/2026 (Michael: "do it: yes"): a changed regex or text filter carries a "זוגות:" line
+cr = gate.changes_regex
+check('changes_regex: a regex literal or new RegExp in a code line; not a comment, not a division, not a URL',
+  cr("+  if (/^tru-/.test(n)) return 1;") and cr("+export const QUOTE_VALID_RE = /תוקף ההצעה/i;") and cr("-  const r = new RegExp(x);")
+  and not cr("+  // /^tru-/.test(n)") and not cr("+  const h = a / b / c;") and not cr("+  const u = 'https://x.co/a/b';") and not cr("+++ b/x.js"))
+_fd = gate.file_diff
+try:
+    gate.file_diff = lambda f: "+  if (/^nm-/.test(x)) return;"
+    check('a filter change without a pairs line: blocked', not raw('Filter', R, ['functions/api/x.js']))
+    check('...with "זוגות: <the test with 3 and 3>": ok', raw('Filter', R + 'זוגות: x-test.mjs, 3 שורות שמתאימות ו-3 שלא', ['functions/api/x.js']))
+    check('...a regex in a .md file does not count', raw('Doc', R, ['STATUS.md']))
+    gate.file_diff = lambda f: "+  const n = 1;"
+    check('a code change with no regex: no pairs line needed', raw('Filter', R, ['functions/api/x.js']))
 finally:
     gate.file_diff = _fd
 check('every SENSITIVE path exists in the repo', all(os.path.exists(os.path.join(gate.ROOT, f)) for f in gate.SENSITIVE), [f for f in gate.SENSITIVE if not os.path.exists(os.path.join(gate.ROOT, f))])

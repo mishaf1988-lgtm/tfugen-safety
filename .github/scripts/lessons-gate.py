@@ -90,6 +90,30 @@ def file_diff(f):
         return None
 
 
+# 02/11/2026 (Michael in the questionnaire: "do it: required in every fix (recommended)"; retro 29/10/2026 (f)): the delete
+# fix closed one of five "prev" fallbacks and no step asked for the others. A fix PR names where the same pattern was
+# searched and what was found, each "fixed" or "left on purpose".
+SIBLINGS = re.compile(r"^\s*(siblings|אחים)\s*:\s*(\S.{4,})$", re.I | re.M)
+# 02/11/2026 (Michael in the questionnaire: "do it: yes (recommended)"; retro 28/10/2026 (d)): a changed regex or text
+# filter is tried on 3 real lines that must match and 3 that must not (QUOTE_VALID_RE matched what it should not).
+PAIRS = re.compile(r"^\s*(pairs|זוגות)\s*:\s*(\S.{9,})$", re.I | re.M)
+REGEX_LINE = re.compile(r"new RegExp\(|(?:^|[=(,:!&|?]\s*)/(?![/*\s])(?:\\.|[^/\n])+/[gimsuy]*\s*(?:\.(?:test|exec)\(|[;,)])")
+FILTER_DIRS = ("functions/", "index.html")
+
+
+def changes_regex(diff):
+    """True when an added or removed code line (not a comment) holds a regex literal or new RegExp."""
+    for l in (diff or "").splitlines():
+        if l[:1] not in "+-" or l.startswith(("+++", "---")):
+            continue
+        t = l[1:].strip()
+        if t.startswith("//") or t.startswith("*"):
+            continue
+        if REGEX_LINE.search(t):
+            return True
+    return False
+
+
 PERM_SQL = re.compile(r"\b(create|alter|drop)\s+policy\b|\bgrant\b|\brevoke\b|row\s+level\s+security|security\s+definer", re.I)
 REVIEW = re.compile(r"^\s*(review|סקירה)\s*:\s*(\S.{4,})$", re.I | re.M)
 # 27/10/2026 (Michael in the questionnaire: "do it: brief + refute step", from cloudflare/security-audit-skill): every
@@ -164,6 +188,13 @@ def check(title, body, files):
         return False, ("this PR changes server code (functions/). Add a line 'מה לא נבדק: <what was skipped or not tried, "
                        "and a risk Michael should know>' or 'מה לא נבדק: אין' (tfugen-dev, the ladder).")
     retro_mistake = not RETRO_CLEAN.match(RETRO.search(body or "").group(2).strip())
+    if FIX.search(title or "") and not SIBLINGS.search(body or ""):
+        return False, ("a fix PR names the siblings of what it fixed: 'אחים: <the grep of the pattern, each place found: "
+                       "fixed / left on purpose and why>' (Michael 02/11/2026, retro 29/10/2026 (f)).")
+    flt = [f for f in files if f.startswith(FILTER_DIRS) and f.endswith((".js", ".html"))]
+    if flt and not PAIRS.search(body or "") and any(changes_regex(file_diff(f) or "") for f in flt):
+        return False, ("this PR changes a regex or a text filter (%s). Add 'זוגות: <the test that tries it on 3 real lines "
+                       "that must match and 3 that must not>' (Michael 02/11/2026, retro 28/10/2026 (d))." % ", ".join(flt))
     if not FIX.search(title or "") and not retro_mistake:
         return True, "not a fix PR"
     if LESSONS in files or any(has_domain_lessons(f) for f in files):
