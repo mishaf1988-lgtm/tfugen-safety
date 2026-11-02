@@ -22,6 +22,12 @@ import { onRequest as routineDb, OD_ROOT, isAutoTop, OD_INBOX, delRefOf, DEL_ASK
 import { SIGN_KEY, signRefOf, signAnswer, signTake, signMark, signRun, signDoneText, SIGN_CANCEL_TEXT, SIGN_EXPIRED_TEXT, SIGN_DONE_TEXT } from '../_sign.js';
 
 export const FAIL_TEXT = '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05dc\u05e2\u05d5\u05d6\u05e8. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.';
+// retro 29/10/2026 (c): a fire that took earlier messages along (fire_join) and then failed lost them too; FAIL_TEXT
+// asked to resend only the last one. The joined ones are named, and forgotten like the last, so a Meta retry refires them.
+export function failText(n) {
+  if (!(n > 0)) return FAIL_TEXT;
+  return FAIL_TEXT + (n === 1 ? ' \u05d2\u05dd \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05d4\u05e7\u05d5\u05d3\u05de\u05ea, \u05e9\u05e0\u05e9\u05dc\u05d7\u05d4 \u05d9\u05d7\u05d3 \u05d0\u05d9\u05ea\u05d4, \u05dc\u05d0 \u05d4\u05d2\u05d9\u05e2\u05d4. \u05e9\u05dc\u05d7\u05d5 \u05d2\u05dd \u05d0\u05d5\u05ea\u05d4 \u05e9\u05d5\u05d1.' : ' \u05d2\u05dd ' + n + ' \u05d4\u05d4\u05d5\u05d3\u05e2\u05d5\u05ea \u05d4\u05e7\u05d5\u05d3\u05de\u05d5\u05ea, \u05e9\u05e0\u05e9\u05dc\u05d7\u05d5 \u05d9\u05d7\u05d3 \u05d0\u05d9\u05ea\u05d4, \u05dc\u05d0 \u05d4\u05d2\u05d9\u05e2\u05d5. \u05e9\u05dc\u05d7\u05d5 \u05d2\u05dd \u05d0\u05d5\u05ea\u05df \u05e9\u05d5\u05d1.');
+}
 export const ACK_TEXT = '\u05e7\u05d9\u05d1\u05dc\u05ea\u05d9, \u05d1\u05d5\u05d3\u05e7 \u05d5\u05e2\u05d5\u05e0\u05d4 \u05e2\u05d5\u05d3 \u05e8\u05d2\u05e2.';
 const SEEN_KEY = 'wa_hook_seen', SEEN_MAX = 100;
 // 19/10/2026 (setup through Claude in Chrome: a pasted value could not be seen, Cloudflare hides
@@ -32,7 +38,7 @@ export const SNAP_MS = 4000;
 // 28/10/2026 (Michael in the questionnaire: "do it: join messages sent together"): a photo and its text two seconds
 // apart fired two runs, and each made its own PDF and its own draft. A message logged up to JOIN_MS after an earlier
 // one takes it along (fire_join, the earlier text in the fire), and the earlier one, seeing a newer message within
-// JOIN_MS, waits for a fire_join that names it and then does not fire. No message is ever lost (review and refutation,
+// JOIN_MS, waits for a fire_join that names it and then does not fire. No message is ever lost silently (review and refutation,
 // 28/10/2026): a message that took others along always fires itself and never waits; a message skips only when a
 // fire_join naming it exists, whose author always fires (or sends FAIL_TEXT). The worst case is two runs, as before.
 // A message with no neighbour is not delayed; a run already late (JOIN_LATE_MS) does not wait.
@@ -720,8 +726,8 @@ async function handle(env, raw) {
     seen.fire_status = fr ? fr.status : 'network';
     seen.fire_ms = Date.now() - t0;
     if (fr && fr.ok) { const fj = await fr.clone().json().catch(() => null); seen.fire_session = (fj && fj.claude_code_session_id) || null; }
-    if (fr && fr.ok) seen.fired++; else await forget(env, m.id);
-    if (!(fr && fr.ok) && wa) await sendToOwner(env, owner, FAIL_TEXT, { windowOpen: true, noTemplate: true }).catch(() => null);
+    if (fr && fr.ok) seen.fired++; else { await forget(env, m.id); for (const j of joins) await forget(env, j.payload.wamid); }
+    if (!(fr && fr.ok) && wa) await sendToOwner(env, owner, failText(joins.length), { windowOpen: true, noTemplate: true }).catch(() => null);
   }
   await note(env, seen);
 }
