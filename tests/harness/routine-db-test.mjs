@@ -491,6 +491,7 @@ const callIn = async (body) => {
           const raw = new Uint8Array(await new Response(new Blob([zeros]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());
           let capped = false; try { await entryText({ method: 8, raw, usize: 100 }, 1048576); } catch (x) { capped = /larger than/.test(String(x && x.message)); }
           const small = await entryText({ method: 8, raw: new Uint8Array(await new Response(new Blob([new TextEncoder().encode('abc')]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer()), usize: 3 }, 1048576);
+          check('the parts of one document share one budget (DOC_TOTAL_MAX), not 20MB each', /let budget = DOC_TOTAL_MAX/.test(readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8')));
           check('entryText with a cap stops a bomb that claims a small size, and still reads a small entry', capped && small === 'abc');
         }
         const partsOf = async (f) => { const o = {}; for (const e of readZip(new Uint8Array(readFileSync(new URL('../../f/' + f, import.meta.url))))) if (/^word\/(document|header\d*|footer\d*)\.xml$/.test(e.name)) o[e.name] = await entryText(e); return o; };

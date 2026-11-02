@@ -1724,7 +1724,7 @@ export function savedFresh(status, j, nowMs) {
 // marks of the factory's controlled form (DECISIONS 24/10/2026; the domains' checklist, step 2; tools/form-fill.py checks
 // the same when Claude fills a form): the logo (an image in a header or the body), a form number NN.NN in a header or the
 // first table, and "\u05e2\u05de\u05d5\u05d3" (page X of Y). Pure: parts = {name: xml} of word/document.xml, headers, footers.
-export const DOC_MAX_BYTES = 10 * 1048576; export const DOC_PART_MAX = 20 * 1048576;
+export const DOC_MAX_BYTES = 10 * 1048576; export const DOC_PART_MAX = 20 * 1048576; export const DOC_TOTAL_MAX = 8 * 1048576;
 export function docMarks(parts, name) {
   // 01/11/2026, run on the factory's own files: procedures carry "\u05e0\u05d5\u05d4\u05dc \u05de\u05e1'" and no NN.NN, the policy has no page-of. So the logo
   // is required in every Word file, and the form number and page-of only in a form (its name says \u05d8\u05d5\u05e4\u05e1 or NN.NN).
@@ -3361,7 +3361,8 @@ async function routineDbHandle(context) {
               if (buf.byteLength <= DOC_MAX_BYTES) {
                 const es = readZip(buf).filter((e) => /^word\/(document|header\d*|footer\d*)\.xml$/.test(e.name) && e.usize <= DOC_PART_MAX).slice(0, 12);
                 // the size in the zip directory is the file's own claim: the inflate itself is capped (retro 02/11/2026)
-                for (const e of es) parts[e.name] = await entryText(e, DOC_PART_MAX);
+                let budget = DOC_TOTAL_MAX; // one budget for all parts together (12 parts of 20MB would pass the memory limit)
+                for (const e of es) { parts[e.name] = await entryText(e, Math.min(DOC_PART_MAX, budget)); budget -= parts[e.name].length; }
               }
               const de = Object.keys(parts).length &&  docMarksError(docMarks(parts, sp.rel.split('/').pop()));
               if (de) return jsonResp({ ok: false, error: de }, 400, {});
