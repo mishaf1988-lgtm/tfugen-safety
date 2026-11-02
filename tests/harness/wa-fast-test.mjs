@@ -1,7 +1,7 @@
 // The server's fast lane (20/10/2026, Michael in the questionnaire: "do it: a fast lane in the server").
 // A number 1-4 that answers a hazard alert, and "what is urgent" / "expiries", are answered by wa-hook
 // itself by rules; everything else, and anything unclear, still goes to the assistant.
-import { ownerInPayload, recentLine, RECENT_MAX, accountCmdOf, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX, joinCandidates, joinedLine, hasNewer, JOIN_MS, fireText, fastDel, DEL_NO, DEL_GONE } from './_build/wa-hook.mjs';
+import { failText, FAIL_TEXT, ownerInPayload, recentLine, RECENT_MAX, accountCmdOf, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX, joinCandidates, joinedLine, hasNewer, JOIN_MS, fireText, fastDel, DEL_NO, DEL_GONE } from './_build/wa-hook.mjs';
 import { HAZARD_OPTIONS, hazardAsk, assistantFire, pickFire, accountOf, fireUrlOf } from './_build/_wa.mjs';
 import { rateAgain } from './_build/chat.mjs';
 
@@ -143,6 +143,14 @@ console.log('\n9. move an event only on his yes to that question (26/10/2026 ret
   check('a message another one already took is not taken twice', joinCandidates([photo, text, bJoin, c4], 'w6', t + 2500).length === 0);
   const fastNew = { ts: iso(t + 1000), event_type: 'fast_try', payload: { wamid: 'w2' } };
   check('a newer message the fast lane takes: no wait for a join that never comes', hasNewer([photo, text, fastNew], 'w1', t) === false);
+  // retro 29/10/2026 (c): a failed fire that took earlier messages along names them, and forgets them for a retry
+  check('failText: no joins = FAIL_TEXT as before; 1 = asks to resend the earlier one too; 3 = says how many',
+    failText(0) === FAIL_TEXT && failText(1).startsWith(FAIL_TEXT) && failText(1).length > FAIL_TEXT.length && /\b3\b/.test(failText(3)) && !/\b3\b/.test(failText(1)), [failText(1), failText(3)]);
+  {
+    const hs = (await import('fs')).readFileSync(new URL('../../functions/api/wa-hook.js', import.meta.url), 'utf8');
+    check('a failed fire forgets every joined message and sends failText(joins.length)',
+      /for \(const j of joins\) await forget\(env, j\.payload\.wamid\)/.test(hs) && /sendToOwner\(env, owner, failText\(joins\.length\)/.test(hs) && !/sendToOwner\(env, owner, FAIL_TEXT,/.test(hs));
+  }
   check('an app chat line (no wamid) is not a newer WhatsApp message', hasNewer([photo, { ts: iso(t + 1000), event_type: 'owner_in', payload: { text: 'x' } }], 'w1', t) === false);
   const ft = fireText({ id: 'w2', text: 'תמיר ל-PDF', type: 'text' }, null, null, '', '', '', joinedLine(j));
   check('the fire text says the photo came with this message and is one request', /joined \(Michael's own messages sent together/.test(ft) && ft.indexOf('[wa_media M1]') > 0 && ft.indexOf('joined') < ft.indexOf('text: '), ft.slice(-300));
