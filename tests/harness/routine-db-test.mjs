@@ -423,6 +423,11 @@ const callIn = async (body) => {
     r = await call({ op: 'dev_done', id: inbox[0].id, note: 'מוזג #1789' });
     check('dev_done with a note: a for_michael line from "dev" in agent_log', JSON.parse(state.agent_log).some((x) => x.agent === 'dev' && x.for_michael === 'מוזג #1789'), state.agent_log);
     check('dev_done: closed with the note; an unknown id refused', r.json.ok && r.json.open === 0 && JSON.parse(state.dev_inbox)[0].status === 'done' && (await call({ op: 'dev_done', id: 'dev-x' })).status === 400, r.json);
+    {
+      const logN = JSON.parse(state.agent_log).length, inboxBefore = state.dev_inbox;
+      const again = await call({ op: 'dev_done', id: inbox[0].id, note: '\u05e0\u05e1\u05d2\u05e8 \u05e9\u05d5\u05d1' });
+      check('02/11/2026: dev_done on a request already closed = ok with already, nothing rewritten, no second log line, no WhatsApp', again.json.ok && again.json.already === true && again.json.wa === null && state.dev_inbox === inboxBefore && JSON.parse(state.agent_log).length === logN, again.json);
+    }
     check('a short text, a bad agent: refused', (await call({ op: 'dev_request', agent: 'routine-wa-assistant', text: 'קצר' })).status === 400 && (await call({ op: 'dev_request', agent: 'Bad Name', text: 'x'.repeat(20) })).status === 400);
     let raw = JSON.stringify([{ id: 'o', status: 'open' }].concat(Array.from({ length: DEV_INBOX_MAX }, (_, i) => ({ id: 'd' + i, status: 'done' }))));
     const full = devInboxAdd(raw, { agent: 'dev', text: 'x'.repeat(20) }, '2026-10-20T20:00:00Z');
