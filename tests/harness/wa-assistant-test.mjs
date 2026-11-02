@@ -3,7 +3,7 @@
 // Meta-signed message from Michael's own number and fires the assistant's Routine once per message;
 // routine-db op wa_me answers only to that number, falling back to the template outside the window.
 import { onRequest as hook, fireText, mediaName, ACK_TEXT, FAIL_TEXT } from './_build/wa-hook.mjs';
-import { onRequest as rdb, hazardChoiceNote, hasPassport, hasInternalId } from './_build/routine-db.mjs';
+import { onRequest as rdb, hazardChoiceNote, hasPassport, hasInternalId, hasIsraeliId, hasPersonalNo } from './_build/routine-db.mjs';
 import { metaSigOk, inboundMessages, waOneLine, ASSISTANT_TEMPLATE, sameSession, ilTimes, asksRepoSetup } from './_build/_wa.mjs';
 import fs from 'fs';
 
@@ -402,6 +402,10 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   check('passport number: refused', hasPassport('4 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd: AD3659758') && hasPassport('AC3341142, ...'));
   check('a quote number PQ26001545 passes; a passport still refused (26/10/2026)', !hasPassport('הצעת מחיר PQ26001545') && hasPassport('AD3659758'));
   check('company number, phone, C27, ISO45001, #1784: pass', !hasPassport('511969008 054-7940073 C27 ISO45001 #1784 trig_01Tofq session_01McD38'));
+  // 02/11/2026 (Michael: "do it: block ID numbers in messages", from Presidio): an Israeli ID with a valid check digit
+  check('Israeli ID with the word: refused', hasIsraeliId('\u05ea"\u05d6 123456782 \u05e9\u05dc \u05d4\u05e2\u05d5\u05d1\u05d3') && hasIsraeliId('\u05de\u05e1\u05e4\u05e8 \u05d6\u05d4\u05d5\u05ea: 12345678-2') && hasPersonalNo('ID 123456782'));
+  check('two valid IDs (a list of people): refused with no word', hasIsraeliId('\u05d9\u05d5\u05e1\u05d9 123456782, \u05d3\u05e0\u05d9 039337423'));
+  check('one valid number alone, a bad check digit, a company number, a phone: pass', !hasIsraeliId('\u05d4\u05d6\u05de\u05e0\u05d4 123456782') && !hasIsraeliId('\u05ea"\u05d6 123456789') && !hasIsraeliId('\u05ea"\u05d6 \u05d7\u05d1\u05e8\u05d4 511969008 515555551') && !hasIsraeliId('054-7940073 0547940073 21/10/2026'));
   // 21/10/2026, Michael's screenshot: "\u05d4\u05d5\u05e2\u05d1\u05e8 \u05dc\u05e4\u05d9\u05ea\u05d5\u05d7 dev-20261021053745-tqu3" in an answer.
   check('internal ids: refused (dev request, trigger, session, office row)', hasInternalId('\u05d4\u05d5\u05e2\u05d1\u05e8 \u05dc\u05e4\u05d9\u05ea\u05d5\u05d7 dev-20261021053745-tqu3.') && hasInternalId('trig_01TofqtqNWtrXMnqiNjHq1nZ') && hasInternalId('session_01McD38xyz') && hasInternalId('cse_01TuRyeMrE8W') && hasInternalId('chat h-20261020-2036'));
   check('dates, form numbers, phone, ISO: pass', !hasInternalId('21/10/2026 \u05d8\u05d5\u05e4\u05e1 16 054-7940073 ISO 45001 C27 #1802 dev team'));
