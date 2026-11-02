@@ -307,6 +307,39 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
     await post(raw, await sign(raw, ENV.META_APP_SECRET));
     const ft2 = fires[fires.length - 1].body.text;
     check('a folded line leaves the fire text', /wamid\.L2/.test(ft2) && !/\nlearned/.test(ft2), ft2);
+    // 02/11/2026 (Michael: "do it: a correction replaces at once"): replaces takes the old open line out of the fire text now
+    const o1 = await L({ kind: 'fact', text: 'the forklift inspection is every 12 months at the factory' });
+    await L({ kind: 'fact', text: 'the crane inspection is every 14 months at the factory' });
+    const amb = await L({ kind: 'correction', text: 'something else entirely, long enough', replaces: 'inspection is every' });
+    const none = await L({ kind: 'correction', text: 'something else entirely, long enough', replaces: 'no such phrase here' });
+    const shortQ = await L({ kind: 'correction', text: 'something else entirely, long enough', replaces: 'every' });
+    check('learn replaces: two matches, none, or under 8 characters is refused, and nothing is written', amb.ok === false && /2 open lines/.test(amb.error) && none.ok === false && shortQ.ok === false && JSON.parse(state.assistant_learned).filter((x) => x.status === 'new').length === 2, { amb, none, shortQ });
+    const c1 = await L({ kind: 'correction', text: 'the forklift inspection is every 6 months (Michael corrected)', replaces: 'forklift inspection is every 12' });
+    const nb = JSON.parse(state.assistant_learned), old = nb.find((x) => x.id === o1.id), neu = nb.find((x) => x.id === c1.id);
+    check('learn replaces: the old line is marked replaced, by the new one, and the answer says which', c1.ok && old.status === 'replaced' && old.replaced_by === c1.id && neu.replaces === o1.id && c1.replaced && c1.replaced.id === o1.id, { old, neu, c1 });
+    // review of 02/11/2026: a phrase only finds the caller's own lines; a correction already open still retires the old one
+    await call({ op: 'learn', agent: 'routine-quality', kind: 'fact', text: 'the quality line about compressors every year' });
+    const other = await L({ kind: 'correction', text: 'compressors every 2 years (corrected)', replaces: 'about compressors every' });
+    check('learn replaces: a phrase does not reach another agent\'s line', other.ok === false && JSON.parse(state.assistant_learned).find((x) => /quality line/.test(x.text)).status === 'new', other);
+    const dup0 = await L({ kind: 'fact', text: 'hearing tests are in January every year' });
+    await L({ kind: 'fact', text: 'hearing tests are in March every year' });
+    const dup = await L({ kind: 'fact', text: 'hearing tests are in January every year', replaces: 'hearing tests are in March' });
+    check('learn replaces: when the new text is already open, the old line is still retired', dup.ok && dup.id === dup0.id && JSON.parse(state.assistant_learned).find((x) => /March/.test(x.text)).status === 'replaced', dup);
+    const byId = await L({ kind: 'correction', text: 'the crane inspection is every 12 months (Michael corrected)', replaces: nb.find((x) => /crane/.test(x.text)).id });
+    check('learn replaces: an id works too', byId.ok && JSON.parse(state.assistant_learned).find((x) => /14 months/.test(x.text)).status === 'replaced', byId);
+    // pairs (lessons-gate "\u05d6\u05d5\u05d2\u05d5\u05ea:"): the id pattern of replaces, 3 real ids that must match and 3 near ids that must not
+    const ids = [];
+    for (const n of ['one', 'two', 'three']) ids.push((await L({ kind: 'fact', text: 'pair line number ' + n + ' for the id test' })).id);
+    const okIds = [];
+    for (const [i, id] of ids.entries()) okIds.push((await L({ kind: 'fact', text: 'pair line ' + i + ' corrected by its id', replaces: id })).ok === true);
+    const nearIds = ['l-2026110216465-g6gx', 'dev-20261021053745-tqu3', 'l-20261102164657-G6GX'];
+    const badIds = [];
+    for (const q of nearIds) badIds.push((await L({ kind: 'fact', text: 'a line that must not replace ' + q, replaces: q })).ok === false);
+    check('pairs: replaces takes 3 real line ids and refuses 3 near ids (13 digits, another prefix, capitals)', okIds.every(Boolean) && badIds.every(Boolean) && /^l-\d{14}-[a-z0-9]{1,8}$/.test(ids[0]), { okIds, badIds, ids });
+    raw = msgBody(OWNER, 'wamid.L3', 'q3');
+    await post(raw, await sign(raw, ENV.META_APP_SECRET));
+    const ft3 = fires[fires.length - 1].body.text;
+    check('learn replaces: the next fire has the correction and not the old line', /every 6 months/.test(ft3) && !/every 12 months at the factory/.test(ft3) && !/14 months/.test(ft3), ft3);
   }
   console.log('\n3f. rating a professional answer, end to end (21/10/2026)');
   {
