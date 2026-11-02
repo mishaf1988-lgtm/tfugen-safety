@@ -173,7 +173,7 @@ import { findSignSpot } from '../_pdftext.js';
 import { rowContradictions } from './wa-morning.js';
 import { respUnknown } from './hazard-report.js';
 import { PDFDocument } from '../_pdflib.js';
-import { ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, learnedLine, learnedLabel, LEARNED_MAX, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, assistantFireNow, fireUrlOf, sameSession, recentLine, ilTimes , pickFire, ACCOUNT_KEY } from '../_wa.js';
+import { DOC_MAX, ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, learnedLine, learnedLabel, LEARNED_MAX, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, assistantFireNow, fireUrlOf, sameSession, recentLine, ilTimes , pickFire, ACCOUNT_KEY } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads',
@@ -2079,8 +2079,12 @@ async function routineDbHandle(context) {
         const a = c.attach[i];
         let r;
         try {
-          const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(OD_ROOT + a.rel) + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(30000) });
-          r = d.ok ? await sendDocToOwner(env, to, new Uint8Array(await d.arrayBuffer()), a.name, i === 0 ? body.caption : '', win, { path: OD_ROOT + a.rel }) : { ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status };
+          // the size first, from the item, so a big file is not read into memory to be refused (02/11/2026, retro 22/10/2026 (b))
+          const m = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(OD_ROOT + a.rel) + '?select=size,file', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) });
+          const mj = m.ok ? await m.json().catch(() => ({})) : {};
+          const big = m.ok && !(mj.file && Number(mj.size) > 0 && Number(mj.size) <= DOC_MAX);
+          const d = m.ok && !big ? await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(OD_ROOT + a.rel) + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(30000) }) : m;
+          r = big ? { ok: false, error: mj.file ? 'size' : 'not a file' } : d.ok ? await sendDocToOwner(env, to, new Uint8Array(await d.arrayBuffer()), a.name, i === 0 ? body.caption : '', win, { path: OD_ROOT + a.rel }) : { ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status };
         } catch (x) { r = { ok: false, error: 'read' }; }
         sent.push({ name: a.name, ok: !!r.ok, error: r.ok ? undefined : r.error });
       }

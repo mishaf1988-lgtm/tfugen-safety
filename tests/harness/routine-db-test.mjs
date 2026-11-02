@@ -564,6 +564,11 @@ const callIn = async (body) => {
         && !draftAttach(['a/b.doc'], true).error && !draftAttach(['a/b.xls'], true).error && !!draftAttach(['a/b.exe'], true).error && !!draftAttach(['../b.doc'], true).error);
       check('wa_file: an unknown field (a recipient) is refused', (await call({ op: 'wa_file', agent: 'routine-wa-assistant', paths: ['a/b.pdf'], to: '972500000000' })).status === 400);
       check('wa_file: nothing fetched for a refused call', calls.length === before, calls.slice(before)); }
+    { // 02/11/2026 (retro 22/10/2026 (b)): the size is read from the item before the content, and over DOC_MAX nothing is read
+      const src = fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
+      const i = src.indexOf("if (body.op === 'wa_file')"), seg = src.slice(i, i + 4000);
+      const meta = seg.indexOf("?select=size,file'"), content = seg.indexOf(":/content'");
+      check('wa_file: the size comes from the item before the content is read, and big = no read', i > 0 && meta > 0 && content > meta && /Number\(mj\.size\) <= DOC_MAX/.test(seg) && /m\.ok && !big \? await fetch/.test(seg)); }
     { const { workerJobAdd, workerJobDone, workerFireText, WORKERS, WORKER_FIRE_HEAD } = await import('./_build/routine-db.mjs');
       const now = '2026-10-21T16:00:00.000Z', task = '\u05dc\u05d1\u05d3\u05d5\u05e7 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05de\u05d0\u05dc\u05e2\u05d3';
       const a = workerJobAdd('[]', { agent: 'routine-wa-assistant', worker: WORKERS[2], task }, now);
