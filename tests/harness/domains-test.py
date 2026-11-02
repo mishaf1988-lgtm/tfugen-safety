@@ -96,5 +96,19 @@ py = [[k for k, _, _ in dm.branches(t, idx)] for t, _ in PAIRS]
 jsr = subprocess.run(["node", "-e", "import(process.argv[1]).then((m) => console.log(JSON.stringify(JSON.parse(process.argv[2]).map((t) => m.domainsOf(t).map((d) => d.key)))))", "file://" + os.path.join(ROOT, "functions/_domains.js"), json.dumps([t for t, _ in PAIRS])], capture_output=True, text=True)
 check("pairs: 3 typo lines find their branch and 3 real lines find none (domain_match)", py == [e for _, e in PAIRS], py)
 check("pairs: the server's domainsOf gives the same 6 answers", jsr.stdout.strip() and json.loads(jsr.stdout) == [e for _, e in PAIRS], jsr.stdout + jsr.stderr[:200])
+# 02/11/2026 (Michael: "do it: a cost per session" and "golden questions"): session-cost dedupes a message logged per
+# content block and prices it; golden-check passes a right short answer and fails a wrong, long or dashed one
+import tempfile
+td = tempfile.mkdtemp()
+tr = os.path.join(td, "s.jsonl")
+msg = {"id": "m1", "model": "claude-opus-5-5", "usage": {"input_tokens": 1000000, "output_tokens": 0, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}}
+open(tr, "w").write("\n".join(json.dumps({"requestId": "r1", "message": msg}) for _ in range(3)) + "\n")
+sc = subprocess.run([sys.executable, os.path.join(ROOT, "tools/session-cost.py"), tr], capture_output=True, text=True, encoding="utf-8")
+check("session-cost: one message logged 3 times counts once (1M Opus input = 4.00 dollars)", "4.00" in sc.stdout and "1 " in sc.stdout, sc.stdout + sc.stderr[:200])
+ga = os.path.join(td, "a.json")
+json.dump({"g1": "\u05de\u05ea\u05d7\u05d9\u05dc\u05d9\u05dd \u05d9\u05e6\u05d9\u05d0\u05d4 \u05d1-150 \u05d1\u05e8", "g4": "3,000 \u05e9\"\u05d7 \u05dc\u05e4\u05d9 \u05d4\u05d7\u05d5\u05e7", "g10": "150 \u05d1\u05e8 \u2014 \u05e1\u05e2\u05d9\u05e3 1.5"}, open(ga, "w", encoding="utf-8"), ensure_ascii=False)
+gc = subprocess.run([sys.executable, os.path.join(ROOT, "tools/golden-check.py"), ga], capture_output=True, text=True, encoding="utf-8")
+check("golden-check: right answer passes; wrong fine, missing answer and long dash fail; exit 1", "PASS g1" in gc.stdout and "FAIL g4" in gc.stdout and "FAIL g2 no answer" in gc.stdout and "long dash" in gc.stdout and gc.returncode == 1, gc.stdout[:400])
+check("golden set: 10 questions, each with a source", len(json.load(open(os.path.join(ROOT, "project-files/assistant-golden.json"), encoding="utf-8"))["questions"]) == 10 and all(q.get("source") for q in json.load(open(os.path.join(ROOT, "project-files/assistant-golden.json"), encoding="utf-8"))["questions"]))
 print("\n%d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)
