@@ -327,6 +327,15 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
     check('learn replaces: when the new text is already open, the old line is still retired', dup.ok && dup.id === dup0.id && JSON.parse(state.assistant_learned).find((x) => /March/.test(x.text)).status === 'replaced', dup);
     const byId = await L({ kind: 'correction', text: 'the crane inspection is every 12 months (Michael corrected)', replaces: nb.find((x) => /crane/.test(x.text)).id });
     check('learn replaces: an id works too', byId.ok && JSON.parse(state.assistant_learned).find((x) => /14 months/.test(x.text)).status === 'replaced', byId);
+    // pairs (lessons-gate "\u05d6\u05d5\u05d2\u05d5\u05ea:"): the id pattern of replaces, 3 real ids that must match and 3 near ids that must not
+    const ids = [];
+    for (const n of ['one', 'two', 'three']) ids.push((await L({ kind: 'fact', text: 'pair line number ' + n + ' for the id test' })).id);
+    const okIds = [];
+    for (const [i, id] of ids.entries()) okIds.push((await L({ kind: 'fact', text: 'pair line ' + i + ' corrected by its id', replaces: id })).ok === true);
+    const nearIds = ['l-2026110216465-g6gx', 'dev-20261021053745-tqu3', 'l-20261102164657-G6GX'];
+    const badIds = [];
+    for (const q of nearIds) badIds.push((await L({ kind: 'fact', text: 'a line that must not replace ' + q, replaces: q })).ok === false);
+    check('pairs: replaces takes 3 real line ids and refuses 3 near ids (13 digits, another prefix, capitals)', okIds.every(Boolean) && badIds.every(Boolean) && /^l-\d{14}-[a-z0-9]{1,8}$/.test(ids[0]), { okIds, badIds, ids });
     raw = msgBody(OWNER, 'wamid.L3', 'q3');
     await post(raw, await sign(raw, ENV.META_APP_SECRET));
     const ft3 = fires[fires.length - 1].body.text;
