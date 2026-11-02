@@ -57,12 +57,15 @@ console.log('\n4. which message is an answer (wa-hook fast lane)');
 const m = (text, choice) => ({ text, choice: choice || null });
 const prev = { text: ask, ref: 'sign:' + a.id };
 const about = 'assistant | ' + ask.slice(0, 40) + ' | ref sign:' + a.id + ' | 2026-10-21';
-check('"בצע" right after the question = sign yes', JSON.stringify(fastRoute(m('בצע'), '', prev)) === JSON.stringify({ kind: 'sign', id: a.id, yes: true }));
-check('a tap on button 1 / "1" / "1. בצע" = yes', fastRoute(m('בצע', 1), about, prev).yes === true && fastRoute(m('1'), '', prev).yes === true && fastRoute(m('1. בצע'), '', prev).yes === true);
+// 02/11/2026 (Michael: "do it: only signing"): a typed yes that is not a tap or a reply to the question does not sign
+check('"בצע" typed right after the question, not as a reply = not a signature (to the assistant)', !fastRoute(m('בצע'), '', prev) || fastRoute(m('בצע'), '', prev).kind !== 'sign');
+check('"בצע" as a reply to the question = sign yes', JSON.stringify(fastRoute(m('בצע'), about, prev)) === JSON.stringify({ kind: 'sign', id: a.id, yes: true }));
+check('a tap in /chat on the question itself (tapped = its text) = yes; a tap on an older message = not a signature', (fastRoute(Object.assign(m('בצע', 1), { tapped: ask }), '', prev) || {}).yes === true && (!fastRoute(Object.assign(m('1. כן', 1), { tapped: 'שאלה ישנה אחרת לגמרי של העוזר' }), '', prev) || fastRoute(Object.assign(m('1. כן', 1), { tapped: 'שאלה ישנה אחרת לגמרי של העוזר' }), '', prev).kind !== 'sign'));
+check('a tap on button 1 / "1" / "1. בצע" in reply to the question = yes', fastRoute(m('בצע', 1), about, prev).yes === true && fastRoute(m('1'), about, prev).yes === true && fastRoute(m('1. בצע'), about, prev).yes === true);
 check('"לא" / "2" = no', fastRoute(m('לא'), '', prev).yes === false && fastRoute(m('2', 2), about, prev).yes === false);
 check('a reply to the question itself = that request', fastRoute(m('בצע'), about, null).id === a.id);
 // 21/10/2026 (Michael: "no need for exact words for the approval"): a plain yes word is a yes; a sentence is not.
-['כן', 'אוקיי', 'תחתום', 'מאשר', '👍'].forEach((w) => check('"' + w + '" = approval', (fastRoute(m(w), '', prev) || {}).kind === 'sign' && fastRoute(m(w), '', prev).yes === true));
+['כן', 'אוקיי', 'תחתום', 'מאשר', '👍'].forEach((w) => check('"' + w + '" in reply to the question = approval; typed bare = not', (fastRoute(m(w), about, prev) || {}).kind === 'sign' && fastRoute(m(w), about, prev).yes === true && (!fastRoute(m(w), '', prev) || fastRoute(m(w), '', prev).kind !== 'sign')));
 ['בצע אבל רק בעמוד 2', 'מה המצב?', 'כן אבל לא בעמוד הזה'].forEach((w) => check('"' + w + '" = not an approval, to the assistant', !fastRoute(m(w), '', prev) || fastRoute(m(w), '', prev).kind !== 'sign'));
 ['בטל', 'עזוב'].forEach((w) => check('"' + w + '" = cancel', (fastRoute(m(w), '', prev) || {}).yes === false));
 check('"בצע" with no signature question before it = not a signature', !fastRoute(m('בצע'), '', { text: 'x', ref: 'pro' }) || fastRoute(m('בצע'), '', { text: 'x', ref: 'pro' }).kind !== 'sign');

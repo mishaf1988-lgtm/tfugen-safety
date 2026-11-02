@@ -418,8 +418,11 @@ export function tapIsPrev(m, prev) {
 export function fastRoute(m, about, prev) {
   const raw = String((m && m.text) || '').trim();
   // an answer to the signature question first: "\u05ea\u05d7\u05ea\u05d5\u05dd" there is a yes, not a new request
-  const sid0 = signRefOf(about, prev);
-  if (sid0) { const yes = signAnswer(m); if (yes !== null) return { kind: 'sign', id: sid0, yes }; }
+  // 02/11/2026 (Michael in the questionnaire: "do it: only signing"; retro 29/10/2026 (a)): a signature in his name
+  // cannot be undone, so a yes counts only as a tap on that question or a reply to it (like a delete). A bare "no"
+  // still cancels: cancelling signs nothing. Invites, meeting moves and tour closing keep the 21/10/2026 rule.
+  const sid0 = signRefOf(about, prev), byMsg = !!about || tapIsPrev(m, prev);
+  if (sid0) { const yes = signAnswer(m); if (yes === false || (yes === true && byMsg)) return { kind: 'sign', id: sid0, yes }; }
   // 28/10/2026: an answer to "delete this row?" (routine-db del_ask); only a yes / no, else the assistant
   const did = delRefOf(about, prev);
   // 29/10/2026 retro: a delete is confirmed only by a tap (a button choice) or a reply to that very message (about carries the ref), never by a bare "yes" that happens to follow it within 3 hours (the prev fallback)
@@ -450,7 +453,7 @@ export function fastRoute(m, about, prev) {
   // 21/10/2026: an answer to "sign in your name on <file>?" (routine-db sign_request). Only the server signs, and
   // only here, on Michael's own "1" / "do it" to that very request; any other word goes to the assistant.
   const sid = signRefOf(about, prev);
-  if (sid) { const yes = signAnswer(m); if (yes !== null) return { kind: 'sign', id: sid, yes }; }
+  if (sid) { const yes = signAnswer(m); if (yes === false || (yes === true && byMsg)) return { kind: 'sign', id: sid, yes }; }
   const ac = accountCmdOf(raw);
   if (ac) return ac;
   const rt = rateOf(m, about, prev);
