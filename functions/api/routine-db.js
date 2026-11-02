@@ -554,6 +554,13 @@ const short = (x, n) => String(x === undefined || x === null ? '' : x).replace(/
 // filed file. Never a change or a delete; refused when the code or the report number is already there. Pure: the row.
 export const EQUIP_FIT = '\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4';
 export const EQUIP_FILE_DIR = '02_\u05ea\u05e1\u05e7\u05d9\u05e8\u05d9 \u05e6\u05d9\u05d5\u05d3/'; // the equipment reports folder
+// A file link is checked as the server will use it: decoded (02/11/2026, retro 28/10/2026 (b): "%2e%2e" passed the
+// check and became ".." after decodeURIComponent, and a broken "%" threw). false = not a usable link.
+export function linkPathBad(file) {
+  let dec; try { dec = decodeURIComponent(file); } catch (e) { return true; }
+  // also a segment ending in a space or a dot (".. " may be trimmed to ".."), and hidden or direction characters (security review 02/11/2026)
+  return /[\t\r\n\f\v"'<>\x00-\x1f\\\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/.test(dec) || /(^|\/)\.\.?(\/|$)/.test(dec) || /[ .](\/|$)/.test(dec);
+}
 export const equipFilePrefix = () => SITE.odFileUrl + 'Documents/' + OD_ROOT + EQUIP_FILE_DIR; // OD_ROOT is defined further down
 export function equipAddRow(b, today, rand) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
@@ -572,7 +579,7 @@ export function equipAddRow(b, today, rand) {
   if (!/^\d{3,8}\/\d{1,4}$/.test(rn)) return { error: 'report_number: like 186003/226' };
   const file = String(b.file_url || '');
   // 27/10/2026 review: only a report filed in the equipment folders (the handler also checks the file is there).
-  if (!file.startsWith(equipFilePrefix()) || !/\.pdf$/i.test(file) || file.length > 600 || /[\t\r\n\f\v"'<>\x00-\x1f]/.test(file) || /\/\.\.?\//.test(file)) return { error: 'file_url: a PDF under ' + equipFilePrefix() };
+  if (!file.startsWith(equipFilePrefix()) || !/\.pdf$/i.test(file) || file.length > 600 || /[\t\r\n\f\v"'<>\x00-\x1f]/.test(file) || /\/\.\.?\//.test(file) || linkPathBad(file)) return { error: 'file_url: a PDF under ' + equipFilePrefix() };
   const row = { id: rand, code, n, d: b.d, e: b.e, s: EQUIP_FIT, report_number: rn, file_url: file,
     notes: ddmm(today) + ' Claude (' + b.agent + '): \u05e9\u05d5\u05e8\u05d4 \u05d7\u05d3\u05e9\u05d4. ' + why + '. \u05de\u05e1\u05de\u05da: ' + doc }; // "new row", "document"
   for (const [k, max] of [['loc', 80], ['vendor', 80], ['inspector', 60]]) if (b[k] !== undefined) { const v = short(b[k], max); if (/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/.test(v)) return { error: 'bad ' + k }; if (v) row[k] = v; }
@@ -614,7 +621,7 @@ export function incAddRow(b, today, rand, known) {
   if (b.dy !== undefined && !(Number.isInteger(b.dy) && b.dy >= 0 && b.dy <= 365)) return { error: 'dy: days of absence 0-365, or leave it out' };
   if (b.reported !== undefined && typeof b.reported !== 'boolean') return { error: 'reported: true or false' };
   const file = b.file_url === undefined ? null : String(b.file_url);
-  if (file !== null && (!file.startsWith(incFilePrefix()) || file.length > 600 || /[\t\r\n\f\v"'<>\x00-\x1f]/.test(file) || /\/\.\.?\//.test(file))) return { error: 'file_url: the worker\'s folder under ' + incFilePrefix() };
+  if (file !== null && (!file.startsWith(incFilePrefix()) || file.length > 600 || /[\t\r\n\f\v"'<>\x00-\x1f]/.test(file) || /\/\.\.?\//.test(file) || linkPathBad(file))) return { error: 'file_url: the worker\'s folder under ' + incFilePrefix() };
   for (const k of ['l', 'd', 'r', 'p', 'rc', 'src']) if (b[k] !== undefined && /[\u0000-\u0008\u000b-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/.test(String(b[k]))) return { error: k + ': control characters' };
   const row = { id: 'a' + b.day.slice(2).replace(/-/g, '') + '-' + rand, d, dt, ty: '\u05ea\u05d0\u05d5\u05e0\u05d4 \u05e2\u05dd \u05e4\u05e6\u05d9\u05e2\u05d4', l, w, dy: b.dy === undefined ? null : b.dy, s: '\u05e4\u05ea\u05d5\u05d7',
     r: b.r === undefined ? null : short(b.r, 600), p: b.p === undefined ? null : short(b.p, 1200), rc: b.rc === undefined ? null : short(b.rc, 1200), file_url: file,
@@ -685,7 +692,7 @@ export function expiryPatch(b, row, today) {
   if (b.file_url !== undefined) {
     const u = String(b.file_url || '');
     // spaces allowed: the stored links are the plain OneDrive path (13/10/2026, a Hebrew path encoded ran past 600)
-    if (u.indexOf(FILE_URL_PREFIX) !== 0 || u.length > 600 || /[\t\r\n\f\v"<>]/.test(u)) return { error: 'bad file_url' };
+    if (u.indexOf(FILE_URL_PREFIX) !== 0 || u.length > 600 || /[\t\r\n\f\v"<>]/.test(u) || linkPathBad(u)) return { error: 'bad file_url' };
     if (u !== row.file_url) { patch.file_url = u; said.push('\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e7\u05d5\u05d1\u05e5'); }
   }
   // 27/10/2026 (the assistant's dev request: BIGBAG-001 got its new e and kept the old report 182666/226): equipment

@@ -1544,7 +1544,7 @@ const callIn = async (body) => {
     check('equip_add: a code already there = refused (update it with expiry_set)', !x.json.ok && /already there: q9/.test(x.json.error) && rows.equip_inspections.length === 2, x.json);
     const T = '2026-10-27';
     check('equip_add: no doc, a future d, e before d or past 6 years, a bad report number, a file outside the drive, a lower-case code, or an extra field (s, id) = refused',
-      [{ doc: '' }, { d: ['2026-10-25'] }, { file_url: FILE_URL_PREFIX + 'Documents/other/x.pdf' }, { file_url: equipFilePrefix() + 'a/../../x.pdf' }, { file_url: equipFilePrefix() + 'a/x.docx' }, { d: '2026-11-01' }, { e: '2026-10-01' }, { e: '2033-01-01' }, { report_number: '186003' }, { file_url: 'https://evil.example/x.pdf' }, { code: 'chain' }, { n: 'x' }].every((o) => !!equipAddRow({ ...A, ...o }, T, 'abcdef123456').error)
+      [{ doc: '' }, { d: ['2026-10-25'] }, { file_url: FILE_URL_PREFIX + 'Documents/other/x.pdf' }, { file_url: equipFilePrefix() + 'a/../../x.pdf' }, { file_url: equipFilePrefix() + 'a/%2e%2e/%2E%2E/x.pdf' }, { file_url: equipFilePrefix() + 'a/%zz.pdf' }, { file_url: equipFilePrefix() + 'a/%0a.pdf' }, { file_url: equipFilePrefix() + 'a/%2e%2e%20/x.pdf' }, { file_url: equipFilePrefix() + 'a/x%E2%80%AE.pdf' }, { file_url: equipFilePrefix() + 'a./x.pdf' }, { file_url: equipFilePrefix() + 'a/x.docx' }, { d: '2026-11-01' }, { e: '2026-10-01' }, { e: '2033-01-01' }, { report_number: '186003' }, { file_url: 'https://evil.example/x.pdf' }, { code: 'chain' }, { n: 'x' }].every((o) => !!equipAddRow({ ...A, ...o }, T, 'abcdef123456').error)
       && !equipAddRow(A, T, 'abcdef123456').error && (await call({ ...A, s: 'x' })).status === 400 && (await call({ ...A, id: 'mine' })).status === 400 && rows.equip_inspections.length === 2);
     rows = {};
   }
@@ -1589,7 +1589,7 @@ const callIn = async (body) => {
     check('inc_add: a folder with nothing behind it = refused, no row', !x.json.ok && /no such folder/.test(x.json.error) && rows.inc.length === 3, x.json);
     const T = '2026-10-29';
     check('inc_add: no why, a future day, a bad time, an unknown department, a short description, a folder outside the drive, or a non-text field = refused; a good row passes',
-      [{ why: '' }, { day: '2026-11-02' }, { time: '25:00' }, { dept: 'x' }, { d: 'short' }, { file_url: 'https://evil.example/x' }, { file_url: incFilePrefix() + 'a/../../x' }, { w: ['x'] }, { dy: -1 }, { reported: 'yes' }].every((o) => !!incAddRow({ ...A, ...o }, T, 'abc123', KN).error)
+      [{ why: '' }, { day: '2026-11-02' }, { time: '25:00' }, { dept: 'x' }, { d: 'short' }, { file_url: 'https://evil.example/x' }, { file_url: incFilePrefix() + 'a/../../x' }, { file_url: incFilePrefix() + 'a/%2e%2e/x' }, { file_url: incFilePrefix() + 'a/%' }, { w: ['x'] }, { dy: -1 }, { reported: 'yes' }].every((o) => !!incAddRow({ ...A, ...o }, T, 'abc123', KN).error)
       && !incAddRow(A, T, 'abc123', KN).error && !!incAddRow(A, T, 'abc123').error
       && (await call({ ...A, w: '\u05e2\u05d5\u05d1\u05d3 \u05e9\u05dc\u05d9\u05e9\u05d9', s: '\u05e1\u05d2\u05d5\u05e8' })).status === 400 && (await call({ ...A, w: '\u05e2\u05d5\u05d1\u05d3 \u05e9\u05dc\u05d9\u05e9\u05d9', id: 'mine' })).status === 400 && rows.inc.length === 3);
     rows = {};
