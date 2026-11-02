@@ -26,7 +26,7 @@ Input: env PR_TITLE, PR_BODY; changed file names on stdin, one per line.
 Exit 0 = ok, 1 = missing lesson. Called from .github/workflows/tests.yml.
 Test: tests/harness/lessons-gate-test.py
 """
-import os, re, sys
+import subprocess, os, re, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 LESSONS = ".claude/skills/tfugen-lessons/SKILL.md"
@@ -59,6 +59,37 @@ SENSITIVE = ("functions/_middleware.js", "functions/_sign.js", "functions/api/co
              "functions/api/chat.js", "functions/api/chat-file/[[name]].js", "functions/_closelink.js",
              "functions/_pdftext.js", "functions/_xlsx.js", "functions/_xlsxpatch.js", "functions/_pptx.js",
              "functions/_deckpatch.js", "functions/_ocr.js", "functions/_stt.js")
+# 02/11/2026 (Michael in the questionnaire: "do it: only when the checks change"; retro 28/10/2026 (c, d)): routine-db.js
+# is not in SENSITIVE, since almost every PR touches it, so a weakened check there (QUOTE_VALID_RE, mail_forward's subject)
+# went in with no review. It needs one only when a changed line, not a comment, refuses something or is a check.
+CHECKED_FILES = ("functions/api/routine-db.js",)
+CHECK_LINE = re.compile(r"return\s+(jsonResp\(\{\s*ok:\s*false|\{\s*error:)|\b\w+(Check|Gate)\s*\(|function\s+\w+(Check|Gate)\b")
+
+
+def changes_checks(diff):
+    """True when an added or removed code line (not a comment) refuses a request or is a *Check / *Gate."""
+    for l in (diff or "").splitlines():
+        if l[:1] not in "+-" or l.startswith(("+++", "---")):
+            continue
+        t = l[1:].strip()
+        if t.startswith("//"):
+            continue
+        if CHECK_LINE.search(t):
+            return True
+    return False
+
+
+def file_diff(f):
+    """The file's diff against the PR base (CI: $BASE) or origin/main (the pr-gate hook). None = could not read it."""
+    base = os.environ.get("BASE")
+    rng = [base, "HEAD"] if base else ["origin/main...HEAD"]
+    try:
+        p = subprocess.run(["git", "diff"] + rng + ["--", f], cwd=ROOT, capture_output=True, text=True, timeout=20)
+        return p.stdout if p.returncode == 0 else None
+    except Exception:
+        return None
+
+
 PERM_SQL = re.compile(r"\b(create|alter|drop)\s+policy\b|\bgrant\b|\brevoke\b|row\s+level\s+security|security\s+definer", re.I)
 REVIEW = re.compile(r"^\s*(review|סקירה)\s*:\s*(\S.{4,})$", re.I | re.M)
 # 27/10/2026 (Michael in the questionnaire: "do it: brief + refute step", from cloudflare/security-audit-skill): every
@@ -73,6 +104,11 @@ UNCHECKED_DIRS = ("functions/",)
 def sensitive(files):
     """The changed files that need a security review."""
     out = [f for f in files if f in SENSITIVE]
+    for f in files:
+        if f in CHECKED_FILES:
+            d = file_diff(f)
+            if d is None or changes_checks(d):  # a diff that cannot be read counts as a change to the checks
+                out.append(f)
     for f in files:
         if f.startswith("migrations/") and f.endswith(".sql"):
             try:

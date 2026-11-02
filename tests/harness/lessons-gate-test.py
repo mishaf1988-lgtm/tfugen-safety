@@ -90,6 +90,22 @@ check('...with a real unchecked line: ok', raw('Morning brief', R0 + 'מה לא 
 check('...an empty unchecked line: blocked', not raw('Morning brief', R0 + 'מה לא נבדק: ', ['functions/api/wa-morning.js']))
 check('...not required outside functions/', raw('Tour screen', R0, ['index.html', 'STATUS.md']))
 check('a file that takes outside input (trustee photos, a parser): blocked without review', not raw('Log', R, ['functions/api/trustee-log.js']) and not raw('PDF', R, ['functions/_pdftext.js']))
+# 02/11/2026 (Michael: "do it: only when the checks change"): routine-db.js needs a review only when a check changes
+cc = gate.changes_checks
+check('routine-db: a changed refusal or *Check line = review; a comment, a log line or a new field = none',
+  cc("+      if (x) return jsonResp({ ok: false, error: 'bad' }, 400, {});") and cc("-  if (!d0) return { error: 'replaced_by' };") and cc("+      const c = odExpireCheck(body);")
+  and cc("+export function draftThreadGate(b) {") and not cc("+      // return jsonResp({ ok: false })") and not cc("+      const name = 'x';") and not cc("+++ b/functions/api/routine-db.js"))
+check('routine-db is in CHECKED_FILES and its path exists', all(os.path.exists(os.path.join(gate.ROOT, f)) for f in gate.CHECKED_FILES) and 'functions/api/routine-db.js' in gate.CHECKED_FILES)
+_fd = gate.file_diff
+try:
+    gate.file_diff = lambda f: "+  const n = 1;"
+    check('routine-db with no check changed: no review needed', raw('Morning brief', R, ['functions/api/routine-db.js']))
+    gate.file_diff = lambda f: "+  if (!ok) return jsonResp({ ok: false, error: 'x' }, 400, {});"
+    check('routine-db with a check changed: blocked without review', not raw('Morning brief', R, ['functions/api/routine-db.js']))
+    gate.file_diff = lambda f: None
+    check('routine-db whose diff cannot be read: blocked without review', not raw('Morning brief', R, ['functions/api/routine-db.js']))
+finally:
+    gate.file_diff = _fd
 check('every SENSITIVE path exists in the repo', all(os.path.exists(os.path.join(gate.ROOT, f)) for f in gate.SENSITIVE), [f for f in gate.SENSITIVE if not os.path.exists(os.path.join(gate.ROOT, f))])
 check('an empty review line: blocked', not raw('Codes screen', R + 'סקירה: ', ['functions/api/create-user.js']))
 mig = 'migrations/zz-gate-test-%d.sql' % os.getpid()
