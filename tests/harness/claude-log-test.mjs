@@ -17,6 +17,7 @@ const NOW = '2026-11-01T23:10:00.000Z';
 { // not a write op: nothing
   check('a read op gives no line', logLine({ op: 'select', table: 'docs' }, NOW) === null);
   check('no op gives no line', logLine({}, NOW) === null && logLine(null, NOW) === null);
+  check('the OneDrive and calendar writes are logged too (retro 02/11/2026)', ['ocr_txt', 'mail_request', 'cal_move', 'cal_invite'].every((op) => logLine({ op, agent: 'x' }, '2026-11-02T06:00:00Z') !== null));
   check('every write op in routine-db is a known op name', Object.keys(LOG_OPS).every((op) => fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8').indexOf("body.op === '" + op + "'") >= 0));
 }
 { // details: a list joined, attachments counted, long values cut

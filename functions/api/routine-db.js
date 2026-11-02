@@ -1041,7 +1041,7 @@ export function draftTrashCheck(b, made, nowMs) {
 export function asksApiCredit(t) {
   const s = String(t || '');
   return /\u05e7\u05e8\u05d3\u05d9\u05d8/.test(s) && /(\u05d8\u05e2\u05d9\u05e0\u05d4|\u05dc\u05d0 \u05e2\u05d5\u05d1\u05d3|\u05dc\u05d8\u05e2\u05d5\u05df|\u05dc\u05d4\u05d8\u05e2\u05d9\u05df|\u05d8\u05e2\u05d9\u05e0\u05ea|\u05ea\u05d8\u05e2\u05d9\u05df|\u05dc\u05d8\u05e2\u05d5\u05df|\u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05e7\u05e8\u05d3\u05d9\u05d8|console\.anthropic)/.test(s)
-    || (/\u05e7\u05e8\u05d3\u05d9\u05d8/.test(s) && /(API|anthropic|claude|\u05e7\u05dc\u05d5\u05d3)/i.test(s));
+    || (/\u05e7\u05e8\u05d3\u05d9\u05d8/.test(s) && /(\bAPI\b|anthropic|claude|\u05e7\u05dc\u05d5\u05d3)/i.test(s));
 }
 export function calMoveCheck(b, nowMs) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
