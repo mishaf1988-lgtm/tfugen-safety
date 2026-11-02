@@ -9856,11 +9856,18 @@ function eqiEdit(id){
     _eqiRenderFiles();
   },30);
 }
+// 02/11/2026 (Michael in the questionnaire: "do it: only the code"): one row per equipment code. The database refuses
+// a second row with the same code (equip_inspections_code_uq, case and spaces aside), so the form and the Excel import
+// stop here with a clear message instead of a save that stays red in the queue.
+function _eqiCodeKey(c){var k=String(c==null?'':c).trim().toLowerCase();return (k==='?'||k==='-')?'':k;}
+function _eqiCodeTaken(code,exceptId){var k=_eqiCodeKey(code);if(!k)return null;return (DB.equip_inspections||[]).find(function(r){return r&&String(r.id)!==String(exceptId||'')&&_eqiCodeKey(r.code)===k;})||null;}
 function svEqi(){
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4');return;}
   var id=g('eqi-id')&&g('eqi-id').value;
   var n=gv('eqi-n');
   if(!n){toast('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
+  var _dupEq=_eqiCodeTaken(gv('eqi-code'),id);
+  if(_dupEq){toast('\u05e7\u05d5\u05d3 \u05d4\u05e6\u05d9\u05d5\u05d3 \u05db\u05d1\u05e8 \u05e7\u05d9\u05d9\u05dd: '+(_dupEq.n||_dupEq.code)+'. \u05dc\u05e2\u05d3\u05db\u05df \u05d0\u05ea \u05d4\u05e9\u05d5\u05e8\u05d4 \u05d4\u05e7\u05d9\u05d9\u05de\u05ea \u05d1\u05de\u05e7\u05d5\u05dd \u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05d7\u05d3\u05e9\u05d4.');return;}
   // Multi-file: keep photo_url for backward compat (= first file URL),
   // and store the full list in `attachments` (jsonb column added by the
   // 2026-05-06 migration). Records loaded before that migration ran will
@@ -9951,6 +9958,10 @@ function eqiXlRead(file){
 function eqiXlOk(){
   var data=window._eqiXlData||[];if(!data.length)return;
   if(!DB.equip_inspections)DB.equip_inspections=[];
+  // 02/11/2026: a code already in the list, or twice in the file, is skipped (the database allows one row per code)
+  var _seenC={},_skipC=0;data=data.filter(function(r){var k=_eqiCodeKey(r.code);if(!k)return true;if(_seenC[k]||_eqiCodeTaken(r.code,null)){_skipC++;return false;}_seenC[k]=1;return true;});
+  if(_skipC)toast(_skipC+' \u05e9\u05d5\u05e8\u05d5\u05ea \u05d3\u05d5\u05dc\u05d2\u05d5: \u05e7\u05d5\u05d3 \u05e6\u05d9\u05d5\u05d3 \u05e9\u05db\u05d1\u05e8 \u05e7\u05d9\u05d9\u05dd');
+  if(!data.length){closeEqiXl();return;}
   DB.equip_inspections=DB.equip_inspections.concat(data);
   // Collect failures so the toast at the end accurately reflects what got saved.
   var _xlFailed=0;
@@ -10091,6 +10102,9 @@ window.eqiXl2Apply=function(){
   var nIns=0,nHis=0,errs=[];
   if(!DB.equip_inspections)DB.equip_inspections=[];
   var p=Promise.resolve();
+  // 02/11/2026: one row per equipment code (equip_inspections_code_uq): a code already in the list, or twice in the file, is skipped
+  var _seenX={},_skX=0;d.items=d.items.filter(function(rec){var k=_eqiCodeKey(rec.code);if(!k)return true;if(_seenX[k]||_eqiCodeTaken(rec.code,null)){_skX++;return false;}_seenX[k]=1;return true;});
+  if(_skX)errs.push(_skX+' \u05e9\u05d5\u05e8\u05d5\u05ea \u05d3\u05d5\u05dc\u05d2\u05d5: \u05e7\u05d5\u05d3 \u05e6\u05d9\u05d5\u05d3 \u05e9\u05db\u05d1\u05e8 \u05e7\u05d9\u05d9\u05dd');
   // Items
   d.items.forEach(function(rec){
     p=p.then(function(){
@@ -27351,6 +27365,8 @@ function _odApplyExtractedFields(t,p,name,uploadedUrl){
     DB.ncr=DB.ncr||[];DB.ncr.push(rec);sbIns('ncr',rec);
   }else if(t==='equip_inspections'){
     rec.code=clean(p.code)||'?';rec.n=nm;
+    // 02/11/2026: a code already on another row would be refused by the database (one row per code): kept in the notes
+    if(typeof _eqiCodeTaken==='function'&&_eqiCodeTaken(rec.code,rec.id)){rec.notes='\u05e7\u05d5\u05d3 \u05e9\u05db\u05d1\u05e8 \u05e7\u05d9\u05d9\u05dd \u05d1\u05e8\u05e9\u05d9\u05de\u05d4: '+rec.code;rec.code='?';}
     rec.manufacturer=clean(p.manufacturer)||'';
     rec.model=clean(p.model)||'';
     rec.serial_number=clean(p.serial_number)||'';

@@ -1588,6 +1588,15 @@ const callIn = async (body) => {
     check('equip_add (review): a file_url with no file behind it = refused, no row', !x.json.ok && /no such file/.test(x.json.error) && rows.equip_inspections.length === 2, x.json);
     x = await call({ ...A, code: 'WASTE-49571', report_number: '199999/226' });
     check('equip_add: a code already there = refused (update it with expiry_set)', !x.json.ok && /already there: q9/.test(x.json.error) && rows.equip_inspections.length === 2, x.json);
+    { // 02/11/2026 (retro 28/10/2026 (b)): two requests at once both pass the check; the unique index refuses the second (409)
+      const f0 = globalThis.fetch;
+      globalThis.fetch = async (u, o = {}) => (String(u) === SB + '/rest/v1/equip_inspections' && (o.method || 'GET') === 'POST'
+        ? new Response(JSON.stringify({ code: '23505', message: 'duplicate key value violates unique constraint "equip_inspections_code_uq"' }), { status: 409 }) : f0(u, o));
+      try {
+        x = await call({ ...A, code: 'RACE-1', report_number: '199997/226' });
+        check('equip_add: the database refuses a second row with the same code at the same moment = a clear answer, no row', !x.json.ok && /already in the table/.test(x.json.error) && rows.equip_inspections.length === 2, x.json);
+      } finally { globalThis.fetch = f0; }
+    }
     const T = '2026-10-27';
     check('equip_add: no doc, a future d, e before d or past 6 years, a bad report number, a file outside the drive, a lower-case code, or an extra field (s, id) = refused',
       [{ doc: '' }, { d: ['2026-10-25'] }, { file_url: FILE_URL_PREFIX + 'Documents/other/x.pdf' }, { file_url: equipFilePrefix() + 'a/../../x.pdf' }, { file_url: equipFilePrefix() + 'a/%2e%2e/%2E%2E/x.pdf' }, { file_url: equipFilePrefix() + 'a/%zz.pdf' }, { file_url: equipFilePrefix() + 'a/%0a.pdf' }, { file_url: equipFilePrefix() + 'a/%2e%2e%20/x.pdf' }, { file_url: equipFilePrefix() + 'a/x%E2%80%AE.pdf' }, { file_url: equipFilePrefix() + 'a./x.pdf' }, { file_url: equipFilePrefix() + 'a/x.docx' }, { d: '2026-11-01' }, { e: '2026-10-01' }, { e: '2033-01-01' }, { report_number: '186003' }, { file_url: 'https://evil.example/x.pdf' }, { code: 'chain' }, { n: 'x' }].every((o) => !!equipAddRow({ ...A, ...o }, T, 'abcdef123456').error)

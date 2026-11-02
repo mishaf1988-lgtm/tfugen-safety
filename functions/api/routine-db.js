@@ -2612,6 +2612,9 @@ async function routineDbHandle(context) {
       const there = await g.json();
       if (!Array.isArray(there) || there.length) return jsonResp({ ok: false, error: 'already there: ' + (Array.isArray(there) ? there.map((r) => r.id).join(',') : '?') + ' (expiry_set updates a row)' }, 200, {});
       const w = await fetch(url + '/rest/v1/equip_inspections', { method: 'POST', headers: { ...h, Prefer: 'return=representation' }, body: JSON.stringify(c.row), signal: tmo(SB_MS) });
+      // 02/11/2026 (retro 28/10/2026 (b)): two requests at once both passed the check above; the unique index on the code
+      // (equip_inspections_code_uq) refuses the second, answered like the check
+      if (w.status === 409) return jsonResp({ ok: false, error: 'already in the table (same code, a request at the same moment)' }, 200, {});
       if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status, detail: (await w.text()).slice(0, 300) }, 200, {});
       const after = await w.json();
       if (!Array.isArray(after) || after.length !== 1) return jsonResp({ ok: false, error: 'write touched ' + (Array.isArray(after) ? after.length : '?') + ' rows' }, 200, {});
