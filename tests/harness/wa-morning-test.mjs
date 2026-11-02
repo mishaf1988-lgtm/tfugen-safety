@@ -162,6 +162,16 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     check('watch: marked (checks 1, no check_at), logged as promise_check with the session', st.checks === 1 && !st.check_at && logs.some((l) => l.event_type === 'promise_check' && l.payload.session === 'session_X1'), { st, logs });
     await run(E, new Date(NM + 36 * 60e3), { watch: true });
     check('watch: not fired twice', fires.length === 1);
+    { // 02/11/2026 (security review): a promise with the default 24-hour check wakes the assistant once, not again minutes later through the day-old path
+      const D0 = '2026-11-02T08:00:00.000Z';
+      const pd = promiseAdd('[]', { agent: 'routine-wa-assistant', text: 'the default check promise', who: 'docs' }, D0);
+      state = { promises: JSON.stringify(pd.list) }; logs = []; fires.length = 0;
+      await run(E, new Date(Date.parse(D0) + 24 * 3600e3 + 60e3), { watch: true });
+      await run(E, new Date(Date.parse(D0) + 24 * 3600e3 + 6 * 60e3), { watch: true });
+      await run(E, new Date(Date.parse(D0) + 24 * 3600e3 + 11 * 60e3), { watch: true });
+      const sd = JSON.parse(state.promises)[0];
+      check('default check: the assistant is woken once at 24 hours, and the day-old reminder does not wake it again', fires.length === 1 && sd.checks === 1 && !!sd.reminded_at, { fires: fires.length, sd });
+    }
     globalThis.fetch = f0; state = {}; logs = [];
   }
 
