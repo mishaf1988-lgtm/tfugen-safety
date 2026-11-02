@@ -1767,6 +1767,50 @@ const callIn = async (body) => {
     } finally { globalThis.fetch = f0; }
   }
 
+  // 02/11/2026 (retro 22/10/2026 (e)): the sign_request handler itself, with the WhatsApp question failing. Until now only
+  // a source check (sign-test.mjs 7) said the request is marked failed; here it runs, and Michael's answer that arrives
+  // between the read and the write is not overwritten.
+  {
+    console.log('\nsign_request handler, the question not sent (retro 22/10/2026 (e))');
+    const E = { ...ENV, META_PHONE_NUMBER_ID: 'P', META_ACCESS_TOKEN: 'm' };
+    const f0 = globalThis.fetch, g0 = graph, metaSends = [], logs = [];
+    graph = async (u) => {
+      if (/:\/content$/.test(u)) return new Response(new Uint8Array([1, 2, 3]), { status: 200 });
+      return new Response(JSON.stringify({ id: 'I1', file: {}, size: 3 }), { status: 200 });
+    };
+    globalThis.fetch = async (u, o = {}) => {
+      const su = String(u);
+      if (su.startsWith(SB + '/rest/v1/notification_prefs')) return new Response(JSON.stringify([{ prefs: { trustee_hazard: { whatsapp_to: '972500000001' } } }]), { status: 200 });
+      if (su.startsWith('https://graph.facebook.com/v25.0/P/')) { metaSends.push(su); return new Response(JSON.stringify({ error: { message: 'down' } }), { status: 500 }); }
+      if (su.startsWith(SB + '/rest/v1/notifications_log') && (o.method || 'GET') === 'POST') { JSON.parse(o.body).forEach((r) => logs.push(r)); return new Response('', { status: 201 }); }
+      return f0(u, o);
+    };
+    try {
+      delete state.sign_requests; delete stateVer.sign_requests;
+      state.wa_owner_in_at = new Date().toISOString();
+      const req = { op: 'sign_request', agent: 'routine-wa-assistant', why: 'test of a failed question', path: '99_x/permit.pdf' };
+      const a = await call(req, 'k-123', 'POST', E);
+      const list = JSON.parse(state.sign_requests || '[]');
+      const mine = list.find((x) => x && x.id === a.json.id);
+      check('sign_request: the question failed = the reply says not sent, and the request is marked failed (not left pending)',
+        a.json.ok === false && a.json.created === true && a.json.sent === false && mine && mine.status === 'failed' && metaSends.length > 0, { a: a.json, list, metaSends: metaSends.length });
+      check('sign_request: the failed question is logged as whatsapp_error with its ref', logs.some((r) => r.channel === 'whatsapp_error' && r.payload.ref === 'sign:' + a.json.id), logs.map((r) => r.channel));
+      const b = await call(req, 'k-123', 'POST', E);
+      check('sign_request: after a failed question, the next request on the same file creates a new one (not "already waiting")', b.json.created === true && b.json.id !== a.json.id, b.json);
+      // Michael's answer lands between the handler's read and its write: the first PATCH loses, the row is not overwritten
+      delete state.sign_requests; delete stateVer.sign_requests;
+      let n = 0;
+      raceOnce = null;
+      const realPatchRace = (kk) => { if (kk !== 'sign_requests') return; const l = JSON.parse(state.sign_requests); l.forEach((x) => { x.status = 'done'; }); state.sign_requests = JSON.stringify(l); stateVer.sign_requests = 'v-michael'; n++; };
+      const f1 = globalThis.fetch;
+      globalThis.fetch = async (u, o = {}) => { if (String(u).startsWith('https://graph.facebook.com/v25.0/P/') && !raceOnce && n === 0) raceOnce = realPatchRace; return f1(u, o); };
+      const c = await call(req, 'k-123', 'POST', E);
+      globalThis.fetch = f1;
+      const after = JSON.parse(state.sign_requests || '[]').find((x) => x && x.id === c.json.id);
+      check('sign_request: Michael\'s answer saved meanwhile stays (only a request still pending is marked failed)', n === 1 && after && after.status === 'done' && c.json.sent === false, { c: c.json, after, n });
+    } finally { globalThis.fetch = f0; graph = g0; raceOnce = null; delete state.sign_requests; delete state.wa_owner_in_at; }
+  }
+
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.log('HARNESS ERROR: ' + (e && e.stack || e)); process.exit(1); });
