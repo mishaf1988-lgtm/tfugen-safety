@@ -355,7 +355,7 @@ export function learnAdd(raw, b, nowIso) {
   if (!/^[a-z0-9-]{2,40}$/.test(agent)) return { error: 'bad agent name' };
   if (LEARN_KINDS.indexOf(kind) < 0) return { error: 'kind: ' + LEARN_KINDS.join(' | ') };
   if (text.length < 10 || text.length > 400) return { error: 'text 10-400 characters' };
-  if (hasInternalId(text + ' ' + source) || hasPassport(text + ' ' + source)) return { error: 'no internal ids or passport numbers in the notebook' };
+  if (hasInternalId(text + ' ' + source) || hasPersonalNo(text + ' ' + source)) return { error: 'no internal ids or passport numbers in the notebook' };
   let list = [];
   try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
   if (!Array.isArray(list)) list = [];
@@ -959,6 +959,20 @@ export { hasInternalId };
 // 26/10/2026: a quote number "PQ26001545" (Negev Ecology) was read as a passport and the assistant lost a round
 // rewriting its message. PQ is a quote prefix, never a passport.
 export function hasPassport(t) { return /(^|[^A-Za-z0-9])(?!PQ)[A-Z]{1,2}[0-9]{6,8}(?![A-Za-z0-9])/.test(String(t || '')); }
+// 02/11/2026 (Michael in the questionnaire: "do it: block ID numbers in messages", from Microsoft Presidio's Israeli
+// ID recognizer): an Israeli ID (9 digits, the last a check digit) in a message to Michael's phone. One valid number alone
+// passes unless the text names an ID (teudat zehut, its short form, or ID), so an order or landline number that happens to check out is not
+// stopped; two valid numbers = a list of people. Company numbers (they start with 5) pass. Mail drafts are not checked:
+// a contractor's permit needs the IDs, and Michael reads every draft before he sends it.
+export function idCheckOk(d) { let s = 0; for (let i = 0; i < 9; i++) { const x = Number(d[i]) * ((i % 2) + 1); s += x > 9 ? x - 9 : x; } return s % 10 === 0; }
+export const IL_ID_WORD_RE = /\u05ea[\s"'\u05f3\u05f4.]{1,3}\u05d6|\u05d6\u05d4\u05d5\u05ea|\bID\b/;
+export function hasIsraeliId(t) {
+  // security review 02/11/2026: "039 337 423" / "039.337.423" are joined, and an 8-digit ID (leading zero dropped) is padded
+  const s = String(t || '').replace(/(\d{3})[ .](\d{3})[ .](\d{3})(?![0-9])/g, '$1$2$3'), re = /(^|[^0-9])(\d{7,8}-?\d)(?![0-9])/g; let m, n = 0;
+  while ((m = re.exec(s))) { const d = m[2].replace('-', '').padStart(9, '0'); if (!/^5/.test(d) && !/^0+$/.test(d) && idCheckOk(d)) n++; }
+  return n >= 2 || (n === 1 && IL_ID_WORD_RE.test(s));
+}
+export function hasPersonalNo(t) { return hasPassport(t) || hasIsraeliId(t); }
 export const MAIL_REQ_ID = /^[A-Za-z0-9_=+\/-]{40,400}$/;
 // mail_forward (02/11/2026, Michael in the assistant's chat: "do it: yes, build it"; DECISIONS 02/11/2026): a forward of a
 // mail with every attachment as it came (zip too), as a draft in Michael's Drafts. Flow 11 "forward drafts" reads the file
@@ -1688,7 +1702,7 @@ export function delAskText(table, row, why) {
   const one = (v, n) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, n);
   const what = table === 'inc' ? [fd(row.dt), one(row.dept, 40), one(row.d, 100)] : table === 'equip_inspections' ? [one(row.code, 40), one(row.n, 100)] : [one(row.n, 100), one(row.c, 40)];
   // 28/10/2026: a forklift code (FL-FN637226) reads as a passport number and wa_me refused the whole ask; such a part is left out
-  return '\u05de\u05d7\u05d9\u05e7\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, ' + t + ': ' + what.filter((x) => x && !hasPassport(x)).join(', ') + (row.s ? ' (\u05de\u05e6\u05d1: ' + one(row.s, 30) + ')' : '') + '.\n\u05dc\u05de\u05d4: ' + String(why).slice(0, 200) + '\n\u05d4\u05e9\u05d5\u05e8\u05d4 \u05d4\u05de\u05dc\u05d0\u05d4 \u05e0\u05e9\u05de\u05e8\u05ea \u05d1\u05d2\u05d9\u05d1\u05d5\u05d9 \u05dc\u05e4\u05e0\u05d9 \u05d4\u05de\u05d7\u05d9\u05e7\u05d4.';
+  return '\u05de\u05d7\u05d9\u05e7\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, ' + t + ': ' + what.filter((x) => x && !hasPersonalNo(x)).join(', ') + (row.s ? ' (\u05de\u05e6\u05d1: ' + one(row.s, 30) + ')' : '') + '.\n\u05dc\u05de\u05d4: ' + String(why).slice(0, 200) + '\n\u05d4\u05e9\u05d5\u05e8\u05d4 \u05d4\u05de\u05dc\u05d0\u05d4 \u05e0\u05e9\u05de\u05e8\u05ea \u05d1\u05d2\u05d9\u05d1\u05d5\u05d9 \u05dc\u05e4\u05e0\u05d9 \u05d4\u05de\u05d7\u05d9\u05e7\u05d4.';
 }
 // 02/11/2026 (Michael in the questionnaire: "do it: 200 and restore from the assistant (recommended)"; retro 29/10/2026
 // (e)): undo_log kept 50 deleted rows and a restore needed the main chat with SQL. It keeps UNDO_MAX, and the assistant
@@ -1745,7 +1759,7 @@ export function linkRow(b) {
   const ref = String(b.ref || '').trim(), title = String(b.title || '').replace(/\s+/g, ' ').trim();
   if (ref.length < 3 || ref.length > 600 || /[\r\n]/.test(ref)) return { error: 'ref: the mail subject and date, the file path or the quote number, 3-600 characters' };
   if (title.length < 2 || title.length > 200) return { error: 'title: what it is, for Michael, 2-200 characters' };
-  if (hasInternalId(title) || hasPassport(title + ' ' + ref)) return { error: 'no internal ids or personal numbers' };
+  if (hasInternalId(title) || hasPersonalNo(title + ' ' + ref)) return { error: 'no internal ids or personal numbers' };
   return { row: { item_table: table, item_id: id, rel: b.rel, ref, title, agent: b.agent } };
 }
 export function cardQuery(q) {
@@ -2278,7 +2292,7 @@ async function routineDbHandle(context) {
     }
     if (body.op === 'worker_now' || body.op === 'worker_done') {
       const now = new Date().toISOString();
-      if (body.op === 'worker_done' && (hasInternalId(body.note) || hasPassport(body.note))) return jsonResp({ ok: false, error: 'note: no internal ids or passport numbers (it goes to Michael)' }, 400, {});
+      if (body.op === 'worker_done' && (hasInternalId(body.note) || hasPersonalNo(body.note))) return jsonResp({ ok: false, error: 'note: no internal ids or passport numbers (it goes to Michael)' }, 400, {});
       const rows = await stateRead([WORKER_JOBS_KEY]);
       const raw = rows && rows[0] && rows[0].value;
       const r = body.op === 'worker_now' ? workerJobAdd(raw, body, now) : workerJobDone(raw, String(body.id || ''), body.note, now);
@@ -3375,7 +3389,7 @@ async function routineDbHandle(context) {
       const c = calMoveCheck(Object.assign({}, body, { approved: '\u05d1\u05e6\u05e2' }), Date.now());
       if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
       if (body.was !== undefined && !CAL_T.test(String(body.was))) return jsonResp({ ok: false, error: 'was: the current start, YYYY-MM-DDTHH:MM, Israel time' }, 400, {});
-      if (hasInternalId(body.who) || hasPassport(body.who)) return jsonResp({ ok: false, error: 'who: names only' }, 400, {});
+      if (hasInternalId(body.who) || hasPersonalNo(body.who)) return jsonResp({ ok: false, error: 'who: names only' }, 400, {});
       const k = Math.random().toString(36).slice(2, 10).padEnd(8, '0'), mv = {};
       for (const f of CAL_MOVE_FIELDS) mv[f] = body[f];
       mv.why = body.why;
@@ -3387,7 +3401,7 @@ async function routineDbHandle(context) {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'who', 'answers'].concat(CAL_INVITE_FIELDS).indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const c = calInviteCheck(Object.assign({}, body, { approved: '\u05d1\u05e6\u05e2' }), Date.now());
       if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
-      if (hasInternalId(body.who) || hasPassport(body.who)) return jsonResp({ ok: false, error: 'who: names only' }, 400, {});
+      if (hasInternalId(body.who) || hasPersonalNo(body.who)) return jsonResp({ ok: false, error: 'who: names only' }, 400, {});
       const k = Math.random().toString(36).slice(2, 10).padEnd(8, '0'), inv = {};
       for (const f of CAL_INVITE_FIELDS) if (body[f] !== undefined) inv[f] = body[f];
       inv.why = body.why;
@@ -3401,7 +3415,7 @@ async function routineDbHandle(context) {
       if (!Object.prototype.hasOwnProperty.call(DEL_TABLES, table)) return jsonResp({ ok: false, error: 'table: ' + Object.keys(DEL_TABLES).join(' | ') }, 400, {});
       if (!DEL_ID.test(id)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
       if (why.length < 5 || why.length > 300) return jsonResp({ ok: false, error: 'why: why it goes, for Michael, 5-300 characters' }, 400, {});
-      if (hasInternalId(why) || hasPassport(why)) return jsonResp({ ok: false, error: 'no ids or personal numbers in why' }, 400, {});
+      if (hasInternalId(why) || hasPersonalNo(why)) return jsonResp({ ok: false, error: 'no ids or personal numbers in why' }, 400, {});
       const rr = await fetch(url + '/rest/v1/' + table + '?id=eq.' + encodeURIComponent(id) + '&select=' + DEL_TABLES[table], { headers: h, signal: tmo(SB_MS) });
       const row = rr.ok ? ((await rr.json().catch(() => []))[0] || null) : null;
       if (!row) return jsonResp({ ok: false, error: 'no such row' }, 400, {});
@@ -3433,7 +3447,7 @@ async function routineDbHandle(context) {
       const id = String(body.id || ''), note = String(body.note || '').replace(/\s+/g, ' ').trim();
       if (!TOUR_ID.test(id)) return jsonResp({ ok: false, error: 'id: a tour_hazards id like th-12' }, 400, {});
       if (note.length < 5 || note.length > 300) return jsonResp({ ok: false, error: 'note: what Michael checked, 5-300 characters' }, 400, {});
-      if (hasInternalId(note) || hasPassport(note)) return jsonResp({ ok: false, error: 'no ids or personal numbers in the note' }, 400, {});
+      if (hasInternalId(note) || hasPersonalNo(note)) return jsonResp({ ok: false, error: 'no ids or personal numbers in the note' }, 400, {});
       const rr = await fetch(url + '/rest/v1/tour_hazards?id=eq.' + encodeURIComponent(id) + '&select=id,n,descr,loc,s', { headers: h, signal: tmo(SB_MS) });
       const row = rr.ok ? ((await rr.json().catch(() => []))[0] || null) : null;
       if (!row) return jsonResp({ ok: false, error: 'no such tour finding' }, 400, {});
@@ -3443,7 +3457,7 @@ async function routineDbHandle(context) {
       body = { op: 'wa_me', agent: body.agent, answers: body.answers, askInternal: true, text: tourCloseAskText(row, note), choices: ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'], ref: 'tourclose:' + id };
     }
     if (body.op === 'wa_me') {
-      if (hasPassport(body.text)) return jsonResp({ ok: false, error: 'passport number in text: write "4 workers from the list", no ids (20/10/2026)' }, 400, {});
+      if (hasPersonalNo(body.text)) return jsonResp({ ok: false, error: 'passport or Israeli ID number in text: write "4 workers from the list", no ids (20/10/2026; Israeli ID 02/11/2026)' }, 400, {});
       if (asksApiCredit(body.text)) return jsonResp({ ok: false, error: 'mentions API credit: Michael decided no credit (22/10, 26/10/2026). Read the PDF with ocr_txt (paths) and its txt, and go on with the task; do not tell him about credit (01/11/2026)' }, 400, {});
       if (asksRepoSetup(body.text)) return jsonResp({ ok: false, error: 'asks Michael to add a repository or edit a Routine: no such choice (C32); say the dev runner builds it at its next wake (07:17-19:17 every 2 hours) (21/10/2026)' }, 400, {});
       // 25/10/2026 (Michael in the questionnaire: "do it: block"): the assistant asked for "\u05d1\u05e6\u05e2" with no buttons, and fixed it only when he said so.

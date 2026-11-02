@@ -48,7 +48,7 @@
 מה קרה: ב-`Edit` על `functions/api/routine-db.js` כתבתי רצף `\u05d0` ו-`/[\u05d0-\u05ea]/`, והקובץ נשמר עם אותיות עבריות גולמיות. `push-gate` (`rule1-hebrew-test.js`) תפס לפני הדחיפה; תיקנתי בסקריפט.
 הכלל: אחרי כל עריכה של קובץ ב-`functions/` שמכיל עברית, להריץ `cd tests/harness && node rule1-hebrew-test.js` לפני קומיט, ולא לסמוך על שהעריכה שמרה את ה-escape.
 נאכף: `push-gate` + `rule1-hebrew-test.js` (קיימים; הלקח רק מזכיר להריץ מוקדם).
-חזר: 0.
+חזר: 1 (02/11/2026: סקריפט Python שערך את `routine-db.js` ואת `wa-assistant-test.mjs` כתב ביטוי עם אותיות עבריות ישירות, לא ב-escape; הבדיקה המקומית `raw Hebrew in functions/` תפסה לפני קומיט. בסקריפט כזה לכתוב `\u05xx` כבר במקור, או להמיר בסוף לפי טווח 0590-05FF).
 
 **186. קובץ routine-*.md חדש חייב להירשם בשני מקומות (30/10/2026, #2285).**
 מה קרה: הוספתי `routine-wa-core.md` ונכשלו שתי בדיקות, בזו אחר זו: `wa-worker-map-test.py` (מפת העובדים או `NOT_WORKER`) ו-`account-inventory-test.py` (שם הקובץ ב-`ACCOUNT-INVENTORY.md`). שני מחזורי CI.
