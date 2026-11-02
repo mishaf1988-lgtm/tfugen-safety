@@ -3,7 +3,7 @@
 נטען לבד כשמזכירים את הנושא (`index.json`). חוק מלא נמצא במקום שמצוין בסוגריים; כאן רק השורה וההפניה. נפתח 02/11/2026 (מיכאל בשאלון: "בצע: ענף חדש העוזר", ואחר כך "בצע: לצרף לענף העוזר" את האוטומציות).
 
 ## לפני שמכינים מסמך (כל ענף)
-0. **כל כללי הענף:** `project-files/domains/rules/assistant.md`. לקרוא לפני משימה בענף.
+0. **כל כללי הענף:** `project-files/domains/rules/assistant.md`. השורות שקשורות למשימה מגיעות לבד (אצל Claude ה-hook; העוזר: `grep -i` עם מילים מהמשימה); כולו כשמכינים מסמך או כשהשורות לא עונות (02/11/2026).
 1. **שינוי מודל או טריגר:** קודם `get_trigger` (מה רץ עכשיו), אחר כך `update_trigger`, ואז שוב `get_trigger` ולכתוב מה הוא מחזיר. בכל שינוי: DECISIONS, `ACCOUNT-INVENTORY.md`, ובנייה מחדש של מפת המערכת (`build-map.py`, פרסום, `system-map-test.py`).
 2. **שינוי בהוראות העוזר:** `routine-wa-core.md` (מה שהטריגר קורא) וגם `routine-wa-assistant.md`; קובץ נושא ב-`project-files/wa-topics/`. `wa-core-sync-test.py` אחרי כל שינוי.
 3. **בקשה מצ'אט "עבודה על העוזר"** (`session_01HFfaw8agDoZHqLpa6o84Ji`): נרשמת ב-STATUS לפני הביצוע, ובסוף `send_message` חזרה עם מה נבדק.

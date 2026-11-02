@@ -58,5 +58,22 @@ check("decisions-map.tsv uses only real branch keys or general", all(v in keys f
 for k, v in doms.items():
     rp = os.path.join(ROOT, "project-files/domains/rules/" + k + ".md")
     check(k + ": has rules/" + k + ".md and its branch file points to it in step 0", os.path.exists(rp) and ("domains/rules/" + k + ".md") in open(os.path.join(ROOT, v["file"]), encoding="utf-8").read())
+# 02/11/2026 (Michael: "do it: precise retrieval from the branch"): the hook gives the checklist and only the lines that
+# share words with the message, not the whole branch and its rules
+pr = hook("\u05ea\u05db\u05d9\u05df \u05d8\u05d5\u05e4\u05e1 \u05d4\u05e8\u05e9\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 \u05dc\u05e7\u05d1\u05dc\u05df \u05e9\u05e2\u05d5\u05d1\u05d3 \u05d1\u05d2\u05d5\u05d1\u05d4")
+pctx = (pr.get("hookSpecificOutput") or {}).get("additionalContext", "")
+full = "".join(open(os.path.join(ROOT, "project-files/domains/" + f), encoding="utf-8").read() for k in ("height", "iso") for f in (k + ".md", "rules/" + k + ".md"))  # "\u05d8\u05d5\u05e4\u05e1" loads ISO too
+check("hook: precise retrieval, the checklist plus the related lines (146.03 for a contractor), shorter than the branch and its rules", "\u05dc\u05e4\u05e0\u05d9 \u05e9\u05de\u05db\u05d9\u05e0\u05d9\u05dd" in pctx and "146.03" in pctx and "\u05de\u05d4 \u05e9\u05e7\u05e9\u05d5\u05e8 \u05dc\u05de\u05e9\u05d9\u05de\u05d4" in pctx and len(pctx) < len(full) * 0.6, len(pctx))
+check("the assistant's domain line names the rules file and says to read only the related lines", "rules/" in open(os.path.join(ROOT, "functions/_domains.js"), encoding="utf-8").read() and "grep -i" in open(os.path.join(ROOT, "functions/_domains.js"), encoding="utf-8").read())
+# 02/11/2026 (Michael: "do it: words that learn by themselves"): domain-gaps.py finds the requests with no branch and refuses a too-common word
+import subprocess, tempfile
+tf = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8")
+json.dump({"rows": [{"who": "michael", "text": "\u05d0\u05e0\u05d9 \u05e8\u05d5\u05e6\u05d4 \u05dc\u05d4\u05d6\u05d9\u05d6 \u05d0\u05ea \u05d9\u05de\u05d9 \u05d4\u05db\u05e9\u05e8\u05d5\u05ea \u05e9\u05dc\u05d9 \u05db\u05de\u05d5 \u05e9\u05d3\u05d9\u05d1\u05e8\u05e0\u05d5 \u05e7\u05d5\u05d3\u05dd"}, {"who": "michael", "text": "xyzzy plugh frotz gnusto rezrov blorb quux"}, {"who": "michael", "text": "[" + "x" * 40}, {"who": "assistant", "text": "y" * 50}]}, tf); tf.close()
+g = lambda *a: subprocess.run([sys.executable, os.path.join(ROOT, "tools/domain-gaps.py"), tf.name] + list(a), capture_output=True, text=True, encoding="utf-8")
+r0, r1 = g(), g("mail=xyzzy")
+check("domain-gaps: counts only Michael's real requests and lists the one with no branch", "requests: 2," in r0.stdout and "xyzzy" in r0.stdout and r0.returncode == 0, r0.stdout[:300])
+check("domain-gaps: a word that would load one branch on more than 40% exits 3", r1.returncode == 3, r1.stdout[:200])
+os.unlink(tf.name)
+check("retro-prompt: the weekly words step runs domain-gaps", "tools/domain-gaps.py" in open(os.path.join(ROOT, "project-files/retro-prompt.md"), encoding="utf-8").read())
 print("\n%d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)
