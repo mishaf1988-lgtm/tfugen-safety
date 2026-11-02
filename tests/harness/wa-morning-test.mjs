@@ -134,7 +134,15 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     const a = promiseAdd('[]', { agent: 'routine-wa-assistant', text: 'the merged PDF', who: 'docs', check_in_min: 30, check: 'the chat row has an answer' }, N);
     check('check: check_at 30 minutes on, what to check kept', a.list[0].check_at === '2026-10-21T08:30:00.000Z' && a.list[0].check === 'the chat row has an answer' && a.check_at === a.list[0].check_at, a);
     check('check: under 10 minutes or over 2 days refused', !!promiseAdd('[]', { agent: 'a-b', text: 'abcdef', check_in_min: 5 }, N).error && !!promiseAdd('[]', { agent: 'a-b', text: 'abcdef', check_in_min: 3000 }, N).error);
-    check('check: none without check_in_min', !promiseAdd('[]', { agent: 'a-b', text: 'abcdef' }, N).list[0].check_at);
+    check('check (02/11/2026): without check_in_min = checked in 24 hours, not never', promiseAdd('[]', { agent: 'a-b', text: 'abcdef' }, N).list[0].check_at === new Date(Date.parse(N) + 1440 * 60e3).toISOString());
+    { // 02/11/2026: a near promise (same who, most words) updates the open one; another who or another subject opens a new one
+      const p1 = promiseAdd('[]', { agent: 'routine-wa-assistant', text: '\u05dc\u05d1\u05d3\u05d5\u05e7 \u05d0\u05ea \u05d4\u05d8\u05d9\u05d5\u05d8\u05d4 \u05dc\u05d0\u05dc\u05d9\u05e0\u05d4 \u05d1-Drafts', who: 'docs', ref: 'r1' }, N);
+      const p2 = promiseAdd(JSON.stringify(p1.list), { agent: 'routine-wa-assistant', text: '\u05d4\u05d8\u05d9\u05d5\u05d8\u05d4 \u05dc\u05d0\u05dc\u05d9\u05e0\u05d4 \u05d1-Drafts, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05e9\u05d5\u05d1', who: 'docs', ref: 'r2' }, N);
+      const p3 = promiseAdd(JSON.stringify(p1.list), { agent: 'routine-wa-assistant', text: '\u05d4\u05d8\u05d9\u05d5\u05d8\u05d4 \u05dc\u05d0\u05dc\u05d9\u05e0\u05d4 \u05d1-Drafts, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05e9\u05d5\u05d1', who: 'dev', ref: 'r3' }, N);
+      const p4 = promiseAdd(JSON.stringify(p1.list), { agent: 'routine-wa-assistant', text: '\u05ea\u05d6\u05db\u05d5\u05e8\u05ea \u05dc\u05db\u05d9\u05d5\u05dc \u05d2\u05dc\u05d0\u05d9 \u05d4\u05d0\u05de\u05d5\u05e0\u05d9\u05d4', who: 'docs', ref: 'r4' }, N);
+      check('near promise: same who and most words = opened, and the answer names the open one that reads the same', p2.similar && p2.similar.id === p1.id && /promise_done/.test(p2.hint) && p2.list.length === 2, p2);
+      check('near promise: another who, or another subject = no warning', !p3.similar && !p4.similar, { p3: p3.similar, p4: p4.similar });
+    }
     const L = JSON.stringify(a.list);
     check('check: not due before its time, due after, daytime only (07-21 Israel)', !promiseCheckDue(L, NM + 29 * 60e3, 11) && (promiseCheckDue(L, NM + 31 * 60e3, 11) || {}).id === a.id && !promiseCheckDue(L, NM + 31 * 60e3, 22) && !promiseCheckDue(L, NM + 31 * 60e3, 6));
     const again = promiseAdd(L, { agent: 'routine-wa-assistant', text: 'the merged PDF', check_in_min: 60 }, '2026-10-21T09:00:00.000Z');

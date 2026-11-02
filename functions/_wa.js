@@ -121,16 +121,20 @@ export function promiseAdd(raw, b, nowIso) {
   const list = plist(raw);
   const same = list.find((x) => x && x.status === 'open' && (ref ? x.ref === ref : x.text === text));
   if (same) { const c = promiseCheckSet(same, b, nowIso); return c.error ? c : { list, id: same.id, check_at: same.check_at || null }; }
+  // 02/11/2026 (the assistant's chat, Michael: "do it: all"): two open promises on one subject with another ref were
+  // found. A near one (same who, most words shared) is not merged (two real promises can read alike): the answer names it
+  const near = list.find((x) => x && x.status === 'open' && promiseNear(x, text, who));
   if (list.length >= PROMISE_MAX && !list.some((x) => x && x.status !== 'open')) return { error: 'too many open promises' };
   const id = 'p-' + nowIso.replace(/\D/g, '').slice(0, 14) + '-' + Math.random().toString(36).slice(2, 6);
   const e = { id, at: nowIso, agent, text, status: 'open' };
   if (who) e.who = who;
   if (ref) e.ref = ref;
-  const c = promiseCheckSet(e, b, nowIso);
+  // 02/11/2026: 4 of 9 open promises had no check_at and never came back; one with no check_in_min is checked in 24 hours
+  const c = promiseCheckSet(e, (b.check_in_min == null || b.check_in_min === '') && Date.parse(nowIso) ? Object.assign({}, b, { check_in_min: PROMISE_DEFAULT_MIN }) : b, nowIso);
   if (c.error) return c;
   list.push(e);
   while (list.length > PROMISE_MAX) { const i = list.findIndex((x) => x.status !== 'open'); list.splice(i >= 0 ? i : 0, 1); }
-  return { list, id, check_at: e.check_at || null };
+  return Object.assign({ list, id, check_at: e.check_at || null }, near ? { similar: { id: near.id, text: near.text }, hint: 'an open promise reads the same: if it is the same one, close this with promise_done and keep the old' } : {});
 }
 // Closes the open promise with this id, or every open one with this ref. closed = the promises closed now.
 export function promiseDone(raw, key, note, nowIso) {
@@ -197,6 +201,16 @@ export function promiseRemindText(due) {
 // 23/10/2026 (Michael in the questionnaire: "do it: fewer follow-up checks"; 18 fires in 5 days): 30 minutes at the
 // earliest and 3 checks a promise, then Michael is told where it stands.
 export const PROMISE_CHECK_MIN = 30, PROMISE_CHECK_MAX_MIN = 2880, PROMISE_CHECKS_MAX = 3;
+export const PROMISE_DEFAULT_MIN = 1440;
+// Near = the same who (or neither has one) and at least 60% of the shorter text's words (3+ letters) in the other. Pure.
+const pwords = (t) => String(t || '').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter((w) => w.length >= 3);
+export function promiseNear(x, text, who) {
+  if (String(x.who || '') !== String(who || '')) return false;
+  const a = pwords(x.text), b = pwords(text);
+  if (a.length < 2 || b.length < 2) return false;
+  const [s, l] = a.length <= b.length ? [a, new Set(b)] : [b, new Set(a)];
+  return s.filter((w) => l.has(w)).length / s.length >= 0.6;
+}
 export const PROMISE_CHECK_HEAD = '[\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea \u05e9\u05ea\u05d6\u05de\u05e0\u05ea, \u05e0\u05d1\u05d3\u05e7 \u05d1\u05e9\u05e8\u05ea]';
 export function promiseCheckSet(p, b, nowIso) {
   if (b.check_in_min == null || b.check_in_min === '') return {};

@@ -2412,7 +2412,7 @@ async function routineDbHandle(context) {
           wa = s.ok ? (s.via || 'sent') : (s.error || 'failed');
         } catch (x) { wa = 'failed'; }
       }
-      return jsonResp({ ok: true, id: r.id || (r.closed && r.closed.map((x) => x.id).join(',')), open: r.list.filter((x) => x.status === 'open').length, wa, check_at: r.check_at || null }, 200, {});
+      return jsonResp(Object.assign({ ok: true, id: r.id || (r.closed && r.closed.map((x) => x.id).join(',')), open: r.list.filter((x) => x.status === 'open').length, wa, check_at: r.check_at || null }, r.similar ? { similar: r.similar, hint: r.hint } : {}), 200, {});
     }
     if (body.op === 'learn' || body.op === 'learn_done') {
       const now = new Date().toISOString();
