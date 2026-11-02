@@ -69,7 +69,7 @@
 - od-read: קריאת קבצים מ-OneDrive
 - OCR: קריאת סריקות, חינמי (Workers AI)
 - claude.js: ה-AI באפליקציה
-- routine-db: 70 פעולות שהסוכנים מותרים בהן: agent_report, agents_pause, agents_resume, assistant_account, cal_invite, cal_invite_ask, cal_move, cal_move_ask, claim, claims, 
+- routine-db: 71 פעולות שהסוכנים מותרים בהן: agent_report, agents_pause, agents_resume, assistant_account, cal_invite, cal_invite_ask, cal_move, cal_move_ask, claim, claims, 
 
 ## המסד
 - מסמכים ותוקף: טבלה docs
@@ -104,6 +104,7 @@
 - זרימה: טיוטות למחיקה: קורא JSON, בודק שזו עדיין טיוטה עם אותו נושא, ומעביר אותה לפריטים שנמחקו (`power-automate-mail.md` זרימה 8)
 - זרימה: זימונים: קורא JSON ויוצר פגישה ביומן של מיכאל עם מוזמנים (אירוע Graph); Outlook שולח את ההזמנות (`power-automate-mail.md` זרימה 9)
 - זרימה: החלפות באתר iso: קורא JSON, מעלה קובץ מ-OneDrive לאתר iso בלי דריסה ומעביר קובץ שם בלי דריסה (SharePoint REST, `power-automate-mail.md` זרימה 10)
+- זרימה: העברות מייל כטיוטה: קורא JSON ויוצר טיוטת העברה של המייל המקורי עם כל הקבצים, כולל zip (Graph createForward); אין שליחה (`mail_forward`, `power-automate-mail.md` זרימה 11)
 - זרימה: קבצים ממיילים ששלחתי: אותן החרגות (על הנמענים) ואותם סוגים כמו הזרימה הראשונה; שומר ב-`_נכנס מהמייל` עם "נשלח" בשם
 
 ## האפליקציה
