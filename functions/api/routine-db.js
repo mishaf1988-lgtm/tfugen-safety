@@ -945,12 +945,15 @@ export function mailGotCheck(b, now) {
   if (!isFinite(t) || t > now + 60000 || t < now - MAIL_GOT_HOURS * 3600000) return { error: 'since: within the last ' + MAIL_GOT_HOURS + ' hours' };
   return { since: t };
 }
+// The time a file was last written: a mail_request on a mail flow 1 already saved overwrites the same name, so
+// createdDateTime stays at the first save (02/11/2026, live: created 22:44, rewritten 05:26 by the request).
+const mailGotAt = (x) => Math.max(Date.parse(x.createdDateTime) || 0, Date.parse(x.lastModifiedDateTime) || 0);
 export function mailGotList(items, since) {
   return (Array.isArray(items) ? items : [])
-    .filter((x) => x && x.file && typeof x.name === 'string' && Date.parse(x.createdDateTime) >= since - 5000)
-    .sort((a, b) => Date.parse(b.createdDateTime) - Date.parse(a.createdDateTime))
+    .filter((x) => x && x.file && typeof x.name === 'string' && mailGotAt(x) >= since - 5000)
+    .sort((a, b) => mailGotAt(b) - mailGotAt(a))
     .slice(0, MAIL_GOT_MAX)
-    .map((x) => ({ name: x.name, size: x.size || 0, at: x.createdDateTime }));
+    .map((x) => ({ name: x.name, size: x.size || 0, at: new Date(mailGotAt(x)).toISOString(), first: x.createdDateTime || null }));
 }
 export const OD_CAL_MOVE = OD_AUTO + '/' + OD_AUTO_DIRS[3], CAL_MOVED_KEY = 'cal_moved', CAL_MOVED_MAX = 30;
 const CAL_T = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
@@ -2706,7 +2709,7 @@ async function routineDbHandle(context) {
       const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
       const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
       const items = [];
-      let next = G + enc(OD_ROOT + OD_INBOX) + ':/children?$select=name,size,file,createdDateTime&$top=200';
+      let next = G + enc(OD_ROOT + OD_INBOX) + ':/children?$select=name,size,file,createdDateTime,lastModifiedDateTime&$top=200';
       for (let i = 0; next && i < 5; i++) {
         const r = await fetch(next, { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) });
         if (!r.ok) return jsonResp({ ok: false, error: 'onedrive ' + r.status }, 200, {});
