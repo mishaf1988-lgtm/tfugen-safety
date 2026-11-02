@@ -151,13 +151,33 @@ console.log('\n9. move an event only on his yes to that question (26/10/2026 ret
 
 console.log('\n9. del_ask: the delete button (28/10/2026, Michael: "do it: a delete button on WhatsApp")');
 {
-  const prev = { ref: 'del:ab12cd34' };
-  const y = fastRoute(m('\u05de\u05d7\u05e7', 1), '', prev), n = fastRoute(m('\u05dc\u05d0', 2), '', prev), q = fastRoute(m('\u05de\u05d4 \u05d6\u05d4?'), '', prev);
+  const prev = { ref: 'del:ab12cd34', text: '\u05dc\u05de\u05d7\u05d5\u05e7 \u05d0\u05ea \u05d4\u05e9\u05d5\u05e8\u05d4? \u05d0\u05d9\u05e8\u05d5\u05e2 01/11/2026, \u05e0\u05e4\u05d9\u05dc\u05d4 \u05d1\u05de\u05d7\u05e1\u05df' };
+  // 02/11/2026: a WhatsApp tap carries its message (about); a /chat tap carries the start of its text (tapped)
+  const delAbout = 'assistant | x | ref del:ab12cd34 | 2026-11-02T08:00:00Z';
+  const y = fastRoute(m('\u05de\u05d7\u05e7', 1), delAbout, prev), n = fastRoute(m('\u05dc\u05d0', 2), delAbout, prev), q = fastRoute(m('\u05de\u05d4 \u05d6\u05d4?'), '', prev);
   check('a tap on "\u05de\u05d7\u05e7" = delete, "\u05dc\u05d0" = no, a question = to the assistant', y && y.kind === 'del' && y.id === 'ab12cd34' && y.yes === true && n && n.kind === 'del' && n.yes === false && (!q || q.kind !== 'del'), { y, n, q });
   { // 29/10/2026 retro: a bare "yes" that happens to follow a delete question (no tap, no reply to it) must not delete
     const bare = ['\u05db\u05df', '\u05d1\u05e1\u05d3\u05e8', '\u05de\u05d7\u05e7', 'ok'].map((t) => fastRoute(m(t), '', prev));
     const about = 'x | ref del:ab12cd34 | \u05de\u05d7\u05e7 \u05d0\u05ea \u05d4\u05e9\u05d5\u05e8\u05d4?', viaReply = fastRoute(m('\u05db\u05df'), about, prev);
     check('delete: a typed yes with no tap and no reply is not a delete; a tap or a reply to that message is', bare.every((r) => !r || r.kind !== 'del') && viaReply && viaReply.kind === 'del' && viaReply.yes === true, { bare, viaReply });
+  }
+  { // 02/11/2026 (retro 29/10/2026 (b)): a tap on an older message's "1" must not delete
+    const tap = (t, c, tapped) => Object.assign(m(t, c), tapped === undefined ? {} : { tapped });
+    const waOld = fastRoute(tap('1. \u05db\u05df', 1), 'assistant | old question | ref hz:5 | 2026-11-01T08:00:00Z', prev);
+    const waLost = fastRoute(tap('\u05de\u05d7\u05e7', 1), '', prev);
+    const chatOld = fastRoute(tap('1. \u05db\u05df', 1, '\u05e9\u05d0\u05dc\u05d4 \u05d9\u05e9\u05e0\u05d4 \u05e2\u05dd \u05db\u05e4\u05ea\u05d5\u05e8\u05d9\u05dd \u05e9\u05dc \u05d4\u05e2\u05d5\u05d6\u05e8'), '', prev);
+    const chatDel = fastRoute(tap('\u05de\u05d7\u05e7', 1, prev.text), '', prev);
+    const chatNo = fastRoute(tap('\u05dc\u05d0', 2, '  ' + prev.text.replace(/ /g, '  ') + ' '), '', prev);
+    const chatShort = fastRoute(tap('\u05de\u05d7\u05e7', 1, '\u05dc\u05de\u05d7\u05d5\u05e7'), '', { ref: 'del:ab12cd34', text: '\u05dc\u05de\u05d7\u05d5\u05e7' });
+    { // security review 02/11/2026: an older delete question with the same first 40 letters is not the newest one
+      const same = prev.text.slice(0, 45);
+      const older = fastRoute(tap('\u05de\u05d7\u05e7', 1, same + ' \u05de\u05e1\u05de\u05da \u05d0\u05d7\u05e8 \u05dc\u05d2\u05de\u05e8\u05d9'), '', prev);
+      check('delete tap in /chat: an older delete question that shares the first 40 letters does not delete the newest one', !older || older.kind !== 'del', older);
+    }
+    check('delete tap: a WhatsApp tap on an older message, or one whose message was not found, does not delete',
+      (!waOld || waOld.kind !== 'del') && (!waLost || waLost.kind !== 'del'), { waOld, waLost });
+    check('delete tap in /chat: only a tap on the delete question itself (same start of text, spaces aside); an old message\'s button and a typed-less tap do not',
+      (!chatOld || chatOld.kind !== 'del') && chatDel && chatDel.kind === 'del' && chatDel.yes === true && chatNo && chatNo.kind === 'del' && chatNo.yes === false && (!chatShort || chatShort.kind !== 'del'), { chatOld, chatDel, chatNo, chatShort });
   }
   check('"\u05de\u05d7\u05e7" with no delete question before it is not a delete', !(fastRoute(m('\u05de\u05d7\u05e7', 1), '', { ref: 'brief' }) || {}).kind || fastRoute(m('\u05de\u05d7\u05e7', 1), '', { ref: 'brief' }).kind !== 'del');
 }
