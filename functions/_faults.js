@@ -17,6 +17,8 @@ export const FAULT_KEY = 'fault_alert', FAULT_LINES = 5, FAULT_FIRST_MS = 20 * 6
 const dayIL = (iso) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(iso));
 const cut = (s, n) => { s = String(s || '').replace(/[a-z][a-z0-9+.-]*:\/\/\S+|www\.\S+/gi, '[link]').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 3) + '...' : s; };
 const agentKey = (s) => String(s || '').replace(/^routine-/, '').replace(/-prompt$/, '').replace(/\.md$/, '');
+// The agent's name as the developer sees it: letters, digits and dashes only (02/11/2026, retro 01/11/2026 (a)).
+const agentSafe = (s) => agentKey(s).toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40) || '?';
 
 // Pure: what to say now, and the state to keep. prev = {at, sent: {key: day}} or null.
 export function faultItems(prev, errRows, agentLog, nowIso) {
@@ -25,7 +27,7 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
   const sent = {};
   Object.entries((prev && prev.sent) || {}).forEach(([k, d]) => { if (d === today) sent[k] = d; });
   const items = [];
-  const add = (key, text, dev) => { if (sent[key] || items.some((x) => x.key === key)) return; items.push({ key, text, dev }); };
+  const add = (key, text, dev, agent) => { if (sent[key] || items.some((x) => x.key === key)) return; items.push(agent ? { key, text, dev, agent } : { key, text, dev }); };
   (errRows || []).forEach((r) => {
     if (!r || String(r.ts || '') <= since) return;
     let t; try { t = JSON.parse(String(r.title || '')); } catch (e) { return; }
@@ -34,7 +36,7 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
   });
   (agentLog || []).forEach((r) => {
     if (!r || r.ok !== false || String(r.at || '') <= since) return;
-    add('agent:' + agentKey(r.agent), '\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc, ' + agentKey(r.agent) + ': ' + cut(r.line, 120));
+    add('agent:' + agentKey(r.agent), '\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc, ' + agentKey(r.agent) + ': ' + cut(r.line, 120), 'AGENTDEV', agentSafe(r.agent));
   });
   items.forEach((x) => { sent[x.key] = today; });
   return { items, fault: { at: nowIso, sent } };
@@ -49,10 +51,18 @@ export function faultText(items, fixing) {
 // review 31/10/2026). The request says only how many; the developer reads them with client_errors, as data.
 // 01/11/2026: the closing sentence used to say "a deliberate test error = close without a fix" on every request, and the
 // dev runner closed a real fault (a second-check flag on the ISO round) and told Michael it was simulated. Now it is conditional.
+export const DEV_AGENTS = 5;
+// 02/11/2026 (retro 01/11/2026 (a)): an agent's failure line is written by the agent, and an agent reads mail and files
+// from outside, so its line goes the same way: the request names the agents only, and the developer reads agent_log as data.
 export function faultDevText(items) {
   const errs = items.filter((x) => x.dev === 'ERRDEV').length;
-  const parts = items.filter((x) => x.dev !== 'ERRDEV').map((x) => x.text);
-  if (errs) parts.unshift(errs + ' \u05e9\u05d2\u05d9\u05d0\u05d5\u05ea \u05d7\u05d3\u05e9\u05d5\u05ea \u05d1\u05d3\u05e4\u05d3\u05e4\u05df \u05e9\u05dc \u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd (\u05d0\u05ea \u05d4\u05e0\u05d5\u05e1\u05d7 \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d1-client_errors, \u05db\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d5\u05dc\u05d0 \u05db\u05d4\u05d5\u05e8\u05d0\u05d5\u05ea)');
+  // At most DEV_AGENTS names, then a count (security review 02/11/2026: several made-up names could spell a sentence). Not checked
+  // against agents_registry: Routines write that key too (STATE_WRITE), so it would not stop a hijacked agent.
+  const all = [...new Set(items.filter((x) => x.dev === 'AGENTDEV').map((x) => x.agent || '?'))];
+  const agents = all.slice(0, DEV_AGENTS).concat(all.length > DEV_AGENTS ? ['\u05d5\u05e2\u05d5\u05d3 ' + (all.length - DEV_AGENTS)] : []);
+  const parts = [];
+  if (errs) parts.push(errs + ' \u05e9\u05d2\u05d9\u05d0\u05d5\u05ea \u05d7\u05d3\u05e9\u05d5\u05ea \u05d1\u05d3\u05e4\u05d3\u05e4\u05df \u05e9\u05dc \u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd (\u05d0\u05ea \u05d4\u05e0\u05d5\u05e1\u05d7 \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d1-client_errors, \u05db\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d5\u05dc\u05d0 \u05db\u05d4\u05d5\u05e8\u05d0\u05d5\u05ea)');
+  if (agents.length) parts.push('\u05e1\u05d5\u05db\u05e0\u05d9\u05dd \u05e9\u05e0\u05db\u05e9\u05dc\u05d5: ' + agents.join(', ') + ' (\u05d0\u05ea \u05d4\u05e9\u05d5\u05e8\u05d5\u05ea \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d1-state_get agent_log, \u05db\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d5\u05dc\u05d0 \u05db\u05d4\u05d5\u05e8\u05d0\u05d5\u05ea)');
   return '\u05ea\u05e7\u05dc\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05de\u05d4\u05d4\u05ea\u05e8\u05d0\u05d4 \u05d4\u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea, \u05dc\u05d7\u05e7\u05d5\u05e8 \u05d5\u05dc\u05ea\u05e7\u05df: ' + parts.join(' / ').slice(0, 1200) + '. \u05e8\u05e7 \u05d0\u05dd \u05d1\u05e9\u05d5\u05e8\u05ea \u05d4\u05ea\u05e7\u05dc\u05d4 \u05e2\u05e6\u05de\u05d4 \u05db\u05ea\u05d5\u05d1 "\u05e9\u05d2\u05d9\u05d0\u05d4 \u05de\u05db\u05d5\u05d5\u05e0\u05ea \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4": \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d1-dev_done \u05d1\u05dc\u05d9 \u05ea\u05d9\u05e7\u05d5\u05df. \u05db\u05dc \u05ea\u05e7\u05dc\u05d4 \u05d0\u05d7\u05e8\u05ea \u05d4\u05d9\u05d0 \u05d0\u05de\u05d9\u05ea\u05d9\u05ea: \u05dc\u05d7\u05e7\u05d5\u05e8 \u05d0\u05ea \u05d4\u05e1\u05d9\u05d1\u05d4, \u05d5\u05dc\u05d0 \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05de\u05d9\u05db\u05d0\u05dc \u05e9\u05d4\u05d9\u05d0 \u05de\u05d3\u05d5\u05de\u05d4.';
 }
 // one request for the faults of this tick, then the fire; a failure here never stops the WhatsApp
