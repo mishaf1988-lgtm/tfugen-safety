@@ -392,7 +392,8 @@ export async function promiseCheck(env, now) {
   let list = []; try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
   const e = list.find((x) => x && x.id === p.id);
   if (!e) return null;
-  e.checks = (e.checks || 0) + 1; e.checked_at = now.toISOString(); delete e.check_at;
+  // 02/11/2026 (security review): a check counts as the day-old reminder too, or promiseDue woke the assistant again minutes later
+  e.checks = (e.checks || 0) + 1; e.checked_at = now.toISOString(); delete e.check_at; if (!e.reminded_at) e.reminded_at = now.toISOString();
   await stateSet(env, PROMISE_KEY, JSON.stringify(list));
   const fr = await fetch(af.url, { method: 'POST', signal: tmo(20000),
     headers: { Authorization: 'Bearer ' + af.token, 'anthropic-beta': 'experimental-cc-routine-2026-04-01', 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
