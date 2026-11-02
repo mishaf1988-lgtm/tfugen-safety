@@ -29,6 +29,7 @@ export const LOG_OPS = {
   cal_move: '\u05d4\u05d6\u05d6\u05ea \u05d0\u05d9\u05e8\u05d5\u05e2 \u05d1\u05d9\u05d5\u05de\u05df',
   cal_invite: '\u05d4\u05d6\u05de\u05e0\u05d4 \u05dc\u05d9\u05d5\u05de\u05df',
   draft_trash: '\u05d8\u05d9\u05d5\u05d8\u05d4 \u05dc\u05e1\u05dc \u05d4\u05de\u05d9\u05d7\u05d6\u05d5\u05e8',
+  mail_forward: '\u05d8\u05d9\u05d5\u05d8\u05ea \u05d4\u05e2\u05d1\u05e8\u05d4 \u05e2\u05dd \u05db\u05dc \u05d4\u05e7\u05d1\u05e6\u05d9\u05dd \u05d1-Outlook',
 };
 
 const short = (t, n) => { t = String(t == null ? '' : t).replace(/\s+/g, ' ').trim(); return t.length > n ? t.substring(0, n - 3) + '...' : t; };

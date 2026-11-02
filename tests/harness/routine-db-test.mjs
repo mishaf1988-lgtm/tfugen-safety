@@ -227,7 +227,7 @@ const callIn = async (body) => {
   })();
   check('od_pull never into the mail-flow folders (draft, file request, inbox, calendar queue, OCR text): those take files through mail_draft / mail_request only (25/10/2026 retro)', (() => {
     const t = (d) => odPullCheck({ agent: 'dev', why: 'to a flow folder', from: 'x/a.txt', dir: d });
-    return OD_TRIGGER_DIRS.length === 10 && OD_TRIGGER_DIRS.every((d) => !!t(d).error) && !!t(OD_DRAFT + '/sub').error && !t('22_x/09_y').error;
+    return OD_TRIGGER_DIRS.length === 11 && OD_TRIGGER_DIRS.every((d) => !!t(d).error) && !!t(OD_DRAFT + '/sub').error && !t('22_x/09_y').error;
   })());
   check('od_mkdir and od_put_pdf refuse every flow-trigger folder, OCR text folder included (01/11/2026, STATUS retro 25/10)', (() => {
     const mk = (parent, name) => odMkdirCheck({ agent: 'dev', why: 'to a flow folder', parent, name });
@@ -1237,7 +1237,7 @@ const callIn = async (body) => {
       for (const m of src.matchAll(/(OD_ROOT \+ '_|\\u05d1\\u05d8\\u05d9\\u05d7\\u05d5\\u05ea\/_(?!\\u05d0\\u05d5\\u05d8\\u05d5|\\u05e0\\u05db\\u05e0\\u05e1|\\u05d8\\u05e7\\u05e1\\u05d8|\\u05d2\\u05e8\\u05e1))/g)) direct.push(pth.basename(f));
     }
     check('no new "_" folder straight under the safety folder: a folder a flow reads is OD_AUTO + "/" + its name (add it to OD_AUTO_DIRS)', tops.length === 0 && direct.length === 0, { tops, direct });
-    check('the seven flow folders are inside OD_AUTO (flow 10, iso swaps: 31/10/2026)', [OD_REQ, OD_DRAFT, OD_CAL_MOVE, OD_DRAFT_TRASH, OD_CAL_INVITE, OD_ISO_SWAP].every((x) => x.indexOf(OD_AUTO + '/') === 0) && OD_AUTO_DIRS.length === 7);
+    check('the eight flow folders are inside OD_AUTO (flow 10, iso swaps: 31/10/2026; flow 11, forwards: 02/11/2026)', [OD_REQ, OD_DRAFT, OD_CAL_MOVE, OD_DRAFT_TRASH, OD_CAL_INVITE, OD_ISO_SWAP].every((x) => x.indexOf(OD_AUTO + '/') === 0) && OD_AUTO_DIRS.length === 8);
   }
 
   console.log('\n4e4b. a promise check-in waits while Michael is in a conversation (26/10/2026)');
@@ -1859,6 +1859,36 @@ const callIn = async (body) => {
       const after = JSON.parse(state.sign_requests || '[]').find((x) => x && x.id === c.json.id);
       check('sign_request: Michael\'s answer saved meanwhile stays (only a request still pending is marked failed)', n === 1 && after && after.status === 'done' && c.json.sent === false, { c: c.json, after, n });
     } finally { globalThis.fetch = f0; graph = g0; raceOnce = null; delete state.sign_requests; delete state.wa_owner_in_at; }
+  }
+
+  // 02/11/2026 (Michael in the assistant's chat: "do it: yes, build it"; DECISIONS 02/11/2026): mail_forward
+  {
+    console.log('\nmail_forward: a forward draft with every attachment (flow 11)');
+    const { forwardRequest, OD_FORWARD, OD_AUTO_DIRS: DIRS } = await import('./_build/routine-db.mjs');
+    const ID = 'AAMkADNmMjhjNWNiLTk4ZTItNDA4Ny1hYTM4LWM3MWJjMTc2MzUyMwBGAAAAAAAa1234567890abcdef';
+    const r = forwardRequest({ message_id: ID, to: 'sharon.a@tapugan.co.il', comment: 'שרון, מצורף.\nמיכאל <x>' });
+    const j = r.file && JSON.parse(r.file);
+    check('forwardRequest: the file holds the mail id, the recipients for createForward and the comment as rtl html (escaped)',
+      j && j.id === ID && j.forward_body.toRecipients[0].emailAddress.address === 'sharon.a@tapugan.co.il' && /^<div dir="rtl">/.test(j.forward_body.comment) && /<br>/.test(j.forward_body.comment) && /&lt;x&gt;/.test(j.forward_body.comment), j);
+    check('forwardRequest: a bad id, no recipient, more than 5, or a 2001-character comment = refused',
+      !!forwardRequest({ message_id: 'short', to: 'a@b.co' }).error && !!forwardRequest({ message_id: ID, to: '' }).error
+      && !!forwardRequest({ message_id: ID, to: 'a@b.co;c@d.co;e@f.co;g@h.co;i@j.co;k@l.co' }).error && !!forwardRequest({ message_id: ID, to: 'a@b.co', comment: 'x'.repeat(2001) }).error);
+    check('the forward folder is its own automation folder (the last one), so no other op writes there', OD_FORWARD.endsWith(DIRS[DIRS.length - 1]) && /העברות/.test(OD_FORWARD));
+    const g0 = graph, puts = [];
+    graph = async (u, o = {}) => {
+      if (/\/me\/messages\//.test(u)) return u.includes(encodeURIComponent(ID)) ? new Response(JSON.stringify({ subject: 'RE: x', hasAttachments: true }), { status: 200 }) : new Response('{}', { status: 404 });
+      if ((o.method || 'GET') === 'PUT') { puts.push(decodeURIComponent(u)); return new Response(JSON.stringify({ size: 300 }), { status: 201 }); }
+      return new Response('{}', { status: 404 });
+    };
+    try {
+      const A = { op: 'mail_forward', agent: 'routine-wa-assistant', why: 'Michael asked to forward the maps to Sharon', message_id: ID, to: 'sharon.a@tapugan.co.il' };
+      const ok1 = await call(A);
+      check('mail_forward: one request file in the forward folder, the subject and attachments in the answer', ok1.json.ok === true && puts.length === 1 && puts[0].includes(OD_FORWARD) && ok1.json.attachments === true && ok1.json.subject === 'RE: x', { j: ok1.json, puts });
+      const noWhy = await call(Object.assign({}, A, { why: '' }));
+      const extra = await call(Object.assign({}, A, { approved: 'בצע' }));
+      const missing = await call(Object.assign({}, A, { message_id: ID.replace('a1234', 'b9999') }));
+      check('mail_forward: no why = 400, an "approved" field = 400 (it only drafts; lesson 169), a mail that is not there = refused, and nothing written', noWhy.status === 400 && extra.status === 400 && missing.json.ok === false && /not found/.test(missing.json.error) && puts.length === 1, { noWhy: noWhy.json, missing: missing.json });
+    } finally { graph = g0; }
   }
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

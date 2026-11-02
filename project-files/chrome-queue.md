@@ -617,3 +617,16 @@
   **נסגר 31/10/2026: דיווח השגיאות עובד.** שתי שורות `client_error` ב-`audit_log` (נבדק ב-SQL): "בדיקת דיווח 2" נשלחה 4 שניות אחרי הזריקה (POST 201 ב-edge logs, 14:50:28 UTC), ו"בדיקת דיווח 31/10" מ-16:25 הגיעה ב-14:48:59 UTC, כשהדף נפתח מחדש: הלשונית עברה ל-Power Automate לפני שהתור נשלח, והתור נשמר בדפדפן ונשלח בטעינה הבאה. כך זה תוכנן, אין תקלה.
 
   **31/10/2026 (כרום):** נעצר במסך הכניסה, אף משתמש לא מחובר בדפדפן. מחכה שמיכאל יתחבר.
+
+- [ ] **C73. זרימה 11: "העברות מייל כטיוטה" עם כל הקבצים (02/11/2026, מיכאל בשאלון בצ'אט "עבודה על העוזר": "בצע: כן, לבנות (מומלץ)"; DECISIONS 02/11/2026).** השרת (`mail_forward`) כבר כותב קובץ בקשה. הזרימה מכינה טיוטת העברה ב-Drafts, ואף פעם לא שולחת. אחרי הבנייה Claude מאמת לבד: בקשת ניסיון על מייל של מיכאל לעצמו, והטיוטה מופיעה ב-Drafts עם הקבצים.
+  ```
+  ב-Power Automate (make.powerautomate.com), בחשבון sviva@tapugan.co.il, צור זרימה אוטומטית חדשה בשם "העברות מייל כטיוטה":
+  1. טריגר: OneDrive for Business > "When a file is created (properties only)". Folder: /שולחן העבודה/ניהול בטיחות/_אוטומציה/_העברות מייל (אם התיקייה לא קיימת, צור אותה ב-OneDrive קודם).
+  2. OneDrive for Business > "Get file content". File: Id מהטריגר.
+  3. Data Operation > "Compose". Inputs (Expression): json(trim(string(body('Get_file_content'))))
+  4. Office 365 Outlook > "Send an HTTP request". Method: POST. URI (Expression): concat('https://graph.microsoft.com/v1.0/me/messages/', outputs('Compose')?['id'], '/createForward'). Body (Expression): outputs('Compose')?['forward_body']. Content-Type: application/json.
+     בדוק ב-Code view שה-URI נכון (בעורך החדש "/" פותח תפריט ונבלע).
+  5. שמור, ודא שהזרימה On, ושה-Flow checker נקי.
+  חשוב: אל תוסיף שום פעולת "Send". createForward יוצר טיוטה בלבד, עם כל הקבצים המצורפים של המייל המקורי.
+  דווח: שם הזרימה, שהיא On, ה-URI כפי שמופיע ב-Code view, ומה נעצר ולמה.
+  ```
