@@ -1246,6 +1246,17 @@ export const OFFICE_ROW = /^[A-Za-z0-9_-]{4,80}$/;
 // stopped on the contradiction. A drill has its own head, which the assistant's step 0-alef-2 knows: answer in the office only.
 // It is logged as drill_in, so it is neither in recent nor in wa_review, and carries the notebook but not the conversation.
 export const DRILL_ROW = /^drill-[A-Za-z0-9_-]{2,70}$/;
+// 02/11/2026 (retro 22/10/2026 (a)): a courier call cut off after the server took it was retried, logged owner_in twice
+// and fired the assistant twice. The log line is now written after the fire and carries the session, and a row that
+// already has a fired line is answered from it with no second fire. The row is checked by OFFICE_ROW/DRILL_ROW first, so it
+// is safe in the query. Pure: the query path and the verdict.
+export function askDupQuery(eventType, channel, row) {
+  return '/rest/v1/notifications_log?select=payload&event_type=eq.' + eventType + '&channel=eq.' + channel + '&payload->>row=eq.' + encodeURIComponent(row) + '&order=ts.desc&limit=5';
+}
+export function askDupOf(rows) {
+  const hit = Array.isArray(rows) ? rows.find((r) => r && r.payload && r.payload.session) : null;
+  return hit ? { status: 'dup', session: hit.payload.session } : null;
+}
 // 01/11/2026 (Michael: "the developer does it alone"): the routine's own prompt lists the first lines it accepts and can
 // be changed only from its own conversation, so a drill rides on the office head it already accepts; the drill- row
 // is what step 0\u05d01 of the assistant reads as a drill (step 0\u05d02).
@@ -2106,9 +2117,9 @@ async function routineDbHandle(context) {
       const now = new Date().toISOString();
       const lr = await fetch(url + '/rest/v1/server_state?key=eq.' + LEARN_KEY + '&select=value', { headers: h, signal: tmo(SB_MS) }).then((x) => x.ok ? x.json() : null).catch(() => null);
       const learned = lr && lr[0] ? learnedLine(lr[0].value, LEARNED_MAX) : '';
-      await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
-        body: JSON.stringify([{ id: 'dr' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now,
-          event_type: 'drill_in', channel: 'drill', payload: { title: text.replace(/\s+/g, ' ').slice(0, 120), text: text.slice(0, 1500), row: body.row, agent: String(body.agent || '') } }]) }).catch(() => null);
+      const dd = await fetch(url + askDupQuery('drill_in', 'drill', body.row), { headers: h, signal: tmo(SB_MS) }).then((x) => x.ok ? x.json() : null).catch(() => null);
+      const dupD = askDupOf(dd);
+      if (dupD) return jsonResp({ ok: true, dup: true, fired: dupD }, 200, {});
       let fired;
       try {
         const fr = await fetch(af.url, { method: 'POST', signal: tmo(GRAPH_MS),
@@ -2117,6 +2128,9 @@ async function routineDbHandle(context) {
         const fj = fr.ok ? await fr.json().catch(() => ({})) : {};
         fired = { status: fr.status, session: (fj && fj.claude_code_session_id) || null };
       } catch (x) { fired = { status: 'network', session: null }; }
+      await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
+        body: JSON.stringify([{ id: 'dr' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now,
+          event_type: 'drill_in', channel: 'drill', payload: { title: text.replace(/\s+/g, ' ').slice(0, 120), text: text.slice(0, 1500), row: body.row, agent: String(body.agent || ''), session: fired.session, fired: fired.status } }]) }).catch(() => null);
       return jsonResp({ ok: fired.status === 200 || fired.status === 201, fired }, 200, {});
     }
     if (body.op === 'office_ask') {
@@ -2131,10 +2145,10 @@ async function routineDbHandle(context) {
       const recent = rr ? recentLine(rr, '', Date.now()) : '';
       const lr = await fetch(url + '/rest/v1/server_state?key=eq.' + LEARN_KEY + '&select=value', { headers: h, signal: tmo(SB_MS) }).then((x) => x.ok ? x.json() : null).catch(() => null);
       const learned = lr && lr[0] ? learnedLine(lr[0].value, LEARNED_MAX) : '';
-      // logged as Michael's own line (channel office), so wa_review and the weekly review see the turn
-      await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
-        body: JSON.stringify([{ id: 'of' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now,
-          event_type: 'owner_in', channel: 'office', payload: { title: text.replace(/\s+/g, ' ').slice(0, 120), text: text.slice(0, 1500), row: body.row } }]) }).catch(() => null);
+      // a retry of a row that already fired: the same answer, no second run (retro 22/10/2026 (a))
+      const od = await fetch(url + askDupQuery('owner_in', 'office', body.row), { headers: h, signal: tmo(SB_MS) }).then((x) => x.ok ? x.json() : null).catch(() => null);
+      const dupO = askDupOf(od);
+      if (dupO) return jsonResp({ ok: true, dup: true, fired: dupO }, 200, {});
       let fired;
       try {
         const fr = await fetch(af.url, { method: 'POST', signal: tmo(GRAPH_MS),
@@ -2143,6 +2157,11 @@ async function routineDbHandle(context) {
         const fj = fr.ok ? await fr.json().catch(() => ({})) : {};
         fired = { status: fr.status, session: (fj && fj.claude_code_session_id) || null };
       } catch (x) { fired = { status: 'network', session: null }; }
+      // logged as Michael's own line (channel office), so wa_review and the weekly review see the turn; after the fire, with
+      // its session, so a retry of the same row finds it (ts is still the time the line came in)
+      await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
+        body: JSON.stringify([{ id: 'of' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now,
+          event_type: 'owner_in', channel: 'office', payload: { title: text.replace(/\s+/g, ' ').slice(0, 120), text: text.slice(0, 1500), row: body.row, session: fired.session, fired: fired.status } }]) }).catch(() => null);
       return jsonResp({ ok: fired.status === 200 || fired.status === 201, fired }, 200, {});
     }
     if (body.op === 'worker_now' || body.op === 'worker_done') {

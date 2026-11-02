@@ -1740,6 +1740,33 @@ const callIn = async (body) => {
     check('cas: five lost races = a clear "try again", nothing written', lost.json.ok === false && /conflict/.test(lost.json.error) && state.promises === keep && n === 5, [lost.json, n]);
   }
 
+  // 02/11/2026 (retro 22/10/2026 (a)): a retried office_ask / drill_ask for a row that already fired does not fire again
+  {
+    const { askDupOf, askDupQuery } = await import('./_build/routine-db.mjs');
+    const E2 = { ...ENV, ASSISTANT_FIRE_URL: 'https://api.anthropic.com/v1/claude_code/routines/trig_A/fire', ASSISTANT_FIRE_TOKEN: 't' };
+    const f0 = globalThis.fetch, logs = [];
+    globalThis.fetch = async (u, o = {}) => {
+      const su = String(u);
+      if (su.startsWith(SB + '/rest/v1/notifications_log') && (o.method || 'GET') === 'POST') { JSON.parse(o.body).forEach((r) => logs.push(r)); return new Response('', { status: 201 }); }
+      const m = /event_type=eq\.(owner_in|drill_in)&channel=eq\.(office|drill)&payload->>row=eq\.([^&]*)/.exec(su);
+      if (m) return new Response(JSON.stringify(logs.filter((r) => r.event_type === m[1] && r.channel === m[2] && r.payload.row === decodeURIComponent(m[3])).map((r) => ({ payload: r.payload }))), { status: 200 });
+      return f0(u, o);
+    };
+    try {
+      for (const [op, row, ev] of [['office_ask', 'dupRow01', 'owner_in'], ['drill_ask', 'drill-dup01', 'drill_in']]) {
+        fires.length = 0;
+        const callE = async (b) => { const r = await onRequest({ request: new Request('https://x/api/routine-db', { method: 'POST', headers: { 'x-routine-key': 'k-123', 'content-type': 'application/json' }, body: JSON.stringify(b) }), env: E2 }); return r.json(); };
+        const a = await callE({ op, agent: 'routine-chat-relay', row, text: 'q' });
+        const b = await callE({ op, agent: 'routine-chat-relay', row, text: 'q' });
+        const mine = logs.filter((r) => r.event_type === ev && r.payload.row === row);
+        check(op + ': a retry of the same row fires once, logs once, and answers ok with the first session (retro 22/10/2026 (a))',
+          a.ok && !a.dup && b.ok && b.dup === true && fires.length === 1 && mine.length === 1 && mine[0].payload.session === fireSession && b.fired.session === fireSession, { a, b, fires: fires.length, mine });
+      }
+      check('askDup: a line with no session (the fire failed) does not block a retry', askDupOf([{ payload: { row: 'x', session: null } }]) === null && askDupOf(null) === null && askDupOf([{ payload: { session: 's1' } }]).session === 's1');
+      check('askDup: the row goes into the query encoded, and only after OFFICE_ROW/DRILL_ROW', /payload->>row=eq\.ab_c-1&/.test(askDupQuery('owner_in', 'office', 'ab_c-1')));
+    } finally { globalThis.fetch = f0; }
+  }
+
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.log('HARNESS ERROR: ' + (e && e.stack || e)); process.exit(1); });
