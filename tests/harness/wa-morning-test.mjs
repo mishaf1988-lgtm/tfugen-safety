@@ -351,6 +351,18 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     check('clip: a cut ends on a whole word, with ...', long === 'aaaa bbbb cccc...' && long.length <= 20, long);
     check('clip: short text unchanged, a dash that is not a repeat stays', clip('a - b', 50) === 'a - b' && clip('VARIOGARD - x', 50) === 'VARIOGARD - x');
   }
+  { // 02/11/2026 (the assistant's chat, Michael: "do it: fix it in the server"): the update of 02/11/2026 07:47, as sent
+    const { notesOpen, itemName } = await import('./_build/wa-morning.mjs');
+    const dev = { agent: 'dev', at: '2026-11-01T19:00:00Z', text: 'תוקן: העוזר יכול עכשיו לשלוח לך בוואטסאפ גם קבצי Word ו-Excel ישנים (.doc/.xls), כמו טופס המינוי לאדם כשיר עם הלוגו.' };
+    const asst = { agent: 'routine-wa-assistant', at: '2026-11-01T17:00:00Z', text: 'הטופס למינוי אדם כשיר (עם הלוגו) הוא קובץ.doc ישן, והשליחה בוואטסאפ לא תומכת בו. הפיתוח יתקן. אשלח כשזה מוכן.' };
+    const other = { agent: 'routine-quality', at: '2026-11-01T16:00:00Z', text: 'נבדקו 60 הודעות, אין שגיאות.' };
+    const kept = notesOpen([dev, asst, other]);
+    check('morning notes: an older note on the same subject is left out once a newer one says it is fixed; other notes stay', kept.length === 2 && kept[0] === dev && kept[1] === other, kept.map((x) => x.agent));
+    check('morning notes: an older "fixed" stays when the newer one on the subject is still open', notesOpen([asst, dev]).length === 2);
+    const b = buildBrief([{ n: 'זוג מאריך קלשונים באורך 1650 מ"מ, כנ"ל', e: '2026-10-29' }], [], '2026-11-02', false, [dev, asst], null, null, null);
+    check('morning brief: the expiry name loses its trailing "כנ"ל", and the closed note is not in it', !/כנ"ל/.test(b) && /מאריך קלשונים באורך 1650/.test(b) && !/הפיתוח יתקן/.test(b) && /תוקן: העוזר/.test(b), b);
+    check('itemName: only a trailing "כנ"ל" (also ״ and ”), nothing else', itemName('X, כנ״ל') === 'X' && itemName('X כנ”ל') === 'X' && itemName('כנ"ל בתחילה') === 'כנ"ל בתחילה');
+  }
   console.log('\nwa-morning-test: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })();
