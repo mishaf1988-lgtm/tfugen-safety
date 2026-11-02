@@ -1,7 +1,7 @@
 // The server's fast lane (20/10/2026, Michael in the questionnaire: "do it: a fast lane in the server").
 // A number 1-4 that answers a hazard alert, and "what is urgent" / "expiries", are answered by wa-hook
 // itself by rules; everything else, and anything unclear, still goes to the assistant.
-import { failText, FAIL_TEXT, ownerInPayload, recentLine, RECENT_MAX, accountCmdOf, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX, joinCandidates, joinedLine, hasNewer, JOIN_MS, fireText, fastDel, DEL_NO, DEL_GONE } from './_build/wa-hook.mjs';
+import { failText, FAIL_TEXT, ownerInPayload, recentLine, RECENT_MAX, accountCmdOf, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX, joinCandidates, joinedLine, hasNewer, JOIN_MS, fireText, fastDel, DEL_NO, DEL_GONE, fastUndo, UNDO_NO, UNDO_GONE } from './_build/wa-hook.mjs';
 import { HAZARD_OPTIONS, hazardAsk, assistantFire, pickFire, accountOf, fireUrlOf } from './_build/_wa.mjs';
 import { rateAgain } from './_build/chat.mjs';
 
@@ -235,6 +235,55 @@ await (async () => {
   check('no request at all: nothing deleted', a === DEL_GONE && !w.calls.some((c) => c.startsWith('DELETE inc')));
   w = db({ undoFail: true }); a = await fastDel(ENV, { id: 'ab12cd34', yes: true }).catch(() => 'threw');
   check('the row cannot be kept: not deleted', !w.calls.some((c) => c.startsWith('DELETE inc')), { a, calls: w.calls });
+})();
+console.log('\n10. undo_ask: restore a deleted row (02/11/2026, Michael: "do it: 200 and restore from the assistant")');
+{
+  const uPrev = { ref: 'undo:cd34ef56', text: '\u05dc\u05d4\u05d7\u05d6\u05d9\u05e8 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e9\u05d5\u05e8\u05d4 \u05e9\u05e0\u05de\u05d7\u05e7\u05d4, \u05d0\u05d9\u05e8\u05d5\u05e2' };
+  const uAbout = 'assistant | x | ref undo:cd34ef56 | 2026-11-02T08:00:00Z';
+  const y = fastRoute(m('\u05d4\u05d7\u05d6\u05e8', 1), uAbout, uPrev), n = fastRoute(m('\u05dc\u05d0', 2), uAbout, uPrev);
+  const bare = fastRoute(m('\u05db\u05df'), '', uPrev), old = fastRoute(Object.assign(m('1', 1), {}), 'assistant | old | ref hz:5 | 2026-11-01T08:00:00Z', uPrev);
+  check('restore: a tap on "\u05d4\u05d7\u05d6\u05e8" = undo yes, "\u05dc\u05d0" = no; a bare yes or a tap on another message is not', y && y.kind === 'undo' && y.id === 'cd34ef56' && y.yes === true && n && n.kind === 'undo' && n.yes === false && (!bare || bare.kind !== 'undo') && (!old || old.kind !== 'undo'), { y, n, bare, old });
+}
+await (async () => {
+  const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv' };
+  const ROW = { id: 'acc26-28', dt: '2026-02-26', d: 'x', s: 'y' };
+  function db(o) {
+    const w = { state: { undo_ask: JSON.stringify(Object.assign({ k: 'cd34ef56', table: 'inc', id: 'acc26-28', at: new Date().toISOString() }, o.ask || {})),
+      undo_log: o.undo !== undefined ? o.undo : JSON.stringify([{ table: 'inc', row: { id: 'other' }, at: '2026-10-01T00:00:00Z' }, { table: 'inc', row: ROW, why: 'w', at: '2026-10-28T17:59:00Z' }]) }, calls: [], inserted: null };
+    globalThis.fetch = async (url, init) => {
+      const u = decodeURIComponent(String(url)), mth = (init && init.method) || 'GET';
+      w.calls.push(mth + ' ' + u.replace(/^.*\/rest\/v1\//, ''));
+      const json = (x, st = 200) => new Response(JSON.stringify(x), { status: st, headers: { 'Content-Type': 'application/json' } });
+      if (u.includes('server_state')) {
+        const key = (/key=eq\.([a-z_]+)/.exec(u) || [])[1];
+        if (mth === 'GET') return json(w.state[key] !== undefined ? [{ value: w.state[key] }] : []);
+        if (mth === 'DELETE') { delete w.state[key]; return new Response(null, { status: 204 }); }
+        JSON.parse(init.body).forEach((x) => { w.state[x.key] = x.value; });
+        return json(JSON.parse(init.body), 201);
+      }
+      if (/\/inc\?id=eq\.acc26-28/.test(u)) return json(o.exists ? [{ id: 'acc26-28' }] : []);
+      if (/\/inc$/.test(u) && mth === 'POST') { if (o.insertFail) return json({ e: 1 }, 409); w.inserted = JSON.parse(init.body)[0]; return json([w.inserted], 201); }
+      return json({ error: 'unexpected ' + u }, 599);
+    };
+    return w;
+  }
+  let w = db({}); let a = await fastUndo(ENV, { id: 'cd34ef56', yes: true });
+  let u = JSON.parse(w.state.undo_log);
+  check('"\u05d4\u05d7\u05d6\u05e8": the whole kept row goes back, then leaves the log (the other entry stays), the request is gone', /\u05d4\u05d5\u05d7\u05d6\u05e8/.test(a || '') && w.inserted && w.inserted.id === 'acc26-28' && w.inserted.dt === '2026-02-26' && u.length === 1 && u[0].row.id === 'other' && !w.state.undo_ask, { a, calls: w.calls });
+  w = db({}); a = await fastUndo(ENV, { id: 'cd34ef56', yes: false });
+  check('"\u05dc\u05d0": nothing inserted, the log untouched', a === UNDO_NO && !w.inserted && JSON.parse(w.state.undo_log).length === 2);
+  w = db({ exists: true }); a = await fastUndo(ENV, { id: 'cd34ef56', yes: true });
+  check('the row is back in the table already: nothing inserted, the copy stays in the log', a === UNDO_GONE && !w.inserted && JSON.parse(w.state.undo_log).length === 2, w.calls);
+  w = db({ insertFail: true }); a = await fastUndo(ENV, { id: 'cd34ef56', yes: true }).catch(() => null);  // the caller's try turns a throw into no answer
+  check('the insert fails: the copy stays in the log', a === null && JSON.parse(w.state.undo_log).length === 2, w.calls);
+  w = db({}); a = await fastUndo(ENV, { id: 'zz99zz99', yes: true });
+  check('a tap on an older question (another key): nothing inserted', a === UNDO_GONE && !w.inserted);
+  w = db({ ask: { at: new Date(Date.now() - 25 * 3600e3).toISOString() } }); a = await fastUndo(ENV, { id: 'cd34ef56', yes: true });
+  check('a request over a day old: nothing inserted', a === UNDO_GONE && !w.inserted);
+  w = db({ ask: { table: 'ncr' } }); a = await fastUndo(ENV, { id: 'cd34ef56', yes: true });
+  check('a stored request for a table off the list (ncr): nothing inserted', a === UNDO_GONE && !w.inserted);
+  w = db({ undo: '{not json' }); a = await fastUndo(ENV, { id: 'cd34ef56', yes: true });
+  check('an unreadable log: nothing inserted, the log untouched', a === null && !w.inserted && w.state.undo_log === '{not json');
 })();
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

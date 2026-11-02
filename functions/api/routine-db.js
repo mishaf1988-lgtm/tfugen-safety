@@ -1645,7 +1645,7 @@ export function tourCloseAskText(row, note) {
 // del_ask; the server keeps the request in DEL_ASK_KEY and sends the row with buttons and ref del:<k>; only Michael's
 // tap on that very message deletes it (wa-hook fastDel), after the whole row goes to UNDO_KEY. No op deletes without
 // the tap, and ncr / ncr_ai / trustee_reports are never in the list.
-export const DEL_ASK_KEY = 'del_ask', DEL_ASK_MS = 24 * 3600e3, UNDO_KEY = 'undo_log', UNDO_MAX = 50;
+export const DEL_ASK_KEY = 'del_ask', DEL_ASK_MS = 24 * 3600e3, UNDO_KEY = 'undo_log', UNDO_MAX = 200;
 export const DEL_TABLES = { inc: 'id,dt,dept,d,s', equip_inspections: 'id,code,n,s,e', docs: 'id,n,c,s,e' };
 export const DEL_ID = /^[A-Za-z0-9_.-]{1,80}$/;
 export function delRefOf(about, prev) {
@@ -1661,6 +1661,27 @@ export function delAskText(table, row, why) {
   const what = table === 'inc' ? [fd(row.dt), one(row.dept, 40), one(row.d, 100)] : table === 'equip_inspections' ? [one(row.code, 40), one(row.n, 100)] : [one(row.n, 100), one(row.c, 40)];
   // 28/10/2026: a forklift code (FL-FN637226) reads as a passport number and wa_me refused the whole ask; such a part is left out
   return '\u05de\u05d7\u05d9\u05e7\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, ' + t + ': ' + what.filter((x) => x && !hasPassport(x)).join(', ') + (row.s ? ' (\u05de\u05e6\u05d1: ' + one(row.s, 30) + ')' : '') + '.\n\u05dc\u05de\u05d4: ' + String(why).slice(0, 200) + '\n\u05d4\u05e9\u05d5\u05e8\u05d4 \u05d4\u05de\u05dc\u05d0\u05d4 \u05e0\u05e9\u05de\u05e8\u05ea \u05d1\u05d2\u05d9\u05d1\u05d5\u05d9 \u05dc\u05e4\u05e0\u05d9 \u05d4\u05de\u05d7\u05d9\u05e7\u05d4.';
+}
+// 02/11/2026 (Michael in the questionnaire: "do it: 200 and restore from the assistant (recommended)"; retro 29/10/2026
+// (e)): undo_log kept 50 deleted rows and a restore needed the main chat with SQL. It keeps UNDO_MAX, and the assistant
+// asks with undo_ask; only Michael's tap on that very message ("ref undo:<k>") puts the row back (wa-hook fastUndo).
+export const UNDO_ASK_KEY = 'undo_ask', UNDO_ASK_MS = 24 * 3600e3;
+export function undoRefOf(about, prev) {
+  const a = String(about || '');
+  if (a) { const m = /\| ref undo:([a-z0-9]{8}) \| [^|]*$/.exec(a); return m ? m[1] : null; }
+  const r = /^undo:([a-z0-9]{8})$/.exec(String((prev && prev.ref) || ''));
+  return r ? r[1] : null;
+}
+// The newest kept copy of a row (table, id), or -1. Pure.
+export function undoPick(undo, table, id) {
+  const u = Array.isArray(undo) ? undo : [];
+  for (let i = u.length - 1; i >= 0; i--) if (u[i] && u[i].table === table && u[i].row && String(u[i].row.id) === String(id)) return i;
+  return -1;
+}
+export function undoAskText(e) {
+  const t = delAskText(e.table, e.row, e.why || '').split('\n')[0].replace(/^\u05de\u05d7\u05d9\u05e7\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, /, '');
+  const d = /^\d{4}-\d{2}-\d{2}/.test(String(e.at || '')) ? String(e.at).substring(8, 10) + '/' + String(e.at).substring(5, 7) + '/' + String(e.at).substring(0, 4) : '';
+  return '\u05dc\u05d4\u05d7\u05d6\u05d9\u05e8 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e9\u05d5\u05e8\u05d4 \u05e9\u05e0\u05de\u05d7\u05e7\u05d4, ' + t + (d ? '\n\u05e0\u05de\u05d7\u05e7\u05d4 \u05d1-' + d + (e.why ? ': ' + String(e.why).slice(0, 150) : '') : '') + '.';
 }
 // 27/10/2026 (the mail triage offered Michael "I will answer by Thursday" to Negev Ecology, which he had sent the day
 // before, and "until when?" in her mail was a quote; it also said "an updated quote" without what changed, and the
@@ -3357,6 +3378,24 @@ async function routineDbHandle(context) {
         body: JSON.stringify([{ key: DEL_ASK_KEY, value: JSON.stringify({ k, table, id, why, at: new Date().toISOString() }), updated_at: new Date().toISOString() }]) });
       body = { op: 'wa_me', agent: body.agent, answers: body.answers, askInternal: true, text: delAskText(table, row, why), choices: ['\u05de\u05d7\u05e7', '\u05dc\u05d0'], ref: 'del:' + k };
     }
+    if (body.op === 'undo_ask') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'table', 'id', 'answers'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const table = String(body.table || ''), id = String(body.id === undefined || body.id === null ? '' : body.id);
+      if (!Object.prototype.hasOwnProperty.call(DEL_TABLES, table)) return jsonResp({ ok: false, error: 'table: ' + Object.keys(DEL_TABLES).join(' | ') }, 400, {});
+      if (!DEL_ID.test(id)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
+      if (String(body.why || '').trim().length < 5) return jsonResp({ ok: false, error: 'why required' }, 400, {});
+      const ur = await fetch(url + '/rest/v1/server_state?select=value&key=eq.' + UNDO_KEY, { headers: h, signal: tmo(SB_MS) });
+      let undo = []; try { undo = JSON.parse(((ur.ok ? await ur.json() : [])[0] || {}).value || '[]'); } catch (e) { undo = []; }
+      const ix = undoPick(undo, table, id);
+      if (ix < 0) return jsonResp({ ok: false, error: 'no kept copy of this row (undo_log keeps the last ' + UNDO_MAX + ' deletes)' }, 200, {});
+      const er = await fetch(url + '/rest/v1/' + table + '?id=eq.' + encodeURIComponent(id) + '&select=id', { headers: h, signal: tmo(SB_MS) });
+      if (!er.ok) return jsonResp({ ok: false, error: 'could not check the table (' + er.status + ')' }, 200, {});
+      if ((await er.json().catch(() => [1])).length) return jsonResp({ ok: false, error: 'the row is in the table now: nothing to restore' }, 200, {});
+      const k = Array.from(crypto.getRandomValues(new Uint8Array(8))).map((x) => 'abcdefghijklmnopqrstuvwxyz0123456789'[x % 36]).join('');
+      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+        body: JSON.stringify([{ key: UNDO_ASK_KEY, value: JSON.stringify({ k, table, id, at: new Date().toISOString() }), updated_at: new Date().toISOString() }]) });
+      body = { op: 'wa_me', agent: body.agent, answers: body.answers, askInternal: true, text: undoAskText(undo[ix]), choices: ['\u05d4\u05d7\u05d6\u05e8', '\u05dc\u05d0'], ref: 'undo:' + k };
+    }
     if (body.op === 'tour_close_ask') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'id', 'note', 'answers'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const id = String(body.id || ''), note = String(body.note || '').replace(/\s+/g, ' ').trim();
@@ -3389,8 +3428,8 @@ async function routineDbHandle(context) {
       // 27/10/2026 retro: calmove:/calinvite:/tourclose: run a pending action on Michael's "\u05d1\u05e6\u05e2"; only the *_ask ops (askInternal) may carry them
       // 28/10/2026 security review: the reply's context line holds the start of the text, so a text that carries
       // "| ref del:<k> |" could pass for the real ask. The *RefOf readers take only the last field, and such a text is refused.
-      if (body.askInternal !== true && /ref\s*(calmove|calinvite|tourclose|del):/i.test(String(body.text || ''))) return jsonResp({ ok: false, error: 'the text carries a reserved ref (del:, calmove:, calinvite:, tourclose:): drop it' }, 400, {});
-      if (body.askInternal !== true && /^(calmove|calinvite|tourclose|del):/i.test(String(body.ref || ''))) return jsonResp({ ok: false, error: 'ref calmove:/calinvite:/tourclose:/del: reserved for the *_ask ops; use another ref' }, 400, {});
+      if (body.askInternal !== true && /ref\s*(calmove|calinvite|tourclose|del|undo):/i.test(String(body.text || ''))) return jsonResp({ ok: false, error: 'the text carries a reserved ref (del:, undo:, calmove:, calinvite:, tourclose:): drop it' }, 400, {});
+      if (body.askInternal !== true && /^(calmove|calinvite|tourclose|del|undo):/i.test(String(body.ref || ''))) return jsonResp({ ok: false, error: 'ref calmove:/calinvite:/tourclose:/del:/undo: reserved for the *_ask ops; use another ref' }, 400, {});
       if (mentionsQuoteValidity(body.text)) return jsonResp({ ok: false, error: 'the text gives a quote validity date: drop it (Michael 26/10 and 27/10/2026: "a quote I send is always valid"); write the supplier, the price, what is included and the difference' }, 400, {});
       const tg = triageGate(body);
       if (tg) return jsonResp({ ok: false, error: tg }, 400, {});

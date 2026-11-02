@@ -18,7 +18,7 @@ import { learnedLabel, LEARNED_MAX } from '../_wa.js';
 import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, hasStatuses, STATUS_KEY, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, assistantFireNow, pickFire, accountOf, ACCOUNT_KEY, forgetAccount, LEARN_KEY, learnedLine, recentLine } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 import { accessToken } from '../_onedrive.js';
-import { onRequest as routineDb, OD_ROOT, isAutoTop, OD_INBOX, delRefOf, DEL_ASK_KEY, DEL_ASK_MS, DEL_TABLES, UNDO_KEY, UNDO_MAX, tourRefOf, TOUR_CLOSE_KEY, TOUR_CLOSE_MS, TOUR_OPEN, TOUR_CLOSED, calInviteRefOf, CAL_INVITE_ASK_KEY, CAL_INVITE_ASK_MS, calMoveRefOf, CAL_MOVE_ASK_KEY, CAL_MOVE_ASK_MS } from './routine-db.js';
+import { onRequest as routineDb, OD_ROOT, isAutoTop, OD_INBOX, delRefOf, DEL_ASK_KEY, DEL_ASK_MS, DEL_TABLES, UNDO_KEY, UNDO_MAX, undoRefOf, undoPick, UNDO_ASK_KEY, UNDO_ASK_MS, tourRefOf, TOUR_CLOSE_KEY, TOUR_CLOSE_MS, TOUR_OPEN, TOUR_CLOSED, calInviteRefOf, CAL_INVITE_ASK_KEY, CAL_INVITE_ASK_MS, calMoveRefOf, CAL_MOVE_ASK_KEY, CAL_MOVE_ASK_MS } from './routine-db.js';
 import { SIGN_KEY, signRefOf, signAnswer, signTake, signMark, signRun, signDoneText, SIGN_CANCEL_TEXT, SIGN_EXPIRED_TEXT, SIGN_DONE_TEXT } from '../_sign.js';
 
 export const FAIL_TEXT = '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05dc\u05e2\u05d5\u05d6\u05e8. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.';
@@ -436,6 +436,9 @@ export function fastRoute(m, about, prev) {
   // message (about); a tap whose message was not found is not read against the newest one. In /chat about is always
   // empty, so the page sends the start of the tapped message (m.tapped) and it must be the delete question (prev).
   if (did && (about || tapIsPrev(m, prev))) { const yes = signAnswer(m); if (yes !== null) return { kind: 'del', id: did, yes }; }
+  // 02/11/2026: an answer to "restore this row?" (routine-db undo_ask): the same rule as a delete, a tap on that very question
+  const uid = undoRefOf(about, prev);
+  if (uid && (about || tapIsPrev(m, prev))) { const yes = signAnswer(m); if (yes !== null) return { kind: 'undo', id: uid, yes }; }
   // 26/10/2026: an answer to "close tour finding <n>?" (routine-db tour_close_ask); only a yes / no, else the assistant
   const tid = tourRefOf(about, prev);
   if (tid) { const yes = signAnswer(m); if (yes !== null) return { kind: 'tour_close', id: tid, yes }; }
@@ -497,7 +500,37 @@ export async function fastDel(env, r) {
     body: JSON.stringify([{ key: UNDO_KEY, value: JSON.stringify(undo.slice(-UNDO_MAX)), updated_at: new Date().toISOString() }]) });
   if (!Array.isArray(kept) || !kept.length) return null;
   const gone = await sbJson(env, q, { method: 'DELETE', headers: { Prefer: 'return=representation' } });
-  return Array.isArray(gone) && gone.length === 1 ? '\u05e0\u05de\u05d7\u05e7 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4. \u05d4\u05e9\u05d5\u05e8\u05d4 \u05d4\u05de\u05dc\u05d0\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 \u05d1\u05d2\u05d9\u05d1\u05d5\u05d9, \u05d5\u05d0\u05dd \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05d7\u05d6\u05d9\u05e8 \u05d0\u05d5\u05ea\u05d4, \u05db\u05ea\u05d5\u05d1 \u05dc\u05e2\u05d5\u05d6\u05e8 \u05d5\u05d4\u05e4\u05d9\u05ea\u05d5\u05d7 \u05d9\u05d7\u05d6\u05d9\u05e8.' : null;
+  return Array.isArray(gone) && gone.length === 1 ? '\u05e0\u05de\u05d7\u05e7 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4. \u05d4\u05e9\u05d5\u05e8\u05d4 \u05d4\u05de\u05dc\u05d0\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 \u05d1\u05d2\u05d9\u05d1\u05d5\u05d9, \u05d5\u05d0\u05dd \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05d7\u05d6\u05d9\u05e8 \u05d0\u05d5\u05ea\u05d4, \u05db\u05ea\u05d5\u05d1 \u05dc\u05e2\u05d5\u05d6\u05e8 "\u05dc\u05d4\u05d7\u05d6\u05d9\u05e8" \u05d5\u05ea\u05d0\u05e9\u05e8 \u05d1\u05dc\u05d7\u05d9\u05e6\u05d4.' : null;
+}
+export const UNDO_NO = '\u05dc\u05d0 \u05d4\u05d5\u05d7\u05d6\u05e8. \u05d4\u05e9\u05d5\u05e8\u05d4 \u05e0\u05e9\u05d0\u05e8\u05d4 \u05d1\u05d2\u05d9\u05d1\u05d5\u05d9.', UNDO_GONE = '\u05d1\u05e7\u05e9\u05ea \u05d4\u05d4\u05d7\u05d6\u05e8\u05d4 \u05db\u05d1\u05e8 \u05dc\u05d0 \u05d1\u05ea\u05d5\u05e7\u05e3. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d1\u05e7\u05e9 \u05de\u05d4\u05e2\u05d5\u05d6\u05e8 \u05e9\u05d5\u05d1.';
+// 02/11/2026: Michael's tap on "restore this row?" (routine-db undo_ask). The request must be the one this message carried
+// and under a day old; the row goes back only if it is not in the table, and leaves the log only after it is back.
+export async function fastUndo(env, r) {
+  const rows = await sbJson(env, 'server_state?key=eq.' + UNDO_ASK_KEY + '&select=value');
+  let st = null; try { st = JSON.parse(rows && rows[0] ? rows[0].value : 'null'); } catch (x) { st = null; }
+  if (!st || st.k !== r.id || Date.now() - Date.parse(st.at) > UNDO_ASK_MS || !Object.prototype.hasOwnProperty.call(DEL_TABLES, st.table)) return UNDO_GONE;
+  await sbJson(env, 'server_state?key=eq.' + UNDO_ASK_KEY, { method: 'DELETE' });
+  if (!r.yes) return UNDO_NO;
+  const ur = await sbJson(env, 'server_state?key=eq.' + UNDO_KEY + '&select=value');
+  let undo = []; try { undo = JSON.parse(ur && ur[0] ? ur[0].value : '[]'); } catch (x) { return null; }
+  if (!Array.isArray(undo)) return null;
+  const ix = undoPick(undo, st.table, st.id);
+  if (ix < 0) return UNDO_GONE;
+  const now = await sbJson(env, st.table + '?id=eq.' + encodeURIComponent(st.id) + '&select=id');
+  if (!Array.isArray(now) || now.length) return UNDO_GONE;
+  const back = await sbJson(env, st.table, { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify([undo[ix].row]) });
+  if (!Array.isArray(back) || back.length !== 1) return null;
+  // security review 02/11/2026: read the log again just before writing, so a delete kept meanwhile (fastDel) is not lost;
+  // an unreadable log is left as it is (the row is back, its copy simply stays)
+  const ur2 = await sbJson(env, 'server_state?key=eq.' + UNDO_KEY + '&select=value');
+  let now2 = null; try { now2 = JSON.parse(ur2 && ur2[0] ? ur2[0].value : '[]'); } catch (x) { now2 = null; }
+  const ix2 = Array.isArray(now2) ? undoPick(now2, st.table, st.id) : -1;
+  if (ix2 >= 0) {
+    now2.splice(ix2, 1);
+    await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([{ key: UNDO_KEY, value: JSON.stringify(now2), updated_at: new Date().toISOString() }]) });
+  }
+  return '\u05d4\u05d5\u05d7\u05d6\u05e8 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4. \u05d4\u05e9\u05d5\u05e8\u05d4 \u05d7\u05d6\u05e8\u05d4 \u05db\u05de\u05d5 \u05e9\u05d4\u05d9\u05d9\u05ea\u05d4 \u05dc\u05e4\u05e0\u05d9 \u05d4\u05de\u05d7\u05d9\u05e7\u05d4.';
 }
 async function fastTourClose(env, r) {
   const rows = await sbJson(env, 'server_state?key=eq.' + TOUR_CLOSE_KEY + '&select=value');
@@ -784,6 +817,7 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
       ref = 'sign-mail';
     }
     else if (fr0.kind === 'del') { ans = await fastDel(env, fr0); ref = 'del-done'; }
+    else if (fr0.kind === 'undo') { ans = await fastUndo(env, fr0); ref = 'undo-done'; }
     else if (fr0.kind === 'tour_close') { ans = await fastTourClose(env, fr0); ref = 'tourclose-done'; }
     else if (fr0.kind === 'cal_invite') { ans = await fastCalInvite(env, fr0); ref = 'calinvite-done'; }
     else if (fr0.kind === 'cal_move') { ans = await fastCalMove(env, fr0); ref = 'calmove-done'; }
