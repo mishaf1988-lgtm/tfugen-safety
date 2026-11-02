@@ -340,6 +340,9 @@ export function devInboxDone(raw, id, note, nowIso) {
   try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
   const x = Array.isArray(list) && list.find((y) => y && y.id === id);
   if (!x) return { error: 'no such request' };
+  // 02/11/2026 (review of #2467; DECISIONS 26/10/2026: dev_done was called twice at 25/10 11:23): a request already
+  // closed stays as it was, so a second call writes nothing, logs nothing and sends Michael nothing.
+  if (x.status === 'done') return { list, already: true };
   x.status = 'done'; x.done_at = nowIso; x.note = String(note || '').slice(0, 300);
   return { list };
 }
@@ -2092,11 +2095,14 @@ async function routineDbHandle(context) {
       // goes through stateCas: only if the row is still the one read, else read again and redo (ideas-lab 12).
       let r = body.op === 'dev_request' ? devInboxAdd(raw, body, now) : devInboxDone(raw, String(body.id || ''), body.note, now);
       if (r.error) return jsonResp({ ok: false, error: r.error }, 400, {});
+      const doneAlready = () => jsonResp({ ok: true, id: body.id, already: true, open: r.list.filter((x) => x && x.status === 'open').length, wa: null }, 200, {});
+      if (r.already) return doneAlready();
       const cw = await stateCas(url, h, DEV_INBOX_KEY, (cur) => {
         r = body.op === 'dev_request' ? devInboxAdd(cur, body, now) : devInboxDone(cur, String(body.id || ''), body.note, now);
-        return r.error ? { write: false } : { value: JSON.stringify(r.list) };
+        return r.error || r.already ? { write: false } : { value: JSON.stringify(r.list) };
       }, () => tmo(SB_MS));
       if (r.error) return jsonResp({ ok: false, error: r.error }, 400, {});
+      if (r.already) return doneAlready();
       if (!cw.written) return jsonResp({ ok: false, error: 'write ' + (cw.status || (cw.conflict ? 'conflict' : 'failed')) }, 200, {});
       let fired = null;
       const ft = body.op === 'dev_request' && r.created ? devFireTarget(env) : null;
