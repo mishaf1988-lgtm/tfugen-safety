@@ -40,7 +40,7 @@ const ilWhen = (iso) => {
 };
 
 // What the line says about the target: the fields a write op carries, in a fixed order, never the file bytes.
-const DETAIL_FIELDS = ['dir', 'name', 'path', 'from', 'to', 'move_to', 'replaced_by', 'keep', 'subject', 'kind'];
+const DETAIL_FIELDS = ['dir', 'name', 'path', 'from', 'to', 'move_to', 'replaced_by', 'keep', 'subject', 'kind', 'paths', 'message_id'];
 export function logDetails(body) {
   const out = [];
   DETAIL_FIELDS.forEach((k) => {

@@ -17,6 +17,8 @@ const NOW = '2026-11-01T23:10:00.000Z';
 { // not a write op: nothing
   check('a read op gives no line', logLine({ op: 'select', table: 'docs' }, NOW) === null);
   check('no op gives no line', logLine({}, NOW) === null && logLine(null, NOW) === null);
+  check('the log line names the file for ocr_txt (paths) and the mail for mail_request (message_id)', /a\/1\.pdf/.test(logLine({ op: 'ocr_txt', agent: 'x', paths: ['a/1.pdf'] }, '2026-11-02T06:00:00Z')[3]) && /message_id: AAMk/.test(logLine({ op: 'mail_request', agent: 'x', message_id: 'AAMk123' }, '2026-11-02T06:00:00Z')[3]));
+  check('the log wrapper looks at the request before it clones a response (a read op is not parsed)', /reqBody = await copy\.json\(\)/.test(fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8')));
   check('the OneDrive and calendar writes are logged too (retro 02/11/2026)', ['ocr_txt', 'mail_request', 'cal_move', 'cal_invite'].every((op) => logLine({ op, agent: 'x' }, '2026-11-02T06:00:00Z') !== null));
   check('every write op in routine-db is a known op name', Object.keys(LOG_OPS).every((op) => fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8').indexOf("body.op === '" + op + "'") >= 0));
 }

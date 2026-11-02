@@ -53,12 +53,26 @@ export function readZip(bytes) {
   return out;
 }
 
-export async function entryText(e) {
+export async function entryText(e, max) {
   if (e.text != null) return e.text;
   if (e.method === 0) return dec.decode(e.raw);
   if (e.method !== 8) throw new Error('unsupported zip method ' + e.method);
   const stream = new Blob([e.raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-  return dec.decode(new Uint8Array(await new Response(stream).arrayBuffer()));
+  if (!(max > 0)) return dec.decode(new Uint8Array(await new Response(stream).arrayBuffer()));
+  // with a cap: read chunk by chunk and stop at the cap (a zip directory can claim a small size for a huge entry)
+  const rd = stream.getReader(), chunks = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await rd.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > max) { try { await rd.cancel(); } catch (x) { /* already closed */ } throw new Error('zip entry larger than ' + max + ' bytes'); }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(total);
+  let o = 0;
+  for (const c of chunks) { out.set(c, o); o += c.byteLength; }
+  return dec.decode(out);
 }
 
 async function deflate(u8) {

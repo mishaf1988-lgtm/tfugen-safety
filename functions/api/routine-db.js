@@ -1890,9 +1890,12 @@ export async function onRequest(context) {
   const res = await routineDbHandle(context);
   if (copy && res.status === 200) {
     try {
-      const out = await res.clone().json();
-      const body = out && out.ok === true ? await copy.json() : null;
-      const row = body && logLine(body, new Date().toISOString());
+      // the request first: a read op (select, wa_media, pdf_read) is not cloned and parsed at all (retro 02/11/2026)
+      const reqBody = await copy.json().catch(() => null);
+      const row0 = reqBody && logLine(reqBody, new Date().toISOString());
+      const out = row0 ? await res.clone().json() : null;
+      const body = out && out.ok === true ? reqBody : null;
+      const row = body && row0;
       const env = context.env;
       if (row && env.SUPABASE_SERVICE_ROLE_KEY) {
         const url = env.SUPABASE_URL || SB_DEFAULT, k = env.SUPABASE_SERVICE_ROLE_KEY;
@@ -3357,7 +3360,8 @@ async function routineDbHandle(context) {
               const parts = {};
               if (buf.byteLength <= DOC_MAX_BYTES) {
                 const es = readZip(buf).filter((e) => /^word\/(document|header\d*|footer\d*)\.xml$/.test(e.name) && e.usize <= DOC_PART_MAX).slice(0, 12);
-                for (const e of es) parts[e.name] = await entryText(e);
+                // the size in the zip directory is the file's own claim: the inflate itself is capped (retro 02/11/2026)
+                for (const e of es) parts[e.name] = await entryText(e, DOC_PART_MAX);
               }
               const de = Object.keys(parts).length &&  docMarksError(docMarks(parts, sp.rel.split('/').pop()));
               if (de) return jsonResp({ ok: false, error: de }, 400, {});
