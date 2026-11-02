@@ -7,10 +7,12 @@ questionnaire: "do it: words that learn by themselves"). Run weekly by the retro
   python3 tools/domain-gaps.py /tmp/wa.json mail=מייל iso=טופס   # the same with candidate words added (nothing written)
 
 Only Michael's own requests: more than 30 characters (not a button), not a test ("[..." at the start). The match is
-the server's (functions/_domains.js): a branch word anywhere in the lower-cased text. Exit 3 when a candidate word
-would make one branch load on more than MAX_SHARE of the requests (a word that is too common), else 0.
+the server's (functions/_domains.js, tools/domain_match.py): a branch word anywhere in the lower-cased text, or one letter off. Exit 3 when a candidate word
+adds requests to a branch that then loads on more than MAX_SHARE of them (a word that is too common), else 0.
 """
 import json, os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import domain_match as dm  # the same match as the hook and the server, with one-letter typos (02/11/2026)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MAX_SHARE = 0.4
@@ -23,10 +25,16 @@ def requests(rows):
 
 
 def report(texts, idx, extra):
-    words = {k: [w.lower() for w in v["words"]] + [w.lower() for kk, w in extra if kk == k] for k, v in idx.items() if not k.startswith("_")}
-    hits = {k: sum(1 for t in texts if any(w in t for w in ws)) for k, ws in words.items()}
-    none = [t for t in texts if not any(w in t for ws in words.values() for w in ws)]
-    return hits, none
+    ix = {k: dict(v, words=list(v["words"]) + [w for kk, w in extra if kk == k]) for k, v in idx.items() if not k.startswith("_")}
+    hit = {k: 0 for k in ix}
+    none = []
+    for t in texts:
+        bs = dm.branches(t, ix)
+        for k, _, _ in bs:
+            hit[k] += 1
+        if not bs:
+            none.append(t)
+    return hit, none
 
 
 def main(argv):
@@ -49,7 +57,11 @@ def main(argv):
     print("no branch:")
     for t in none:
         print("  - " + t.replace("\n", " / ")[:160])
-    return 3 if extra and any(h / n > MAX_SHARE for h in hits.values()) else 0
+    base, _ = report(texts, idx, [])
+    grew = [k for k, _ in extra if hits[k] > base[k] and hits[k] / n > MAX_SHARE]
+    if grew:
+        print("too common: " + ", ".join(sorted(set(grew))) + " would load on more than %d%% of the requests" % round(100 * MAX_SHARE))
+    return 3 if grew else 0
 
 
 if __name__ == "__main__":
