@@ -67,7 +67,7 @@ const TK = [
       if (u.startsWith(SB + '/rest/v1/tasks')) return json(TK);
       if (u.startsWith('https://graph.microsoft.com/')) {
         w.calls.push(mth + ' ' + d);
-        if (mth === 'GET' && d.includes(BOARD + '?')) return o.noBoard ? json({}, 404) : json({ id: 'B1', file: {} });
+        if (mth === 'GET' && d.includes(BOARD + '?')) return o.noBoard ? json({}, 404) : json({ id: 'B1', file: {}, parentReference: { id: 'H1' } });
         if (mth === 'GET' && d.includes(ARCHIVE + '?')) return o.noArchive ? json({}, 404) : json({ id: 'A1', folder: {} });
         if (mth === 'GET') return json({ id: 'P1' });
         if (mth === 'POST') return json({ id: 'A2', folder: {} }, 201);
@@ -102,6 +102,13 @@ const TK = [
   await onRequest({ request: req(S), env: ENV });
   s = JSON.parse(w.state[STATE_KEY] || '{}');
   check('the move fails: no new board over the old one, ok false with the reason', !w.calls.some((c) => c.startsWith('PUT')) && s.ok === false && /archive move 423/.test(s.error), s);
+  // retro 29/10/2026 (e): the new board fails to write after the old one was archived: the old one goes back
+  w = world({ putFail: true });
+  await onRequest({ request: req(S), env: ENV });
+  s = JSON.parse(w.state[STATE_KEY] || '{}');
+  { const pm = w.calls.filter((c) => c.startsWith('PATCH'));
+    check('the write fails after the archive move: the old board moves back to its place (a second move, never over a file), ok false says so',
+      pm.length === 2 && /conflictBehavior=fail/.test(pm[1]) && s.ok === false && /old board is back in place/.test(s.error), { calls: w.calls, s }); }
   w = world({ noArchive: true });
   await onRequest({ request: req(S), env: ENV });
   check('no archive folder: made once, then the move', w.calls.some((c) => c.startsWith('POST')) && w.calls.some((c) => c.startsWith('PATCH')), w.calls);
