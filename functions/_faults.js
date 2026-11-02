@@ -11,7 +11,8 @@
 import { stateGet, stateSet } from './_onedrive.js';
 import { ownerWa, sendToOwner, ownerWindowOpen } from './_wa.js';
 import { SB_LIVE, tmo } from './_shared.js';
-import { DEV_INBOX_KEY, devInboxAdd, devFireTarget, devFireText } from './api/routine-db.js';
+import { DEV_INBOX_KEY, devInboxAdd, devInboxFired, devFireTarget, devFireText } from './api/routine-db.js';
+import { stateCas } from './_cas.js';
 
 export const FAULT_KEY = 'fault_alert', FAULT_LINES = 5, FAULT_FIRST_MS = 20 * 60e3;
 const dayIL = (iso) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(iso));
@@ -98,11 +99,12 @@ async function openFix(env, url, k, items, nowIso, fireOk) {
   // "the developer is fixing it" only while every cited request is still open; a closed one was answered already
   // (security review 02/11/2026: a closed id must not make the message promise a fix nobody is doing)
   if (!todo.length) return { ok: true, fired: false, covered: faultTodo(items, (Array.isArray(list0) ? list0 : []).filter((x) => x && x.status === 'open')).length === 0 };
-  const r = devInboxAdd(raw, { agent: 'fault-alert', text: faultDevText(todo) }, nowIso);
+  // security review 02/11/2026: through stateCas, so a request saved meanwhile is not dropped
+  let r = devInboxAdd(raw, { agent: 'fault-alert', text: faultDevText(todo) }, nowIso);
   if (r.error) return { ok: false, error: r.error };
-  const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify([{ key: DEV_INBOX_KEY, value: JSON.stringify(r.list), updated_at: nowIso }]), signal: tmo(10000) }).catch(() => null);
-  if (!w || !w.ok) return { ok: false, error: 'dev_inbox write' };
+  const w = await stateCas(url, h, DEV_INBOX_KEY, (cur) => { r = devInboxAdd(cur, { agent: 'fault-alert', text: faultDevText(todo) }, nowIso); return r.error ? { write: false } : { value: JSON.stringify(r.list) }; }, () => tmo(10000)).catch(() => null);
+  if (r.error) return { ok: false, error: r.error };
+  if (!w || !w.written) return { ok: false, error: 'dev_inbox write' };
   const ft = r.created && fireOk ? devFireTarget(env) : null;
   if (!ft) return { ok: true, id: r.id, fired: false };
   const e = r.list.find((x) => x && x.id === r.id);
@@ -113,8 +115,7 @@ async function openFix(env, url, k, items, nowIso, fireOk) {
     const fj = fr.ok ? await fr.json().catch(() => ({})) : {};
     if (fj && fj.claude_code_session_id) {
       e.fired_session = fj.claude_code_session_id;
-      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify([{ key: DEV_INBOX_KEY, value: JSON.stringify(r.list), updated_at: nowIso }]), signal: tmo(10000) }).catch(() => null);
+      await stateCas(url, h, DEV_INBOX_KEY, (cur) => { const l = devInboxFired(cur, r.id, fj.claude_code_session_id); return l ? { value: JSON.stringify(l) } : { write: false }; }, () => tmo(10000)).catch(() => null);
     }
     return { ok: true, id: r.id, fired: fr.ok };
   } catch (x) { return { ok: true, id: r.id, fired: false }; }

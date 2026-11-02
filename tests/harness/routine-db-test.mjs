@@ -1823,6 +1823,19 @@ const callIn = async (body) => {
     const lost = await call({ op: 'promise', agent: 'wa-test', text: 'never gets written text' });
     globalThis.fetch = orig;
     check('cas: five lost races = a clear "try again", nothing written', lost.json.ok === false && /conflict/.test(lost.json.error) && state.promises === keep && n === 5, [lost.json, n]);
+    // retro 21/10/2026 (c): dev_inbox and agent_log go through the same cas
+    state.agent_log = JSON.stringify([{ agent: 'x', at: '2026-11-01T00:00:00Z', ok: true, line: 'old' }]); stateVer.agent_log = 'v1';
+    raceOnce = (k) => { if (k !== 'agent_log') return; const l = JSON.parse(state[k]); l.push({ agent: 'other', at: '2026-11-02T00:00:00Z', ok: true, line: 'saved meanwhile' }); state[k] = JSON.stringify(l); stateVer[k] = 'v-other'; };
+    const ar = await call({ op: 'agent_report', agent: 'routine-quality', ok: true, line: '02/11/2026: the race test line' });
+    const al = JSON.parse(state.agent_log).map((x) => x.line);
+    check('cas: agent_report keeps a report saved in between (before: the second write dropped it)', ar.json.ok === true && al.includes('saved meanwhile') && al.some((x) => /race test line/.test(x)), { j: ar.json, al });
+    const inboxBefore = state.dev_inbox;
+    raceOnce = (k) => { if (k !== 'dev_inbox') return; const l = JSON.parse(state[k] || '[]'); l.push({ id: 'dev-other-1', at: new Date().toISOString(), agent: 'other', text: 'another request saved meanwhile', status: 'open' }); state[k] = JSON.stringify(l); stateVer[k] = 'v-dev-other'; };
+    if (!state.dev_inbox) { state.dev_inbox = '[]'; stateVer.dev_inbox = 'v0'; }
+    const dr = await call({ op: 'dev_request', agent: 'routine-quality', text: 'a new request for the race test, long enough to pass' });
+    const di = JSON.parse(state.dev_inbox).map((x) => x.text);
+    check('cas: dev_request keeps a request saved in between', dr.json.ok === true && di.includes('another request saved meanwhile') && di.some((x) => /race test/.test(x)), { j: dr.json, di });
+    raceOnce = null; if (inboxBefore === undefined) delete state.dev_inbox; else state.dev_inbox = inboxBefore;
   }
 
   // 02/11/2026 (retro 22/10/2026 (a)): a retried office_ask / drill_ask for a row that already fired does not fire again
