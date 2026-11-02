@@ -23,7 +23,7 @@ def build():
             '// The line for the assistant\'s fire text; empty when no branch matches.\n'
             'export function domainLine(text) {\n'
             '  const ds = domainsOf(text);\n'
-            "  return ds.length ? 'domain (read first, before any step: the branch rules, its controlled forms and its laws): ' + ds.map((d) => d.file).join(', ') : '';\n"
+            "  return ds.length ? 'domain (read first, before any step: the checklist at the top of the branch file, then only the lines of the branch file and of its rules file that hold words of this message, grep -i; the whole file when you make a document or the lines do not answer): ' + ds.map((d) => d.file + ' + project-files/domains/rules/' + d.key + '.md').join(', ') : '';\n"
             '}\n'
             '// The controlled forms of every branch (paths under the desktop), checked weekly by routine-db forms_check.\n'
             'export const DOMAIN_FORMS = DOMAINS.flatMap((d) => d.forms.map((path) => ({ domain: d.key, path })));\n')
