@@ -486,6 +486,14 @@ const callIn = async (body) => {
       { // 01/11/2026 (mechanism 2): a Word file the assistant saved keeps the controlled form's marks
         const { docMarks, docMarksError } = await import('./_build/routine-db.mjs');
         const { readZip, entryText } = await import('./_build/_xlsxpatch.mjs');
+        { // 02/11/2026 (retro): a zip entry that claims little and inflates to a lot is stopped at the cap
+          const zeros = new Uint8Array(6 * 1048576);
+          const raw = new Uint8Array(await new Response(new Blob([zeros]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());
+          let capped = false; try { await entryText({ method: 8, raw, usize: 100 }, 1048576); } catch (x) { capped = /larger than/.test(String(x && x.message)); }
+          const small = await entryText({ method: 8, raw: new Uint8Array(await new Response(new Blob([new TextEncoder().encode('abc')]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer()), usize: 3 }, 1048576);
+          check('the parts of one document share one budget (DOC_TOTAL_MAX), not 20MB each', /let budget = DOC_TOTAL_MAX/.test(readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8')));
+          check('entryText with a cap stops a bomb that claims a small size, and still reads a small entry', capped && small === 'abc');
+        }
         const partsOf = async (f) => { const o = {}; for (const e of readZip(new Uint8Array(readFileSync(new URL('../../f/' + f, import.meta.url))))) if (/^word\/(document|header\d*|footer\d*)\.xml$/.test(e.name)) o[e.name] = await entryText(e); return o; };
         const real = ['\u05e0\u05d5\u05d4\u05dc 08 - \u05d4\u05d3\u05e8\u05db\u05d4 \u05d4\u05e1\u05de\u05db\u05d4 \u05d5\u05db\u05e9\u05d9\u05e8\u05d5\u05ea - 19.04.2026.docx', '\u05e0\u05d5\u05d4\u05dc 35 - \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd - 12.03.2025.docx'];
         let realOk = true;
@@ -1140,6 +1148,7 @@ const callIn = async (body) => {
       const said = '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e7\u05e8\u05d5\u05d0: \u05d4\u05e9\u05d9\u05e8\u05d5\u05ea \u05d4\u05d7\u05d6\u05d9\u05e8 \u05e9\u05d0\u05d9\u05df \u05d9\u05ea\u05e8\u05ea \u05e7\u05e8\u05d3\u05d9\u05d8 \u05dc-API.';
       const w = await call({ op: 'wa_me', agent: 'routine-wa-assistant', text: said });
       check('wa_me: the 01/11 line about API credit is refused, and the error points to ocr_txt', asksApiCredit(said) && w.status === 400 && /ocr_txt/.test(w.json.error), w.json);
+      check('..."Rapid" and "capital" are not API (retro 02/11/2026)', !asksApiCredit('\u05d6\u05d9\u05d5\u05d9 \u05e7\u05e8\u05d3\u05d9\u05d8 \u05de\u05e1\u05e4\u05e7 Rapid \u05e6\u05d9\u05d5\u05d3') && !asksApiCredit('\u05e7\u05e8\u05d3\u05d9\u05d8 \u05e1\u05e4\u05e7 capital') && asksApiCredit('\u05d0\u05d9\u05df \u05e7\u05e8\u05d3\u05d9\u05d8 \u05dc-API'));
       check('...a supplier\'s credit on an invoice is not touched', !asksApiCredit('\u05d9\u05ea\u05e8\u05ea \u05e7\u05e8\u05d3\u05d9\u05d8 \u05d0\u05e6\u05dc \u05d4\u05e1\u05e4\u05e7: 1,200 \u05e9\u05d7.'));
     }
     { // 27/10/2026: a line for Michael that asks to load API credit is refused (he decided no on 22/10 and 26/10)

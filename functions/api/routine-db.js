@@ -1041,7 +1041,7 @@ export function draftTrashCheck(b, made, nowMs) {
 export function asksApiCredit(t) {
   const s = String(t || '');
   return /\u05e7\u05e8\u05d3\u05d9\u05d8/.test(s) && /(\u05d8\u05e2\u05d9\u05e0\u05d4|\u05dc\u05d0 \u05e2\u05d5\u05d1\u05d3|\u05dc\u05d8\u05e2\u05d5\u05df|\u05dc\u05d4\u05d8\u05e2\u05d9\u05df|\u05d8\u05e2\u05d9\u05e0\u05ea|\u05ea\u05d8\u05e2\u05d9\u05df|\u05dc\u05d8\u05e2\u05d5\u05df|\u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05e7\u05e8\u05d3\u05d9\u05d8|console\.anthropic)/.test(s)
-    || (/\u05e7\u05e8\u05d3\u05d9\u05d8/.test(s) && /(API|anthropic|claude|\u05e7\u05dc\u05d5\u05d3)/i.test(s));
+    || (/\u05e7\u05e8\u05d3\u05d9\u05d8/.test(s) && /(\bAPI\b|anthropic|claude|\u05e7\u05dc\u05d5\u05d3)/i.test(s));
 }
 export function calMoveCheck(b, nowMs) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
@@ -1724,7 +1724,7 @@ export function savedFresh(status, j, nowMs) {
 // marks of the factory's controlled form (DECISIONS 24/10/2026; the domains' checklist, step 2; tools/form-fill.py checks
 // the same when Claude fills a form): the logo (an image in a header or the body), a form number NN.NN in a header or the
 // first table, and "\u05e2\u05de\u05d5\u05d3" (page X of Y). Pure: parts = {name: xml} of word/document.xml, headers, footers.
-export const DOC_MAX_BYTES = 10 * 1048576; export const DOC_PART_MAX = 20 * 1048576;
+export const DOC_MAX_BYTES = 10 * 1048576; export const DOC_PART_MAX = 20 * 1048576; export const DOC_TOTAL_MAX = 8 * 1048576;
 export function docMarks(parts, name) {
   // 01/11/2026, run on the factory's own files: procedures carry "\u05e0\u05d5\u05d4\u05dc \u05de\u05e1'" and no NN.NN, the policy has no page-of. So the logo
   // is required in every Word file, and the form number and page-of only in a form (its name says \u05d8\u05d5\u05e4\u05e1 or NN.NN).
@@ -1890,9 +1890,12 @@ export async function onRequest(context) {
   const res = await routineDbHandle(context);
   if (copy && res.status === 200) {
     try {
-      const out = await res.clone().json();
-      const body = out && out.ok === true ? await copy.json() : null;
-      const row = body && logLine(body, new Date().toISOString());
+      // the request first: a read op (select, wa_media, pdf_read) is not cloned and parsed at all (retro 02/11/2026)
+      const reqBody = await copy.json().catch(() => null);
+      const row0 = reqBody && logLine(reqBody, new Date().toISOString());
+      const out = row0 ? await res.clone().json() : null;
+      const body = out && out.ok === true ? reqBody : null;
+      const row = body && row0;
       const env = context.env;
       if (row && env.SUPABASE_SERVICE_ROLE_KEY) {
         const url = env.SUPABASE_URL || SB_DEFAULT, k = env.SUPABASE_SERVICE_ROLE_KEY;
@@ -3357,7 +3360,9 @@ async function routineDbHandle(context) {
               const parts = {};
               if (buf.byteLength <= DOC_MAX_BYTES) {
                 const es = readZip(buf).filter((e) => /^word\/(document|header\d*|footer\d*)\.xml$/.test(e.name) && e.usize <= DOC_PART_MAX).slice(0, 12);
-                for (const e of es) parts[e.name] = await entryText(e);
+                // the size in the zip directory is the file's own claim: the inflate itself is capped (retro 02/11/2026)
+                let budget = DOC_TOTAL_MAX; // one budget for all parts together (12 parts of 20MB would pass the memory limit)
+                for (const e of es) { parts[e.name] = await entryText(e, Math.min(DOC_PART_MAX, budget)); budget -= parts[e.name].length; }
               }
               const de = Object.keys(parts).length &&  docMarksError(docMarks(parts, sp.rel.split('/').pop()));
               if (de) return jsonResp({ ok: false, error: de }, 400, {});

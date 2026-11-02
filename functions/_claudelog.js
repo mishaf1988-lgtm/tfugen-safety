@@ -24,6 +24,10 @@ export const LOG_OPS = {
   od_swap: '\u05d4\u05d7\u05dc\u05e4\u05ea \u05de\u05e1\u05de\u05da ISO',
   iso_up: '\u05e2\u05d3\u05db\u05d5\u05df \u05de\u05e1\u05de\u05da ISO',
   mail_draft: '\u05d8\u05d9\u05d5\u05d8\u05ea \u05de\u05d9\u05d9\u05dc \u05d1-Outlook',
+  ocr_txt: '\u05db\u05ea\u05d9\u05d1\u05ea \u05d8\u05e7\u05e1\u05d8 \u05e1\u05e8\u05d9\u05e7\u05d4 \u05d1-OneDrive',
+  mail_request: '\u05d1\u05e7\u05e9\u05ea \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05de\u05d9\u05d9\u05dc \u05dc-OneDrive',
+  cal_move: '\u05d4\u05d6\u05d6\u05ea \u05d0\u05d9\u05e8\u05d5\u05e2 \u05d1\u05d9\u05d5\u05de\u05df',
+  cal_invite: '\u05d4\u05d6\u05de\u05e0\u05d4 \u05dc\u05d9\u05d5\u05de\u05df',
   draft_trash: '\u05d8\u05d9\u05d5\u05d8\u05d4 \u05dc\u05e1\u05dc \u05d4\u05de\u05d9\u05d7\u05d6\u05d5\u05e8',
 };
 
@@ -36,7 +40,7 @@ const ilWhen = (iso) => {
 };
 
 // What the line says about the target: the fields a write op carries, in a fixed order, never the file bytes.
-const DETAIL_FIELDS = ['dir', 'name', 'path', 'from', 'to', 'move_to', 'replaced_by', 'keep', 'subject', 'kind'];
+const DETAIL_FIELDS = ['dir', 'name', 'path', 'from', 'to', 'move_to', 'replaced_by', 'keep', 'subject', 'kind', 'paths', 'message_id'];
 export function logDetails(body) {
   const out = [];
   DETAIL_FIELDS.forEach((k) => {
