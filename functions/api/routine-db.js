@@ -120,7 +120,7 @@
 //              {id | ref, note?} closes it and tells Michael on WhatsApp now. dev_request writes one, dev_done closes it.
 //              check_in_min (10-2880) + check?: the server wakes the assistant then to check (wa-morning promiseCheck);
 //              promise with the same ref (or text) and a new check_in_min sets the next check.
-//   learn / learn_done  (21/10/2026) {agent, kind: correction|preference|fact|source, text, source?} a line in the
+//   learn / learn_done  (21/10/2026) {agent, kind: correction|preference|fact|source, text, source?, replaces?} a line in the
 //              assistant's notebook (server_state.assistant_learned); {id, where} marks it folded into the rules
 //              or the knowledge. learnAdd / learnDone.
 //   od_archive  (20/10/2026) {agent, why, path, replaced_by}: the old version of a form moves to "_גרסאות קודמות" in its
@@ -359,15 +359,30 @@ export function learnAdd(raw, b, nowIso) {
   let list = [];
   try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
   if (!Array.isArray(list)) list = [];
+  // 02/11/2026 (Michael in the questionnaire: "do it: a correction replaces at once", the idea from Mem0): replaces = the
+  // id of an open line, or a phrase (8+ characters) found in exactly one open line of the same agent, that this line
+  // corrects. The old line leaves the assistant's fire text now (learnedLine shows only new), not the next morning when
+  // the retro folds it. Checked before "the same line", so a correction whose text is already open still retires the old.
+  let old = null;
+  if (b.replaces != null && String(b.replaces).trim()) {
+    const q = String(b.replaces).replace(/\s+/g, ' ').trim();
+    const open = list.filter((x) => x && x.status === 'new' && x.text !== text);
+    const hits = /^l-\d{14}-[a-z0-9]{1,8}$/.test(q) ? open.filter((x) => x.id === q) : q.length >= 8 ? open.filter((x) => x.agent === agent && String(x.text || '').indexOf(q) >= 0) : [];
+    if (hits.length !== 1) return { error: 'replaces: ' + (hits.length ? hits.length + ' open lines match, give the id' : 'no open line matches (an id, or 8+ characters of one of your own lines)') };
+    old = hits[0];
+  }
+  const retire = (newId) => { old.status = 'replaced'; old.replaced_by = newId; old.replaced_at = nowIso; return { id: old.id, text: String(old.text || '').slice(0, 120) }; };
   const same = list.find((x) => x && x.status === 'new' && x.text === text);
-  if (same) return { list, id: same.id };
-  if (list.length >= LEARN_MAX && !list.some((x) => x && x.status !== 'new')) return { error: 'notebook full: the retro has not folded it' };
+  if (same) return old ? { list, id: same.id, replaced: retire(same.id) } : { list, id: same.id };
+  if (!old && list.length >= LEARN_MAX && !list.some((x) => x && x.status !== 'new')) return { error: 'notebook full: the retro has not folded it' };
   const id = 'l-' + nowIso.replace(/\D/g, '').slice(0, 14) + '-' + Math.random().toString(36).slice(2, 6);
   const e = { id, at: nowIso, agent, kind, text, status: 'new' };
   if (source) e.source = source;
+  let replaced;
+  if (old) { replaced = retire(id); e.replaces = old.id; }
   list.push(e);
   while (list.length > LEARN_MAX) { const i = list.findIndex((x) => x.status !== 'new'); list.splice(i >= 0 ? i : 0, 1); }
-  return { list, id };
+  return replaced ? { list, id, replaced } : { list, id };
 }
 export function learnDone(raw, id, where, nowIso) {
   let list = [];
@@ -2492,7 +2507,7 @@ async function routineDbHandle(context) {
         body: JSON.stringify([{ key: LEARN_KEY, value: JSON.stringify(r.list), updated_at: now }]), signal: tmo(SB_MS),
       });
       if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status }, 200, {});
-      return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'new').length }, 200, {});
+      return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'new').length, replaced: r.replaced }, 200, {});
     }
     // out_log (27/10/2026, Michael in the interview: the quality checker reads what the agents sent him, the drafts and
     // the database writes, fixes and reports in one line): the WhatsApp traffic since a time, his messages included so
