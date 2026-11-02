@@ -1362,6 +1362,8 @@ const callIn = async (body) => {
     ];
     const l = mailGotList(items, Date.parse('2026-11-02T05:26:29Z'));
     check('only files created since then, newest first, folders left out (the real case: the xlsx 23 seconds after the request, named by the UTC date of 01/11)', l.length === 2 && l[0].name === 'b.pdf' && l[1].size === 14481 && l[1].name.indexOf('2026-11-01 2243') === 0, l);
+    const rew = mailGotList([{ name: '2026-11-01 2243 - x.xlsx', size: 14481, file: {}, createdDateTime: '2026-11-01T22:44:12Z', lastModifiedDateTime: '2026-11-02T05:26:52Z' }], Date.parse('2026-11-02T05:26:29Z'));
+    check('a file flow 1 saved before and the request wrote again counts by its last write (live 02/11/2026: created 22:44, rewritten 05:26)', rew.length === 1 && rew[0].at === '2026-11-02T05:26:52.000Z' && rew[0].first === '2026-11-01T22:44:12Z', rew);
     const many = Array.from({ length: 80 }, (_, i) => ({ name: i + '.pdf', size: 2000, file: {}, createdDateTime: '2026-11-02T05:30:00Z' }));
     check('capped at MAIL_GOT_MAX', mailGotList(many, 0).length === MAIL_GOT_MAX);
     let gets = [];
