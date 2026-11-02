@@ -29,7 +29,8 @@ export function lev1(a, b) {
 }
 export function domainsOf(text) {
   const t = String(text || '').toLowerCase();
-  const toks = (t.match(/[\w\u0590-\u05ff.-]+/g) || []).map((w) => w.replace(/^[.-]+|[.-]+$/g, '')).filter((w) => w.length >= 4);
+  const toks = [];
+  for (let w of (t.match(/[\w\u0590-\u05ff.-]+/g) || [])) { w = w.replace(/^[.-]+|[.-]+$/g, ''); for (let i = 0; i < 3 && w.length >= 4; i++) { toks.push(w); if ('\u05d5\u05d4\u05d1\u05dc\u05de\u05e9\u05db'.indexOf(w[0]) < 0) break; w = w.slice(1); } }
   const hit = (w) => { w = w.toLowerCase(); return t.indexOf(w) >= 0 || (w.indexOf(' ') < 0 && w.length >= 5 && toks.some((x) => lev1(w, x))); };
   return DOMAINS.filter((d) => d.words.some(hit));
 }
