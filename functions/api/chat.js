@@ -176,7 +176,10 @@ export async function onRequest(context) {
     return new Response(up.r.body, { headers: Object.assign({}, cors, X, { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-store' }) });
   }
   const choice = Number.isInteger(body.choice) && body.choice >= 1 && body.choice <= 10 ? body.choice : null;
-  return chatSend(env, url, h, cors, text, null, choice);
+  // 02/11/2026 (retro 29/10/2026 (b)): the start of the message whose button was tapped, so a tap on an old message is
+  // not read against the newest question (a delete); only with a tap
+  const tapped = choice && typeof body.tapped === 'string' ? body.tapped.slice(0, 200) : undefined;
+  return chatSend(env, url, h, cors, text, null, choice, tapped);
 }
 
 // a tap on "1. accurate" again, right after the server thanked him for one (ref rate). Pure.
@@ -187,7 +190,7 @@ export function rateAgain(m, prev) {
 }
 
 // his line (or file) to the assistant: logged as his own on channel chat, then fired like a WhatsApp message
-async function chatSend(env, url, h, cors, text, media, choice) {
+async function chatSend(env, url, h, cors, text, media, choice, tapped) {
   const af = await assistantFireNow(env);
   if (!af) return jsonResp({ ok: false, error: 'assistant not configured' }, 200, cors);
   const now = new Date().toISOString(), id = 'ch' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -204,7 +207,7 @@ async function chatSend(env, url, h, cors, text, media, choice) {
   // the same fast lane as WhatsApp (25/10/2026, in the questionnaire: "do it: immediate signing"): "do it" on a
   // signature question signs now, a tap on a sign list picks, and so on; only what it does not answer goes on
   if (!media) {
-    const m = { id: null, text, choice }, fr0 = fastRoute(m, null, prev), seen = {};
+    const m = { id: null, text, choice, tapped }, fr0 = fastRoute(m, null, prev), seen = {};
     const rt = rateOf(m, null, prev);
     if (rt) await rateNote(env, rt.good, prev && prev.text).catch(() => null);
     // 25/10/2026 (dev request: three taps on "1. accurate" ran the assistant twice, and it thanked him again): a tap

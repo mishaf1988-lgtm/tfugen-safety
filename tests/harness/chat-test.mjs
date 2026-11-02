@@ -129,7 +129,8 @@ console.log('\n5. files and buttons, like WhatsApp (25/10/2026)');
   check('the page: a line that was not sent goes back into the box, on a refusal and on no signal', (page.match(/back\(t\);sys\(/g) || []).length === 2 && /function back\(t\)/.test(page));
   check('the page: a file bubble has a share button that shares the file itself, not its link', /class=\\?"sh\\?"/.test(page) && /navigator\.share\(\{files:\[f\]/.test(page) && !/navigator\.share\(\{[^}]*url:/.test(page));
   check('the page: a new answer while he reads higher up shows the new-message chip', /else chip\(1\);return true\}/.test(page) && /id=\\?"nw\\?"/.test(page));
-  check('the page: a file is a link that opens it, buttons send their own text', /class="doc" href=/.test(page) && /send\(x\.getAttribute\('data-c'\),i\+1\)/.test(page));
+  check('the page: a file is a link that opens it, buttons send their own text', /class="doc" href=/.test(page) && /send\(x\.getAttribute\('data-c'\),i\+1,m\.text\)/.test(page));
+  check('the page: a tap sends the start of the message it was on (02/11/2026, retro 29/10/2026 (b): an old "1" must not answer a newer delete question)', /function send\(t,choice,tapped\)\{/.test(page) && /choice:choice,tapped:String\(tapped\|\|''\)\.slice\(0,200\)/.test(page));
   logRows = [];
   fileRows = { wodoc1: fileRows.wodoc1 };
 }
@@ -144,6 +145,18 @@ console.log('\n5. files and buttons, like WhatsApp (25/10/2026)');
   r = await onRequest({ request: req('/api/chat', 'POST', ADM, { text: '1. מדויק', choice: 1 }), env: ENV });
   const jf = await r.json();
   check('a button tap the WhatsApp fast lane answers: answered by the server (logged for the chat), the assistant not fired', jf.ok === true && jf.fast === 'rate' && !calls.some((c) => c.url.startsWith('https://fire.test/')) && calls.some((c) => c.url.includes('notifications_log') && c.m === 'POST' && /wa_out/.test(c.body)), jf);
+  // 02/11/2026 (retro 29/10/2026 (b)): a tap goes to the delete lane only when it was on the delete question itself
+  const dq = '\u05dc\u05de\u05d7\u05d5\u05e7 \u05d0\u05ea \u05d4\u05e9\u05d5\u05e8\u05d4? \u05d0\u05d9\u05e8\u05d5\u05e2 01/11/2026, \u05e0\u05e4\u05d9\u05dc\u05d4';
+  lastOutVal = { at: new Date().toISOString(), text: dq, ref: 'del:ab12cd34' };
+  calls = [];
+  r = await onRequest({ request: req('/api/chat', 'POST', ADM, { text: '\u05de\u05d7\u05e7', choice: 1, tapped: dq }), env: ENV });
+  const jd = await r.json();
+  const delFired = calls.some((c) => c.url.startsWith('https://fire.test/'));
+  calls = [];
+  r = await onRequest({ request: req('/api/chat', 'POST', ADM, { text: '1. \u05db\u05df', choice: 1, tapped: '\u05e9\u05d0\u05dc\u05d4 \u05d9\u05e9\u05e0\u05d4 \u05e2\u05dd \u05db\u05e4\u05ea\u05d5\u05e8\u05d9\u05dd' }), env: ENV });
+  const jo = await r.json();
+  check('a tap on the delete question itself goes to the server\'s delete lane; a tap on an older message\'s button goes to the assistant, not to the delete',
+    jd.ok === true && jd.fast === 'del' && !delFired && jo.ok === true && !jo.fast && calls.some((c) => c.url.startsWith('https://fire.test/')), { jd, jo, delFired });
   lastOutVal = null;
 }
 

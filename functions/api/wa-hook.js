@@ -407,6 +407,14 @@ export function accountCmdOf(raw) {
   if (/^(\u05e2\u05d1\u05d5\u05e8|\u05ea\u05e2\u05d1\u05d5\u05e8|\u05d4\u05e2\u05d5\u05d6\u05e8) (\u05dc\u05d7\u05e9\u05d1\u05d5\u05df |\u05dc-?)?(\u05e8\u05d0\u05e9\u05d9|\u05d4\u05e8\u05d0\u05e9\u05d9)$/.test(w)) return { kind: 'account', to: 'main' };
   return null;
 }
+// 02/11/2026: the tapped message is the newest one the server sent (prev): the same start of text. Pure.
+// 150, not 40 (security review 02/11/2026): two delete questions open with the same fixed words and differ only after them
+export const tapHead = (t) => String(t || '').replace(/\s+/g, ' ').trim().slice(0, 150);
+export function tapIsPrev(m, prev) {
+  if (!m || m.choice === undefined || m.choice === null || typeof m.tapped !== 'string' || !prev) return false;
+  const a = tapHead(m.tapped), b = tapHead(prev.text);
+  return a.length >= 10 && a === b;
+}
 export function fastRoute(m, about, prev) {
   const raw = String((m && m.text) || '').trim();
   // an answer to the signature question first: "\u05ea\u05d7\u05ea\u05d5\u05dd" there is a yes, not a new request
@@ -415,7 +423,10 @@ export function fastRoute(m, about, prev) {
   // 28/10/2026: an answer to "delete this row?" (routine-db del_ask); only a yes / no, else the assistant
   const did = delRefOf(about, prev);
   // 29/10/2026 retro: a delete is confirmed only by a tap (a button choice) or a reply to that very message (about carries the ref), never by a bare "yes" that happens to follow it within 3 hours (the prev fallback)
-  if (did && (about || (m && m.choice !== undefined && m.choice !== null))) { const yes = signAnswer(m); if (yes !== null) return { kind: 'del', id: did, yes }; }
+  // 02/11/2026 (retro 29/10/2026 (b)): a tap counts only on the delete question itself. On WhatsApp a tap carries its
+  // message (about); a tap whose message was not found is not read against the newest one. In /chat about is always
+  // empty, so the page sends the start of the tapped message (m.tapped) and it must be the delete question (prev).
+  if (did && (about || tapIsPrev(m, prev))) { const yes = signAnswer(m); if (yes !== null) return { kind: 'del', id: did, yes }; }
   // 26/10/2026: an answer to "close tour finding <n>?" (routine-db tour_close_ask); only a yes / no, else the assistant
   const tid = tourRefOf(about, prev);
   if (tid) { const yes = signAnswer(m); if (yes !== null) return { kind: 'tour_close', id: tid, yes }; }
