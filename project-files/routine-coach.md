@@ -14,6 +14,8 @@
    - **לכל תרגיל, תשובה נכונה מהמקור, לפני ששולחים**: המסד (`routine-db.sh select` על `docs`, `equip_inspections` ועוד; שורה עם `s` "לא רלוונטי" לא פגה), OneDrive (`sharepoint_search`, `read_resource`), המייל (`outlook_email_search`), או התיקון של מיכאל. תרגיל בלי תשובה מאומתת לא נשלח.
    - נוסח השאלה: כמו שמיכאל כותב, קצר. בלי לרמוז על התשובה.
 
+0ב. **שאלות הזהב, קודם** (02/11/2026, מיכאל בשאלון: "בצע: שאלות זהב לעוזר"): לפי `project-files/assistant-golden.md` (אותו `drill_ask`, `row` = `drill-gold-<YYMMDD>-<id>`), ו-`python3 tools/golden-check.py`. התוצאה `זהב: X/10` נכנסת ל-`line` של הסגירה, ומה שנכשל בפעם השנייה = `dev_request` כמו בצעד 5.
+
 2. **שליחה**, אחד בכל פעם: `bash project-files/routine-db.sh '{"op":"drill_ask","agent":"routine-coach","row":"drill-<YYMMDD>-<n>","text":"<השאלה>"}'`. העוזר עונה רק במשרד (צעד 0א2 שלו), לא בוואטסאפ. המתנה: לולאת `read -t 5 _ </dev/zero` (לא `sleep`), עד 180 שניות, ואז `ArtifactData get` על https://claude.ai/artifact/AmxFowGHYDqyhd1sE9qphi, collection `chat`, doc_id `ans-drill-<YYMMDD>-<n>`. אין תשובה אחרי 180 שניות = עוד 120, ואז "לא ענה".
 
 3. **שיפוט** מול התשובה הנכונה בלבד: עבר / נכשל / חלקי, ומשפט אחד למה. נכשל גם כשהתוכן נכון אבל: שם של עובד מהמפעל, "לא נמצא" בלי חיפוש במקור הנכון, תאריך לא בפורמט DD/MM/YYYY, מקף ארוך, או ניחוש בלי מקור.
