@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, ilInstant, incFilePrefix, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, refusesWithoutFlow, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, odPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrTxtName, taskAddCheck, TASK_ADD_MAX, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT, isoSwapRequest, isoUpCheck, OD_ISO_SWAP, ISO_SITE_URL } from './_build/routine-db.mjs';
+import { secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, ilInstant, incFilePrefix, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, refusesWithoutFlow, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, odPdfCheck, OD_PUT_MAX, odArchiveCheck, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrTxtName, taskAddCheck, TASK_ADD_MAX, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT, isoSwapRequest, isoUpCheck, OD_ISO_SWAP, ISO_SITE_URL, mailGotCheck, mailGotList, MAIL_GOT_MAX } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -1341,6 +1341,36 @@ const callIn = async (body) => {
     check('why missing or a bad agent: refused', (await call({ op: 'mail_request', agent: 'a-b', message_id: ID })).status === 400 && (await call({ op: 'mail_request', agent: 'Bad', message_id: ID, why: 'xxxxx' })).status === 400 && !puts.length);
     check('without the key: 403', (await call({ op: 'mail_request', agent: 'a-b', message_id: ID, why: 'xxxxx' }, 'nope')).status === 403 && !puts.length);
     check('the id pattern has no dot (no ../ in a name)', !MAIL_REQ_ID.test('a'.repeat(40) + '.'));
+    check('02/11/2026: the answer carries the request time and how to check with mail_got', /^\d{4}-\d{2}-\d{2}T/.test(x.json.at || '') && /mail_got/.test(x.json.next || '') && /UTC/.test(x.json.next || ''), x.json);
+    graph = async () => new Response('{}', { status: 500 });
+  }
+
+  console.log('\n4f2. mail_got: what reached the inbox since a mail_request (02/11/2026, dev-20261102053215-jiln)');
+  {
+    const now = Date.parse('2026-11-02T05:40:00Z');
+    check('since must be a UTC time within 48 hours; agent and fields checked', mailGotCheck({ op: 'mail_got', agent: 'routine-wa-assistant', since: '2026-11-02T05:26:29Z' }, now).since === Date.parse('2026-11-02T05:26:29Z')
+      && mailGotCheck({ op: 'mail_got', agent: 'a-b', since: '2026-10-29T05:26:29Z' }, now).error
+      && mailGotCheck({ op: 'mail_got', agent: 'a-b', since: '02/11/2026' }, now).error
+      && mailGotCheck({ op: 'mail_got', agent: 'a-b', since: '2026-11-02T07:26:29+02:00' }, now).error
+      && mailGotCheck({ op: 'mail_got', agent: 'Bad', since: '2026-11-02T05:26:29Z' }, now).error
+      && mailGotCheck({ op: 'mail_got', agent: 'a-b', since: '2026-11-02T05:26:29Z', path: '../x' }, now).error);
+    const items = [
+      { name: '2026-11-01 2243 - \u05e9\u05d8\u05d7.xlsx', size: 14481, file: {}, createdDateTime: '2026-11-02T05:26:52Z' },
+      { name: '2026-11-01 1806 - old.doc', size: 71680, file: {}, createdDateTime: '2026-11-01T18:07:14Z' },
+      { name: '\u05dc\u05d0 \u05dc\u05ea\u05d9\u05d5\u05e7', folder: { childCount: 3 }, createdDateTime: '2026-11-02T05:30:00Z' },
+      { name: 'b.pdf', size: 5, file: {}, createdDateTime: '2026-11-02T05:30:00Z' },
+    ];
+    const l = mailGotList(items, Date.parse('2026-11-02T05:26:29Z'));
+    check('only files created since then, newest first, folders left out (the real case: the xlsx 23 seconds after the request, named by the UTC date of 01/11)', l.length === 2 && l[0].name === 'b.pdf' && l[1].size === 14481 && l[1].name.indexOf('2026-11-01 2243') === 0, l);
+    const many = Array.from({ length: 80 }, (_, i) => ({ name: i + '.pdf', size: 2000, file: {}, createdDateTime: '2026-11-02T05:30:00Z' }));
+    check('capped at MAIL_GOT_MAX', mailGotList(many, 0).length === MAIL_GOT_MAX);
+    let gets = [];
+    graph = async (url, opt = {}) => { gets.push({ url: decodeURIComponent(url), method: opt.method || 'GET' }); return new Response(JSON.stringify({ value: items }), { status: 200 }); };
+    const r = await call({ op: 'mail_got', agent: 'routine-wa-assistant', since: new Date(Date.now() - 60000).toISOString() });
+    check('the server reads the inbox folder only (GET children), and answers with names', r.json.ok === true && gets.length === 1 && gets[0].method === 'GET' && gets[0].url.indexOf(OD_ROOT + OD_INBOX + ':/children') > 0, { r: r.json, gets });
+    const e = await call({ op: 'mail_got', agent: 'routine-wa-assistant', since: 'x' });
+    check('a bad since: 400, nothing read', e.status === 400 && gets.length === 1);
+    check('without the key: 403', (await call({ op: 'mail_got', agent: 'a-b', since: new Date().toISOString() }, 'nope')).status === 403);
     graph = async () => new Response('{}', { status: 500 });
   }
 
