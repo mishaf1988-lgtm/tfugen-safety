@@ -1,4 +1,4 @@
--- dumped 2026-10-29 from the live project by tools/platform/schema-dump.sql; verified with schema-fingerprint.sql
+-- dumped 2026-11-02 from the live project by tools/platform/schema-dump.sql
 create schema if not exists private;
 
 create extension if not exists "uuid-ossp" with schema extensions;
@@ -342,6 +342,8 @@ CREATE INDEX equip_inspection_history_report_number_idx ON public.equip_inspecti
 CREATE INDEX equip_inspection_history_ts_idx ON public.equip_inspection_history USING btree (ts DESC);
 
 CREATE INDEX equip_inspections_code_idx ON public.equip_inspections USING btree (code);
+
+CREATE UNIQUE INDEX equip_inspections_code_uq ON public.equip_inspections USING btree (lower(btrim(code))) WHERE ((code IS NOT NULL) AND (btrim(code) <> ALL (ARRAY[''::text, '?'::text, '-'::text])));
 
 CREATE INDEX equip_inspections_e_idx ON public.equip_inspections USING btree (e);
 
