@@ -1407,7 +1407,7 @@ export function odArchiveCheck(b) {
 // missing), same name, as the equipment folders are kept since 15/09/2026. Only from a folder named valid, and only
 // when the report that replaces it (replaced_by) sits in that same folder, so the folder is never left empty. Pure.
 export const OD_VALID_DIR = '\u05d1\u05ea\u05d5\u05e7\u05e3', OD_EXPIRED_DIR = '\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3';
-export function odExpireCheck(b) {
+export function odExpireCheck(b, now = Date.now()) {
   const c = odArchiveCheck(b);
   if (c.error) return c;
   const parts = String(b.path || '').split('/').filter(Boolean);
@@ -1417,6 +1417,10 @@ export function odExpireCheck(b) {
   const day = (n) => (/^(\d{4}-\d{2}-\d{2}) /.exec(n) || [])[1];
   const d0 = day(parts[parts.length - 1]), d1 = day(String(b.replaced_by || ''));
   if (!d0 || !d1 || d1 <= d0) return { error: 'replaced_by: a report dated after the one it replaces (names start YYYY-MM-DD)' };
+  // retro 28/10/2026 (c): the date in the name was never held against today, so a replacement named for a future day (a
+  // typo, or the next inspection's due date) moved a report that is still the valid one. Israel's date, one day of slack.
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(now + 86400000));
+  if (d1 > today) return { error: 'replaced_by: dated after today (' + d1 + '): the name starts with the inspection date, not the next one' };
   const parent = OD_ROOT + parts.slice(0, -2).join('/');
   return Object.assign(c, { targetParent: parent, targetName: OD_EXPIRED_DIR });
 }
