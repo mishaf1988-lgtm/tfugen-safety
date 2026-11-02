@@ -965,10 +965,11 @@ export function hasPassport(t) { return /(^|[^A-Za-z0-9])(?!PQ)[A-Z]{1,2}[0-9]{6
 // stopped; two valid numbers = a list of people. Company numbers (they start with 5) pass. Mail drafts are not checked:
 // a contractor's permit needs the IDs, and Michael reads every draft before he sends it.
 export function idCheckOk(d) { let s = 0; for (let i = 0; i < 9; i++) { const x = Number(d[i]) * ((i % 2) + 1); s += x > 9 ? x - 9 : x; } return s % 10 === 0; }
-export const IL_ID_WORD_RE = /\u05ea\s*["\u05f4'.]\s*\u05d6|\u05d6\u05d4\u05d5\u05ea|\bID\b/i;
+export const IL_ID_WORD_RE = /\u05ea[\s"'\u05f3\u05f4.]{1,3}\u05d6|\u05d6\u05d4\u05d5\u05ea|\bID\b/;
 export function hasIsraeliId(t) {
-  const s = String(t || ''), re = /(^|[^0-9])(\d{8}-?\d)(?![0-9])/g; let m, n = 0;
-  while ((m = re.exec(s))) { const d = m[2].replace('-', ''); if (!/^5/.test(d) && !/^0+$/.test(d) && idCheckOk(d)) n++; }
+  // security review 02/11/2026: "039 337 423" / "039.337.423" are joined, and an 8-digit ID (leading zero dropped) is padded
+  const s = String(t || '').replace(/(\d{3})[ .](\d{3})[ .](\d{3})(?![0-9])/g, '$1$2$3'), re = /(^|[^0-9])(\d{7,8}-?\d)(?![0-9])/g; let m, n = 0;
+  while ((m = re.exec(s))) { const d = m[2].replace('-', '').padStart(9, '0'); if (!/^5/.test(d) && !/^0+$/.test(d) && idCheckOk(d)) n++; }
   return n >= 2 || (n === 1 && IL_ID_WORD_RE.test(s));
 }
 export function hasPersonalNo(t) { return hasPassport(t) || hasIsraeliId(t); }
