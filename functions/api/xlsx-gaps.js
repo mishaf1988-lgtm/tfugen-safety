@@ -104,7 +104,7 @@ const enc = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).
 // name, or null when there was no board. conflictBehavior=fail: a copy is never overwritten.
 async function archiveBoard(token, now) {
   const h = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
-  const cur = await fetch(G + enc(BOARD) + '?select=id,file', { headers: h, signal: tmo(GRAPH_MS) });
+  const cur = await fetch(G + enc(BOARD) + '?select=id,file,parentReference', { headers: h, signal: tmo(GRAPH_MS) });
   if (cur.status === 404) return null;
   if (!cur.ok) throw new Error('board ' + cur.status);
   const cj = await cur.json();
@@ -123,7 +123,16 @@ async function archiveBoard(token, now) {
   const mv = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(cj.id) + '?@microsoft.graph.conflictBehavior=fail', {
     method: 'PATCH', headers: h, body: JSON.stringify({ parentReference: { id: dj.id }, name }), signal: tmo(GRAPH_MS) });
   if (!mv.ok) throw new Error('archive move ' + mv.status);
-  return name;
+  return { name, id: cj.id, home: cj.parentReference && cj.parentReference.id };
+}
+// retro 29/10/2026 (e): the board moved to the archive before the new one was written, so a write that failed left a
+// day with no board in place. The archived copy goes back to its place and name (fail, never over a file).
+async function unarchiveBoard(token, a) {
+  if (!a || !a.id || !a.home) return false;
+  const r = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(a.id) + '?@microsoft.graph.conflictBehavior=fail', {
+    method: 'PATCH', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ parentReference: { id: a.home }, name: BOARD_NAME }), signal: tmo(GRAPH_MS) }).catch(() => null);
+  return !!(r && r.ok);
 }
 
 export async function onRequest(context) {
@@ -147,9 +156,11 @@ export async function onRequest(context) {
     let prev = null; try { prev = JSON.parse((st && st[STATE_KEY] && st[STATE_KEY].value) || 'null'); } catch (e) { prev = null; }
     const same = !!(prev && prev.board && prev.board.hash === hash);
     const { token } = await accessToken(env);
-    const archived = same ? null : await archiveBoard(token, now);
+    const arc = same ? null : await archiveBoard(token, now);
+    const archived = arc ? arc.name : null;
     const parts = BOARD.split('/'); parts.pop();
-    await putFile(token, parts.join('/'), BOARD_NAME, buildXlsxBook(b.sheets), XLSX_TYPE);
+    try { await putFile(token, parts.join('/'), BOARD_NAME, buildXlsxBook(b.sheets), XLSX_TYPE); }
+    catch (e) { const back = await unarchiveBoard(token, arc); e.message = String(e.message || e) + (arc ? (back ? '; the old board is back in place' : '; the old board stays in the archive') : ''); throw e; }
     const board = Object.assign({ hash, written: at, changed: !same, archived: archived || '' }, b.counts);
     await save({ ok: true, error: '', board });
     return jsonResp({ ok: true, changed: !same, archived: !!archived }, 200, {});
