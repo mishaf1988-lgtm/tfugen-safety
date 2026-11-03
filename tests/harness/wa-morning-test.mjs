@@ -1,6 +1,6 @@
 // The morning update on WhatsApp from the server (20/10/2026): pg_cron calls /api/wa-morning twice,
 // only the call on 07:xx in Israel on Sunday-Thursday sends, once a day, to Michael's number only.
-import { clip, areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT, splitUrgent, WAIT_DAYS, rowContradictions } from './_build/wa-morning.mjs';
+import { stagingDue, watch, clip, areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT, splitUrgent, WAIT_DAYS, rowContradictions } from './_build/wa-morning.mjs';
 import { OD_ROOT } from './_build/routine-db.mjs';
 import fs from 'fs';
 
@@ -33,6 +33,13 @@ const equipUrls = [], stagingCalls = [];
 const call = async (body, secret) => (await onRequest({ request: new Request('https://x/api/wa-morning', { method: 'POST', headers: secret === null ? {} : { 'x-notify-secret': secret || 'sec' }, body: JSON.stringify(body || {}) }), env: ENV })).json();
 
 (async () => {
+  console.log('\n0. the test database stays awake (03/11/2026)');
+  // winter: Israel = UTC+2. 03:02 Israel Saturday = 01:02 UTC; 09:01 Israel = 07:01 UTC; 09:07 Israel and 10:01 Israel: not due
+  check('due at 03, 09, 15, 21 Israel in the first 5 minutes, Saturday too; not at 09:07 or 10:01', stagingDue(new Date('2026-11-07T01:02:00Z')) && stagingDue(new Date('2026-11-03T07:01:00Z')) && stagingDue(new Date('2026-11-03T13:00:00Z')) && stagingDue(new Date('2026-11-03T19:04:00Z')) && !stagingDue(new Date('2026-11-03T07:07:00Z')) && !stagingDue(new Date('2026-11-03T08:01:00Z')));
+  { stagingCalls.length = 0;
+    const w1 = await watch(ENV, new Date('2026-11-07T01:02:00Z')), w2 = await watch(ENV, new Date('2026-11-07T02:02:00Z'));
+    check('the tick at a due time: one read with the public key, the result in staging; off-time: none', stagingCalls.length === 1 && /\/rest\/v1\/locations\?select=id&limit=1$/.test(stagingCalls[0].url) && /^sb_publishable_/.test(stagingCalls[0].key || '') && w1.staging && w1.staging.status === 200 && !w2.staging, [stagingCalls, w1.staging, w2.staging]);
+    stagingCalls.length = 0; }
   console.log('\n1. when it sends');
   check('Monday 07:47 Israel in summer (04:47 UTC): due', dueNow(new Date('2026-10-19T04:47:00Z')));
   check('...and the 05:47 UTC call that day (08:47 Israel): not due', !dueNow(new Date('2026-10-19T05:47:00Z')));
@@ -263,8 +270,8 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   check('Monday 04:47 UTC: sent, and the day is 19/10', j.sent && metas.length === n + 1 && state[LAST_KEY] === '2026-10-19', [j, state]);
   j = await run(ENV, new Date('2026-10-19T04:48:00Z'), {});
   check('a second call the same morning: not sent again', !j.sent && j.reason === 'already sent today' && metas.length === n + 1, j);
-  // 03/11/2026 (Supabase: tfugen-staging to be paused after 7 idle days): a read of the test database each workday morning
-  check('workday morning: one read of the test database with its public key, also when already sent; not on a dry run or off-hours', stagingCalls.length === 2 && stagingCalls.every((c) => /\/rest\/v1\/locations\?select=id&limit=1$/.test(c.url) && /^sb_publishable_/.test(c.key || '')) && j.staging && j.staging.status === 200, [stagingCalls, j.staging]);
+  // 03/11/2026 (Supabase: tfugen-staging to be paused after 7 idle days; docs: a few requests each day): the morning brief does not read it
+  check('the morning brief itself does not read the test database (the 5-minute tick does)', stagingCalls.length === 0, stagingCalls);
   j = await run(ENV, new Date('2026-10-19T05:47:00Z'), {});
   check('the 05:47 UTC call (08:47 Israel): not sent', !j.sent && metas.length === n + 1, j);
 
