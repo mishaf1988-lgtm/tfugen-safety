@@ -141,6 +141,10 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
     check('meetingMinor: only the week before the meeting (20-26/09), a year count to the meeting day, no name kept', minor.week.length === 2 && minor.year === 3 && !('name' in minor.week[0]), minor);
     const outM = await patchDeck(src, deckContent(Object.assign({}, m, { minor }), ROWS, ref, { s3Month: '2026-09' }));
     const s2m = await partText(outM.bytes, 'ppt/slides/slide2.xml');
+    { const sp = (x) => { const k = x.indexOf('NoChangeNote'); return x.substring(k, x.indexOf('</p:sp>', k)); };
+      const one = await patchDeck(outM.bytes, deckContent(m, ROWS, ref, { s3Month: '2026-09' }));
+      const s2one = sp(await partText(one.bytes, 'ppt/slides/slide2.xml')), s2two = sp(s2m);
+      check('two lines fit the clipped box: 13pt and 11pt, 85% spacing; the next week with none: one 15pt line, the second gone', /sz="1300"/.test(s2two) && /sz="1100"/.test(s2two) && /spcPct val="85000"/.test(s2two) && (s2one.match(/<a:p>/g) || []).length === 1 && /sz="1500"/.test(s2one) && !/sz="1[13]00"/.test(s2one) && !/85000/.test(s2one) && !s2one.includes('פגיעות'), [s2two.slice(0, 200), s2one]); }
     check('with minor injuries: "no work accidents" and a second line with the count, dates and departments; the accident count unchanged', s2m.includes('<a:t>ללא תאונות עבודה בשבוע שעבר</a:t>') && s2m.includes('פגיעות קלות ללא היעדרות (לא תאונת עבודה): 2, 24/09 ייצור טוגנים, 25/09 ייצור') && outM.report.length === 0 && s2m.replace(/<a:t>[^<]*פגיעות[^<]*<\/a:t>/, '').replace(/ללא תאונות עבודה בשבוע שעבר/, '').length > 0 && (s2m.match(/סה"כ \d+ תאונות/) || [''])[0] === (s2plain.match(/סה"כ \d+ תאונות/) || [''])[0], [outM.report, (s2m.match(/<a:t>[^<]*<\/a:t>/g) || []).slice(-4)]); }
   const again2 = await patchDeck(out.bytes, deckContent(m, ROWS, ref, { s3Month: '2026-09' }));
   check('...and the next run still finds each department by the label\'s first line', again2.report.length === 0 && again2.changed.length === 0, again2.report);
