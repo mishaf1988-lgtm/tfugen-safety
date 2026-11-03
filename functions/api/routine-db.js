@@ -1500,7 +1500,10 @@ export function odTrashCheck(b) {
   if (String(b.why || '').trim().length < 5) return { error: 'why required' };
   const parts = String(b.path || '').split('/').filter(Boolean);
   const bad = (x) => x === '.' || x === '..' || OD_BAD.test(x) || x.length > 200 || x.startsWith('.');
-  if (parts.length < 2 || parts.length > OD_MKDIR_DEPTH + 1 || parts.some(bad) || !OD_EXT.test(parts[parts.length - 1])) return { error: 'bad path' };
+  // 03/11/2026 (Michael in the questionnaire: "do it: to the recycle bin (recommended)"): a txt of _טקסט סריקות too, the
+  // partial OCR of a PDF made on a computer (the logo only, OCR experiment 03/11/2026). Only directly in that folder.
+  const ocrTxt = parts.length === 2 && parts[0] === OD_OCR_DIR && /\.txt$/i.test(parts[1]);
+  if (parts.length < 2 || parts.length > OD_MKDIR_DEPTH + 1 || parts.some(bad) || !(OD_EXT.test(parts[parts.length - 1]) || ocrTxt)) return { error: 'bad path' };
   if (OD_NO_DIR.test(parts.slice(0, -1).join('/'))) return { error: 'bad path' };
   const name = (parts[parts.length - 2] + ' - ' + parts[parts.length - 1]).slice(-200);
   return { from: OD_ROOT + parts.join('/'), to: OD_ROOT + OD_TRASH_DIR, name };
