@@ -280,6 +280,18 @@
           }
         ]
       }
+    ],
+    "PermissionDenied": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/denial-log.py",
+            "timeout": 30
+          }
+        ]
+      }
     ]
   },
   "extraKnownMarketplaces": {
