@@ -468,8 +468,9 @@ export async function watch(env, now) {
   const pc = await promiseCheck(env, now).catch(() => null);
   const pr = await promiseRemind(env, now).catch(() => null);
   const dv = await devRemind(env, now).catch(() => null);
+  const st = stagingDue(now) ? await stagingPing().catch((e) => ({ error: String(e.message || e).slice(0, 120) })) : null;
   const r = await watchReply(env, now);
-  return Object.assign({}, r, pr ? { promises: pr } : {}, dv ? { dev: dv } : {}, pc ? { check: pc } : {}, oc ? { ocr: oc } : {});
+  return Object.assign({}, r, pr ? { promises: pr } : {}, dv ? { dev: dv } : {}, pc ? { check: pc } : {}, oc ? { ocr: oc } : {}, st ? { staging: st } : {});
 }
 async function watchReply(env, now) {
   const rows = await sb(env, 'notifications_log?select=ts,payload&event_type=eq.owner_in&order=ts.desc&limit=1').catch(() => []);
@@ -496,9 +497,11 @@ async function watchReply(env, now) {
 }
 
 // 03/11/2026 (Supabase mail to Michael: the test project tfugen-staging is to be paused after 7 days with no activity;
-// its only other user is the weekly preview test, every Wednesday, so a missed or late run crosses 7 days): one read of
-// the test database each workday morning, with its public key, before anything that can stop the morning run.
-// The read returns no rows (RLS) and touches nothing; a failure is logged in the answer and never stops the brief.
+// its only other user is the weekly preview test, every Wednesday, so a missed or late run crosses 7 days). Supabase's
+// docs: "typically a few user requests to the database each day ... is enough", and API calls count. So the 5-minute
+// tick reads the test database at 03, 09, 15 and 21 Israel time, every day (weekend too), with its public key. The read
+// returns no rows (RLS) and touches nothing; a failure never stops the tick.
+export function stagingDue(now) { return ilHour(now) % 6 === 3 && now.getUTCMinutes() < 5; }
 export const STAGING_PING_PATH = '/rest/v1/locations?select=id&limit=1';
 export async function stagingPing() {
   if (!SITE.stagingSupabaseUrl || !SITE.stagingSupabaseKey) return { skipped: 'no staging project' };
@@ -516,12 +519,11 @@ export async function run(env, now, body) {
   if (!body.force && !body.dry && !dueNow(now)) return { ok: true, sent: false, reason: 'not 07:xx on a workday in Israel' };
   // Calendar first and on its own: a WhatsApp failure or "already sent today" does not stop it.
   const cal = await calendarStep(env, now, !!body.dry).catch((e) => ({ error: String(e.message || e).slice(0, 200) }));
-  const staging = body.dry ? null : await stagingPing().catch((e) => ({ error: String(e.message || e).slice(0, 120) }));
   const g = await gather(env, now);
   const open = await ownerWindowOpen(env, sbFrom(env), now.getTime());
   const text = buildBrief(g.items, g.failed, g.today, !open, g.notes, g.weather, g.devDone, g.learnOpen, false, g.waiting, g.disq, g.contra);
   if (body.dry) return { ok: true, sent: false, dry: true, text, cal };
-  if (!body.force && (await stateGet(env, LAST_KEY).catch(() => null)) === g.today) return { ok: true, sent: false, reason: 'already sent today', cal, staging };
+  if (!body.force && (await stateGet(env, LAST_KEY).catch(() => null)) === g.today) return { ok: true, sent: false, reason: 'already sent today', cal };
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };
   const to = await ownerWa(env, sbFrom(env));
   if (!to) return { ok: false, error: 'no owner number in notification_prefs' };
@@ -531,5 +533,5 @@ export async function run(env, now, body) {
     body: JSON.stringify([{ id: 'wm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
       event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error',
       payload: { title: clip(text, 120), kind: 'morning', via: r.via || null, wamid: r.wamid || null, detail: r.error || null } }]) }).catch(() => {});
-  return { ok: r.ok, sent: r.ok, via: r.via || null, error: r.error || null, chars: text.length, cal, staging };
+  return { ok: r.ok, sent: r.ok, via: r.via || null, error: r.error || null, chars: text.length, cal };
 }
