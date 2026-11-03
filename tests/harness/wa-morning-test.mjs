@@ -373,6 +373,10 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
       const neg = { agent: 'dev', text: 'המייל לשרון לא נשלח: חסר קובץ של הצעת המחיר, צריך החלטה' };
       const old = { agent: 'routine-wa-assistant', text: 'מחכה לאישורך: טיוטת המייל לשרון עם הצעת המחיר' };
       check('morning notes: a negated "not sent" does not hide an older open note', notesOpen([neg, old]).length === 2);
+      // pairs (retro rule, 02/11/2026): 3 lines that must count as done, 3 that must not
+      const mk = (t) => ({ agent: 'dev', text: t + ' \u05d4\u05de\u05d9\u05d9\u05dc \u05dc\u05e9\u05e8\u05d5\u05df \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8' });
+      const hides = (t) => notesOpen([mk(t), old]).length === 1;
+      check('morning notes pairs: "sent", "fixed", "done" hide the older note; "not sent", "not yet sent", "is not fixed" do not', hides('\u05e0\u05e9\u05dc\u05d7') && hides('\u05ea\u05d5\u05e7\u05df') && hides('\u05d1\u05d5\u05e6\u05e2') && !hides('\u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7') && !hides('\u05d8\u05e8\u05dd \u05e0\u05e9\u05dc\u05d7') && !hides('\u05d0\u05d9\u05e0\u05d5 \u05ea\u05d5\u05e7\u05df'));
     }
     const b = buildBrief([{ n: 'זוג מאריך קלשונים באורך 1650 מ"מ, כנ"ל', e: '2026-10-29' }], [], '2026-11-02', false, [dev, asst], null, null, null);
     check('morning brief: the expiry name loses its trailing "כנ"ל", and the closed note is not in it', !/כנ"ל/.test(b) && /מאריך קלשונים באורך 1650/.test(b) && !/הפיתוח יתקן/.test(b) && /תוקן: העוזר/.test(b), b);
