@@ -460,7 +460,7 @@ async function ocrAuto(env, now) {
     st.cont = res && (res.ok || (res.retry && tries < 3)) && res.next && res.next <= OCR_MAX_PAGES ? { name: next.name, from: res.next, tries } : null; // retry: the earlier txt could not be read, the same pages again (28/10/2026 retro)
   }
   await stateSet(env, OCR_AUTO_KEY, JSON.stringify(st));
-  return res ? { name: res.name, ok: res.ok, chars: res.chars || 0, error: res.error || null } : { idle: true };
+  return res ? { name: res.name, ok: res.ok, chars: res.chars || 0, skipped: !!res.skipped, error: res.error || null } : { idle: true }; // skipped (03/11/2026 review): a PDF with its own text is not a 0-char read
 }
 export async function watch(env, now) {
   try {
