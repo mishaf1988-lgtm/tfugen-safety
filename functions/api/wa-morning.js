@@ -101,7 +101,7 @@ export function splitUrgent(items, today) {
 }
 // 27/10/2026 (the extenders: the note said "disqualified" while s and deficiencies said "fit for work"; Michael: "do it"):
 // an equipment row whose state passes while its latest note or its deficiencies say it failed. Pure.
-export const PASS_RE = /^(\u05ea\u05e7\u05d9\u05df|\u05db\u05e9\u05d9\u05e8|\u05de\u05d5\u05ea\u05e8)/, FAIL_WORD = /(^|[^\u05d0-\u05ea])(?<!\u05dc\u05d0 )(\u05e0\u05e4\u05e1\u05dc|\u05e4\u05e1\u05d5\u05dc(?!\u05ea)|\u05dc\u05d0 \u05db\u05e9\u05d9\u05e8|\u05dc\u05d0 \u05ea\u05e7\u05d9\u05df)/;
+export const PASS_RE = /^(\u05ea\u05e7\u05d9\u05df|\u05db\u05e9\u05d9\u05e8|\u05de\u05d5\u05ea\u05e8)/, FAIL_WORD = /(^|[^\u05d0-\u05ea])(?<!(?:\u05dc\u05d0|\u05d0\u05d9\u05e0\u05d5|\u05d8\u05e8\u05dd|\u05d0\u05d9\u05df)[\s-]+)(\u05e0\u05e4\u05e1\u05dc|\u05e4\u05e1\u05d5\u05dc(?!\u05ea)|\u05dc\u05d0 \u05db\u05e9\u05d9\u05e8|\u05dc\u05d0 \u05ea\u05e7\u05d9\u05df)/;
 export function rowContradictions(rows) {
   return (rows || []).filter((r) => {
     if (!r || !PASS_RE.test(String(r.s || ''))) return false;
@@ -115,7 +115,7 @@ export function rowContradictions(rows) {
 // assistant's "the .doc form cannot go, the developer will fix it" under the developer's newer "fixed: the assistant can
 // now send .doc". A note is left out when a newer one on the same subject (2+ shared words of 4+ letters) says it is
 // done. notes: newest first, each with at. Pure.
-export const NOTE_DONE_RE = /(^|[^\u05d0-\u05ea])(\u05ea\u05d5\u05e7\u05df|\u05d1\u05d5\u05e6\u05e2|\u05e0\u05e9\u05dc\u05d7|\u05e0\u05e1\u05d2\u05e8|\u05d4\u05d5\u05e9\u05dc\u05dd)/;
+export const NOTE_DONE_RE = /(^|[^\u05d0-\u05ea])(?<!(?:\u05dc\u05d0|\u05d0\u05d9\u05e0\u05d5|\u05d8\u05e8\u05dd|\u05d0\u05d9\u05df)[\s-]+)(\u05ea\u05d5\u05e7\u05df|\u05d1\u05d5\u05e6\u05e2|\u05e0\u05e9\u05dc\u05d7|\u05e0\u05e1\u05d2\u05e8|\u05d4\u05d5\u05e9\u05dc\u05dd)/;
 const noteWords = (t) => new Set(String(t || '').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter((w) => w.length >= 4));
 export function notesOpen(notes) {
   const list = (notes || []).filter((x) => x && x.text);
