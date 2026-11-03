@@ -21,10 +21,11 @@ replay = load("replay", os.path.join(D, "replay.py"))
 gc = load("gc", os.path.join(ROOT, "tools", "golden-check.py"))
 tests = json.load(open(os.path.join(D, "tests.json"), encoding="utf-8"))
 check("tests.json is what build-tests.py makes now (run it after changing the questions)", tests == bt.build())
-cfg = open(os.path.join(D, "promptfooconfig.yaml"), encoding="utf-8").read()
-refs = re.findall(r"file://([\w.\-]+)", cfg)
-check("every file the config names exists (%s)" % ", ".join(refs), refs and all(os.path.exists(os.path.join(D, r)) for r in refs))
-check("the config pins a promptfoo version", re.search(r"promptfoo@\d+\.\d+\.\d+", cfg))
+for c in ("promptfooconfig.yaml", "compare.yaml"):
+    cfg = open(os.path.join(D, c), encoding="utf-8").read()
+    refs = re.findall(r"file://([\w.\-]+)", cfg) + re.findall(r"answers: (\S+)", cfg)
+    check("%s: every file it names exists (%s)" % (c, ", ".join(refs)), refs and all(os.path.exists(os.path.join(D, r)) or os.path.exists(os.path.join(ROOT, r)) for r in refs))
+    check("%s pins a promptfoo version" % c, re.search(r"promptfoo@\d+\.\d+\.\d+", cfg))
 gold = {q["id"]: q for q in json.load(open(os.path.join(ROOT, "project-files/assistant-golden.json"), encoding="utf-8"))["questions"]}
 
 for name, want in (("answers-261102-first.json", 8), ("answers-261102-final.json", 10)):
@@ -41,6 +42,8 @@ for name, want in (("answers-261102-first.json", 8), ("answers-261102-final.json
     check("%s: promptfoo judge = golden-check per question, gold %d/10 (want %d), Hebrew %d/10" % (name, got, want, heb), same and got == want)
 
 os.environ.pop("ANSWERS", None)
+r = replay.call_api("x", {"config": {"answers": "project-files/research/promptfoo-golden/answers-261102-first.json"}}, {"vars": {"id": "g10"}})
+check("config.answers (the comparison config) is read relative to the repo root", "150" in r.get("output", ""), r)
 check("the provider refuses to run without ANSWERS", "error" in replay.call_api("x", {}, {"vars": {"id": "g1"}}))
 print("%d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)
