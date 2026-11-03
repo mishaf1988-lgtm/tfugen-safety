@@ -231,6 +231,7 @@ export function deckContent(m, rows, meetingDate, opts) {
   const nClosedMonth = Object.values(closedMonth).reduce((s, x) => s + x, 0);
   const maxTotal = h.byDept.reduce((s, d) => Math.max(s, d.total), 0);
   const inWeek = a.inWeek || 0;
+  const minorWeek = (m.minor && m.minor.week) || [];
   const nw = h.total.newThisWeek, nc = h.summary.newClosed, no = h.summary.newStillOpen;
   const hi = sevOf('\u05d2\u05d1\u05d5\u05d4\u05d4').length, med = sevOf('\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea').length, low = sevOf('\u05e0\u05de\u05d5\u05db\u05d4').length;
   const last = a.lastAccident;
@@ -344,7 +345,7 @@ export function deckContent(m, rows, meetingDate, opts) {
       // year's total to one month read as a drop from 13 to 3).
       Y2026Box: ['\u05e1\u05d4"\u05db \u05dc\u05e9\u05e0\u05d4: ' + (+y - 2) + ': ' + yearTotal(+y - 2) + ', ' + (+y - 1) + ': ' + yearTotal(+y - 1), y + ' \u05e2\u05d3 \u05d4\u05d9\u05d5\u05dd: ' + a.summary.total],
       DaysSafeText: [String(a.daysSinceLastAccident == null ? '-' : a.daysSinceLastAccident)],
-      NoChangeNote: [inWeek ? (inWeek === 1 ? '\u05ea\u05d0\u05d5\u05e0\u05d4 \u05d0\u05d7\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8' : inWeek + ' \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8') : '\u05dc\u05dc\u05d0 \u05e9\u05d9\u05e0\u05d5\u05d9, \u05dc\u05dc\u05d0 \u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd \u05de\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8'],
+      NoChangeNote: minorWeek.length ? Object.assign([inWeek ? (inWeek === 1 ? '\u05ea\u05d0\u05d5\u05e0\u05d4 \u05d0\u05d7\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8' : inWeek + ' \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8') : '\u05dc\u05dc\u05d0 \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8', '\u05e4\u05d2\u05d9\u05e2\u05d5\u05ea \u05e7\u05dc\u05d5\u05ea \u05dc\u05dc\u05d0 \u05d4\u05d9\u05e2\u05d3\u05e8\u05d5\u05ea (\u05dc\u05d0 \u05ea\u05d0\u05d5\u05e0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4): ' + minorWeek.length + ', ' + minorWeek.map((x) => dmy(x.d).substring(0, 5) + (x.dept ? ' ' + x.dept : '')).join(', ')], { exact: true }) : [inWeek ? (inWeek === 1 ? '\u05ea\u05d0\u05d5\u05e0\u05d4 \u05d0\u05d7\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8' : inWeek + ' \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8') : '\u05dc\u05dc\u05d0 \u05e9\u05d9\u05e0\u05d5\u05d9, \u05dc\u05dc\u05d0 \u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd \u05de\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8'],
       line: { cats: a.byMonth.map((x) => x.month), vals: a.byMonth.map((x) => x.count) },
       chartTitle: '\u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 ' + y + ' \u05dc\u05e4\u05d9 \u05d7\u05d5\u05d3\u05e9',
     },
