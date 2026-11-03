@@ -37,11 +37,10 @@ async function sha(s) {
   return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-export async function runDeck(env, force, s3Now, opt) {
-  // The deck lives next to the year's file and moves with it (upgrade review 24).
-  const FOLDER = folderFor(ilYear((opt && opt.now) || Date.now()));
+// What the deck is built from, read once (runDeck writes it, checkDeck compares the file with it).
+async function deckInputs(env, s3Now) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-  const st = await stateGet(env, ['deck_sig', 'deck_ctag', 'deck_week', 'deck_meeting_date', 'deck_s3_month', 'deck_ver', 'deck_err_kind', 'deck_s5', 'minor_injuries']).catch(() => ({}));
+  const st = await stateGet(env, ['deck_sig', 'deck_ctag', 'deck_week', 'deck_meeting_date', 'deck_s3_month', 'deck_ver', 'deck_err_kind', 'deck_err', 'deck_s5', 'minor_injuries']).catch(() => ({}));
   const val = (k) => (st[k] && st[k].value) || '';
   const date = meetingDate(today, val('deck_meeting_date'));
   const [hazards, reports, tasks, inc, nearMiss] = await Promise.all([
@@ -68,6 +67,13 @@ export async function runDeck(env, force, s3Now, opt) {
   // deck without waiting for the data to change (28/09, PR #918).
   // Slide 4 (near misses) is the month that ended, like slide 3, but written on every run.
   const repMonth = s3Now || prevMonth;
+  return { st, val, today, date, m, rows, nearMiss, committee, s3Month, repMonth };
+}
+
+export async function runDeck(env, force, s3Now, opt) {
+  // The deck lives next to the year's file and moves with it (upgrade review 24).
+  const FOLDER = folderFor(ilYear((opt && opt.now) || Date.now()));
+  const { val, today, date, m, rows, nearMiss, committee, s3Month, repMonth } = await deckInputs(env, s3Now);
   const sig = await sha(JSON.stringify([date, today, m, rows, nearMiss, committee, DECK_VERSION, s3Month || val('deck_s3_month')]));
   const now = new Date().toISOString();
   try {
@@ -116,6 +122,54 @@ export async function runDeck(env, force, s3Now, opt) {
     await stateSet(env, { deck_err: msg, deck_err_kind: 'run', deck_err_at: now }).catch(() => {});
     return { ok: false, pushed: false, error: msg, locked: !!(e && e.status === 423), date };
   }
+}
+
+// ---- the morning of the meeting (03/11/2026, Michael in the questionnaire: "do it: cross-check on the meeting morning") ----
+// The deck in OneDrive is compared with what the database says now: the same build as runDeck, run on the
+// file without writing it. Anything it would still change (a run that failed, the file open in PowerPoint,
+// a person who typed over a number), an old meeting date, an older version of the code or a part of the
+// deck the code did not find is a gap. Pure: the gaps in Hebrew, for the WhatsApp line.
+const SLIDE_NO = (name) => { const x = /slide(\d+)\.xml$/.exec(name); return x ? x[1] : null; };
+const dmy = (ymd) => ymd.substring(8, 10) + '/' + ymd.substring(5, 7) + '/' + ymd.substring(0, 4);
+export function deckGaps(c) {
+  const out = [];
+  if (c.err) out.push('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e2\u05d3\u05db\u05d5\u05df \u05d4\u05d0\u05d7\u05e8\u05d5\u05df: ' + String(c.err).substring(0, 120));
+  if (c.week !== c.date) out.push('\u05d4\u05de\u05e6\u05d2\u05ea \u05dc\u05d0 \u05e2\u05d5\u05d3\u05db\u05e0\u05d4 \u05dc\u05d9\u05e9\u05d9\u05d1\u05d4 \u05e9\u05dc ' + dmy(c.date));
+  if (c.ver !== String(DECK_VERSION)) out.push('\u05d4\u05de\u05e6\u05d2\u05ea \u05d1\u05d2\u05e8\u05e1\u05d4 \u05d9\u05e9\u05e0\u05d4 \u05e9\u05dc \u05d4\u05e2\u05d3\u05db\u05d5\u05df \u05d4\u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9');
+  const ch = c.changed || [];
+  if (ch.length) {
+    const sl = [...new Set(ch.map(SLIDE_NO).filter(Boolean))].sort();
+    const charts = ch.filter((n) => /charts\//.test(n)).length;
+    out.push('\u05d4\u05de\u05e6\u05d2\u05ea \u05dc\u05d0 \u05ea\u05d5\u05d0\u05de\u05ea \u05d0\u05ea \u05d4\u05de\u05e1\u05d3: ' + [sl.length ? '\u05e9\u05e7\u05e4\u05d9\u05dd ' + sl.join(', ') : '', charts ? '\u05d2\u05e8\u05e3' : ''].filter(Boolean).join(', '));
+  }
+  const miss = (c.report || []).filter((x) => /^(missing |chart category not matched|chart series not updated|no chart series|line chart has no series)/.test(x));
+  if (miss.length) out.push('\u05d7\u05dc\u05e7\u05d9\u05dd \u05d1\u05de\u05e6\u05d2\u05ea \u05e9\u05d4\u05e2\u05d3\u05db\u05d5\u05df \u05dc\u05d0 \u05de\u05e6\u05d0: ' + miss.length);
+  return out;
+}
+export function deckGapText(date, gaps, fixed) {
+  return '\u05de\u05e6\u05d2\u05ea \u05d4\u05d9\u05e9\u05d9\u05d1\u05d4 \u05e9\u05dc ' + dmy(date) + ':\n' + gaps.map((g) => '- ' + g).join('\n') + (fixed ? '\n\u05e2\u05d3\u05db\u05e0\u05ea\u05d9 \u05d0\u05d5\u05ea\u05d4 \u05e2\u05db\u05e9\u05d9\u05d5 \u05de\u05d4\u05de\u05e1\u05d3, \u05d5\u05d1\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05e9\u05e0\u05d9\u05d9\u05d4 \u05d4\u05d9\u05d0 \u05ea\u05d5\u05d0\u05de\u05ea.' : '\n\u05e0\u05d9\u05e1\u05d9\u05ea\u05d9 \u05dc\u05e2\u05d3\u05db\u05df \u05d5\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9. \u05d0\u05dd \u05d4\u05de\u05e6\u05d2\u05ea \u05e4\u05ea\u05d5\u05d7\u05d4 \u05d1-PowerPoint, \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d0\u05d5\u05ea\u05d4, \u05d5\u05d4\u05d9\u05d0 \u05ea\u05ea\u05e2\u05d3\u05db\u05df \u05ea\u05d5\u05da 15 \u05d3\u05e7\u05d5\u05ea.');
+}
+// Reads the file and compares, no write. { ok, date, gaps, report }.
+export async function checkDeck(env, opt) {
+  const { val, date, m, rows, nearMiss, committee, s3Month, repMonth } = await deckInputs(env, null);
+  const { token } = await accessToken(env);
+  const { mr } = await yearItem(token, DECK.name, DECK.type, ilYear((opt && opt.now) || Date.now()), 'id,cTag,@microsoft.graph.downloadUrl');
+  if (!mr.ok) return { ok: false, date, gaps: ['\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d0\u05ea \u05e7\u05d5\u05d1\u05e5 \u05d4\u05de\u05e6\u05d2\u05ea: ' + mr.status], report: [] };
+  const meta = await mr.json();
+  const dl = await fetch(meta['@microsoft.graph.downloadUrl'], { signal: AbortSignal.timeout(FILE_MS) });
+  if (!dl.ok) return { ok: false, date, gaps: ['\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d0\u05ea \u05e7\u05d5\u05d1\u05e5 \u05d4\u05de\u05e6\u05d2\u05ea: ' + dl.status], report: [] };
+  const orig = new Uint8Array(await dl.arrayBuffer());
+  const { report, changed } = await patchDeck(orig, deckContent(m, rows, date, { s3Month, s3Now: null, nearMiss, repMonth, committee, addSlide: val('deck_s5') !== '1' }));
+  const gaps = deckGaps({ err: val('deck_err'), week: val('deck_week'), date, ver: val('deck_ver'), changed, report });
+  return { ok: !gaps.length, date, gaps, changed, report };
+}
+// Check; on a gap, one ordinary run (it writes what is missing) and a second check. { ok, date, gaps, fixed }.
+export async function checkAndFixDeck(env) {
+  const a = await checkDeck(env);
+  if (a.ok) return Object.assign(a, { fixed: false });
+  const r = await runLeased(env, 'deck', 120000, () => runDeck(env, false, null)).catch((e) => ({ ok: false, error: String((e && e.message) || e).substring(0, 120) }));
+  const b = await checkDeck(env).catch(() => a);
+  return Object.assign(b, { fixed: b.ok, first: a.gaps, run: r && (r.error || r.reason || (r.pushed ? 'pushed' : null)) });
 }
 
 export async function onRequest(context) {

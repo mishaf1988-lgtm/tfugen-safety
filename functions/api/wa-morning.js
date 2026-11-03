@@ -21,6 +21,7 @@
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo, SITE } from '../_shared.js';
 import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, PROMISE_KEY, promiseDue, promiseRemindText, promiseToCheck, eveningAdd, isoWeekAdd, promiseCheckDue, promiseCheckFireText, assistantFire, assistantFireNow } from '../_wa.js';
 import { odConfigured, accessToken, putFile } from '../_onedrive.js';
+import { meetingDate, checkAndFixDeck, deckGapText } from './hazard-deck.js';
 import { OCR_ROOT, OCR_INBOX, OCR_AUTO_KEY, OCR_AUTO_GAP_MS, OCR_DONE_MAX, OCR_MAX_PAGES, OCR_MODELS, ocrAutoPick, ocrOne } from '../_ocr.js';
 
 export const LAST_KEY = 'wa_morning_last';
@@ -474,9 +475,10 @@ export async function watch(env, now) {
   const pc = await promiseCheck(env, now).catch(() => null);
   const pr = await promiseRemind(env, now).catch(() => null);
   const dv = await devRemind(env, now).catch(() => null);
+  const dk = await deckWatch(env, now).catch((e) => ({ error: String(e.message || e).slice(0, 120) }));
   const st = stagingDue(now) ? await stagingPing().catch((e) => ({ error: String(e.message || e).slice(0, 120) })) : null;
   const r = await watchReply(env, now);
-  return Object.assign({}, r, pr ? { promises: pr } : {}, dv ? { dev: dv } : {}, pc ? { check: pc } : {}, oc ? { ocr: oc } : {}, st ? { staging: st } : {});
+  return Object.assign({}, r, pr ? { promises: pr } : {}, dv ? { dev: dv } : {}, pc ? { check: pc } : {}, oc ? { ocr: oc } : {}, st ? { staging: st } : {}, dk ? { deck: dk } : {});
 }
 async function watchReply(env, now) {
   const rows = await sb(env, 'notifications_log?select=ts,payload&event_type=eq.owner_in&order=ts.desc&limit=1').catch(() => []);
@@ -500,6 +502,40 @@ async function watchReply(env, now) {
     body: JSON.stringify([{ id: 'ww' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
       event_type: 'watch', channel: r.ok ? 'whatsapp' : 'whatsapp_error', payload: { title: clip(v.text, 120), kind: 'watch', wamid: v.wamid, detail: r.error || null } }]) }).catch(() => {});
   return { ok: r.ok, sent: r.ok, error: r.error || null };
+}
+
+// 03/11/2026 (Michael in the questionnaire: "do it: cross-check on the meeting morning"): on the day of the weekly
+// meeting, once, from 06:00 Israel, the deck in OneDrive is compared with the database (checkAndFixDeck in
+// hazard-deck.js). A gap is fixed by one run and checked again; Michael gets a WhatsApp only when there was a gap.
+// The day is marked before the check, so a slow check is never run twice; the result stays in server_state.
+export const DECK_CHECK_KEY = 'deck_check';
+export function deckCheckDue(now, meeting, last) {
+  const h = ilHour(now);
+  return ilDay(now) === meeting && h >= 6 && h < 12 && String(last || '').slice(0, 10) !== meeting;
+}
+export async function deckWatch(env, now) {
+  if (!odConfigured(env)) return null;
+  const meeting = meetingDate(ilDay(now), await stateGet(env, 'deck_meeting_date').catch(() => null));
+  let last = null; try { last = (JSON.parse((await stateGet(env, DECK_CHECK_KEY)) || 'null') || {}).day; } catch (e) { last = null; }
+  if (!deckCheckDue(now, meeting, last)) return null;
+  await stateSet(env, DECK_CHECK_KEY, JSON.stringify({ day: meeting, at: now.toISOString(), state: 'running' }));
+  const c = await checkAndFixDeck(env);
+  const out = { day: meeting, at: now.toISOString(), ok: !!c.ok && !(c.first && c.first.length), fixed: !!c.fixed, gaps: (c.first || c.gaps || []).slice(0, 6), left: c.ok ? [] : (c.gaps || []).slice(0, 6), run: c.run || null };
+  let sent = null;
+  if (!out.ok) {
+    const text = deckGapText(meeting, out.gaps, out.fixed);
+    const to = env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN ? await ownerWa(env, sbFrom(env)) : null;
+    const open = to ? await ownerWindowOpen(env, sbFrom(env), now.getTime()) : false;
+    sent = to ? await sendToOwner(env, to, text, { windowOpen: open }) : { ok: false, error: 'whatsapp not configured' };
+    if (sent.ok) await noteLastOut(env, sbFrom(env), text, 'deck_check').catch(() => {});
+    out.sent = !!sent.ok;
+  }
+  await stateSet(env, DECK_CHECK_KEY, JSON.stringify(out));
+  await sb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify([{ id: 'wd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
+      event_type: 'deck_check', channel: !sent ? 'none' : sent.ok ? 'whatsapp' : 'whatsapp_error',
+      payload: { title: out.ok ? 'deck matches the database' : clip(out.gaps.join('; '), 120), kind: 'deck_check', day: meeting, ok: out.ok, fixed: out.fixed, detail: (sent && sent.error) || null } }]) }).catch(() => {});
+  return out;
 }
 
 // 03/11/2026 (Supabase mail to Michael: the test project tfugen-staging is to be paused after 7 days with no activity;
