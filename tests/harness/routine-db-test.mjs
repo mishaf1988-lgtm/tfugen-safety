@@ -375,6 +375,12 @@ const callIn = async (body) => {
       && !!odTrashCheck({ agent: 'dev', why: 'a test', path: OD_TRASH_DIR + '/a.pdf' }).error && !!odTrashCheck({ agent: 'dev', why: 'a test', path: '18_x/_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea/a.pdf' }).error
       && !!odTrashCheck({ agent: 'dev', why: 'a test', path: 'a.pdf' }).error && !!odTrashCheck({ agent: 'dev', why: 'a test', path: '18_x/folder' }).error;
   })());
+  check('od_trash: a txt only directly in the OCR text folder, nowhere else (03/11/2026)', (() => {
+    const ok = odTrashCheck({ agent: 'dev', why: 'a test', path: OD_OCR_DIR + '/2026-10-29 1443 - x.txt' });
+    return ok.to === OD_ROOT + OD_TRASH_DIR && ok.name === OD_OCR_DIR + ' - 2026-10-29 1443 - x.txt'
+      && !!odTrashCheck({ agent: 'dev', why: 'a test', path: '18_x/a.txt' }).error && !!odTrashCheck({ agent: 'dev', why: 'a test', path: OD_OCR_DIR + '/sub/a.txt' }).error
+      && !!odTrashCheck({ agent: 'dev', why: 'a test', path: OD_OCR_DIR + '/a.js' }).error;
+  })());
   check('the write list is exactly the eleven keys (agents_registry 31/10/2026; mail_filing, validity_run 11/10/2026; iso_tasks 24/10/2026; mail_triage 25/10/2026; quality_run 27/10/2026; live_note 31/10/2026)', STATE_WRITE.join() === 'quote_track,nevo_versions,od_raw_token,od_raw_exp,mail_filing,validity_run,iso_tasks,mail_triage,quality_run,live_note,agents_registry');
   check('agents_registry: the server stamps its time and it is readable by state_get', STAMP_AT.includes('agents_registry') && STATE_READ.includes('agents_registry'));
   check('live_note: the server stamps its time, it is readable, and its size is capped at 4000', STAMP_AT.includes('live_note') && STATE_READ.includes('live_note') && LIVE_NOTE_MAX === 4000);
