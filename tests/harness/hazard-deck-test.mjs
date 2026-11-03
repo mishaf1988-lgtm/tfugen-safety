@@ -6,7 +6,7 @@
 import { patchPara, setList, patchDeck, deckContent, FIXED_YEARS, setBars, catName } from './_build/_deckpatch.mjs';
 import { meetingHazards, meetingAccidents, meetingMinor } from './_build/_meeting.mjs';
 import { readZip, writeZip, entryText } from './_build/_xlsxpatch.mjs';
-import { onRequest, runDeck, defaultMeeting, meetingDate } from './_build/hazard-deck.mjs';
+import { onRequest, runDeck, defaultMeeting, meetingDate, deckGaps, deckGapText, checkDeck, checkAndFixDeck, DECK_VERSION } from './_build/hazard-deck.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 500) : '')); } };
@@ -286,7 +286,7 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
       if (u.startsWith('https://graph.microsoft.com/') && mth === 'PUT') {
         if (o.conflict && !/%D7%90%D7%A8%D7%9B%D7%99%D7%95%D7%9F/.test(u)) return json({ error: { code: 'resourceModified', message: 'The resource has changed since the caller last read it' } }, 409);
         if (o.locked && !/%D7%90%D7%A8%D7%9B%D7%99%D7%95%D7%9F/.test(u)) return json({ error: { code: 'resourceLocked' } }, 423);
-        w.puts.push({ path: decodeURIComponent(u.split('/root:/')[1]), body: init.body }); return json({ cTag: 'c-ours-' + w.puts.length, webUrl: 'https://od/deck' });
+        w.puts.push({ path: decodeURIComponent(u.split('/root:/')[1]), body: init.body }); if (!/%D7%90%D7%A8%D7%9B%D7%99%D7%95%D7%9F/.test(u)) w.file = init.body; return json({ cTag: 'c-ours-' + w.puts.length, webUrl: 'https://od/deck' });
       }
       return json({ error: 'unexpected ' + u }, 599);
     };
@@ -438,6 +438,37 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
     check('a deck with sections: the new slide is also listed in the last section', /<p14:sldId id="563"\/><p14:sldId id="564"\/><\/p14:sldIdLst>/.test(await entryText(readZip(osec.bytes).find((e) => e.name === 'ppt/presentation.xml'))));
     const none = await patchDeck(src5, deckContent(m, ROWS, ref, {}));
     check('without committee data (a failed read) the deck is as before: no slide 5', !readZip(none.bytes).find((e) => e.name === 'ppt/slides/slide5.xml'));
+  }
+
+  console.log('\n6. the morning of the meeting: the deck against the database (03/11/2026)');
+  {
+    const base = { err: '', week: '2026-11-03', date: '2026-11-03', ver: String(DECK_VERSION), changed: [], report: [] };
+    check('gaps: none when the file is what the database gives, the date and version current', deckGaps(base).length === 0);
+    const g = deckGaps(Object.assign({}, base, { err: 'timeout', week: '2026-10-27', ver: '9', changed: ['ppt/slides/slide1.xml', 'ppt/slides/slide2.xml', 'ppt/charts/chart1.xml'], report: ['missing shape NewNote', 'chart category not matched: x/y', 'committee slide added'] }));
+    check('gaps: the error, the old meeting date (DD/MM/YYYY), the old version, which slides and the chart, the parts not found (not the slide-5 note)', g.length === 5 && /timeout/.test(g[0]) && g[1].includes('03/11/2026') && g[3].includes('1, 2') && g[3].includes('גרף') && /: 2$/.test(g[4]), g);
+    { const yes = ['missing shape NewNote', 'chart category not matched: פתוח/מחלקה שנמחקה', 'missing part ppt/slides/slide2.xml'], no = ['committee slide added', 'committee slide not in the deck, not added again', 'committee slide not added: slide5.xml is another slide'];
+      check('pairs: 3 real report lines that are a missing part, 3 that are only notes about slide 5', yes.every((x) => deckGaps(Object.assign({}, base, { report: [x] })).length === 1) && no.every((x) => deckGaps(Object.assign({}, base, { report: [x] })).length === 0)); }
+    const t = deckGapText('2026-11-03', g, false), tf = deckGapText('2026-11-03', g, true);
+    check('the WhatsApp text: the meeting date, a line per gap, what to do; keyboard characters only', t.startsWith('מצגת הישיבה של 03/11/2026:') && t.split('\n- ').length === 6 && /PowerPoint/.test(t) && /תואמת/.test(tf) && !/[‐-―‘-‟•…«»־←-⇿]/.test(t + tf), t);
+  }
+  {
+    const meet = meetingDate(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }), '');
+    const okState = Object.assign({}, s1st, { deck_week: meet, deck_ver: String(DECK_VERSION), deck_err: '' });
+    w = world({ file: written, state: okState, cTag: 'c-ours-2' });
+    let c = await checkDeck(ENV);
+    check('checkDeck: the file the last run wrote matches the database, nothing written', c.ok && !c.gaps.length && !w.puts.length, c.gaps);
+    w = world({ file: src, state: okState, cTag: 'someone-saved-old' });
+    c = await checkDeck(ENV);
+    check('checkDeck: a file with other numbers (a person typed over them) is a gap naming its slides, and nothing is written', !c.ok && c.gaps.some((x) => /לא תואמת את המסד/.test(x) && /1/.test(x)) && !w.puts.length, c.gaps);
+    w = world({ file: src, state: okState, cTag: 'someone-saved-old' });
+    c = await checkAndFixDeck(ENV);
+    check('checkAndFixDeck: a gap is written by one run and the second check matches (fixed)', c.ok && c.fixed && c.first.length > 0 && w.puts.length >= 1, [c.gaps, c.first, w.puts.length]);
+    w = world({ file: src, state: okState, cTag: 'someone-saved-old', locked: true });
+    c = await checkAndFixDeck(ENV);
+    check('checkAndFixDeck: open in PowerPoint, the run cannot write: still a gap, not fixed', !c.ok && !c.fixed && c.gaps.length > 0, c);
+    w = world({ file: src, state: okState, missing: true });
+    c = await checkDeck(ENV);
+    check('checkDeck: no deck in the folder is a gap, not a crash', !c.ok && /404/.test(c.gaps[0]), c.gaps);
   }
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

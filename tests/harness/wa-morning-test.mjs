@@ -1,6 +1,6 @@
 // The morning update on WhatsApp from the server (20/10/2026): pg_cron calls /api/wa-morning twice,
 // only the call on 07:xx in Israel on Sunday-Thursday sends, once a day, to Michael's number only.
-import { stagingDue, watch, clip, areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT, splitUrgent, WAIT_DAYS, rowContradictions, expOff } from './_build/wa-morning.mjs';
+import { deckCheckDue, DECK_CHECK_KEY, stagingDue, watch, clip, areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT, splitUrgent, WAIT_DAYS, rowContradictions, expOff } from './_build/wa-morning.mjs';
 import { OD_ROOT } from './_build/routine-db.mjs';
 import fs from 'fs';
 
@@ -40,6 +40,15 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     const w1 = await watch(ENV, new Date('2026-11-07T01:02:00Z')), w2 = await watch(ENV, new Date('2026-11-07T02:02:00Z'));
     check('the tick at a due time: one read with the public key, the result in staging; off-time: none', stagingCalls.length === 1 && /\/rest\/v1\/locations\?select=id&limit=1$/.test(stagingCalls[0].url) && /^sb_publishable_/.test(stagingCalls[0].key || '') && w1.staging && w1.staging.status === 200 && !w2.staging, [stagingCalls, w1.staging, w2.staging]);
     stagingCalls.length = 0; }
+  console.log('\n0b. the deck on the meeting morning (03/11/2026)');
+  // winter: Israel = UTC+2. 06:10 Israel = 04:10 UTC
+  check('due on the meeting day from 06:00 to 11:59 Israel, once: not at 05:59, not at 12:00, not on another day, not after it ran that day',
+    deckCheckDue(new Date('2026-11-03T04:10:00Z'), '2026-11-03', null) && deckCheckDue(new Date('2026-11-03T09:59:00Z'), '2026-11-03', '2026-10-27')
+    && !deckCheckDue(new Date('2026-11-03T03:59:00Z'), '2026-11-03', null) && !deckCheckDue(new Date('2026-11-03T10:00:00Z'), '2026-11-03', null)
+    && !deckCheckDue(new Date('2026-11-04T04:10:00Z'), '2026-11-03', null) && !deckCheckDue(new Date('2026-11-03T04:15:00Z'), '2026-11-03', '2026-11-03'));
+  { const before = Object.keys(state).length;
+    const w0 = await watch(ENV, new Date('2026-11-03T04:10:00Z'));
+    check('without OneDrive (no server token) the tick skips the deck: no state, no message', !('deck' in w0) && !(DECK_CHECK_KEY in state) && Object.keys(state).length >= before, w0); }
   console.log('\n1. when it sends');
   check('Monday 07:47 Israel in summer (04:47 UTC): due', dueNow(new Date('2026-10-19T04:47:00Z')));
   check('...and the 05:47 UTC call that day (08:47 Israel): not due', !dueNow(new Date('2026-10-19T05:47:00Z')));
