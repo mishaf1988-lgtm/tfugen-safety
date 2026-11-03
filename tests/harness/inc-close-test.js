@@ -44,6 +44,14 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('no investigation, no task: refused, says both, nothing saved, form stays open', r.s === 'פתוח' && r.upd === 0 && r.open && /חקירה/.test(r.alerts[0] || '') && /משימה מתקנת/.test(r.alerts[0] || ''), r);
   r = await closeVia('c');
   check('root cause but no task: refused, asks only for the task', r.s === 'פתוח' && r.upd === 0 && r.alerts.length === 1 && /משימה מתקנת/.test(r.alerts[0]) && !/סיבת שורש/.test(r.alerts[0]), r);
+  // 03/11/2026 (security review): an open task an agent added (id tsk-, routine-db task_add) does not open the gate; a done one does
+  await page.evaluate(() => { closeModal('m-inc'); DB.tasks.push({ id: 'tsk-ab12cd', title: 'משימה מסוכן', source_table: 'inc', source_id: 'c', status: 'פתוח' }); });
+  r = await closeVia('c');
+  check('only an open agent task (tsk-): still refused, asks for the task', r.s === 'פתוח' && r.upd === 0 && /משימה מתקנת/.test(r.alerts[0] || ''), r);
+  await page.evaluate(() => { closeModal('m-inc'); DB.tasks.find((t) => t.id === 'tsk-ab12cd').status = 'הושלם'; });
+  r = await closeVia('c');
+  check('the agent task done: the gate opens', r.s === 'סגור' && r.upd === 1, r);
+  await page.evaluate(() => { closeModal('m-inc'); const c = DB.inc.find((x) => x.id === 'c'); c.s = 'פתוח'; DB.tasks = DB.tasks.filter((t) => t.id !== 'tsk-ab12cd'); });
   await page.evaluate(() => { closeModal('m-inc'); DB.tasks.push({ id: 't1', title: 'נוהל עבודה בגובה', source_table: 'inc', source_id: 'c', status: 'פתוח' }); });
   r = await closeVia('c');
   check('root cause and a linked task: closes and saves', r.s === 'סגור' && r.upd === 1 && r.alerts.length === 0, r);

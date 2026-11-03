@@ -547,7 +547,7 @@ export function taskAddCheck(b, today) {
   for (const k of Object.keys(b || {})) if (['op', 'agent', 'why', 'source_table', 'source_id', 'title', 'due', 'notes'].indexOf(k) < 0) return { error: 'field not allowed: ' + k };
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
   if (String(b.why || '').trim().length < 5) return { error: 'why required' };
-  if (!Object.prototype.hasOwnProperty.call(EXPIRY_TABLES, String(b.source_table || ''))) return { error: 'source_table: an expiry table' };
+  if (!Object.prototype.hasOwnProperty.call(TASK_SOURCES, String(b.source_table || ''))) return { error: 'source_table: an expiry table, or inc (a procedure from an investigation)' };
   const sid = String(b.source_id === undefined || b.source_id === null ? '' : b.source_id);
   if (!/^[A-Za-z0-9_.-]{1,80}$/.test(sid)) return { error: 'bad source_id' };
   const title = String(b.title || '').trim();
@@ -562,12 +562,19 @@ export function taskAddCheck(b, today) {
   // by a mail could message a worker. Michael assigns in the app.
   const clean = (x) => String(x || '').replace(/[\u0000-\u001f\u200e\u200f\u202a-\u202e\u2066-\u2069<>]/g, ' ').trim();
   const notes = (clean(b.notes).slice(0, 300) + ' | ' + b.agent + ' ' + today + ': ' + clean(b.why).slice(0, 200)).replace(/^ \| /, '');
-  return { row: { title, due, assignee: null, status: TASK_OPEN, priority: TASK_NORMAL, source_table: b.source_table, source_id: sid, notes } };
+  return { row: { title, due, assignee: null, status: TASK_OPEN, priority: TASK_NORMAL, source_table: String(b.source_table), source_id: sid, notes } };
 }
 export const EXPIRY_TABLES = {
   docs: { note: 'nt', extra: 's' },
   equip_inspections: { note: 'notes', extra: 'd' },
 };
+// 03/11/2026 (Michael in the questionnaire: "do it: a task for the manager, not a hazard"): a procedure from an investigation that
+// the department manager writes and trains the workers on is a task on the accident (inc), not a tour_hazards row. One accident
+// can open several, so for inc an open task with the same title is the duplicate, not any open task on the row.
+export const TASK_SOURCES = { docs: 1, equip_inspections: 1, inc: 1 };
+export function taskOpenDup(existing, row) {
+  return (existing || []).find((x) => x && ['\u05d4\u05d5\u05e9\u05dc\u05dd', '\u05d1\u05d5\u05d8\u05dc'].indexOf(x.status) < 0 && (row.source_table !== 'inc' || String(x.title || '').trim() === row.title)) || null;
+}
 // equipment: the one state a run may set (18/10/2026, Michael: "בצע: לעשות את הצעות 1 עד 5"): taking a row
 // out of tracking after HIS decision ("לא רלוונטי" with e null), the way Drager 8000/7000 went by hand.
 export const EQUIP_OUT = '\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9';
@@ -2643,10 +2650,10 @@ async function routineDbHandle(context) {
       const src = g.ok ? await g.json() : null;
       if (!Array.isArray(src)) return jsonResp({ ok: false, error: 'read ' + g.status }, 200, {});
       if (src.length !== 1) return jsonResp({ ok: false, error: 'source row not found' }, 200, {});
-      const q = await fetch(url + '/rest/v1/tasks?select=id,status&source_table=eq.' + encodeURIComponent(r.source_table) + '&source_id=eq.' + encodeURIComponent(r.source_id), { headers: h, signal: tmo(SB_MS) });
+      const q = await fetch(url + '/rest/v1/tasks?select=id,status,title&source_table=eq.' + encodeURIComponent(r.source_table) + '&source_id=eq.' + encodeURIComponent(r.source_id), { headers: h, signal: tmo(SB_MS) });
       const ex = q.ok ? await q.json() : null;
       if (!Array.isArray(ex)) return jsonResp({ ok: false, error: 'read ' + q.status }, 200, {});
-      const open = ex.find((x) => ['\u05d4\u05d5\u05e9\u05dc\u05dd', '\u05d1\u05d5\u05d8\u05dc'].indexOf(x.status) < 0);
+      const open = taskOpenDup(ex, r);
       if (open) return jsonResp({ ok: true, added: false, exists: open.id }, 200, {});
       let cur = null;
       try { cur = (await stateRead([TASK_ADD_KEY]))[0]; } catch (e) { return jsonResp({ ok: false, error: 'state read failed' }, 200, {}); }
