@@ -115,7 +115,7 @@ export function rowContradictions(rows) {
 // assistant's "the .doc form cannot go, the developer will fix it" under the developer's newer "fixed: the assistant can
 // now send .doc". A note is left out when a newer one on the same subject (2+ shared words of 4+ letters) says it is
 // done. notes: newest first, each with at. Pure.
-export const NOTE_DONE_RE = /(^|[^\u05d0-\u05ea])(\u05ea\u05d5\u05e7\u05df|\u05d1\u05d5\u05e6\u05e2|\u05e0\u05e9\u05dc\u05d7|\u05e0\u05e1\u05d2\u05e8|\u05d4\u05d5\u05e9\u05dc\u05dd)/;
+export const NOTE_DONE_RE = /(^|[^\u05d0-\u05ea])(?<!\u05dc\u05d0 )(\u05ea\u05d5\u05e7\u05df|\u05d1\u05d5\u05e6\u05e2|\u05e0\u05e9\u05dc\u05d7|\u05e0\u05e1\u05d2\u05e8|\u05d4\u05d5\u05e9\u05dc\u05dd)/;
 const noteWords = (t) => new Set(String(t || '').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter((w) => w.length >= 4));
 export function notesOpen(notes) {
   const list = (notes || []).filter((x) => x && x.text);

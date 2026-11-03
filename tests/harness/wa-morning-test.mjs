@@ -369,6 +369,11 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     const kept = notesOpen([dev, asst, other]);
     check('morning notes: an older note on the same subject is left out once a newer one says it is fixed; other notes stay', kept.length === 2 && kept[0] === dev && kept[1] === other, kept.map((x) => x.agent));
     check('morning notes: an older "fixed" stays when the newer one on the subject is still open', notesOpen([asst, dev]).length === 2);
+    { // 03/11/2026 (retro): "not sent" is not "sent": a negated done word does not hide the older open note
+      const neg = { agent: 'dev', text: 'המייל לשרון לא נשלח: חסר קובץ של הצעת המחיר, צריך החלטה' };
+      const old = { agent: 'routine-wa-assistant', text: 'מחכה לאישורך: טיוטת המייל לשרון עם הצעת המחיר' };
+      check('morning notes: a negated "not sent" does not hide an older open note', notesOpen([neg, old]).length === 2);
+    }
     const b = buildBrief([{ n: 'זוג מאריך קלשונים באורך 1650 מ"מ, כנ"ל', e: '2026-10-29' }], [], '2026-11-02', false, [dev, asst], null, null, null);
     check('morning brief: the expiry name loses its trailing "כנ"ל", and the closed note is not in it', !/כנ"ל/.test(b) && /מאריך קלשונים באורך 1650/.test(b) && !/הפיתוח יתקן/.test(b) && /תוקן: העוזר/.test(b), b);
     check('itemName: only a trailing "כנ"ל" (also ״ and ”), nothing else', itemName('X, כנ״ל') === 'X' && itemName('X כנ”ל') === 'X' && itemName('כנ"ל בתחילה') === 'כנ"ל בתחילה');
