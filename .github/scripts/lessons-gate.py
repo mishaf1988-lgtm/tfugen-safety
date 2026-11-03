@@ -123,6 +123,11 @@ REFUTE = re.compile(r"^\s*(refute|הפרכה)\s*:\s*(\S.{4,})$", re.I | re.M)
 # says what was not checked: skipped tests, an untried path, a risk Michael should know. "מה לא נבדק: אין" is valid.
 UNCHECKED = re.compile(r"^\s*(untested|unchecked|מה לא נבדק)\s*:\s*(\S.*)$", re.I | re.M)
 UNCHECKED_DIRS = ("functions/",)
+# 03/11/2026 (Michael in the questionnaire: "do it: required in every fix (recommended)", retro 21/10/2026 (b), lesson 141:
+# a fix in two layers passed with 57 of 57 green and fixed nothing): a fix PR that changes code says how its test was
+# proven to catch the bug: the fix taken out on purpose, and which test failed.
+BREAK = re.compile(r"^\s*(break|\u05e9\u05d1\u05d9\u05e8\u05d4)\s*:\s*(\S.{9,})$", re.I | re.M)
+BREAK_DIRS = ("functions/", "index.html", "tools/", ".claude/hooks/", ".github/scripts/", "chat/")
 
 
 def sensitive(files):
@@ -191,6 +196,10 @@ def check(title, body, files):
     if FIX.search(title or "") and not SIBLINGS.search(body or ""):
         return False, ("a fix PR names the siblings of what it fixed: 'אחים: <the grep of the pattern, each place found: "
                        "fixed / left on purpose and why>' (Michael 02/11/2026, retro 29/10/2026 (f)).")
+    if FIX.search(title or "") and any(f.startswith(BREAK_DIRS) for f in files) and not BREAK.search(body or ""):
+        return False, ("a fix PR that changes code proves its test catches the bug: take the fix out, run the test, "
+                       "and add 'שבירה: <what was taken out, which test failed and how many>' (Michael 03/11/2026, "
+                       "retro 21/10/2026 (b), lesson 141).")
     flt = [f for f in files if f.startswith(FILTER_DIRS) and f.endswith((".js", ".html"))]
     if flt and not PAIRS.search(body or "") and any(changes_regex(file_diff(f) or "") for f in flt):
         return False, ("this PR changes a regex or a text filter (%s). Add 'זוגות: <the test that tries it on 3 real lines "
