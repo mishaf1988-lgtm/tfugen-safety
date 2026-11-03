@@ -446,6 +446,8 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
     check('gaps: none when the file is what the database gives, the date and version current', deckGaps(base).length === 0);
     const g = deckGaps(Object.assign({}, base, { err: 'timeout', week: '2026-10-27', ver: '9', changed: ['ppt/slides/slide1.xml', 'ppt/slides/slide2.xml', 'ppt/charts/chart1.xml'], report: ['missing shape NewNote', 'chart category not matched: x/y', 'committee slide added'] }));
     check('gaps: the error, the old meeting date (DD/MM/YYYY), the old version, which slides and the chart, the parts not found (not the slide-5 note)', g.length === 5 && /timeout/.test(g[0]) && g[1].includes('03/11/2026') && g[3].includes('1, 2') && g[3].includes('גרף') && /: 2$/.test(g[4]), g);
+    { const yes = ['missing shape NewNote', 'chart category not matched: פתוח/מחלקה שנמחקה', 'missing part ppt/slides/slide2.xml'], no = ['committee slide added', 'committee slide not in the deck, not added again', 'committee slide not added: slide5.xml is another slide'];
+      check('pairs: 3 real report lines that are a missing part, 3 that are only notes about slide 5', yes.every((x) => deckGaps(Object.assign({}, base, { report: [x] })).length === 1) && no.every((x) => deckGaps(Object.assign({}, base, { report: [x] })).length === 0)); }
     const t = deckGapText('2026-11-03', g, false), tf = deckGapText('2026-11-03', g, true);
     check('the WhatsApp text: the meeting date, a line per gap, what to do; keyboard characters only', t.startsWith('מצגת הישיבה של 03/11/2026:') && t.split('\n- ').length === 6 && /PowerPoint/.test(t) && /תואמת/.test(tf) && !/[‐-―‘-‟•…«»־←-⇿]/.test(t + tf), t);
   }
