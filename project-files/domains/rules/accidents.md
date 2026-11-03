@@ -12,7 +12,7 @@
 - בתחקיר: בלי סעיף 5 למה, בלי "המלצה שלי"; שדה בלי מקור נשאר ריק ומה שחסר נכתב בהודעה (`project-files/assistant/accidents.md:21`)
 - תחקיר טיוטה וסופי: Word ו-PDF באותו שם; ה-PDF מ-`od-read` עם `format:pdf`, לא `soffice`; תיקון נוסח = שני הקבצים מחדש (`project-files/assistant/accidents.md:9`)
 - לפני שמירת תחקיר: רינדור ובדיקה בעין: לוגו בכותרת, עד 2 עמודים (`project-files/assistant/accidents.md:8`)
-- קובץ מנוהל: רק `xlsx_add_rows.py` (לא openpyxl), `cmp` מול הורדה טרייה לפני העלאה, `od_trash` לישן ואז העלאה באותו שם (`project-files/assistant/accidents.md:40`)
+- קובץ מנוהל: רק `xlsx_add_rows.py`, ולתיקון שורה קיימת `xlsx_update_row.py` (לא openpyxl), `cmp` מול הורדה טרייה לפני העלאה, `od_trash` לישן ואז העלאה באותו שם (`project-files/assistant/accidents.md:40`)
 - "מחלקה" בקובץ המנוהל וב-`inc` רק מהרשימה (ייצור טוגנים, אריזה, חומר גלם...); "ייצור" לבד = "אחר"; "דיווח" = "מדווח"/"לא מדווח" (`project-files/assistant/accidents.md:25`)
 - בדיקה בסוף: `read_resource` על "ריכוז תאונות", הסה"כ עלה באחד ו"מדווח"+"לא מדווח" = הסה"כ (`project-files/assistant/accidents.md:44`)
 - `thz_add` מתחקיר: `loc` = מקום האירוע בלי שם המחלקה; "להשלמה" או "לקבוע לוז" = `due` ריק והמילים ב-`notes` (`project-files/assistant/accidents.md:27`)
