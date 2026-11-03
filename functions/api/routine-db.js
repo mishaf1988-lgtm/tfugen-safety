@@ -1445,6 +1445,16 @@ export { OCR_MODELS, OCR_PAGES, OCR_PROMPT, pdfJpegs, pdfDct, pdfCcitt, g4Gray, 
 // missing), same name. Only when the file that replaces it (replaced_by) sits in the same folder, so this
 // archives a version and never hides a document. Never from the inbox, the requests or the drafts folder.
 export const OD_ARCHIVE_DIR = '_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea';
+// 03/11/2026 (Michael's accident investigation: the edited PDF could not move, "name taken in archive", because the
+// earlier PDF of the same name was already there): on a clash in the archive the file goes in as
+// "<name> (YYYY-MM-DD HHMM).<ext>" (Israel time), so nothing in the archive is overwritten and the move still happens. Pure.
+export function archiveStampName(name, now = Date.now()) {
+  const n = String(name || ''), i = n.lastIndexOf('.');
+  const base = i > 0 ? n.slice(0, i) : n, ext = i > 0 ? n.slice(i) : '';
+  const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(now));
+  const g = (t) => (p.find((x) => x.type === t) || {}).value || '';
+  return base + ' (' + g('year') + '-' + g('month') + '-' + g('day') + ' ' + g('hour') + g('minute') + ')' + ext;
+}
 export function odArchiveCheck(b) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
   if (String(b.why || '').trim().length < 5) return { error: 'why required' };
@@ -1686,11 +1696,13 @@ export const DRAFT_READY_RE = /\u05d4\u05db\u05e0\u05ea\u05d9[^.\n]{0,14}\u05d8\
 // assistant may close. It asks with tour_close_ask; the server keeps the request in TOUR_CLOSE_KEY and sends the
 // question with ref tourclose:<id>; only Michael's "\u05d1\u05e6\u05e2" on that very message closes it (wa-hook fastRoute).
 export const TOUR_CLOSE_KEY = 'tour_close_ask', TOUR_CLOSE_MS = 24 * 3600e3, TOUR_OPEN = '\u05e4\u05ea\u05d5\u05d7', TOUR_CLOSED = '\u05e1\u05d2\u05d5\u05e8';
-export const TOUR_ID = /^th-[0-9]{1,6}$/;
+// 03/11/2026: thz_add makes th-<8 hex> and the app th-<base36 time + 4>, so the id is th- and 1-24 lowercase letters
+// or digits (was th-<digits> only: tour_close_ask refused a row thz_add itself had made).
+export const TOUR_ID = /^th-[0-9a-z]{1,24}$/;
 export function tourRefOf(about, prev) {
   const a = String(about || '');
-  if (a) { const m = /\| ref tourclose:(th-[0-9]{1,6}) \| [^|]*$/.exec(a); return m ? m[1] : null; }
-  const r = /^tourclose:(th-[0-9]{1,6})$/.exec(String((prev && prev.ref) || ''));
+  if (a) { const m = /\| ref tourclose:(th-[0-9a-z]{1,24}) \| [^|]*$/.exec(a); return m ? m[1] : null; }
+  const r = /^tourclose:(th-[0-9a-z]{1,24})$/.exec(String((prev && prev.ref) || ''));
   return r ? r[1] : null;
 }
 export function tourCloseAskText(row, note) {
@@ -3189,13 +3201,20 @@ async function routineDbHandle(context) {
       } else if (!arc.ok) return jsonResp({ ok: false, error: 'archive ' + arc.status }, 200, {});
       aj = await arc.json();
       if (!aj.folder) return jsonResp({ ok: false, error: 'archive is not a folder' }, 200, {});
-      const destUrl = G + enc(tParent + '/' + tName + '/' + c.name) + '?select=id';
-      const taken = await get(destUrl);
+      let destName = c.name;
+      let destUrl = G + enc(tParent + '/' + tName + '/' + destName) + '?select=id';
+      let taken = await get(destUrl);
+      // od_archive only (od_expire sets targetName and keeps the same name, the equipment folders' rule): a clash gets a date-time suffix.
+      if (taken.ok && !c.targetName) {
+        destName = archiveStampName(c.name);
+        destUrl = G + enc(tParent + '/' + tName + '/' + destName) + '?select=id';
+        taken = await get(destUrl);
+      }
       if (taken.status !== 404) return jsonResp({ ok: false, error: taken.ok ? 'name taken in archive' : 'name check ' + taken.status }, 200, {});
       let mv;
       try {
         mv = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(sj.id) + '?@microsoft.graph.conflictBehavior=fail', {
-          method: 'PATCH', headers: gh, body: JSON.stringify({ parentReference: { id: aj.id } }), signal: tmo(GRAPH_MS),
+          method: 'PATCH', headers: gh, body: JSON.stringify(destName === c.name ? { parentReference: { id: aj.id } } : { parentReference: { id: aj.id }, name: destName }), signal: tmo(GRAPH_MS),
         });
       } catch (e) {
         if (!isTmo(e)) throw e;
@@ -3205,7 +3224,7 @@ async function routineDbHandle(context) {
         mv = { ok: true };
       }
       if (!mv.ok) return jsonResp({ ok: false, error: 'move ' + mv.status }, 200, {});
-      return jsonResp({ ok: true, path: tParent.slice(OD_ROOT.length) + '/' + tName + '/' + c.name }, 200, {});
+      return jsonResp({ ok: true, path: tParent.slice(OD_ROOT.length) + '/' + tName + '/' + destName, ...(destName === c.name ? {} : { renamed: destName }) }, 200, {});
     }
     if (body.op === 'od_pull') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'from', 'dir', 'dest'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
