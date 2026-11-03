@@ -116,8 +116,8 @@ function nature(x) { const m = /\u05de\u05d4\u05d5\u05ea \u05d4\u05e4\u05d2\u05d
 // own line. list = server_state.minor_injuries, [{d: 'YYYY-MM-DD', dept}]; no names (the deck is shown in the meeting).
 export function meetingMinor(list, ref) {
   const wk = weekBefore(ref), y = ref.substring(0, 4);
-  const ok = (Array.isArray(list) ? list : []).filter((x) => x && /^\d{4}-\d{2}-\d{2}$/.test(String(x.d || '')) && x.d <= ref)
-    .map((x) => ({ d: x.d, dept: String(x.dept || '').slice(0, 30) })).sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0));
+  const ok = (Array.isArray(list) ? list : []).filter((x) => x && typeof x.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x.d) && x.d <= ref)
+    .map((x) => ({ d: x.d, dept: typeof x.dept === 'string' ? x.dept.slice(0, 30) : '' })).sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0));
   return { week: ok.filter((x) => x.d >= wk.start && x.d <= wk.end), year: ok.filter((x) => x.d.substring(0, 4) === y).length };
 }
 export function meetingAccidents(inc, ref) {

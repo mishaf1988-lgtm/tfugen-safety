@@ -136,6 +136,8 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   { const s2plain = await partText(out.bytes, 'ppt/slides/slide2.xml');
     check('no minor injuries: the "no change" note as it was', s2plain.includes('<a:t>ללא שינוי, ללא אירועים משבוע שעבר</a:t>'));
     const minor = meetingMinor([{ d: '2026-09-24', dept: 'ייצור טוגנים', name: 'X' }, { d: '2026-09-25', dept: 'ייצור' }, { d: '2026-09-10', dept: 'a' }, { d: '2026-10-05', dept: 'later' }, { d: 'bad' }], ref);
+    { let thrown = null, r = null; try { r = meetingMinor([{ d: ['2026-09-24'], dept: 'x' }, { d: '2026-09-24', dept: { a: 1 } }, null, 5], ref); } catch (e) { thrown = e; }
+      check('security review 03/11/2026: a date that is not text is dropped, a dept that is not text becomes empty, nothing throws', !thrown && r.week.length === 1 && r.week[0].dept === '', [String(thrown), r]); }
     check('meetingMinor: only the week before the meeting (20-26/09), a year count to the meeting day, no name kept', minor.week.length === 2 && minor.year === 3 && !('name' in minor.week[0]), minor);
     const outM = await patchDeck(src, deckContent(Object.assign({}, m, { minor }), ROWS, ref, { s3Month: '2026-09' }));
     const s2m = await partText(outM.bytes, 'ppt/slides/slide2.xml');

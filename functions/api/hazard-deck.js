@@ -53,7 +53,7 @@ export async function runDeck(env, force, s3Now, opt) {
   ]);
   const rows = buildRegister(hazards, reports, tasks).rows;
   let minorList = []; try { minorList = JSON.parse(val('minor_injuries') || '[]'); } catch (e) { minorList = []; }
-  const m = { hazards: meetingHazards(rows, date), accidents: meetingAccidents(inc, date), minor: meetingMinor(minorList, date) };
+  const m = { hazards: meetingHazards(rows, date), accidents: meetingAccidents(inc, date), minor: (() => { try { return meetingMinor(minorList, date); } catch (e) { return { week: [], year: 0 }; } })() };
   // Slide 5 (29/10/2026): the open actions that came from an investigation or the committee itself.
   const committee = hazards.filter((x) => x.src && x.s !== '\u05e1\u05d2\u05d5\u05e8').map((x) => ({ n: x.n, dept: x.dept, resp: x.resp, action: x.action, descr: x.descr, due: x.due, s: x.s }));
   // Slide 3 = the month that ended, written once when a new month begins
