@@ -1040,7 +1040,7 @@ export const draftSubj = (x) => String(x || '').replace(/^\s*((re|fw|fwd|\u05d4\
 // quality checker writes the seven-day window of its own rate_limit_info each morning. Saving = used more than 85%,
 // or more than 15 points ahead of the share of the week that has passed. Until QUOTA_DRY_UNTIL nothing is skipped:
 // every Routine only writes "in saving mode I would skip" in its line (agent-common.md, opening).
-export const QUOTA_KEY = 'quota_mode', QUOTA_DRY_UNTIL = '2026-11-03', QUOTA_WEEK_MS = 7 * 864e5;
+export const QUOTA_KEY = 'quota_mode', QUOTA_DRY_UNTIL = '2026-11-10', QUOTA_WEEK_MS = 7 * 864e5;
 export function quotaMode(util, resetsAt, nowMs) {
   const u = Number(util), r = Number(resetsAt);
   if (!(u >= 0 && u <= 1.5)) return { error: 'util: 0-1, as utilization in rate_limit_info' };
