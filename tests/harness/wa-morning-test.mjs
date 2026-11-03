@@ -25,10 +25,11 @@ globalThis.fetch = async (url, opt = {}) => {
   if (url.startsWith(SB + '/rest/v1/docs')) return new Response(JSON.stringify(docs), { status: 200 });
   if (url.startsWith(SB + '/rest/v1/equip_inspections')) { equipUrls.push(url); return new Response(JSON.stringify(equip), { status: 200 }); }
   if (url.startsWith(SB + '/rest/v1/notifications_log')) { logs.push(...JSON.parse(opt.body)); return new Response('', { status: 201 }); }
+  if (url.startsWith('https://ldzbjbsumzqjyvtpiwqo.supabase.co/')) { stagingCalls.push({ url, key: (opt.headers || {}).apikey }); return new Response('[]', { status: 200 }); }
   if (url.startsWith('https://graph.facebook.com/')) { metas.push(JSON.parse(opt.body)); return new Response(JSON.stringify({ messages: [{ id: 'wamid.M' }] }), { status: 200 }); }
   return new Response('[]', { status: 200 });
 };
-const equipUrls = [];
+const equipUrls = [], stagingCalls = [];
 const call = async (body, secret) => (await onRequest({ request: new Request('https://x/api/wa-morning', { method: 'POST', headers: secret === null ? {} : { 'x-notify-secret': secret || 'sec' }, body: JSON.stringify(body || {}) }), env: ENV })).json();
 
 (async () => {
@@ -256,12 +257,14 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   let n = metas.length;
   j = await call({});
   check('the scheduled call now (not 07:xx Israel, or already sent): nothing more', !j.sent && metas.length === n, j);
-  state = { agent_log: '[]' }; n = metas.length;
+  state = { agent_log: '[]' }; n = metas.length; stagingCalls.length = 0;
   const mon = new Date('2026-10-19T04:47:00Z');
   j = await run(ENV, mon, {});
   check('Monday 04:47 UTC: sent, and the day is 19/10', j.sent && metas.length === n + 1 && state[LAST_KEY] === '2026-10-19', [j, state]);
   j = await run(ENV, new Date('2026-10-19T04:48:00Z'), {});
   check('a second call the same morning: not sent again', !j.sent && j.reason === 'already sent today' && metas.length === n + 1, j);
+  // 03/11/2026 (Supabase: tfugen-staging to be paused after 7 idle days): a read of the test database each workday morning
+  check('workday morning: one read of the test database with its public key, also when already sent; not on a dry run or off-hours', stagingCalls.length === 2 && stagingCalls.every((c) => /\/rest\/v1\/locations\?select=id&limit=1$/.test(c.url) && /^sb_publishable_/.test(c.key || '')) && j.staging && j.staging.status === 200, [stagingCalls, j.staging]);
   j = await run(ENV, new Date('2026-10-19T05:47:00Z'), {});
   check('the 05:47 UTC call (08:47 Israel): not sent', !j.sent && metas.length === n + 1, j);
 
