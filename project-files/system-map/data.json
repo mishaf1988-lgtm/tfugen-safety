@@ -1119,6 +1119,20 @@
    "reports": false
   },
   {
+   "id": "trig_01FXM5HDLeTUdAmkXm5iMyEB",
+   "zone": "routines",
+   "name": "מדידת מכסה יומית",
+   "what": "מדידת מכסה יומית (שבוע ניסוי 2, עד 10/11/2026; חוזר, להעביר בכל מעבר צ'אט)",
+   "when": "כל יום 08:41",
+   "when_full": "כל יום 08:41",
+   "doc": "הפרומפט בטריגר",
+   "key": "",
+   "family": "תקשורת ומשרד",
+   "ops": [],
+   "m365": false,
+   "reports": null
+  },
+  {
    "id": "trig_01FKenmRrWQ22S1566BReYri",
    "zone": "routines",
    "name": "מנהל השיווק",
