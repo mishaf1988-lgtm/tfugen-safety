@@ -20,7 +20,7 @@ export const DECK = { name: '\u05de\u05e6\u05d2\u05ea \u05e9\u05d1\u05d5\u05e2\u
 // Bump when deckContent/patchDeck change what they write.
 // 14 (13/10/2026): chart categories saved by PowerPoint with \r matched again; the bars were all 0.
 // 15 (29/10/2026): slide 5, the committee's open actions (added once as a copy of slide 4).
-export const DECK_VERSION = 15;
+export const DECK_VERSION = 16; // 16 (03/11/2026): the minor-injuries line at 13/11pt; a look change rewrites the deck only through this number
 const DAY = 86400000;
 const addDays = (ymd, n) => new Date(Date.parse(ymd + 'T12:00:00Z') + n * DAY).toISOString().substring(0, 10);
 const dow = (ymd) => new Date(Date.parse(ymd + 'T12:00:00Z')).getUTCDay();
