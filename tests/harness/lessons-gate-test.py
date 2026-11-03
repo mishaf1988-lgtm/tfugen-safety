@@ -9,10 +9,10 @@ def check(label, cond, detail=None):
     else: failed += 1; print('  ✗ ' + label + ('  -> ' + str(detail) if detail is not None else ''))
 
 L = gate.LESSONS
-R = 'רטרו: אין\nskill: אין\nמה לא נבדק: אין\nאחים: grep של הדפוס, אין אחר\n'
+R = 'רטרו: אין\nskill: אין\nמה לא נבדק: אין\nאחים: grep של הדפוס, אין אחר\nשבירה: הסרתי את התיקון, בדיקה 4b נכשלה (2)\n'
 ok = lambda t, b, f: gate.check(t, R + (b or ''), f)[0]
 check('not a fix PR: ok', ok('Tour screen: due date in one tap', '', ['index.html']))
-Rm = lambda r: 'רטרו: ' + r + '\nskill: אין\nמה לא נבדק: אין\nאחים: grep של הדפוס, אין אחר\n'
+Rm = lambda r: 'רטרו: ' + r + '\nskill: אין\nמה לא נבדק: אין\nאחים: grep של הדפוס, אין אחר\nשבירה: הסרתי את התיקון, בדיקה 4b נכשלה (2)\n'
 check('01/11/2026: a retro that names a mistake, without a lesson: blocked even without a Fix title', not gate.check('Tour screen', Rm('כתובת מייל נכתבה בקובץ md'), ['index.html'])[0])
 check('...with a lesson: ok', gate.check('Tour screen', Rm('כתובת מייל נכתבה בקובץ md'), ['index.html', L])[0])
 check('...with no-lesson and a reason: ok', gate.check('Tour screen', Rm('כתובת מייל נכתבה') + 'בלי לקח: כבר לקח 170, חזר נרשם שם', ['index.html'])[0])
@@ -111,6 +111,14 @@ R_noSib = 'רטרו: אין\nskill: אין\nמה לא נבדק: אין\n'
 check('a Fix PR without a siblings line: blocked, even with its lesson', not gate.check('Fix: x', R_noSib, ['a.js', L])[0])
 check('...with "אחים: <what was searched and found>": ok', gate.check('Fix: x', R_noSib + 'אחים: grep tapIsPrev, 4 אחים, תוקנו', ['a.js', L])[0])
 check('...an empty siblings line: blocked', not gate.check('Fix: x', R_noSib + 'אחים: ', ['a.js', L])[0])
+# 03/11/2026 (Michael: "do it: required in every fix"): a fix PR that changes code proves its test catches the bug
+R_noBrk = 'רטרו: אין\nskill: אין\nמה לא נבדק: אין\nאחים: grep, אין אחר\n'
+check('a Fix PR on server code without a break line: blocked', not gate.check('Fix: x', R_noBrk, ['functions/api/wa-morning.js', L])[0])
+check('...on index.html, a hook or a tool: blocked too', all(not gate.check('Fix: x', R_noBrk, [f, L])[0] for f in ['index.html', '.claude/hooks/x.py', 'tools/x.py']))
+check('...with "שבירה: <what was taken out and what failed>": ok', gate.check('Fix: x', R_noBrk + 'שבירה: בלי stateCas נכשלו 3 בבדיקת המרוץ', ['functions/api/wa-morning.js', L])[0])
+check('...a too short break line: blocked', not gate.check('Fix: x', R_noBrk + 'שבירה: כן', ['functions/api/x.js', L])[0])
+check('a Fix PR on documents only: no break line needed', gate.check('Fix: x', R_noBrk, ['project-files/x.md', L])[0])
+check('not a fix PR on server code: no break line needed', gate.check('Morning brief', R_noBrk, ['functions/api/wa-morning.js'])[0])
 check('not a fix PR: no siblings line needed', gate.check('Tour screen', R_noSib, ['index.html'])[0])
 # 02/11/2026 (Michael: "do it: yes"): a changed regex or text filter carries a "זוגות:" line
 cr = gate.changes_regex
