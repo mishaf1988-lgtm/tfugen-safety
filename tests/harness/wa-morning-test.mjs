@@ -1,6 +1,6 @@
 // The morning update on WhatsApp from the server (20/10/2026): pg_cron calls /api/wa-morning twice,
 // only the call on 07:xx in Israel on Sunday-Thursday sends, once a day, to Michael's number only.
-import { stagingDue, watch, clip, areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT, splitUrgent, WAIT_DAYS, rowContradictions } from './_build/wa-morning.mjs';
+import { stagingDue, watch, clip, areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT, splitUrgent, WAIT_DAYS, rowContradictions, expOff } from './_build/wa-morning.mjs';
 import { OD_ROOT } from './_build/routine-db.mjs';
 import fs from 'fs';
 
@@ -296,6 +296,8 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     const off = '\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9';
     const sp = splitUrgent([{ n: 'FORKEXT-1650', e: '2026-10-29', s: off }, { n: 'Crane', e: '2026-10-29', s: '' }], '2026-11-03');
     check('not relevant row with e: not urgent, not waiting, not disqualified (03/11/2026)', sp.items.map((x) => x.n).join() === 'Crane' && !sp.waiting.length && !sp.disq.length);
+    const yes = [off, '  ' + off + ' (01/11/2026)', off + ' \u05e0\u05e4\u05e1\u05dc'], no = ['\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4', '\u05e4\u05e1\u05d5\u05dc', '\u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9 \u05e2\u05d3 \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4'];
+    check('expOff pairs: 3 real states match, 3 do not (03/11/2026)', yes.every((x) => expOff({ s: x })) && !no.some((x) => expOff({ s: x })) && !expOff({}) && !expOff(null));
     check('not relevant row with e: no calendar entry (03/11/2026)', calendarPlan([{ t: 'equip', id: 21, n: 'FORKEXT-1650', e: '2026-11-05', s: off + ' (01/11)' }, { t: 'equip', id: 22, n: 'Crane', e: '2026-11-05', s: '' }], {}, '2026-10-20').todo.map((x) => x.key).join() === 'equip:22:2026-11-05');
   }
   check('equipment of another area (resp_area): no calendar entry (21/10/2026 retro)', calendarPlan([{ t: 'equip', id: 11, n: 'NH3 valve', e: '2026-11-30', resp_area: '\u05e7\u05d9\u05e8\u05d5\u05e8 \u05d5\u05d0\u05de\u05d5\u05e0\u05d9\u05d4' }, { t: 'equip', id: 12, n: 'Crane', e: '2026-11-30', resp_area: null }], {}, '2026-10-20').todo.map((x) => x.key).join() === 'equip:12:2026-11-30');
