@@ -1,0 +1,223 @@
+<title>עץ הענפים של תפוגן</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&family=Heebo:wght@300;400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: full-bleed night scene of a living tree (one branch per work domain), a stat rail on top and a detail sheet that opens on tap. Single daylight look by choice. */
+:root{
+  --bg:#eaf3f6; --bg2:#f7fbf8; --ink:#1d2b26; --mute:#5b6f66; --line:#c9d8d2;
+  --leaf:#2f8f5b; --sap:#b86e00; --bark:#6b4b33; --panel:rgba(255,255,255,.95);
+  --display:"Rubik","Heebo",system-ui,sans-serif; --body:"Heebo",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden}
+#scene{position:fixed;inset:0;display:block;width:100%;height:100%;touch-action:none;cursor:grab;background:linear-gradient(180deg,#bfe0f0 0%,#e4f2f6 55%,#eef6ea 100%)}
+#scene:active{cursor:grabbing}
+header{position:fixed;top:0;left:0;right:0;z-index:5;padding-top:calc(env(safe-area-inset-top,0px) + 14px);padding-bottom:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));pointer-events:none;background:linear-gradient(rgba(234,243,246,.95),rgba(234,243,246,0))}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(20px,3.4vw,30px);margin:0;letter-spacing:.2px;text-wrap:balance}
+.sub{color:var(--mute);font-size:13px;margin-top:4px;max-width:60ch}
+.stats{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:10px;font-family:var(--mono);font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums}
+.stats b{color:var(--sap);font-weight:500;font-size:15px;margin-inline-end:4px}
+#labels{position:fixed;inset:0;pointer-events:none;z-index:3}
+.lbl{position:absolute;transform:translate(-50%,-130%);white-space:nowrap;font-family:var(--display);font-size:13px;font-weight:500;color:var(--ink);padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.9);border:1px solid var(--line);box-shadow:0 1px 3px rgba(30,60,50,.15);pointer-events:auto;cursor:pointer;transition:border-color .2s,color .2s}
+.lbl.on,.lbl:hover,.lbl:focus-visible{border-color:var(--sap);color:var(--sap);outline:none}
+.lbl small{font-family:var(--mono);color:var(--mute);margin-inline-start:6px;font-size:11px}
+.trunk-lbl{position:absolute;transform:translate(-50%,0);background:rgba(255,255,255,.85);padding:4px 10px;border-radius:10px;font-family:var(--display);font-weight:700;font-size:15px;color:var(--sap);text-align:center;white-space:nowrap}
+.trunk-lbl span{display:block;font-family:var(--mono);font-weight:400;font-size:11px;color:var(--mute)}
+#sheet{position:fixed;z-index:6;bottom:0;right:0;width:min(380px,100%);max-height:62vh;overflow:auto;background:var(--panel);border-top:1px solid var(--line);border-left:1px solid var(--line);border-top-left-radius:14px;padding-block:16px calc(16px + env(safe-area-inset-bottom,0px));padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));backdrop-filter:blur(8px)}
+#sheet h2{font-family:var(--display);font-size:20px;margin:0 0 2px}
+#sheet .k{font-family:var(--mono);font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.08em}
+.row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.cell{border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.cell b{display:block;font-family:var(--mono);font-size:20px;color:var(--sap);font-variant-numeric:tabular-nums}
+.cell span{font-size:12px;color:var(--mute)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+.chip{font-size:12px;padding:3px 9px;border-radius:999px;background:rgba(47,143,91,.1);color:var(--leaf);border:1px solid rgba(47,143,91,.3)}
+.chip.form{background:rgba(242,170,40,.12);color:var(--sap);border-color:rgba(184,110,0,.35)}
+#close{position:absolute;top:10px;left:12px;background:none;border:1px solid var(--line);color:var(--mute);border-radius:8px;width:30px;height:30px;font-size:16px;cursor:pointer}
+#close:focus-visible{outline:2px solid var(--sap)}
+.hint{position:fixed;z-index:4;bottom:calc(14px + env(safe-area-inset-bottom,0px));left:max(16px,env(safe-area-inset-left,0px));font-size:12px;color:var(--mute);font-family:var(--mono)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--mute)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-inline-end:5px;vertical-align:middle}
+@media (max-width:560px){.sub{display:none}.lbl{font-size:11px;padding:2px 7px}.lbl small{display:none}}
+</style>
+
+<canvas id="scene" aria-label="עץ תלת-ממדי של ענפי העבודה"></canvas>
+<div id="labels"></div>
+<header>
+  <h1>עץ הענפים של תפוגן</h1>
+  <div class="sub">כל ענף הוא תחום עבודה עם חוקים, החלטות וטפסים משלו. מילה מהענף בהודעה שלך טוענת אותו לבד, אצלי ואצל העוזר בוואטסאפ.</div>
+  <div class="stats" id="stats"></div>
+  <div class="legend"><span><i style="background:var(--leaf)"></i>עלים: מילים שמפעילות את הענף</span><span><i style="background:var(--sap)"></i>פירות: טפסים מבוקרים</span><span>עובי: החלטות · אורך: חוקים</span></div>
+</header>
+<aside id="sheet" hidden aria-live="polite">
+  <button id="close" aria-label="סגירה">×</button>
+  <div class="k">ענף</div>
+  <h2 id="s-name"></h2>
+  <div class="row">
+    <div class="cell"><b id="s-rules"></b><span>חוקים</span></div>
+    <div class="cell"><b id="s-dec"></b><span>החלטות</span></div>
+    <div class="cell"><b id="s-words"></b><span>מילות הפעלה</span></div>
+  </div>
+  <div class="k">נטען כשכותבים למשל</div>
+  <div class="chips" id="s-chips"></div>
+  <div id="s-forms-wrap"><div class="k">טפסים מבוקרים</div><div class="chips" id="s-forms"></div></div>
+</aside>
+<div class="hint" id="hint">גרירה לסיבוב · צביטה לזום · לחיצה על ענף</div>
+
+<script type="application/json" id="data">__DATA__</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function(){
+  var D=JSON.parse(document.getElementById('data').textContent);
+  var B=D.branches;
+  var totR=0,totD=D.general,totF=0;
+  B.forEach(function(b){totR+=b.rules;totD+=b.decisions;totF+=b.forms.length;});
+  document.getElementById('stats').innerHTML=
+    '<span><b>'+B.length+'</b>ענפים</span><span><b>'+totR+'</b>חוקים</span><span><b>'+totD+'</b>החלטות</span><span><b>'+D.general+'</b>מהן כלליות, בגזע</span><span><b>'+totF+'</b>טפסים מבוקרים</span>';
+
+  var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var cv=document.getElementById('scene');
+  var R=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});R.setClearColor(0x000000,0);
+  R.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+  var S=new THREE.Scene();
+  S.fog=new THREE.FogExp2(0xe4f0f0,0.012);
+  var C=new THREE.PerspectiveCamera(45,1,0.1,200);
+  C.position.set(0,9,24);
+  var O=new THREE.OrbitControls(C,cv);
+  O.target.set(0,6,0);O.enableDamping=true;O.dampingFactor=0.08;O.minDistance=10;O.maxDistance=45;O.maxPolarAngle=Math.PI*0.52;
+  O.autoRotate=!reduce;O.autoRotateSpeed=0.5;
+
+  S.add(new THREE.HemisphereLight(0xffffff,0x6f8a55,0.8));
+  var sun=new THREE.DirectionalLight(0xfff4e0,1.0);sun.position.set(8,18,10);S.add(sun);
+  var glow=new THREE.PointLight(0xfff0c8,0.3,30);glow.position.set(0,5,0);S.add(glow);
+
+  // ground: soft disc with rings
+  var g=new THREE.Mesh(new THREE.CircleGeometry(30,64),new THREE.MeshLambertMaterial({color:0x6fa552}));
+  g.rotation.x=-Math.PI/2;S.add(g);
+  for(var ri=1;ri<=4;ri++){
+    var ring=new THREE.Mesh(new THREE.RingGeometry(ri*3.2,ri*3.2+0.03,96),new THREE.MeshBasicMaterial({color:0x7fae66,transparent:true,opacity:0.5}));
+    ring.rotation.x=-Math.PI/2;ring.position.y=0.01;S.add(ring);
+  }
+
+  var bark=new THREE.MeshStandardMaterial({color:0x6b4b33,roughness:0.85,metalness:0.05});
+  // trunk
+  var trunkH=6;
+  var trunkCurve=new THREE.CatmullRomCurve3([new THREE.Vector3(0,0,0),new THREE.Vector3(0.25,2,0.1),new THREE.Vector3(-0.15,4,-0.1),new THREE.Vector3(0,trunkH,0)]);
+  var trunk=new THREE.Mesh(new THREE.TubeGeometry(trunkCurve,40,1.05,18,false),bark);S.add(trunk);
+  // roots (general decisions)
+  for(var k=0;k<7;k++){
+    var a=k/7*Math.PI*2+0.3;
+    var rc=new THREE.CatmullRomCurve3([new THREE.Vector3(0,0.6,0),new THREE.Vector3(Math.cos(a)*1.6,0.15,Math.sin(a)*1.6),new THREE.Vector3(Math.cos(a)*3.4,0.02,Math.sin(a)*3.4)]);
+    S.add(new THREE.Mesh(new THREE.TubeGeometry(rc,16,0.32,8,false),bark));
+  }
+
+  var maxR=Math.max.apply(null,B.map(function(b){return b.rules;}));
+  var maxD=Math.max.apply(null,B.map(function(b){return b.decisions;}));
+  var leafGeo=new THREE.IcosahedronGeometry(0.22,1);
+  var fruitGeo=new THREE.SphereGeometry(0.3,16,12);
+  var picks=[],tips=[];
+  var labelsEl=document.getElementById('labels');
+  var golden=Math.PI*(3-Math.sqrt(5));
+
+  B.forEach(function(b,i){
+    var ang=i*golden*1.0+0.4;
+    var start=new THREE.Vector3(0,3.2+(i%5)*0.65,0);
+    var len=4.2+6.5*(b.rules/maxR);
+    var rise=2.2+ (i%3)*1.2;
+    var dir=new THREE.Vector3(Math.cos(ang),0,Math.sin(ang));
+    var mid=start.clone().add(dir.clone().multiplyScalar(len*0.45)).add(new THREE.Vector3(0,rise*0.75,0));
+    var end=start.clone().add(dir.clone().multiplyScalar(len)).add(new THREE.Vector3(0,rise,0));
+    var curve=new THREE.CatmullRomCurve3([start,mid,end]);
+    var rad=0.16+0.42*(b.decisions/maxD);
+    var mat=bark.clone();
+    var tube=new THREE.Mesh(new THREE.TubeGeometry(curve,30,rad,10,false),mat);
+    tube.userData.i=i;S.add(tube);picks.push(tube);
+    // tip node
+    var tip=new THREE.Mesh(new THREE.SphereGeometry(rad*1.4+0.12,16,12),new THREE.MeshStandardMaterial({color:0x3fae6e,emissive:0x0c2a18,roughness:0.45}));
+    tip.position.copy(end);tip.userData.i=i;S.add(tip);picks.push(tip);
+    // leaves around the outer half (one per trigger word, capped for readability)
+    var nLeaves=Math.min(b.nwords,24);
+    var lmat=new THREE.MeshStandardMaterial({color:0x56b97a,emissive:0x0a2414,roughness:0.6,flatShading:true});
+    for(var l=0;l<nLeaves;l++){
+      var t=0.45+0.55*(l/nLeaves);
+      var p=curve.getPoint(t);
+      var off=new THREE.Vector3(Math.sin(l*2.3)*0.9,Math.cos(l*1.7)*0.7+0.3,Math.cos(l*2.9)*0.9);
+      var leaf=new THREE.Mesh(leafGeo,lmat);leaf.position.copy(p).add(off.multiplyScalar(0.6+t*0.6));
+      leaf.scale.setScalar(0.7+((l*37)%10)/14);leaf.userData.i=i;leaf.userData.sway=l*0.7;
+      S.add(leaf);picks.push(leaf);
+    }
+    // fruits: controlled forms
+    var fmat=new THREE.MeshStandardMaterial({color:0xf2a531,emissive:0x3a2200,roughness:0.4});
+    b.forms.forEach(function(f,fi){
+      var p=curve.getPoint(0.62+fi*0.12);
+      var fr=new THREE.Mesh(fruitGeo,fmat);fr.position.copy(p).add(new THREE.Vector3(0,-0.55,0));fr.userData.i=i;
+      S.add(fr);picks.push(fr);
+    });
+    tips.push({pos:end.clone().add(new THREE.Vector3(0,rad*1.4+0.4,0)),mat:mat,tip:tip});
+    var el=document.createElement('button');
+    el.className='lbl';el.type='button';el.innerHTML=b.name+'<small>'+b.rules+'</small>';
+    el.addEventListener('click',function(){select(i);});
+    labelsEl.appendChild(el);tips[i].el=el;
+  });
+  var tl=document.createElement('div');tl.className='trunk-lbl';tl.innerHTML='הגזע: החוקים הכלליים<span>CLAUDE.md · '+D.general+' החלטות כלליות</span>';labelsEl.appendChild(tl);
+
+  // fireflies
+  var fg=new THREE.BufferGeometry();var fp=[];
+  for(var q=0;q<160;q++){fp.push((Math.random()-.5)*28,Math.random()*16+0.5,(Math.random()-.5)*28);}
+  fg.setAttribute('position',new THREE.Float32BufferAttribute(fp,3));
+  var flies=new THREE.Points(fg,new THREE.PointsMaterial({color:0xffffff,size:0.07,transparent:true,opacity:0.6}));S.add(flies);
+
+  var sel=-1;
+  var sheet=document.getElementById('sheet');
+  function select(i){
+    sel=i;var b=B[i];
+    tips.forEach(function(t,j){t.el.classList.toggle('on',j===i);t.mat.color.setHex(j===i?0x9a6a40:0x6b4b33);t.mat.emissive.setHex(j===i?0x3a2008:0x000000);});
+    document.getElementById('s-name').textContent=b.name;
+    document.getElementById('s-rules').textContent=b.rules;
+    document.getElementById('s-dec').textContent=b.decisions;
+    document.getElementById('s-words').textContent=b.nwords;
+    document.getElementById('s-chips').innerHTML=b.words.map(function(w){return '<span class="chip">'+w.replace(/[<&]/g,'')+'</span>';}).join('');
+    var fw=document.getElementById('s-forms-wrap');
+    fw.hidden=!b.forms.length;
+    document.getElementById('s-forms').innerHTML=b.forms.map(function(f){return '<span class="chip form">'+f.replace(/[<&]/g,'')+'</span>';}).join('');
+    sheet.hidden=false;
+    O.autoRotate=false;
+    var t=tips[i].pos;flyTo=t.clone();
+  }
+  document.getElementById('close').addEventListener('click',function(){sheet.hidden=true;sel=-1;tips.forEach(function(t){t.el.classList.remove('on');t.mat.color.setHex(0x6b4b33);t.mat.emissive.setHex(0);});flyTo=new THREE.Vector3(0,6,0);O.autoRotate=!reduce;});
+
+  var flyTo=null;
+  var ray=new THREE.Raycaster(),m=new THREE.Vector2(),down=null;
+  cv.addEventListener('pointerdown',function(e){down=[e.clientX,e.clientY];});
+  cv.addEventListener('pointerup',function(e){
+    if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>6)return;
+    var r=cv.getBoundingClientRect();m.x=((e.clientX-r.left)/r.width)*2-1;m.y=-((e.clientY-r.top)/r.height)*2+1;
+    ray.setFromCamera(m,C);var h=ray.intersectObjects(picks,false);
+    if(h.length&&h[0].object.userData.i!==undefined)select(h[0].object.userData.i);
+  });
+
+  function size(){var w=window.innerWidth,h=window.innerHeight;R.setSize(w,h,false);C.aspect=w/h;C.updateProjectionMatrix();
+    if(w<560){C.position.set(0,12,44);}}
+  window.addEventListener('resize',size);size();
+
+  var v=new THREE.Vector3(),clock=new THREE.Clock();
+  function frame(){
+    var t=clock.getElapsedTime();
+    if(flyTo){O.target.lerp(flyTo,0.06);if(O.target.distanceTo(flyTo)<0.02)flyTo=null;}
+    O.update();
+    if(!reduce){flies.rotation.y=t*0.03;flies.position.y=Math.sin(t*0.6)*0.2;}
+    R.render(S,C);
+    var w=window.innerWidth,h=window.innerHeight;
+    tips.forEach(function(tp){v.copy(tp.pos).project(C);
+      var vis=v.z<1;tp.el.style.display=vis?'':'none';
+      tp.el.style.left=((v.x+1)/2*w)+'px';tp.el.style.top=((-v.y+1)/2*h)+'px';
+      tp.el.style.opacity=String(Math.max(0.35,Math.min(1,1.25-v.z*0.3)));});
+    v.set(0,0.2,0).project(C);tl.style.left=((v.x+1)/2*w)+'px';tl.style.top=((-v.y+1)/2*h+8)+'px';
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+</script>

@@ -17,6 +17,8 @@
 ### Routines (טריגרים מתוזמנים)
 **מפת המערכת** (https://claude.ai/artifact/KTMVcoPJBva43nKRacSLkc, 27/10/2026): נבנית מהטבלה הזו ומזרימות Power Automate למטה. שורה שנוספה או כובתה = `python3 project-files/system-map/build-map.py` ופרסום מחדש של `project-files/system-map/system-map.html` לאותו קישור, באותו PR (`system-map-test.py` נכשל אחרת).
 
+**עץ הענפים** (https://claude.ai/artifact/3tVqQWHsc4kwgdKntufErG, 03/11/2026): 13 ענפי העבודה בתלת-ממד (אורך = חוקים, עובי = החלטות, עלים = מילות הפעלה, פירות = טפסים מבוקרים). נבנה מ-`project-files/domains/` ב-`python3 project-files/domain-tree/build.py` ומתפרסם **רק כשמיכאל מבקש** (מיכאל בשאלון: "בצע: עדכון רק כשאבקש").
+
 ההוראות של כל אחד בקובץ `project-files/routine-*.md` (הטריגר רק אומר "קרא את הקובץ ובצע"). להעברה: `create_trigger` מחדש מתוך שיחה עובדת עם ה-repo, באותו cron ובאותו פרומפט קצר (התבנית: `tfugen-db` סעיף 7).
 
 | מזהה | שם | מתי (שעון ישראל) | קובץ הוראות | שיחה |
