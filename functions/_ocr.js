@@ -99,7 +99,17 @@ export function ocrAutoPick(items, done, nowMs) {
 // from (27/10/2026): the first page of this call, 1-based. A scan longer than OCR_PAGES is read in calls of OCR_PAGES pages
 // (a 6-page inspector scan stopped at 3); from > 1 appends to the same txt. `next` = the from of the next call.
 // txtName (31/10/2026): the txt file name; routine-db's ocr_txt passes ocrTxtName (folders added outside the inbox).
-export async function ocrOne(env, token, rel, name, model, from, txtName) {
+// skipText (03/11/2026, OCR experiment on 13 real files, STATUS "three experiments"): a PDF made on a computer (a quote,
+// an invoice, an order) keeps its text in fonts, and its only images are the logos, so the image read gave the logo and
+// nothing else (7 such PDFs: 0 of 19 dates and 1 of 104 numbers, while their own text had all of them). With skipText
+// (the automatic read of the inbox) a PDF with a font is not read and no txt is written: read_resource reads its text.
+// The ocr_txt op still reads it when an agent asks, since an agent asks only after read_resource found no text.
+export function pdfHasFont(buf) {
+  const n = Math.min(buf.length, 4 * 1024 * 1024);
+  for (let i = 0; i + 5 <= n; i++) if (buf[i] === 47 && buf[i + 1] === 70 && buf[i + 2] === 111 && buf[i + 3] === 110 && buf[i + 4] === 116) return true; // "/Font"
+  return false;
+}
+export async function ocrOne(env, token, rel, name, model, from, txtName, skipText) {
   from = Math.max(1, Number(from) || 1);
   const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
   const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
@@ -107,6 +117,7 @@ export async function ocrOne(env, token, rel, name, model, from, txtName) {
   if (!d.ok) return { name, ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status };
   const buf = new Uint8Array(await d.arrayBuffer());
   if (buf.length > 4 * 1024 * 1024) return { name, ok: false, error: 'too big: ' + buf.length };
+  if (skipText && pdfHasFont(buf)) return { name, ok: true, skipped: true, text_layer: true, note: 'the PDF has its own text (fonts): read it with read_resource, no OCR' };
   const MAXP = OCR_MAX_PAGES;
   let all = await pdfDct(buf, MAXP, from - 1, from - 1 + OCR_PAGES), mime = 'image/jpeg', ccitt = null;
   if (!all.length) all = pdfJpegs(buf, MAXP); // no image object found by its dictionary: the raw search, as before

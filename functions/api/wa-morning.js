@@ -455,12 +455,12 @@ async function ocrAuto(env, now) {
     st.cont = null;
     await stateSet(env, OCR_AUTO_KEY, JSON.stringify(st));
     const model = env.OCR_MODEL && OCR_MODELS.indexOf(env.OCR_MODEL) >= 0 ? env.OCR_MODEL : OCR_MODELS[0];
-    res = await ocrOne(env, at.token, OCR_INBOX + '/' + next.name, next.name, model, cont ? cont.from : 1).catch((e) => ({ name: next.name, ok: false, error: 'ocr' }));
+    res = await ocrOne(env, at.token, OCR_INBOX + '/' + next.name, next.name, model, cont ? cont.from : 1, undefined, true).catch((e) => ({ name: next.name, ok: false, error: 'ocr' }));
     const tries = res && res.retry ? ((cont && cont.tries) || 0) + 1 : 0; // a read that keeps failing is dropped after 3 tries (28/10/2026 security review)
     st.cont = res && (res.ok || (res.retry && tries < 3)) && res.next && res.next <= OCR_MAX_PAGES ? { name: next.name, from: res.next, tries } : null; // retry: the earlier txt could not be read, the same pages again (28/10/2026 retro)
   }
   await stateSet(env, OCR_AUTO_KEY, JSON.stringify(st));
-  return res ? { name: res.name, ok: res.ok, chars: res.chars || 0, error: res.error || null } : { idle: true };
+  return res ? { name: res.name, ok: res.ok, chars: res.chars || 0, skipped: !!res.skipped, error: res.error || null } : { idle: true }; // skipped (03/11/2026 review): a PDF with its own text is not a 0-char read
 }
 export async function watch(env, now) {
   try {
