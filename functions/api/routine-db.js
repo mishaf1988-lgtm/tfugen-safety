@@ -237,6 +237,8 @@ const SECOND_CONTENT = /\d+ ?\u05d1\u05e8(?![\u05d0-\u05ea])|ppm|\u05de\u05e0"\u
 // prepared, a short acknowledgement was sent" turned red. A report that says Michael declined and nothing was prepared
 // gives no safety answer to check; a figure or instruction in it still puts it back under the gate.
 const SECOND_DECLINED = /(?:\u05e2\u05e0\u05d4|\u05d1\u05d7\u05e8) \u05dc\u05d0(?:\s|$)|\u05dc\u05d0 \u05d4\u05d5\u05db\u05e0/;
+// the gate's own prefix; the fault alert reads it (_faults.js faultItems) to keep this breach off Michael's WhatsApp
+export const SECOND_MISS = '\u05d7\u05e1\u05e8 \u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9 \u05d1\u05e9\u05d0\u05dc\u05d4 \u05e8\u05d2\u05d9\u05e9\u05d4: ';
 export function secondCheckGate(e) {
   if (!e || !e.ok || SECOND_CHECK_AGENTS.indexOf(e.agent) < 0) return e;
   const text = String(e.line || '') + ' ' + String(e.learned || '');
@@ -244,7 +246,7 @@ export function secondCheckGate(e) {
   if (SECOND_DONE.test(text) && !SECOND_SKIPPED.test(text)) return e;
   if (SECOND_DOCMETA.test(text) && !SECOND_CONTENT.test(text)) return e;
   if (SECOND_DECLINED.test(text) && !SECOND_CONTENT.test(text)) return e;
-  return { ...e, ok: false, line: ('\u05d7\u05e1\u05e8 \u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9 \u05d1\u05e9\u05d0\u05dc\u05d4 \u05e8\u05d2\u05d9\u05e9\u05d4: ' + e.line).slice(0, 300) };
+  return { ...e, ok: false, line: (SECOND_MISS + e.line).slice(0, 300) };
 }
 // languageGate (30/10/2026, handoff gap: two Haiku run summaries came out in English): the assistant's closing
 // report with no Hebrew letter at all turns red like the second-check one; the text is kept, nothing is refused.

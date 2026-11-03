@@ -11,7 +11,7 @@
 import { stateGet, stateSet } from './_onedrive.js';
 import { ownerWa, sendToOwner, ownerWindowOpen } from './_wa.js';
 import { SB_LIVE, tmo } from './_shared.js';
-import { DEV_INBOX_KEY, devInboxAdd, devInboxFired, devFireTarget, devFireText } from './api/routine-db.js';
+import { DEV_INBOX_KEY, devInboxAdd, devInboxFired, devFireTarget, devFireText, SECOND_MISS, SECOND_CHECK_AGENTS } from './api/routine-db.js';
 import { stateCas } from './_cas.js';
 
 export const FAULT_KEY = 'fault_alert', FAULT_LINES = 5, FAULT_FIRST_MS = 20 * 60e3;
@@ -28,13 +28,15 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
   const sent = {};
   Object.entries((prev && prev.sent) || {}).forEach(([k, d]) => { if (d === today) sent[k] = d; });
   const items = [];
-  const add = (key, text, dev, agent, ref) => {
+  const add = (key, text, dev, agent, ref, quiet) => {
     if (sent[key]) return;
     const had = items.find((x) => x.key === key);
     // a second failure of the same agent with no request of its own: the item is no longer covered by one
-    if (had) { if (had.ref && had.ref !== ref) delete had.ref; return; }
+    // and a real failure beside a quiet one makes the item loud
+    if (had) { if (had.ref && had.ref !== ref) delete had.ref; if (!quiet) delete had.quiet; return; }
     const it = agent ? { key, text, dev, agent } : { key, text, dev };
     if (ref) it.ref = ref;
+    if (quiet) it.quiet = true;
     items.push(it);
   };
   (errRows || []).forEach((r) => {
@@ -50,7 +52,11 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
     // (only the id, matched exactly) lets openFix leave out a failure that already has a request.
     // only in the part Michael sees (security review 02/11/2026): an id that hides a failure is always in his message
     const m = /\bdev-\d{14}-[a-z0-9]{4}\b/.exec(cut(r.line, 120));
-    add('agent:' + agentKey(r.agent), '\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc, ' + agentKey(r.agent) + ': ' + cut(r.line, 120), 'AGENTDEV', agentSafe(r.agent), m ? m[0] : '');
+    // 03/11/2026 (dev-20261103090001-c5il; Michael in the questionnaire of the assistant chat: "do it: two fixes"): a missing
+    // second checker on the assistant's answer is a procedure breach after the answer already reached Michael, not a system
+    // fault. It goes to the developer (and the retro and the daily quality check read agent_log), not to his WhatsApp.
+    const quiet = SECOND_CHECK_AGENTS.indexOf(String(r.agent || '')) >= 0 && String(r.line || '').indexOf(SECOND_MISS) === 0;
+    add('agent:' + agentKey(r.agent), '\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc, ' + agentKey(r.agent) + ': ' + cut(r.line, 120), 'AGENTDEV', agentSafe(r.agent), m ? m[0] : '', quiet);
   });
   items.forEach((x) => { sent[x.key] = today; });
   return { items, fault: { at: nowIso, sent } };
@@ -138,9 +144,12 @@ export async function runFaultAlert(env, nowIso) {
   if (items.length) {
     // a fault already reported today was filtered above, so the fix is opened once a day per fault too
     try { fix = await openFix(env, url, k, items, nowIso, !(prev && prev.fired_day === dayIL(nowIso))); } catch (e) { fix = { ok: false }; }
-    const to = await ownerWa(env, url);
-    const s = to ? await sendToOwner(env, to, faultText(items, fix && (fix.fired || fix.already || fix.covered)), { windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
-    sentOk = !!(s && s.ok);
+    const loud = items.filter((x) => !x.quiet);
+    if (loud.length) {
+      const to = await ownerWa(env, url);
+      const s = to ? await sendToOwner(env, to, faultText(loud, fix && (fix.fired || fix.already || fix.covered)), { windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
+      sentOk = !!(s && s.ok);
+    }
   }
   // not sent: the mark does not move, so the same faults are tried again next tick
   if (fix && fix.fired) fault.fired_day = dayIL(nowIso); else if (prev && prev.fired_day) fault.fired_day = prev.fired_day;

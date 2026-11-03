@@ -31,6 +31,19 @@ const NOW = '2026-10-31T14:50:00.000Z';
   const r = faultItems(prev, [], log, NOW);
   check('an agent that failed since the last tick, once, by its short name', r.items.length === 1 && r.items[0].key === 'agent:map-lights', r.items);
 }
+{ // 03/11/2026 (dev-20261103090001-c5il): a missing second checker goes to the developer, not to Michael's WhatsApp
+  const prev = { at: '2026-11-03T08:00:00.000Z', sent: {} };
+  const miss = '\u05d7\u05e1\u05e8 \u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9 \u05d1\u05e9\u05d0\u05dc\u05d4 \u05e8\u05d2\u05d9\u05e9\u05d4: Excel';
+  const now = '2026-11-03T09:00:00.000Z';
+  const q = faultItems(prev, [], [{ agent: 'routine-wa-assistant', at: '2026-11-03T08:50:00Z', ok: false, line: miss }], now);
+  check('second check missing: the item is quiet (no WhatsApp) but still goes to the developer', q.items.length === 1 && q.items[0].quiet === true && faultDevText(q.items).indexOf('wa-assistant') > 0, q.items);
+  const l = faultItems(prev, [], [{ agent: 'routine-wa-assistant', at: '2026-11-03T08:50:00Z', ok: false, line: miss }, { agent: 'routine-wa-assistant', at: '2026-11-03T08:55:00Z', ok: false, line: 'wa_me failed 500' }], now);
+  check('a real failure of the same agent beside it makes the item loud', l.items.length === 1 && !l.items[0].quiet, l.items);
+  const o = faultItems(prev, [], [{ agent: 'routine-map-lights', at: '2026-11-03T08:50:00Z', ok: false, line: miss }, { agent: 'wa-assistant', at: '2026-11-03T08:51:00Z', ok: false, line: 'x ' + miss }], now);
+  check('only the assistant, and only the gate prefix at the start, is quiet', o.items.every((x) => !x.quiet), o.items);
+  const fsrc = fs.readFileSync(new URL('../../functions/_faults.js', import.meta.url), 'utf8');
+  check('the WhatsApp gets only the loud items, and none at all when every item is quiet', /const loud = items\.filter\(\(x\) => !x\.quiet\)/.test(fsrc) && /if \(loud\.length\)/.test(fsrc) && /faultText\(loud,/.test(fsrc));
+}
 { // the text
   const items = Array.from({ length: FAULT_LINES + 3 }, (_, i) => ({ key: 'k' + i, text: 'x' + i }));
   const t = faultText(items);
@@ -45,7 +58,7 @@ const NOW = '2026-10-31T14:50:00.000Z';
   check('a test error is closed without a fix (the request says so)', d.indexOf('dev_done') > 0);
   check('the message says the fix already started when it did, and the morning check when it did not', faultText(items, true) !== faultText(items, false) && /\u05d4\u05de\u05e4\u05ea\u05d7/.test(faultText(items, true)));
   const fsrc = fs.readFileSync(new URL('../../functions/_faults.js', import.meta.url), 'utf8');
-  check('the message says the fix started only when the developer was really fired (fired, already open, or the failure cites its own request; not no-fire)', /faultText\(items, fix && \(fix\.fired \|\| fix\.already \|\| fix\.covered\)\)/.test(fsrc));
+  check('the message says the fix started only when the developer was really fired (fired, already open, or the failure cites its own request; not no-fire)', /faultText\(loud, fix && \(fix\.fired \|\| fix\.already \|\| fix\.covered\)\)/.test(fsrc));
   check('the fire goes through devFireTarget, only for a new request, once a day', /const ft = r\.created && fireOk \? devFireTarget\(env\) : null/.test(fsrc) && /fired_day/.test(fsrc));
   check('one open fault-alert request at a time', /x\.agent === 'fault-alert'/.test(fsrc) && /already: true/.test(fsrc));
 }
