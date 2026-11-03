@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 // the Routines' way to the database without the Supabase connector. One key, a fixed
 // list of tables, medical tables expiry only, trustee reports without text or names,
 // four server_state keys to write, nothing deleted.
+import { pdfHasFont } from './_build/_ocr.mjs';
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
 import { secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, ilInstant, incFilePrefix, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, refusesWithoutFlow, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, odPdfCheck, OD_PUT_MAX, odArchiveCheck, archiveStampName, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrTxtName, taskAddCheck, TASK_ADD_MAX, taskOpenDup, TASK_SOURCES, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT, isoSwapRequest, isoUpCheck, OD_ISO_SWAP, ISO_SITE_URL, mailGotCheck, mailGotList, MAIL_GOT_MAX } from './_build/routine-db.mjs';
@@ -190,7 +191,7 @@ const callIn = async (body) => {
       if (o && o.method === 'PUT') { saved.text = String(o.body); saved.puts = (saved.puts || 0) + 1; return new Response('{}', { status: 201 }); }
       if (saved.readFail && /\.txt:\/content/.test(decodeURIComponent(url))) return new Response('x', { status: 500 });
       if (/\.txt:\/content/.test(decodeURIComponent(url))) return new Response(saved.text || '', { status: saved.text ? 200 : 404 });
-      return new Response(pdf, { status: 200 });
+      return new Response(saved.pdf || pdf, { status: 200 });
     };
     const seen = [];
     const env = { AI: { run: async (m, inp) => { const b64 = inp.messages[0].content[1].image_url.url.split(',')[1]; const b = Buffer.from(b64, 'base64'); seen.push(b[5]); return { response: 'p' + b[5] }; } } };
@@ -212,6 +213,18 @@ const callIn = async (body) => {
       check('ocrOne: a failed read of the earlier pages = an error with retry and no write; blank pages in the middle = ok, skipped, next, no write (the chain goes on); blank to the end after earlier pages = ok skipped (28/10/2026 retro)',
         !f1.ok && f1.retry === true && f1.next === 4 && /not overwritten/.test(f1.error) && f2.ok && f2.skipped === true && f2.next === 4 && f3.ok && f3.skipped === true && f3.next === undefined
         && saved.puts === putsBefore && saved.text === before && seen.length === seenBefore, { f1, f2, f3, puts: saved.puts, putsBefore, ai: seen.length - seenBefore });
+      // 03/11/2026 (OCR experiment): the automatic inbox read (skipText) skips a PDF with its own text (a font), with no AI
+      // call and no txt; a scan (no font) is read as before; the ocr_txt op (no skipText) reads even a PDF with a font
+      const putsS = saved.puts, seenS = seen.length;
+      saved.pdf = Buffer.concat([Buffer.from(pdf), Buffer.from('\n5 0 obj << /Type /Font /Subtype /Type0 >> endobj\n')]);
+      const t1 = await ocrOne(env, 't', 'x/quote.pdf', 'quote.pdf', OCR_MODELS[0], 1, undefined, true);
+      const t2 = await ocrOne(env, 't', 'x/quote.pdf', 'quote.pdf', OCR_MODELS[0], 1);
+      saved.pdf = null;
+      const t3 = await ocrOne(env, 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0], 1, undefined, true);
+      check('ocrOne skipText: a PDF with a font = ok, skipped, text_layer, no AI read and no txt; without skipText it is read; a scan with skipText is read (03/11/2026)',
+        t1.ok && t1.skipped === true && t1.text_layer === true && /read_resource/.test(t1.note) && t2.ok && !t2.skipped && t3.ok && !t3.skipped && t3.pages === 3
+        && pdfHasFont(new Uint8Array(Buffer.from('<< /Font << /F1 3 0 R >> >>'))) && !pdfHasFont(new Uint8Array(Buffer.from('<< /XObject << /Im1 3 0 R >> >>'))),
+        { t1, t2, t3 });
     } finally { globalThis.fetch = real; }
   })();
   // 26/10/2026 (dev request: a copier scan, "no scanned page image"): black and white pages are CCITT Group 4.
