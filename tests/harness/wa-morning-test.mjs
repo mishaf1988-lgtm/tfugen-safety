@@ -292,6 +292,12 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   const rows = [{ t: 'equip', id: 7, n: 'Crane \u2014 hall', loc: 'A', vendor: 'V<x>', e: '2026-11-30' }, { t: 'docs', id: 3, n: 'Permit', e: '2026-09-01' }, { t: 'docs', id: 4, n: '', e: '2026-11-01' }, { t: 'docs', id: 5, n: 'Bad', e: '' }];
   let p = calendarPlan(rows, { 'docs:9:2026-11-01': 1, 'docs:3:2026-09-01': 1 }, '2026-10-20');
   check('already written: not again; nameless or dateless rows: skipped', p.todo.length === 1 && p.todo[0].key === 'equip:7:2026-11-30', p.todo);
+  { // 03/11/2026: FORKEXT-1650, s "not relevant" with e left on 29/10, read as an urgent expiry
+    const off = '\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9';
+    const sp = splitUrgent([{ n: 'FORKEXT-1650', e: '2026-10-29', s: off }, { n: 'Crane', e: '2026-10-29', s: '' }], '2026-11-03');
+    check('not relevant row with e: not urgent, not waiting, not disqualified (03/11/2026)', sp.items.map((x) => x.n).join() === 'Crane' && !sp.waiting.length && !sp.disq.length);
+    check('not relevant row with e: no calendar entry (03/11/2026)', calendarPlan([{ t: 'equip', id: 21, n: 'FORKEXT-1650', e: '2026-11-05', s: off + ' (01/11)' }, { t: 'equip', id: 22, n: 'Crane', e: '2026-11-05', s: '' }], {}, '2026-10-20').todo.map((x) => x.key).join() === 'equip:22:2026-11-05');
+  }
   check('equipment of another area (resp_area): no calendar entry (21/10/2026 retro)', calendarPlan([{ t: 'equip', id: 11, n: 'NH3 valve', e: '2026-11-30', resp_area: '\u05e7\u05d9\u05e8\u05d5\u05e8 \u05d5\u05d0\u05de\u05d5\u05e0\u05d9\u05d4' }, { t: 'equip', id: 12, n: 'Crane', e: '2026-11-30', resp_area: null }], {}, '2026-10-20').todo.map((x) => x.key).join() === 'equip:12:2026-11-30');
   check('the sent map keeps only what is still in the window', JSON.stringify(p.keep) === JSON.stringify({ 'docs:3:2026-09-01': 1 }), p.keep);
   const f = JSON.parse(p.todo[0].file);
