@@ -20,6 +20,7 @@ Claude Code בענן לא כותב ל-OneDrive: המסווג של Claude Code ח
 - תזמון הבדיקה שלי: משימה שנכנסת לפני דקה 19 תבוצע בריצה הקרובה; `send_later` ל-90 דקות מכסה ריצה אחת ומרווח.
 
 ## מה Cowork לא יכול (נבדק 11/10/2026)
+**תוכנה של Windows (נבדק 03/11/2026, `t-2026-11-03-dwg-orel-pdf`):** Cowork רץ במכונה וירטואלית Linux שרואה רק את התיקיות המחוברות: `accoreconsole.exe` של DWG TrueView החזיר `Exec format error`, ואין `cmd.exe`, PowerShell או גישה ל-`C:\`. בדיקה שתוכנה מותקנת עובדת (קריאת הקבצים), הרצה לא. המרה ב-AutoCAD/TrueView, Excel עם מאקרו, או כל exe: Claude Code במחשב של מיכאל (לשונית Code באפליקציה), עם טקסט מוכן להדבקה; לא Cowork.
 קובץ מצורף ממייל: החיבור ל-365 ב-Cowork מחזיר רק את הטקסט שלו, לא את הקובץ (`t-2026-10-11-pump-reports-mail` נעצרה ב-blocked). קובץ ממייל מגיע ל-OneDrive רק דרך הזרימה ב-Power Automate (`power-automate-mail.md`) או "שמור ב-OneDrive" ב-Outlook באתר. משימה ל-Cowork עם קובץ: רק מ-assets של הארטיפקט.
 
 ## משימות של תיוק המייל (מ-11/10/2026)
