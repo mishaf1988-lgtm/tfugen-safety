@@ -13,7 +13,7 @@
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { odConfigured, accessToken, stateGet, stateSet, runLeased } from '../_onedrive.js';
 import { G, seg, graphPut, stampName, buildRegister, readAll, TASKS_Q, ilYear, folderFor, yearItem, FILE_MS } from './hazard-file.js';
-import { meetingHazards, meetingAccidents } from '../_meeting.js';
+import { meetingHazards, meetingAccidents, meetingMinor } from '../_meeting.js';
 import { deckContent, patchDeck } from '../_deckpatch.js';
 
 export const DECK = { name: '\u05de\u05e6\u05d2\u05ea \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea.\u05d7\u05d5\u05d3\u05e9\u05d9\u05ea.pptx', type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' };
@@ -41,7 +41,7 @@ export async function runDeck(env, force, s3Now, opt) {
   // The deck lives next to the year's file and moves with it (upgrade review 24).
   const FOLDER = folderFor(ilYear((opt && opt.now) || Date.now()));
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-  const st = await stateGet(env, ['deck_sig', 'deck_ctag', 'deck_week', 'deck_meeting_date', 'deck_s3_month', 'deck_ver', 'deck_err_kind', 'deck_s5']).catch(() => ({}));
+  const st = await stateGet(env, ['deck_sig', 'deck_ctag', 'deck_week', 'deck_meeting_date', 'deck_s3_month', 'deck_ver', 'deck_err_kind', 'deck_s5', 'minor_injuries']).catch(() => ({}));
   const val = (k) => (st[k] && st[k].value) || '';
   const date = meetingDate(today, val('deck_meeting_date'));
   const [hazards, reports, tasks, inc, nearMiss] = await Promise.all([
@@ -52,7 +52,8 @@ export async function runDeck(env, force, s3Now, opt) {
     readAll(env, 'near_miss?select=id,d,area,descr,s&order=d.asc'),
   ]);
   const rows = buildRegister(hazards, reports, tasks).rows;
-  const m = { hazards: meetingHazards(rows, date), accidents: meetingAccidents(inc, date) };
+  let minorList = []; try { minorList = JSON.parse(val('minor_injuries') || '[]'); } catch (e) { minorList = []; }
+  const m = { hazards: meetingHazards(rows, date), accidents: meetingAccidents(inc, date), minor: meetingMinor(minorList, date) };
   // Slide 5 (29/10/2026): the open actions that came from an investigation or the committee itself.
   const committee = hazards.filter((x) => x.src && x.s !== '\u05e1\u05d2\u05d5\u05e8').map((x) => ({ n: x.n, dept: x.dept, resp: x.resp, action: x.action, descr: x.descr, due: x.due, s: x.s }));
   // Slide 3 = the month that ended, written once when a new month begins

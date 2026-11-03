@@ -111,6 +111,15 @@ export function meetingHazards(rows, ref) {
 const ilDay = (ts) => (ts ? new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }) : '');
 export const offSite = (l) => /\u05d1\u05d3\u05e8\u05da|\u05de\u05d7\u05d5\u05e5 \u05dc\u05de\u05e4\u05e2\u05dc/.test(String(l || ''));
 function nature(x) { const m = /\u05de\u05d4\u05d5\u05ea \u05d4\u05e4\u05d2\u05d9\u05e2\u05d4: ([^.]+)/.exec(String(x.r || '')); return (m ? m[1] : String(x.d || '')).replace(/\s+/g, ' ').substring(0, 80); }
+// 03/11/2026 (Michael in the questionnaire: "do it: a separate line on the accidents slide"): an injury Michael decided is
+// not a work accident (back to work at once, no absence) is kept out of inc and every accident count, and shown as its
+// own line. list = server_state.minor_injuries, [{d: 'YYYY-MM-DD', dept}]; no names (the deck is shown in the meeting).
+export function meetingMinor(list, ref) {
+  const wk = weekBefore(ref), y = ref.substring(0, 4);
+  const ok = (Array.isArray(list) ? list : []).filter((x) => x && /^\d{4}-\d{2}-\d{2}$/.test(String(x.d || '')) && x.d <= ref)
+    .map((x) => ({ d: x.d, dept: String(x.dept || '').slice(0, 30) })).sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0));
+  return { week: ok.filter((x) => x.d >= wk.start && x.d <= wk.end), year: ok.filter((x) => x.d.substring(0, 4) === y).length };
+}
 export function meetingAccidents(inc, ref) {
   const y = +ref.substring(0, 4);
   const wk = weekBefore(ref);

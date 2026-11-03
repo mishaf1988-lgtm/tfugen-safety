@@ -4,7 +4,7 @@
 // section inside HighSevPanel), and the real chart XML (stacked bar with a
 // hidden "Totals" series and a fixed axis max; a literal line chart).
 import { patchPara, setList, patchDeck, deckContent, FIXED_YEARS, setBars, catName } from './_build/_deckpatch.mjs';
-import { meetingHazards, meetingAccidents } from './_build/_meeting.mjs';
+import { meetingHazards, meetingAccidents, meetingMinor } from './_build/_meeting.mjs';
 import { readZip, writeZip, entryText } from './_build/_xlsxpatch.mjs';
 import { onRequest, runDeck, defaultMeeting, meetingDate } from './_build/hazard-deck.mjs';
 
@@ -132,6 +132,14 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   check('the label above each bar: "פתוחים N" in red, "הכל סגור" for none', c1.includes('formatCode="&quot;פתוחים &quot;#,##0;;&quot;הכל סגור&quot;"') && /<c:v>Totals<\/c:v>[\s\S]*?<a:srgbClr val="C00000"\/>/.test(c1) && !c1.includes('595959'), c1.slice(c1.indexOf('<c:v>Totals'), c1.indexOf('<c:v>Totals') + 500));
   check('chart axis max follows the tallest bar (3 x 1.25 = 3.8), colours and labels untouched', c1.includes('<c:max val="3.8"/>') && c1.includes('4EA72E') && c1.includes('<c:showVal val="1"/>'), c1.match(/<c:max[^>]*>/));
   check('chart labels: each department with this week\'s closed and new on lines of their own (06/10/2026)', c1.includes('<c:v>ייצור טוגנים\nנסגרו 0\nחדשים 0</c:v>') && (c1.match(/<c:v>תוצג\nנסגרו 0\nחדשים 0<\/c:v>/g) || []).length === 3, c1.slice(c1.indexOf('<c:cat>'), c1.indexOf('<c:cat>') + 400));
+  // 03/11/2026 (Michael: "do it: a separate line on the accidents slide"): injuries that are not work accidents
+  { const s2plain = await partText(out.bytes, 'ppt/slides/slide2.xml');
+    check('no minor injuries: the "no change" note as it was', s2plain.includes('<a:t>ללא שינוי, ללא אירועים משבוע שעבר</a:t>'));
+    const minor = meetingMinor([{ d: '2026-09-24', dept: 'ייצור טוגנים', name: 'X' }, { d: '2026-09-25', dept: 'ייצור' }, { d: '2026-09-10', dept: 'a' }, { d: '2026-10-05', dept: 'later' }, { d: 'bad' }], ref);
+    check('meetingMinor: only the week before the meeting (20-26/09), a year count to the meeting day, no name kept', minor.week.length === 2 && minor.year === 3 && !('name' in minor.week[0]), minor);
+    const outM = await patchDeck(src, deckContent(Object.assign({}, m, { minor }), ROWS, ref, { s3Month: '2026-09' }));
+    const s2m = await partText(outM.bytes, 'ppt/slides/slide2.xml');
+    check('with minor injuries: "no work accidents" and a second line with the count, dates and departments; the accident count unchanged', s2m.includes('<a:t>ללא תאונות עבודה בשבוע שעבר</a:t>') && s2m.includes('פגיעות קלות ללא היעדרות (לא תאונת עבודה): 2, 24/09 ייצור טוגנים, 25/09 ייצור') && outM.report.length === 0 && s2m.replace(/<a:t>[^<]*פגיעות[^<]*<\/a:t>/, '').replace(/ללא תאונות עבודה בשבוע שעבר/, '').length > 0 && (s2m.match(/סה"כ \d+ תאונות/) || [''])[0] === (s2plain.match(/סה"כ \d+ תאונות/) || [''])[0], [outM.report, (s2m.match(/<a:t>[^<]*<\/a:t>/g) || []).slice(-4)]); }
   const again2 = await patchDeck(out.bytes, deckContent(m, ROWS, ref, { s3Month: '2026-09' }));
   check('...and the next run still finds each department by the label\'s first line', again2.report.length === 0 && again2.changed.length === 0, again2.report);
   const s2 = await partText(out.bytes, 'ppt/slides/slide2.xml');
