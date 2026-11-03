@@ -1,0 +1,24 @@
+# Two runs of the assistant side by side (e.g. Sonnet against Opus, or before and after a change in its instructions).
+# Run from the repo root:  npx promptfoo@0.125.1 eval -c project-files/research/promptfoo-golden/compare.yaml -o <out>.html
+# Each provider replays one answers file; the judge is tools/golden-check.py (judge.py). No model is called.
+description: golden questions, two runs side by side
+prompts:
+  - "{{q}}"
+providers:
+  - id: file://replay.py
+    label: "02/11 first answers"
+    config:
+      answers: project-files/research/promptfoo-golden/answers-261102-first.json
+  - id: file://replay.py
+    label: "02/11 after the fix"
+    config:
+      answers: project-files/research/promptfoo-golden/answers-261102-final.json
+tests: file://tests.json
+defaultTest:
+  assert:
+    - type: python
+      value: file://judge.py:gold
+      metric: gold
+    - type: python
+      value: file://judge.py:hebrew
+      metric: hebrew
