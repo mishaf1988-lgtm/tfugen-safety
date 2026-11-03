@@ -3,6 +3,7 @@
 נבנה 01/11/2026 מסריקה של כל קבצי ה-md, ה-skills, הכללים, נהלי העוזר והסוכנים (מיכאל: "תעבור על כל מה שרשום ... ובכלל כל קובץ"). כל שורה: הכלל בקצרה, והמקור שבו הוא כתוב במלואו. התיק הקצר: `project-files/domains/risk.md`. כלל חדש בענף נכנס גם לכאן.
 
 ## כללים מכל הקבצים
+- נוהל מתחקיר שמנהל המחלקה כותב ומדריך עליו = `task_add` על התאונה (`source_table` `inc`), לא `thz_add` ולא מפגע (03/11/2026, `project-files/assistant/accidents.md` 8א, DECISIONS 3991)
 - ביקורת חוזרת על מפגע סגור: עמודה אחת `tour_hazards.recheck_d`, לא משימה וירטואלית (`.claude/skills/tfugen-ref/references/gotchas.md:14`)
 - דוח המחלקות: `noAction` לפי הפעולה כפי שהוקלדה; `suggest` לא שומר, `setAction` רק כשריק (`.claude/skills/tfugen-ref/references/gotchas.md:42`)
 - שמות העמודות בחוברת המפגעים (I "פעולה נדרשת", K סטטוס, P תמונה) להוראות לכרום; אין גיליון "מייל משימות" (`.claude/skills/tfugen-ref/references/gotchas.md:43`)

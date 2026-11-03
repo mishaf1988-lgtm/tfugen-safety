@@ -16,6 +16,7 @@
 - "מחלקה" בקובץ המנוהל וב-`inc` רק מהרשימה (ייצור טוגנים, אריזה, חומר גלם...); "ייצור" לבד = "אחר"; "דיווח" = "מדווח"/"לא מדווח" (`project-files/assistant/accidents.md:25`)
 - בדיקה בסוף: `read_resource` על "ריכוז תאונות", הסה"כ עלה באחד ו"מדווח"+"לא מדווח" = הסה"כ (`project-files/assistant/accidents.md:44`)
 - `thz_add` מתחקיר: `loc` = מקום האירוע בלי שם המחלקה; "להשלמה" או "לקבוע לוז" = `due` ריק והמילים ב-`notes` (`project-files/assistant/accidents.md:27`)
+- נוהל מתחקיר שמנהל המחלקה כותב ומדריך עליו = `task_add` על התאונה (`source_table` `inc`), לא `thz_add` ולא מפגע (03/11/2026, `project-files/assistant/accidents.md` 8א, DECISIONS 3991)
 - שם העובד רק מנושא המייל של משאבי אנוש ומשם קובץ 250; לא לנחש משם אחר (`project-files/assistant/accidents.md:33`)
 - timeout מ-`od_trash`/`od_put_pdf`: קודם לבדוק בתיקייה, "name taken" = לבדוק גודל; לא לנסות שוב מיד (`project-files/assistant/accidents.md:39`)
 - `od_move` עובד רק מ-`_נכנס מהמייל`; העתקת קובץ שכבר בתיקייה = הורדה, העלאה בשם חדש, השוואת גודל ורק אז `od_trash` (`project-files/assistant/accidents.md:37`)

@@ -8792,7 +8792,10 @@ function _incInvestigated(r){return !!(r&&((r.rc&&String(r.rc).trim())||(r.five_
 // and a linked corrective task (ISO 45001 10.2). Only a NEW close is checked;
 // the incidents already closed stay as they are and show in the work list.
 function _incTasks(id){return (DB.tasks||[]).filter(function(t){return t&&t.source_table==='inc'&&t.source_id===id;});}
-function _incCloseGap(r){var m=[];if(!_incInvestigated(r))m.push('\u05d7\u05e7\u05d9\u05e8\u05d4 (\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9 \u05d0\u05d5 5-Why)');if(!r||!r.id||!_incTasks(r.id).length)m.push('\u05de\u05e9\u05d9\u05de\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea \u05de\u05e7\u05d5\u05e9\u05e8\u05ea');return m;}
+// 03/11/2026 (security review of task_add on inc): a task an agent added (id 'tsk-', routine-db task_add) counts only once it
+// is done, so a run steered by a mail cannot open the close gate with an empty task.
+function _incCloseTasks(id){return _incTasks(id).filter(function(t){return String(t.id||'').indexOf('tsk-')!==0||t.status==='\u05d4\u05d5\u05e9\u05dc\u05dd';});}
+function _incCloseGap(r){var m=[];if(!_incInvestigated(r))m.push('\u05d7\u05e7\u05d9\u05e8\u05d4 (\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9 \u05d0\u05d5 5-Why)');if(!r||!r.id||!_incCloseTasks(r.id).length)m.push('\u05de\u05e9\u05d9\u05de\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea \u05de\u05e7\u05d5\u05e9\u05e8\u05ea');return m;}
 // Work list: this year's incidents with no investigation, oldest first.
 function _incTodo(){var yr=String(new Date().getFullYear());return (DB.inc||[]).filter(function(r){return r&&String(r.dt||'').substring(0,4)===yr&&!_incInvestigated(r);}).sort(function(a,b){return String(a.dt||'').localeCompare(String(b.dt||''));});}
 function _opsEvidence(inFn){
