@@ -18,7 +18,7 @@
 //   body {calendar: true} only the calendar requests, now; no WhatsApp (a check after the flow is built)
 //   body {watch: true}  the watchdog for a stuck run, every 5 minutes (watchVerdict)
 // The same run writes calendar requests for upcoming expiries (calendarStep, below).
-import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo } from '../_shared.js';
+import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo, SITE } from '../_shared.js';
 import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, PROMISE_KEY, promiseDue, promiseRemindText, promiseToCheck, eveningAdd, isoWeekAdd, promiseCheckDue, promiseCheckFireText, assistantFire, assistantFireNow } from '../_wa.js';
 import { odConfigured, accessToken, putFile } from '../_onedrive.js';
 import { OCR_ROOT, OCR_INBOX, OCR_AUTO_KEY, OCR_AUTO_GAP_MS, OCR_DONE_MAX, OCR_MAX_PAGES, OCR_MODELS, ocrAutoPick, ocrOne } from '../_ocr.js';
@@ -495,6 +495,17 @@ async function watchReply(env, now) {
   return { ok: r.ok, sent: r.ok, error: r.error || null };
 }
 
+// 03/11/2026 (Supabase mail to Michael: the test project tfugen-staging is to be paused after 7 days with no activity;
+// its only other user is the weekly preview test, every Wednesday, so a missed or late run crosses 7 days): one read of
+// the test database each workday morning, with its public key, before anything that can stop the morning run.
+// The read returns no rows (RLS) and touches nothing; a failure is logged in the answer and never stops the brief.
+export const STAGING_PING_PATH = '/rest/v1/locations?select=id&limit=1';
+export async function stagingPing() {
+  if (!SITE.stagingSupabaseUrl || !SITE.stagingSupabaseKey) return { skipped: 'no staging project' };
+  const r = await fetch(SITE.stagingSupabaseUrl + STAGING_PING_PATH, { headers: { apikey: SITE.stagingSupabaseKey }, signal: tmo(SB_TIMEOUT_MS) });
+  return { status: r.status };
+}
+
 // The call itself, with the clock as an argument (tested at 07:47 Israel).
 // 20/10/2026 (Michael: "do it: buttons in WhatsApp"): three questions to tap under the update, inside
 // the window. A tap reaches the assistant as "1. ...", like a typed message.
@@ -505,11 +516,12 @@ export async function run(env, now, body) {
   if (!body.force && !body.dry && !dueNow(now)) return { ok: true, sent: false, reason: 'not 07:xx on a workday in Israel' };
   // Calendar first and on its own: a WhatsApp failure or "already sent today" does not stop it.
   const cal = await calendarStep(env, now, !!body.dry).catch((e) => ({ error: String(e.message || e).slice(0, 200) }));
+  const staging = body.dry ? null : await stagingPing().catch((e) => ({ error: String(e.message || e).slice(0, 120) }));
   const g = await gather(env, now);
   const open = await ownerWindowOpen(env, sbFrom(env), now.getTime());
   const text = buildBrief(g.items, g.failed, g.today, !open, g.notes, g.weather, g.devDone, g.learnOpen, false, g.waiting, g.disq, g.contra);
   if (body.dry) return { ok: true, sent: false, dry: true, text, cal };
-  if (!body.force && (await stateGet(env, LAST_KEY).catch(() => null)) === g.today) return { ok: true, sent: false, reason: 'already sent today', cal };
+  if (!body.force && (await stateGet(env, LAST_KEY).catch(() => null)) === g.today) return { ok: true, sent: false, reason: 'already sent today', cal, staging };
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };
   const to = await ownerWa(env, sbFrom(env));
   if (!to) return { ok: false, error: 'no owner number in notification_prefs' };
@@ -519,5 +531,5 @@ export async function run(env, now, body) {
     body: JSON.stringify([{ id: 'wm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
       event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error',
       payload: { title: clip(text, 120), kind: 'morning', via: r.via || null, wamid: r.wamid || null, detail: r.error || null } }]) }).catch(() => {});
-  return { ok: r.ok, sent: r.ok, via: r.via || null, error: r.error || null, chars: text.length, cal };
+  return { ok: r.ok, sent: r.ok, via: r.via || null, error: r.error || null, chars: text.length, cal, staging };
 }
