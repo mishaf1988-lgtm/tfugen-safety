@@ -89,10 +89,16 @@ export const stripPrRefs = (t) => String(t || '').replace(/\s*\(#\d{3,5}\)/g, ''
 // after WAIT_DAYS with no report the item is urgent again. Pure.
 export const WAIT_DAYS = 14;
 export const DISQ_RE = /^(\u05dc\u05d0 \u05ea\u05e7\u05d9\u05df|\u05dc\u05d0 \u05db\u05e9\u05d9\u05e8|\u05dc\u05ea\u05e7\u05df|\u05d0\u05e1\u05d5\u05e8|\u05e4\u05e1\u05d5\u05dc)/;
+// 03/11/2026 (FORKEXT-1650 closed as not relevant with e left on 29/10, read as an urgent expiry; Michael:
+// "they were disqualified and are not tracked any more"): as _expOff in index.html, a row whose s starts
+// "\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9" is out of tracking, whatever its e.
+export const EXP_OFF = /^\s*\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9/;
+export const expOff = (x) => EXP_OFF.test(String((x && x.s) || ''));
 export function splitUrgent(items, today) {
   const from = new Date(Date.parse(today + 'T00:00:00Z') - WAIT_DAYS * 86400000).toISOString().slice(0, 10);
   const out = { items: [], waiting: [], disq: [] };
   (items || []).forEach((x) => {
+    if (expOff(x)) return;
     if (x.s && DISQ_RE.test(String(x.s))) out.disq.push(x);
     else if (x.d && /^\d{4}-\d{2}-\d{2}/.test(String(x.d)) && String(x.d).slice(0, 10) >= from && String(x.d).slice(0, 10) <= today) out.waiting.push(x);
     else out.items.push(x);
@@ -208,8 +214,8 @@ export async function gather(env, now) {
   const today = ilDay(now);
   const week = ilDay(new Date(now.getTime() + 7 * 86400000));
   const q = (t, cols) => sb(env, t + '?select=' + cols + '&e=not.is.null&e=lte.' + week + '&order=e.asc&limit=20').catch(() => []);
-  const [docs, equip] = await Promise.all([q('docs', 'n,e'), q('equip_inspections', 'n,loc,e,resp_area,d,s')]);
-  const all = [].concat((docs || []).map((x) => ({ n: x.n, e: x.e })),
+  const [docs, equip] = await Promise.all([q('docs', 'n,e,s'), q('equip_inspections', 'n,loc,e,resp_area,d,s')]);
+  const all = [].concat((docs || []).map((x) => ({ n: x.n, e: x.e, s: x.s || '' })),
     (equip || []).map((x) => ({ n: x.loc ? x.n + ', ' + x.loc : x.n, e: x.e, area: x.resp_area || '', d: x.d || null, s: x.s || '' })))
     .filter((x) => x.n && /^\d{4}-\d{2}-\d{2}/.test(String(x.e))).sort((a, b) => String(a.e).localeCompare(String(b.e)));
   const { items, waiting, disq } = splitUrgent(all, today);
@@ -273,7 +279,7 @@ export function eventDay(e, today) {
 // Pure. rows = [{t, id, n, e, vendor, loc, resp_area}] (a row with resp_area is another area's, no calendar entry), sent = {key: 1}. Returns the files to write, in e order,
 // and the sent map pruned to what is still in the window (a renewed or deleted item leaves it).
 export function calendarPlan(rows, sent, today) {
-  const ok = rows.filter((r) => r && !r.resp_area && r.id != null && r.n && /^\d{4}-\d{2}-\d{2}$/.test(String(r.e || '').slice(0, 10)))
+  const ok = rows.filter((r) => r && !r.resp_area && !expOff(r) && r.id != null && r.n && /^\d{4}-\d{2}-\d{2}$/.test(String(r.e || '').slice(0, 10)))
     .map((r) => Object.assign({}, r, { e: String(r.e).slice(0, 10), key: r.t + ':' + r.id + ':' + String(r.e).slice(0, 10) }))
     .sort((a, b) => a.e.localeCompare(b.e));
   const keep = {};
@@ -296,7 +302,7 @@ export async function calendarStep(env, now, dry) {
   if (!odConfigured(env)) return { skipped: 'onedrive not configured' };
   const today = ilDay(now), until = addDays(today, CAL_DAYS);
   const q = (t, cols) => sb(env, t + '?select=' + cols + '&e=not.is.null&e=lte.' + until + (t === 'equip_inspections' ? '&resp_area=is.null' : '') + '&order=e.asc&limit=100');
-  const [docs, equip] = await Promise.all([q('docs', 'id,n,e'), q('equip_inspections', 'id,n,loc,vendor,resp_area,e')]);
+  const [docs, equip] = await Promise.all([q('docs', 'id,n,e,s'), q('equip_inspections', 'id,n,loc,vendor,resp_area,e,s')]);
   const rows = [].concat((docs || []).map((x) => Object.assign({ t: 'docs' }, x)), (equip || []).map((x) => Object.assign({ t: 'equip' }, x)));
   let sent = {};
   try { sent = JSON.parse((await stateGet(env, CAL_KEY)) || '{}') || {}; } catch (e) { sent = {}; }
