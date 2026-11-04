@@ -68,6 +68,25 @@ print('\nBash: the synced OneDrive folder and curl to Graph')
 check('rm inside the synced OneDrive folder is denied', 'Bash', 'deny', {'command': 'rm -rf "/c/Users/m/OneDrive/שולחן העבודה/ניהול בטיחות/13_ועדה"'})
 check('mv inside the safety folder is denied', 'Bash', 'deny', {'command': 'mv "ניהול בטיחות/a.xlsx" "ניהול בטיחות/b.xlsx"'})
 check('Remove-Item on a OneDrive path is denied', 'Bash', 'deny', {'command': 'Remove-Item "C:\\Users\\m\\OneDrive\\x.docx"'})
+# retro 18/10/2026 (STATUS 112 b): camelCase tool names and shell deletes without rm
+check('camelCase send (outlook_sendMail) is denied, not asked', 'mcp__Microsoft_365__outlook_sendMail', 'deny')
+check('camelCase delete on an unknown server name is denied', 'mcp__x__deleteMessage', 'deny')
+check('camelCase read (outlook_searchMail) still passes', 'mcp__Microsoft_365__outlook_searchMail', 'pass')
+check('find -delete in OneDrive is denied', 'Bash', 'deny', {'command': 'find ~/OneDrive/x -name "*.pdf" -delete'})
+check('truncate in OneDrive is denied', 'Bash', 'deny', {'command': 'truncate -s 0 "/c/Users/m/OneDrive/a.xlsx"'})
+check('cp /dev/null over a OneDrive file is denied', 'Bash', 'deny', {'command': 'cp /dev/null "/c/Users/m/OneDrive/a.xlsx"'})
+check('find without -delete in OneDrive passes', 'Bash', 'pass', {'command': 'find ~/OneDrive/x -name "*.pdf"'})
+check('truncate in the repo passes', 'Bash', 'pass', {'command': 'truncate -s 0 tests/harness/_build/x'})
+# security review 04/11/2026
+for c in ['unlink ~/OneDrive/a.xlsx', 'cp -f /dev/null ~/OneDrive/a', ': > ~/OneDrive/a', 'cat /dev/null > "/c/Users/m/OneDrive/a"',
+          'dd if=/dev/zero of=~/OneDrive/a bs=1 count=0', 'rsync -a --delete x/ ~/OneDrive/y/']:
+    check('emptying in the synced folder is denied: ' + c, 'Bash', 'deny', {'command': c})
+check('a listing of OneDrive redirected to /tmp passes', 'Bash', 'pass', {'command': 'ls ~/OneDrive > /tmp/x.txt'})
+check('SENDMAIL (no case to split) is denied', 'mcp__Microsoft_365__outlook_SENDMAIL', 'deny')
+check('listAndSENDmail on an unnamed server is denied', 'mcp__x__listAndSENDmail', 'deny')
+for n in ['mcp__Cloudflare_Developer_Platform__hyperdrive_config_delete', 'mcp__claude-code-remote__send_message', 'mcp__Supabase__execute_sql',
+          'mcp__github__merge_pull_request', 'mcp__Claude_Docs__update', 'SendMessage']:
+    check('another server is not 365: ' + n, n, 'pass')
 check('rm in the repo passes', 'Bash', 'pass', {'command': 'rm -rf tests/harness/_build'})
 check('a commit message that mentions rm/mv and OneDrive passes (prose, not a command)', 'Bash', 'pass', {'command': 'git commit -F - <<EOF\nrm/mv on an OneDrive path are blocked\nEOF'})
 check('ls of the OneDrive folder passes', 'Bash', 'pass', {'command': 'ls "OneDrive/שולחן העבודה"'})

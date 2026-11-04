@@ -27,6 +27,15 @@ check('a push inside a longer command is still a push', hook('git add -A && git 
 env = dict(os.environ, PUSH_GATE_CHANGED=L); env.pop('PUSH_GATE_TEST', None); env.pop('CLAUDE_PROJECT_DIR', None)
 r = subprocess.run([sys.executable, HOOK], input=json.dumps({'tool_name': 'Bash', 'tool_input': {'command': 'git push origin x'}, 'cwd': os.path.dirname(os.path.abspath(__file__))}), capture_output=True, text=True, timeout=120, env=env)
 check('from tests/harness as cwd the real format test is found and run (no "No such file")', 'No such file' not in r.stdout + r.stderr, r.stdout[-300:])
+# retro 18/10/2026 (STATUS 112 a): options between git and the subcommand still count
+check('git -C <dir> push: still checked', hook('git -C /home/user/tfugen-safety push origin x', L, 1).get('permissionDecision') == 'deny')
+check('git -c k=v push: still checked', hook('git -c http.extraHeader=x push origin x', L, 1).get('permissionDecision') == 'deny')
+check('git --no-pager -C d push: still checked', hook('git --no-pager -C d push origin x', L, 1).get('permissionDecision') == 'deny')
+check('git -C <dir> commit on main: denied', hook('git -C /home/user/tfugen-safety commit -m x', 'STATUS.md', 0, PUSH_GATE_BRANCH='main').get('permissionDecision') == 'deny')
+for c in ['git -P push origin x', 'git --git-dir .git push origin x', 'git --work-tree . push origin x', 'git -C "/a b" push origin x',
+          'git -c "a.b=c d" push origin x', '/usr/bin/git push origin x']:
+    check('still a push (review 04/11/2026): ' + c, hook(c, L, 1).get('permissionDecision') == 'deny')
+check('git -C <dir> status: passes', hook('git -C /home/user/tfugen-safety status', L, 1) == {})
 check('git push only inside a heredoc body: passes (05/10/2026)', hook("cat > t.py <<'EOF'\necho; git push origin b\nEOF\npython3 t.py", L, 1) == {})
 check('a real push after a heredoc: still checked', hook("cat > t <<'EOF'\nx\nEOF\ngit push origin x", L, 1).get('permissionDecision') == 'deny')
 # 14/10/2026: a changed server file runs graph-writes-test.py (PR #1502 went red on a new mail call site)

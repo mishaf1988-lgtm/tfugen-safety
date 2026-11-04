@@ -30,7 +30,31 @@ GENERIC = {"אחזקה", "מעבדה", "מעבדות",
            "אריזה", "חצר", "שפכים",
            "תשתיות", "חומר גלם"}
 # Spelled in parts, as in the export, so a scan of this file does not trip on itself.
-FIXED = ["znhjtpclt" + "rxxyfjczgvw", "ldzbjbsum" + "zqjyvtpiwqo", "tapugan" + ".co.il", "פרי" + "יליך"]
+FIXED = ["znhjtpclt" + "rxxyfjczgvw", "ldzbjbsum" + "zqjyvtpiwqo", "tapugan" + ".co.il", "פרי" + "יליך",
+         "svi" + "va@", "מיכ" + "אל"]  # retro 18/10/2026 (STATUS 112 c): the mail box name and the owner's first name
+
+
+def site_phones():
+    """Phone numbers of the owner's signature and the WhatsApp number note in functions/_site.js, as digits
+    (security review 04/11/2026: compared on digits only, so 08-6808365, 054-794-0073 and +972 all match)."""
+    try:
+        lines = open(os.path.join(ROOT, "functions", "_site.js"), encoding="utf-8").read().split("\n")
+    except Exception:
+        return set()
+    out = set()
+    for l in lines:
+        if "signature" not in l and "real number" not in l:
+            continue
+        for m in re.findall(r"(?<!\d)0\d{1,2}-?\d{3}-?\d{3,4}(?!\d)", l):
+            d = re.sub(r"\D", "", m)
+            if 9 <= len(d) <= 10:
+                out.add(d)
+    return out
+
+
+def digits(text):
+    """The text's digits, with +972 / 972 read as a leading 0."""
+    return re.sub(r"\D", "", re.sub(r"\+?972[\s-]?", "0", text))
 
 
 def factory_words():
@@ -47,9 +71,10 @@ def factory_words():
 def paste_parts(blocks):
     """The text after each "להדבקה" line, in replies about the business line."""
     parts = []
+    # The business line may be named in one block and the paste come in the next (retro 18/10/2026, STATUS 112 c).
+    if not any(BUSINESS.search(b) for b in blocks):
+        return parts
     for b in blocks:
-        if not BUSINESS.search(b):
-            continue
         for m in PASTE.finditer(b):
             parts.append(b[m.end():])
     return parts
@@ -57,7 +82,12 @@ def paste_parts(blocks):
 
 def hits(parts, words):
     found = []
+    phones = site_phones()
     for p in parts:
+        dp = digits(p)
+        for ph in phones:
+            if ph in dp and ph not in found:
+                found.append(ph)
         for w in words:
             if w in p and w not in found:
                 found.append(w)

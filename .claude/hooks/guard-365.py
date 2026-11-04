@@ -49,6 +49,8 @@ NEVER = re.compile(r"(^|_)(delete|remove|trash|purge|destroy|send|reply|forward|
 # The one real delete (25/10/2026, Michael in the questionnaire: "do it: to the recycle bin") is on the server,
 # not a 365 tool: routine-db op od_dedupe, a duplicate the server itself made, same hash as the file kept. This hook
 # keeps denying every delete through a 365 tool or the synced folder.
+# The same verbs inside a name with no case or underscore to split on (SENDMAIL, listandsendmail; review 04/11/2026)
+NEVER_IN = re.compile(r"delete|remove|trash|purge|destroy|send(?!er)|reply|forward", re.I)
 MOVE = re.compile(r"(^|_)(move|copy)(_|$)", re.I)
 TRASH_FOLDER = "\u05dc\u05de\u05d7\u05d9\u05e7\u05d4"  # "למחיקה"
 # The OneDrive folder synced to Michael's computer is the same data: a shell delete or move there
@@ -58,8 +60,17 @@ TRASH_FOLDER = "\u05dc\u05de\u05d7\u05d9\u05e7\u05d4"  # "למחיקה"
 # trips it: write such text with Edit/Write, not through Bash.
 # The verb may also end a pipeline ("... | Remove-Item"), and .NET calls delete without a verb.
 SHELL_DEL = re.compile(r"(^|[\s;&|({])(rm|rmdir|del|erase|rd|mv|move|mi|Remove-Item|Move-Item|ri|rni|ren|Rename-Item|git\s+clean)(?=\s+\S|\s*($|[;|)}]))"
-                       r"|(\[(System\.)?IO\.(File|Directory)\]::(Delete|Move|Replace))", re.I)
+                       r"|(\[(System\.)?IO\.(File|Directory)\]::(Delete|Move|Replace))"
+                       # retro 18/10/2026 (STATUS 112 b): deletes and emptying without rm
+                       r"|(^|[\s;&|({])(find\b[^;&|\n]*\s-delete\b|truncate\s|shred\s|unlink\s|cp\b[^;&|\n]*/dev/null\b"
+                       r"|rsync\b[^;&|\n]*--(delete|remove-source-files)\b|dd\b[^;&|\n]*\bof=)"
+                       # an overwriting redirect whose target is in the synced folder (": > x", "cat /dev/null > x")
+                       r"|((?<![>\d&])>(?![>&])\s*[\"']?[^\s;&|]*(OneDrive|\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4|\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea))", re.I)
 SHELLS = ("Bash", "PowerShell")
+# An MCP server with an id instead of a name (mcp__x__deleteMessage) is treated as 365 when the tool is about
+# messages; the known other servers in this repo are not (claude-code-remote has send_message).
+OTHER_MCP = re.compile(r"^mcp__(github|supabase|claude-code-remote|claude_docs|cloudflare|perplexity)", re.I)
+MAILISH = re.compile(r"message|mail|inbox|folder|file|item|drive", re.I)
 ONEDRIVE_PATH = re.compile(r"OneDrive|\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4|\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea|tapugancoil-my\.sharepoint", re.I)
 # curl, and PowerShell's Invoke-RestMethod / Invoke-WebRequest (-Method Post, -Body).
 _GW = r"(-X\s*(POST|DELETE|PATCH|PUT)|--request\s*(POST|DELETE|PATCH|PUT)|-d\s|--data|-Method\s+['\"]?(POST|DELETE|PATCH|PUT)|-Body\b)"
@@ -232,9 +243,14 @@ def decide(name, ti):
                 return ("deny", why)
         return None
     short = name.split("__")[-1] if "__" in name else name
-    if not M365.search(name):
+    # camelCase names (outlook_sendMail, deleteMessage) are read as snake_case, or "sendMail" matched no verb
+    # and only asked (retro 18/10/2026, STATUS 112 b).
+    short = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", short).lower()
+    if OTHER_MCP.search(name):  # the matcher is mcp__.* since 04/11/2026; Cloudflare's hyperdrive_* is not a drive
         return None
-    if READ.search(short) and not WRITE.search(short) and not NEVER.search(short):
+    if not M365.search(name) and not (name.startswith("mcp__") and not OTHER_MCP.search(name) and MAILISH.search(short)):
+        return None
+    if READ.search(short) and not WRITE.search(short) and not NEVER.search(short) and not NEVER_IN.search(short.replace("_", "")):
         return None
     if MOVE.search(short):
         if any(TRASH_FOLDER in s for s in strings(ti, [])):
@@ -248,7 +264,7 @@ def decide(name, ti):
             return ("allow", "a draft Claude created itself (Michael, 30/10/2026): moved to Deleted Items, recoverable.")
         return ("deny", "'%s' is allowed only for a draft Claude itself created (this machine's ledger). "
                 "Michael's own drafts are never deleted (05/10/2026)." % short)
-    if NEVER.search(short):
+    if NEVER.search(short) or NEVER_IN.search(short.replace("_", "")):
         return ("deny", "'%s' deletes, sends or moves something in Microsoft 365. Michael (05/10/2026): "
                 "never through Claude, not even with approval. A mail is a draft that he sends from Outlook; "
                 "a file to remove goes to a 'למחיקה' folder that he empties." % short)
