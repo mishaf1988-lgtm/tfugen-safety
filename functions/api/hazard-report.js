@@ -120,7 +120,9 @@ export function respKey(x) { const t = String(x || '').trim(); return RESP_KEYS.
 // (tour_hazards resp/resp2, trustee_reports resp). A part that is neither a form choice, nor a known plain wording,
 // nor recognised by respKey may be a maintenance team that the report silently skips. routine-db op:'resp_check'.
 // "\u05de\u05e0\u05d4\u05dc \u05d4\u05d9\u05d9\u05e6\u05d5\u05e8" (an investigation, 29/10/2026) is a known wording with no routing of its own.
-export const RESP_PLAIN = RESP_CHOICES.concat(['\u05de\u05e0\u05d4\u05dc \u05d4\u05d9\u05d9\u05e6\u05d5\u05e8']);
+// 04/11/2026 (resp_check, th-2908f79a): "\u05e0\u05d5\u05e2\u05dd" is a department manager by first name, not a maintenance team;
+// the department report already reaches him, so it is known wording with no routing of its own.
+export const RESP_PLAIN = RESP_CHOICES.concat(['\u05de\u05e0\u05d4\u05dc \u05d4\u05d9\u05d9\u05e6\u05d5\u05e8', '\u05e0\u05d5\u05e2\u05dd']);
 export function respUnknown(rows, table) {
   const out = new Map();
   (Array.isArray(rows) ? rows : []).forEach((r) => ['resp', 'resp2'].forEach((f) => String((r && r[f]) || '').split(/\s*\+\s*/).forEach((x) => {
