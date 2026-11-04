@@ -2636,11 +2636,12 @@ async function routineDbHandle(context) {
       if (res.error) return jsonResp({ ok: false, error: res.error }, 400, {});
       if (res.map) {
         const w = await stateCas(url, h, CLAIM_KEY, (raw) => {
-          let cur = {}; try { cur = JSON.parse(raw || '{}'); } catch (x) { cur = {}; }
+          // an unreadable map is not rewritten with one claim (security review 04/11/2026): the others would be lost
+          let cur = {}; try { cur = JSON.parse(raw || '{}'); } catch (x) { res = { error: 'claims map unreadable' }; return { write: false }; }
           res = claimApply(cur, body, now);
           return res.error || !res.map ? { write: false } : { value: JSON.stringify(res.map) };
         }, () => tmo(SB_MS)).catch((e) => ({ written: false, error: String(e && e.message || e) }));
-        if (res.error) return jsonResp({ ok: false, error: res.error }, 400, {});
+        if (res.error) return jsonResp({ ok: false, error: res.error }, res.error === 'claims map unreadable' ? 200 : 400, {});
         if (res.map && !w.written) return jsonResp({ ok: false, error: 'write ' + (w.error || w.status || 'conflict') }, 200, {});
       }
       return jsonResp({ ok: true, ...res.ans }, 200, {});
