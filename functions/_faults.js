@@ -56,7 +56,7 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
     // second checker on the assistant's answer is a procedure breach after the answer already reached Michael, not a system
     // fault. It goes to the developer (and the retro and the daily quality check read agent_log), not to his WhatsApp.
     const quiet = SECOND_CHECK_AGENTS.indexOf(String(r.agent || '')) >= 0 && String(r.line || '').indexOf(SECOND_MISS) === 0;
-    add('agent:' + agentKey(r.agent), '\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc, ' + agentKey(r.agent) + ': ' + cut(r.line, 120), 'AGENTDEV', agentSafe(r.agent), m ? m[0] : '', quiet);
+    add((quiet ? 'agentq:' : 'agent:') + agentKey(r.agent), '\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc, ' + agentKey(r.agent) + ': ' + cut(r.line, 120), 'AGENTDEV', agentSafe(r.agent), m ? m[0] : '', quiet);
   });
   items.forEach((x) => { sent[x.key] = today; });
   return { items, fault: { at: nowIso, sent } };

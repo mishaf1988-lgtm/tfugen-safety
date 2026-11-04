@@ -30,6 +30,9 @@ check('without ROUTINE_KEY: exit 0 and the row on stderr', p.returncode == 0 and
 check('the hook never prints a retry decision', p.stdout.strip() == b'', p.stdout[:100])
 p = subprocess.run([sys.executable, P], input=b'not json', capture_output=True, env=env, timeout=30)
 check('bad input: exit 0', p.returncode == 0)
+p = subprocess.run([sys.executable, P], input=b'[1]', capture_output=True, env=env, timeout=30)
+check('valid JSON that is not an object: exit 0, no traceback (retro 04/11/2026)', p.returncode == 0 and b'Traceback' not in p.stderr, p.stderr[:200])
+check('the free text of the reason is not logged, only its [rule tag]', 'Bearer abc123' not in dl.row(dict(ev, reason='[External System Writes] curl with Authorization Bearer abc123')) and '[External System Writes]' in dl.row(dict(ev, reason='[External System Writes] curl with Authorization Bearer abc123')))
 s = json.load(open(os.path.join(ROOT, '.claude', 'settings.json'), encoding='utf-8'))
 hs = [h.get('command', '') for m in s['hooks'].get('PermissionDenied', []) for h in m.get('hooks', [])]
 check('settings.json runs denial-log.py on PermissionDenied', any('denial-log.py' in c for c in hs), hs)

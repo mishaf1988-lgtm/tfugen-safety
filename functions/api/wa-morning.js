@@ -519,7 +519,8 @@ export async function deckWatch(env, now) {
   let last = null; try { last = (JSON.parse((await stateGet(env, DECK_CHECK_KEY)) || 'null') || {}).day; } catch (e) { last = null; }
   if (!deckCheckDue(now, meeting, last)) return null;
   await stateSet(env, DECK_CHECK_KEY, JSON.stringify({ day: meeting, at: now.toISOString(), state: 'running' }));
-  const c = await checkAndFixDeck(env);
+  // an exception (OneDrive not connected, a Graph error) is a gap to tell Michael, not silence: the day is marked 'running' already
+  let c; try { c = await checkAndFixDeck(env); } catch (e) { const g = ['\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05de\u05e6\u05d2\u05ea \u05e0\u05db\u05e9\u05dc\u05d4: ' + clip(String((e && e.message) || e), 80)]; c = { ok: false, fixed: false, gaps: g, first: g }; }
   const out = { day: meeting, at: now.toISOString(), ok: !!c.ok && !(c.first && c.first.length), fixed: !!c.fixed, gaps: (c.first || c.gaps || []).slice(0, 6), left: c.ok ? [] : (c.gaps || []).slice(0, 6), run: c.run || null };
   let sent = null;
   if (!out.ok) {
