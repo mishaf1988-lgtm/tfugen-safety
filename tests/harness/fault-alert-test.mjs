@@ -103,6 +103,11 @@ const NOW = '2026-10-31T14:50:00.000Z';
   const r3 = faultItems(prev, [], [{ agent: 'mail-file', at: '2026-10-31T14:10:00Z', ok: false, line: 'failed, no request' }], NOW);
   check('a failure with no id still opens a request', faultTodo(r3.items, inbox).length === 1 && !('ref' in r3.items[0]));
   check('the id never reaches the developer text', faultDevText(r.items).indexOf('oszd') < 0);
+  // retro 03/11/2026 (STATUS 160 a): a request closed before the failure does not cover it
+  check('the failure time is kept beside the cited id', r.items[0].ref_at === '2026-10-31T14:10:00Z', JSON.stringify(r.items));
+  check('a request closed after the failure covers it', faultTodo(r.items, [{ id: 'dev-20261102063806-oszd', status: 'done', done_at: '2026-10-31T14:13:00Z' }]).length === 0);
+  check('a request closed before the failure does not cover it', faultTodo(r.items, [{ id: 'dev-20261102063806-oszd', status: 'done', done_at: '2026-10-30T09:00:00Z' }]).length === 1);
+  check('an open request covers it whatever the time', faultTodo(r.items, [{ id: 'dev-20261102063806-oszd', status: 'open' }]).length === 0);
 }
 { // wiring: the watchdog calls it, and a fault-alert failure does not fail the watch
   const src = fs.readFileSync(new URL('../../functions/_watchdog.js', import.meta.url), 'utf8');

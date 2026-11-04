@@ -223,7 +223,8 @@ const callIn = async (body) => {
       const t3 = await ocrOne(env, 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0], 1, undefined, true);
       check('ocrOne skipText: a PDF with a font = ok, skipped, text_layer, no AI read and no txt; without skipText it is read; a scan with skipText is read (03/11/2026)',
         t1.ok && t1.skipped === true && t1.text_layer === true && /read_resource/.test(t1.note) && t2.ok && !t2.skipped && t3.ok && !t3.skipped && t3.pages === 3
-        && pdfHasFont(new Uint8Array(Buffer.from('<< /Font << /F1 3 0 R >> >>'))) && !pdfHasFont(new Uint8Array(Buffer.from('<< /XObject << /Im1 3 0 R >> >>'))),
+        && pdfHasFont(new Uint8Array(Buffer.from('<< /Font << /F1 3 0 R >> >>'))) && !pdfHasFont(new Uint8Array(Buffer.from('<< /XObject << /Im1 3 0 R >> >>')))
+        && !pdfHasFont(new Uint8Array(Buffer.from('<< /FontDescriptor 5 0 R /FontFile2 6 0 R /FontName /X >>'))) && pdfHasFont(new Uint8Array(Buffer.from('/Font/F1'))),
         { t1, t2, t3 });
     } finally { globalThis.fetch = real; }
   })();

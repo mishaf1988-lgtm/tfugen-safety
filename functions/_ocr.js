@@ -106,7 +106,12 @@ export function ocrAutoPick(items, done, nowMs) {
 // The ocr_txt op still reads it when an agent asks, since an agent asks only after read_resource found no text.
 export function pdfHasFont(buf) {
   const n = Math.min(buf.length, 4 * 1024 * 1024);
-  for (let i = 0; i + 5 <= n; i++) if (buf[i] === 47 && buf[i + 1] === 70 && buf[i + 2] === 111 && buf[i + 3] === 110 && buf[i + 4] === 116) return true; // "/Font"
+  // "/Font" as a whole name: not /FontDescriptor, /FontFile2, /FontName (retro 04/11/2026, STATUS 159 a)
+  const nameChar = (b) => (b >= 48 && b <= 57) || (b >= 65 && b <= 90) || (b >= 97 && b <= 122);
+  for (let i = 0; i + 5 <= n; i++) {
+    if (buf[i] === 47 && buf[i + 1] === 70 && buf[i + 2] === 111 && buf[i + 3] === 110 && buf[i + 4] === 116
+      && !(i + 5 < buf.length && nameChar(buf[i + 5]))) return true;
+  }
   return false;
 }
 export async function ocrOne(env, token, rel, name, model, from, txtName, skipText) {
