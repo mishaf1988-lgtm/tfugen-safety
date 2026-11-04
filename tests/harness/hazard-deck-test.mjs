@@ -6,6 +6,7 @@
 import { patchPara, setList, patchDeck, deckContent, FIXED_YEARS, setBars, catName } from './_build/_deckpatch.mjs';
 import { meetingHazards, meetingAccidents, meetingMinor } from './_build/_meeting.mjs';
 import { readZip, writeZip, entryText } from './_build/_xlsxpatch.mjs';
+import { readFileSync } from 'fs';
 import { onRequest, runDeck, defaultMeeting, meetingDate, deckGaps, deckGapText, checkDeck, checkAndFixDeck, DECK_VERSION } from './_build/hazard-deck.mjs';
 
 let pass = 0, fail = 0;
@@ -326,6 +327,10 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   const moName = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'][+curM.substring(5) - 1];
   { const td = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); check('slide 3 on request: the title says today', !!s3now && s3now.includes('נכון ל-' + td.substring(8, 10) + '/' + td.substring(5, 7) + '/' + td.substring(0, 4))); }
   check('slide 3 on request: this month so far, and the month-end write is still due (deck_s3_month kept)', !!s3now && s3now.includes('פעולות סגירה - ' + moName) && !(await partText(written, 'ppt/slides/slide3.xml')).includes('פעולות סגירה - ' + moName) && w.state.deck_s3_month === s1st.deck_s3_month, [r.pushed, w.state.deck_s3_month]);
+  { // 04/11/2026 (retro): nothing to change in the file after a version bump: deck_ver is still written, or the old-version gap is reported every meeting morning
+    const hd = readFileSync(new URL('../../functions/api/hazard-deck.js', import.meta.url), 'utf8');
+    check('the "already up to date" branch writes deck_ver too', /deck_week: date, deck_ver: String\(DECK_VERSION\), \.\.\.\(s3Month/.test(hd));
+  }
   w = world({ file: src, state: Object.assign({}, s1st, { deck_ver: '9' }), cTag: 'someone-saved-old' });
   r = await runDeck(ENV, false);
   check('a new look (DECK_VERSION) on the same meeting date: the deck as it was goes to the archive first, slide 3 rewritten', r.pushed && w.puts.length === 2 && /ארכיון/.test(w.puts[0].path) && w.state.deck_ver !== '9', w.puts.map((p) => p.path));

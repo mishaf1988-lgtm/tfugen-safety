@@ -94,7 +94,7 @@ export async function runDeck(env, force, s3Now, opt) {
     // upload, or a person saved it without touching the numbers): remember the
     // cTag, write nothing, or this would rewrite the deck every 15 minutes.
     if (!changed.length && !force) {
-      await stateSet(env, { deck_sig: sig, deck_ctag: meta.cTag || '', deck_week: date, ...(s3Month && !s3Now ? { deck_s3_month: s3Month } : {}) });
+      await stateSet(env, { deck_sig: sig, deck_ctag: meta.cTag || '', deck_week: date, deck_ver: String(DECK_VERSION), ...(s3Month && !s3Now ? { deck_s3_month: s3Month } : {}) });
       await clearRunErr();
       return { ok: true, pushed: false, reason: 'already up to date', date, report };
     }
