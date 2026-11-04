@@ -115,5 +115,8 @@ json.dump({"g1": "\u05de\u05ea\u05d7\u05d9\u05dc\u05d9\u05dd \u05d1-150, \u05d1\
 gk = subprocess.run([sys.executable, os.path.join(ROOT, "tools/golden-check.py"), gh], capture_output=True, text=True, encoding="utf-8")
 check("golden-check Hebrew judge: English word, ISO date, Markdown fail; ppm / ISO / PDF / OneDrive pass", "FAIL g1" in gk.stdout and "checklist" in gk.stdout and "FAIL g2" in gk.stdout and "DD/MM/YYYY" in gk.stdout and "PASS g3" in gk.stdout and "Markdown" in gk.stdout and "\u05e2\u05d1\u05e8\u05d9\u05ea: 1/10" in gk.stdout, gk.stdout[:600])
 check("golden set: 10 questions, each with a source", len(json.load(open(os.path.join(ROOT, "project-files/assistant-golden.json"), encoding="utf-8"))["questions"]) == 10 and all(q.get("source") for q in json.load(open(os.path.join(ROOT, "project-files/assistant-golden.json"), encoding="utf-8"))["questions"]))
+# retro 03/11/2026 (STATUS 160 c): a broad word ("הזמנה") loaded the mail branch for "הזמנה לישיבה"
+jsb = subprocess.run(["node", "-e", "import(process.argv[1]).then((m) => console.log(JSON.stringify(JSON.parse(process.argv[2]).map((t) => m.domainsOf(t).map((d) => d.key).includes('mail')))))", "file://" + os.path.join(ROOT, "functions/_domains.js"), json.dumps(["\u05d4\u05d6\u05de\u05e0\u05d4 \u05dc\u05d9\u05e9\u05d9\u05d1\u05d4", "\u05d4\u05d6\u05de\u05e0\u05ea \u05e8\u05db\u05e9 \u05dc\u05e1\u05e4\u05e7"])], capture_output=True, text=True)
+check("an invitation to a meeting does not load mail, a purchase order does", jsb.stdout.strip() == "[false,true]", jsb.stdout + jsb.stderr)
 print("\n%d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)

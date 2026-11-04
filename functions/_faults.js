@@ -28,14 +28,14 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
   const sent = {};
   Object.entries((prev && prev.sent) || {}).forEach(([k, d]) => { if (d === today) sent[k] = d; });
   const items = [];
-  const add = (key, text, dev, agent, ref, quiet) => {
+  const add = (key, text, dev, agent, ref, quiet, at) => {
     if (sent[key]) return;
     const had = items.find((x) => x.key === key);
     // a second failure of the same agent with no request of its own: the item is no longer covered by one
     // and a real failure beside a quiet one makes the item loud
     if (had) { if (had.ref && had.ref !== ref) delete had.ref; if (!quiet) delete had.quiet; return; }
     const it = agent ? { key, text, dev, agent } : { key, text, dev };
-    if (ref) it.ref = ref;
+    if (ref) { it.ref = ref; if (at) it.ref_at = String(at); }
     if (quiet) it.quiet = true;
     items.push(it);
   };
@@ -56,7 +56,7 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
     // second checker on the assistant's answer is a procedure breach after the answer already reached Michael, not a system
     // fault. It goes to the developer (and the retro and the daily quality check read agent_log), not to his WhatsApp.
     const quiet = SECOND_CHECK_AGENTS.indexOf(String(r.agent || '')) >= 0 && String(r.line || '').indexOf(SECOND_MISS) === 0;
-    add((quiet ? 'agentq:' : 'agent:') + agentKey(r.agent), '\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc, ' + agentKey(r.agent) + ': ' + cut(r.line, 120), 'AGENTDEV', agentSafe(r.agent), m ? m[0] : '', quiet);
+    add((quiet ? 'agentq:' : 'agent:') + agentKey(r.agent), '\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc, ' + agentKey(r.agent) + ': ' + cut(r.line, 120), 'AGENTDEV', agentSafe(r.agent), m ? m[0] : '', quiet, r.at);
   });
   items.forEach((x) => { sent[x.key] = today; });
   return { items, fault: { at: nowIso, sent } };
@@ -87,9 +87,19 @@ export function faultDevText(items) {
 }
 // Pure: the faults that still need a request (a failure whose line cites a request that is in the inbox, open or done, is
 // already with a developer).
+// retro 03/11/2026 (STATUS 160 a): a request that was closed before the failure happened did not cover it; the line
+// only quotes an old id. Covered = the request is open, or it was closed at or after the failure's own time.
 export function faultTodo(items, inbox) {
-  const known = new Set((Array.isArray(inbox) ? inbox : []).map((x) => x && x.id).filter(Boolean));
-  return (items || []).filter((x) => !(x.ref && known.has(x.ref)));
+  const byId = new Map((Array.isArray(inbox) ? inbox : []).filter((x) => x && x.id).map((x) => [x.id, x]));
+  const covers = (x) => {
+    const q = x.ref && byId.get(x.ref);
+    if (!q) return false;
+    if (q.status !== 'done' || !q.done_at || !x.ref_at) return true;
+    // as times, not strings (security review 04/11/2026); an unreadable time keeps the old answer: covered
+    const d = Date.parse(q.done_at), a = Date.parse(x.ref_at);
+    return !(Number.isFinite(d) && Number.isFinite(a)) || d >= a;
+  };
+  return (items || []).filter((x) => !covers(x));
 }
 // one request for the faults of this tick, then the fire; a failure here never stops the WhatsApp
 async function openFix(env, url, k, items, nowIso, fireOk) {

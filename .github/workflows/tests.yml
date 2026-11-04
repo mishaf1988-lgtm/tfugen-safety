@@ -87,6 +87,9 @@ jobs:
       - run: python3 tests/harness/handoff-root-test.py
       # A decision from a questionnaire says which option was chosen (18/10/2026): a DECISIONS-only PR is .md and skips the harness.
       - run: python3 tests/harness/decisions-chosen-test.py
+      # Same reason (04/11/2026, #2541): a DECISIONS-only PR added a heading without its decisions-map.tsv line, and the
+      # next code PR went red on it. The branch map is checked here too.
+      - run: python3 tests/harness/domains-test.py
       # CLAUDE.md rule 7 on the lines this PR adds (a STATUS PR is .md only and skips the harness).
       - env:
           BASE: ${{ github.event.pull_request.base.sha }}
