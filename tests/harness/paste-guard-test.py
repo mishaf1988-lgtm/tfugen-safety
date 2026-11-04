@@ -46,6 +46,15 @@ check("generic words and the brand name in a business paste block pass",
       run([HEAD + "אחזקה, מעבדה וחצר. להעביר לתפוגן כל שינוי."]) is None)
 r = run([HEAD + "המסד: znhjtpcltrxxyfjczgvw"])
 check("the live database id in a business paste block is blocked", r and r.get("decision") == "block", r)
+# retro 18/10/2026 (STATUS 112 c): phone, mail box name and owner's first name; business named in another block
+r = run([HEAD + "לפרטים: 054" + "7940073"])
+check("the owner's phone in a business paste block is blocked", r and r.get("decision") == "block", r)
+r = run([HEAD + "כתובת: svi" + "va@example.com"])
+check("the mail box name in a business paste block is blocked", r and r.get("decision") == "block", r)
+r = run([HEAD + "תודה, מיכ" + "אל"])
+check("the owner's first name in a business paste block is blocked", r and r.get("decision") == "block", r)
+r = run(["עדכון לצ'אט של העסק בהמשך.", "להדבקה:\nשני אזורים: " + ZONE])
+check("business named in one block, the paste in the next: still blocked", r and r.get("decision") == "block", r)
 check("stop_hook_active never blocks twice", run([HEAD + ZONE], active=True) is None)
 
 print("\n%d passed, %d failed" % (passed, failed))

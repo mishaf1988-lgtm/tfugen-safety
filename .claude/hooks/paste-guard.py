@@ -30,7 +30,21 @@ GENERIC = {"אחזקה", "מעבדה", "מעבדות",
            "אריזה", "חצר", "שפכים",
            "תשתיות", "חומר גלם"}
 # Spelled in parts, as in the export, so a scan of this file does not trip on itself.
-FIXED = ["znhjtpclt" + "rxxyfjczgvw", "ldzbjbsum" + "zqjyvtpiwqo", "tapugan" + ".co.il", "פרי" + "יליך"]
+FIXED = ["znhjtpclt" + "rxxyfjczgvw", "ldzbjbsum" + "zqjyvtpiwqo", "tapugan" + ".co.il", "פרי" + "יליך",
+         "svi" + "va@", "מיכ" + "אל"]  # retro 18/10/2026 (STATUS 112 c): the mail box name and the owner's first name
+
+
+def site_phones():
+    """Phone numbers written in functions/_site.js (the owner's signature), with and without a dash."""
+    try:
+        txt = open(os.path.join(ROOT, "functions", "_site.js"), encoding="utf-8").read()
+    except Exception:
+        return set()
+    out = set()
+    for m in re.findall(r"0\d{1,2}-?\d{7}", txt):
+        d = m.replace("-", "")
+        out |= {d, d[:3] + "-" + d[3:]}
+    return out
 
 
 def factory_words():
@@ -41,15 +55,16 @@ def factory_words():
         words = json.loads(out)
     except Exception:
         words = []
-    return sorted({w for w in words if w and w not in GENERIC} | set(FIXED), key=len, reverse=True)
+    return sorted({w for w in words if w and w not in GENERIC} | set(FIXED) | site_phones(), key=len, reverse=True)
 
 
 def paste_parts(blocks):
     """The text after each "להדבקה" line, in replies about the business line."""
     parts = []
+    # The business line may be named in one block and the paste come in the next (retro 18/10/2026, STATUS 112 c).
+    if not any(BUSINESS.search(b) for b in blocks):
+        return parts
     for b in blocks:
-        if not BUSINESS.search(b):
-            continue
         for m in PASTE.finditer(b):
             parts.append(b[m.end():])
     return parts

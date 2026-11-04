@@ -58,8 +58,14 @@ TRASH_FOLDER = "\u05dc\u05de\u05d7\u05d9\u05e7\u05d4"  # "למחיקה"
 # trips it: write such text with Edit/Write, not through Bash.
 # The verb may also end a pipeline ("... | Remove-Item"), and .NET calls delete without a verb.
 SHELL_DEL = re.compile(r"(^|[\s;&|({])(rm|rmdir|del|erase|rd|mv|move|mi|Remove-Item|Move-Item|ri|rni|ren|Rename-Item|git\s+clean)(?=\s+\S|\s*($|[;|)}]))"
-                       r"|(\[(System\.)?IO\.(File|Directory)\]::(Delete|Move|Replace))", re.I)
+                       r"|(\[(System\.)?IO\.(File|Directory)\]::(Delete|Move|Replace))"
+                       # retro 18/10/2026 (STATUS 112 b): deletes and emptying without rm
+                       r"|(^|[\s;&|({])(find\b[^;&|\n]*\s-delete\b|truncate\s|shred\s|cp\s+/dev/null\s)", re.I)
 SHELLS = ("Bash", "PowerShell")
+# An MCP server with an id instead of a name (mcp__x__deleteMessage) is treated as 365 when the tool is about
+# messages; the known other servers in this repo are not (claude-code-remote has send_message).
+OTHER_MCP = re.compile(r"^mcp__(github|supabase|claude-code-remote|claude_docs|cloudflare|perplexity)", re.I)
+MAILISH = re.compile(r"(^|_)(message|messages|mail|inbox|folder|file|item)(_|$)", re.I)
 ONEDRIVE_PATH = re.compile(r"OneDrive|\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4|\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea|tapugancoil-my\.sharepoint", re.I)
 # curl, and PowerShell's Invoke-RestMethod / Invoke-WebRequest (-Method Post, -Body).
 _GW = r"(-X\s*(POST|DELETE|PATCH|PUT)|--request\s*(POST|DELETE|PATCH|PUT)|-d\s|--data|-Method\s+['\"]?(POST|DELETE|PATCH|PUT)|-Body\b)"
@@ -232,7 +238,10 @@ def decide(name, ti):
                 return ("deny", why)
         return None
     short = name.split("__")[-1] if "__" in name else name
-    if not M365.search(name):
+    # camelCase names (outlook_sendMail, deleteMessage) are read as snake_case, or "sendMail" matched no verb
+    # and only asked (retro 18/10/2026, STATUS 112 b).
+    short = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", short).lower()
+    if not M365.search(name) and not (name.startswith("mcp__") and not OTHER_MCP.search(name) and MAILISH.search(short)):
         return None
     if READ.search(short) and not WRITE.search(short) and not NEVER.search(short):
         return None
