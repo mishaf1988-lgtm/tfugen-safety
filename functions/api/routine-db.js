@@ -1209,7 +1209,8 @@ export function calMoveAskText(c, b) {
 const OD_NO_DIR = /(^|\/)(_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea|\u05dc\u05de\u05d7\u05d9\u05e7\u05d4|ARCHIVE)(\/|$)/i;
 // 18/10/2026 (Michael: "גם וגם"): csv too, the data file next to a lab certificate pdf.
 // pptx (28/10/2026): the safety committee deck is moved to the trash folder or to old versions before the new one is saved.
-const OD_EXT = /\.(pdf|docx?|xlsx|pptx|csv|jpe?g|png)$/i;
+// xls (04/11/2026, Michael in the questionnaire: "\u05d1\u05e6\u05e2: \u05dc\u05ea\u05d9\u05d9\u05e7 \u05d1\u05d0\u05d9\u05db\u05d5\u05ea \u05d4\u05e1\u05d1\u05d9\u05d1\u05d4"): an old Excel file in the inbox could not be filed.
+const OD_EXT = /\.(pdf|docx?|xlsx?|pptx|csv|jpe?g|png)$/i;
 // Into "not filed" any file the flow saved may go (11/10/2026: a 4 MB .mp4 ad stayed in the inbox;
 // 12/10/2026: an attachment named "RAW", saved with no extension, was refused and stuck there),
 // under the same name; into a document folder only OD_EXT.
