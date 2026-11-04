@@ -32,8 +32,11 @@ export const ISO_OLD = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\
 export const DESKTOP = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/';
 export function safePath(p, raw, root) {
   const parts = String(p || '').split('/').filter(Boolean);
-  const ext = raw ? /\.(xls[xmx]?|pptx|pdf|docx?|txt|csv)$/i : /\.(xls[xm]|pptx)$/i;
+  // jpg/jpeg/png (04/11/2026, the mail-filing agent): photos land in the mail inbox folder and were refused as 'bad path'.
+  const ext = raw ? /\.(xls[xmx]?|pptx|pdf|docx?|txt|csv|jpe?g|png)$/i : /\.(xls[xm]|pptx)$/i;
   if (!parts.length || parts.some((x) => x === '..' || x === '.') || !ext.test(parts[parts.length - 1])) return null;
+  // Photos only inside the safety folder: never from the whole desktop or the old ISO folder (security review 04/11/2026).
+  if (root && /\.(jpe?g|png)$/i.test(parts[parts.length - 1])) return null;
   if (root === 'iso-old') return raw ? ISO_OLD + parts.join('/') : null;
   // The whole desktop (24/10/2026, Michael: "I want access not only to the safety folder, to the desktop"):
   // the same read-only raw read with the one-off token; writing stays inside the safety folder.
