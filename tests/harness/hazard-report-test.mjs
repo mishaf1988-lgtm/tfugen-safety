@@ -42,6 +42,8 @@ const ROWS = [
   const ru = respUnknown(RU, 'tour_hazards');
   check('respUnknown: the form choices, "מנהל הייצור", "מנהל אחזקה" and empty pass; "צוות מכונאות" is flagged twice, one open', ru.length === 1 && ru[0].value === 'צוות מכונאות' && ru[0].n === 2 && ru[0].open === 1 && ru[0].ids.join() === 'th-4,th-5' && ru[0].table === 'tour_hazards', ru);
   check('respUnknown: not a list = nothing, no throw', respUnknown(null).length === 0);
+  // 04/11/2026 (resp_check, th-2908f79a): a department manager by first name is known wording, not flagged, and not a maintenance key.
+  check('respUnknown: "נועם" (a department manager) is not flagged and routes nowhere', respUnknown([{ id: 'th-7', resp: 'נועם', s: 'פתוח' }], 'tour_hazards').length === 0 && respKey('נועם') === null);
   const inv = ROWS.map((r) => (r[7] === 'אחזקה' ? Object.assign(r.slice(), { 7: 'מנהל אחזקה' }) : r));
   check('...so a "מנהל אחזקה" hazard brings the maintenance team as before', buildReport('חומר גלם', inv, parseRecipients(RCPT_ROWS), {}).to.join() === buildReport('חומר גלם', ROWS, parseRecipients(RCPT_ROWS), {}).to.join());
   check('sourceOf: tour number, trustee, investigation, committee', sourceOf([5, '', 3]) === 'סיור 3' && sourceOf(['נ-12', '', '']) === 'דיווח נאמן' && sourceOf([61, '', ''], 'investigation') === 'תחקיר תאונה' && sourceOf([7, '', ''], 'committee') === 'ועדת בטיחות' && sourceOf([8, '', '']) === '');
