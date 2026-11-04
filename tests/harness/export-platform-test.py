@@ -95,5 +95,25 @@ try:
 finally:
     open(victim, "wb").write(orig)
 check("the injected file is restored", open(victim, "rb").read() == orig)
+# retro 18/10/2026 (STATUS 113): a failed scan leaves the last export whole, and the next run is not stopped
+keep = tempfile.mkdtemp(prefix="platform-keep-")
+try:
+    EXP = ["node", os.path.join(ROOT, "tools", "export-platform.mjs"), keep]
+    first = subprocess.run(EXP, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", timeout=240)
+    mf = os.path.join(keep, ".export-manifest.json")
+    before = open(mf, encoding="utf-8").read() if os.path.exists(mf) else ""
+    try:
+        open(victim, "wb").write(orig + ("\nconst leak = '" + "Tapu" + "gan" + "';\n").encode("utf-8"))
+        bad_run = subprocess.run(EXP, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", timeout=240)
+    finally:
+        open(victim, "wb").write(orig)
+    after = open(mf, encoding="utf-8").read() if os.path.exists(mf) else ""
+    check("a failed export leaves the last one whole (manifest and files unchanged)",
+          first.returncode == 0 and bad_run.returncode == 1 and before and after == before
+          and os.path.exists(os.path.join(keep, "functions", "api", "od-read.js")), (first.returncode, bad_run.returncode, len(before), len(after)))
+    again = subprocess.run(EXP, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", timeout=240)
+    check("the next export after a failed one runs (no 'not from the export' stop)", again.returncode == 0, ((again.stdout or "") + (again.stderr or ""))[-300:])
+finally:
+    shutil.rmtree(keep, ignore_errors=True)
 print("\n%d passed, %d failed" % (ok, bad))
 sys.exit(1 if bad else 0)
