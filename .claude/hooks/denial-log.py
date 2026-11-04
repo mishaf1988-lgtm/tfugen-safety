@@ -27,6 +27,9 @@ def first_word(cmd):
 def row(ev):
     tool = str(ev.get("tool_name") or "?")[:60]
     reason = re.sub(r"\s+", " ", str(ev.get("reason") or "")).strip()[:90]
+    # the classifier's free text can quote the command (a token, a name): only its leading [rule tag] is kept (retro 04/11/2026)
+    mt = re.match(r"\[[^\]]{1,60}\]", reason)
+    reason = mt.group(0) if mt else ""
     ti = ev.get("tool_input") if isinstance(ev.get("tool_input"), dict) else {}
     fw = first_word(ti.get("command")) if tool in ("Bash", "PowerShell") else ""
     if fw == "bash" or fw == "sh" or fw == "python3":
@@ -50,6 +53,8 @@ def main():
     try:
         ev = json.loads(sys.stdin.read() or "{}")
     except Exception:
+        return 0
+    if not isinstance(ev, dict):
         return 0
     if ev.get("hook_event_name") not in (None, "PermissionDenied"):
         return 0

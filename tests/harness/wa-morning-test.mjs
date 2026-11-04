@@ -41,6 +41,10 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     check('the tick at a due time: one read with the public key, the result in staging; off-time: none', stagingCalls.length === 1 && /\/rest\/v1\/locations\?select=id&limit=1$/.test(stagingCalls[0].url) && /^sb_publishable_/.test(stagingCalls[0].key || '') && w1.staging && w1.staging.status === 200 && !w2.staging, [stagingCalls, w1.staging, w2.staging]);
     stagingCalls.length = 0; }
   console.log('\n0b. the deck on the meeting morning (03/11/2026)');
+  { // 04/11/2026 (retro): an exception of the deck check (OneDrive down) is a gap told to Michael, not silence on the one day it guards
+    const wm = fs.readFileSync(new URL('../../functions/api/wa-morning.js', import.meta.url), 'utf8');
+    check('the deck check catches an exception of checkAndFixDeck and turns it into a gap', /try \{ c = await checkAndFixDeck\(env\); \} catch \(e\)/.test(wm));
+  }
   // winter: Israel = UTC+2. 06:10 Israel = 04:10 UTC
   check('due on the meeting day from 06:00 to 11:59 Israel, once: not at 05:59, not at 12:00, not on another day, not after it ran that day',
     deckCheckDue(new Date('2026-11-03T04:10:00Z'), '2026-11-03', null) && deckCheckDue(new Date('2026-11-03T09:59:00Z'), '2026-11-03', '2026-10-27')

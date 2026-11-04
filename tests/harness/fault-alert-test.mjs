@@ -38,7 +38,12 @@ const NOW = '2026-10-31T14:50:00.000Z';
   const q = faultItems(prev, [], [{ agent: 'routine-wa-assistant', at: '2026-11-03T08:50:00Z', ok: false, line: miss }], now);
   check('second check missing: the item is quiet (no WhatsApp) but still goes to the developer', q.items.length === 1 && q.items[0].quiet === true && faultDevText(q.items).indexOf('wa-assistant') > 0, q.items);
   const l = faultItems(prev, [], [{ agent: 'routine-wa-assistant', at: '2026-11-03T08:50:00Z', ok: false, line: miss }, { agent: 'routine-wa-assistant', at: '2026-11-03T08:55:00Z', ok: false, line: 'wa_me failed 500' }], now);
-  check('a real failure of the same agent beside it makes the item loud', l.items.length === 1 && !l.items[0].quiet, l.items);
+  check('a real failure of the same agent beside it is its own loud item (the WhatsApp gets it)', l.items.filter((x) => !x.quiet).length === 1, l.items);
+  { // 04/11/2026 (retro): a quiet breach already marked as sent today must not hide a real failure of the same agent later in the day
+    const first = faultItems(prev, [], [{ agent: 'routine-wa-assistant', at: '2026-11-03T08:50:00Z', ok: false, line: miss }], now);
+    const later = faultItems(first.fault, [], [{ agent: 'routine-wa-assistant', at: '2026-11-03T13:55:00Z', ok: false, line: 'wa_me failed 500' }], '2026-11-03T14:00:00.000Z');
+    check('quiet breach marked sent, real failure of the same agent later: still reported', later.items.some((x) => !x.quiet), later.items);
+  }
   const o = faultItems(prev, [], [{ agent: 'routine-map-lights', at: '2026-11-03T08:50:00Z', ok: false, line: miss }, { agent: 'wa-assistant', at: '2026-11-03T08:51:00Z', ok: false, line: 'x ' + miss }], now);
   check('only the assistant, and only the gate prefix at the start, is quiet', o.items.every((x) => !x.quiet), o.items);
   const fsrc = fs.readFileSync(new URL('../../functions/_faults.js', import.meta.url), 'utf8');
