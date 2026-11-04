@@ -55,6 +55,10 @@ r = run([HEAD + "תודה, מיכ" + "אל"])
 check("the owner's first name in a business paste block is blocked", r and r.get("decision") == "block", r)
 r = run(["עדכון לצ'אט של העסק בהמשך.", "להדבקה:\nשני אזורים: " + ZONE])
 check("business named in one block, the paste in the next: still blocked", r and r.get("decision") == "block", r)
+for ph in ["08-680" + "8365", "054-794-" + "0073", "+972 54 794 " + "0073"]:
+    r = run([HEAD + "טלפון: " + ph])
+    check("a phone in any spelling is blocked: " + ph, r and r.get("decision") == "block", r)
+check("a long id that is not a phone passes", run([HEAD + "מספר הזמנה 1109175661875883 כללי"]) is None)
 check("stop_hook_active never blocks twice", run([HEAD + ZONE], active=True) is None)
 
 print("\n%d passed, %d failed" % (passed, failed))

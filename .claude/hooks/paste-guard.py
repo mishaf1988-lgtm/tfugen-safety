@@ -35,16 +35,26 @@ FIXED = ["znhjtpclt" + "rxxyfjczgvw", "ldzbjbsum" + "zqjyvtpiwqo", "tapugan" + "
 
 
 def site_phones():
-    """Phone numbers written in functions/_site.js (the owner's signature), with and without a dash."""
+    """Phone numbers of the owner's signature and the WhatsApp number note in functions/_site.js, as digits
+    (security review 04/11/2026: compared on digits only, so 08-6808365, 054-794-0073 and +972 all match)."""
     try:
-        txt = open(os.path.join(ROOT, "functions", "_site.js"), encoding="utf-8").read()
+        lines = open(os.path.join(ROOT, "functions", "_site.js"), encoding="utf-8").read().split("\n")
     except Exception:
         return set()
     out = set()
-    for m in re.findall(r"0\d{1,2}-?\d{7}", txt):
-        d = m.replace("-", "")
-        out |= {d, d[:3] + "-" + d[3:]}
+    for l in lines:
+        if "signature" not in l and "real number" not in l:
+            continue
+        for m in re.findall(r"(?<!\d)0\d{1,2}-?\d{3}-?\d{3,4}(?!\d)", l):
+            d = re.sub(r"\D", "", m)
+            if 9 <= len(d) <= 10:
+                out.add(d)
     return out
+
+
+def digits(text):
+    """The text's digits, with +972 / 972 read as a leading 0."""
+    return re.sub(r"\D", "", re.sub(r"\+?972[\s-]?", "0", text))
 
 
 def factory_words():
@@ -55,7 +65,7 @@ def factory_words():
         words = json.loads(out)
     except Exception:
         words = []
-    return sorted({w for w in words if w and w not in GENERIC} | set(FIXED) | site_phones(), key=len, reverse=True)
+    return sorted({w for w in words if w and w not in GENERIC} | set(FIXED), key=len, reverse=True)
 
 
 def paste_parts(blocks):
@@ -72,7 +82,12 @@ def paste_parts(blocks):
 
 def hits(parts, words):
     found = []
+    phones = site_phones()
     for p in parts:
+        dp = digits(p)
+        for ph in phones:
+            if ph in dp and ph not in found:
+                found.append(ph)
         for w in words:
             if w in p and w not in found:
                 found.append(w)

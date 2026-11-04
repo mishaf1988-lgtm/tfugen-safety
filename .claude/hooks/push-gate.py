@@ -78,7 +78,9 @@ def no_heredoc(cmd):
 
 # git's own options may come before the subcommand: git -C <dir> push, git -c k=v push, git --no-pager push
 # (retro 18/10/2026, STATUS 112 a: "git -C <dir> push" skipped every check).
-GIT = r"git(?:\s+(?:-[Cc]\s+\S+|--[\w-]+(?:=\S+)?))*\s+"
+_V = r"(?:\"[^\"]*\"|'[^']*'|\S+)"  # an option value, quoted or not
+# security review 04/11/2026: also -P / -p, --git-dir X, quoted values and /usr/bin/git
+GIT = r"(?:\S*/)?git(?:\s+(?:-[Cc]\s+" + _V + r"|-[A-Za-z]\b|--(?:git-dir|work-tree|namespace|exec-path|super-prefix|config-env)(?:=" + _V + r"|\s+" + _V + r")|--[\w-]+(?:=" + _V + r")?))*\s+"
 
 
 def main():

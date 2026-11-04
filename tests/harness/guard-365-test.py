@@ -77,6 +77,16 @@ check('truncate in OneDrive is denied', 'Bash', 'deny', {'command': 'truncate -s
 check('cp /dev/null over a OneDrive file is denied', 'Bash', 'deny', {'command': 'cp /dev/null "/c/Users/m/OneDrive/a.xlsx"'})
 check('find without -delete in OneDrive passes', 'Bash', 'pass', {'command': 'find ~/OneDrive/x -name "*.pdf"'})
 check('truncate in the repo passes', 'Bash', 'pass', {'command': 'truncate -s 0 tests/harness/_build/x'})
+# security review 04/11/2026
+for c in ['unlink ~/OneDrive/a.xlsx', 'cp -f /dev/null ~/OneDrive/a', ': > ~/OneDrive/a', 'cat /dev/null > "/c/Users/m/OneDrive/a"',
+          'dd if=/dev/zero of=~/OneDrive/a bs=1 count=0', 'rsync -a --delete x/ ~/OneDrive/y/']:
+    check('emptying in the synced folder is denied: ' + c, 'Bash', 'deny', {'command': c})
+check('a listing of OneDrive redirected to /tmp passes', 'Bash', 'pass', {'command': 'ls ~/OneDrive > /tmp/x.txt'})
+check('SENDMAIL (no case to split) is denied', 'mcp__Microsoft_365__outlook_SENDMAIL', 'deny')
+check('listAndSENDmail on an unnamed server is denied', 'mcp__x__listAndSENDmail', 'deny')
+for n in ['mcp__Cloudflare_Developer_Platform__hyperdrive_config_delete', 'mcp__claude-code-remote__send_message', 'mcp__Supabase__execute_sql',
+          'mcp__github__merge_pull_request', 'mcp__Claude_Docs__update', 'SendMessage']:
+    check('another server is not 365: ' + n, n, 'pass')
 check('rm in the repo passes', 'Bash', 'pass', {'command': 'rm -rf tests/harness/_build'})
 check('a commit message that mentions rm/mv and OneDrive passes (prose, not a command)', 'Bash', 'pass', {'command': 'git commit -F - <<EOF\nrm/mv on an OneDrive path are blocked\nEOF'})
 check('ls of the OneDrive folder passes', 'Bash', 'pass', {'command': 'ls "OneDrive/שולחן העבודה"'})

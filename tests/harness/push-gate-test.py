@@ -32,6 +32,9 @@ check('git -C <dir> push: still checked', hook('git -C /home/user/tfugen-safety 
 check('git -c k=v push: still checked', hook('git -c http.extraHeader=x push origin x', L, 1).get('permissionDecision') == 'deny')
 check('git --no-pager -C d push: still checked', hook('git --no-pager -C d push origin x', L, 1).get('permissionDecision') == 'deny')
 check('git -C <dir> commit on main: denied', hook('git -C /home/user/tfugen-safety commit -m x', 'STATUS.md', 0, PUSH_GATE_BRANCH='main').get('permissionDecision') == 'deny')
+for c in ['git -P push origin x', 'git --git-dir .git push origin x', 'git --work-tree . push origin x', 'git -C "/a b" push origin x',
+          'git -c "a.b=c d" push origin x', '/usr/bin/git push origin x']:
+    check('still a push (review 04/11/2026): ' + c, hook(c, L, 1).get('permissionDecision') == 'deny')
 check('git -C <dir> status: passes', hook('git -C /home/user/tfugen-safety status', L, 1) == {})
 check('git push only inside a heredoc body: passes (05/10/2026)', hook("cat > t.py <<'EOF'\necho; git push origin b\nEOF\npython3 t.py", L, 1) == {})
 check('a real push after a heredoc: still checked', hook("cat > t <<'EOF'\nx\nEOF\ngit push origin x", L, 1).get('permissionDecision') == 'deny')
