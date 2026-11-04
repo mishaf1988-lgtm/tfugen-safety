@@ -95,7 +95,9 @@ export function faultTodo(items, inbox) {
     const q = x.ref && byId.get(x.ref);
     if (!q) return false;
     if (q.status !== 'done' || !q.done_at || !x.ref_at) return true;
-    return String(q.done_at) >= String(x.ref_at);
+    // as times, not strings (security review 04/11/2026); an unreadable time keeps the old answer: covered
+    const d = Date.parse(q.done_at), a = Date.parse(x.ref_at);
+    return !(Number.isFinite(d) && Number.isFinite(a)) || d >= a;
   };
   return (items || []).filter((x) => !covers(x));
 }

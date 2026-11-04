@@ -107,6 +107,7 @@ const NOW = '2026-10-31T14:50:00.000Z';
   check('the failure time is kept beside the cited id', r.items[0].ref_at === '2026-10-31T14:10:00Z', JSON.stringify(r.items));
   check('a request closed after the failure covers it', faultTodo(r.items, [{ id: 'dev-20261102063806-oszd', status: 'done', done_at: '2026-10-31T14:13:00Z' }]).length === 0);
   check('a request closed before the failure does not cover it', faultTodo(r.items, [{ id: 'dev-20261102063806-oszd', status: 'done', done_at: '2026-10-30T09:00:00Z' }]).length === 1);
+  check('a close time in another zone is compared as a time', faultTodo(r.items, [{ id: 'dev-20261102063806-oszd', status: 'done', done_at: '2026-10-31T16:05:00+02:00' }]).length === 1);
   check('an open request covers it whatever the time', faultTodo(r.items, [{ id: 'dev-20261102063806-oszd', status: 'open' }]).length === 0);
 }
 { // wiring: the watchdog calls it, and a fault-alert failure does not fail the watch
