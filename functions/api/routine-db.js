@@ -2630,15 +2630,19 @@ async function routineDbHandle(context) {
       let map = {};
       try { map = JSON.parse(rows && rows[0] && rows[0].value || '{}'); } catch (x) { map = {}; }
       if (body.op === 'claims') return jsonResp({ ok: true, claims: claimsFresh(map, Date.parse(now)) }, 200, {});
-      const res = claimApply(map, body, now);
+      // through stateCas (retro 13/10/2026, STATUS 188 b): two sessions that claim different items at the same moment
+      // each re-read the map, so neither claim overwrites the other
+      let res = claimApply(map, body, now);
       if (res.error) return jsonResp({ ok: false, error: res.error }, 400, {});
       if (res.map) {
-        const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', {
-          method: 'POST',
-          headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-          body: JSON.stringify([{ key: CLAIM_KEY, value: JSON.stringify(res.map), updated_at: now }]), signal: tmo(SB_MS),
-        });
-        if (!r.ok) return jsonResp({ ok: false, error: 'write ' + r.status }, 200, {});
+        const w = await stateCas(url, h, CLAIM_KEY, (raw) => {
+          // an unreadable map is not rewritten with one claim (security review 04/11/2026): the others would be lost
+          let cur = {}; try { cur = JSON.parse(raw || '{}'); } catch (x) { res = { error: 'claims map unreadable' }; return { write: false }; }
+          res = claimApply(cur, body, now);
+          return res.error || !res.map ? { write: false } : { value: JSON.stringify(res.map) };
+        }, () => tmo(SB_MS)).catch((e) => ({ written: false, error: String(e && e.message || e) }));
+        if (res.error) return jsonResp({ ok: false, error: res.error }, res.error === 'claims map unreadable' ? 200 : 400, {});
+        if (res.map && !w.written) return jsonResp({ ok: false, error: 'write ' + (w.error || w.status || 'conflict') }, 200, {});
       }
       return jsonResp({ ok: true, ...res.ans }, 200, {});
     }
