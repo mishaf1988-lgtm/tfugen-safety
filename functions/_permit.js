@@ -184,6 +184,17 @@ export async function fillPermit(bytes, spec) {
       P.fills.push([b, sec.other]); report.filled++;
     }
   }
+  // The work permit's list of kinds ("\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4:, \u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05e9\u05de\u05dc,: ..."): "X " before each kind of the work, in the line
+  // where it appears (the live PDF of 05/11/2026 showed the work permit with none marked). Right to left within a
+  // paragraph, so an insertion never moves the next one.
+  const marks = new Map();
+  for (const word of (spec.markWords || [])) {
+    const P = paras.find((x) => x.text.indexOf(word) >= 0);
+    if (!P) { report.missing.push(word); continue; }
+    if (!marks.has(P)) marks.set(P, []);
+    marks.get(P).push(P.text.indexOf(word));
+  }
+  for (const [P, at] of marks) at.sort((a, b) => b - a).forEach((i) => { if (setChar(P, i, 'X ' + P.text[i])) report.ticked++; });
   if (spec.append) {
     const P = find(spec.append.after, 0);
     if (P) { P.append = lineAfter(P, spec.append.text, spec.append.marker); report.filled++; } else report.missing.push(spec.append.after);
@@ -223,7 +234,7 @@ export function permitSpec(form, w, o) {
     fill.push({ at: '\u05d0\u05e0\u05d9 \u05de\u05d0\u05e9\u05e8 \u05d1\u05d6\u05d4 \u05db\u05d9 \u05e1\u05d9\u05d9\u05de\u05ea\u05d9', vals: [chk.close.end] });
     fill.push({ at: '\u05e9\u05dd \u05d4\u05de\u05d1\u05e6\u05e2', nth: 1, vals: [one(chk.close.by, 60)] });
   }
-  if (form === 'work') return { fill };
+  if (form === 'work') return { fill, markWords: (w.cats || []).filter((k) => HEADS[k]).map((k) => HEADS[k]) };
   if (chk.elc) fill.push({ at: "\u05de\u05e1' \u05de\u05e0\u05d5\u05e2/\u05de\u05db\u05d5\u05e0\u05d4 \u05e9\u05e0\u05d5\u05ea\u05e7", vals: [one(chk.elc.mot, 80), one(chk.elc.ele, 80)] });
   if (ctr) fill.push({ at: '\u05e9\u05dd \u05de\u05de\u05d5\u05e0\u05d4', vals: [SITE.owner, o.date, { hidden: true }] });
   const sections = (w.cats || []).filter((k) => HEADS[k]).map((k) => {

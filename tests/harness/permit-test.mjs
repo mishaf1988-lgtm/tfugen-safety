@@ -72,6 +72,9 @@ console.log('\n1. the contractors\' work permit');
   check('workers on one line', lineOf(x, 'שמות העובדים').includes('אבי, משה, דני'));
   const loc = lineOf(x, 'מקום העבודה');
   check('area and department; the two blanks with no value stay', loc.includes('חדר אנרגיה') && loc.includes('אחזקה') && blanksOf(loc).length === 2, loc);
+  // the live PDF of 05/11/2026: the work permit's list of kinds had none marked
+  const kinds = lineOf(x, 'X עבודה בגובה');
+  check('the kinds of the work are marked "X" in the work permit\'s list (hot, height, electric), the others not', kinds.includes('X עבודות חמות') && kinds.includes('X עבודה בגובה') && kinds.includes('X עבודות חשמל') && !kinds.includes('X עבודות הנפה'), kinds);
   const ds = lineOf(x, 'תיאור העבודה');
   check('the description with Michael\'s notes, & < > " escaped and read back', ds.includes('ריתוך צנרת & חיתוך <קו> 6"') && ds.includes('הערות הממונה: לגדר את האזור') && !ds.includes('_'), ds);
   check('the signature lines of the field stay blank (not approved yet)', lineOf(x, 'שם מנהל').includes('____') && lineOf(x, 'שם המבצע').includes('____'));
