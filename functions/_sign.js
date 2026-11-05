@@ -138,7 +138,8 @@ export async function stampPdf(pdfBytes, sigBytes, dateText, opts) {
   // o.maxH (the signed permit, 05/11/2026): a line of a form has room for a short signature only; narrower so it is no taller.
   if (typeof o.maxH === 'number' && o.maxH > 0 && sig.height * W / sig.width > o.maxH) W = Math.max(20, o.maxH * sig.width / sig.height);
   const sh = sig.height * W / sig.width, ch = cap.height * CAP_W / cap.width;
-  const right = (typeof o.x === 'number' ? o.x : width - MARGIN - W) + W;
+  // o.right (the signed permit, 05/11/2026): the signature's right edge, so it ends just before the word "\u05d7\u05ea\u05d9\u05de\u05d4" whatever its width
+  const right = typeof o.right === 'number' ? o.right : (typeof o.x === 'number' ? o.x : width - MARGIN - W) + W;
   const y = typeof o.y === 'number' ? o.y : MARGIN + DATE_SIZE + 4 + ch + 2;
   pg.drawImage(sig, { x: right - W, y, width: W, height: sh });
   // o.bare: the signature only; the form's own line already carries the name and the date (no stamp, no date below it)

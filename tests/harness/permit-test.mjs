@@ -7,7 +7,7 @@
 import { readFileSync } from 'fs';
 import { readZip, entryText } from './_build/_xlsxpatch.mjs';
 import { PDFDocument, StandardFonts } from './_build/_pdflib.mjs';
-import { fillPermit, permitSpec, permitBase, safeName, blanksOf, norm, signSpot, mergePdfs, pdfAttachment, BOX, SIGN_MARK, HEADS, TEMPLATES, FILED_DIR, FALLBACK_SPOT, EMP_SIG_X, unmark } from './_build/_permit.mjs';
+import { fillPermit, permitSpec, permitBase, safeName, blanksOf, norm, signSpot, mergePdfs, pdfAttachment, BOX, SIGN_MARK, HEADS, TEMPLATES, FILED_DIR, FALLBACK_SPOT, EMP_SIG_X, unmark, SIG_DROP } from './_build/_permit.mjs';
 import { findTextSpot } from './_build/_pdftext.mjs';
 import { SITE } from './_build/_site.mjs';
 
@@ -162,9 +162,9 @@ async function pdfWith(pages, mark) {
   const m = await mergePdfs([work, safe]);
   check('merged: 1 + 2 pages', m.counts.join() === '1,2' && (await PDFDocument.load(m.bytes)).getPageCount() === 3);
   const sp = await signSpot(m.bytes, 1, true);
-  check('the marker found on page 3; contractor: the signature on the line left of it, its bottom on the line', sp.found && sp.page === 3 && sp.x === Math.round(300 + 10 * 8 * 0.55 - 80) && sp.x + sp.w <= 300 + 10 * 8 * 0.55 + 12 && sp.y === 338, sp);
+  check('the marker found on page 3; contractor: the signature on the line left of it, its right edge just before the word, dipping SIG_DROP below the line (Michael: bigger)', sp.found && sp.page === 3 && sp.x === Math.round(300 + 10 * 8 * 0.55 - 80) && sp.x + sp.w <= 300 + 10 * 8 * 0.55 + 12 && sp.y === 340 - SIG_DROP && sp.right === Math.round(300 + 10 * 8 * 0.55 - 4), sp);
   const se = await signSpot(m.bytes, 1, false);
-  check('maintenance workers: the marker\'s row, at the left margin', se.found && se.page === 3 && se.x === EMP_SIG_X && se.y === 338, se);
+  check('maintenance workers: the marker\'s row, at the left margin', se.found && se.page === 3 && se.x === EMP_SIG_X && se.y === 340 - SIG_DROP, se);
   const none = await mergePdfs([work, await pdfWith(2)]);
   const fb = await signSpot(none.bytes, 1, true);
   check('no marker, contractor: the measured spot on the safety form\'s page 2', !fb.found && fb.page === 3 && fb.x === FALLBACK_SPOT.x && fb.y === FALLBACK_SPOT.y, fb);
