@@ -23,6 +23,7 @@
 //   agents_pause  {until: 'YYYY-MM-DD', agent?}: 29/10/2026 one switch: every Routine stops at its opening until that day (agent-common.md, 0). agents_resume clears it.
 //   assistant_account  {account: 'main'|'gmail', agent?}: 29/10/2026 which Claude account the assistant's WhatsApp messages fire (the ASSISTANT_* or the ASSISTANT2_* pair).
 //   works_try_mail  {}: 05/11/2026 the weekly works-link mail, once, marked as a trial, to Michael's own mailbox only (works.js).
+//   works_mail_now {}: 05/11/2026 the weekly works link to the maintenance list now (works_mail_on + works_mail_to only), once per Friday.
 //   works_approve_mail {}: 05/11/2026 the approval mail (approve / notes buttons) again, for this Friday's works still pending, to Michael's own mailbox only.
 //   works_permit {id: wk-YYYY-MM-DD-n, closed?: true}: 05/11/2026 the signed permit of ONE approved work again (testing,
 //              recovery after works_permit_err): filled from the factory's templates, signed, filed as a NEW file in
@@ -174,7 +175,7 @@ import { transcribe } from '../_stt.js';
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, FILE_TIMEOUT_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile, sendMailTo } from '../_onedrive.js';
-import { worksTryMail, worksApproveMail, worksPermit, WK_ID_RE as WORKS_ID_RE } from './works.js';
+import { worksTryMail, worksApproveMail, worksPermit, WK_ID_RE as WORKS_ID_RE, worksMailNow } from './works.js';
 import { readZip, entryText } from '../_xlsxpatch.js';
 import { DOMAIN_FORMS } from '../_domains.js';
 import { OD_OCR_DIR, OCR_MODELS, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
@@ -2118,6 +2119,11 @@ async function routineDbHandle(context) {
     if (body.op === 'works_try_mail') {
       for (const k of Object.keys(body)) if (['op', 'agent'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       try { return jsonResp(await worksTryMail(env, new Date(), { accessToken, sendMailTo }), 200, {}); }
+      catch (e) { return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 160) }, 200, {}); }
+    }
+    if (body.op === 'works_mail_now') {
+      for (const k of Object.keys(body)) if (['op', 'agent'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      try { return jsonResp(await worksMailNow(env, new Date(), { accessToken, sendMailTo }), 200, {}); }
       catch (e) { return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 160) }, 200, {}); }
     }
     if (body.op === 'works_approve_mail') {
