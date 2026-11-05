@@ -342,6 +342,7 @@ check('the mailed link is valid for that Friday', (await readWorksToken(ENV, mto
 await worksTick(ENV, new Date(WED18.getTime() + 5 * 60000), deps);
 check('the next tick: no second mail', db.mails.length === 1);
 check('the mail text: keyboard characters only, signed with the owner\'s own signature (SITE.signature, 05/11/2026)', !/[–—…־]/.test(db.mails[0].html) && db.mails[0].html.includes(SITE.signature) && SITE.signature.length > 100);
+check('the mail is right-to-left in the style too (Outlook drops dir=, 05/11/2026)', /^<div dir="rtl" style="direction:rtl;text-align:right;/.test(db.mails[0].html));
 db.wa = [];
 await worksTick(ENV, THU12, deps);
 check('Thursday 12:00, nothing came: one WhatsApp reminder', db.wa.length === 1 && /לא התקבלה רשימת העבודות ליום שישי 06\/11\/2026/.test(waText(db.wa[0])), db.wa.map(waText));
