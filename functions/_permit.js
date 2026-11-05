@@ -42,7 +42,9 @@ export const SIGN_MARK = 'qzxSgq';  // no word in Hebrew or English has it ("eSi
 export const SIG_W = 90;
 // The live PDF of 05/11/2026: the full stamp (signature, name stamp, date) overlapped the lines above and below the
 // officer's line. On a form line: the signature alone, at most this tall (points).
-export const SIG_MAX_H = 26;  // 16 was unreadable in the live PDF (the stored signature carries the name stamp)
+export const SIG_MAX_H = 38;  // Michael 05/11/2026 on 16: "too small, you can't see it's mine"; the room between the lines
+// above and below the officer's line is about 45 points, so it dips 8 below the line (SIG_DROP) and fills the rest
+export const SIG_DROP = 8;
 // PERMIT_SPOT of routine-db.js (measured on the contractors' safety template 22/10/2026), on the safety form's page 2.
 export const FALLBACK_SPOT = { x: 225, y: 342, w: 90 };
 
@@ -324,7 +326,7 @@ export async function signSpot(merged, workPages, ctr) {
   const m = findTextSpot(doc, SIGN_MARK);
   // contractors: on the blank after "\u05d7\u05ea\u05d9\u05de\u05d4", its right edge at the marker (the live PDF of 05/11/2026: a left edge at marker-80 put a
   // narrow signature over "\u05e0\u05d9\u05d9\u05d3")
-  if (m && m.page > workPages) return { page: m.page, x: ctr ? Math.max(20, Math.round(m.x - 80)) : EMP_SIG_X, right: ctr ? Math.round(m.x - 4) : undefined, y: Math.round(m.y - 2), w: SIG_W, found: true };
+  if (m && m.page > workPages) return { page: m.page, x: ctr ? Math.max(20, Math.round(m.x - 80)) : EMP_SIG_X, right: ctr ? Math.round(m.x - 4) : undefined, y: Math.round(m.y - SIG_DROP), w: SIG_W, found: true };
   if (ctr) return { page: Math.min(n, workPages + 2), x: FALLBACK_SPOT.x, y: FALLBACK_SPOT.y, w: FALLBACK_SPOT.w, found: false };
   return { page: n, found: false };
 }
