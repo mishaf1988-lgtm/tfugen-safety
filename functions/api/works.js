@@ -84,7 +84,8 @@ const BLK = Object.fromEntries(BLOCKS.map((c) => [c.k, c]));
 export const OTHER_L = '\u05d0\u05d7\u05e8';
 // The gas thresholds (proposal, 05/11/2026). OFF until Michael approves the numbers (STATUS): until then the values are
 // recorded and required, but nothing is red because of them.
-export const GAS_LIMITS = { on: false, o2: [19.5, 23.5], lel: [null, 10], h2s: [null, 10], co: [null, 25] };
+// on: Michael approved the thresholds in the questionnaire 05/11/2026 ("\u05d1\u05e6\u05e2: \u05d4\u05e1\u05e4\u05d9\u05dd \u05d4\u05de\u05e7\u05d5\u05d1\u05dc\u05d9\u05dd").
+export const GAS_LIMITS = { on: true, o2: [19.5, 23.5], lel: [null, 10], h2s: [null, 10], co: [null, 25] };
 export const GAS_KEYS = ['o2', 'lel', 'h2s', 'co', 'gat', 'gby', 'att', 'rsc'];
 const NUM_MAX = { o2: 100, lel: 100, h2s: 1000, co: 1000 };
 // Kinds whose certificates Michael wants attached (a yellow note when none is, not a block).
