@@ -59,6 +59,7 @@ check('the real hook-utf8 and settings tests run and are green on this tree', r.
 B = lambda cmd, br: hook(cmd, '', 0, PUSH_GATE_BRANCH=br)
 check('commit on main: denied', B('git add -A && git commit -qm x', 'main').get('permissionDecision') == 'deny')
 check('commit on a routine branch: passes', B('git commit -qm x', 'routine/x-2026-10-18') == {})
+check('git -C <dir> checkout -B then commit, while still on main: passes (retro 05/11/2026)', B('git -C /home/user/tfugen-safety checkout -q -B routine/x origin/main && git -C /home/user/tfugen-safety commit -qm x', 'main') == {})
 check('checkout -B then commit, while still on main: passes', B('git checkout -q -B routine/x origin/main; git add -A; git commit -qm x', 'main') == {})
 check('checkout -b chained with && then commit: passes', B('git checkout -q -b routine/x && git commit -qm x', 'main') == {})
 check('checkout -b then ; commit (the -b can fail on an existing branch): denied', 'deny' in json.dumps(B('git checkout -b routine/x 2>/dev/null; git commit -qm x', 'main')))

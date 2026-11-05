@@ -12762,7 +12762,8 @@ function tbtClose(id,op){
   .then(_tbtJson)
   .then(function(x){
     if(!x.ok||!x.j||!x.j.ok){toast('\u26a0\ufe0f '+_tbtLinkErr(x.st,x.j&&x.j.error));return 'failed';}
-    r.closed_at=x.j.closed_at||null;
+    // the tab that loses a close race (already:true) gets closed_at:null from the server: it must show closed, not open (retro 05/11/2026)
+    r.closed_at=x.j.closed_at||((op==='close'&&x.j.already)?(r.closed_at||new Date().toISOString()):null);
     // 05/11/2026: a reopen clears form_at (the next close files a new 08.01); a second close keeps the first one.
     if(op!=='close')r.form_at=null;
     if(op==='close'&&x.j.already){try{rTbt();}catch(e){}toast('\ud83d\udd12 \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05db\u05d1\u05e8 \u05e1\u05d2\u05d5\u05e8\u05d4');return 'closed';}
