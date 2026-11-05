@@ -38,7 +38,7 @@ description: How to connect an outside service (Cloudflare, Supabase management,
 | שירות | Host | הרשאה | נרשם |
 |---|---|---|---|
 | Cloudflare | `api.cloudflare.com` | Pages, חשבון `c9d388e3a5f9ee9546e8aa6b6353ec87` | `ACCOUNT-INVENTORY.md` |
-| Supabase (ניסוי בלבד) | `api.supabase.com` | scoped PAT על `ldzbjbsumzqjyvtpiwqo`: Database, Auth Config כתיבה; תוקף 24 שעות מ-18/10/2026 | `ACCOUNT-INVENTORY.md` |
+| Supabase (ניסוי בלבד) | `api.supabase.com` | scoped PAT על `ldzbjbsumzqjyvtpiwqo`: Database, Auth Config כתיבה; תוקף 24 שעות מ-18/10/2026, **פג 19/10/2026** (401 נמדד 05/11/2026; מפתח חדש רק אחרי החלטה של מיכאל) | `ACCOUNT-INVENTORY.md` |
 
 **מפתח Supabase:** רק scoped (מתחיל ב-`sbp_`, נבחרים פרויקט והרשאות). מפתח classic פותח את כל הפרויקטים, כולל החי: לא ליצור. בדיקה אחרי שמירה: הפרויקט שלו 200, החי 403.
 
