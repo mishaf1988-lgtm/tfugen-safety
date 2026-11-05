@@ -5,7 +5,7 @@
 // The 5-minute clock: Wednesday 18:00 the mail (only when works_mail_on), Thursday 12:00 the reminder, Sunday 08:00
 // permits not closed. Mocked network, nothing leaves.
 import { onRequest, makeWorksToken, readWorksToken, fridayOf, CATS, S_PEND, S_CANCEL, S_REJ, S_CLOSED, EMP_LABEL, CHECK_MARK, GATE_MARK, NOTE_LINE, REJ_MARK, kindsIn, ctrKey, ctrIssue,
-  parseSafety, buildSafety, assess, GAS_LIMITS, worksTick, worksTryMail, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck } from './_build/works.mjs';
+  parseSafety, buildSafety, assess, GAS_LIMITS, worksTick, worksTryMail, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck, mailDeps, makeOkToken, readOkToken, OK_PREFIX, S_OK, APPROVE_SUBJECT } from './_build/works.mjs';
 import { makeLinkToken } from './_build/_closelink.mjs';
 import { run as morningRun } from './_build/wa-morning.mjs';
 import { SITE } from './_build/_site.mjs';
@@ -22,6 +22,9 @@ const FRI = '2026-11-06';
 
 const db = {};
 const resetDb = () => Object.assign(db, { ptw: {}, state: {}, wa: [], mails: [], ptwPosts: 0, patches: [], ctrFail: false, files: {}, approveAfterRead: null });
+// The approval mail (05/11/2026) goes through these, never to Graph.
+mailDeps.accessToken = async () => ({ token: 'gt', email: 'owner@tapugan.co.il' });
+mailDeps.sendMailTo = async (t, to, cc, subj, html) => { db.mails.push({ to, cc, subj, html }); return true; };
 resetDb();
 const CTR = [
   { n: 'ט"ס פרויקטים בע"מ', e: '2027-03-01', s: 'פעיל', tr: 'הוכשר' },
@@ -167,6 +170,42 @@ check('confined space without a gas test: missing for approval, naming what', b.
 check('the sign-off fields stay empty for stage B', !('sg1n' in a) && !('sg4n' in a));
 check('Michael gets one WhatsApp with counts, the red flag and the app link', db.wa.length === 1 && /התקבלה: 2 עבודות/.test(waText(db.wa[0])) && /נגב אקולוגיה/.test(waText(db.wa[0])) && /חסרה בדיקת גזים/.test(waText(db.wa[0])) && waText(db.wa[0]).includes('/#ptw'), db.wa.map(waText));
 check('works_sub notes the Friday', JSON.parse(db.state.works_sub).friday === FRI);
+
+console.log('\n5b. approval from the mail (Michael 05/11/2026: "a mail with approve buttons")');
+{ const am = db.mails.filter((x) => x.subj === APPROVE_SUBJECT(FRI, false));
+  check('one approval mail, to the connected mailbox only, both works, a button each', am.length === 1 && am[0].to.join() === 'owner@tapugan.co.il' && !am[0].cc.length && (am[0].html.match(/\/api\/works\?a=/g) || []).length === 2 && am[0].html.includes('נגב אקולוגיה'), am.map((x) => x.subj));
+  check('the mail shows the red flag and the "missing before approval" line, right-to-left', /פג ב-01\/10\/2026/.test(am[0].html) && /חסרה בדיקת גזים/.test(am[0].html) && /^<div dir="rtl" style="direction:rtl;text-align:right;/.test(am[0].html));
+  const toks = [...am[0].html.matchAll(/\/api\/works\?a=([^"&]+)/g)].map((x) => decodeURIComponent(x[1]));
+  check('each button is a token for its own row, with its own prefix', (await readOkToken(ENV, toks[0], NOW)).id === 'wk-2026-11-06-1' && (await readOkToken(ENV, toks[1], NOW)).id === 'wk-2026-11-06-2');
+  check('the weekly-list token is refused as an approval token, and an approval token is no list link', (await readOkToken(ENV, tok, NOW)).error && (await readWorksToken(ENV, toks[0], NOW)).error);
+  const forged = await makeLinkToken(ENV, OK_PREFIX, 'ctr26-1', 8, NOW);
+  check('a token for a row that is not a weekly work: refused', (await readOkToken(ENV, forged, NOW)).error === 'bad');
+  const pg = await open(URL0 + '?a=' + encodeURIComponent(toks[0]));
+  check('opening the button (GET, as mail scanners do) only shows the work: nothing changes', pg.st === 200 && pg.h.includes('מאשר את תחילת העבודה') && db.ptw['wk-2026-11-06-1'].s === S_PEND);
+  const pg2 = await open(URL0 + '?a=' + encodeURIComponent(toks[1]));
+  check('a work missing a gas test: no approve button, reject only', pg2.st === 200 && !pg2.h.includes('value="approve"') && pg2.h.includes('value="reject"'));
+  const decide = async (t, act, why) => { const body = new URLSearchParams({ op: 'decide', a: t, act, why: why || '' }).toString(); const r = await onRequest({ request: new Request(URL0, { method: 'POST', body, headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'content-length': String(body.length) } }), env: ENV }); return { st: r.status, h: await r.text() }; };
+  let r = await decide(toks[1], 'approve');
+  check('approving it anyway (a forged POST): refused, still pending', r.st === 409 && db.ptw['wk-2026-11-06-2'].s === S_PEND, r.st);
+  r = await decide(toks[1], 'reject', '');
+  check('a reject with no reason: refused', r.st === 400 && db.ptw['wk-2026-11-06-2'].s === S_PEND);
+  r = await decide(toks[1], 'reject', 'חסרה בדיקת גזים, להשלים');
+  check('a reject with a reason: rejected, the reason is first in safety for the link', r.st === 200 && db.ptw['wk-2026-11-06-2'].s === S_REJ && db.ptw['wk-2026-11-06-2'].safety.startsWith(REJ_MARK + 'חסרה בדיקת גזים, להשלים'), db.ptw['wk-2026-11-06-2'].s);
+  const np = db.patches.length;
+  r = await decide(toks[0], 'approve');
+  const last = db.patches[np];
+  check('approve: open, only while pending (the update is filtered by status)', r.st === 200 && db.ptw['wk-2026-11-06-1'].s === S_OK && last && Object.keys(last.b).join() === 's', [r.st, last]);
+  r = await decide(toks[0], 'approve');
+  check('a second click: "already handled", nothing written', r.st === 409 && db.patches.length === np + 1);
+  db.ptw['wk-2026-11-06-2'].s = S_PEND; db.ptw['wk-2026-11-06-2'].ver = '2026-11-05T08:00:00Z';
+  const pv = await open(URL0 + '?a=' + encodeURIComponent(toks[1]));
+  check('the page carries the version it showed', pv.h.includes('name="v" value="2026-11-05T08:00:00Z"'));
+  const decideV = async (t, v) => { const body = new URLSearchParams({ op: 'decide', a: t, act: 'reject', why: 'x', v }).toString(); const rr = await onRequest({ request: new Request(URL0, { method: 'POST', body, headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'content-length': String(body.length) } }), env: ENV }); return rr.status; };
+  check('maintenance changed the work after the page opened: no decision, "open it again"', (await decideV(toks[1], '2026-11-05T07:00:00Z')) === 409 && db.ptw['wk-2026-11-06-2'].s === S_PEND);
+  delete db.ptw['wk-2026-11-06-2'].ver;
+  r = await decide(toks[0].slice(0, -2) + 'zz', 'approve');
+  check('a tampered token: refused', r.st === 403);
+  db.ptw['wk-2026-11-06-1'].s = S_PEND; db.ptw['wk-2026-11-06-2'].s = S_PEND; db.ptw['wk-2026-11-06-2'].safety = db.ptw['wk-2026-11-06-2'].safety.split('\n').filter((x) => x.indexOf(REJ_MARK) !== 0).join('\n'); }
 
 console.log('\n6. the page opens again, resubmit updates');
 p = await open(URL0 + '?k=' + encodeURIComponent(tok));
