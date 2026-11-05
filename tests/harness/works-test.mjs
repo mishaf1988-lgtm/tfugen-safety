@@ -176,10 +176,11 @@ check('a saved work offers attachments (its own small form)', p.h.includes('<for
 r = await post([['k', tok]].concat(fieldsOf(0, Object.assign({}, W1, { rid: '1' }), { hgt: [0, 1, 4], hot: [0, 1, 2] }, { hot: { fw: 'משה' } }), fieldsOf(1, Object.assign({}, W2, { rid: '2' }), { cnf: [0, 1, 2] }, { cnf: GAS })));
 b = db.ptw['wk-2026-11-06-2'];
 check('the gas test filled: kept, and the work is no longer blocked', r.st === 200 && !b.safety.includes(GATE_MARK) && parseSafety(b.safety).chk.cnf.o2 === '20.9' && parseSafety(b.safety).chk.cnf.rsc === GAS.rsc, b.safety);
-check('thresholds are off until Michael approves them: an O2 of 15 is recorded, not red', GAS_LIMITS.on === false && assess({ chk: { cnf: Object.assign({}, GAS, { o2: '15' }) }, files: 1 }, ['cnf']).red.length === 0);
+check('thresholds are on (Michael approved 05/11/2026)', GAS_LIMITS.on === true);
+GAS_LIMITS.on = false;
+check('with the thresholds off: an O2 of 15 is recorded, not red', assess({ chk: { cnf: Object.assign({}, GAS, { o2: '15' }) }, files: 1 }, ['cnf']).red.length === 0);
 GAS_LIMITS.on = true;
 check('with the thresholds on: O2 15 / LEL 12 / CO 30 are red, 20.9 / 0 / 2 are not', assess({ chk: { cnf: Object.assign({}, GAS, { o2: '15', lel: '12', co: '30' }) }, files: 1 }, ['cnf']).red.length === 3 && assess({ chk: { cnf: GAS }, files: 1 }, ['cnf']).red.length === 0);
-GAS_LIMITS.on = false;
 check('a change within 15 minutes: no second WhatsApp', db.wa.length === 1, db.wa.length);
 db.ptw['wk-2026-11-06-1'].s = 'פתוח';
 r = await post([['k', tok]].concat(fieldsOf(0, Object.assign({}, W1, { rid: '1', desc: 'שונה אחרי אישור' }), {}), fieldsOf(5, W3, {})));
