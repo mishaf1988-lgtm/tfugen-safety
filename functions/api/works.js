@@ -1089,6 +1089,25 @@ export async function worksApproveMail(env, now, deps) {
   const r = await approvalMail(env, friday, works, false, now.getTime(), deps);
   return { ok: true, friday, n: r.n, to: r.to };
 }
+// The weekly link to maintenance now, not on Wednesday 18:00 (05/11/2026, Michael: "you can send Alina, Nahum and
+// Shlomi the request now", the Wednesday of that week already past). Only with the weekly mail on and its list set (the
+// same recipients the clock uses; nobody else), only while this Friday is still open, and once per Friday
+// (works_mail_last, like the clock: the Wednesday run will not send it again).
+export async function worksMailNow(env, now, deps) {
+  SB = sbFrom(env);
+  const friday = fridayOf(now);
+  const rows = await sbGet(env, 'server_state?key=in.(' + MAIL_KEYS.join(',') + ')&select=key,value');
+  const st = {}; (rows || []).forEach((x) => { st[x.key] = x.value; });
+  if (String(st.works_mail_on || '').trim() !== 'true') return { ok: false, error: 'weekly mail is off (works_mail_on)' };
+  const list = mailList(st.works_mail_to);
+  if (!list) return { ok: false, error: 'no recipients (works_mail_to)' };
+  if (!listOpen(friday, now.getTime())) return { ok: false, error: 'friday passed' };
+  if (st.works_mail_last === friday) return { ok: false, error: 'already sent for ' + friday };
+  const sent = await mailWeek(env, friday, list, '', now.getTime(), deps);
+  if (sent.error) return { ok: false, error: sent.error };
+  await stateSet(env, 'works_mail_last', friday);
+  return { ok: true, friday, to: list.to, cc: list.cc };
+}
 // deps = {accessToken, sendMailTo} from _onedrive.js (wa-morning passes them; a test passes its own).
 export async function worksTick(env, now, deps) {
   const m = mailDue(now), r = remindDue(now), o = openDue(now);

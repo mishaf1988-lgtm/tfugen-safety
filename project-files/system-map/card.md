@@ -71,7 +71,7 @@
 - OCR: קריאת סריקות, חינמי (Workers AI)
 - claude.js: ה-AI באפליקציה
 - works: רשימת העבודות לשישי: קישור לאחזקה, היתרים לאישור, אישורים מצורפים, סגירה מהטלפון; הרשאה חתומה (PDF) לכל עבודה שאושרה, מתויקת בתיקייה 18 ונשלחת במייל; מייל ברביע
-- routine-db: 75 פעולות שהסוכנים מותרים בהן: agent_report, agents_pause, agents_resume, assistant_account, cal_invite, cal_invite_ask, cal_move, cal_move_ask, claim, claims, 
+- routine-db: 76 פעולות שהסוכנים מותרים בהן: agent_report, agents_pause, agents_resume, assistant_account, cal_invite, cal_invite_ask, cal_move, cal_move_ask, claim, claims, 
 
 ## המסד
 - מסמכים ותוקף: טבלה docs

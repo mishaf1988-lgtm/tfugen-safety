@@ -5,7 +5,7 @@
 // The 5-minute clock: Wednesday 18:00 the mail (only when works_mail_on), Thursday 12:00 the reminder, Sunday 08:00
 // permits not closed. Mocked network, nothing leaves.
 import { onRequest, makeWorksToken, readWorksToken, fridayOf, CATS, S_PEND, S_CANCEL, S_REJ, S_CLOSED, EMP_LABEL, CHECK_MARK, GATE_MARK, NOTE_LINE, REJ_MARK, kindsIn, ctrKey, ctrIssue,
-  parseSafety, buildSafety, assess, GAS_LIMITS, worksTick, worksTryMail, worksApproveMail, permitRun, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck, mailDeps, makeOkToken, readOkToken, OK_PREFIX, S_OK, APPROVE_SUBJECT, OKN_MARK, DECIDE_SUBJECT,
+  parseSafety, buildSafety, assess, GAS_LIMITS, worksTick, worksTryMail, worksApproveMail, worksMailNow, permitRun, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck, mailDeps, makeOkToken, readOkToken, OK_PREFIX, S_OK, APPROVE_SUBJECT, OKN_MARK, DECIDE_SUBJECT,
   PERMIT_MARK, PERMIT_ERR, PERMIT_TO, PERMIT_SUBJECT, permitHtml, worksPermit } from './_build/works.mjs';
 import { readFileSync } from 'fs';
 import { readZip, entryText } from './_build/_xlsxpatch.mjs';
@@ -443,6 +443,17 @@ console.log('\n13. the trial mail to Michael (05/11/2026)');
   check('...the weekly switch untouched (still off), no last-sent stamp', db.state.works_mail_on === 'false' && db.state.works_mail_last !== FRI, db.state);
   const r2 = await worksTryMail(ENV, THU12, { accessToken: async () => ({ token: 'gt' }), sendMailTo: deps.sendMailTo });
   check('no connected address: nothing sent', r2.ok === false && db.mails.length === 1, r2); }
+console.log('\n13b. the weekly link now (05/11/2026)');
+{ db.mails = []; const dm = { accessToken: async () => ({ token: 'gt', email: 'owner@tapugan.co.il' }), sendMailTo: deps.sendMailTo };
+  delete db.state.works_mail_last; db.state.works_mail_on = 'false'; db.state.works_mail_to = JSON.stringify({ to: ['alina@tapugan.co.il', 'x@gmail.com'], cc: [] });
+  const off = await worksMailNow(ENV, THU12, dm);
+  check('mail off: nothing sent', off.ok === false && !db.mails.length, off);
+  db.state.works_mail_on = 'true';
+  const r = await worksMailNow(ENV, THU12, dm);
+  check('on: one mail to the list only (outside address dropped), no trial prefix, the link, the Friday stamped', r.ok && db.mails.length === 1 && db.mails[0].to.join() === 'alina@tapugan.co.il' && db.mails[0].subj === MAIL_SUBJECT(FRI) && db.mails[0].html.includes('/api/works?k=') && db.state.works_mail_last === FRI, [r, db.mails[0] && db.mails[0].subj]);
+  const again = await worksMailNow(ENV, THU12, dm);
+  check('a second time the same week: refused, nothing sent', again.ok === false && db.mails.length === 1, again);
+  delete db.state.works_mail_on; delete db.state.works_mail_to; delete db.state.works_mail_last; }
 console.log('\n14. the approval mail again, for works still pending (05/11/2026)');
 { db.mails = []; const dm = { accessToken: async () => ({ token: 'gt', email: 'owner@tapugan.co.il' }), sendMailTo: deps.sendMailTo };
   db.ptw = {}; ['wk-' + FRI + '-1', 'wk-' + FRI + '-2', 'wk-' + FRI + '-3'].forEach((id, i) => { db.ptw[id] = { id, num: '', con: 'x', sup: 's', ph: '', wkr: '', area: 'a', dep: '', ds: FRI, de: FRI, ts: '', te: '', types: '', safety: '', desc: 'work ' + i, s: i === 2 ? S_OK : S_PEND }; });
