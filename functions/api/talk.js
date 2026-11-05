@@ -1720,8 +1720,10 @@ async function makeLink(env, request, ctx) {
     if (TYPED_KINDS.indexOf(talk.kind) < 0) return jsonResp({ error: 'not an annual / quality training' }, 409, cors);
     if (b.op === 'close' && talk.closed_at) return jsonResp({ ok: true, closed_at: talk.closed_at, already: true, filed: null, fileErr: null }, 200, cors);
     const at = b.op === 'close' ? new Date().toISOString() : null;
-    const p = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(talk.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify(b.op === 'close' ? (talk.first_closed_at ? { closed_at: at } : { closed_at: at, first_closed_at: at }) : { closed_at: null, form_at: null }) });
+    // A close only takes a training that is still open (closed_at=is.null): two clicks at once file one form (security review 05/11/2026).
+    const p = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(talk.id) + (b.op === 'close' ? '&closed_at=is.null' : ''), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: b.op === 'close' ? 'return=representation' : 'return=minimal' }), body: JSON.stringify(b.op === 'close' ? (talk.first_closed_at ? { closed_at: at } : { closed_at: at, first_closed_at: at }) : { closed_at: null, form_at: null }) });
     if (!p.ok) return jsonResp({ error: b.op + ' failed' }, 502, cors);
+    if (b.op === 'close') { const won = await p.json().catch(() => null); if (Array.isArray(won) && !won.length) return jsonResp({ ok: true, closed_at: null, already: true, filed: null, fileErr: null }, 200, cors); }
     // Closing files form 08.01 with everyone who signed and mails it (15/10/2026, Michael: "once I close it,
     // all the forms arrive by mail"). A failure there leaves the training closed and says why.
     let filed = null, fileErr = null;

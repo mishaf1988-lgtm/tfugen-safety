@@ -163,6 +163,12 @@ console.log('\n4. reopened and closed again (05/11/2026, DECISIONS: a new 08.01,
   check('close of a closed training: keeps the first date, writes and files nothing', c2.st === 200 && c2.j.already === true && c2.j.closed_at === '2026-10-25T10:00:00.000Z' && w.patches.length === np && (w.puts || []).length === npu && (w.mails || []).length === nm, c2.j);
   const ro = await link({ op: 'reopen', id: 'an1' }, 'good');
   const rp = w.patches.slice(-1)[0];
+  // two closes at once: the second PATCH matches no row (closed_at=is.null) and files nothing
+  { const keep = globalThis.fetch, npu0 = (w.puts || []).length; T.ann.closed_at = null;
+    globalThis.fetch = async (u, i) => (String(u).includes('/rest/v1/toolbox_talks') && i && i.method === 'PATCH' ? (/closed_at=is\.null/.test(String(u)) ? new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } }) : new Response('x', { status: 500 })) : keep(u, i));
+    const race = await link({ op: 'close', id: 'an1' }, 'good'); globalThis.fetch = keep;
+    check('close race: the losing close (no open row matched) files nothing and says already', race.st === 200 && race.j.already === true && (w.puts || []).length === npu0, race.j);
+    T.ann.closed_at = '2026-10-25T10:00:00.000Z'; }
   check('reopen clears form_at too (the form filed before no longer counts)', ro.st === 200 && rp.b.closed_at === null && 'form_at' in rp.b && rp.b.form_at === null, rp);
   T.ann.closed_at = null; T.ann.first_closed_at = '2026-10-25T10:00:00.000Z';
   const nmv = (w.moves || []).length, np3 = w.patches.length;
