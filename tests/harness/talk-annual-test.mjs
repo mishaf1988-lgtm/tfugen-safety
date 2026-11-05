@@ -33,7 +33,15 @@ globalThis.fetch = async (url, init) => {
   if (u.startsWith(SB + '/rest/v1/app_users')) return json([u.includes('michael') ? { role: 'מנהל', active: true } : { role: 'צופה', active: true }]);
   if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return json([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite Mail.Send' }]);
   if (u.startsWith(GR + 'me/sendMail')) { w.mails = (w.mails || []).concat([JSON.parse(init.body)]); return new Response(null, { status: 202 }); }
-  if (u.startsWith(GR) && m === 'PUT') { w.puts = (w.puts || []).concat([decodeURIComponent(u)]); return json({ webUrl: 'https://od.example/' + w.puts.length }); }
+  // 05/11/2026: OneDrive keeps the files put, so a second filing of the same form meets a 409 (conflictBehavior=fail)
+  if (u.startsWith(GR) && m === 'PUT') {
+    const path = decodeURIComponent(u.split('?')[0]); w.od = w.od || new Set();
+    if (/conflictBehavior=fail/.test(u) && w.od.has(path)) return json({ error: { code: 'nameAlreadyExists' } }, 409);
+    w.od.add(path); w.puts = (w.puts || []).concat([decodeURIComponent(u)]); return json({ webUrl: 'https://od.example/' + w.puts.length });
+  }
+  if (u.startsWith(GR + 'me/drive/root:/') && m === 'GET' && u.includes('?select=id,file')) { const path = decodeURIComponent(u.split('?')[0]).replace(':/content', ''); return (w.od || new Set()).has(path + ':/content') ? json({ id: 'f:' + path, file: {} }) : json({}, 404); }
+  if (u.startsWith(GR + 'me/drive/root:/') && m === 'GET' && u.includes('?select=id,folder')) return w.noTrash ? json({}, 500) : json({ id: 'trash', folder: {} });
+  if (u.startsWith(GR + 'me/drive/items/') && m === 'PATCH') { const id = decodeURIComponent(u.split('items/')[1].split('?')[0]); const b = JSON.parse(init.body); w.moves = (w.moves || []).concat([{ id, b }]); w.od.delete(id.slice(2) + ':/content'); return json({ name: b.name }); }
   if (u.startsWith(GR) && u.includes('format=pdf')) { const b = new Uint8Array(1200); b.set([0x25, 0x50, 0x44, 0x46], 0); return new Response(b, { status: 200 }); }
   return json({ error: 'unexpected ' + u }, 599);
 };
@@ -145,6 +153,31 @@ console.log('\n3. a real close (14/10/2026, Michael: "בצע: סגירה אמי�
   check('reopen: closed_at back to null', ro.st === 200 && ro.j.closed_at === null && w.patches.slice(-1)[0].b.closed_at === null, ro);
   T.ann.closed_at = null;
   check('reopened: the same link and QR work again', (await open(uo)).st === 200);
+}
+
+console.log('\n4. reopened and closed again (05/11/2026, DECISIONS: a new 08.01, the old one to the to-delete folder)');
+{
+  T.ann.closed_at = '2026-10-25T10:00:00.000Z';
+  const np = w.patches.length, npu = (w.puts || []).length, nm = (w.mails || []).length;
+  const c2 = await link({ op: 'close', id: 'an1' }, 'good');
+  check('close of a closed training: keeps the first date, writes and files nothing', c2.st === 200 && c2.j.already === true && c2.j.closed_at === '2026-10-25T10:00:00.000Z' && w.patches.length === np && (w.puts || []).length === npu && (w.mails || []).length === nm, c2.j);
+  const ro = await link({ op: 'reopen', id: 'an1' }, 'good');
+  const rp = w.patches.slice(-1)[0];
+  check('reopen clears form_at too (the form filed before no longer counts)', ro.st === 200 && rp.b.closed_at === null && 'form_at' in rp.b && rp.b.form_at === null, rp);
+  T.ann.closed_at = null;
+  const nmv = (w.moves || []).length;
+  const c3 = await link({ op: 'close', id: 'an1' }, 'good');
+  const mv = (w.moves || []).slice(nmv);
+  check('closed again: a new form with everyone is filed and mailed, form_at stamped', c3.st === 200 && c3.j.filed && c3.j.filed.n === w.reads.length && c3.j.filed.mailed && c3.j.filed.form_at && !c3.j.fileErr, c3.j);
+  check('...and the form filed before moved to the to-delete folder, named with its folder', mv.length === 1 && c3.j.filed.prev && /^2026 - .*08\.01\.pdf$/.test(mv[0].b.name) && mv[0].b.parentReference.id === 'trash' && !c3.j.filed.prevErr, { mv, f: c3.j.filed });
+  const put3 = (w.puts || []).slice(-1)[0];
+  check('...the new form has the same name, in the same folder', put3 && put3.includes('/11_הדרכות/הדרכה שנתית/2026/') && put3.includes('08.01.pdf'), put3);
+  // the move fails: both forms stay, the new one renamed; nothing overwritten
+  T.ann.closed_at = null; w.noTrash = true;
+  const c4 = await link({ op: 'close', id: 'an1' }, 'good');
+  const put4 = (w.puts || []).slice(-1)[0];
+  check('move failed: the new form is still filed (rename), the reason returned', c4.st === 200 && c4.j.filed && c4.j.filed.prevErr && /conflictBehavior=rename/.test(put4), { j: c4.j, put4 });
+  w.noTrash = false;
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

@@ -211,9 +211,12 @@ export async function accessToken(env) {
 // PUT a file by path under the user's OneDrive root. Replaces an existing
 // file of the same name. `folder` segments are encoded one by one so the
 // slashes stay separators.
-export async function putFile(token, folder, name, bytes, type) {
+// conflict (05/11/2026): 'fail' answers 409 when a file of that name is there (form 08.01 filed again after a
+// reopen), 'rename' keeps both; left out, the file is replaced as before.
+export async function putFile(token, folder, name, bytes, type, conflict) {
   const seg = String(folder || '').split('/').filter(Boolean).map(encodeURIComponent).join('/');
-  const url = 'https://graph.microsoft.com/v1.0/me/drive/root:/' + seg + '/' + encodeURIComponent(name) + ':/content';
+  const url = 'https://graph.microsoft.com/v1.0/me/drive/root:/' + seg + '/' + encodeURIComponent(name) + ':/content'
+    + (conflict === 'fail' || conflict === 'rename' ? '?@microsoft.graph.conflictBehavior=' + conflict : '');
   const r = await fetch(url, { method: 'PUT', headers: { Authorization: 'Bearer ' + token, 'Content-Type': type || 'application/octet-stream' }, body: bytes, signal: tmo(PUT_MS) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) {
@@ -223,6 +226,37 @@ export async function putFile(token, folder, name, bytes, type) {
     throw e;
   }
   return { webUrl: j.webUrl || null, size: j.size || null };
+}
+
+// Move ONE file to the to-delete folder (05/11/2026, DECISIONS "\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05e0\u05e4\u05ea\u05d7\u05d4 \u05de\u05d7\u05d3\u05e9"): `dir` is that folder's path,
+// created if missing under its parent; the file keeps its bytes under `newName` (renamed on a clash). Nothing is deleted:
+// Michael empties the folder himself, as with od_trash. Returns the name it got; throws on any failure.
+export async function trashFile(token, path, dir, newName) {
+  const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
+  const enc = (p) => String(p || '').split('/').filter(Boolean).map(encodeURIComponent).join('/');
+  const gh = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
+  const src = await fetch(G + enc(path) + '?select=id,file', { headers: gh, signal: tmo(GRAPH_MS) });
+  if (!src.ok) throw new Error('trash source ' + src.status);
+  const sj = await src.json();
+  if (!sj.file) throw new Error('trash source is not a file');
+  let tr = await fetch(G + enc(dir) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
+  if (tr.status === 404) {
+    const parts = String(dir).split('/').filter(Boolean);
+    const up = await fetch(G + enc(parts.slice(0, -1).join('/')) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
+    if (!up.ok) throw new Error('trash parent ' + up.status);
+    tr = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent((await up.json()).id) + '/children', {
+      method: 'POST', headers: gh, body: JSON.stringify({ name: parts[parts.length - 1], folder: {}, '@microsoft.graph.conflictBehavior': 'fail' }), signal: tmo(GRAPH_MS),
+    });
+  }
+  if (!tr.ok) throw new Error('trash folder ' + tr.status);
+  const tj = await tr.json();
+  if (!tj.folder) throw new Error('trash folder is not a folder');
+  const mv = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(sj.id) + '?@microsoft.graph.conflictBehavior=rename', {
+    method: 'PATCH', headers: gh, body: JSON.stringify({ parentReference: { id: tj.id }, name: newName }), signal: tmo(GRAPH_MS),
+  });
+  if (!mv.ok) throw new Error('trash move ' + mv.status);
+  const mj = await mv.json().catch(() => ({}));
+  return mj.name || newName;
 }
 
 // webUrl of a folder (or file) by path; null when it is not there.
