@@ -965,7 +965,7 @@ async function decisionMail(env, d, act, note, nowMs, deps) {
   const od = await deps.accessToken(env);
   if (!od || !od.email) throw new Error('no connected mailbox');
   const to = list ? list.to : [od.email], cc = list ? list.cc : [];
-  await sendOut(deps, od.token, to, cc, (list ? '' : TRY_PREFIX) + DECIDE_SUBJECT(ok, d.w, d.friday), decisionHtml(ok, d.w, d.friday, note, worksUrl(tok)));
+  await sendOut(deps, od.token, to, cc, (list ? '' : TRY_PREFIX) + DECIDE_SUBJECT(ok, d.w, d.friday), decisionHtml(ok, d.w, d.friday, note, worksUrl(tok)), [], !!list);
   return { to, trial: !list };
 }
 
@@ -1025,7 +1025,7 @@ export async function permitRun(env, id, closed, nowMs, deps, ownerOnly) {
   const attached = b.bytes.length <= ATTACH_MAX;
   let mailed;
   try {
-    await sendOut(deps, od.token, to, cc, (list || closed ? '' : TRY_PREFIX) + PERMIT_SUBJECT(w, friday, closed), permitHtml(w, friday, closed, b.name, b.webUrl, attached), attached ? [pdfAttachment(b.name, b.bytes)] : []);
+    await sendOut(deps, od.token, to, cc, (list || closed ? '' : TRY_PREFIX) + PERMIT_SUBJECT(w, friday, closed), permitHtml(w, friday, closed, b.name, b.webUrl, attached), attached ? [pdfAttachment(b.name, b.bytes)] : [], !!list);
     mailed = { to, cc, trial: !list && !closed, attached };
   } catch (e) { mailed = { error: String((e && e.message) || e).slice(0, 120) }; }
   return { ok: true, path: b.path, spot: b.spot, missing: b.missing, recorded, mailed };
@@ -1109,7 +1109,9 @@ export function mailList(raw) {
 }
 // The only call that sends mail from this file (graph-writes-test counts it): the weekly link and the approval mail.
 // The signed permit (05/11/2026, DECISIONS "\u05d4\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d4\u05d7\u05ea\u05d5\u05de\u05d4") goes through it too, with the PDF attached.
-const sendOut = (deps, token, to, cc, subject, html, att) => deps.sendMailTo(token, to, cc, subject, html, att || []);
+// save = a mail to maintenance (the weekly link, a decision, a signed permit): kept in Michael's Sent Items for the record
+// (05/11/2026, Michael: "it must reach me and also be in Sent Items, for the record"); his own copies are not.
+const sendOut = (deps, token, to, cc, subject, html, att, save) => deps.sendMailTo(token, to, cc, subject, html, att || [], save ? { save: true } : undefined);
 // The one place that mails the link: the weekly mail and Michael's trial copy (05/11/2026). list = {to, cc}, or null
 // for the connected account only (Michael's own mailbox; nobody else).
 async function mailWeek(env, friday, list, prefix, nowMs, deps) {
@@ -1118,7 +1120,7 @@ async function mailWeek(env, friday, list, prefix, nowMs, deps) {
   const od = await deps.accessToken(env);
   const to = list ? list.to : [od.email], cc = list ? list.cc : [];
   if (!to.length || !to[0]) return { error: 'no recipients' };
-  await sendOut(deps, od.token, to, cc, prefix + MAIL_SUBJECT(friday), mailHtml(friday, worksUrl(tok)));
+  await sendOut(deps, od.token, to, cc, prefix + MAIL_SUBJECT(friday), mailHtml(friday, worksUrl(tok)), [], !!list);
   return { to };
 }
 // A trial (Michael 05/11/2026: "send me the link by mail as maintenance would get it, and I fill it in myself"):

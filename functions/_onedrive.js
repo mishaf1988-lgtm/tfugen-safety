@@ -274,14 +274,16 @@ export async function itemUrl(token, path) {
 // saves it, so nothing has to be deleted afterwards. The log is in server_state.
 // attachments (optional): Graph fileAttachment objects, e.g. inline pictures
 // (isInline + contentId, shown where the html says cid:<contentId>).
-export async function sendMailTo(token, to, cc, subject, html, attachments) {
+// opts.save (05/11/2026, Michael on the weekly works mail: "it must reach me and also be in Sent Items, for the
+// record"): the one exception, kept in Sent Items; only mails that go to other people ask for it.
+export async function sendMailTo(token, to, cc, subject, html, attachments, opts) {
   const list = (a) => (a || []).map((x) => ({ emailAddress: { address: x } }));
   const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       message: Object.assign({ subject: String(subject || '').substring(0, 240), body: { contentType: 'HTML', content: html }, toRecipients: list(to), ccRecipients: list(cc) }, attachments && attachments.length ? { attachments } : {}),
-      saveToSentItems: false,
+      saveToSentItems: !!(opts && opts.save),
     }),
     signal: tmo(GRAPH_MS),
   });

@@ -29,7 +29,7 @@ const db = {};
 const resetDb = () => Object.assign(db, { ptw: {}, state: {}, wa: [], mails: [], ptwPosts: 0, patches: [], ctrFail: false, files: {}, approveAfterRead: null });
 // The approval mail (05/11/2026) goes through these, never to Graph.
 mailDeps.accessToken = async () => ({ token: 'gt', email: 'owner@tapugan.co.il' });
-mailDeps.sendMailTo = async (t, to, cc, subj, html) => { db.mails.push({ to, cc, subj, html }); return true; };
+mailDeps.sendMailTo = async (t, to, cc, subj, html, att, opts) => { db.mails.push({ to, cc, subj, html, save: !!(opts && opts.save) }); return true; };
 resetDb();
 const CTR = [
   { n: 'ט"ס פרויקטים בע"מ', e: '2027-03-01', s: 'פעיל', tr: 'הוכשר' },
@@ -459,6 +459,7 @@ console.log('\n11b. reminder and approval (05/11/2026, Michael: "a reminder that
   check('two clicks at once (the other took the Friday first): this one sends nothing', !db.mails.length && race.st === 200 && db.state.works_mail_last === FRI, [race.st, db.mails.length]);
   delete db.state.works_mail_last;
   const ok = await post([['op', 'send'], ['s', stok]], { noWeek: true });
+  check('the weekly mail to maintenance is kept in Sent Items (05/11/2026, "for the record"); the ask to Michael is not', db.mails[0] && db.mails[0].save === true);
   check('the POST (Michael approves): one mail to the list from the database, the link inside, the Friday stamped', ok.st === 200 && db.mails.length === 1 && db.mails[0].to.join() === 'alina@tapugan.co.il,nahum@tapugan.co.il' && db.mails[0].cc.join() === 'owner@tapugan.co.il' && db.mails[0].subj === MAIL_SUBJECT(FRI) && db.mails[0].html.includes('/api/works?k=') && db.state.works_mail_last === FRI, [ok.st, db.mails[0] && db.mails[0].to]);
   const again = await post([['op', 'send'], ['s', stok]], { noWeek: true });
   check('a second click: "already sent", no second mail', again.st === 200 && db.mails.length === 1 && (await open(URL0 + '?s=' + encodeURIComponent(stok))).h.includes('כבר נשלח'));
@@ -483,6 +484,7 @@ console.log('\n11b. reminder and approval (05/11/2026, Michael: "a reminder that
   const noWa = Object.assign({}, ENV); delete noWa.META_ACCESS_TOKEN;
   const b = await worksTick(noWa, WED18, mailDeps);
   check('WhatsApp not available: one mail to Michael\'s own mailbox only, with the send link; nothing to maintenance', b.ask && !b.wa && b.mailed && db.mails.length === 1 && db.mails[0].to.join() === 'owner@tapugan.co.il' && db.mails[0].subj === ASK_SUBJECT(FRI) && db.mails[0].html.includes('/api/works?s='), [b, db.mails[0] && db.mails[0].to]);
+  check('...that mail to Michael himself is not kept in Sent Items', db.mails[0].save === false);
   // Thursday: no "nothing came" while the mail was not sent
   db.wa = []; db.mails = [];
   await worksTick(ENV, THU12, mailDeps);
@@ -575,7 +577,7 @@ console.log('\n15. the signed permit (stage B, 05/11/2026): approve -> filled, r
     }
     return json({ error: 'unexpected ' + u }, 599);
   };
-  mailDeps.sendMailTo = async (t, to, cc, subj, html, att) => { db.mails.push({ to, cc, subj, html, att: att || [] }); return true; };
+  mailDeps.sendMailTo = async (t, to, cc, subj, html, att, opts) => { db.mails.push({ to, cc, subj, html, att: att || [], save: !!(opts && opts.save) }); return true; };
   const ID = 'wk-2026-11-06-1', MONTH = OD_SAFETY + FILED_DIR + '/2026-11';
   const hotSt = { blocks: ['hot'], chk: { hot: { items: [0, 1, 6], fw: 'יוסי' } }, files: 0, flags: [], gate: [], notes: [] };
   const row = (id, o) => Object.assign({ id, num: 'WK-0611-1', con: 'ט"ס פרויקטים', sup: 'נועם', ph: '050-1234567', wkr: 'אבי, משה', area: 'חדר אנרגיה', dep: '', ds: FRI, de: FRI, ts: '07:00', te: '15:00',
@@ -609,6 +611,7 @@ console.log('\n15. the signed permit (stage B, 05/11/2026): approve -> filled, r
   db.mails = [];
   await permitRun(ENV, ID, false, Date.now(), mailDeps);
   check('to maintenance, copy to the boss and Michael, not a trial, outside addresses dropped', db.mails.length === 1 && db.mails[0].to.join() === 'alina@tapugan.co.il' && db.mails[0].cc.join() === 'boss@tapugan.co.il,owner@tapugan.co.il' && db.mails[0].subj.indexOf(TRY_PREFIX) < 0, db.mails[0] && [db.mails[0].to, db.mails[0].cc, db.mails[0].subj]);
+  check('the signed permit to maintenance: Michael in copy and kept in his Sent Items, for the record (05/11/2026)', db.mails[0].save === true && db.mails[0].cc.indexOf('owner@tapugan.co.il') >= 0);
   db.state[PERMIT_TO] = JSON.stringify({ to: ['x@gmail.com'] }); db.mails = [];
   await worksPermit(ENV, ID, false, mailDeps);
   check('works_permit_to with no company address: Michael only, a trial', db.mails[0].to.join() === 'owner@tapugan.co.il' && db.mails[0].subj.indexOf(TRY_PREFIX) === 0);
