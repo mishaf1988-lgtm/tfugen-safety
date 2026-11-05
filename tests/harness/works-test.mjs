@@ -8,6 +8,7 @@ import { onRequest, makeWorksToken, readWorksToken, fridayOf, CATS, S_PEND, S_CA
   parseSafety, buildSafety, assess, GAS_LIMITS, worksTick, worksTryMail, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck } from './_build/works.mjs';
 import { makeLinkToken } from './_build/_closelink.mjs';
 import { run as morningRun } from './_build/wa-morning.mjs';
+import { SITE } from './_build/_site.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 500) : '')); } };
@@ -340,7 +341,7 @@ const mtok = decodeURIComponent(/k=([^"&]+)/.exec(db.mails[0].html)[1]);
 check('the mailed link is valid for that Friday', (await readWorksToken(ENV, mtok, WED18.getTime())).id === FRI);
 await worksTick(ENV, new Date(WED18.getTime() + 5 * 60000), deps);
 check('the next tick: no second mail', db.mails.length === 1);
-check('the mail text: keyboard characters only, signed by the owner', !/[–—…־]/.test(db.mails[0].html) && db.mails[0].html.includes('ממונה בטיחות'));
+check('the mail text: keyboard characters only, signed with the owner\'s own signature (SITE.signature, 05/11/2026)', !/[–—…־]/.test(db.mails[0].html) && db.mails[0].html.includes(SITE.signature) && SITE.signature.length > 100);
 db.wa = [];
 await worksTick(ENV, THU12, deps);
 check('Thursday 12:00, nothing came: one WhatsApp reminder', db.wa.length === 1 && /לא התקבלה רשימת העבודות ליום שישי 06\/11\/2026/.test(waText(db.wa[0])), db.wa.map(waText));
