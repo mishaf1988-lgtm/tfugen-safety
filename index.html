@@ -12366,7 +12366,7 @@ function _tpDone(r){
   var a=_TP_AUTO[r.n];
   if(a)(DB.toolbox_talks||[]).forEach(function(t){
     if(!t||t.kind!==a[0]||!t.closed_at)return;
-    var d=String(t.closed_at).substring(0,10);if(+d.substring(0,4)!==+r.yr)return;
+    var d=String(t.first_closed_at||t.closed_at).substring(0,10);if(+d.substring(0,4)!==+r.yr)return;
     if(a[1]&&String(t.subjects||'').split(/\n/).map(function(v){return v.trim();}).indexOf(a[1])<0)return;
     out.push({d:d,by:t.trainer||'',src:'talk',talk:t.id,title:t.title||''});
   });

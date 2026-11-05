@@ -514,7 +514,7 @@ const ROWS = [
       { yr: 2025, n: 3, t: 'CCP2', q: '1', done: [] },
     ];
     const talks = [
-      { kind: 'annual', closed_at: '2026-02-10T09:00:00Z', subjects: 'חשמל' },
+      { kind: 'annual', closed_at: '2026-04-20T09:00:00Z', first_closed_at: '2026-02-10T09:00:00Z', subjects: 'חשמל' },
       { kind: 'quality', closed_at: '2026-05-01T09:00:00Z', subjects: 'GMP והיגיינה אישית\nאלרגנים' },
     ];
     const p = planLate(plan, talks, '2026-10-15');

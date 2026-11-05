@@ -132,7 +132,7 @@ console.log('\n3. a real close (14/10/2026, Michael: "בצע: סגירה אמי�
   const np = w.patches.length, nm = (w.mails || []).length, npu = (w.puts || []).length;
   let c = await link({ op: 'close', id: 'an1' }, 'good');
   const cp = w.patches.slice(np);
-  check('close: closed_at written first, link_v untouched', c.st === 200 && c.j.ok && /^\d{4}-/.test(c.j.closed_at) && Object.keys(cp[0].b).join() === 'closed_at' && cp[0].b.closed_at === c.j.closed_at && !cp.some((x) => 'link_v' in x.b), { c, cp });
+  check('close: closed_at written first, link_v untouched', c.st === 200 && c.j.ok && /^\d{4}-/.test(c.j.closed_at) && Object.keys(cp[0].b).join() === 'closed_at,first_closed_at' && cp[0].b.closed_at === c.j.closed_at && cp[0].b.first_closed_at === c.j.closed_at && !cp.some((x) => 'link_v' in x.b), { c, cp });
   // 15/10/2026 (Michael: "once I close it, all the forms arrive by mail"): closing files form 08.01 and mails it
   check('close files form 08.01 with everyone who signed, mails it, and stamps form_at', c.j.filed && c.j.filed.n === w.reads.length && c.j.filed.mailed && (w.mails || []).length === nm + 1 && (w.puts || []).length > npu && cp.length === 2 && cp[1].b.form_at === c.j.filed.form_at && !c.j.fileErr, { filed: c.j.filed, cp });
   { const keep = w.reads, nm2 = (w.mails || []).length; w.reads = [];
@@ -164,10 +164,11 @@ console.log('\n4. reopened and closed again (05/11/2026, DECISIONS: a new 08.01,
   const ro = await link({ op: 'reopen', id: 'an1' }, 'good');
   const rp = w.patches.slice(-1)[0];
   check('reopen clears form_at too (the form filed before no longer counts)', ro.st === 200 && rp.b.closed_at === null && 'form_at' in rp.b && rp.b.form_at === null, rp);
-  T.ann.closed_at = null;
-  const nmv = (w.moves || []).length;
+  T.ann.closed_at = null; T.ann.first_closed_at = '2026-10-25T10:00:00.000Z';
+  const nmv = (w.moves || []).length, np3 = w.patches.length;
   const c3 = await link({ op: 'close', id: 'an1' }, 'good');
   const mv = (w.moves || []).slice(nmv);
+  check('closed again: a new closed_at, the first close date (first_closed_at) untouched', w.patches[np3] && Object.keys(w.patches[np3].b).join() === 'closed_at' && w.patches[np3].b.closed_at === c3.j.closed_at, w.patches[np3]);
   check('closed again: a new form with everyone is filed and mailed, form_at stamped', c3.st === 200 && c3.j.filed && c3.j.filed.n === w.reads.length && c3.j.filed.mailed && c3.j.filed.form_at && !c3.j.fileErr, c3.j);
   check('...and the form filed before moved to the to-delete folder, named with its folder', mv.length === 1 && c3.j.filed.prev && /^2026 - .*08\.01\.pdf$/.test(mv[0].b.name) && mv[0].b.parentReference.id === 'trash' && !c3.j.filed.prevErr, { mv, f: c3.j.filed });
   const put3 = (w.puts || []).slice(-1)[0];

@@ -1105,7 +1105,7 @@ export async function fileForm0801(env, talk, hb, n, miss, nowMs) {
 }
 
 async function getTalk(env, id) {
-  const r = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(id) + '&select=id,d,title,body,body_ar,body_ru,body_am,file_url,s,trainer,trainer_qual,trainer_signed_at,trainer_sig_url,video_url,quiz,kind,link_v,dept,dur,mail_cc,subjects,closed_at', { headers: sbH(env) });
+  const r = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(id) + '&select=id,d,title,body,body_ar,body_ru,body_am,file_url,s,trainer,trainer_qual,trainer_signed_at,trainer_sig_url,video_url,quiz,kind,link_v,dept,dur,mail_cc,subjects,closed_at,first_closed_at', { headers: sbH(env) });
   if (!r.ok) throw new Error('talk read ' + r.status);
   const rows = await r.json();
   return Array.isArray(rows) ? rows[0] || null : null;
@@ -1715,11 +1715,12 @@ async function makeLink(env, request, ctx) {
   // Close / reopen an annual or quality training (14/10/2026): closed_at, nothing else changes; who signed stays.
   // 05/11/2026 (DECISIONS "\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05e0\u05e4\u05ea\u05d7\u05d4 \u05de\u05d7\u05d3\u05e9"): reopen also clears form_at, so the next close files a new 08.01 with
   // everyone; a close of a training that is already closed keeps its date and files nothing (already: true).
+  // first_closed_at is written once, at the first close, and never cleared: the yearly plan counts the training by it.
   if (b.op === 'close' || b.op === 'reopen') {
     if (TYPED_KINDS.indexOf(talk.kind) < 0) return jsonResp({ error: 'not an annual / quality training' }, 409, cors);
     if (b.op === 'close' && talk.closed_at) return jsonResp({ ok: true, closed_at: talk.closed_at, already: true, filed: null, fileErr: null }, 200, cors);
     const at = b.op === 'close' ? new Date().toISOString() : null;
-    const p = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(talk.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify(b.op === 'close' ? { closed_at: at } : { closed_at: null, form_at: null }) });
+    const p = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(talk.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify(b.op === 'close' ? (talk.first_closed_at ? { closed_at: at } : { closed_at: at, first_closed_at: at }) : { closed_at: null, form_at: null }) });
     if (!p.ok) return jsonResp({ error: b.op + ' failed' }, 502, cors);
     // Closing files form 08.01 with everyone who signed and mails it (15/10/2026, Michael: "once I close it,
     // all the forms arrive by mail"). A failure there leaves the training closed and says why.
