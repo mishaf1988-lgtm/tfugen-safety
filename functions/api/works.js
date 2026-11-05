@@ -27,6 +27,9 @@
 import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, sbFrom, SITE, SB_LIVE } from '../_shared.js';
 import { makeLinkToken, readLinkToken } from '../_closelink.js';
 import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut } from '../_wa.js';
+import { accessToken, sendMailTo } from '../_onedrive.js';
+// The mail functions the request path uses (the approval mail); a test replaces them.
+export const mailDeps = { accessToken, sendMailTo };
 
 let SB = SB_LIVE; // set from env in onRequest and in worksTick (sbFrom)
 export const FETCH_MS = 10000, FILE_MS = 60000;
@@ -129,6 +132,14 @@ export async function readWorksToken(env, tok, nowMs) {
 }
 export const worksUrl = (tok) => SITE.appUrl + '/api/works?k=' + encodeURIComponent(tok);
 export const rowId = (friday, n) => 'wk-' + friday + '-' + n;
+// Approval from the mail (Michael 05/11/2026 in the questionnaire: "do it: a mail with approve buttons"): one signed
+// link per work, its own prefix, its row id only. Opening it (GET, which mail scanners also do) only shows the work;
+// approving or rejecting is a POST from that page. An approval goes through only while the work is pending and has
+// no "missing before approval" line (gas test, fire watch), exactly as the app's button.
+export const OK_PREFIX = 'works-ok:v1:', OK_TTL_DAYS = 8, S_OK = '\u05e4\u05ea\u05d5\u05d7';
+export function makeOkToken(env, id, nowMs) { return makeLinkToken(env, OK_PREFIX, id, OK_TTL_DAYS, nowMs); }
+export async function readOkToken(env, tok, nowMs) { const r = await readLinkToken(env, OK_PREFIX, tok, nowMs); return r.error || WK_ID_RE.test(r.id) ? r : { error: 'bad' }; }
+export const okUrl = (tok) => SITE.appUrl + '/api/works?a=' + encodeURIComponent(tok);
 export const nOf = (id, friday) => { const m = new RegExp('^wk-' + friday + '-(\\d{1,2})$').exec(String(id || '')); return m ? Number(m[1]) : 0; };
 export const WK_ID_RE = /^wk-(\d{4}-\d{2}-\d{2})-(\d{1,2})$/;
 
@@ -592,6 +603,7 @@ async function submitList(env, form, tok, friday, nowMs) {
   if (due) {
     const wa = await waOwner(env, submitText(friday, plan.write, again), 'works ' + friday, nowMs).catch(() => ({ ok: false }));
     if (wa.ok) sub.notified_at = nowIso;
+    if (plan.write.length) { try { await approvalMail(env, friday, plan.write, again, nowMs, mailDeps); sub.mailed_at = nowIso; } catch (e) { sub.mail_error = String((e && e.message) || e).slice(0, 120); } }
   }
   try { await stateSet(env, STATE_SUB, JSON.stringify(sub)); } catch (e) { /* the rows are saved; only the reminder may ask again */ }
   const red = plan.write.filter((w) => w.st.flags.length || w.st.gate.length).length;
@@ -707,6 +719,7 @@ async function submit(env, request, nowMs) {
   const raw = await request.text();
   if (raw.length > MAX_BODY) return errPage('\u05d4\u05e8\u05e9\u05d9\u05de\u05d4 \u05d0\u05e8\u05d5\u05db\u05d4 \u05de\u05d3\u05d9.', 413);
   const form = new URLSearchParams(raw);
+  if (form.get('op') === 'decide') return submitDecide(env, form, nowMs);
   const tok = String(form.get('k') || '');
   const t = await readWorksToken(env, tok, nowMs);
   if (t.error === 'expired') return errPage('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e4\u05d2. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d1\u05e7\u05e9 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9 \u05de\u05d4\u05de\u05de\u05d5\u05e0\u05d4 \u05e2\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.', 403);
@@ -753,6 +766,7 @@ export async function onRequest(context) {
   try {
     if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders(request.headers.get('origin') || '', defaultAllowedOrigins(env), 'POST,OPTIONS') });
     if (!env.SUPABASE_SERVICE_ROLE_KEY) return errPage('\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8.', 500);
+    if (request.method === 'GET' && new URL(request.url).searchParams.get('a')) return await showDecide(env, new URL(request.url).searchParams.get('a'), nowMs);
     if (request.method === 'GET') return await showPage(env, new URL(request.url).searchParams.get('k') || '', nowMs);
     if (request.method !== 'POST') return errPage('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05dc\u05d0 \u05e0\u05ea\u05de\u05db\u05ea.', 405);
     if (/application\/json/i.test(request.headers.get('content-type') || '')) return await appOp(env, request, nowMs);
@@ -760,6 +774,95 @@ export async function onRequest(context) {
   } catch (e) {
     return errPage('\u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.', 503);
   }
+}
+
+// ---- approval from the mail (05/11/2026) ----
+export const APPROVE_SUBJECT = (friday, again) => '\u05dc\u05d0\u05d9\u05e9\u05d5\u05e8: \u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05dc\u05d9\u05d5\u05dd \u05e9\u05d9\u05e9\u05d9 ' + dmy(friday) + (again ? ' (\u05e2\u05d5\u05d3\u05db\u05e0\u05d4)' : '');
+const lineOf = (w) => [w.desc, [w.dep, w.area].filter(Boolean).join(' - '), w.who === 'emp' ? '\u05e2\u05d5\u05d1\u05d3\u05d9 \u05d4\u05de\u05e4\u05e2\u05dc' : w.con].filter(Boolean).join(' | ');
+// To Michael's own mailbox only (the connected account): every work of the list, its flags, and one button each.
+export function approvalHtml(friday, items, again) {
+  const p = (x, st) => '<p style="margin:0 0 8px' + (st || '') + '">' + x + '</p>';
+  const work = (it) => {
+    const w = it.w, kinds = w.cats.map((k) => BLK[k].t).join(', ');
+    const red = w.st.flags.concat(w.st.gate), yel = w.st.notes;
+    return '<div style="border:1px solid #d1d5db;border-radius:8px;padding:10px 12px;margin:0 0 10px">'
+      + p('<b>' + esc(w.n + '. ' + lineOf(w)) + '</b>') + (kinds ? p(esc(kinds), ';color:#374151') : '')
+      + red.map((x) => p(esc(x), ';color:#b91c1c;font-weight:700')).join('') + yel.map((x) => p(esc(x), ';color:#92400e')).join('')
+      + (w.st.gate.length ? p('\u05d7\u05e1\u05e8 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8: \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d3\u05d7\u05d5\u05ea \u05d0\u05d5 \u05dc\u05d7\u05db\u05d5\u05ea \u05e9\u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d9\u05e9\u05dc\u05d9\u05de\u05d5.', ';color:#b91c1c') : '')
+      + '<a href="' + esc(it.url) + '" style="display:inline-block;background:#15803d;color:#fff;padding:8px 16px;border-radius:8px;text-decoration:none;font-weight:700">\u05dc\u05d0\u05d9\u05e9\u05d5\u05e8 \u05d0\u05d5 \u05dc\u05d3\u05d7\u05d9\u05d9\u05d4</a></div>';
+  };
+  return '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2937">'
+    + p(esc('\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05dc\u05d9\u05d5\u05dd \u05e9\u05d9\u05e9\u05d9 ' + dmy(friday) + (again ? ' \u05e2\u05d5\u05d3\u05db\u05e0\u05d4' : ' \u05d4\u05ea\u05e7\u05d1\u05dc\u05d4 \u05de\u05d4\u05d0\u05d7\u05d6\u05e7\u05d4') + ': ' + items.length + ' \u05e2\u05d1\u05d5\u05d3\u05d5\u05ea.'))
+    + items.map(work).join('')
+    + p('<a href="' + esc(SITE.appUrl + '/#ptw') + '">\u05de\u05e1\u05da \u05d4\u05d9\u05ea\u05e8\u05d9 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4</a>') + '</div>';
+}
+export async function approvalMail(env, friday, works, again, nowMs, deps) {
+  const items = [];
+  for (const w of works.slice(0, MAX_ROWS)) {
+    const tok = await makeOkToken(env, rowId(friday, w.n), nowMs);
+    if (!tok) throw new Error('no secret');
+    items.push({ w, url: okUrl(tok) });
+  }
+  const od = await deps.accessToken(env);
+  if (!od || !od.email) throw new Error('no connected mailbox');
+  await sendOut(deps, od.token, [od.email], [], APPROVE_SUBJECT(friday, again), approvalHtml(friday, items, again));
+  return { to: od.email, n: items.length };
+}
+async function decideRow(env, tok, nowMs) {
+  const t = await readOkToken(env, tok, nowMs);
+  if (t.error) return { error: t.error };
+  const rows = await sbGet(env, 'ptw?id=eq.' + encodeURIComponent(t.id) + '&select=' + WEEK_COLS + ',ver');
+  if (!rows || !rows[0]) return { error: 'missing' };
+  const m = WK_ID_RE.exec(t.id);
+  return { id: t.id, row: rows[0], w: rowToWork(rows[0], m[1]), friday: m[1] };
+}
+const decideErr = (e) => errPage(e === 'expired' ? '\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e4\u05d2. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d0\u05e9\u05e8 \u05d1\u05de\u05e1\u05da \u05d4\u05d9\u05ea\u05e8\u05d9 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4.' : e === 'missing' ? '\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4 (\u05d0\u05d5\u05dc\u05d9 \u05d1\u05d5\u05d8\u05dc\u05d4).' : '\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df.', e === 'missing' ? 404 : 403);
+function decideSummary(d) {
+  const w = d.w, red = w.st.flags.concat(w.st.gate);
+  return '<p><b>' + esc(lineOf(w)) + '</b></p><p>\u05d9\u05d5\u05dd \u05e9\u05d9\u05e9\u05d9 ' + esc(dmy(d.friday)) + (w.ts ? ', ' + esc(w.ts) + (w.te ? '-' + esc(w.te) : '') : '') + '</p>'
+    + (w.cats.length ? '<p>' + esc(w.cats.map((k) => BLK[k].t).join(', ')) + '</p>' : '')
+    + (w.sup ? '<p>\u05d0\u05d7\u05e8\u05d0\u05d9: ' + esc(w.sup) + (w.ph ? ' ' + esc(w.ph) : '') + '</p>' : '')
+    + red.map((x) => '<p class="red">' + esc(x) + '</p>').join('') + w.st.notes.map((x) => '<p>' + esc(x) + '</p>').join('');
+}
+async function showDecide(env, tok, nowMs) {
+  const d = await decideRow(env, String(tok || '').slice(0, 300), nowMs);
+  if (d.error) return decideErr(d.error);
+  const state = d.row.s === S_PEND ? '' : '<p class="red">\u05de\u05e6\u05d1 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4: ' + esc(d.row.s) + '. \u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05d0\u05e9\u05e8 \u05db\u05d0\u05df.</p>';
+  const gate = d.w.st.gate.length;
+  const form = d.row.s !== S_PEND ? '' : '<form method="post" action="/api/works"><input type="hidden" name="op" value="decide"><input type="hidden" name="a" value="' + esc(tok) + '"><input type="hidden" name="v" value="' + esc(d.row.ver || '') + '">'
+    + (gate ? '' : '<p><button type="submit" name="act" value="approve" style="background:#15803d;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:16px;font-weight:700">\u05de\u05d0\u05e9\u05e8 \u05d0\u05ea \u05ea\u05d7\u05d9\u05dc\u05ea \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4</button></p>')
+    + '<p><label>\u05e1\u05d9\u05d1\u05ea \u05d3\u05d7\u05d9\u05d9\u05d4 (\u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d9\u05e8\u05d0\u05d5 \u05d0\u05d5\u05ea\u05d4 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d9\u05d5\u05db\u05dc\u05d5 \u05dc\u05ea\u05e7\u05df):<br><textarea name="why" maxlength="200" rows="3" style="width:100%"></textarea></label></p>'
+    + '<p><button type="submit" name="act" value="reject" style="background:#b91c1c;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:16px">\u05d3\u05d5\u05d7\u05d4</button></p></form>';
+  return page('\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4', decideSummary(d) + state + (gate && d.row.s === S_PEND ? '<p class="red">\u05d0\u05d9 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d0\u05e9\u05e8 \u05e2\u05d3\u05d9\u05d9\u05df: \u05d7\u05e1\u05e8 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8.</p>' : '') + form, '', 200);
+}
+async function submitDecide(env, form, nowMs) {
+  const tok = String(form.get('a') || '').slice(0, 300), act = String(form.get('act') || '');
+  const d = await decideRow(env, tok, nowMs);
+  if (d.error) return decideErr(d.error);
+  // The version Michael saw (security review 05/11/2026): maintenance may send the list again between his reading and
+  // his click; the decision is about what he read, so a changed work is shown again instead. A Friday already past
+  // is not approved from the mail.
+  const v = String(form.get('v') || '');
+  if (d.row.ver && v !== String(d.row.ver)) return page('\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d4\u05e9\u05ea\u05e0\u05ea\u05d4', '<p>\u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05e2\u05d3\u05db\u05e0\u05d5 \u05d0\u05ea \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d0\u05d7\u05e8\u05d9 \u05e9\u05e4\u05ea\u05d7\u05ea \u05d0\u05ea \u05d4\u05d3\u05e3. \u05e4\u05ea\u05d7 \u05e9\u05d5\u05d1 \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05de\u05d4\u05de\u05d9\u05d9\u05dc \u05d5\u05e8\u05d0\u05d4 \u05d0\u05ea \u05d4\u05d2\u05e8\u05e1\u05d4 \u05d4\u05d7\u05d3\u05e9\u05d4.</p>', 'err', 409);
+  if (new Date(nowMs).toLocaleDateString('en-CA', { timeZone: TZ }) > d.friday) return page('\u05d4\u05d9\u05d5\u05dd \u05d4\u05d6\u05d4 \u05e2\u05d1\u05e8', '<p>\u05d9\u05d5\u05dd \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05db\u05d1\u05e8 \u05e2\u05d1\u05e8. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d8\u05e4\u05dc \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05de\u05e1\u05da \u05d4\u05d9\u05ea\u05e8\u05d9 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4.</p>', 'err', 409);
+  if (d.row.s !== S_PEND) return page('\u05db\u05d1\u05e8 \u05d8\u05d5\u05e4\u05dc', '<p>\u05de\u05e6\u05d1 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4: ' + esc(d.row.s) + '.</p>', '', 409);
+  let body;
+  if (act === 'approve') {
+    if (d.w.st.gate.length) return page('\u05d0\u05d9 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d0\u05e9\u05e8', '<p class="red">' + esc(d.w.st.gate.join('; ')) + '</p>', 'err', 409);
+    body = { s: S_OK };
+  } else if (act === 'reject') {
+    const why = clean(form.get('why') || '', 200);
+    if (!why) return page('\u05e6\u05e8\u05d9\u05da \u05e1\u05d9\u05d1\u05d4', '<p>\u05db\u05d3\u05d9 \u05dc\u05d3\u05d7\u05d5\u05ea \u05e6\u05e8\u05d9\u05da \u05dc\u05db\u05ea\u05d5\u05d1 \u05e1\u05d9\u05d1\u05d4. \u05d7\u05d6\u05d5\u05e8 \u05dc\u05d3\u05e3 \u05d4\u05e7\u05d5\u05d3\u05dd.</p>', 'err', 400);
+    const rest = String(d.row.safety || '').split('\n').filter((x) => x && x.indexOf(REJ_MARK) !== 0);
+    body = { s: S_REJ, safety: [REJ_MARK + why].concat(rest).join('\n') };
+  } else return errPage('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05dc\u05d0 \u05e0\u05ea\u05de\u05db\u05ea.', 400);
+  // Only while still pending: a decision made meanwhile in the app (or a second click) is never overwritten.
+  const r = await fetch(SB + '/rest/v1/ptw?id=eq.' + encodeURIComponent(d.id) + '&s=eq.' + encodeURIComponent(S_PEND) + (d.row.ver ? '&ver=eq.' + encodeURIComponent(String(d.row.ver)) : ''), { method: 'PATCH',
+    headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify(body) });
+  const got = r.ok ? await r.json().catch(() => null) : null;
+  if (!r.ok) return errPage('\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8 \u05d1\u05d2\u05dc\u05dc \u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.', 503);
+  if (Array.isArray(got) && !got.length) return page('\u05db\u05d1\u05e8 \u05d8\u05d5\u05e4\u05dc', '<p>\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05db\u05d1\u05e8 \u05dc\u05d0 \u05de\u05de\u05ea\u05d9\u05e0\u05d4 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8.</p>', '', 409);
+  return page(act === 'approve' ? '\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d0\u05d5\u05e9\u05e8\u05d4' : '\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e0\u05d3\u05d7\u05ea\u05d4', '<p><b>' + esc(lineOf(d.w)) + '</b></p><p>' + (act === 'approve' ? '\u05d4\u05d0\u05d7\u05e8\u05d0\u05d9 \u05e1\u05d5\u05d2\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d9\u05ea\u05e8 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e9\u05dc \u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d1\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4.' : '\u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d9\u05e8\u05d0\u05d5 \u05d0\u05ea \u05d4\u05e1\u05d9\u05d1\u05d4 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d9\u05d5\u05db\u05dc\u05d5 \u05dc\u05ea\u05e7\u05df \u05d5\u05dc\u05e9\u05dc\u05d5\u05d7 \u05e9\u05d5\u05d1.') + '</p>', 'ok', 200);
 }
 
 // ---- the 5-minute clock (wa-morning.js watch) ----
@@ -796,6 +899,8 @@ export function mailList(raw) {
   const to = ok(o && o.to).slice(0, 6), cc = ok(o && o.cc).slice(0, 4);
   return to.length ? { to, cc } : null;
 }
+// The only call that sends mail from this file (graph-writes-test counts it): the weekly link and the approval mail.
+const sendOut = (deps, token, to, cc, subject, html) => deps.sendMailTo(token, to, cc, subject, html, []);
 // The one place that mails the link: the weekly mail and Michael's trial copy (05/11/2026). list = {to, cc}, or null
 // for the connected account only (Michael's own mailbox; nobody else).
 async function mailWeek(env, friday, list, prefix, nowMs, deps) {
@@ -804,7 +909,7 @@ async function mailWeek(env, friday, list, prefix, nowMs, deps) {
   const od = await deps.accessToken(env);
   const to = list ? list.to : [od.email], cc = list ? list.cc : [];
   if (!to.length || !to[0]) return { error: 'no recipients' };
-  await deps.sendMailTo(od.token, to, cc, prefix + MAIL_SUBJECT(friday), mailHtml(friday, worksUrl(tok)), []);
+  await sendOut(deps, od.token, to, cc, prefix + MAIL_SUBJECT(friday), mailHtml(friday, worksUrl(tok)));
   return { to };
 }
 // A trial (Michael 05/11/2026: "send me the link by mail as maintenance would get it, and I fill it in myself"):
