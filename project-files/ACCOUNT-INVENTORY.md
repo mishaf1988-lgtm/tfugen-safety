@@ -206,6 +206,8 @@ Worker נפרד: `tapugan-backup-cron` (`workers/backup-cron.js`), גיבוי י
 | `db-columns-check` | 1 לחודש 02:41 | שינויי עמודות |
 | `hazard-file-retry`, `trustee-log-retry` | כל 15 דק' | ניסיון חוזר לתיוק |
 
+**רשימת העבודות לשישי (05/11/2026, `functions/api/works.js`):** קישור חתום לכל יום שישי (`works-link:v1`, 8 ימים) שרכזת האחזקה ממלאת; כל עבודה שורה ב-`ptw` (`wk-<שישי>-<מספר>`, "ממתין לאישור"). השעון של `wa-morning` (watch, כל 5 דקות) שולח את הקישור ברביעי 18:00, מזכיר למיכאל בחמישי 12:00, ומודיע ביום ראשון 08:00 על היתרים שלא נסגרו. אישורים מצורפים: בדלי `incidents-photos` (פרטי) תחת `works/<שישי>/<מספר>/`; להעברה: להעתיק את התיקייה. מפתחות ב-`server_state`: `works_mail_on` (כבוי עד שמיכאל מאשר את נוסח המייל), `works_mail_to` (הנמענים, JSON `{to, cc}`, רק כתובות בדומיין החברה; הכתובות במסד ולא בקוד הציבורי), `works_mail_last`, `works_remind_last`, `works_open_last`, `works_sub`. להעברה: להעתיק את ששת המפתחות.
+
 ה-jobs קוראים לשרת עם `TRUSTEE_NOTIFY_SECRET` (שמור ב-Supabase Vault / בגוף ה-job). להעברה: להריץ את ה-migrations שיוצרים אותם (`grep -l "cron.schedule" migrations/`).
 
 **קבצים בדלי `backups` שהשרת תלוי בהם** (לא ב-repo; 21/10/2026): `owner-signature/sig.png` = החתימה של מיכאל לחתימה על PDF (`functions/_sign.js`, `SIGN_OBJ`). בלעדיה כל "בצע" על בקשת חתימה עונה "תמונת החתימה עוד לא נשמרה בשרת". בהעברה: להעתיק את הקובץ לאותו נתיב (Storage > backups). `induction-docs/` של שיחת הבטיחות (`talk.js`, `DOCS_DIR`).
