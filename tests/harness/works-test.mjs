@@ -468,7 +468,10 @@ console.log('\n11b. reminder and approval (05/11/2026, Michael: "a reminder that
   delete db.state.works_mail_last; db.mails = [];
   const failDeps = { accessToken: mailDeps.accessToken, sendMailTo: async () => { throw new Error('graph 500'); } };
   const fr = await worksMailNow(ENV, THU12, failDeps);
-  check('a send that fails: not stamped, so a second try can send', fr.ok === false && !db.state.works_mail_last, [fr, db.state.works_mail_last]);
+  check('a send that fails: not stamped (given back as "none"), so a second try can send', fr.ok === false && db.state.works_mail_last === 'none', [fr, db.state.works_mail_last]);
+  const fr2 = await worksMailNow(ENV, THU12, mailDeps);
+  check('...and the second try sends', fr2.ok === true && db.mails.length === 1 && db.state.works_mail_last === FRI, fr2);
+  db.mails = [];
   // an old week's link
   NOW = Date.parse('2026-11-11T16:05:00Z');
   const oldp = await post([['op', 'send'], ['s', await makeSendToken(ENV, FRI, Date.parse('2026-11-10T08:00:00Z'))]], { noWeek: true });

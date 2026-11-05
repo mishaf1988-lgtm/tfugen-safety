@@ -1146,6 +1146,9 @@ export async function worksApproveMail(env, now, deps) {
 // Shlomi the request now", the Wednesday of that week already past). Only with the weekly mail on and its list set (the
 // same recipients the clock uses; nobody else), only while this Friday is still open, and once per Friday
 // (works_mail_last, like the clock: the Wednesday run will not send it again).
+// A failed send gives the Friday back: the value before, or 'none' when there was no row (never '', which a later
+// compare-and-swap would have to match as an empty filter; security review 05/11/2026).
+const giveBack = (env, prev) => stateSet(env, 'works_mail_last', prev || 'none').catch(() => {});
 // works_mail_last from prev to friday, only if it still holds prev (no row yet: insert, ignored if one appeared).
 async function claimWeek(env, friday, prev) {
   const at = new Date().toISOString();
@@ -1170,11 +1173,11 @@ export async function worksMailNow(env, now, deps) {
   if (st.works_mail_last === friday) return { ok: false, error: 'already sent for ' + friday };
   // The Friday is taken before the send (security review 05/11/2026: two clicks on the send page at once = one mail):
   // only the request whose swap changed the row sends; a failed send gives the Friday back.
-  const prev = st.works_mail_last == null ? null : String(st.works_mail_last);
+  const prev = st.works_mail_last == null || st.works_mail_last === '' ? null : String(st.works_mail_last);
   if (!(await claimWeek(env, friday, prev))) return { ok: false, error: 'already sent for ' + friday };
   let sent;
   try { sent = await mailWeek(env, friday, list, '', now.getTime(), deps); } catch (e) { sent = { error: String((e && e.message) || e).slice(0, 120) }; }
-  if (sent.error) { await stateSet(env, 'works_mail_last', prev || '').catch(() => {}); return { ok: false, error: sent.error }; }
+  if (sent.error) { await giveBack(env, prev); return { ok: false, error: sent.error }; }
   return { ok: true, friday, to: list.to, cc: list.cc };
 }
 // Reminder mode on Wednesday: the WhatsApp with the send link, once per Friday (works_ask_last); if WhatsApp fails,
@@ -1215,9 +1218,12 @@ export async function worksTick(env, now, deps) {
     const list = mailList(st.works_mail_to);
     if (!list) return { mail: false, error: 'no recipients' };
     if (String(st.works_mail_mode || '').trim() !== MODE_AUTO) return askOwner(env, friday, list, st, now, deps);
-    const sent = await mailWeek(env, friday, list, '', now.getTime(), deps);
-    if (sent.error) return { mail: false, error: sent.error };
-    await stateSet(env, 'works_mail_last', friday);
+    // the same claim as the send page (security review 05/11/2026: a click on the send link while the mode turns to auto)
+    const prev = st.works_mail_last == null || st.works_mail_last === '' ? null : String(st.works_mail_last);
+    if (!(await claimWeek(env, friday, prev))) return null;
+    let sent;
+    try { sent = await mailWeek(env, friday, list, '', now.getTime(), deps); } catch (e) { sent = { error: String((e && e.message) || e).slice(0, 120) }; }
+    if (sent.error) { await giveBack(env, prev); return { mail: false, error: sent.error }; }
     return { mail: true, friday, to: list.to.length, cc: list.cc.length };
   }
   if (st.works_remind_last === friday) return null;
