@@ -1,7 +1,7 @@
 // The weekly works link (05/11/2026, Michael in the questionnaire): maintenance fills the Friday works in a signed
 // link, every work becomes a ptw row waiting for Michael's approval, the contractor is checked against ctr, the gas test
 // of a confined space and the fire watch of hot work must be in before approval, lock-out / tag-out, attachments
-// (by their bytes), closing from the phone (never with a lock open), the Friday's plant representative and first-aider.
+// (by their bytes), closing from the phone (never with a lock open), the Friday's plant representative.
 // The 5-minute clock: Wednesday 18:00 the mail (only when works_mail_on), Thursday 12:00 the reminder, Sunday 08:00
 // permits not closed. Mocked network, nothing leaves.
 import { onRequest, makeWorksToken, readWorksToken, fridayOf, CATS, S_PEND, S_CANCEL, S_REJ, S_CLOSED, EMP_LABEL, CHECK_MARK, GATE_MARK, NOTE_LINE, REJ_MARK, kindsIn, ctrKey, ctrIssue,
@@ -87,7 +87,7 @@ globalThis.fetch = async (url, init) => {
 };
 const realNow = Date.now; Date.now = () => NOW;
 const open = async (u) => { const r = await onRequest({ request: new Request(u), env: ENV }); return { st: r.status, h: await r.text(), r }; };
-const WEEKF = [['f_w_week_rep', 'יוסי לוי'], ['f_w_week_rph', '050-7654321'], ['f_w_week_aid', 'רינה כהן']];
+const WEEKF = [['f_w_week_rep', 'יוסי לוי'], ['f_w_week_rph', '050-7654321']];
 const post = async (fields, opts) => {
   const p = new URLSearchParams();
   for (const [k, v] of (opts && opts.noWeek ? [] : WEEKF).concat(fields)) p.append(k, v);
@@ -125,7 +125,7 @@ check('opens 200, RTL Hebrew, the Friday in DD/MM/YYYY', p.st === 200 && p.h.inc
 check('mobile first: viewport, no-store, CSP with a nonce, no framing', p.h.includes('width=device-width') && p.r.headers.get('cache-control') === 'no-store' && /script-src 'nonce-[0-9a-f]{24}'/.test(p.r.headers.get('content-security-policy')) && p.r.headers.get('x-frame-options') === 'DENY');
 check('all 8 kinds of the permit form with their measures', CATS.length === 8 && CATS.every((c) => p.h.includes(c.t)) && p.h.includes('קו חיים תקין') && p.h.includes('בדיקה סופית 30 דקות אחרי הסיום'));
 check('the gas test, attendant and rescue plan under confined space; the fire watch under hot work; lock-out / tag-out', ['f_0_cnf_o2', 'f_0_cnf_lel', 'f_0_cnf_h2s', 'f_0_cnf_co', 'f_0_cnf_gat', 'f_0_cnf_gby', 'f_0_cnf_att', 'f_0_cnf_rsc', 'f_0_hot_fw', 'f_0_loto_pts', 'f_0_loto_lby', 'f_0_loto_rby', 'f_0_loto_rat', 'chk_0_loto'].every((n) => p.h.includes('name="' + n + '"')));
-check('the Friday: plant representative, his phone, first-aider', p.h.includes('name="f_w_week_rep"') && p.h.includes('name="f_w_week_rph"') && p.h.includes('name="f_w_week_aid"'));
+check('the Friday: plant representative and his phone; no first-aider field (Michael 05/11/2026)', p.h.includes('name="f_w_week_rep"') && p.h.includes('name="f_w_week_rph"') && !p.h.includes('name="f_w_week_aid"'));
 check('the contractor list comes from ctr (datalist)', p.h.includes('<datalist id="ctrl">') && p.h.includes('נגב אקולוגיה'));
 check('departments from SITE in a select, plus a free place field', DEPTS.length >= 5 && DEPTS.every((d) => p.h.includes('<option>' + d + '</option>')) && p.h.includes('name="area_0"'));
 check('add-row template, a "no works" box, one list submit', p.h.includes('<template id="tpl">') && p.h.includes('name="none"') && (p.h.match(/type="submit" id="go"/g) || []).length === 1);
@@ -159,7 +159,7 @@ check('types in the app\'s names, in the form\'s order', a.types === 'עבודו
 check('the ticked measures are kept per kind, with the fire watch', a.safety.includes('עבודה בגובה: רתמת בטיחות; קסדה; פיגום עם אישור') && a.safety.includes('עבודות חמות: היתר עבודה בחום; הרחקת חומרים דליקים; מטף כיבוי באתר; צופה האש (שם): משה'), a.safety);
 const pa = parseSafety(a.safety);
 check('...and read back the same (the page that opens again)', JSON.stringify(pa.chk.hgt.items) === '[0,1,4]' && JSON.stringify(pa.chk.hot.items) === '[0,1,2]' && pa.chk.hot.fw === 'משה', pa);
-check('the Friday\'s representative, phone and first-aider are on every work', pa.chk.week && pa.chk.week.rep === 'יוסי לוי' && pa.chk.week.rph === '050-7654321' && pa.chk.week.aid === 'רינה כהן' && parseSafety(b.safety).chk.week.aid === 'רינה כהן');
+check('the Friday\'s representative and phone are on every work (no first-aider, Michael 05/11/2026)', pa.chk.week && pa.chk.week.rep === 'יוסי לוי' && pa.chk.week.rph === '050-7654321' && !pa.chk.week.aid && !parseSafety(b.safety).chk.week.aid);
 check('a valid contractor, fire watch given: nothing red, nothing missing for approval', !a.safety.includes(CHECK_MARK) && !a.safety.includes(GATE_MARK), a.safety);
 check('a height work with no attachment: a yellow note, not a block', a.safety.includes(NOTE_LINE + 'לא צורפו אישורים'), a.safety);
 check('expired contractor and a kind with no measure: red flags', b.safety.includes(CHECK_MARK) && b.safety.includes('פג ב-01/10/2026') && b.safety.includes('חלל מוקף: לא סומן אף אמצעי'), b.safety);
@@ -170,7 +170,7 @@ check('works_sub notes the Friday', JSON.parse(db.state.works_sub).friday === FR
 
 console.log('\n6. the page opens again, resubmit updates');
 p = await open(URL0 + '?k=' + encodeURIComponent(tok));
-check('shows what was sent, editable, with the row numbers and the Friday\'s details', p.h.includes('הרשימה כבר נשלחה') && p.h.includes('ט.ס פרויקטים') && p.h.includes('name="rid_0" value="1"') && p.h.includes('name="rid_1" value="2"') && p.h.includes('value="רינה כהן"'));
+check('shows what was sent, editable, with the row numbers and the Friday\'s details', p.h.includes('הרשימה כבר נשלחה') && p.h.includes('ט.ס פרויקטים') && p.h.includes('name="rid_0" value="1"') && p.h.includes('name="rid_1" value="2"') && p.h.includes('value="יוסי לוי"') && !p.h.includes('f_w_week_aid'));
 check('the ticked measures are ticked again', /name="chk_0_hgt" value="0" checked/.test(p.h) && /name="chk_0_hot" value="2" checked/.test(p.h) && p.h.includes('value="משה"'));
 check('what is missing shows on the page', p.h.includes('חסר לפני אישור: חלל מוקף'));
 check('a saved work offers attachments (its own small form)', p.h.includes('<form id="fu2"') && p.h.includes('form="fu2"'));
@@ -212,7 +212,7 @@ await bad(fieldsOf(0, Object.assign({}, W1, { dep: 'מחלקה מומצאת' }),
 await bad(fieldsOf(0, Object.assign({}, W1, { sup: '' }), {}), 'no responsible person: refused');
 await bad(fieldsOf(0, W2, { cnf: [0] }, { cnf: { o2: 'abc' } }), 'a gas reading that is not a number: refused');
 await bad(fieldsOf(0, W2, { cnf: [0] }, { cnf: { gat: '7am' } }), 'a gas test time that is not a time: refused');
-await bad(fieldsOf(0, W3, {}), 'works without the Friday\'s representative / first-aider: refused', { noWeek: true });
+await bad(fieldsOf(0, W3, {}), 'works without the Friday\'s representative: refused', { noWeek: true });
 await bad(Array.from({ length: MAX_ROWS + 1 }, (_, i) => fieldsOf(i, W3, {})).flat(), 'more than ' + MAX_ROWS + ' works: refused');
 await bad([], 'nothing at all (no works, "none" not ticked): refused');
 const big = await post([['k', tok], ['desc_0', 'x'.repeat(130 * 1024)]]);
