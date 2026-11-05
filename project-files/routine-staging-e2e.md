@@ -5,7 +5,7 @@
 מיכאל, 18/10/2026, בשאלון: "בצע: בדיקת הניסוי שבועית". `tests/staging/e2e.js` עם `PREVIEW_URL` (31 בדיקות, #1666) רץ רק כשמישהו מפעיל אותו. כאן הוא רץ פעם בשבוע ומדווח רק כשמשהו נשבר.
 
 **ה-Routine:** ייפתח מהשיחה הבאה. ד' 06:29 (`CRON_TZ=Asia/Jerusalem 29 6 * * 3`). שם הסוכן: `staging-e2e`.
-**תלות:** הסיסמה הזמנית של `claude-test` נקבעת ב-`execute_sql` על `ldzbjbsumzqjyvtpiwqo` (Supabase MCP בשיחה העובדת), וכתובת גרסת התצוגה מ-Cloudflare (Network secret `api.cloudflare.com` בסביבה). בלי אחד מהם: ok:false עם הסיבה, לא לעקוף.
+**תלות:** הסיסמה הזמנית של `claude-test` נקבעת ב-`execute_sql` על `ldzbjbsumzqjyvtpiwqo` (Supabase MCP בשיחה העובדת), וכתובת גרסת התצוגה מ-Cloudflare (Network secret `api.cloudflare.com` בסביבה). בלי אחד מהם: ok:false עם הסיבה, לא לעקוף. Network secret של `api.supabase.com` בסביבה פג ב-19/10/2026 (401): לא תחליף ל-MCP.
 
 ---
 0. ידע משותף: קרא את project-files/agent-common.md, סעיפי "פתיחה" ו"ידע משותף". בסוף: סעיף "סגירה" (שם הסוכן: staging-e2e).
