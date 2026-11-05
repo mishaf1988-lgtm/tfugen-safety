@@ -44,6 +44,24 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('ldb() after the lock loads the rest and no employees', r.docs === 1 && r.emp === 0, r);
   }
 
+  console.log('\n3. the lock screen says how many sensitive edits are still on the phone (05/11/2026)');
+  {
+    const r = await page.evaluate(() => {
+      const show = () => { const el = document.getElementById('lock-pending'); return { vis: el.style.display, txt: el.textContent }; };
+      localStorage.setItem('tfgn_outbox', JSON.stringify([{ op: 'upd', tbl: 'emp', id: 'e1' }, { op: 'ins', tbl: 'med', row: {} }, { op: 'ins', tbl: 'docs', row: {} }]));
+      _lockNow(); const two = show();
+      localStorage.setItem('tfgn_outbox', JSON.stringify([{ op: 'ins', tbl: 'hearing_tests', row: {} }]));
+      _lockNow(); const one = show();
+      localStorage.setItem('tfgn_outbox', JSON.stringify([{ op: 'ins', tbl: 'docs', row: {} }]));
+      _lockNow(); const none = show();
+      return { two, one, none, kept: localStorage.getItem('tfgn_outbox') };
+    });
+    check('2 sensitive edits (a docs edit does not count): shown with the number', r.two.vis === 'block' && /^2 /.test(r.two.txt), r.two);
+    check('1 sensitive edit: the singular wording', r.one.vis === 'block' && /^\u05e9\u05d9\u05e0\u05d5\u05d9 \u05e8\u05d2\u05d9\u05e9 \u05d0\u05d7\u05d3/.test(r.one.txt), r.one);
+    check('no sensitive edit: nothing shown', r.none.vis === 'none' && r.none.txt === '', r.none);
+    check('the queue is still not wiped', /docs/.test(r.kept || ''), r.kept);
+  }
+
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
