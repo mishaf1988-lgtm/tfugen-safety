@@ -959,7 +959,6 @@
     "dev_request",
     "expiry_set",
     "mail_draft",
-    "select",
     "state_get",
     "worker_done",
     "worker_now"
