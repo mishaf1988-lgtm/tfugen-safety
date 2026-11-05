@@ -42,7 +42,7 @@
         ]
       },
       {
-        "matcher": "Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit|mcp__.*365.*|mcp__.*__(outlook|sharepoint|onedrive|teams|graph)_.*",
+        "matcher": "Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit|mcp__.*",
         "hooks": [
           {
             "type": "command",

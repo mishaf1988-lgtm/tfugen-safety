@@ -76,6 +76,13 @@ def no_heredoc(cmd):
     return "\n".join(out)
 
 
+# git's own options may come before the subcommand: git -C <dir> push, git -c k=v push, git --no-pager push
+# (retro 18/10/2026, STATUS 112 a: "git -C <dir> push" skipped every check).
+_V = r"(?:\"[^\"]*\"|'[^']*'|\S+)"  # an option value, quoted or not
+# security review 04/11/2026: also -P / -p, --git-dir X, quoted values and /usr/bin/git
+GIT = r"(?:\S*/)?git(?:\s+(?:-[Cc]\s+" + _V + r"|-[A-Za-z]\b|--(?:git-dir|work-tree|namespace|exec-path|super-prefix|config-env)(?:=" + _V + r"|\s+" + _V + r")|--[\w-]+(?:=" + _V + r")?))*\s+"
+
+
 def main():
     try:
         d = json.load(sys.stdin)
@@ -87,7 +94,7 @@ def main():
     # 18/10/2026 (Michael: "מאשר"): a compound command whose branch step was refused by another hook
     # never switched branch, and its commit landed on the local main (lesson 110). A commit on main
     # in this repo is refused, unless the same command first makes or switches to a branch.
-    m = re.search(r"(^|[;&|\s])git\s+commit\b", cmd)
+    m = re.search(r"(^|[;&|\s])" + GIT + r"commit\b", cmd)
     pre = cmd[:m.start() + 1] if m else ""
     # -B / -C always succeed; -b / -c fail when the branch exists, so the commit must be chained with && (retro 19/10/2026)
     branched = re.search(r"git\s+(checkout\s+(-q\s+)?-B|switch\s+(-q\s+)?-C)\s", pre) or \
@@ -105,7 +112,7 @@ def main():
             print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                 "permissionDecisionReason": "push-gate (\u05dc\u05e7\u05d7 110): commit \u05e2\u05dc main. \u05e7\u05d5\u05d3\u05dd branch: git checkout -B routine/<name>-<date> origin/main"}}, ensure_ascii=False))
             return
-    if not re.search(r"(^|[;&|\s])git\s+push\b", cmd):
+    if not re.search(r"(^|[;&|\s])" + GIT + r"push\b", cmd):
         print("{}"); return
     # The repo root, not the shell's cwd (the first live run came from tests/harness
     # and looked for tests/harness/tests/harness/...).

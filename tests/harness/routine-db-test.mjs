@@ -2003,6 +2003,35 @@ const callIn = async (body) => {
     } finally { graph = g0; }
   }
 
+  { // retro 13/10/2026 (STATUS 188 b): a claim written at the same moment by another session is kept, not overwritten
+    const real = globalThis.fetch;
+    let state = { value: JSON.stringify({ 'item-a': { session: 'session_AAAA', at: new Date().toISOString(), note: 'a' } }), updated_at: '2026-11-04T20:00:00.000Z' };
+    let raced = false; const writes = [];
+    globalThis.fetch = async (u, opt = {}) => {
+      u = String(u);
+      if (/server_state/.test(u) && (opt.method || 'GET') === 'GET') return new Response(JSON.stringify([{ key: 'k', ...state }]), { status: 200 });
+      if (/server_state/.test(u) && opt.method === 'PATCH') {
+        if (!raced) { // another session wrote item b between our read and our write
+          raced = true;
+          const m = JSON.parse(state.value); m['item-b'] = { session: 'session_BBBB', at: new Date().toISOString(), note: 'b' };
+          state = { value: JSON.stringify(m), updated_at: '2026-11-04T20:00:01.000Z' };
+          return new Response('[]', { status: 200 });
+        }
+        if (!u.includes(encodeURIComponent(state.updated_at))) return new Response('[]', { status: 200 });
+        const b = JSON.parse(opt.body); writes.push(b.value); state = { value: b.value, updated_at: b.updated_at };
+        return new Response(JSON.stringify([{ key: 'k' }]), { status: 200 });
+      }
+      if (/server_state/.test(u) && opt.method === 'POST') { writes.push('POST'); return new Response('[]', { status: 201 }); }
+      return real(u, opt);
+    };
+    try {
+      const r = await call({ op: 'claim', item: 'item-c', session: 'session_CCCC', note: 'c' });
+      const fin = JSON.parse(state.value);
+      check('claim: a claim written meanwhile by another session is kept (a, b and c all in the map, one PATCH after the retry)',
+        r.json.ok && r.json.mine && fin['item-a'] && fin['item-b'] && fin['item-c'] && writes.length === 1 && writes[0] !== 'POST', { r: r.json, fin, writes });
+    } finally { globalThis.fetch = real; }
+  }
+
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.log('HARNESS ERROR: ' + (e && e.stack || e)); process.exit(1); });
