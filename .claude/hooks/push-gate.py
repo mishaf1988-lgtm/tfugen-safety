@@ -97,8 +97,8 @@ def main():
     m = re.search(r"(^|[;&|\s])" + GIT + r"commit\b", cmd)
     pre = cmd[:m.start() + 1] if m else ""
     # -B / -C always succeed; -b / -c fail when the branch exists, so the commit must be chained with && (retro 19/10/2026)
-    branched = re.search(r"git\s+(checkout\s+(-q\s+)?-B|switch\s+(-q\s+)?-C)\s", pre) or \
-        re.search(r"git\s+(checkout\s+(-q\s+)?-b|switch\s+(-q\s+)?-c)\s[^;\n|]*&&[^;\n]*$", pre)
+    branched = re.search(GIT + r"(checkout\s+(-q\s+)?-B|switch\s+(-q\s+)?-C)\s", pre) or \
+        re.search(GIT + r"(checkout\s+(-q\s+)?-b|switch\s+(-q\s+)?-c)\s[^;\n|]*&&[^;\n]*$", pre)
     if m and not branched:
         br = os.environ.get("PUSH_GATE_BRANCH")
         if br is None:

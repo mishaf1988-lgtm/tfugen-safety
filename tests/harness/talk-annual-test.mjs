@@ -3,6 +3,7 @@
 // "everything typed", "PDF to the folder + print"). kind annual / quality: a permanent link until
 // closed (revoke), the worker types name and ID and picks a department, one form 08.01 for all.
 import { onRequest, makePermToken, permOk, KIND_ANN, KIND_QA, PERM_KINDS, TYPED_KINDS, ANN_OK, annOk, MAX_OUT_TYPED, form0801Html, topicsOf, F0801_ROWS, F0801_SUB } from './_build/talk.mjs';
+import { readFileSync as _rf } from 'fs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -169,6 +170,7 @@ console.log('\n4. reopened and closed again (05/11/2026, DECISIONS: a new 08.01,
     const race = await link({ op: 'close', id: 'an1' }, 'good'); globalThis.fetch = keep;
     check('close race: the losing close (no open row matched) files nothing and says already', race.st === 200 && race.j.already === true && (w.puts || []).length === npu0, race.j);
     T.ann.closed_at = '2026-10-25T10:00:00.000Z'; }
+  check('the tab that loses a close race shows the training closed: closed_at is not set to null when already (retro 05/11/2026)', /r\.closed_at=x\.j\.closed_at\|\|\(\(op==='close'&&x\.j\.already\)\?\(r\.closed_at\|\|new Date\(\)\.toISOString\(\)\):null\);/.test(_rf(new URL('../../index.html', import.meta.url), 'utf8')));
   check('reopen clears form_at too (the form filed before no longer counts)', ro.st === 200 && rp.b.closed_at === null && 'form_at' in rp.b && rp.b.form_at === null, rp);
   T.ann.closed_at = null; T.ann.first_closed_at = '2026-10-25T10:00:00.000Z';
   const nmv = (w.moves || []).length, np3 = w.patches.length;
