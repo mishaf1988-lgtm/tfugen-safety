@@ -1031,6 +1031,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
     <input id="uname" type="text" placeholder="&#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513;" autocomplete="username" autocapitalize="off" style="width:100%;padding:12px;text-align:center;font-size:16px;border:2px solid var(--border);border-radius:8px;margin-bottom:8px;font-family:inherit;box-sizing:border-box;-webkit-appearance:none">
     <input id="pw" type="password" placeholder="&#1505;&#1497;&#1505;&#1502;&#1492;" autocomplete="current-password">
     <div id="pw-err"></div>
+    <div id="lock-pending" style="display:none;margin:8px 0;padding:8px 10px;border-radius:8px;background:var(--c-amber-100,#fff4d6);color:var(--c-amber-900,#5c3d00);font-size:13px;line-height:1.5"></div>
     <button id="login-btn">&#1499;&#1504;&#1497;&#1505;&#1492;</button>
     <button id="login-pk-btn" type="button" style="display:none;margin-top:8px" onclick="_pkLogin()">&#128273; &#1499;&#1504;&#1497;&#1505;&#1492; &#1506;&#1501; Face ID</button>
     <a onclick="_openForgotPwModal()" style="display:block;margin-top:4px;padding:13px 8px;font-size:13px;color:var(--c-gray-650,#555);text-decoration:underline;cursor:pointer;text-align:center">&#1513;&#1499;&#1495;&#1514;&#1497; &#1505;&#1497;&#1505;&#1502;&#1492;?</a>
@@ -5487,6 +5488,20 @@ function _lockWipeSensitive(){
     if(hit)localStorage.setItem('tfgn2',JSON.stringify(d));
   }catch(e){}
 }
+// 05/11/2026 (Michael in the questionnaire: "do it: show it on the lock"; retro 13/10/2026 (a)): queued edits of
+// employees, medical and hearing rows stay in tfgn_outbox while the phone is locked (they are not wiped, so nothing is
+// lost). The lock screen now says how many, so the phone is not handed on before they are sent.
+function _lockPendingCount(){
+  var q=[];try{q=_obGet().concat(_obMem||[]);}catch(e){q=[];}
+  return q.filter(function(o){return o&&_LOCK_WIPE.indexOf(o.tbl)>=0;}).length;
+}
+function _lockPendingShow(){
+  var el=g('lock-pending');if(!el)return;
+  var n=_lockPendingCount();
+  if(!n){el.style.display='none';el.textContent='';return;}
+  el.textContent=n===1?'\u05e9\u05d9\u05e0\u05d5\u05d9 \u05e8\u05d2\u05d9\u05e9 \u05d0\u05d7\u05d3 (\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd, \u05e8\u05e4\u05d5\u05d0\u05d4 \u05d0\u05d5 \u05e9\u05de\u05d9\u05e2\u05d4) \u05e2\u05d3\u05d9\u05d9\u05df \u05d1\u05d8\u05dc\u05e4\u05d5\u05df \u05d5\u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7. \u05d4\u05d5\u05d0 \u05d9\u05d9\u05e9\u05dc\u05d7 \u05d0\u05d7\u05e8\u05d9 \u05d4\u05db\u05e0\u05d9\u05e1\u05d4, \u05db\u05e9\u05d9\u05e9 \u05e7\u05dc\u05d9\u05d8\u05d4. \u05dc\u05d0 \u05dc\u05de\u05e1\u05d5\u05e8 \u05d0\u05ea \u05d4\u05d8\u05dc\u05e4\u05d5\u05df \u05dc\u05e4\u05e0\u05d9 \u05db\u05df.':n+' \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd \u05e8\u05d2\u05d9\u05e9\u05d9\u05dd (\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd, \u05e8\u05e4\u05d5\u05d0\u05d4 \u05d0\u05d5 \u05e9\u05de\u05d9\u05e2\u05d4) \u05e2\u05d3\u05d9\u05d9\u05df \u05d1\u05d8\u05dc\u05e4\u05d5\u05df \u05d5\u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7\u05d5. \u05d4\u05dd \u05d9\u05d9\u05e9\u05dc\u05d7\u05d5 \u05d0\u05d7\u05e8\u05d9 \u05d4\u05db\u05e0\u05d9\u05e1\u05d4, \u05db\u05e9\u05d9\u05e9 \u05e7\u05dc\u05d9\u05d8\u05d4. \u05dc\u05d0 \u05dc\u05de\u05e1\u05d5\u05e8 \u05d0\u05ea \u05d4\u05d8\u05dc\u05e4\u05d5\u05df \u05dc\u05e4\u05e0\u05d9 \u05db\u05df.';
+  el.style.display='block';
+}
 window._lockNow=function(){
   try{_rtStop();}catch(e){}
   try{_lockWipeSensitive();}catch(e){}
@@ -5499,6 +5514,7 @@ window._lockNow=function(){
   try{_mfOnLock();}catch(e){}
   var app=g('app');if(app)app.style.display='none';
   var ls=g('login');if(ls)ls.style.display='flex';
+  try{_lockPendingShow();}catch(e){}
   var pw=g('pw');if(pw){pw.value='';setTimeout(function(){try{pw.focus();}catch(e){}},100);}
 };
 (function(){
