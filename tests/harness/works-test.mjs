@@ -577,7 +577,7 @@ console.log('\n15. the signed permit (stage B, 05/11/2026): approve -> filled, r
     }
     return json({ error: 'unexpected ' + u }, 599);
   };
-  mailDeps.sendMailTo = async (t, to, cc, subj, html, att) => { db.mails.push({ to, cc, subj, html, att: att || [] }); return true; };
+  mailDeps.sendMailTo = async (t, to, cc, subj, html, att, opts) => { db.mails.push({ to, cc, subj, html, att: att || [], save: !!(opts && opts.save) }); return true; };
   const ID = 'wk-2026-11-06-1', MONTH = OD_SAFETY + FILED_DIR + '/2026-11';
   const hotSt = { blocks: ['hot'], chk: { hot: { items: [0, 1, 6], fw: 'יוסי' } }, files: 0, flags: [], gate: [], notes: [] };
   const row = (id, o) => Object.assign({ id, num: 'WK-0611-1', con: 'ט"ס פרויקטים', sup: 'נועם', ph: '050-1234567', wkr: 'אבי, משה', area: 'חדר אנרגיה', dep: '', ds: FRI, de: FRI, ts: '07:00', te: '15:00',
@@ -611,6 +611,7 @@ console.log('\n15. the signed permit (stage B, 05/11/2026): approve -> filled, r
   db.mails = [];
   await permitRun(ENV, ID, false, Date.now(), mailDeps);
   check('to maintenance, copy to the boss and Michael, not a trial, outside addresses dropped', db.mails.length === 1 && db.mails[0].to.join() === 'alina@tapugan.co.il' && db.mails[0].cc.join() === 'boss@tapugan.co.il,owner@tapugan.co.il' && db.mails[0].subj.indexOf(TRY_PREFIX) < 0, db.mails[0] && [db.mails[0].to, db.mails[0].cc, db.mails[0].subj]);
+  check('the signed permit to maintenance: Michael in copy and kept in his Sent Items, for the record (05/11/2026)', db.mails[0].save === true && db.mails[0].cc.indexOf('owner@tapugan.co.il') >= 0);
   db.state[PERMIT_TO] = JSON.stringify({ to: ['x@gmail.com'] }); db.mails = [];
   await worksPermit(ENV, ID, false, mailDeps);
   check('works_permit_to with no company address: Michael only, a trial', db.mails[0].to.join() === 'owner@tapugan.co.il' && db.mails[0].subj.indexOf(TRY_PREFIX) === 0);
