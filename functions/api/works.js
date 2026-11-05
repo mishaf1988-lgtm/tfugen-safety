@@ -794,6 +794,26 @@ export function mailList(raw) {
   const to = ok(o && o.to).slice(0, 6), cc = ok(o && o.cc).slice(0, 4);
   return to.length ? { to, cc } : null;
 }
+// The one place that mails the link: the weekly mail and Michael's trial copy (05/11/2026). list = {to, cc}, or null
+// for the connected account only (Michael's own mailbox; nobody else).
+async function mailWeek(env, friday, list, prefix, nowMs, deps) {
+  const tok = await makeWorksToken(env, friday, nowMs);
+  if (!tok) return { error: 'no secret' };
+  const od = await deps.accessToken(env);
+  const to = list ? list.to : [od.email], cc = list ? list.cc : [];
+  if (!to.length || !to[0]) return { error: 'no recipients' };
+  await deps.sendMailTo(od.token, to, cc, prefix + MAIL_SUBJECT(friday), mailHtml(friday, worksUrl(tok)), []);
+  return { to };
+}
+// A trial (Michael 05/11/2026: "send me the link by mail as maintenance would get it, and I fill it in myself"):
+// the same mail, subject marked as a trial, to the connected account only. The weekly switch is not touched.
+export const TRY_PREFIX = '\u05e0\u05d9\u05e1\u05d9\u05d5\u05df: ';
+export async function worksTryMail(env, now, deps) {
+  SB = sbFrom(env);
+  const friday = fridayOf(now);
+  const r = await mailWeek(env, friday, null, TRY_PREFIX, now.getTime(), deps);
+  return r.error ? { ok: false, error: r.error } : { ok: true, friday, to: r.to };
+}
 // deps = {accessToken, sendMailTo} from _onedrive.js (wa-morning passes them; a test passes its own).
 export async function worksTick(env, now, deps) {
   const m = mailDue(now), r = remindDue(now), o = openDue(now);
@@ -816,10 +836,8 @@ export async function worksTick(env, now, deps) {
     if (st.works_mail_last === friday) return null;
     const list = mailList(st.works_mail_to);
     if (!list) return { mail: false, error: 'no recipients' };
-    const tok = await makeWorksToken(env, friday, now.getTime());
-    if (!tok) return { mail: false, error: 'no secret' };
-    const od = await deps.accessToken(env);
-    await deps.sendMailTo(od.token, list.to, list.cc, MAIL_SUBJECT(friday), mailHtml(friday, worksUrl(tok)), []);
+    const sent = await mailWeek(env, friday, list, '', now.getTime(), deps);
+    if (sent.error) return { mail: false, error: sent.error };
     await stateSet(env, 'works_mail_last', friday);
     return { mail: true, friday, to: list.to.length, cc: list.cc.length };
   }

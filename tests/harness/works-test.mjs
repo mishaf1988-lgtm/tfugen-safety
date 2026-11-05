@@ -5,7 +5,7 @@
 // The 5-minute clock: Wednesday 18:00 the mail (only when works_mail_on), Thursday 12:00 the reminder, Sunday 08:00
 // permits not closed. Mocked network, nothing leaves.
 import { onRequest, makeWorksToken, readWorksToken, fridayOf, CATS, S_PEND, S_CANCEL, S_REJ, S_CLOSED, EMP_LABEL, CHECK_MARK, GATE_MARK, NOTE_LINE, REJ_MARK, kindsIn, ctrKey, ctrIssue,
-  parseSafety, buildSafety, assess, GAS_LIMITS, worksTick, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck } from './_build/works.mjs';
+  parseSafety, buildSafety, assess, GAS_LIMITS, worksTick, worksTryMail, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck } from './_build/works.mjs';
 import { makeLinkToken } from './_build/_closelink.mjs';
 import { run as morningRun } from './_build/wa-morning.mjs';
 
@@ -375,6 +375,14 @@ console.log('--- WA remind:\n' + remindText(FRI));
 console.log('--- WA Sunday:\n' + openText(FRI, [{ id: 'wk-2026-11-06-1', desc: 'ריתוך מעקה בחצר', s: 'פתוח', safety: 'נעילה ותיוג: מי נעל: נחום' }]));
 check('the texts have keyboard characters only', ![submitText(FRI, sample, false), remindText(FRI), mailHtml(FRI, 'u'), openText(FRI, [])].some((s) => /[–—…־“”]/.test(s)));
 
+console.log('\n13. the trial mail to Michael (05/11/2026)');
+{ db.mails = []; const dm = { accessToken: async () => ({ token: 'gt', email: 'owner@tapugan.co.il' }), sendMailTo: deps.sendMailTo };
+  db.state.works_mail_on = 'false';
+  const r = await worksTryMail(ENV, THU12, dm);
+  check('the trial: one mail, to the connected account only, marked as a trial, the same link', r.ok && db.mails.length === 1 && db.mails[0].to.join() === 'owner@tapugan.co.il' && !db.mails[0].cc.length && db.mails[0].subj === TRY_PREFIX + MAIL_SUBJECT(FRI) && db.mails[0].html.includes('/api/works?k='), [r, db.mails[0]]);
+  check('...the weekly switch untouched (still off), no last-sent stamp', db.state.works_mail_on === 'false' && db.state.works_mail_last !== FRI, db.state);
+  const r2 = await worksTryMail(ENV, THU12, { accessToken: async () => ({ token: 'gt' }), sendMailTo: deps.sendMailTo });
+  check('no connected address: nothing sent', r2.ok === false && db.mails.length === 1, r2); }
 Date.now = realNow;
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
