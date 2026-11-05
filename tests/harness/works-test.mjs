@@ -5,7 +5,7 @@
 // The 5-minute clock: Wednesday 18:00 the mail (only when works_mail_on), Thursday 12:00 the reminder, Sunday 08:00
 // permits not closed. Mocked network, nothing leaves.
 import { onRequest, makeWorksToken, readWorksToken, fridayOf, CATS, S_PEND, S_CANCEL, S_REJ, S_CLOSED, EMP_LABEL, CHECK_MARK, GATE_MARK, NOTE_LINE, REJ_MARK, kindsIn, ctrKey, ctrIssue,
-  parseSafety, buildSafety, assess, GAS_LIMITS, worksTick, worksTryMail, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck, mailDeps, makeOkToken, readOkToken, OK_PREFIX, S_OK, APPROVE_SUBJECT } from './_build/works.mjs';
+  parseSafety, buildSafety, assess, GAS_LIMITS, worksTick, worksTryMail, worksApproveMail, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck, mailDeps, makeOkToken, readOkToken, OK_PREFIX, S_OK, APPROVE_SUBJECT } from './_build/works.mjs';
 import { makeLinkToken } from './_build/_closelink.mjs';
 import { run as morningRun } from './_build/wa-morning.mjs';
 import { SITE } from './_build/_site.mjs';
@@ -424,6 +424,15 @@ console.log('\n13. the trial mail to Michael (05/11/2026)');
   check('...the weekly switch untouched (still off), no last-sent stamp', db.state.works_mail_on === 'false' && db.state.works_mail_last !== FRI, db.state);
   const r2 = await worksTryMail(ENV, THU12, { accessToken: async () => ({ token: 'gt' }), sendMailTo: deps.sendMailTo });
   check('no connected address: nothing sent', r2.ok === false && db.mails.length === 1, r2); }
+console.log('\n14. the approval mail again, for works still pending (05/11/2026)');
+{ db.mails = []; const dm = { accessToken: async () => ({ token: 'gt', email: 'owner@tapugan.co.il' }), sendMailTo: deps.sendMailTo };
+  db.ptw = {}; ['wk-' + FRI + '-1', 'wk-' + FRI + '-2', 'wk-' + FRI + '-3'].forEach((id, i) => { db.ptw[id] = { id, num: '', con: 'x', sup: 's', ph: '', wkr: '', area: 'a', dep: '', ds: FRI, de: FRI, ts: '', te: '', types: '', safety: '', desc: 'work ' + i, s: i === 2 ? S_OK : S_PEND }; });
+  const pend = 2;
+  const r = await worksApproveMail(ENV, THU12, dm);
+  check('one mail to Michael only, one approve button per pending work', r.ok && r.n === pend && pend > 0 && db.mails.length === 1 && db.mails[0].to.join() === 'owner@tapugan.co.il' && !db.mails[0].cc.length && db.mails[0].subj === APPROVE_SUBJECT(FRI, false) && (db.mails[0].html.match(/\/api\/works\?a=/g) || []).length === pend, [r, pend, db.mails[0] && db.mails[0].subj]);
+  Object.values(db.ptw).forEach((x) => { if (x.s === S_PEND) x.s = S_OK; });
+  const r2 = await worksApproveMail(ENV, THU12, dm);
+  check('nothing pending: no mail', r2.ok && r2.n === 0 && db.mails.length === 1, r2); }
 Date.now = realNow;
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

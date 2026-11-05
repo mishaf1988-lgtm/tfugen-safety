@@ -921,6 +921,18 @@ export async function worksTryMail(env, now, deps) {
   const r = await mailWeek(env, friday, null, TRY_PREFIX, now.getTime(), deps);
   return r.error ? { ok: false, error: r.error } : { ok: true, friday, to: r.to };
 }
+// The approval mail again, for the works of this Friday still waiting (05/11/2026: the trial work was sent at 10:08,
+// before the approval mail existed at 10:33, so no mail came). Michael's own mailbox only, the same buttons and tokens.
+export async function worksApproveMail(env, now, deps) {
+  SB = sbFrom(env);
+  const friday = fridayOf(now);
+  const rows = await weekRows(env, friday);
+  if (!Array.isArray(rows)) return { ok: false, error: 'read failed' };
+  const works = rows.filter((r) => r.s === S_PEND).map((r) => rowToWork(r, friday));
+  if (!works.length) return { ok: true, friday, n: 0 };
+  const r = await approvalMail(env, friday, works, false, now.getTime(), deps);
+  return { ok: true, friday, n: r.n, to: r.to };
+}
 // deps = {accessToken, sendMailTo} from _onedrive.js (wa-morning passes them; a test passes its own).
 export async function worksTick(env, now, deps) {
   const m = mailDue(now), r = remindDue(now), o = openDue(now);
