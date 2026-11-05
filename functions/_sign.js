@@ -134,11 +134,15 @@ export async function stampPdf(pdfBytes, sigBytes, dateText, opts) {
   if (!sig) throw new Error('signature is not png or jpg');
   const cap = await doc.embedPng(b64bytes(CAPTION_PNG_B64));
   const font = await doc.embedFont(StandardFonts.Helvetica);
-  const W = typeof o.w === 'number' && o.w >= 40 && o.w <= SIG_W ? o.w : SIG_W;
+  let W = typeof o.w === 'number' && o.w >= 40 && o.w <= SIG_W ? o.w : SIG_W;
+  // o.maxH (the signed permit, 05/11/2026): a line of a form has room for a short signature only; narrower so it is no taller.
+  if (typeof o.maxH === 'number' && o.maxH > 0 && sig.height * W / sig.width > o.maxH) W = Math.max(20, o.maxH * sig.width / sig.height);
   const sh = sig.height * W / sig.width, ch = cap.height * CAP_W / cap.width;
   const right = (typeof o.x === 'number' ? o.x : width - MARGIN - W) + W;
   const y = typeof o.y === 'number' ? o.y : MARGIN + DATE_SIZE + 4 + ch + 2;
   pg.drawImage(sig, { x: right - W, y, width: W, height: sh });
+  // o.bare: the signature only; the form's own line already carries the name and the date (no stamp, no date below it)
+  if (o.bare) return doc.save();
   pg.drawImage(cap, { x: right - CAP_W, y: y - ch - 2, width: CAP_W, height: ch });
   const dw = font.widthOfTextAtSize(dateText, DATE_SIZE);
   pg.drawText(dateText, { x: right - dw, y: y - ch - 2 - DATE_SIZE - 2, size: DATE_SIZE, font, color: rgb(0.1, 0.1, 0.1) });

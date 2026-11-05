@@ -40,6 +40,9 @@ export const PERMIT_MAX = 8 * 1024 * 1024;   // a template or a rendered PDF rea
 export const ATTACH_MAX = 3 * 1024 * 1024;   // Graph sendMail takes about 4MB a request; above this the mail carries a link
 export const SIGN_MARK = 'qzxSgq';  // no word in Hebrew or English has it ("eSign" collided with "design")
 export const SIG_W = 90;
+// The live PDF of 05/11/2026: the full stamp (signature, name stamp, date) overlapped the lines above and below the
+// officer's line. On a form line: the signature alone, at most this tall (points).
+export const SIG_MAX_H = 16;
 // PERMIT_SPOT of routine-db.js (measured on the contractors' safety template 22/10/2026), on the safety form's page 2.
 export const FALLBACK_SPOT = { x: 225, y: 342, w: 90 };
 
@@ -348,7 +351,7 @@ export async function buildPermit(env, sbUrl, token, job) {
   const merged = await mergePdfs([pw, ps]);
   const spot = await signSpot(merged.bytes, merged.counts[0], w.who === 'ctr');
   const sig = await signature(env, sbUrl);
-  const signed = await stampPdf(merged.bytes, sig, date, spot.found || w.who === 'ctr' ? { page: spot.page, x: spot.x, y: spot.y, w: spot.w } : { page: spot.page });
+  const signed = await stampPdf(merged.bytes, sig, date, spot.found || w.who === 'ctr' ? { page: spot.page, x: spot.x, y: spot.y, w: spot.w, bare: true, maxH: SIG_MAX_H } : { page: spot.page });
   const up = await upload(gh, dir, base + '.pdf', signed, 'application/pdf');
   return { ok: true, path: dir.slice(OD_SAFETY.length) + '/' + up.name, name: up.name, webUrl: up.webUrl, bytes: signed, docx: [uw.name, us.name],
     spot: spot.found ? 'marker' : 'fixed', missing: fw.report.missing.concat(fs.report.missing) };
