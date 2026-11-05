@@ -5,7 +5,7 @@
 // The 5-minute clock: Wednesday 18:00 the mail (only when works_mail_on), Thursday 12:00 the reminder, Sunday 08:00
 // permits not closed. Mocked network, nothing leaves.
 import { onRequest, makeWorksToken, readWorksToken, fridayOf, CATS, S_PEND, S_CANCEL, S_REJ, S_CLOSED, EMP_LABEL, CHECK_MARK, GATE_MARK, NOTE_LINE, REJ_MARK, kindsIn, ctrKey, ctrIssue,
-  parseSafety, buildSafety, assess, GAS_LIMITS, worksTick, worksTryMail, worksApproveMail, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck, mailDeps, makeOkToken, readOkToken, OK_PREFIX, S_OK, APPROVE_SUBJECT, OKN_MARK, DECIDE_SUBJECT,
+  parseSafety, buildSafety, assess, GAS_LIMITS, worksTick, worksTryMail, worksApproveMail, permitRun, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck, mailDeps, makeOkToken, readOkToken, OK_PREFIX, S_OK, APPROVE_SUBJECT, OKN_MARK, DECIDE_SUBJECT,
   PERMIT_MARK, PERMIT_ERR, PERMIT_TO, PERMIT_SUBJECT, permitHtml, worksPermit } from './_build/works.mjs';
 import { readFileSync } from 'fs';
 import { readZip, entryText } from './_build/_xlsxpatch.mjs';
@@ -64,8 +64,10 @@ globalThis.fetch = async (url, init) => {
       const ids = decodeURIComponent((/id=in\.\(([^)]*)\)/.exec(u) || /id=eq\.([^&]+)/.exec(u) || [])[1] || '').split(',');
       const b = JSON.parse(init.body); db.patches.push({ ids, b });
       if ('id' in b) return json({ message: 'id must not change' }, 400);
-      ids.forEach((id) => { if (db.ptw[id] && ok(db.ptw[id].s)) Object.assign(db.ptw[id], b); });
-      return new Response(null, { status: 204 });
+      const hit = [];
+      ids.forEach((id) => { if (db.ptw[id] && ok(db.ptw[id].s)) { Object.assign(db.ptw[id], b); hit.push({ ...db.ptw[id] }); } });
+      const pref = String((init.headers && (init.headers.Prefer || init.headers.prefer)) || '');
+      return /return=representation/.test(pref) ? json(hit) : new Response(null, { status: 204 });
     }
   }
   if (u.startsWith(SB + '/rest/v1/ctr')) return db.ctrFail ? json({ message: 'down' }, 500) : json(CTR);
@@ -526,6 +528,9 @@ console.log('\n15. the signed permit (stage B, 05/11/2026): approve -> filled, r
   db.mails = [];
   const again = await worksPermit(ENV, ID, false, mailDeps);
   check('again (routine-db works_permit): a NEW file " 1", the row line replaced, not added', again.ok && g.puts[g.puts.length - 1] === base0 + ' 1.pdf' && parseSafety(db.ptw[ID].safety).permit.endsWith(' 1.pdf') && db.ptw[ID].safety.split('\n').filter((x) => x.indexOf(PERMIT_MARK) === 0).length === 1, again);
+  check('the routine-db op mails Michael only, as a trial, even with the weekly mail on (security review 05/11/2026)', db.mails.length === 1 && db.mails[0].to.join() === 'owner@tapugan.co.il' && !db.mails[0].cc.length && db.mails[0].subj.indexOf('ניסיון: ') === 0, db.mails.map((x) => [x.to, x.subj]));
+  db.mails = [];
+  await permitRun(ENV, ID, false, Date.now(), mailDeps);
   check('to maintenance, copy to the boss and Michael, not a trial, outside addresses dropped', db.mails.length === 1 && db.mails[0].to.join() === 'alina@tapugan.co.il' && db.mails[0].cc.join() === 'boss@tapugan.co.il,owner@tapugan.co.il' && db.mails[0].subj.indexOf(TRY_PREFIX) < 0, db.mails[0] && [db.mails[0].to, db.mails[0].cc, db.mails[0].subj]);
   db.state[PERMIT_TO] = JSON.stringify({ to: ['x@gmail.com'] }); db.mails = [];
   await worksPermit(ENV, ID, false, mailDeps);

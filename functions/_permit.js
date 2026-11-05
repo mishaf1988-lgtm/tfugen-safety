@@ -196,7 +196,10 @@ export async function fillPermit(bytes, spec) {
 
 // ---- what goes where (pure) ----
 const dmy = (ymd) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(ymd || '')); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
-const one = (s, max) => norm(String(s || '').replace(/[\r\n]+/g, ', ')).slice(0, max);
+// The signature marker never comes from what a link user typed (security review 05/11/2026): "eSign" in a value
+// would move Michael's signature next to it. Removed in both directions, any spacing.
+export const unmark = (s) => String(s).replace(/e\s*s\s*i\s*g\s*n|n\s*g\s*i\s*s\s*e/gi, '');
+const one = (s, max) => unmark(norm(String(s || '').replace(/[\r\n]+/g, ', '))).slice(0, max);
 // w: a work as works.js rowToWork gives it (who, con, sup, ph, wkr, area, dep, ds, de, ts, te, desc, cats, st);
 // o: { num, date (DD/MM/YYYY, the approval), closed }. form: 'work' | 'safety'.
 export function permitSpec(form, w, o) {

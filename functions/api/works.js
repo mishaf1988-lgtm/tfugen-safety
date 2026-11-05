@@ -724,10 +724,12 @@ async function submitClose(env, form, tok, friday, nowMs, bg) {
   st.blocks = st.blocks.filter((k) => k !== 'close').concat(['close']);
   st.chk.close = { items: [0], end: c.end, c30: c.c30 || '', by: c.by };
   const r = await fetch(SB + '/rest/v1/ptw?id=eq.' + encodeURIComponent(row.id) + '&s=not.in.(' + NOT_APPROVED.map(encodeURIComponent).join(',') + ')', { method: 'PATCH',
-    headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ s: S_CLOSED, te: c.end, safety: buildSafety(st) }) });
+    headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify({ s: S_CLOSED, te: c.end, safety: buildSafety(st) }) });
   if (!r.ok) return page('\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8', '<p>\u05d4\u05e1\u05d2\u05d9\u05e8\u05d4 \u05dc\u05d0 \u05e0\u05e9\u05de\u05e8\u05d4 \u05d1\u05d2\u05dc\u05dc \u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.</p>' + back, 'err', 503);
-  // the closed permit to Michael (stage B), after the closing is saved; it never undoes it
-  await permitLater(env, row.id, true, nowMs, bg);
+  // the closed permit to Michael (stage B), after the closing is saved; it never undoes it. Only by the request that
+  // actually closed the row (security review 05/11/2026: two clicks at once = one closed permit, not two).
+  const closedRows = await r.json().catch(() => null);
+  if (Array.isArray(closedRows) && closedRows.length) await permitLater(env, row.id, true, nowMs, bg);
   return page('\u05d4\u05d4\u05d9\u05ea\u05e8 \u05e0\u05e1\u05d2\u05e8', '<p>\u05d4\u05d9\u05ea\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 ' + n + ' \u05e0\u05e1\u05d2\u05e8 \u05d1\u05e9\u05e2\u05d4 ' + esc(c.end) + '. \u05ea\u05d5\u05d3\u05d4.</p>' + back, 'ok', 200);
 }
 
@@ -967,7 +969,7 @@ async function markPermit(env, row, mark, path) {
 }
 // One permit: closed = the closed version (the row must be closed); else the approved one (approved or closed).
 // deps = {accessToken, sendMailTo}. Returns {ok, path, spot, recorded, mailed: {to, cc, trial, attached} | {error}}.
-export async function permitRun(env, id, closed, nowMs, deps) {
+export async function permitRun(env, id, closed, nowMs, deps, ownerOnly) {
   const m = WK_ID_RE.exec(String(id || ''));
   if (!m) return { ok: false, error: 'bad id' };
   const friday = m[1];
@@ -981,7 +983,7 @@ export async function permitRun(env, id, closed, nowMs, deps) {
   const b = await buildPermit(env, SB, od.token, { w, num: row.num, friday, closed, nowMs });
   const recorded = await markPermit(env, row, closed ? PERMIT_C_MARK : PERMIT_MARK, b.path).catch(() => false);
   let list = null;
-  if (!closed) {
+  if (!closed && !ownerOnly) {
     try { if (String(await stateGet(env, 'works_mail_on') || '').trim() === 'true') list = mailList(await stateGet(env, PERMIT_TO)); } catch (e) { list = null; }
   }
   const me = String(od.email).toLowerCase();
@@ -1014,7 +1016,8 @@ async function permitLater(env, id, closed, nowMs, bg) {
 // routine-db op works_permit (testing and recovery): one work again; the same recipients rule.
 export async function worksPermit(env, id, closed, deps) {
   SB = sbFrom(env);
-  return permitRun(env, id, !!closed, Date.now(), deps);
+  // The routine-db op: Michael's mailbox only, marked as a trial (security review 05/11/2026: mail to a person waits for him).
+  return permitRun(env, id, !!closed, Date.now(), deps, true);
 }
 
 // ---- the 5-minute clock (wa-morning.js watch) ----

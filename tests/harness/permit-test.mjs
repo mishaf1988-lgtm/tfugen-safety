@@ -7,7 +7,7 @@
 import { readFileSync } from 'fs';
 import { readZip, entryText } from './_build/_xlsxpatch.mjs';
 import { PDFDocument, StandardFonts } from './_build/_pdflib.mjs';
-import { fillPermit, permitSpec, permitBase, safeName, blanksOf, norm, signSpot, mergePdfs, pdfAttachment, BOX, SIGN_MARK, HEADS, TEMPLATES, FILED_DIR, FALLBACK_SPOT, EMP_SIG_X } from './_build/_permit.mjs';
+import { fillPermit, permitSpec, permitBase, safeName, blanksOf, norm, signSpot, mergePdfs, pdfAttachment, BOX, SIGN_MARK, HEADS, TEMPLATES, FILED_DIR, FALLBACK_SPOT, EMP_SIG_X, unmark } from './_build/_permit.mjs';
 import { findTextSpot } from './_build/_pdftext.mjs';
 import { SITE } from './_build/_site.mjs';
 
@@ -179,6 +179,12 @@ async function pdfWith(pages, mark) {
   const a = pdfAttachment('x.pdf', new Uint8Array([37, 80, 68, 70, 45]));
   check('the attachment: a Graph fileAttachment, base64', a['@odata.type'] === '#microsoft.graph.fileAttachment' && a.contentBytes === 'JVBERi0=' && a.contentType === 'application/pdf');
 }
+
+// security review 05/11/2026: a link user cannot plant the signature marker
+{ const ok = (c, m) => { if (c) pass++; else { fail++; console.log('  \u2717 ' + m); } };
+  ok(unmark('x eSign y') === 'x  y' && unmark('E S I G N') === '' && unmark('ngiSe') === '' && unmark('e s ign') === '', 'unmark removes the marker in both directions, any case and spacing');
+  const sp = permitSpec('safety', { who: 'ctr', con: 'eSign', sup: 'a', ph: '', wkr: 'ngiSe', area: 'eSign', dep: '', ds: '2026-11-06', de: '2026-11-06', ts: '', te: '', desc: 'e Sign', cats: [], st: { chk: {}, blocks: [] } }, { num: '1', date: '06/11/2026' });
+  ok(!/e\s*s\s*i\s*g\s*n|n\s*g\s*i\s*s\s*e/i.test(JSON.stringify(sp).replace(new RegExp(SIGN_MARK, 'g'), '').replace(/"mark":true/g, '')) || !JSON.stringify(sp).includes('ngiSe'), 'a work typed with the marker: the values carry none of it'); }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
