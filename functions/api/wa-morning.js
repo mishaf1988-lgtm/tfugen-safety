@@ -363,7 +363,7 @@ export function devStuckText(x) {
   return '\u05d1\u05e7\u05e9\u05ea \u05e4\u05d9\u05ea\u05d5\u05d7 \u05de-' + hm + ' \u05e2\u05d3\u05d9\u05d9\u05df \u05e4\u05ea\u05d5\u05d7\u05d4, \u05d5\u05dc\u05d0 \u05e7\u05d9\u05d1\u05dc\u05ea \u05e2\u05dc\u05d9\u05d4 \u05e2\u05d3\u05db\u05d5\u05df: "'
     + clip(stripInternalIds(x.text), 160) + '". \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e2\u05e0\u05d5\u05ea \u05db\u05d0\u05df, \u05d5\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e2\u05d5\u05d1\u05e8\u05ea \u05dc\u05e4\u05d9\u05ea\u05d5\u05d7.';
 }
-async function devRemind(env, now) {
+export async function devRemind(env, now) {
   const [raw, warnedRaw] = await Promise.all([stateGet(env, 'dev_inbox'), stateGet(env, DEV_WARN_KEY)]);
   const due = devStuck(raw, warnedRaw, now.getTime(), ilHour(now));
   if (!due.length) return null;

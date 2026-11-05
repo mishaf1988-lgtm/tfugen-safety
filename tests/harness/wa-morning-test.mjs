@@ -1,6 +1,6 @@
 // The morning update on WhatsApp from the server (20/10/2026): pg_cron calls /api/wa-morning twice,
 // only the call on 07:xx in Israel on Sunday-Thursday sends, once a day, to Michael's number only.
-import { deckCheckDue, DECK_CHECK_KEY, stagingDue, watch, clip, areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT, splitUrgent, WAIT_DAYS, rowContradictions, expOff } from './_build/wa-morning.mjs';
+import { deckCheckDue, DECK_CHECK_KEY, stagingDue, watch, clip, areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT, splitUrgent, WAIT_DAYS, rowContradictions, expOff, devRemind, DEV_WARN_KEY } from './_build/wa-morning.mjs';
 import { OD_ROOT } from './_build/routine-db.mjs';
 import fs from 'fs';
 
@@ -241,6 +241,20 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     const wm = (await import('node:fs')).readFileSync(new URL('../../functions/api/wa-morning.js', import.meta.url), 'utf8');
     const iR = wm.indexOf('async function devRemind');
     check('dev guard: marked warned only after a send that went out, so a failed send is tried again (a source check: devRemind is not run here; 26/10/2026 retro)', iR > 0 && /sendToOwner\([\s\S]{0,300}if \(r\.ok\) await stateSet\(env, DEV_WARN_KEY/.test(wm.slice(iR, iR + 2500)) && !/await stateSet\(env, DEV_WARN_KEY[\s\S]{0,200}const r = await sendToOwner/.test(wm.slice(iR, iR + 2500)));
+    { // 05/11/2026 (STATUS 154): devRemind itself, run: a failed send leaves it unwarned, a sent one marks it
+      const f0 = globalThis.fetch; let fbOk = false;
+      globalThis.fetch = async (url, opt = {}) => String(url).startsWith('https://graph.facebook.com/') && !fbOk
+        ? new Response('{"error":{"code":131000}}', { status: 500 }) : f0(url, opt);
+      state = { dev_inbox: L };
+      const T15 = new Date('2026-10-25T13:00:00Z'); // 15:00 in Israel, inside the day hours
+      const r1 = await devRemind(ENV, T15);
+      const w1 = state[DEV_WARN_KEY];
+      fbOk = true;
+      const r2 = await devRemind(ENV, T15);
+      check('dev guard, run: a failed send is not marked (tried again), a sent one is marked once', r1 && r1.sent === false && !w1 && r2 && r2.sent === true
+        && JSON.parse(state[DEV_WARN_KEY] || '[]')[0] === 'dev-20261025090000-aaaa', { r1, w1, r2, w: state[DEV_WARN_KEY] });
+      globalThis.fetch = f0; state = {}; logs = []; metas = [];
+    }
     const iW = wm.indexOf('stateSet(env, WATCH_KEY'), iP = wm.indexOf('stateSet(env, PROMISE_KEY, JSON.stringify(list))');
     check('watch alert and promise reminder: marked only after a send that went out, so a failed one is tried again (source check; 26/10/2026 retro)', iW > 0 && /if \(r\.ok\) await stateSet\(env, WATCH_KEY/.test(wm.slice(iW - 40, iW + 60)) && iP > 0 && /if \(r\.ok\) await stateSet\(env, PROMISE_KEY, JSON\.stringify\(list\)\)/.test(wm.slice(iP - 40, iP + 80)));
     check('dev guard: bad state = nothing, never a throw', devStuck('x', 'y', T, 15).length === 0 && devStuck(null, null, T, 15).length === 0);
