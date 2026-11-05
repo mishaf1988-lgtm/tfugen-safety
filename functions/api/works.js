@@ -44,6 +44,8 @@ export const NOT_APPROVED = [S_PEND, S_REJ, S_CANCEL, S_CLOSED];
 export const EMP_LABEL = '\u05e2\u05d5\u05d1\u05d3\u05d9 \u05d4\u05de\u05e4\u05e2\u05dc';
 // the lines of ptw.safety that are not a block (the app reads the first four: _PTW_* in index.html)
 export const CHECK_MARK = '[\u05dc\u05d1\u05d3\u05d9\u05e7\u05d4] ', GATE_MARK = '[\u05d7\u05e1\u05e8 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8] ', NOTE_LINE = '[\u05d4\u05e2\u05e8\u05d4] ', REJ_MARK = '[\u05e0\u05d3\u05d7\u05d4] ', FILES_MARK = '[\u05e7\u05d1\u05e6\u05d9\u05dd] ';
+// Michael's notes on an approved work (05/11/2026, Michael: "notes are not always a rejection; I approve with my notes").
+export const OKN_MARK = '[\u05d4\u05e2\u05e8\u05d5\u05ea \u05d4\u05de\u05de\u05d5\u05e0\u05d4] ';
 export const NOTE_MARK = '\n\u05d4\u05e2\u05e8\u05d5\u05ea: ';
 export const STATE_SUB = 'works_sub';           // {friday, at, n, none, notified_at}
 export const NOTIFY_GAP_MIN = 15;
@@ -177,13 +179,15 @@ export function buildSafety(st) {
   if (st.gate && st.gate.length) lines.push(GATE_MARK + st.gate.map(noSemi).join('; '));
   if (st.notes && st.notes.length) lines.push(NOTE_LINE + st.notes.map(noSemi).join('; '));
   if (st.rej) lines.unshift(REJ_MARK + st.rej);
+  if (st.okn) lines.unshift(OKN_MARK + st.okn);
   return lines.join('\n');
 }
 export function parseSafety(safety) {
-  const st = { blocks: [], chk: {}, files: 0, flags: [], gate: [], notes: [], rej: '' };
+  const st = { blocks: [], chk: {}, files: 0, flags: [], gate: [], notes: [], rej: '', okn: '' };
   const list = (s) => s.split('; ').map((p) => p.trim()).filter(Boolean);
   String(safety || '').split('\n').forEach((line) => {
     if (line.indexOf(REJ_MARK) === 0) { st.rej = line.slice(REJ_MARK.length); return; }
+    if (line.indexOf(OKN_MARK) === 0) { st.okn = line.slice(OKN_MARK.length); return; }
     if (line.indexOf(CHECK_MARK) === 0) { st.flags = list(line.slice(CHECK_MARK.length)); return; }
     if (line.indexOf(GATE_MARK) === 0) { st.gate = list(line.slice(GATE_MARK.length)); return; }
     if (line.indexOf(NOTE_LINE) === 0) { st.notes = list(line.slice(NOTE_LINE.length)); return; }
@@ -433,6 +437,7 @@ function rowHtml(i, w, friday, canEdit) {
   let h = '<div class="w' + (w && w.locked ? ' lk' : '') + '" data-i="' + i + '">';
   h += '<div style="font-weight:700">\u05e2\u05d1\u05d5\u05d3\u05d4 <span class="no">' + (i + 1) + '</span>' + (w && w.s === S_CLOSED ? ' - \u05e0\u05e1\u05d2\u05e8\u05d4' : w && w.locked ? ' - \u05d0\u05d5\u05e9\u05e8\u05d4' : '') + '</div>';
   if (w && st.rej) h += '<p class="red">\u05e0\u05d3\u05d7\u05ea\u05d4: ' + esc(st.rej) + '. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05ea\u05e7\u05df \u05d5\u05dc\u05e9\u05dc\u05d5\u05d7 \u05e9\u05d5\u05d1.</p>';
+  if (w && st.okn) h += '<p><b>\u05d4\u05e2\u05e8\u05d5\u05ea \u05d4\u05de\u05de\u05d5\u05e0\u05d4: </b>' + esc(st.okn) + '</p>';
   if (w) h += linesHtml(st);
   if (!lk) h += '<input type="hidden" name="rid_' + i + '" value="' + (w ? w.n : '') + '">';
   h += '<label>\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 *</label><textarea name="desc_' + i + '" maxlength="' + LIM.desc + '" class="kw"' + dis + '>' + v('desc') + '</textarea>';
@@ -830,9 +835,9 @@ async function showDecide(env, tok, nowMs) {
   const state = d.row.s === S_PEND ? '' : '<p class="red">\u05de\u05e6\u05d1 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4: ' + esc(d.row.s) + '. \u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05d0\u05e9\u05e8 \u05db\u05d0\u05df.</p>';
   const gate = d.w.st.gate.length;
   const form = d.row.s !== S_PEND ? '' : '<form method="post" action="/api/works"><input type="hidden" name="op" value="decide"><input type="hidden" name="a" value="' + esc(tok) + '"><input type="hidden" name="v" value="' + esc(d.row.ver || '') + '">'
-    + (gate ? '' : '<p><button type="submit" name="act" value="approve" style="background:#15803d;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:16px;font-weight:700">\u05de\u05d0\u05e9\u05e8 \u05d0\u05ea \u05ea\u05d7\u05d9\u05dc\u05ea \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4</button></p>')
-    + '<p><label>\u05d4\u05d4\u05e2\u05e8\u05d5\u05ea \u05e9\u05dc\u05da \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4 (\u05d4\u05df \u05d9\u05d5\u05e4\u05d9\u05e2\u05d5 \u05dc\u05d4\u05dd \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8, \u05d5\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea \u05d0\u05dc\u05d9\u05d4\u05dd \u05dc\u05ea\u05d9\u05e7\u05d5\u05df):<br><textarea name="why" maxlength="200" rows="3" style="width:100%"></textarea></label></p>'
-    + '<p><button type="submit" name="act" value="reject" style="background:#b91c1c;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:16px">\u05e9\u05d5\u05dc\u05d7 \u05d4\u05e2\u05e8\u05d5\u05ea \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4</button></p></form>';
+    + (gate ? '' : '<p><button type="submit" name="act" value="approve" style="background:#15803d;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:16px;font-weight:700">\u05de\u05d0\u05e9\u05e8 \u05d0\u05ea \u05ea\u05d7\u05d9\u05dc\u05ea \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4</button> <span style="font-size:13px;color:#6b7280">(\u05e2\u05dd \u05d4\u05d4\u05e2\u05e8\u05d5\u05ea, \u05d0\u05dd \u05db\u05ea\u05d1\u05ea)</span></p>')
+    + '<p><label>\u05d4\u05d4\u05e2\u05e8\u05d5\u05ea \u05e9\u05dc\u05da \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4 (\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4 \u05d1\u05d0\u05d9\u05e9\u05d5\u05e8; \u05d7\u05d5\u05d1\u05d4 \u05db\u05e9\u05de\u05d7\u05d6\u05d9\u05e8\u05d9\u05dd \u05dc\u05ea\u05d9\u05e7\u05d5\u05df):<br><textarea name="why" maxlength="200" rows="3" style="width:100%"></textarea></label></p>'
+    + '<p><button type="submit" name="act" value="reject" style="background:#b91c1c;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:16px">\u05de\u05d7\u05d6\u05d9\u05e8 \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4 \u05dc\u05ea\u05d9\u05e7\u05d5\u05df</button></p></form>';
   return page('\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4', decideSummary(d) + state + (gate && d.row.s === S_PEND ? '<p class="red">\u05d0\u05d9 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d0\u05e9\u05e8 \u05e2\u05d3\u05d9\u05d9\u05df: \u05d7\u05e1\u05e8 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8.</p>' : '') + form, '', 200);
 }
 async function submitDecide(env, form, nowMs) {
@@ -849,7 +854,9 @@ async function submitDecide(env, form, nowMs) {
   let body;
   if (act === 'approve') {
     if (d.w.st.gate.length) return page('\u05d0\u05d9 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d0\u05e9\u05e8', '<p class="red">' + esc(d.w.st.gate.join('; ')) + '</p>', 'err', 409);
-    body = { s: S_OK };
+    const okn = clean(form.get('why') || '', 200);
+    const rest = String(d.row.safety || '').split('\n').filter((x) => x && x.indexOf(OKN_MARK) !== 0);
+    body = okn ? { s: S_OK, safety: [OKN_MARK + okn].concat(rest).join('\n') } : { s: S_OK };
   } else if (act === 'reject') {
     const why = clean(form.get('why') || '', 200);
     if (!why) return page('\u05e6\u05e8\u05d9\u05da \u05d4\u05e2\u05e8\u05d5\u05ea', '<p>\u05db\u05d3\u05d9 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05d4\u05e2\u05e8\u05d5\u05ea \u05e6\u05e8\u05d9\u05da \u05dc\u05db\u05ea\u05d5\u05d1 \u05d0\u05d5\u05ea\u05df. \u05d7\u05d6\u05d5\u05e8 \u05dc\u05d3\u05e3 \u05d4\u05e7\u05d5\u05d3\u05dd.</p>', 'err', 400);
@@ -862,7 +869,40 @@ async function submitDecide(env, form, nowMs) {
   const got = r.ok ? await r.json().catch(() => null) : null;
   if (!r.ok) return errPage('\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8 \u05d1\u05d2\u05dc\u05dc \u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.', 503);
   if (Array.isArray(got) && !got.length) return page('\u05db\u05d1\u05e8 \u05d8\u05d5\u05e4\u05dc', '<p>\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05db\u05d1\u05e8 \u05dc\u05d0 \u05de\u05de\u05ea\u05d9\u05e0\u05d4 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8.</p>', '', 409);
-  return page(act === 'approve' ? '\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d0\u05d5\u05e9\u05e8\u05d4' : '\u05d4\u05d4\u05e2\u05e8\u05d5\u05ea \u05e0\u05e9\u05dc\u05d7\u05d5 \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4', '<p><b>' + esc(lineOf(d.w)) + '</b></p><p>' + (act === 'approve' ? '\u05d4\u05d0\u05d7\u05e8\u05d0\u05d9 \u05e1\u05d5\u05d2\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d9\u05ea\u05e8 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e9\u05dc \u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d1\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4.' : '\u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d9\u05e8\u05d0\u05d5 \u05d0\u05ea \u05d4\u05d4\u05e2\u05e8\u05d5\u05ea \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8, \u05d9\u05ea\u05e7\u05e0\u05d5 \u05d5\u05d9\u05e9\u05dc\u05d7\u05d5 \u05e9\u05d5\u05d1, \u05d5\u05d9\u05d2\u05d9\u05e2 \u05d0\u05dc\u05d9\u05da \u05de\u05d9\u05d9\u05dc \u05d7\u05d3\u05e9.') + '</p>', 'ok', 200);
+  // Maintenance hears about it by mail (05/11/2026, Michael: "after notes the work has to open again for them"): the notes
+  // and the link. A failed mail never undoes the decision; the page says so.
+  let mailed = null;
+  try { mailed = await decisionMail(env, d, act, clean(form.get('why') || '', 200), nowMs, mailDeps); } catch (e) { mailed = { error: String((e && e.message) || e).slice(0, 80) }; }
+  const mailLine = mailed && mailed.to ? '<p>\u05e0\u05e9\u05dc\u05d7 \u05de\u05d9\u05d9\u05dc \u05dc: ' + esc(mailed.to.join(', ')) + (mailed.trial ? ' (\u05e0\u05d9\u05e1\u05d9\u05d5\u05df: \u05e8\u05e7 \u05d0\u05dc\u05d9\u05da, \u05db\u05dc \u05e2\u05d5\u05d3 \u05d4\u05de\u05d9\u05d9\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9 \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4 \u05db\u05d1\u05d5\u05d9)' : '') + '</p>' : '<p class="red">\u05d4\u05de\u05d9\u05d9\u05dc \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7 (' + esc((mailed && mailed.error) || '') + ').</p>';
+  return page(act === 'approve' ? '\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d0\u05d5\u05e9\u05e8\u05d4' : '\u05d4\u05d4\u05e2\u05e8\u05d5\u05ea \u05e0\u05e9\u05dc\u05d7\u05d5 \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4', '<p><b>' + esc(lineOf(d.w)) + '</b></p><p>' + (act === 'approve' ? '\u05d4\u05d0\u05d7\u05e8\u05d0\u05d9 \u05e1\u05d5\u05d2\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d9\u05ea\u05e8 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e9\u05dc \u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d1\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4.' : '\u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d9\u05e8\u05d0\u05d5 \u05d0\u05ea \u05d4\u05d4\u05e2\u05e8\u05d5\u05ea \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8, \u05d9\u05ea\u05e7\u05e0\u05d5 \u05d5\u05d9\u05e9\u05dc\u05d7\u05d5 \u05e9\u05d5\u05d1, \u05d5\u05d9\u05d2\u05d9\u05e2 \u05d0\u05dc\u05d9\u05da \u05de\u05d9\u05d9\u05dc \u05d7\u05d3\u05e9.') + '</p>' + mailLine, 'ok', 200);
+}
+
+// The decision to maintenance (05/11/2026): approved (with Michael's notes, if any) or back for a fix with his notes, and
+// the week's link either way (fix and send again / close the permit at the end). To the weekly list only while the
+// weekly mail is on (works_mail_on + works_mail_to); until then to Michael's own mailbox, marked as a trial.
+export const DECIDE_SUBJECT = (ok, w, friday) => (ok ? '\u05d0\u05d5\u05e9\u05e8\u05d4: ' : '\u05dc\u05ea\u05d9\u05e7\u05d5\u05df: ') + String(w.desc || '').slice(0, 60) + ' (\u05d9\u05d5\u05dd \u05e9\u05d9\u05e9\u05d9 ' + dmy(friday) + ')';
+export function decisionHtml(ok, w, friday, note, url) {
+  const p = (x, st) => '<p style="margin:0 0 10px' + (st || '') + '">' + x + '</p>';
+  return '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2937">'
+    + p('\u05e9\u05dc\u05d5\u05dd,')
+    + p((ok ? '\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d0\u05d5\u05e9\u05e8\u05d4: ' : '\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d7\u05d6\u05e8\u05d4 \u05d0\u05dc\u05d9\u05db\u05dd \u05dc\u05ea\u05d9\u05e7\u05d5\u05df: ') + '<b>' + esc(lineOf(w)) + '</b>, \u05d9\u05d5\u05dd \u05e9\u05d9\u05e9\u05d9 ' + dmy(friday) + '.')
+    + (note ? p('<b>\u05d4\u05e2\u05e8\u05d5\u05ea \u05d4\u05de\u05de\u05d5\u05e0\u05d4: </b>' + esc(note), ok ? '' : ';color:#b91c1c') : '')
+    + p(ok ? '\u05d1\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d0\u05d9 \u05e1\u05d5\u05d2\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d9\u05ea\u05e8 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8.' : '\u05de\u05ea\u05e7\u05e0\u05d9\u05dd \u05d5\u05e9\u05d5\u05dc\u05d7\u05d9\u05dd \u05e9\u05d5\u05d1 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8, \u05e2\u05d3 \u05d9\u05d5\u05dd \u05e9\u05d9\u05e9\u05d9 ' + dmy(friday) + '. \u05d0\u05d7\u05e8\u05d9 \u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea \u05d0\u05dc\u05d9\u05d9 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8.')
+    + '<p style="margin:0 0 14px"><a href="' + esc(url) + '" style="display:inline-block;background:#1e3a8a;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700">\u05dc\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea</a></p>'
+    + SITE.signature + '</div>';
+}
+async function decisionMail(env, d, act, note, nowMs, deps) {
+  const ok = act === 'approve';
+  let on = '', raw = null;
+  try { on = String(await stateGet(env, 'works_mail_on') || '').trim(); raw = await stateGet(env, 'works_mail_to'); } catch (e) { on = ''; }
+  const list = on === 'true' ? mailList(raw) : null;
+  const tok = await makeWorksToken(env, d.friday, nowMs);
+  if (!tok) throw new Error('no secret');
+  const od = await deps.accessToken(env);
+  if (!od || !od.email) throw new Error('no connected mailbox');
+  const to = list ? list.to : [od.email], cc = list ? list.cc : [];
+  await sendOut(deps, od.token, to, cc, (list ? '' : TRY_PREFIX) + DECIDE_SUBJECT(ok, d.w, d.friday), decisionHtml(ok, d.w, d.friday, note, worksUrl(tok)));
+  return { to, trial: !list };
 }
 
 // ---- the 5-minute clock (wa-morning.js watch) ----
