@@ -20,7 +20,8 @@
 // The same run writes calendar requests for upcoming expiries (calendarStep, below).
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo, SITE } from '../_shared.js';
 import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, PROMISE_KEY, promiseDue, promiseRemindText, promiseToCheck, eveningAdd, isoWeekAdd, promiseCheckDue, promiseCheckFireText, assistantFire, assistantFireNow } from '../_wa.js';
-import { odConfigured, accessToken, putFile } from '../_onedrive.js';
+import { odConfigured, accessToken, putFile, sendMailTo } from '../_onedrive.js';
+import { worksTick } from './works.js';
 import { meetingDate, checkAndFixDeck, deckGapText } from './hazard-deck.js';
 import { OCR_ROOT, OCR_INBOX, OCR_AUTO_KEY, OCR_AUTO_GAP_MS, OCR_DONE_MAX, OCR_MAX_PAGES, OCR_MODELS, ocrAutoPick, ocrOne } from '../_ocr.js';
 
@@ -476,9 +477,11 @@ export async function watch(env, now) {
   const pr = await promiseRemind(env, now).catch(() => null);
   const dv = await devRemind(env, now).catch(() => null);
   const dk = await deckWatch(env, now).catch((e) => ({ error: String(e.message || e).slice(0, 120) }));
+  // 05/11/2026: the weekly works link (works.js): Wednesday 18:00 the mail (only when works_mail_on), Thursday 12:00 the reminder
+  const wk = await worksTick(env, now, { accessToken, sendMailTo }).catch((e) => ({ error: String(e.message || e).slice(0, 120) }));
   const st = stagingDue(now) ? await stagingPing().catch((e) => ({ error: String(e.message || e).slice(0, 120) })) : null;
   const r = await watchReply(env, now);
-  return Object.assign({}, r, pr ? { promises: pr } : {}, dv ? { dev: dv } : {}, pc ? { check: pc } : {}, oc ? { ocr: oc } : {}, st ? { staging: st } : {}, dk ? { deck: dk } : {});
+  return Object.assign({}, r, pr ? { promises: pr } : {}, dv ? { dev: dv } : {}, pc ? { check: pc } : {}, oc ? { ocr: oc } : {}, st ? { staging: st } : {}, dk ? { deck: dk } : {}, wk ? { works: wk } : {});
 }
 async function watchReply(env, now) {
   const rows = await sb(env, 'notifications_log?select=ts,payload&event_type=eq.owner_in&order=ts.desc&limit=1').catch(() => []);

@@ -32,6 +32,7 @@ APPROVED_SEND = {
     'functions/api/talk.js': 4,   # signed new-worker induction form to Michael and hr-tap@ (questionnaire 10/10/2026); a guessing lock, to Michael (11/10/2026); form 08.01 of the annual / quality training to Michael and the address on it (questionnaire 14/10/2026); who did not sign, to the department managers, only on Michael's click after a preview (questionnaire 14/10/2026)
     'functions/api/trustee-gate.js': 1,  # a guessing lock on the trustee password, to Michael (11/10/2026)
     'functions/api/codes.js': 1,  # a password changed: to Michael only, never the password (10/10/2026, "maasher")
+    'functions/api/works.js': 1,  # the weekly works link to maintenance, Wednesday 18:00 (Michael in the questionnaire 05/11/2026: "the server mails it by itself"); off until he approves the text (server_state works_mail_on), company domain only
 }
 APPROVED_DELETE = {
     'functions/api/routine-db.js': 1,  # od_dedupe: a duplicate the server itself made, same hash as the file kept, to the recycle bin (25/10/2026, Michael in the questionnaire: "do it: to the recycle bin")

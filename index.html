@@ -2065,7 +2065,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
 </div>
 
 <div id="pg-ptw" class="page">
-  <div class="row"><div class="page-title">&#1492;&#1512;&#1513;&#1488;&#1514; &#1506;&#1489;&#1493;&#1491;&#1492; <span>&#1493;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</span></div><button class="btn btn-p" onclick="openModal('m-ptw')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
+  <div class="row"><div class="page-title">&#1492;&#1512;&#1513;&#1488;&#1514; &#1506;&#1489;&#1493;&#1491;&#1492; <span>&#1493;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</span></div>
+  <button class="btn btn-s" id="ptw-wk-link" onclick="_ptwWkLink()" title="&#1511;&#1497;&#1513;&#1493;&#1512; &#1513;&#1489;&#1493;&#1506;&#1497; &#1500;&#1512;&#1513;&#1497;&#1502;&#1514; &#1492;&#1506;&#1489;&#1493;&#1491;&#1493;&#1514; &#1500;&#1497;&#1493;&#1501; &#1513;&#1497;&#1513;&#1497;">&#128203; &#1511;&#1497;&#1513;&#1493;&#1512; &#1500;&#1488;&#1495;&#1494;&#1511;&#1492;</button><button class="btn btn-p" onclick="openModal('m-ptw')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div class="row" style="margin:0 0 8px;flex-wrap:wrap;gap:6px"><select id="ptw-loc-filter" onchange="ptwLocFilter(this.value)" style="padding:8px;max-width:220px"></select><select id="ptw-sv-select" onchange="svPtwApply(this.value)" style="padding:8px;max-width:180px"></select><button class="btn btn-s" onclick="svPtwSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button><button class="btn btn-s" onclick="svPtwDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:var(--c-red-700,#7f1d1d)">&#128465;&#65039;</button></div>
   <div id="ptw-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1502;&#1505;&#1508;&#1512;</th><th scope="col">&#1511;&#1489;&#1500;&#1503;</th><th scope="col">&#1505;&#1493;&#1490; &#1506;&#1489;&#1493;&#1491;&#1492;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1513;&#1506;&#1493;&#1514;</th><th scope="col">&#1502;&#1511;&#1493;&#1501;</th><th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th><th scope="col"></th></tr></thead><tbody id="tb-ptw"></tbody></table></div></div>
@@ -2816,7 +2817,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1488;&#1497;&#1513;&#1493;&#1512; &#1502;&#1502;&#1493;&#1504;&#1492;</label><input type="date" id="ptw-sg4d" data-nodefault></div>
   </div>
   <div class="fgrid" style="margin-top:10px">
-    <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="ptw-st"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1489;&#1497;&#1510;&#1493;&#1506;</option><option>&#1505;&#1490;&#1493;&#1512;</option><option>&#1502;&#1489;&#1493;&#1496;&#1500;</option></select></div>
+    <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="ptw-st"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1489;&#1497;&#1510;&#1493;&#1506;</option><option>&#1505;&#1490;&#1493;&#1512;</option><option>&#1502;&#1489;&#1493;&#1496;&#1500;</option><option>&#1502;&#1502;&#1514;&#1497;&#1503; &#1500;&#1488;&#1497;&#1513;&#1493;&#1512;</option><option>&#1504;&#1491;&#1495;&#1492;</option></select></div>
   </div>
   <div class="modal-footer">
     <button class="btn btn-s" onclick="closeModal('m-ptw')">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
@@ -3731,7 +3732,7 @@ function du(d){if(!d)return 9999;try{return Math.ceil((new Date(d)-new Date())/8
 function eb(d){
   if(!d)return '<span class="b bX" title="\u05dc\u05dc\u05d0 \u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05e4\u05d5\u05d2\u05d4 - \u05d4\u05e4\u05e8\u05d9\u05d8 \u05d0\u05d9\u05e0\u05d5 \u05e0\u05d9\u05ea\u05df \u05dc\u05de\u05e2\u05e7\u05d1">\u05d0\u05d9\u05df \u05ea\u05d0\u05e8\u05d9\u05da</span>';
   var x=du(d);if(x>60)return '<span class="b bG">'+fd(d)+'</span>';if(x>=0&&x<=30)return '<span class="b bY">'+x+'\u05d9</span>';if(x<0)return '<span class="b bR">\u05e4\u05d2</span>';return '<span class="b bG">'+fd(d)+'</span>';}
-function sb(s){var m={'\u05d1\u05ea\u05d5\u05e7\u05e3':'bG','\u05d4\u05d5\u05e9\u05dc\u05dd':'bG','\u05e1\u05d2\u05d5\u05e8':'bG','\u05e4\u05e2\u05d9\u05dc':'bG','\u05d1\u05e1\u05e7\u05d9\u05e8\u05d4':'bY','\u05d1\u05d1\u05d9\u05e6\u05d5\u05e2':'bY','\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc':'bY','\u05d1\u05d7\u05e7\u05d9\u05e8\u05d4':'bY','\u05d1\u05ea\u05d4\u05dc\u05d9\u05da':'bY','\u05d4\u05d5\u05db\u05e9\u05e8':'bG','\u05de\u05ea\u05d5\u05db\u05e0\u05df':'bB','\u05de\u05e6\u05d9\u05d9\u05ea':'bG','\u05e4\u05ea\u05d5\u05d7':'bR','\u05dc\u05d0 \u05de\u05e6\u05d9\u05d9\u05ea':'bR','\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3':'bR','\u05de\u05d1\u05d5\u05d8\u05dc':'bR','\u05dc\u05d0 \u05e4\u05e2\u05d9\u05dc':'bR'};return '<span class="b '+(m[s]||'bX')+'">'+(s?esc(s):'-')+'</span>';}
+function sb(s){var m={'\u05d1\u05ea\u05d5\u05e7\u05e3':'bG','\u05d4\u05d5\u05e9\u05dc\u05dd':'bG','\u05e1\u05d2\u05d5\u05e8':'bG','\u05e4\u05e2\u05d9\u05dc':'bG','\u05d1\u05e1\u05e7\u05d9\u05e8\u05d4':'bY','\u05d1\u05d1\u05d9\u05e6\u05d5\u05e2':'bY','\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc':'bY','\u05d1\u05d7\u05e7\u05d9\u05e8\u05d4':'bY','\u05d1\u05ea\u05d4\u05dc\u05d9\u05da':'bY','\u05d4\u05d5\u05db\u05e9\u05e8':'bG','\u05de\u05ea\u05d5\u05db\u05e0\u05df':'bB','\u05de\u05e6\u05d9\u05d9\u05ea':'bG','\u05e4\u05ea\u05d5\u05d7':'bR','\u05dc\u05d0 \u05de\u05e6\u05d9\u05d9\u05ea':'bR','\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3':'bR','\u05de\u05d1\u05d5\u05d8\u05dc':'bR','\u05dc\u05d0 \u05e4\u05e2\u05d9\u05dc':'bR','\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8':'bY','\u05e0\u05d3\u05d7\u05d4':'bR'};return '<span class="b '+(m[s]||'bX')+'">'+(s?esc(s):'-')+'</span>';}
 function toast(msg,opts){msg=String(msg==null?'':msg).replace(/&#(\d+);/g,function(m,n){return String.fromCodePoint(+n);});var t=document.createElement('div');t.className='toast'+((opts&&opts.ok)||/✓|✅/.test(msg||'')?' ok':'');t.setAttribute('role','alert');t.setAttribute('aria-live','assertive');t.setAttribute('aria-atomic','true');t.textContent=msg;document.body.appendChild(t);if(t.classList.contains('ok')&&navigator.vibrate){try{navigator.vibrate(35);}catch(e){}}setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},2500);}
 
 // High-contrast mode — outdoor factory light readability
@@ -20224,16 +20225,72 @@ function _delAllHearingGo(){
   toast('\u05e0\u05de\u05d7\u05e7 \u2713');
 }
 
+// The weekly works link (05/11/2026, works.js): maintenance fills the Friday works in a link; each work is a ptw
+// row with id wk-<friday>-<n>, status _PTW_PEND. works.js writes marked lines into safety: red flags (_PTW_CHK),
+// what is missing before approval (_PTW_GATE: the gas test of a confined space, the fire watch of hot work), notes
+// (_PTW_NOTE: attachments, lock-out). Michael copies this week's link here, approves a work (only with no
+// _PTW_GATE line) or rejects it with a reason; the supervisor closes an approved permit from the link.
+// The signed permit PDF: stage B (STATUS).
+var _PTW_PEND='\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8',_PTW_REJ='\u05e0\u05d3\u05d7\u05d4',_PTW_OK='\u05e4\u05ea\u05d5\u05d7',_PTW_CHK='[\u05dc\u05d1\u05d3\u05d9\u05e7\u05d4] ',_PTW_GATE='[\u05d7\u05e1\u05e8 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8] ',_PTW_NOTE='[\u05d4\u05e2\u05e8\u05d4] ',_PTW_REJM='[\u05e0\u05d3\u05d7\u05d4] ',_PTW_FILES='[\u05e7\u05d1\u05e6\u05d9\u05dd] ';
+function _ptwIsWk(p){return /^wk-\d{4}-\d{2}-\d{2}-\d{1,2}$/.test(String(p&&p.id||''));}
+function _ptwWkLine(p,mark){var l=String(p&&p.safety||'').split('\n').filter(function(x){return x.indexOf(mark)===0;})[0];return l?l.slice(mark.length):'';}
+function _ptwApi(body){
+  return fetch('/api/works',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify(body)})
+  .then(function(res){return res.json().then(function(j){return {ok:res.ok,j:j};},function(){return {ok:false,j:null};});});
+}
+function _ptwWkLink(){
+  if(_viewOnly()){_viewBlock();return;}
+  toast('\u05de\u05db\u05d9\u05df \u05e7\u05d9\u05e9\u05d5\u05e8...');
+  _ptwApi({op:'link'}).then(function(x){
+    if(!x.ok||!x.j||!x.j.url){toast('\u26a0\ufe0f \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8'+(x.j&&x.j.error?': '+x.j.error:''));return;}
+    var txt='\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05dc\u05d9\u05d5\u05dd \u05e9\u05d9\u05e9\u05d9 '+fd(x.j.friday)+', \u05dc\u05de\u05d9\u05dc\u05d5\u05d9 \u05d5\u05dc\u05e9\u05dc\u05d9\u05d7\u05d4 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8:\n'+x.j.url;
+    var ok=function(){toast('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05d5\u05e2\u05ea\u05e7. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05d3\u05d1\u05d9\u05e7 \u05d1\u05de\u05d9\u05d9\u05dc \u05d0\u05d5 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u2713',{ok:true});};
+    var manual=function(){var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');ok();}catch(e){toast(x.j.url);}document.body.removeChild(ta);};
+    try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(ok,manual);return;}}catch(e){}
+    manual();
+  }).catch(function(){toast('\u26a0\ufe0f \u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05e9\u05e8\u05ea');});
+}
+// Approve: never while works.js wrote what is missing (the gas test, the fire watch); the link then offers closing.
+function _ptwWkApprove(id){
+  if(_viewOnly()){_viewBlock();return;}
+  var r=(DB.ptw||[]).filter(function(x){return x.id===id;})[0];if(!r||r.s!==_PTW_PEND)return;
+  var gate=_ptwWkLine(r,_PTW_GATE);
+  if(gate){toast('\u05d0\u05d9 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d0\u05e9\u05e8 \u05e2\u05d3\u05d9\u05d9\u05df: '+gate);return;}
+  if(!confirm('\u05dc\u05d0\u05e9\u05e8 \u05d0\u05ea \u05ea\u05d7\u05d9\u05dc\u05ea \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4?\n'+String(r.desc||'').slice(0,120)))return;
+  r.s=_PTW_OK;sbUpd('ptw',{id:r.id,s:r.s});sdb();rPtw();
+  toast('\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d0\u05d5\u05e9\u05e8\u05d4. \u05d4\u05d0\u05d7\u05e8\u05d0\u05d9 \u05e1\u05d5\u05d2\u05e8 \u05d0\u05d5\u05ea\u05d4 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05e1\u05d9\u05d5\u05dd \u2713',{ok:true});
+}
+function _ptwWkReject(id){
+  if(_viewOnly()){_viewBlock();return;}
+  var r=(DB.ptw||[]).filter(function(x){return x.id===id;})[0];if(!r)return;
+  var why=prompt('\u05e1\u05d9\u05d1\u05ea \u05d4\u05d3\u05d7\u05d9\u05d9\u05d4 (\u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d9\u05e8\u05d0\u05d5 \u05d0\u05d5\u05ea\u05d4 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d9\u05d5\u05db\u05dc\u05d5 \u05dc\u05ea\u05e7\u05df):');if(why===null)return;
+  why=String(why).replace(/\s+/g,' ').trim().slice(0,200);if(!why){toast('\u05e6\u05e8\u05d9\u05da \u05dc\u05db\u05ea\u05d5\u05d1 \u05e1\u05d9\u05d1\u05d4');return;}
+  var rest=String(r.safety||'').split('\n').filter(function(x){return x&&x.indexOf(_PTW_REJM)!==0;});
+  r.s=_PTW_REJ;r.safety=[_PTW_REJM+why].concat(rest).join('\n');
+  sbUpd('ptw',{id:r.id,s:r.s,safety:r.safety});sdb();rPtw();
+  toast('\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e0\u05d3\u05d7\u05ea\u05d4. \u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d9\u05e8\u05d0\u05d5 \u05d0\u05ea \u05d4\u05e1\u05d9\u05d1\u05d4 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u2713',{ok:true});
+}
+// The attachments of a work (certificates, inspection reports, insurance): links that open for an hour.
+function _ptwWkFiles(id){
+  var box=g('ptw-wk-files');if(!box)return;box.textContent='\u05d8\u05d5\u05e2\u05df...';
+  _ptwApi({op:'files',id:id}).then(function(x){
+    if(!x.ok||!x.j){box.textContent='\u26a0\ufe0f \u05d4\u05e7\u05d1\u05e6\u05d9\u05dd \u05dc\u05d0 \u05e0\u05d8\u05e2\u05e0\u05d5';return;}
+    var f=x.j.files||[];
+    if(!f.length){box.textContent='\u05dc\u05d0 \u05e6\u05d5\u05e8\u05e4\u05d5 \u05e7\u05d1\u05e6\u05d9\u05dd';return;}
+    box.innerHTML=f.map(function(e,i){return e.url&&/^https:\/\//.test(e.url)?'<div><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer">'+esc((i+1)+'. '+e.kind+' ('+String(e.type||'').toUpperCase()+')')+'</a></div>':'<div>'+esc((i+1)+'. '+e.kind)+'</div>';}).join('');
+  }).catch(function(){box.textContent='\u26a0\ufe0f \u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05e9\u05e8\u05ea';});
+}
 function rPtwView(id){
   var p=DB.ptw.find(function(x){return x.id===id;});
   if(!p){goPage('ptw');return;}
   var el=g('ptw-view-num');
   if(el)el.textContent=p.num||'PTW';
-  function row(l,v){return '<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--c-gray-50-4,#f0f0f0)"><span style="color:var(--c-gray-450,#888);min-width:90px;flex-shrink:0">'+l+'</span><strong>'+v+'</strong></div>';}
+  function row(l,v){return '<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--c-gray-50-4,#f0f0f0)"><span style="color:var(--c-gray-450,#888);min-width:90px;flex-shrink:0">'+l+'</span><strong style="white-space:pre-line">'+esc(v)+'</strong></div>';}
   var html='';
   html+=row('\u05de\u05e1\'',p.num||'-');
   html+=row('\u05e7\u05d1\u05dc\u05df',p.con||'-');
-  html+=row('\u05ea\u05d0\u05e8\u05d9\u05da',(p.ds||'-')+' \u05e2\u05d3 '+(p.de||'-'));
+  html+=row('\u05ea\u05d0\u05e8\u05d9\u05da',fd(p.ds)+' \u05e2\u05d3 '+fd(p.de));
+  html+=row('\u05e1\u05d8\u05d8\u05d5\u05e1',p.s||'-');
   html+=row('\u05e9\u05e2\u05d5\u05ea',(p.ts||'-')+' - '+(p.te||'-'));
   html+=row('\u05d0\u05d6\u05d5\u05e8',(p.area||'-')+'/'+(p.dep||'-'));
   html+=row('\u05d0\u05d7\u05e8\u05d0\u05d9',p.sup||'-');
@@ -20247,6 +20304,7 @@ function rPtwView(id){
   html+=row('\u05de\u05e4\u05e7\u05d7',(p.sg2n||'-')+' ('+fd(p.sg2d)+')');
   html+=row('\u05de\u05e0\u05d4\u05dc',(p.sg3n||'-')+' ('+fd(p.sg3d)+')');
   html+=row('\u05de\u05de\u05d5\u05e0\u05d4',(p.sg4n||'-')+' ('+fd(p.sg4d)+')');
+  if(_ptwIsWk(p))html+='<div style="margin-top:12px"><button class="btn btn-s btn-sm" data-fid="'+esc(p.id)+'" onclick="_ptwWkFiles(this.dataset.fid)">&#128206; \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05e6\u05d5\u05e8\u05e4\u05d9\u05dd</button><div id="ptw-wk-files" style="font-size:13px;line-height:1.8"></div></div>';
   var card=g('ptw-view-card');
   if(card)card.innerHTML=html;
 }
@@ -20261,10 +20319,12 @@ function rPtw(){
       var todayP=new Date().toISOString().split('T')[0];
       var openP=allP.filter(function(r){return r.s==='\u05e4\u05ea\u05d5\u05d7'||r.s==='\u05d1\u05ea\u05d5\u05e7\u05e3';}).length;
       var todayP2=allP.filter(function(r){return r.ds===todayP;}).length;
+      var pendP=allP.filter(function(r){return r.s===_PTW_PEND;}).length;
       pSe.innerHTML=
         '<span style="background:var(--c-white,#fff);border:1px solid var(--c-gray-150,#ddd);border-radius:14px;padding:3px 10px">\u05e1\u05d4\u05f4\u05db: <strong>'+allP.length+'</strong></span>'+
         (openP?'<span style="background:var(--c-green-50-2,#dcfce7);border:1px solid var(--c-green-650,#16a34a);border-radius:14px;padding:3px 10px;color:var(--c-green-700,#15803d)">\u05e4\u05e2\u05d9\u05dc\u05d9\u05dd: <strong>'+openP+'</strong></span>':'')+
-        (todayP2?'<span style="background:var(--c-amber-100-2,#fef3c7);border:1px solid var(--c-orange-650,#b45309);border-radius:14px;padding:3px 10px;color:var(--c-orange-700,#92400e)">\u05d4\u05d9\u05d5\u05dd: <strong>'+todayP2+'</strong></span>':'');
+        (todayP2?'<span style="background:var(--c-amber-100-2,#fef3c7);border:1px solid var(--c-orange-650,#b45309);border-radius:14px;padding:3px 10px;color:var(--c-orange-700,#92400e)">\u05d4\u05d9\u05d5\u05dd: <strong>'+todayP2+'</strong></span>':'')+
+        (pendP?'<span style="background:var(--c-amber-100-2,#fef3c7);border:1px solid var(--c-orange-650,#b45309);border-radius:14px;padding:3px 10px;color:var(--c-orange-700,#92400e)">'+_PTW_PEND+': <strong>'+pendP+'</strong></span>':'');
     }
   }catch(e){}
   var locF=window._ptwLocFilter||'';
@@ -20272,13 +20332,21 @@ function rPtw(){
   if(locSel&&typeof _locFilterOptionsHtml==='function'){locSel.innerHTML=_locFilterOptionsHtml(locF);}
   var rows=(DB.ptw||[]).slice();
   if(locF)rows=rows.filter(function(r){return r.location_id===locF;});
+  // works waiting for approval first (05/11/2026, the weekly link), the rest in their order
+  rows=rows.filter(function(r){return r.s===_PTW_PEND;}).concat(rows.filter(function(r){return r.s!==_PTW_PEND;}));
   if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label="">\ud83d\udd12<br>\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea<br><button class="et-cta" onclick="openModal(\'m-ptw\')">+ \u05d4\u05e8\u05e9\u05d0\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
   tb.innerHTML=rows.map(function(p){
     var vid=esc(p.id);
     var vbtn='<button class="btn btn-sm" style="background:var(--c-blue-350,#4d9fff);color:var(--c-white,#fff);border:none;padding:3px 8px;border-radius:4px;cursor:pointer" data-vid="'+vid+'" onclick="rPtwView(this.dataset.vid);goPage(\x27ptw-view\x27)">&#128065;&#65039;</button>';
     var dbtn='<button class="btn btn-d btn-sm" data-did="'+vid+'" onclick="delById(\x27ptw\x27,this.dataset.did)">&#128465;&#65039;</button>';
     var areaTxt=(p.location_id&&typeof _locName==='function'?_locName(p.location_id):'')||p.area||'';
-    return '<tr><td><span class="b bX">'+(p.num||'')+'</span></td><td><strong>'+(p.con||'')+'</strong></td><td style="font-size:11px">'+(p.types||'').substring(0,25)+'</td><td>'+fd(p.ds)+'</td><td style="font-size:11px">'+(p.ts||'')+'-'+(p.te||'')+'</td><td>'+esc(areaTxt)+'</td><td>'+sb(p.s)+'</td><td>'+vbtn+'</td><td>'+dbtn+'</td></tr>';
+    // 05/11/2026: a work from the weekly link (text typed outside the app, so every field is escaped): its red
+    // flags under the contractor, and "reject with a reason" while it waits for approval.
+    var wk=_ptwIsWk(p),flg=wk?_ptwWkLine(p,_PTW_CHK):'',rej=wk?_ptwWkLine(p,_PTW_REJM):'';
+    var gate=wk?_ptwWkLine(p,_PTW_GATE):'',note=wk?_ptwWkLine(p,_PTW_NOTE):'';
+    var wkInfo=(flg?'<div style="color:var(--bad);font-size:11px;white-space:normal">\u26a0\ufe0f '+esc(flg)+'</div>':'')+(gate?'<div style="color:var(--bad);font-size:11px;white-space:normal">\u26d4 '+esc(gate)+'</div>':'')+(note?'<div style="color:var(--c-orange-700,#92400e);font-size:11px;white-space:normal">'+esc(note)+'</div>':'')+(rej?'<div style="color:var(--bad);font-size:11px;white-space:normal">'+esc(_PTW_REJ+': '+rej)+'</div>':'');
+    var rjbtn=wk&&p.s===_PTW_PEND?' <button class="btn btn-sm" style="background:var(--c-green-650,#16a34a);color:var(--c-white,#fff)" data-aid="'+vid+'" onclick="_ptwWkApprove(this.dataset.aid)" title="\u05d0\u05d9\u05e9\u05d5\u05e8">&#10004;</button> <button class="btn btn-d btn-sm" data-rid="'+vid+'" onclick="_ptwWkReject(this.dataset.rid)" title="'+_PTW_REJ+'">&#10006;</button>':'';
+    return '<tr><td><span class="b bX">'+esc(p.num||'')+'</span></td><td><strong>'+esc(p.con||'')+'</strong>'+wkInfo+'</td><td style="font-size:11px">'+esc((p.types||'').substring(0,25))+'</td><td>'+fd(p.ds)+'</td><td style="font-size:11px">'+esc(p.ts||'')+'-'+esc(p.te||'')+'</td><td>'+esc(areaTxt)+'</td><td>'+sb(p.s)+'</td><td>'+vbtn+rjbtn+'</td><td>'+dbtn+'</td></tr>';
   }).join('');
 }
 function rPpe(){
