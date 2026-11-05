@@ -156,3 +156,23 @@ export function findSignSpot(doc) {
   }
   return null;
 }
+
+// A marker the server itself put in a document it had rendered (functions/_permit.js, 05/11/2026): where it starts, on
+// the first page that shows it. It may come as one string or split over several shows of one line; both orders are
+// searched. { page (1-based), x, y, size } in points from the bottom left; or null (the caller then uses a fixed spot).
+export function findTextSpot(doc, needle) {
+  const pages = doc.getPages();
+  for (let p = 0; p < pages.length; p++) {
+    const texts = pageTexts(contentOf(pages[p]), fontsOf(pages[p]));
+    let joined = ''; const at = [];
+    texts.forEach((t) => { at.push(joined.length); joined += t.text; });
+    for (const nd of [needle, rev(needle)]) {
+      const i = joined.indexOf(nd);
+      if (i < 0) continue;
+      let k = 0; while (k + 1 < at.length && at[k + 1] <= i) k++;
+      const t = texts[k];
+      return { page: p + 1, x: t.x + (i - at[k]) * t.size * 0.55, y: t.y, size: t.size };
+    }
+  }
+  return null;
+}

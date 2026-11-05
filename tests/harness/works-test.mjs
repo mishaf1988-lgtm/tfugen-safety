@@ -5,7 +5,12 @@
 // The 5-minute clock: Wednesday 18:00 the mail (only when works_mail_on), Thursday 12:00 the reminder, Sunday 08:00
 // permits not closed. Mocked network, nothing leaves.
 import { onRequest, makeWorksToken, readWorksToken, fridayOf, CATS, S_PEND, S_CANCEL, S_REJ, S_CLOSED, EMP_LABEL, CHECK_MARK, GATE_MARK, NOTE_LINE, REJ_MARK, kindsIn, ctrKey, ctrIssue,
-  parseSafety, buildSafety, assess, GAS_LIMITS, worksTick, worksTryMail, worksApproveMail, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck, mailDeps, makeOkToken, readOkToken, OK_PREFIX, S_OK, APPROVE_SUBJECT, OKN_MARK, DECIDE_SUBJECT } from './_build/works.mjs';
+  parseSafety, buildSafety, assess, GAS_LIMITS, worksTick, worksTryMail, worksApproveMail, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck, mailDeps, makeOkToken, readOkToken, OK_PREFIX, S_OK, APPROVE_SUBJECT, OKN_MARK, DECIDE_SUBJECT,
+  PERMIT_MARK, PERMIT_ERR, PERMIT_TO, PERMIT_SUBJECT, permitHtml, worksPermit } from './_build/works.mjs';
+import { readFileSync } from 'fs';
+import { readZip, entryText } from './_build/_xlsxpatch.mjs';
+import { PDFDocument, PDFName, StandardFonts } from './_build/_pdflib.mjs';
+import { SIGN_MARK, FILED_DIR, OD_SAFETY } from './_build/_permit.mjs';
 import { makeLinkToken } from './_build/_closelink.mjs';
 import { run as morningRun } from './_build/wa-morning.mjs';
 import { SITE } from './_build/_site.mjs';
@@ -445,6 +450,122 @@ console.log('\n14. the approval mail again, for works still pending (05/11/2026)
   Object.values(db.ptw).forEach((x) => { if (x.s === S_PEND) x.s = S_OK; });
   const r2 = await worksApproveMail(ENV, THU12, dm);
   check('nothing pending: no mail', r2.ok && r2.n === 0 && db.mails.length === 1, r2); }
+console.log('\n15. the signed permit (stage B, 05/11/2026): approve -> filled, rendered, signed, filed, mailed');
+{
+  NOW = Date.parse('2026-11-05T08:00:00Z');
+  resetDb();
+  const GR = 'https://graph.microsoft.com/v1.0/me/drive/';
+  const g = { files: {}, ids: {}, folders: {}, mk: [], puts: [], noTemplate: false, n: 0 };
+  g.folders[OD_SAFETY + FILED_DIR] = 'fid';
+  const fx = (n) => new Uint8Array(readFileSync(new URL('../fixtures/permit/' + n + '.docx', import.meta.url)));
+  const TPL = { 'הרשאת עבודה - תבנית לקבלנים': fx('ctr-work'), 'הרשאת בטיחות - תבנית לקבלנים': fx('ctr-safety'), 'הרשאת עבודה - תבנית לעובדי אחזקה': fx('emp-work'), 'הרשאת בטיחות - תבנית לעובדי אחזקה': fx('emp-safety') };
+  const SIG = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAoAAAAECAIAAADAusJtAAAAFklEQVR4nGP4z8DwnwEJMMEZVBMBAD3wA/0HPNdUAAAAAElFTkSuQmCC', 'base64'));
+  // Microsoft's rendering, mocked: the work permit 1 page, the safety permit 2 with the marker on its page 2
+  const render = async (name) => {
+    const d = await PDFDocument.create(); const f = await d.embedFont(StandardFonts.Helvetica);
+    const n = /הרשאת בטיחות/.test(name) ? 2 : 1;
+    for (let i = 1; i <= n; i++) { const pg = d.addPage([595, 842]); pg.drawText('p' + i, { x: 40, y: 800, size: 10, font: f }); if (n === 2 && i === 2) pg.drawText(SIGN_MARK, { x: 300, y: 340, size: 8, font: f }); }
+    return d.save();
+  };
+  const base = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    const u = String(url), m = (init && init.method) || 'GET';
+    const json = (o, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { 'Content-Type': 'application/json' } });
+    if (u === SB + '/storage/v1/object/backups/owner-signature/sig.png') return new Response(SIG, { status: 200 });
+    if (!u.startsWith(GR)) return base(url, init);
+    if (u.startsWith(GR + 'items/')) {
+      if (/\/children$/.test(u) && m === 'POST') { const b = JSON.parse(init.body); g.mk.push(b); g.folders[g.mkParent + '/' + b.name] = 'mid'; return json({ id: 'mid', name: b.name, folder: {} }, 201); }
+      const id = decodeURIComponent(/items\/([^/]+)\/content\?format=pdf/.exec(u)[1]);
+      return new Response(await render(g.ids[id]), { status: 200 });
+    }
+    const path = decodeURIComponent(u.slice((GR + 'root:/').length).replace(/(:\/content)?(\?.*)?$/, ''));
+    if (/:\/content/.test(u) && m === 'GET') {
+      const k = Object.keys(TPL).find((x) => path.endsWith(x + '.docx'));
+      return k && !g.noTemplate ? new Response(TPL[k], { status: 200 }) : json({ error: { code: 'itemNotFound' } }, 404);
+    }
+    if (/:\/content/.test(u) && m === 'PUT') {
+      if (!/conflictBehavior=rename/.test(u)) return json({ error: 'replace' }, 400);
+      let p2 = path; while (g.files[p2]) p2 = p2.replace(/(\.\w+)$/, ' 1$1');
+      const id = 'f' + (++g.n); g.files[p2] = new Uint8Array(init.body); g.ids[id] = p2; g.puts.push(p2);
+      return json({ id, name: p2.split('/').pop(), webUrl: 'https://od/' + id }, 201);
+    }
+    if (/\?select=id,folder/.test(u)) {
+      if (g.folders[path]) return json({ id: g.folders[path], folder: { childCount: 0 } });
+      g.mkParent = path.split('/').slice(0, -1).join('/');
+      return json({ error: { code: 'itemNotFound' } }, 404);
+    }
+    return json({ error: 'unexpected ' + u }, 599);
+  };
+  mailDeps.sendMailTo = async (t, to, cc, subj, html, att) => { db.mails.push({ to, cc, subj, html, att: att || [] }); return true; };
+  const ID = 'wk-2026-11-06-1', MONTH = OD_SAFETY + FILED_DIR + '/2026-11';
+  const hotSt = { blocks: ['hot'], chk: { hot: { items: [0, 1, 6], fw: 'יוסי' } }, files: 0, flags: [], gate: [], notes: [] };
+  const row = (id, o) => Object.assign({ id, num: 'WK-0611-1', con: 'ט"ס פרויקטים', sup: 'נועם', ph: '050-1234567', wkr: 'אבי, משה', area: 'חדר אנרגיה', dep: '', ds: FRI, de: FRI, ts: '07:00', te: '15:00',
+    types: 'עבודות חמות', safety: buildSafety(hotSt), desc: 'החלפת מלכודת קיטור, ריתוך', s: S_PEND, ver: '2026-11-05T06:00:00Z' }, o || {});
+  db.ptw[ID] = row(ID);
+  const decide = async (id, act) => { const t = await makeOkToken(ENV, id, NOW); const body = new URLSearchParams({ op: 'decide', a: t, act, why: '', v: db.ptw[id].ver }).toString(); const r = await onRequest({ request: new Request(URL0, { method: 'POST', body, headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }), env: ENV }); return { st: r.status, h: await r.text() }; };
+  let r = await decide(ID, 'approve');
+  check('approved; the page says the signed permit was filed and mailed', r.st === 200 && db.ptw[ID].s === S_OK && r.h.includes('ההרשאה החתומה תויקה ונשלחה במייל'), r.h.slice(-400));
+  const base0 = MONTH + '/2026-11-06 - הרשאה WK-0611-1 - החלפת מלכודת קיטור, ריתוך';
+  check('the month folder was made (conflictBehavior=fail) under the filing folder', g.mk.length === 1 && g.mk[0].name === '2026-11' && g.mk[0]['@microsoft.graph.conflictBehavior'] === 'fail', g.mk);
+  check('filed: the two Word files and the PDF, by name, never replacing', g.puts.join('|') === [base0 + ' - הרשאת עבודה.docx', base0 + ' - הרשאת בטיחות.docx', base0 + '.pdf'].join('|'), g.puts);
+  const sx = await entryText(readZip(g.files[base0 + ' - הרשאת בטיחות.docx']).find((e) => e.name === 'word/document.xml'));
+  check('the contractors\' safety template, filled: number, the safety officer, the marker', sx.includes('WK-0611-1') && sx.includes(SITE.owner) && sx.includes('05/11/2026') && sx.includes(SIGN_MARK));
+  const pdf = await PDFDocument.load(g.files[base0 + '.pdf']);
+  const xo = (i) => { const res = pdf.getPage(i).node.Resources(); const d = res && res.lookup(PDFName.of('XObject')); return d ? d.entries().length : 0; };
+  check('the PDF: work 1 page + safety 2, signed on the safety form\'s page 2 only', pdf.getPageCount() === 3 && xo(2) >= 2 && xo(0) === 0 && xo(1) === 0, [pdf.getPageCount(), xo(0), xo(1), xo(2)]);
+  const st = parseSafety(db.ptw[ID].safety);
+  check('the row: the filed path on its own line, the measures kept', st.permit === FILED_DIR + '/2026-11/2026-11-06 - הרשאה WK-0611-1 - החלפת מלכודת קיטור, ריתוך.pdf' && st.chk.hot.fw === 'יוסי' && db.ptw[ID].safety.split('\n').filter((x) => x.indexOf(PERMIT_MARK) === 0).length === 1, db.ptw[ID].safety);
+  const pm = db.mails.filter((x) => x.att.length);
+  check('the weekly mail off: one permit mail, to Michael only, a trial, the PDF attached', pm.length === 1 && pm[0].to.join() === 'owner@tapugan.co.il' && !pm[0].cc.length && pm[0].subj === TRY_PREFIX + PERMIT_SUBJECT({ desc: 'החלפת מלכודת קיטור, ריתוך' }, FRI, false)
+    && pm[0].att[0]['@odata.type'] === '#microsoft.graph.fileAttachment' && /\.pdf$/.test(pm[0].att[0].name) && pm[0].att[0].contentBytes.indexOf('JVBER') === 0, pm.map((x) => [x.subj, x.to, x.att.length]));
+  check('the permit mail: right-to-left, Michael\'s signature, keyboard characters only', /^<div dir="rtl" style="direction:rtl;/.test(pm[0].html) && pm[0].html.includes(SITE.signature) && !/[–—־«»“”…]/.test(pm[0].html.replace(SITE.signature, '')));
+  check('no error recorded', !(PERMIT_ERR in db.state), db.state[PERMIT_ERR]);
+
+  // the weekly mail on and works_permit_to set: maintenance, Michael in copy; an address outside the company dropped
+  db.state.works_mail_on = 'true'; db.state[PERMIT_TO] = JSON.stringify({ to: ['alina@tapugan.co.il', 'x@gmail.com'], cc: ['boss@tapugan.co.il'] });
+  db.mails = [];
+  const again = await worksPermit(ENV, ID, false, mailDeps);
+  check('again (routine-db works_permit): a NEW file " 1", the row line replaced, not added', again.ok && g.puts[g.puts.length - 1] === base0 + ' 1.pdf' && parseSafety(db.ptw[ID].safety).permit.endsWith(' 1.pdf') && db.ptw[ID].safety.split('\n').filter((x) => x.indexOf(PERMIT_MARK) === 0).length === 1, again);
+  check('to maintenance, copy to the boss and Michael, not a trial, outside addresses dropped', db.mails.length === 1 && db.mails[0].to.join() === 'alina@tapugan.co.il' && db.mails[0].cc.join() === 'boss@tapugan.co.il,owner@tapugan.co.il' && db.mails[0].subj.indexOf(TRY_PREFIX) < 0, db.mails[0] && [db.mails[0].to, db.mails[0].cc, db.mails[0].subj]);
+  db.state[PERMIT_TO] = JSON.stringify({ to: ['x@gmail.com'] }); db.mails = [];
+  await worksPermit(ENV, ID, false, mailDeps);
+  check('works_permit_to with no company address: Michael only, a trial', db.mails[0].to.join() === 'owner@tapugan.co.il' && db.mails[0].subj.indexOf(TRY_PREFIX) === 0);
+  db.ptw['wk-2026-11-06-5'] = row('wk-2026-11-06-5');
+  check('the op refuses: a missing work, a bad id, a pending one', (await worksPermit(ENV, 'wk-2026-11-06-9', false, mailDeps)).error === 'missing' && (await worksPermit(ENV, '../x', false, mailDeps)).error === 'bad id'
+    && (await worksPermit(ENV, 'wk-2026-11-06-5', false, mailDeps)).error === 'status: ' + S_PEND);
+  check('the closed version only of a closed row', (await worksPermit(ENV, ID, true, mailDeps)).error === 'status: ' + S_OK);
+  delete db.ptw['wk-2026-11-06-5'];
+
+  // closing from the link: the closed version, to Michael only
+  db.state.works_mail_on = 'false'; db.mails = []; const nput = g.puts.length;
+  const c = await post([['k', tok], ['op', 'close'], ['n', '1'], ['done', '1'], ['end', '14:30'], ['c30', '15:00'], ['by', 'נועם']], { noWeek: true });
+  check('closed; the page as before', c.st === 200 && db.ptw[ID].s === S_CLOSED, c.st);
+  const cpdf = g.puts.slice(nput).find((x) => /\.pdf$/.test(x)) || '';
+  check('the closed version filed beside: " - סגורה"', cpdf === MONTH + '/2026-11-06 - הרשאה WK-0611-1 - החלפת מלכודת קיטור, ריתוך - סגורה.pdf', g.puts.slice(nput));
+  const cwn = g.puts.slice(nput).find((x) => /הרשאת עבודה\.docx$/.test(x));
+  const cw = cwn ? await entryText(readZip(g.files[cwn]).find((e) => e.name === 'word/document.xml')) : '';
+  check('...with the end time and who closed', cw.includes('14:30') && cw.includes('נועם'));
+  check('...to Michael only, not a trial, attached', db.mails.length === 1 && db.mails[0].to.join() === 'owner@tapugan.co.il' && !db.mails[0].cc.length && db.mails[0].subj.indexOf('הרשאה סגורה: ') === 0 && db.mails[0].att.length === 1, db.mails.map((x) => x.subj));
+  const cst = parseSafety(db.ptw[ID].safety);
+  check('the row keeps both lines: the approved and the closed', cst.permit.endsWith('.pdf') && cst.permitc.endsWith(' - סגורה.pdf') && cst.chk.close.end === '14:30', db.ptw[ID].safety);
+
+  // a failure never undoes the approval
+  const ID2 = 'wk-2026-11-06-2'; db.ptw[ID2] = row(ID2); g.noTemplate = true; db.mails = [];
+  r = await decide(ID2, 'approve');
+  const err = JSON.parse(db.state[PERMIT_ERR] || '{}');
+  check('a template missing: still approved, the page says so in red, the error kept', r.st === 200 && db.ptw[ID2].s === S_OK && r.h.includes('ההרשאה החתומה לא נוצרה') && err.id === ID2 && /template missing/.test(err.error), [r.st, err]);
+  check('...and maintenance still got the decision mail', db.mails.length === 1 && db.mails[0].subj.indexOf('אושרה: ') >= 0, db.mails.map((x) => x.subj));
+  g.noTemplate = false;
+
+  // the factory's workers: their own templates, the approval line at the bottom
+  const ID3 = 'wk-2026-11-06-3'; db.ptw[ID3] = row(ID3, { con: EMP_LABEL, num: 'WK-0611-3' }); delete db.state[PERMIT_ERR];
+  r = await decide(ID3, 'approve');
+  const ex = Object.keys(g.files).find((x) => /WK-0611-3 .* - הרשאת בטיחות\.docx$/.test(x));
+  const exx = ex ? await entryText(readZip(g.files[ex]).find((e) => e.name === 'word/document.xml')) : '';
+  check('maintenance workers: their templates, the line "approved by the safety officer" with the marker', !!ex && exx.includes('אושר על ידי ממונה הבטיחות, ' + SITE.owner) && exx.includes(SIGN_MARK) && !(PERMIT_ERR in db.state), [ex, db.state[PERMIT_ERR]]);
+  check('a big PDF: the mail carries the link, not the file', permitHtml({ desc: 'x', cats: [] }, FRI, false, 'a.pdf', 'https://od/x', false).includes('href="https://od/x"') && !permitHtml({ desc: 'x', cats: [] }, FRI, false, 'a.pdf', 'https://od/x', true).includes('https://od/x'));
+  globalThis.fetch = base;
+}
 Date.now = realNow;
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

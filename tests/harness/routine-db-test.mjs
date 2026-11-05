@@ -1325,6 +1325,14 @@ const callIn = async (body) => {
     delete state[QUOTA_KEY];
   }
 
+  console.log('\nworks_permit (05/11/2026): the signed permit of one approved work again');
+  {
+    const bad = await Promise.all([{ op: 'works_permit', agent: 'a-b', id: '../x' }, { op: 'works_permit', agent: 'a-b', id: 'wk-2026-11-06-1', to: 'x@y' },
+      { op: 'works_permit', agent: 'a-b', id: 'wk-2026-11-06-1', closed: 'yes' }, { op: 'works_permit', agent: 'a-b' }].map((b) => call(b)));
+    check('works_permit: a bad id, an extra field (no recipients from the caller), a closed that is not true/false = 400', bad.every((x) => x.status === 400 && x.json.ok === false), bad.map((x) => x.json));
+    check('works_permit_err is readable by state_get', STATE_READ.indexOf('works_permit_err') >= 0);
+  }
+
   console.log('\n4e5. tour_close_ask (26/10/2026, Michael: "do it: only after my do-it")');
   {
     rows.tour_hazards = [{ id: 'th-12', n: 12, descr: 'נקודות צביטה חשופות', loc: 'מסוע אריזה', s: 'פתוח' }, { id: 'th-3', n: 3, descr: 'x', s: 'סגור' }];
