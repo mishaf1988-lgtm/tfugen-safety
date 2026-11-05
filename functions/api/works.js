@@ -788,7 +788,7 @@ export function approvalHtml(friday, items, again) {
     return '<div style="border:1px solid #d1d5db;border-radius:8px;padding:10px 12px;margin:0 0 10px">'
       + p('<b>' + esc(w.n + '. ' + lineOf(w)) + '</b>') + (kinds ? p(esc(kinds), ';color:#374151') : '')
       + red.map((x) => p(esc(x), ';color:#b91c1c;font-weight:700')).join('') + yel.map((x) => p(esc(x), ';color:#92400e')).join('')
-      + (w.st.gate.length ? p('\u05d7\u05e1\u05e8 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8: \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d3\u05d7\u05d5\u05ea \u05d0\u05d5 \u05dc\u05d7\u05db\u05d5\u05ea \u05e9\u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d9\u05e9\u05dc\u05d9\u05de\u05d5.', ';color:#b91c1c') : '')
+      + (w.st.gate.length ? p('\u05d7\u05e1\u05e8 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8: \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05d4\u05e2\u05e8\u05d5\u05ea \u05d0\u05d5 \u05dc\u05d7\u05db\u05d5\u05ea \u05e9\u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d9\u05e9\u05dc\u05d9\u05de\u05d5.', ';color:#b91c1c') : '')
       + '<a href="' + esc(it.url) + '" style="display:inline-block;background:#15803d;color:#fff;padding:8px 16px;border-radius:8px;text-decoration:none;font-weight:700">\u05dc\u05d0\u05d9\u05e9\u05d5\u05e8 \u05d0\u05d5 \u05dc\u05d3\u05d7\u05d9\u05d9\u05d4</a></div>';
   };
   return '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2937">'
@@ -831,8 +831,8 @@ async function showDecide(env, tok, nowMs) {
   const gate = d.w.st.gate.length;
   const form = d.row.s !== S_PEND ? '' : '<form method="post" action="/api/works"><input type="hidden" name="op" value="decide"><input type="hidden" name="a" value="' + esc(tok) + '"><input type="hidden" name="v" value="' + esc(d.row.ver || '') + '">'
     + (gate ? '' : '<p><button type="submit" name="act" value="approve" style="background:#15803d;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:16px;font-weight:700">\u05de\u05d0\u05e9\u05e8 \u05d0\u05ea \u05ea\u05d7\u05d9\u05dc\u05ea \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4</button></p>')
-    + '<p><label>\u05e1\u05d9\u05d1\u05ea \u05d3\u05d7\u05d9\u05d9\u05d4 (\u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d9\u05e8\u05d0\u05d5 \u05d0\u05d5\u05ea\u05d4 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d9\u05d5\u05db\u05dc\u05d5 \u05dc\u05ea\u05e7\u05df):<br><textarea name="why" maxlength="200" rows="3" style="width:100%"></textarea></label></p>'
-    + '<p><button type="submit" name="act" value="reject" style="background:#b91c1c;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:16px">\u05d3\u05d5\u05d7\u05d4</button></p></form>';
+    + '<p><label>\u05d4\u05d4\u05e2\u05e8\u05d5\u05ea \u05e9\u05dc\u05da \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4 (\u05d4\u05df \u05d9\u05d5\u05e4\u05d9\u05e2\u05d5 \u05dc\u05d4\u05dd \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8, \u05d5\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea \u05d0\u05dc\u05d9\u05d4\u05dd \u05dc\u05ea\u05d9\u05e7\u05d5\u05df):<br><textarea name="why" maxlength="200" rows="3" style="width:100%"></textarea></label></p>'
+    + '<p><button type="submit" name="act" value="reject" style="background:#b91c1c;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:16px">\u05e9\u05d5\u05dc\u05d7 \u05d4\u05e2\u05e8\u05d5\u05ea \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4</button></p></form>';
   return page('\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4', decideSummary(d) + state + (gate && d.row.s === S_PEND ? '<p class="red">\u05d0\u05d9 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d0\u05e9\u05e8 \u05e2\u05d3\u05d9\u05d9\u05df: \u05d7\u05e1\u05e8 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8.</p>' : '') + form, '', 200);
 }
 async function submitDecide(env, form, nowMs) {
@@ -852,7 +852,7 @@ async function submitDecide(env, form, nowMs) {
     body = { s: S_OK };
   } else if (act === 'reject') {
     const why = clean(form.get('why') || '', 200);
-    if (!why) return page('\u05e6\u05e8\u05d9\u05da \u05e1\u05d9\u05d1\u05d4', '<p>\u05db\u05d3\u05d9 \u05dc\u05d3\u05d7\u05d5\u05ea \u05e6\u05e8\u05d9\u05da \u05dc\u05db\u05ea\u05d5\u05d1 \u05e1\u05d9\u05d1\u05d4. \u05d7\u05d6\u05d5\u05e8 \u05dc\u05d3\u05e3 \u05d4\u05e7\u05d5\u05d3\u05dd.</p>', 'err', 400);
+    if (!why) return page('\u05e6\u05e8\u05d9\u05da \u05d4\u05e2\u05e8\u05d5\u05ea', '<p>\u05db\u05d3\u05d9 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05d4\u05e2\u05e8\u05d5\u05ea \u05e6\u05e8\u05d9\u05da \u05dc\u05db\u05ea\u05d5\u05d1 \u05d0\u05d5\u05ea\u05df. \u05d7\u05d6\u05d5\u05e8 \u05dc\u05d3\u05e3 \u05d4\u05e7\u05d5\u05d3\u05dd.</p>', 'err', 400);
     const rest = String(d.row.safety || '').split('\n').filter((x) => x && x.indexOf(REJ_MARK) !== 0);
     body = { s: S_REJ, safety: [REJ_MARK + why].concat(rest).join('\n') };
   } else return errPage('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05dc\u05d0 \u05e0\u05ea\u05de\u05db\u05ea.', 400);
@@ -862,7 +862,7 @@ async function submitDecide(env, form, nowMs) {
   const got = r.ok ? await r.json().catch(() => null) : null;
   if (!r.ok) return errPage('\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8 \u05d1\u05d2\u05dc\u05dc \u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.', 503);
   if (Array.isArray(got) && !got.length) return page('\u05db\u05d1\u05e8 \u05d8\u05d5\u05e4\u05dc', '<p>\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05db\u05d1\u05e8 \u05dc\u05d0 \u05de\u05de\u05ea\u05d9\u05e0\u05d4 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8.</p>', '', 409);
-  return page(act === 'approve' ? '\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d0\u05d5\u05e9\u05e8\u05d4' : '\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e0\u05d3\u05d7\u05ea\u05d4', '<p><b>' + esc(lineOf(d.w)) + '</b></p><p>' + (act === 'approve' ? '\u05d4\u05d0\u05d7\u05e8\u05d0\u05d9 \u05e1\u05d5\u05d2\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d9\u05ea\u05e8 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e9\u05dc \u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d1\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4.' : '\u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d9\u05e8\u05d0\u05d5 \u05d0\u05ea \u05d4\u05e1\u05d9\u05d1\u05d4 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d9\u05d5\u05db\u05dc\u05d5 \u05dc\u05ea\u05e7\u05df \u05d5\u05dc\u05e9\u05dc\u05d5\u05d7 \u05e9\u05d5\u05d1.') + '</p>', 'ok', 200);
+  return page(act === 'approve' ? '\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d0\u05d5\u05e9\u05e8\u05d4' : '\u05d4\u05d4\u05e2\u05e8\u05d5\u05ea \u05e0\u05e9\u05dc\u05d7\u05d5 \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4', '<p><b>' + esc(lineOf(d.w)) + '</b></p><p>' + (act === 'approve' ? '\u05d4\u05d0\u05d7\u05e8\u05d0\u05d9 \u05e1\u05d5\u05d2\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d9\u05ea\u05e8 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e9\u05dc \u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d1\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4.' : '\u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d9\u05e8\u05d0\u05d5 \u05d0\u05ea \u05d4\u05d4\u05e2\u05e8\u05d5\u05ea \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8, \u05d9\u05ea\u05e7\u05e0\u05d5 \u05d5\u05d9\u05e9\u05dc\u05d7\u05d5 \u05e9\u05d5\u05d1, \u05d5\u05d9\u05d2\u05d9\u05e2 \u05d0\u05dc\u05d9\u05da \u05de\u05d9\u05d9\u05dc \u05d7\u05d3\u05e9.') + '</p>', 'ok', 200);
 }
 
 // ---- the 5-minute clock (wa-morning.js watch) ----
