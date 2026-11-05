@@ -240,7 +240,9 @@ const SECOND_SKIPPED = /(?:\u05dc\u05d0(?! \u05d3\u05d9\u05dc\u05d2)|\u05d1\u05d
 // report (pressure in bar, ppm, SCBA, suit, leak, a distance) puts it back under the gate.
 // 01/11/2026: the weekly ISO round (iso_tasks status: "calibration of the ammonia detectors scheduled 12/11") is status, not
 // an answer; it turned red, and the dev runner closed the alert as a test. A figure or instruction still puts it back under the gate.
-const SECOND_DOCMETA = /\u05ea\u05d5\u05e7\u05e3|\u05de\u05d4\u05d3\u05d5\u05e8\u05d4|\u05de\u05d9\u05e7\u05d5\u05dd|\u05d0\u05d9\u05e4\u05d4|\u05e0\u05ea\u05d9\u05d1|\u05e1\u05e7\u05d9\u05e8\u05ea ISO|iso_tasks/;
+// 05/11/2026 (fault alert dev-20261105131501-78hr): the tomorrow list ("\u05e8\u05e9\u05d9\u05de\u05ea \u05de\u05d7\u05e8") naming the ammonia detector calibration
+// "until 12/11" turned red; a status list and a bare due date ("\u05e2\u05d3 DD/MM") are status too. A figure or instruction still puts it back under the gate.
+const SECOND_DOCMETA = /\u05e8\u05e9\u05d9\u05de\u05ea \u05de\u05d7\u05e8|\u05e2\u05d3 \d{1,2}\/\d{1,2}(?!\d)|\u05ea\u05d5\u05e7\u05e3|\u05de\u05d4\u05d3\u05d5\u05e8\u05d4|\u05de\u05d9\u05e7\u05d5\u05dd|\u05d0\u05d9\u05e4\u05d4|\u05e0\u05ea\u05d9\u05d1|\u05e1\u05e7\u05d9\u05e8\u05ea ISO|iso_tasks/;
 const SECOND_CONTENT = /\d+ ?\u05d1\u05e8(?![\u05d0-\u05ea])|ppm|\u05de\u05e0"\u05e4|\u05d7\u05dc\u05d9\u05e4|\u05d3\u05dc\u05d9\u05e4|\d+ ?\u05de\u05d8\u05e8|\u05e4\u05d9\u05e0\u05d5\u05d9|\u05dc\u05e4\u05e0\u05d5\u05ea|\u05dc\u05dc\u05d1\u05d5\u05e9/;
 // 03/11/2026 (fault alert dev-20261103090001-c5il): "Michael answered no to a draft (ammonia detectors): no draft was
 // prepared, a short acknowledgement was sent" turned red. A report that says Michael declined and nothing was prepared
