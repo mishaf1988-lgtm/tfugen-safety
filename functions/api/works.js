@@ -651,7 +651,14 @@ async function submitFile(env, request, nowMs) {
   const up = await fetch(SB + '/storage/v1/object/' + FILE_BUCKET + '/' + filesDir(friday, n) + name, { method: 'POST',
     headers: sbH(env, { 'Content-Type': ft[1], 'x-upsert': 'false' }), body: u8, signal: AbortSignal.timeout(FILE_MS) });
   if (!up.ok) return page('\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8', '<p>\u05d4\u05e7\u05d5\u05d1\u05e5 \u05dc\u05d0 \u05e0\u05e9\u05de\u05e8 \u05d1\u05d2\u05dc\u05dc \u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.</p>' + back, 'err', 503);
-  const st = parseSafety(row.safety); st.files = have.length + 1;
+  // Uploads sent at the same time all saw the old list (security review 05/11/2026): count again after the upload,
+  // and an upload past the limits removes its own file (only the file this request just wrote).
+  const after = await listFiles(env, friday, n).catch(() => null);
+  if (after && (after.length > MAX_FILES || after.reduce((a, x) => a + x.size, 0) > MAX_FILES_TOTAL)) {
+    await fetch(SB + '/storage/v1/object/' + FILE_BUCKET + '/' + filesDir(friday, n) + name, { method: 'DELETE', headers: sbH(env), signal: AbortSignal.timeout(FILE_MS) }).catch(() => null);
+    return page('\u05e6\u05e8\u05d9\u05da \u05dc\u05ea\u05e7\u05df', '<p>\u05db\u05d1\u05e8 \u05e6\u05d5\u05e8\u05e4\u05d5 \u05de\u05e1\u05e4\u05d9\u05e7 \u05e7\u05d1\u05e6\u05d9\u05dd \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d4\u05d6\u05d5.</p>' + back, 'err', 409);
+  }
+  const st = parseSafety(row.safety); st.files = after ? after.length : have.length + 1;
   try { await rewriteSafety(env, row, friday, st); } catch (e) { /* the file is kept; the count catches up on the next one */ }
   return page('\u05d4\u05e7\u05d5\u05d1\u05e5 \u05e6\u05d5\u05e8\u05e3', '<p>\u05d4\u05e7\u05d5\u05d1\u05e5 \u05e6\u05d5\u05e8\u05e3 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4 ' + n + ' (' + st.files + ' \u05e7\u05d1\u05e6\u05d9\u05dd). \u05d4\u05de\u05de\u05d5\u05e0\u05d4 \u05e2\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d9\u05e8\u05d0\u05d4 \u05d0\u05d5\u05ea\u05d5 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4.</p>' + back, 'ok', 200);
 }

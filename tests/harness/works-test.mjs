@@ -71,9 +71,11 @@ globalThis.fetch = async (url, init) => {
   if (u.startsWith(SB + '/rest/v1/')) return json([]);
   if (u.startsWith(SB + '/storage/v1/object/list/incidents-photos')) {
     const pre = JSON.parse(init.body).prefix;
+    if (db.staleList) { db.staleList = false; return json([]); }
     return json(Object.keys(db.files).filter((p) => p.startsWith(pre)).map((p) => ({ name: p.slice(pre.length), metadata: { size: db.files[p].size } })));
   }
   if (u.startsWith(SB + '/storage/v1/object/sign/incidents-photos')) return json(JSON.parse(init.body).paths.map((p) => ({ path: p, signedURL: '/object/sign/incidents-photos/' + p + '?token=t' })));
+  if (u.startsWith(SB + '/storage/v1/object/incidents-photos/') && m === 'DE' + 'LETE') { delete db.files[decodeURIComponent(u.slice((SB + '/storage/v1/object/incidents-photos/').length))]; return json({}); }
   if (u.startsWith(SB + '/storage/v1/object/incidents-photos/') && m === 'POST') {
     const p = decodeURIComponent(u.slice((SB + '/storage/v1/object/incidents-photos/').length));
     db.files[p] = { size: init.body.length, type: init.headers['Content-Type'] }; return json({ Key: p });
@@ -253,6 +255,12 @@ check('a PDF certificate is kept under works/<friday>/<n>/ with a name of ours (
 check('the work counts it, and the "no attachment" note is gone', parseSafety(db.ptw['wk-2026-11-06-1'].safety).files === 1 && !db.ptw['wk-2026-11-06-1'].safety.includes(NOTE_LINE), db.ptw['wk-2026-11-06-1'].safety);
 u = await upload(1, 'insp', exe, 'report.pdf', 'application/pdf');
 check('a file that says PDF but is not: refused (415)', u.st === 415 && Object.keys(db.files).length === 1);
+{ // uploads at the same time saw the old list (security review 05/11/2026): the count after the upload decides
+  const pre = 'works/2026-11-06/1/'; for (let i = 0; i < 5; i++) db.files[pre + 'other-race' + i + '.pdf'] = { size: 10, type: 'application/pdf' };
+  db.staleList = true;
+  const r = await upload(1, 'cert', pdf, 'race.pdf');
+  check('an upload past 6 files, sent alongside others: removes its own file, 409', r.st === 409 && Object.keys(db.files).filter((k) => k.startsWith(pre)).length === 6, [r.st, Object.keys(db.files)]);
+  for (let i = 0; i < 5; i++) delete db.files[pre + 'other-race' + i + '.pdf']; }
 u = await upload(1, 'virus', jpg, 'a.jpg', 'image/jpeg');
 check('an unknown kind: refused', u.st === 400);
 u = await upload(9, 'cert', jpg, 'a.jpg', 'image/jpeg');
