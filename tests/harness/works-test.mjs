@@ -5,7 +5,7 @@
 // The 5-minute clock: Wednesday 18:00 the mail (only when works_mail_on), Thursday 12:00 the reminder, Sunday 08:00
 // permits not closed. Mocked network, nothing leaves.
 import { onRequest, makeWorksToken, readWorksToken, fridayOf, CATS, S_PEND, S_CANCEL, S_REJ, S_CLOSED, EMP_LABEL, CHECK_MARK, GATE_MARK, NOTE_LINE, REJ_MARK, kindsIn, ctrKey, ctrIssue,
-  parseSafety, buildSafety, assess, GAS_LIMITS, worksTick, worksTryMail, worksApproveMail, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck, mailDeps, makeOkToken, readOkToken, OK_PREFIX, S_OK, APPROVE_SUBJECT } from './_build/works.mjs';
+  parseSafety, buildSafety, assess, GAS_LIMITS, worksTick, worksTryMail, worksApproveMail, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck, mailDeps, makeOkToken, readOkToken, OK_PREFIX, S_OK, APPROVE_SUBJECT, OKN_MARK, DECIDE_SUBJECT } from './_build/works.mjs';
 import { makeLinkToken } from './_build/_closelink.mjs';
 import { run as morningRun } from './_build/wa-morning.mjs';
 import { SITE } from './_build/_site.mjs';
@@ -189,14 +189,26 @@ console.log('\n5b. approval from the mail (Michael 05/11/2026: "a mail with appr
   check('approving it anyway (a forged POST): refused, still pending', r.st === 409 && db.ptw['wk-2026-11-06-2'].s === S_PEND, r.st);
   r = await decide(toks[1], 'reject', '');
   check('a reject with no reason: refused', r.st === 400 && db.ptw['wk-2026-11-06-2'].s === S_PEND);
+  const nm0 = db.mails.length;
   r = await decide(toks[1], 'reject', 'חסרה בדיקת גזים, להשלים');
   check('a reject with a reason: rejected, the reason is first in safety for the link', r.st === 200 && db.ptw['wk-2026-11-06-2'].s === S_REJ && db.ptw['wk-2026-11-06-2'].safety.startsWith(REJ_MARK + 'חסרה בדיקת גזים, להשלים'), db.ptw['wk-2026-11-06-2'].s);
+  { const m = db.mails.slice(nm0);
+    check('notes back to maintenance: one mail, a trial to Michael only while the weekly mail is off, the notes and the week link', m.length === 1 && m[0].to.join() === 'owner@tapugan.co.il' && m[0].subj.indexOf(TRY_PREFIX + 'לתיקון: ') === 0 && m[0].subj.includes('(יום שישי 06/11/2026)') && m[0].html.includes('חסרה בדיקת גזים, להשלים') && m[0].html.includes('/api/works?k=') && /^<div dir="rtl"/.test(m[0].html), m.map((x) => x.subj));
+    check('...the page says where it went', r.h.includes('נשלח מייל ל: owner@tapugan.co.il')); }
+  db.state.works_mail_on = 'true'; db.state.works_mail_to = JSON.stringify({ to: ['alina@tapugan.co.il'], cc: ['boss@tapugan.co.il'] });
   const np = db.patches.length;
   r = await decide(toks[0], 'approve');
   const last = db.patches[np];
   check('approve: open, only while pending (the update is filtered by status)', r.st === 200 && db.ptw['wk-2026-11-06-1'].s === S_OK && last && Object.keys(last.b).join() === 's', [r.st, last]);
+  { const m = db.mails[db.mails.length - 1];
+    check('approve while the weekly mail is on: to the maintenance list with its copy, not a trial', m.to.join() === 'alina@tapugan.co.il' && m.cc.join() === 'boss@tapugan.co.il' && m.subj.indexOf(TRY_PREFIX) !== 0 && m.subj.indexOf('אושרה: ') === 0, m && [m.to, m.subj]); }
   r = await decide(toks[0], 'approve');
   check('a second click: "already handled", nothing written', r.st === 409 && db.patches.length === np + 1);
+  delete db.state.works_mail_on; delete db.state.works_mail_to;
+  db.ptw['wk-2026-11-06-1'].s = S_PEND;
+  r = await decide(toks[0], 'approve', 'לגדר את האזור; עובד נוסף צופה');
+  check('approve with notes: open, the notes first in safety, the link shows them', r.st === 200 && db.ptw['wk-2026-11-06-1'].s === S_OK && db.ptw['wk-2026-11-06-1'].safety.startsWith(OKN_MARK + 'לגדר את האזור') && parseSafety(db.ptw['wk-2026-11-06-1'].safety).okn.includes('עובד נוסף צופה') && buildSafety(parseSafety(db.ptw['wk-2026-11-06-1'].safety)).startsWith(OKN_MARK), db.ptw['wk-2026-11-06-1'].safety);
+  check('...and the mail carries the notes', db.mails[db.mails.length - 1].html.includes('הערות הממונה: </b>לגדר את האזור'));
   db.ptw['wk-2026-11-06-2'].s = S_PEND; db.ptw['wk-2026-11-06-2'].ver = '2026-11-05T08:00:00Z';
   const pv = await open(URL0 + '?a=' + encodeURIComponent(toks[1]));
   check('the page carries the version it showed', pv.h.includes('name="v" value="2026-11-05T08:00:00Z"'));
