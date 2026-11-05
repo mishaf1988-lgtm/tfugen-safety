@@ -444,7 +444,7 @@ console.log('\n11b. reminder and approval (05/11/2026, Michael: "a reminder that
   check('...the WhatsApp names the Friday, the recipients, and a send link', /06\/11\/2026/.test(wt) && /alina, nahum, owner/.test(wt) && /\/api\/works\?s=/.test(wt), wt);
   await worksTick(ENV, new Date(WED18.getTime() + 5 * 60000), mailDeps);
   check('...once per Friday', db.wa.length === 1 && db.state.works_ask_last === FRI);
-  const stok = decodeURIComponent(/s=([^\s&]+)/.exec(wt)[1]);
+  const stok = decodeURIComponent(/\?s=([A-Za-z0-9._%-]+)/.exec(wt)[1]);
   check('the send token has its own prefix: not a works link, not an approval link', (await readSendToken(ENV, stok, NOW)).id === FRI && (await readWorksToken(ENV, stok, NOW)).error && (await readOkToken(ENV, stok, NOW)).error);
   const wtok = await makeWorksToken(ENV, FRI, NOW);
   const g = await open(URL0 + '?s=' + encodeURIComponent(stok));
@@ -454,7 +454,7 @@ console.log('\n11b. reminder and approval (05/11/2026, Michael: "a reminder that
   const offp = await post([['op', 'send'], ['s', stok]], { noWeek: true });
   check('the weekly mail switched off meanwhile: the POST sends nothing', offp.st === 503 && !db.mails.length, offp.st);
   db.state.works_mail_on = 'true';
-  db.casRace = true;
+  db.state.works_mail_last = '2026-10-30'; db.casRace = true;
   const race = await post([['op', 'send'], ['s', stok]], { noWeek: true });
   check('two clicks at once (the other took the Friday first): this one sends nothing', !db.mails.length && race.st === 200 && db.state.works_mail_last === FRI, [race.st, db.mails.length]);
   delete db.state.works_mail_last;
@@ -471,7 +471,7 @@ console.log('\n11b. reminder and approval (05/11/2026, Michael: "a reminder that
   check('a send that fails: not stamped, so a second try can send', fr.ok === false && !db.state.works_mail_last, [fr, db.state.works_mail_last]);
   // an old week's link
   NOW = Date.parse('2026-11-11T16:05:00Z');
-  const oldp = await post([['op', 'send'], ['s', stok]], { noWeek: true });
+  const oldp = await post([['op', 'send'], ['s', await makeSendToken(ENV, FRI, Date.parse('2026-11-10T08:00:00Z'))]], { noWeek: true });
   check('last week\'s link in the next week: refused (410), nothing sent', oldp.st === 410 && !db.mails.length, oldp.st);
   const exp = await open(URL0 + '?s=' + encodeURIComponent(await makeSendToken(ENV, FRI, Date.parse('2026-10-20T00:00:00Z'))));
   check('an expired send link: refused', exp.st === 403);
