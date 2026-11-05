@@ -1253,6 +1253,8 @@ async function signTrainer(env, form, tok, talk) {
   const back = '<p><a href="' + esc(talkUrl(tok, 'he', true, true)) + '" style="color:#1e3a8a;font-weight:700">\u05d7\u05d6\u05e8\u05d4</a></p>';
   const already = (at) => page('\u05db\u05d1\u05e8 \u05e0\u05d7\u05ea\u05dd', '<p>' + trSignedMsg(at) + '</p>' + back, 'err', 409, '', 'he');
   if (talk.trainer_signed_at) return already(talk.trainer_signed_at);
+  // a closed training takes no trainer signature from the link, even after an admin reset (security review 05/11/2026)
+  if (isClosed(talk)) return page('\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05e0\u05e1\u05d2\u05e8\u05d4', '<p>\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05e0\u05e1\u05d2\u05e8\u05d4 \u05dc\u05d7\u05ea\u05d9\u05de\u05d5\u05ea. \u05dc\u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05d9\u05e9 \u05dc\u05e4\u05e0\u05d5\u05ea \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.</p>' + back, 'err', 410, '', 'he');
   if (String(form.get('ok') || '') !== '1') return page('\u05d7\u05e1\u05e8 \u05d0\u05d9\u05e9\u05d5\u05e8', '<p>\u05e6\u05e8\u05d9\u05da \u05dc\u05e1\u05de\u05df \u05d0\u05ea \u05d4\u05d4\u05e6\u05d4\u05e8\u05d4.</p>' + back, 'err', 400, '', 'he');
   const sig = sigBytes(form.get('sig'));
   if (!sig) return page('\u05d7\u05e1\u05e8\u05d4 \u05d7\u05ea\u05d9\u05de\u05d4', '<p>\u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05d0 \u05e0\u05e7\u05dc\u05d8\u05d4. \u05d7\u05ea\u05d5\u05dd \u05d1\u05d0\u05e6\u05d1\u05e2 \u05d1\u05ea\u05d5\u05da \u05d4\u05de\u05e1\u05d2\u05e8\u05ea.</p>' + back, 'err', 400, '', 'he');
@@ -1261,7 +1263,7 @@ async function signTrainer(env, form, tok, talk) {
   const up = await fetch(SB + '/storage/v1/object/' + BUCKET + '/' + name, { method: 'POST', headers: sbH(env, { 'Content-Type': 'image/png', 'x-upsert': 'false' }), body: sig });
   const fail = () => page('\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4', '<p>\u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05d0 \u05e0\u05e9\u05de\u05e8\u05d4. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.</p>' + back, 'err', 502, '', 'he');
   if (!up.ok) return fail();
-  const p = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(talk.id) + '&trainer_signed_at=is.null', { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify({ trainer_sig_url: SB + '/storage/v1/object/public/' + BUCKET + '/' + name, trainer_signed_at: new Date().toISOString() }) });
+  const p = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(talk.id) + '&trainer_signed_at=is.null', { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify({ trainer_sig_url: SB + '/storage/v1/object/public/' + BUCKET + '/' + name, trainer_signed_at: new Date().toISOString(), eff_by: talk.trainer || null }) });
   if (!p.ok) return fail();
   const rows = await p.json().catch(() => null);
   if (Array.isArray(rows) && !rows.length) return already(null);
