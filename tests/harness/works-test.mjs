@@ -6,7 +6,7 @@
 // permits not closed. Mocked network, nothing leaves.
 import { onRequest, makeWorksToken, readWorksToken, fridayOf, CATS, S_PEND, S_CANCEL, S_REJ, S_CLOSED, EMP_LABEL, CHECK_MARK, GATE_MARK, NOTE_LINE, REJ_MARK, kindsIn, ctrKey, ctrIssue,
   parseSafety, buildSafety, assess, GAS_LIMITS, worksTick, worksTryMail, worksApproveMail, worksMailNow, permitRun, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck, mailDeps, makeOkToken, readOkToken, OK_PREFIX, S_OK, APPROVE_SUBJECT, OKN_MARK, DECIDE_SUBJECT,
-  PERMIT_MARK, PERMIT_ERR, PERMIT_TO, PERMIT_SUBJECT, permitHtml, worksPermit } from './_build/works.mjs';
+  PERMIT_MARK, PERMIT_ERR, PERMIT_TO, PERMIT_SUBJECT, permitHtml, worksPermit, makeSendToken, readSendToken, SEND_PREFIX, askText, ASK_SUBJECT } from './_build/works.mjs';
 import { readFileSync } from 'fs';
 import { readZip, entryText } from './_build/_xlsxpatch.mjs';
 import { PDFDocument, PDFName, StandardFonts } from './_build/_pdflib.mjs';
@@ -72,7 +72,17 @@ globalThis.fetch = async (url, init) => {
   }
   if (u.startsWith(SB + '/rest/v1/ctr')) return db.ctrFail ? json({ message: 'down' }, 500) : json(CTR);
   if (u.startsWith(SB + '/rest/v1/server_state')) {
-    if (m === 'POST') { JSON.parse(init.body).forEach((r) => { db.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
+    if (m === 'POST') {
+      const ign = /ignore-duplicates/.test((init.headers && init.headers.Prefer) || ''), done = [];
+      JSON.parse(init.body).forEach((r) => { if (ign && r.key in db.state) return; db.state[r.key] = r.value; done.push(r); });
+      return /return=representation/.test((init.headers && init.headers.Prefer) || '') ? json(done) : new Response(null, { status: 201 });
+    }
+    if (m === 'PATCH') {
+      const k = decodeURIComponent((/key=eq\.([^&]+)/.exec(u) || [])[1] || ''), v = /value=eq\.([^&]*)/.exec(u);
+      if (!(k in db.state) || (v && db.state[k] !== decodeURIComponent(v[1]))) return json([]);
+      if (db.casRace) { db.casRace = false; db.state[k] = JSON.parse(init.body).value; return json([]); }
+      db.state[k] = JSON.parse(init.body).value; return json([{ key: k, value: db.state[k] }]);
+    }
     const one = /key=eq\.([^&]+)/.exec(u), many = /key=in\.\(([^)]*)\)/.exec(u);
     if (one) { const k = decodeURIComponent(one[1]); return json(k in db.state ? [{ key: k, value: db.state[k] }] : []); }
     if (many) return json(decodeURIComponent(many[1]).split(',').filter((k) => k in db.state).map((k) => ({ key: k, value: db.state[k] })));
@@ -392,6 +402,7 @@ check('the flag off (default): no mail', (await worksTick(ENV, WED18, deps)).off
 db.state.works_mail_on = 'true';
 check('on, but no recipients in the database: no mail', (await worksTick(ENV, WED18, deps)).error === 'no recipients' && !db.mails.length);
 db.state.works_mail_to = JSON.stringify({ to: ['coord@tapugan.co.il', 'maint1@tapugan.co.il', 'maint2@tapugan.co.il', 'evil@gmail.com'], cc: ['mgr@tapugan.co.il'] });
+db.state.works_mail_mode = 'auto';
 const t1 = await worksTick(ENV, WED18, deps);
 check('on: one mail, company addresses only, cc kept', t1.mail === true && db.mails.length === 1 && db.mails[0].to.length === 3 && db.mails[0].to.indexOf('evil@gmail.com') < 0 && db.mails[0].cc.join() === 'mgr@tapugan.co.il', [t1, db.mails[0] && db.mails[0].to]);
 check('the subject and the link for the coming Friday', db.mails[0].subj === MAIL_SUBJECT(FRI) && db.mails[0].subj.includes('06/11/2026') && db.mails[0].html.includes('/api/works?k='));
@@ -420,9 +431,64 @@ const so = await worksTick(ENV, SUN8, deps);
 check('Sunday 08:00: one WhatsApp on the approved permit not closed (not the closed, not the pending), lock named, even with the mail off', so && so.open === 1 && db.wa.length === 1 && /שעוד לא נסגרו: 1/.test(waText(db.wa[0])) && /נעילה עוד פתוחה/.test(waText(db.wa[0])), [so, db.wa.map(waText)]);
 await worksTick(ENV, new Date(SUN8.getTime() + 5 * 60000), deps);
 check('...once', db.wa.length === 1);
-resetDb(); db.state.works_mail_on = 'true'; db.state.works_mail_to = JSON.stringify({ to: ['coord@tapugan.co.il'], cc: [] });
+resetDb(); db.state.works_mail_on = 'true'; db.state.works_mail_to = JSON.stringify({ to: ['coord@tapugan.co.il'], cc: [] }); db.state.works_mail_last = FRI;
 const wm = await morningRun(Object.assign({}, ENV), THU12, { watch: true });
 check('wa-morning watch runs the works step (the reminder)', wm && wm.works && wm.works.remind === true, wm && wm.works);
+
+console.log('\n11b. reminder and approval (05/11/2026, Michael: "a reminder that it is time to send, and the moment I approve, it is sent")');
+{ resetDb(); NOW = WED18.getTime();
+  db.state.works_mail_on = 'true'; db.state.works_mail_to = JSON.stringify({ to: ['alina@tapugan.co.il', 'nahum@tapugan.co.il'], cc: ['owner@tapugan.co.il'] });
+  const a = await worksTick(ENV, WED18, mailDeps);
+  check('no works_mail_mode (the default): Wednesday 18:00 sends no mail to maintenance, one WhatsApp to Michael', a && a.ask === true && a.wa === true && !db.mails.length && db.wa.length === 1 && db.state.works_mail_last === undefined, [a, db.mails.length, db.wa.length]);
+  const wt = waText(db.wa[0]);
+  check('...the WhatsApp names the Friday, the recipients, and a send link', /06\/11\/2026/.test(wt) && /alina, nahum, owner/.test(wt) && /\/api\/works\?s=/.test(wt), wt);
+  await worksTick(ENV, new Date(WED18.getTime() + 5 * 60000), mailDeps);
+  check('...once per Friday', db.wa.length === 1 && db.state.works_ask_last === FRI);
+  const stok = decodeURIComponent(/\?s=([A-Za-z0-9._%-]+)/.exec(wt)[1]);
+  check('the send token has its own prefix: not a works link, not an approval link', (await readSendToken(ENV, stok, NOW)).id === FRI && (await readWorksToken(ENV, stok, NOW)).error && (await readOkToken(ENV, stok, NOW)).error);
+  const wtok = await makeWorksToken(ENV, FRI, NOW);
+  const g = await open(URL0 + '?s=' + encodeURIComponent(stok));
+  check('opening the link (GET): shows the recipients and a send button, sends nothing', g.st === 200 && g.h.includes('alina@tapugan.co.il') && g.h.includes('name="op" value="send"') && !db.mails.length, g.st);
+  check('a works-link token as a send link: refused, nothing sent', (await open(URL0 + '?s=' + encodeURIComponent(wtok))).st === 403 && (await post([['op', 'send'], ['s', wtok]], { noWeek: true })).st === 403 && !db.mails.length);
+  db.state.works_mail_on = 'false';
+  const offp = await post([['op', 'send'], ['s', stok]], { noWeek: true });
+  check('the weekly mail switched off meanwhile: the POST sends nothing', offp.st === 503 && !db.mails.length, offp.st);
+  db.state.works_mail_on = 'true';
+  db.state.works_mail_last = '2026-10-30'; db.casRace = true;
+  const race = await post([['op', 'send'], ['s', stok]], { noWeek: true });
+  check('two clicks at once (the other took the Friday first): this one sends nothing', !db.mails.length && race.st === 200 && db.state.works_mail_last === FRI, [race.st, db.mails.length]);
+  delete db.state.works_mail_last;
+  const ok = await post([['op', 'send'], ['s', stok]], { noWeek: true });
+  check('the POST (Michael approves): one mail to the list from the database, the link inside, the Friday stamped', ok.st === 200 && db.mails.length === 1 && db.mails[0].to.join() === 'alina@tapugan.co.il,nahum@tapugan.co.il' && db.mails[0].cc.join() === 'owner@tapugan.co.il' && db.mails[0].subj === MAIL_SUBJECT(FRI) && db.mails[0].html.includes('/api/works?k=') && db.state.works_mail_last === FRI, [ok.st, db.mails[0] && db.mails[0].to]);
+  const again = await post([['op', 'send'], ['s', stok]], { noWeek: true });
+  check('a second click: "already sent", no second mail', again.st === 200 && db.mails.length === 1 && (await open(URL0 + '?s=' + encodeURIComponent(stok))).h.includes('כבר נשלח'));
+  await worksTick(ENV, new Date(WED18.getTime() + 10 * 60000), mailDeps);
+  check('the clock after the send: nothing more', db.mails.length === 1 && db.wa.length === 1);
+  // a failed send gives the Friday back
+  delete db.state.works_mail_last; db.mails = [];
+  const failDeps = { accessToken: mailDeps.accessToken, sendMailTo: async () => { throw new Error('graph 500'); } };
+  const fr = await worksMailNow(ENV, THU12, failDeps);
+  check('a send that fails: not stamped (given back as "none"), so a second try can send', fr.ok === false && db.state.works_mail_last === 'none', [fr, db.state.works_mail_last]);
+  const fr2 = await worksMailNow(ENV, THU12, mailDeps);
+  check('...and the second try sends', fr2.ok === true && db.mails.length === 1 && db.state.works_mail_last === FRI, fr2);
+  db.mails = [];
+  // an old week's link
+  NOW = Date.parse('2026-11-11T16:05:00Z');
+  const oldp = await post([['op', 'send'], ['s', await makeSendToken(ENV, FRI, Date.parse('2026-11-10T08:00:00Z'))]], { noWeek: true });
+  check('last week\'s link in the next week: refused (410), nothing sent', oldp.st === 410 && !db.mails.length, oldp.st);
+  const exp = await open(URL0 + '?s=' + encodeURIComponent(await makeSendToken(ENV, FRI, Date.parse('2026-10-20T00:00:00Z'))));
+  check('an expired send link: refused', exp.st === 403);
+  // WhatsApp fails: the link to Michael's own mailbox
+  resetDb(); db.state.works_mail_on = 'true'; db.state.works_mail_to = JSON.stringify({ to: ['alina@tapugan.co.il'], cc: [] });
+  const noWa = Object.assign({}, ENV); delete noWa.META_ACCESS_TOKEN;
+  const b = await worksTick(noWa, WED18, mailDeps);
+  check('WhatsApp not available: one mail to Michael\'s own mailbox only, with the send link; nothing to maintenance', b.ask && !b.wa && b.mailed && db.mails.length === 1 && db.mails[0].to.join() === 'owner@tapugan.co.il' && db.mails[0].subj === ASK_SUBJECT(FRI) && db.mails[0].html.includes('/api/works?s='), [b, db.mails[0] && db.mails[0].to]);
+  // Thursday: no "nothing came" while the mail was not sent
+  db.wa = []; db.mails = [];
+  await worksTick(ENV, THU12, mailDeps);
+  check('Thursday 12:00 and the mail was not sent yet: no "nothing came from maintenance" message', db.wa.length === 0);
+  check('the ask texts: keyboard characters only', !/[–—…־“”]/.test(askText(FRI, { to: ['a@tapugan.co.il'], cc: [] }, 'u')));
+  NOW = Date.parse('2026-11-05T08:00:00Z'); resetDb(); }
 
 console.log('\n12. the texts');
 console.log('--- MAIL subject: ' + MAIL_SUBJECT(FRI));
