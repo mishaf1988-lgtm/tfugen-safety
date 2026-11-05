@@ -100,6 +100,14 @@ console.log('\n3b. the ID number in the group (regulation 6 as amended, 09/10/20
   check('group: the typed number in id_no and onto the empty card', r3.status === 200 && w.inserts[1] && w.inserts[1].id_no === '01234567' && w.empPatches.length === 1 && w.empPatches[0].b.eid === '01234567' && /id=eq\.e2&or=\(eid\.is\.null,eid\.eq\.\)/.test(w.empPatches[0].u), w.empPatches);
 }
 
+console.log('\n3b. a closed training takes no trainer signature, even after a reset (security review 05/11/2026)');
+{
+  const w = world({ talk: { kind: 'annual', subjects: 'x', closed_at: '2026-10-21T08:00:00Z' } });
+  const gt = await makeGroupToken(ENV, 'tt1');
+  const r = await post({ k: gt, g: '1', t: '1', ok: '1', sig: SIG });
+  check('closed annual training, t=1 with a signature: 410, nothing uploaded or saved', r.status === 410 && w.uploads.length === 0 && w.patches.length === 0, { s: r.status, u: w.uploads.length, p: w.patches.length });
+}
+
 console.log('\n4. the trainer\'s declaration');
 {
   const w = world();
@@ -113,6 +121,7 @@ console.log('\n4. the trainer\'s declaration');
   const p = w.patches[0] && w.patches[0].b;
   check('signed: trainer_sig_url and trainer_signed_at on the talk', p && w.uploads[0] && p.trainer_sig_url.endsWith(w.uploads[0].u.split('/').pop()) && !isNaN(Date.parse(p.trainer_signed_at)), p);
   check('signed: the PATCH only lands on a talk not signed yet', /trainer_signed_at=is\.null/.test(w.patches[0].u), w.patches[0].u);
+  check('signed: eff_by is the trainer again (after an admin reset it was emptied; 05/11/2026)', p && p.eff_by === PUB.trainer, p);
   check('no worker row is written for the trainer', w.inserts.length === 0);
   const viaLink = await post({ k: lt, t: '1', ok: '1', sig: SIG });
   check('t=1 on a shared link is not a trainer signature', w.patches.length === 1 && viaLink.status !== 200, viaLink.status);

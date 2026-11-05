@@ -12681,7 +12681,7 @@ function _tbtTypedFill(r){r=r||{};var set=(r.subjects||'').split(/\n/).map(funct
   var o=g('tbt-subj-o');if(o)o.value=set.filter(function(v){return known.indexOf(v)<0;}).join(', ');
   var d=g('tbt-eff-desc-f');if(d)d.value=r.eff_desc||_TBT_EFF_DEF;var k=g('tbt-eff-ok-f');if(k)k.value=r.eff_ok===true?'1':r.eff_ok===false?'0':'';
   var st=g('tbt-trsig-st');if(st)st.textContent=r.trainer_signed_at?'\u2705 \u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05db\u05d1\u05e8 \u05d7\u05ea\u05dd \u05d1-'+fd(String(r.trainer_signed_at).substring(0,10))+'. \u05d7\u05ea\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05ea\u05d7\u05dc\u05d9\u05e3 \u05d0\u05d5\u05ea\u05d4.':'\u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05dd.';
-  var rb=g('tbt-trsig-reset');if(rb)rb.style.display=(r.trainer_signed_at&&_isAdmin&&r.id)?'inline-block':'none';
+  var rb=g('tbt-trsig-reset');if(rb)rb.style.display=(r.trainer_signed_at&&!r.closed_at&&_isAdmin&&r.id)?'inline-block':'none';
   _tbtSigClear();}
 // 05/11/2026 (Michael in the questionnaire: "do it: a reset button for the admin"; retro 14/10/2026): a trainer signature
 // saved by mistake (an empty box, a scribble, the black one on ann-2026) was locked for good. The admin clears it here:
@@ -12691,6 +12691,8 @@ function _tbtSigReset(){
   if(!_isAdmin){toast('\u05e8\u05e7 \u05d0\u05d3\u05de\u05d9\u05df \u05d9\u05db\u05d5\u05dc \u05dc\u05d0\u05e4\u05e1 \u05d7\u05ea\u05d9\u05de\u05ea \u05de\u05d3\u05e8\u05d9\u05da');return;}
   var id=_svEditId('toolbox_talks');var x=id&&(DB.toolbox_talks||[]).filter(function(z){return z.id===id;})[0];
   if(!x||!x.trainer_signed_at)return;
+  // a closed training is not reset (security review 05/11/2026): reopen it first
+  if(x.closed_at){toast('\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05e1\u05d2\u05d5\u05e8\u05d4. \u05e7\u05d5\u05d3\u05dd \u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05d5\u05ea\u05d4 \u05de\u05d7\u05d3\u05e9, \u05d5\u05d0\u05d6 \u05dc\u05d0\u05e4\u05e1 \u05d0\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d4');return;}
   if(!confirm('\u05dc\u05d0\u05e4\u05e1 \u05d0\u05ea \u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da? \u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05d4\u05e7\u05d9\u05d9\u05de\u05ea \u05ea\u05d5\u05e1\u05e8 \u05de\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 (\u05d4\u05e7\u05d5\u05d1\u05e5 \u05e0\u05e9\u05de\u05e8), \u05d5\u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05d9\u05d5\u05db\u05dc \u05dc\u05d7\u05ea\u05d5\u05dd \u05e9\u05d5\u05d1 \u05de\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d0\u05d5 \u05db\u05d0\u05df. \u05d4\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05e8\u05e9\u05de\u05ea \u05d1\u05d9\u05d5\u05de\u05df.'))return;
   var oldUrl=x.trainer_sig_url||'',oldAt=x.trainer_signed_at;
   x.trainer_sig_url=null;x.trainer_signed_at=null;x.eff_by=null;

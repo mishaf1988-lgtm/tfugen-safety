@@ -31,6 +31,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     _isAdmin = false; _tbtTypedFill(row); o.hiddenForNonAdmin = btn() === 'none';
     _tbtSigReset(); o.nonAdminRefused = row.trainer_signed_at !== null && upd.length === 0;
     _isAdmin = true; _tbtTypedFill(Object.assign({}, row, { trainer_signed_at: null })); o.hiddenUnsigned = btn() === 'none';
+    _tbtTypedFill(Object.assign({}, row, { closed_at: '2026-10-21T08:00:00Z' })); o.hiddenClosed = btn() === 'none';
     _tbtTypedFill(row); o.shownForAdmin = btn() === 'inline-block';
     _svEditing.toolbox_talks = 'ann-2026';
     _tbtSigReset();
@@ -44,7 +45,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     return o;
   });
   check('the button is hidden from a non-admin, and the reset refuses', r.hiddenForNonAdmin && r.nonAdminRefused, r);
-  check('the button is hidden on an unsigned training, shown to the admin on a signed one', r.hiddenUnsigned && r.shownForAdmin, r);
+  check('the button is hidden on an unsigned or a closed training, shown to the admin on a signed open one', r.hiddenUnsigned && r.hiddenClosed && r.shownForAdmin, r);
   check('the reset asks first, then clears the signature, its time and eff_by', r.asked && r.cleared, r);
   check('the row is saved through sbUpd', r.saved, r);
   check('an audit row names the reset and the old file', r.audit, r);
