@@ -38,7 +38,7 @@ export const TEMPLATES = {
 export const FILED_DIR = PERMIT_TOP + '/02_\u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05d7\u05ea\u05d5\u05de\u05d5\u05ea';
 export const PERMIT_MAX = 8 * 1024 * 1024;   // a template or a rendered PDF read whole into the Worker
 export const ATTACH_MAX = 3 * 1024 * 1024;   // Graph sendMail takes about 4MB a request; above this the mail carries a link
-export const SIGN_MARK = 'eSign';
+export const SIGN_MARK = 'qzxSgq';  // no word in Hebrew or English has it ("eSign" collided with "design")
 export const SIG_W = 90;
 // PERMIT_SPOT of routine-db.js (measured on the contractors' safety template 22/10/2026), on the safety form's page 2.
 export const FALLBACK_SPOT = { x: 225, y: 342, w: 90 };
@@ -198,7 +198,7 @@ export async function fillPermit(bytes, spec) {
 const dmy = (ymd) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(ymd || '')); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
 // The signature marker never comes from what a link user typed (security review 05/11/2026): "eSign" in a value
 // would move Michael's signature next to it. Removed in both directions, any spacing.
-export const unmark = (s) => String(s).replace(/e\s*s\s*i\s*g\s*n|n\s*g\s*i\s*s\s*e/gi, '');
+export const unmark = (s) => String(s).replace(/q\s*z\s*x\s*s\s*g\s*q|q\s*g\s*s\s*x\s*z\s*q/gi, '');
 const one = (s, max) => unmark(norm(String(s || '').replace(/[\r\n]+/g, ', '))).slice(0, max);
 // w: a work as works.js rowToWork gives it (who, con, sup, ph, wkr, area, dep, ds, de, ts, te, desc, cats, st);
 // o: { num, date (DD/MM/YYYY, the approval), closed }. form: 'work' | 'safety'.

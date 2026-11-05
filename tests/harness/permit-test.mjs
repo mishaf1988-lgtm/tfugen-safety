@@ -171,7 +171,7 @@ async function pdfWith(pages, mark) {
   check('a marker on the work permit\'s pages is not used', !(await signSpot(onWork.bytes, 1, true)).found);
   {
     const d = await PDFDocument.create(); const f = await d.embedFont(StandardFonts.Helvetica); const p = d.addPage([595, 842]);
-    p.drawText('eSi', { x: 200, y: 100, size: 8, font: f }); p.drawText('gn', { x: 210, y: 100, size: 8, font: f });
+    p.drawText('qzx', { x: 200, y: 100, size: 8, font: f }); p.drawText('Sgq', { x: 212, y: 100, size: 8, font: f });
     const s = findTextSpot(await PDFDocument.load(await d.save()), SIGN_MARK);
     check('findTextSpot: a marker split over two shows of a line is found, at its start', s && s.page === 1 && Math.round(s.x) === 200 && s.y === 100, s);
     check('findTextSpot: absent = null', findTextSpot(await PDFDocument.load(await pdfWith(1)), SIGN_MARK) === null);
@@ -182,9 +182,12 @@ async function pdfWith(pages, mark) {
 
 // security review 05/11/2026: a link user cannot plant the signature marker
 { const ok = (c, m) => { if (c) pass++; else { fail++; console.log('  \u2717 ' + m); } };
-  ok(unmark('x eSign y') === 'x  y' && unmark('E S I G N') === '' && unmark('ngiSe') === '' && unmark('e s ign') === '', 'unmark removes the marker in both directions, any case and spacing');
-  const sp = permitSpec('safety', { who: 'ctr', con: 'eSign', sup: 'a', ph: '', wkr: 'ngiSe', area: 'eSign', dep: '', ds: '2026-11-06', de: '2026-11-06', ts: '', te: '', desc: 'e Sign', cats: [], st: { chk: {}, blocks: [] } }, { num: '1', date: '06/11/2026' });
-  ok(!/e\s*s\s*i\s*g\s*n|n\s*g\s*i\s*s\s*e/i.test(JSON.stringify(sp).replace(new RegExp(SIGN_MARK, 'g'), '').replace(/"mark":true/g, '')) || !JSON.stringify(sp).includes('ngiSe'), 'a work typed with the marker: the values carry none of it'); }
+  // pairs: 3 that must lose the marker, 3 real values that must stay as they are
+  ok(unmark('x qzxSgq y') === 'x  y' && unmark('Q Z X S G Q') === '' && unmark('qgSxzq') === '', 'unmark removes the marker in both directions, any case and spacing');
+  ok(unmark('Design Pro \u05d1\u05e2"\u05de') === 'Design Pro \u05d1\u05e2"\u05de' && unmark('eSign') === 'eSign' && unmark('\u05e8\u05d9\u05ea\u05d5\u05da \u05de\u05e2\u05e7\u05d4 qz') === '\u05e8\u05d9\u05ea\u05d5\u05da \u05de\u05e2\u05e7\u05d4 qz', 'real values (a contractor named Design, eSign, Hebrew) stay untouched');
+  const sp = permitSpec('safety', { who: 'ctr', con: 'qzxSgq', sup: 'a', ph: '', wkr: 'q g s x z q', area: 'x', dep: '', ds: '2026-11-06', de: '2026-11-06', ts: '', te: '', desc: 'qzx sgq', cats: [], st: { chk: {}, blocks: [] } }, { num: '1', date: '06/11/2026' });
+  const typed = JSON.stringify(sp);
+  ok(!/q\s*g\s*s\s*x\s*z\s*q/i.test(typed) && (typed.match(/qzxSgq/g) || []).length <= 1, 'a work typed with the marker: the values carry none of it (only the officer line, if any)'); }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
