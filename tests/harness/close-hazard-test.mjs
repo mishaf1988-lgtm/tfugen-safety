@@ -211,14 +211,14 @@ function post(fields, env, waitUntil) {
     r = await post({ k: htok, who: 'ויטלי', note: 'הוחלף הכבל', photo: new File([JPG], 'a.jpg', { type: 'image/jpeg' }) }); h = await r.text();
     const p = w.hpatches[0];
     check('POST: one PATCH of tour_hazards, guarded by s != סגור', w.hpatches.length === 1 && /s=neq\./.test(p.u) && p.body.s === 'סגור', w.hpatches);
-    check('closed_d today, closed_by, close_note, after_photo_url stored', /^\d{4}-\d{2}-\d{2}$/.test(p.body.closed_d) && p.body.closed_by === 'ויטלי' && p.body.close_note === 'הוחלף הכבל' && /\/incidents-photos\/thz-link-th-mumiomsmjz43-/.test(p.body.after_photo_url || ''), p.body);
+    check('closed_d today, closed_by, close_note, after_photo_url stored', /^\d{4}-\d{2}-\d{2}$/.test(p.body.closed_d) && p.body.closed_by === 'ויטלי' && p.body.close_note === 'הוחלף הכבל (נסגר מקישור במייל)' && /\/incidents-photos\/thz-link-th-mumiomsmjz43-/.test(p.body.after_photo_url || ''), p.body);
     check('no trustee report row is written for a hazard', w.inserts.length === 0 && w.patches.length === 0);
     check('the manager gets the confirmation mail', w.mails.length === 1);
     r = await get(htok); h = await r.text();
     check('opened again: "already closed", no form', !/<form/.test(h) && h.includes('\u05d4\u05de\u05e4\u05d2\u05e2 \u05db\u05d1\u05e8 \u05e0\u05e1\u05d2\u05e8'), h.slice(0, 300));
     w = world();
     await post({ k: htok, who: 'ויטלי', note: '' });
-    check('without a photo or a note: closed, both null', w.hpatches.length === 1 && w.hpatches[0].body.after_photo_url === null && w.hpatches[0].body.close_note === null, w.hpatches);
+    check('without a photo or a note: closed, no photo, the note says only that it was closed from the link', w.hpatches.length === 1 && w.hpatches[0].body.after_photo_url === null && w.hpatches[0].body.close_note === '(נסגר מקישור במייל)', w.hpatches);
     w = world({ hazards: [] });
     r = await get(htok);
     check('a hazard that is gone: 404, no form', r.status === 404 && !/<form/.test(await r.text()));

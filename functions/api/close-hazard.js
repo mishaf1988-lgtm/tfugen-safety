@@ -181,6 +181,10 @@ function later(ctx, p) {
 // POST for a tour hazard: the row itself carries the closure (no report row
 // as for a trustee finding). Guarded by s != סגור, so a second tap or a
 // closure in the app in between changes nothing.
+// retro 15/10/2026 (STATUS 191 a): a tour hazard closed from the mail link says so, like the trustee path's mgr_note,
+// so a closure from the link can be told apart from one in the app.
+export const LINK_MARK = '(\u05e0\u05e1\u05d2\u05e8 \u05de\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05de\u05d9\u05d9\u05dc)';
+export function linkNote(note) { return note ? note + ' ' + LINK_MARK : LINK_MARK; }
 async function closeHazardPost(env, tok, id, form, ctx) {
   let h;
   try { h = await loadHazard(env, id); } catch (e) { return page('\u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea', '<p>\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.</p>', 'err', 502); }
@@ -196,7 +200,7 @@ async function closeHazardPost(env, tok, id, form, ctx) {
   // since this name, note and photo were not stored.
   const up = await fetch(SB + '/rest/v1/tour_hazards?id=eq.' + encodeURIComponent(id) + '&s=neq.' + encodeURIComponent(S_H_CLOSED), {
     method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }),
-    body: JSON.stringify({ s: S_H_CLOSED, closed_d: todayIL(), closed_by: who, close_note: note || null, after_photo_url: photo.url }), signal: tmo(SB_MS),
+    body: JSON.stringify({ s: S_H_CLOSED, closed_d: todayIL(), closed_by: who, close_note: linkNote(note), after_photo_url: photo.url }), signal: tmo(SB_MS),
   });
   if (!up.ok) return formPage(tok, h, '\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4 (' + up.status + '). \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.', who, note);
   let changed = null;
