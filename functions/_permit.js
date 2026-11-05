@@ -40,6 +40,9 @@ export const PERMIT_MAX = 8 * 1024 * 1024;   // a template or a rendered PDF rea
 export const ATTACH_MAX = 3 * 1024 * 1024;   // Graph sendMail takes about 4MB a request; above this the mail carries a link
 export const SIGN_MARK = 'qzxSgq';  // no word in Hebrew or English has it ("eSign" collided with "design")
 export const SIG_W = 90;
+// The live PDF of 05/11/2026: the full stamp (signature, name stamp, date) overlapped the lines above and below the
+// officer's line. On a form line: the signature alone, at most this tall (points).
+export const SIG_MAX_H = 16;
 // PERMIT_SPOT of routine-db.js (measured on the contractors' safety template 22/10/2026), on the safety form's page 2.
 export const FALLBACK_SPOT = { x: 225, y: 342, w: 90 };
 
@@ -181,6 +184,17 @@ export async function fillPermit(bytes, spec) {
       P.fills.push([b, sec.other]); report.filled++;
     }
   }
+  // The work permit's list of kinds ("\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4:, \u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05e9\u05de\u05dc,: ..."): "X " before each kind of the work, in the line
+  // where it appears (the live PDF of 05/11/2026 showed the work permit with none marked). Right to left within a
+  // paragraph, so an insertion never moves the next one.
+  const marks = new Map();
+  for (const word of (spec.markWords || [])) {
+    const P = paras.find((x) => x.text.indexOf(word) >= 0);
+    if (!P) { report.missing.push(word); continue; }
+    if (!marks.has(P)) marks.set(P, []);
+    marks.get(P).push(P.text.indexOf(word));
+  }
+  for (const [P, at] of marks) at.sort((a, b) => b - a).forEach((i) => { if (setChar(P, i, 'X ' + P.text[i])) report.ticked++; });
   if (spec.append) {
     const P = find(spec.append.after, 0);
     if (P) { P.append = lineAfter(P, spec.append.text, spec.append.marker); report.filled++; } else report.missing.push(spec.append.after);
@@ -220,7 +234,7 @@ export function permitSpec(form, w, o) {
     fill.push({ at: '\u05d0\u05e0\u05d9 \u05de\u05d0\u05e9\u05e8 \u05d1\u05d6\u05d4 \u05db\u05d9 \u05e1\u05d9\u05d9\u05de\u05ea\u05d9', vals: [chk.close.end] });
     fill.push({ at: '\u05e9\u05dd \u05d4\u05de\u05d1\u05e6\u05e2', nth: 1, vals: [one(chk.close.by, 60)] });
   }
-  if (form === 'work') return { fill };
+  if (form === 'work') return { fill, markWords: (w.cats || []).filter((k) => HEADS[k]).map((k) => HEADS[k]) };
   if (chk.elc) fill.push({ at: "\u05de\u05e1' \u05de\u05e0\u05d5\u05e2/\u05de\u05db\u05d5\u05e0\u05d4 \u05e9\u05e0\u05d5\u05ea\u05e7", vals: [one(chk.elc.mot, 80), one(chk.elc.ele, 80)] });
   if (ctr) fill.push({ at: '\u05e9\u05dd \u05de\u05de\u05d5\u05e0\u05d4', vals: [SITE.owner, o.date, { hidden: true }] });
   const sections = (w.cats || []).filter((k) => HEADS[k]).map((k) => {
@@ -348,7 +362,7 @@ export async function buildPermit(env, sbUrl, token, job) {
   const merged = await mergePdfs([pw, ps]);
   const spot = await signSpot(merged.bytes, merged.counts[0], w.who === 'ctr');
   const sig = await signature(env, sbUrl);
-  const signed = await stampPdf(merged.bytes, sig, date, spot.found || w.who === 'ctr' ? { page: spot.page, x: spot.x, y: spot.y, w: spot.w } : { page: spot.page });
+  const signed = await stampPdf(merged.bytes, sig, date, spot.found || w.who === 'ctr' ? { page: spot.page, x: spot.x, y: spot.y, w: spot.w, bare: true, maxH: SIG_MAX_H } : { page: spot.page });
   const up = await upload(gh, dir, base + '.pdf', signed, 'application/pdf');
   return { ok: true, path: dir.slice(OD_SAFETY.length) + '/' + up.name, name: up.name, webUrl: up.webUrl, bytes: signed, docx: [uw.name, us.name],
     spot: spot.found ? 'marker' : 'fixed', missing: fw.report.missing.concat(fs.report.missing) };

@@ -514,7 +514,7 @@ console.log('\n15. the signed permit (stage B, 05/11/2026): approve -> filled, r
   check('the contractors\' safety template, filled: number, the safety officer, the marker', sx.includes('WK-0611-1') && sx.includes(SITE.owner) && sx.includes('05/11/2026') && sx.includes(SIGN_MARK));
   const pdf = await PDFDocument.load(g.files[base0 + '.pdf']);
   const xo = (i) => { const res = pdf.getPage(i).node.Resources(); const d = res && res.lookup(PDFName.of('XObject')); return d ? d.entries().length : 0; };
-  check('the PDF: work 1 page + safety 2, signed on the safety form\'s page 2 only', pdf.getPageCount() === 3 && xo(2) >= 2 && xo(0) === 0 && xo(1) === 0, [pdf.getPageCount(), xo(0), xo(1), xo(2)]);
+  check('the PDF: work 1 page + safety 2, signed on the safety form\'s page 2 only, the signature alone (no stamp, no date: 05/11/2026 live PDF)', pdf.getPageCount() === 3 && xo(2) === 1 && xo(0) === 0 && xo(1) === 0, [pdf.getPageCount(), xo(0), xo(1), xo(2)]);
   const st = parseSafety(db.ptw[ID].safety);
   check('the row: the filed path on its own line, the measures kept', st.permit === FILED_DIR + '/2026-11/2026-11-06 - הרשאה WK-0611-1 - החלפת מלכודת קיטור, ריתוך.pdf' && st.chk.hot.fw === 'יוסי' && db.ptw[ID].safety.split('\n').filter((x) => x.indexOf(PERMIT_MARK) === 0).length === 1, db.ptw[ID].safety);
   const pm = db.mails.filter((x) => x.att.length);
