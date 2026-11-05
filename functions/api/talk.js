@@ -27,7 +27,7 @@
 import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, ipBucket, sbFrom, SITE, SB_LIVE } from '../_shared.js';
 import { makeLinkToken, readLinkToken } from '../_closelink.js';
 import { hebrewName, hebrewText, heName, heText, plainQuotes } from '../_ai.js';
-import { accessToken, putFile, sendMailTo } from '../_onedrive.js';
+import { accessToken, putFile, sendMailTo, trashFile } from '../_onedrive.js';
 import { LOGO_JPG } from '../_logo.js';
 import { readRecipients } from './hazard-report.js';
 import { REPORT_DEPTS } from './hazard-file.js';
@@ -916,6 +916,8 @@ const errL = (k, lang, status) => { const L = LANGS[langOf(lang)]; return page(L
 // 20 participants per page, as on the paper; the header repeats on each page.
 export const F0801_ROOT = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/11_\u05d4\u05d3\u05e8\u05db\u05d5\u05ea';
 export const F0801_SUB = { annual: '\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05e0\u05ea\u05d9\u05ea', quality: '\u05d4\u05d3\u05e8\u05db\u05ea \u05d0\u05d9\u05db\u05d5\u05ea', induction: '\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd - \u05d8\u05d5\u05e4\u05e1 08.01' };
+// A form filed again after a reopen (05/11/2026): the one filed before moves here, as od_trash does.
+export const F0801_TRASH = F0801_ROOT.replace(/\/[^/]+$/, '') + '/\u05dc\u05de\u05d7\u05d9\u05e7\u05d4';
 export const F0801_WEEKLY = '\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e9\u05d1\u05d5\u05e2\u05d9\u05d5\u05ea';
 export const F0801_SRC = SITE.odRoot + '/\u05d8\u05e4\u05e1\u05d9 \u05d4\u05d3\u05e8\u05db\u05d4 - \u05de\u05e7\u05d5\u05e8';
 export const F0801_ROWS = 20;
@@ -1079,7 +1081,15 @@ export async function fileForm0801(env, talk, hb, n, miss, nowMs) {
   } catch (e) { /* the HTML is filed instead */ }
   out.name = name;
   const folder = F0801_ROOT + '/' + (F0801_SUB[talk.kind] || F0801_WEEKLY) + '/' + String(talk.d || day).slice(0, 4);
-  const filed = await putFile(od.token, folder, name, bytes, type);
+  // Filed again after a reopen (05/11/2026, DECISIONS "\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05e0\u05e4\u05ea\u05d7\u05d4 \u05de\u05d7\u05d3\u05e9"): the new form, with everyone who signed,
+  // takes the name, and the one filed before goes to the to-delete folder. If that move fails, both stay (rename):
+  // a form is never overwritten. Calls out only when a form of that name is there (the free plan's budget).
+  let filed;
+  try { filed = await putFile(od.token, folder, name, bytes, type, 'fail'); } catch (e) {
+    if (e.status !== 409) throw e;
+    try { out.prev = await trashFile(od.token, folder + '/' + name, F0801_TRASH, folder.split('/').pop() + ' - ' + name); filed = await putFile(od.token, folder, name, bytes, type, 'fail'); }
+    catch (e2) { out.prevErr = String((e2 && e2.message) || e2).substring(0, 160); filed = await putFile(od.token, folder, name, bytes, type, 'rename'); }
+  }
   out.url = filed.webUrl || null;
   // To the connected account, and to the address on the training (the quality department).
   const cc = String(talk.mail_cc || '').split(/[,;\s]+/).filter((x) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)).slice(0, 5);
@@ -1095,7 +1105,7 @@ export async function fileForm0801(env, talk, hb, n, miss, nowMs) {
 }
 
 async function getTalk(env, id) {
-  const r = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(id) + '&select=id,d,title,body,body_ar,body_ru,body_am,file_url,s,trainer,trainer_qual,trainer_signed_at,trainer_sig_url,video_url,quiz,kind,link_v,dept,dur,mail_cc,subjects,closed_at', { headers: sbH(env) });
+  const r = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(id) + '&select=id,d,title,body,body_ar,body_ru,body_am,file_url,s,trainer,trainer_qual,trainer_signed_at,trainer_sig_url,video_url,quiz,kind,link_v,dept,dur,mail_cc,subjects,closed_at,first_closed_at', { headers: sbH(env) });
   if (!r.ok) throw new Error('talk read ' + r.status);
   const rows = await r.json();
   return Array.isArray(rows) ? rows[0] || null : null;
@@ -1703,11 +1713,17 @@ async function makeLink(env, request, ctx) {
   if (!talk) return jsonResp({ error: 'not found' }, 404, cors);
   if (talk.s !== S_PUB) return jsonResp({ error: 'not published' }, 409, cors);
   // Close / reopen an annual or quality training (14/10/2026): closed_at, nothing else changes; who signed stays.
+  // 05/11/2026 (DECISIONS "\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05e0\u05e4\u05ea\u05d7\u05d4 \u05de\u05d7\u05d3\u05e9"): reopen also clears form_at, so the next close files a new 08.01 with
+  // everyone; a close of a training that is already closed keeps its date and files nothing (already: true).
+  // first_closed_at is written once, at the first close, and never cleared: the yearly plan counts the training by it.
   if (b.op === 'close' || b.op === 'reopen') {
     if (TYPED_KINDS.indexOf(talk.kind) < 0) return jsonResp({ error: 'not an annual / quality training' }, 409, cors);
+    if (b.op === 'close' && talk.closed_at) return jsonResp({ ok: true, closed_at: talk.closed_at, already: true, filed: null, fileErr: null }, 200, cors);
     const at = b.op === 'close' ? new Date().toISOString() : null;
-    const p = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(talk.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ closed_at: at }) });
+    // A close only takes a training that is still open (closed_at=is.null): two clicks at once file one form (security review 05/11/2026).
+    const p = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(talk.id) + (b.op === 'close' ? '&closed_at=is.null' : ''), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: b.op === 'close' ? 'return=representation' : 'return=minimal' }), body: JSON.stringify(b.op === 'close' ? (talk.first_closed_at ? { closed_at: at } : { closed_at: at, first_closed_at: at }) : { closed_at: null, form_at: null }) });
     if (!p.ok) return jsonResp({ error: b.op + ' failed' }, 502, cors);
+    if (b.op === 'close') { const won = await p.json().catch(() => null); if (Array.isArray(won) && !won.length) return jsonResp({ ok: true, closed_at: null, already: true, filed: null, fileErr: null }, 200, cors); }
     // Closing files form 08.01 with everyone who signed and mails it (15/10/2026, Michael: "once I close it,
     // all the forms arrive by mail"). A failure there leaves the training closed and says why.
     let filed = null, fileErr = null;

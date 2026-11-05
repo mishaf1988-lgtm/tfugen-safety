@@ -236,7 +236,7 @@ export function planDone(r, talks) {
   const a = PLAN_AUTO[r.n];
   if (a) (Array.isArray(talks) ? talks : []).forEach((t) => {
     if (!t || t.kind !== a[0] || !t.closed_at) return;
-    const d = String(t.closed_at).slice(0, 10); if (+d.slice(0, 4) !== +r.yr) return;
+    const d = String(t.first_closed_at || t.closed_at).slice(0, 10); if (+d.slice(0, 4) !== +r.yr) return; // the first close (05/11/2026)
     if (a[1] && String(t.subjects || '').split(/\n/).map((v) => v.trim()).indexOf(a[1]) < 0) return;
     out.push(d);
   });
@@ -263,7 +263,7 @@ export function planLateLine(plan, talks, today) {
 export async function planData(env, today) {
   const [plan, talks] = await Promise.all([
     readAll(env, 'train_plan?select=yr,n,t,q,done&yr=eq.' + today.slice(0, 4)),
-    readAll(env, 'toolbox_talks?select=kind,subjects,closed_at&closed_at=not.is.null&kind=in.(annual,quality)'),
+    readAll(env, 'toolbox_talks?select=kind,subjects,closed_at,first_closed_at&closed_at=not.is.null&kind=in.(annual,quality)'),
   ]);
   return planLateLine(plan, talks, today);
 }

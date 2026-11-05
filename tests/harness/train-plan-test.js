@@ -53,7 +53,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     const by = (n) => _tpRows(2026).find((x) => x.n === n);
     by(28).q = '1,3'; by(1).q = '2'; by(5).q = '4'; by(12).q = '1';
     DB.toolbox_talks = [
-      { id: 'a1', kind: 'annual', title: 'הדרכת בטיחות שנתית 2026', trainer: 'מיכאל פרייליך', closed_at: '2026-02-10T09:00:00Z', subjects: 'חשמל\nאיכות סביבה' },
+      { id: 'a1', kind: 'annual', title: 'הדרכת בטיחות שנתית 2026', trainer: 'מיכאל פרייליך', closed_at: '2026-04-20T09:00:00Z', first_closed_at: '2026-02-10T09:00:00Z', subjects: 'חשמל\nאיכות סביבה' },
       { id: 'q1', kind: 'quality', title: 'הדרכת איכות', trainer: 'מנהלת איכות', closed_at: '2026-05-01T09:00:00Z', subjects: 'GMP והיגיינה אישית\nאלרגנים' },
       { id: 'q2', kind: 'quality', title: 'פתוחה', trainer: 'x', closed_at: null, subjects: 'HACCP' },
       { id: 'w1', kind: '', title: 'שבועית', closed_at: '2026-03-01T09:00:00Z' },
@@ -93,7 +93,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('created from the form: 30 items numbered 1-30, each sent to the server once', r.n === 30 && r.nums === Array.from({ length: 30 }, (_, i) => i + 1).join(',') && r.ins === 30, [r.n, r.ins]);
   check('item 28 is the safety training, item 30 the "as needed" line', /הדרכות בטיחות/.test(r.r28.t) && /ממונה בטיחות/.test(r.r28.who) && /לפי צרכים/.test(r.r30.t));
   check('creating twice does not duplicate', r.again === 30, r.again);
-  check('a closed annual talk marks item 28 in its quarter, with the trainer', r.done28.length === 1 && r.done28[0].d === '2026-02-10' && r.done28[0].by === 'מיכאל פרייליך' && r.done28[0].src === 'talk', r.done28);
+  check('a closed annual talk marks item 28 in its quarter (the first close, 05/11/2026: reopened and closed again in Q2), with the trainer', r.done28.length === 1 && r.done28[0].d === '2026-02-10' && r.done28[0].by === 'מיכאל פרייליך' && r.done28[0].src === 'talk', r.done28);
   check('item 28 planned for Q1 and Q3, given only in Q1, in Q4: late', r.st28 === 'late', r.st28);
   check('a closed quality talk with the GMP subject marks item 1 (planned Q2, given Q2): done', r.st1 === 'done', r.st1);
   check('an item with no quarter that was given anyway (allergens, environment) counts as done', r.st11 === 'done' && r.st29 === 'done', [r.st11, r.st29]);

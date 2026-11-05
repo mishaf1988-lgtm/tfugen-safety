@@ -1,4 +1,4 @@
--- dumped 2026-11-02 from the live project by tools/platform/schema-dump.sql
+-- dumped 2026-11-05 from the live project by tools/platform/schema-dump.sql
 create schema if not exists private;
 
 create extension if not exists "uuid-ossp" with schema extensions;
@@ -117,7 +117,7 @@ create table if not exists public.toolbox (id text not null, d date, topic text 
 
 create table if not exists public.toolbox_reads (id text not null, talk_id text not null, emp_id text, emp_name text not null, dept text, lang text, sig_url text, device text, read_at timestamp with time zone default now() not null, ts timestamp with time zone default now() not null, id_no text, text_hash text, mode text, quiz_ok smallint, quiz_n smallint, doc_url text, mailed_at timestamp with time zone, doc_err text, emp_no text, phone text, job text, agency text);
 
-create table if not exists public.toolbox_talks (id text not null, d date, title text not null, body text, body_ar text, body_ru text, body_am text, file_url text, s text default 'טיוטה'::text not null, created_by text, ts timestamp with time zone default now() not null, link_at timestamp with time zone, trainer text, trainer_qual text, trainer_sig_url text, trainer_signed_at timestamp with time zone, eff_req boolean, eff_ok boolean, eff_d date, eff_desc text, eff_next text, eff_by text, video_url text, quiz jsonb, kind text, link_v smallint default 0 not null, dept text, topic_id text, dur text, mail_cc text, subjects text, form_at timestamp with time zone, closed_at timestamp with time zone);
+create table if not exists public.toolbox_talks (id text not null, d date, title text not null, body text, body_ar text, body_ru text, body_am text, file_url text, s text default 'טיוטה'::text not null, created_by text, ts timestamp with time zone default now() not null, link_at timestamp with time zone, trainer text, trainer_qual text, trainer_sig_url text, trainer_signed_at timestamp with time zone, eff_req boolean, eff_ok boolean, eff_d date, eff_desc text, eff_next text, eff_by text, video_url text, quiz jsonb, kind text, link_v smallint default 0 not null, dept text, topic_id text, dur text, mail_cc text, subjects text, form_at timestamp with time zone, closed_at timestamp with time zone, first_closed_at timestamp with time zone);
 
 create table if not exists public.tour_hazards (id text not null, n integer, d date, tour_no integer, dept text not null, loc text, location_id text, descr text not null, sev text, resp text, action text, due date, s text default 'פתוח'::text not null, closed_d date, notes text, photo_url text, ts timestamp with time zone default now() not null, resp2 text, closed_by text, close_note text, after_photo_url text, recheck_d date, src text, src_ref text);
 
