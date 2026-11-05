@@ -1118,10 +1118,11 @@
    "key": "savings-assistant",
    "family": "תקשורת ומשרד",
    "ops": [
+    "agent_report",
     "state_get"
    ],
    "m365": false,
-   "reports": false
+   "reports": true
   },
   {
    "id": "trig_01SLQxBD9QvRNBohgFreYtEw` (הועבר 05/11/2026 12:43 מ-`trig_01QuVKDN4dnnG3uocFhELXsv`, ולפניו 10:37 מ-`trig_01W6SjwNKm9gQFGPuGQzgnfN`, ולפניו 06:31 מ-`trig_01GTDqoPoHET83nZ54829cCF`, ולפניו מ-`trig_018uytihJoa3rP3RSQWjZkSt`, ולפניו 03/11/2026 19:00 מ-`trig_01De2eTV9NfopFg5gXsLd94w`, ולפניו 14:19 מ-`trig_01GkWgZu315bqhLsn232sHoj`, ולפניו 11:44 מ-`trig_01FXM5HDLeTUdAmkXm5iMyEB`, שנמחק)",
