@@ -743,6 +743,7 @@ async function submit(env, request, nowMs, bg) {
   if (raw.length > MAX_BODY) return errPage('\u05d4\u05e8\u05e9\u05d9\u05de\u05d4 \u05d0\u05e8\u05d5\u05db\u05d4 \u05de\u05d3\u05d9.', 413);
   const form = new URLSearchParams(raw);
   if (form.get('op') === 'decide') return submitDecide(env, form, nowMs, bg);
+  if (form.get('op') === 'send') return submitSend(env, form, nowMs);
   const tok = String(form.get('k') || '');
   const t = await readWorksToken(env, tok, nowMs);
   if (t.error === 'expired') return errPage('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e4\u05d2. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d1\u05e7\u05e9 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9 \u05de\u05d4\u05de\u05de\u05d5\u05e0\u05d4 \u05e2\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.', 403);
@@ -792,6 +793,7 @@ export async function onRequest(context) {
     if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders(request.headers.get('origin') || '', defaultAllowedOrigins(env), 'POST,OPTIONS') });
     if (!env.SUPABASE_SERVICE_ROLE_KEY) return errPage('\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8.', 500);
     if (request.method === 'GET' && new URL(request.url).searchParams.get('a')) return await showDecide(env, new URL(request.url).searchParams.get('a'), nowMs);
+    if (request.method === 'GET' && new URL(request.url).searchParams.get('s')) return await showSend(env, new URL(request.url).searchParams.get('s'), nowMs);
     if (request.method === 'GET') return await showPage(env, new URL(request.url).searchParams.get('k') || '', nowMs);
     if (request.method !== 'POST') return errPage('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05dc\u05d0 \u05e0\u05ea\u05de\u05db\u05ea.', 405);
     if (/application\/json/i.test(request.headers.get('content-type') || '')) return await appOp(env, request, nowMs);
@@ -799,6 +801,38 @@ export async function onRequest(context) {
   } catch (e) {
     return errPage('\u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.', 503);
   }
+}
+
+// ---- the send page of reminder mode (05/11/2026) ----
+async function sendState(env, tok, nowMs) {
+  const t = await readSendToken(env, String(tok || '').slice(0, 300), nowMs);
+  if (t.error === 'expired') return { err: page('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e4\u05d2', '<p>\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e4\u05d2. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05d0\u05ea \u05d4\u05de\u05d9\u05d9\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9 \u05de\u05d4\u05e2\u05d5\u05d6\u05e8 \u05d0\u05d5 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4.</p>', 'err', 403) };
+  if (t.error) return { err: errPage('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df.', 403) };
+  const friday = t.id;
+  if (friday !== fridayOf(new Date(nowMs)) || !listOpen(friday, nowMs)) return { err: page('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e9\u05d1\u05d5\u05e2 \u05d0\u05d7\u05e8', '<p>\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05d6\u05d4 \u05e9\u05d9\u05d9\u05da \u05dc\u05e9\u05d1\u05d5\u05e2 \u05e9\u05db\u05d1\u05e8 \u05e2\u05d1\u05e8. \u05d4\u05de\u05d9\u05d9\u05dc \u05e9\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2 \u05d4\u05e0\u05d5\u05db\u05d7\u05d9 \u05e0\u05e9\u05dc\u05d7 \u05de\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9.</p>', 'err', 410) };
+  const rows = await sbGet(env, 'server_state?key=in.(' + MAIL_KEYS.join(',') + ')&select=key,value');
+  const st = {}; (rows || []).forEach((x) => { st[x.key] = x.value; });
+  return { friday, st, list: mailList(st.works_mail_to) };
+}
+async function showSend(env, tok, nowMs) {
+  const d = await sendState(env, tok, nowMs);
+  if (d.err) return d.err;
+  const head = '<p><b>' + esc('\u05d4\u05de\u05d9\u05d9\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9 \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4: \u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05dc\u05d9\u05d5\u05dd \u05e9\u05d9\u05e9\u05d9 ' + dmy(d.friday)) + '</b></p>';
+  if (d.st.works_mail_last === d.friday) return page('\u05db\u05d1\u05e8 \u05e0\u05e9\u05dc\u05d7', head + '<p>\u05d4\u05de\u05d9\u05d9\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9 \u05e9\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2 \u05d4\u05d6\u05d4 \u05db\u05d1\u05e8 \u05e0\u05e9\u05dc\u05d7. \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7 \u05e9\u05d5\u05d1.</p>', 'ok', 200);
+  if (String(d.st.works_mail_on || '').trim() !== 'true' || !d.list) return page('\u05d4\u05de\u05d9\u05d9\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9 \u05db\u05d1\u05d5\u05d9', head + '<p>\u05d4\u05de\u05d9\u05d9\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9 \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4 \u05db\u05d1\u05d5\u05d9, \u05d0\u05d5 \u05e9\u05d0\u05d9\u05df \u05e8\u05e9\u05d9\u05de\u05ea \u05e0\u05de\u05e2\u05e0\u05d9\u05dd. \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7 \u05db\u05dc\u05d5\u05dd.</p>', 'err', 409);
+  const form = '<form method="post" action="/api/works"><input type="hidden" name="op" value="send"><input type="hidden" name="s" value="' + esc(tok) + '">'
+    + '<button type="submit" class="btn g">\u05e9\u05dc\u05d7 \u05e2\u05db\u05e9\u05d9\u05d5</button></form>';
+  return page('\u05e9\u05dc\u05d9\u05d7\u05ea \u05d4\u05de\u05d9\u05d9\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9', head + '<p>\u05d0\u05dc: ' + esc(d.list.to.join(', ')) + '</p>' + (d.list.cc.length ? '<p>\u05e2\u05d5\u05ea\u05e7: ' + esc(d.list.cc.join(', ')) + '</p>' : '')
+    + '<p>\u05d1\u05dc\u05d7\u05d9\u05e6\u05d4 \u05d4\u05de\u05d9\u05d9\u05dc \u05d9\u05d5\u05e6\u05d0 \u05de\u05d4\u05ea\u05d9\u05d1\u05d4 \u05e9\u05dc\u05da, \u05e2\u05dd \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05de\u05d9\u05dc\u05d5\u05d9 \u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea, \u05db\u05de\u05d5 \u05d1\u05db\u05dc \u05e9\u05d1\u05d5\u05e2.</p>' + form, '', 200);
+}
+async function submitSend(env, form, nowMs) {
+  const tok = String(form.get('s') || '');
+  const d = await sendState(env, tok, nowMs);
+  if (d.err) return d.err;
+  const r = await worksMailNow(env, new Date(nowMs), mailDeps);
+  if (r.ok) return page('\u05d4\u05de\u05d9\u05d9\u05dc \u05e0\u05e9\u05dc\u05d7', '<p>\u05d4\u05de\u05d9\u05d9\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9 \u05e0\u05e9\u05dc\u05d7 \u05d0\u05dc: ' + esc(r.to.concat(r.cc).join(', ')) + '.</p>', 'ok', 200);
+  if (/already sent/.test(r.error || '')) return page('\u05db\u05d1\u05e8 \u05e0\u05e9\u05dc\u05d7', '<p>\u05d4\u05de\u05d9\u05d9\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9 \u05e9\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2 \u05d4\u05d6\u05d4 \u05db\u05d1\u05e8 \u05e0\u05e9\u05dc\u05d7. \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7 \u05e9\u05d5\u05d1.</p>', 'ok', 200);
+  return page('\u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7', '<p>\u05d4\u05de\u05d9\u05d9\u05dc \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7 \u05d1\u05d2\u05dc\u05dc \u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.</p>', 'err', 503);
 }
 
 // ---- approval from the mail (05/11/2026) ----
@@ -1027,7 +1061,7 @@ export async function worksPermit(env, id, closed, deps) {
 // Thursday from 12:00: nothing came for this Friday (works_sub) = one WhatsApp to Michael (works_remind_last); only
 // while the mail is on. Sunday from 08:00: approved permits of the Friday before that are not closed = one WhatsApp
 // (works_open_last), whether the mail is on or not (the permits exist). Outside these hours the tick costs nothing.
-export const MAIL_KEYS = ['works_mail_on', 'works_mail_to', 'works_mail_last', 'works_remind_last', 'works_open_last', STATE_SUB];
+export const MAIL_KEYS = ['works_mail_on', 'works_mail_to', 'works_mail_last', 'works_remind_last', 'works_open_last', 'works_mail_mode', 'works_ask_last', STATE_SUB];
 export const ilDow = (d) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'short' }).format(d));
 export const ilHour = (d) => Number(new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', hourCycle: 'h23' }).format(d));
 export const mailDue = (now) => ilDow(now) === 3 && ilHour(now) >= 18 && ilHour(now) < 23;
@@ -1046,6 +1080,25 @@ export function mailHtml(friday, url) {
     // Michael's own Outlook signature, as on every mail the server sends for him (05/11/2026: "with my stamp, Tapugan, title").
     + SITE.signature
     + '</div>';
+}
+// Reminder and approval (05/11/2026, Michael: "the assistant sends me a reminder that it is time to send, and the moment
+// I approve, it is sent"). server_state works_mail_mode: "auto" = the clock mails on Wednesday as before; anything
+// else (the default, also when the key is missing) = on Wednesday 18:00 Michael gets one WhatsApp (and, if WhatsApp
+// fails, one mail to his own mailbox) with a signed link of its own prefix. Opening the link (GET, which link previews
+// and mail scanners also do) only shows what will be sent and to whom; the send is a POST from that page, through
+// worksMailNow (mail on, the list in the database, this Friday still open, once per Friday).
+export const SEND_PREFIX = 'works-send:v1:', SEND_TTL_DAYS = 3;
+export const MODE_AUTO = 'auto';
+export function makeSendToken(env, friday, nowMs) { return makeLinkToken(env, SEND_PREFIX, friday, SEND_TTL_DAYS, nowMs); }
+export async function readSendToken(env, tok, nowMs) { const r = await readLinkToken(env, SEND_PREFIX, tok, nowMs); return r.error || /^\d{4}-\d{2}-\d{2}$/.test(r.id) ? r : { error: 'bad' }; }
+export const sendUrl = (tok) => SITE.appUrl + '/api/works?s=' + encodeURIComponent(tok);
+const names = (list) => list.to.concat(list.cc).map((x) => x.split('@')[0]).join(', ');
+export const askText = (friday, list, url) => '\u05ea\u05d6\u05db\u05d5\u05e8\u05ea: \u05d4\u05d2\u05d9\u05e2 \u05d4\u05d6\u05de\u05df \u05dc\u05e9\u05dc\u05d5\u05d7 \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d0\u05ea \u05d4\u05de\u05d9\u05d9\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9 (\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05dc\u05d9\u05d5\u05dd \u05e9\u05d9\u05e9\u05d9 ' + dmy(friday) + ') \u05d0\u05dc: ' + names(list) + '.\n\u05dc\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d5\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d1\u05dc\u05d7\u05d9\u05e6\u05d4 \u05d0\u05d7\u05ea: ' + url;
+export const ASK_SUBJECT = (friday) => '\u05dc\u05d0\u05d9\u05e9\u05d5\u05e8\u05da: \u05e9\u05dc\u05d9\u05d7\u05ea \u05d4\u05de\u05d9\u05d9\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9 \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4 \u05dc\u05d9\u05d5\u05dd \u05e9\u05d9\u05e9\u05d9 ' + dmy(friday);
+export function askHtml(friday, list, url) {
+  return '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2937"><p style="margin:0 0 10px">'
+    + esc('\u05d4\u05d2\u05d9\u05e2 \u05d4\u05d6\u05de\u05df \u05dc\u05e9\u05dc\u05d5\u05d7 \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d0\u05ea \u05d4\u05de\u05d9\u05d9\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9 (\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05dc\u05d9\u05d5\u05dd \u05e9\u05d9\u05e9\u05d9 ' + dmy(friday) + ') \u05d0\u05dc: ' + names(list) + '.')
+    + '</p><p style="margin:0 0 10px"><a href="' + esc(url) + '" style="display:inline-block;background:#15803d;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700">\u05dc\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d5\u05e9\u05dc\u05d9\u05d7\u05d4</a></p></div>';
 }
 export function mailList(raw) {
   const o = parseJson(raw);
@@ -1093,6 +1146,18 @@ export async function worksApproveMail(env, now, deps) {
 // Shlomi the request now", the Wednesday of that week already past). Only with the weekly mail on and its list set (the
 // same recipients the clock uses; nobody else), only while this Friday is still open, and once per Friday
 // (works_mail_last, like the clock: the Wednesday run will not send it again).
+// works_mail_last from prev to friday, only if it still holds prev (no row yet: insert, ignored if one appeared).
+async function claimWeek(env, friday, prev) {
+  const at = new Date().toISOString();
+  const r = prev == null
+    ? await fetch(SB + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'resolution=ignore-duplicates,return=representation' }),
+      body: JSON.stringify([{ key: 'works_mail_last', value: friday, updated_at: at }]) })
+    : await fetch(SB + '/rest/v1/server_state?key=eq.works_mail_last&value=eq.' + encodeURIComponent(prev), { method: 'PATCH',
+      headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify({ value: friday, updated_at: at }) });
+  if (!r.ok) throw new Error('state ' + r.status);
+  const got = await r.json().catch(() => null);
+  return Array.isArray(got) && got.length > 0;
+}
 export async function worksMailNow(env, now, deps) {
   SB = sbFrom(env);
   const friday = fridayOf(now);
@@ -1103,10 +1168,29 @@ export async function worksMailNow(env, now, deps) {
   if (!list) return { ok: false, error: 'no recipients (works_mail_to)' };
   if (!listOpen(friday, now.getTime())) return { ok: false, error: 'friday passed' };
   if (st.works_mail_last === friday) return { ok: false, error: 'already sent for ' + friday };
-  const sent = await mailWeek(env, friday, list, '', now.getTime(), deps);
-  if (sent.error) return { ok: false, error: sent.error };
-  await stateSet(env, 'works_mail_last', friday);
+  // The Friday is taken before the send (security review 05/11/2026: two clicks on the send page at once = one mail):
+  // only the request whose swap changed the row sends; a failed send gives the Friday back.
+  const prev = st.works_mail_last == null ? null : String(st.works_mail_last);
+  if (!(await claimWeek(env, friday, prev))) return { ok: false, error: 'already sent for ' + friday };
+  let sent;
+  try { sent = await mailWeek(env, friday, list, '', now.getTime(), deps); } catch (e) { sent = { error: String((e && e.message) || e).slice(0, 120) }; }
+  if (sent.error) { await stateSet(env, 'works_mail_last', prev || '').catch(() => {}); return { ok: false, error: sent.error }; }
   return { ok: true, friday, to: list.to, cc: list.cc };
+}
+// Reminder mode on Wednesday: the WhatsApp with the send link, once per Friday (works_ask_last); if WhatsApp fails,
+// the same link to Michael's own mailbox (the connected account only). Nothing goes to maintenance from here.
+async function askOwner(env, friday, list, st, now, deps) {
+  if (st.works_ask_last === friday) return null;
+  const tok = await makeSendToken(env, friday, now.getTime());
+  if (!tok) return { ask: true, error: 'no secret' };
+  const url = sendUrl(tok);
+  const wa = await waOwner(env, askText(friday, list, url), 'works ask ' + friday, now.getTime()).catch((e) => ({ ok: false, error: String((e && e.message) || e).slice(0, 80) }));
+  let mailed = false;
+  if (!wa.ok) {
+    try { const od = await deps.accessToken(env); if (od && od.email) { await sendOut(deps, od.token, [od.email], [], ASK_SUBJECT(friday), askHtml(friday, list, url)); mailed = true; } } catch (e) { mailed = false; }
+  }
+  if (wa.ok || mailed) await stateSet(env, 'works_ask_last', friday);
+  return { ask: true, wa: !!wa.ok, mailed, error: wa.ok || mailed ? null : (wa.error || 'not sent') };
 }
 // deps = {accessToken, sendMailTo} from _onedrive.js (wa-morning passes them; a test passes its own).
 export async function worksTick(env, now, deps) {
@@ -1130,12 +1214,15 @@ export async function worksTick(env, now, deps) {
     if (st.works_mail_last === friday) return null;
     const list = mailList(st.works_mail_to);
     if (!list) return { mail: false, error: 'no recipients' };
+    if (String(st.works_mail_mode || '').trim() !== MODE_AUTO) return askOwner(env, friday, list, st, now, deps);
     const sent = await mailWeek(env, friday, list, '', now.getTime(), deps);
     if (sent.error) return { mail: false, error: sent.error };
     await stateSet(env, 'works_mail_last', friday);
     return { mail: true, friday, to: list.to.length, cc: list.cc.length };
   }
   if (st.works_remind_last === friday) return null;
+  // the mail of this Friday was not sent (reminder mode, not approved yet): no "nothing came from maintenance"
+  if (st.works_mail_last !== friday) return null;
   const sub = parseJson(st[STATE_SUB]);
   if (sub && sub.friday === friday) return null;
   const text = remindText(friday);
