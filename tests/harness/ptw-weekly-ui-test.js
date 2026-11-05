@@ -51,6 +51,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     out.gateBlocked = DB.ptw.find((x) => x.id === 'wk-2026-11-06-2').s === 'ממתין לאישור' && !window.__upd.length && /אי אפשר לאשר עדיין/.test(window.__toasts.slice(-1)[0]);
     document.querySelector('#tb-ptw [data-aid="wk-2026-11-06-3"]').click();
     out.approved = DB.ptw.find((x) => x.id === 'wk-2026-11-06-3').s === 'פתוח' && window.__upd.length === 1 && window.__upd[0][1].s === 'פתוח';
+    // the signed permit works.js filed (stage B, 05/11/2026): its file name on the list, the closed one first
+    DB.ptw.push({ id: 'wk-2026-11-06-4', num: 'WK-0611-4', con: 'z', types: 'עבודות חמות', ds: '2026-11-06', s: 'סגור', safety: 'עבודות חמות: מטף\n[הרשאה] 18_x/02_y/2026-11/2026-11-06 - הרשאה WK-0611-4 - a.pdf\n[הרשאה סגורה] 18_x/02_y/2026-11/2026-11-06 - הרשאה WK-0611-4 - a - סגורה.pdf', desc: 'ריתוך' });
+    rPtw();
+    out.permitShown = /2026-11-06 - הרשאה WK-0611-4 - a - סגורה\.pdf/.test(document.getElementById('tb-ptw').textContent) && !/18_x/.test(document.getElementById('tb-ptw').textContent);
     rPtwView('wk-2026-11-06-1');
     out.filesBtn = !!document.querySelector('#ptw-view-card [data-fid="wk-2026-11-06-1"]');
     out.viewXss = !!document.querySelector('#ptw-view-card img');
@@ -74,6 +78,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('approve is refused while the gas test is missing (no update, a toast that says why)', r.gateBlocked);
   check('approve without anything missing: status "open", one update', r.approved);
   check('the permit view of a work from the link has the attachments button', r.filesBtn);
+  check('the signed permit: its file name on the list (the closed version when there is one), not the folders', r.permitShown);
   check('"link to maintenance" asks /api/works for op link with the session, and copies the link with the Friday', r.linkReq && r.linkReq.u === '/api/works' && JSON.parse(r.linkReq.body).op === 'link' && /^Bearer /.test(r.linkReq.auth) && /06\/11\/2026/.test(r.copied || '') && /api\/works\?k=abc/.test(r.copied || ''), [r.linkReq, r.copied]);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

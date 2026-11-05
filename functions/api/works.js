@@ -23,11 +23,18 @@
 // can be changed until the Friday; attachments and closing until the token runs out.
 // No new column (05/11/2026): everything about a work beyond the permit's own columns is a line in ptw.safety.
 // The weekly mail on Wednesday, the Thursday reminder and the Sunday "not closed" message run from the 5-minute
-// clock (wa-morning.js, worksTick). Stage B (STATUS): a signed permit PDF per work (sg1..sg4 are left for it).
+// clock (wa-morning.js, worksTick).
+// Stage B (05/11/2026, DECISIONS "\u05d4\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d4\u05d7\u05ea\u05d5\u05de\u05d4 \u05dc\u05db\u05dc \u05e2\u05d1\u05d5\u05d3\u05d4 \u05e9\u05d0\u05d5\u05e9\u05e8\u05d4"): when Michael approves a work from the mail, the
+// server fills the factory's own work permit and safety permit (functions/_permit.js), signs and files them (folder 18,
+// "02_\u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05d7\u05ea\u05d5\u05de\u05d5\u05ea/<YYYY-MM>") and mails the PDF to maintenance with a copy to him (works_permit_to, only while
+// works_mail_on; else to his own mailbox, marked as a trial). When maintenance closes the permit in the link, the closed
+// version is filed beside it and mailed to him. Both run after the decision is saved (waitUntil) and never undo it: a
+// failure goes to server_state works_permit_err; the filed path is a line "[\u05d4\u05e8\u05e9\u05d0\u05d4] " / "[\u05d4\u05e8\u05e9\u05d0\u05d4 \u05e1\u05d2\u05d5\u05e8\u05d4] " in ptw.safety.
 import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, sbFrom, SITE, SB_LIVE } from '../_shared.js';
 import { makeLinkToken, readLinkToken } from '../_closelink.js';
 import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut } from '../_wa.js';
 import { accessToken, sendMailTo } from '../_onedrive.js';
+import { buildPermit, pdfAttachment, ATTACH_MAX } from '../_permit.js';
 // The mail functions the request path uses (the approval mail); a test replaces them.
 export const mailDeps = { accessToken, sendMailTo };
 
@@ -46,6 +53,8 @@ export const EMP_LABEL = '\u05e2\u05d5\u05d1\u05d3\u05d9 \u05d4\u05de\u05e4\u05e
 export const CHECK_MARK = '[\u05dc\u05d1\u05d3\u05d9\u05e7\u05d4] ', GATE_MARK = '[\u05d7\u05e1\u05e8 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8] ', NOTE_LINE = '[\u05d4\u05e2\u05e8\u05d4] ', REJ_MARK = '[\u05e0\u05d3\u05d7\u05d4] ', FILES_MARK = '[\u05e7\u05d1\u05e6\u05d9\u05dd] ';
 // Michael's notes on an approved work (05/11/2026, Michael: "notes are not always a rejection; I approve with my notes").
 export const OKN_MARK = '[\u05d4\u05e2\u05e8\u05d5\u05ea \u05d4\u05de\u05de\u05d5\u05e0\u05d4] ';
+// The signed permit filed for the work, and its closed version (stage B): the path under the safety folder.
+export const PERMIT_MARK = '[\u05d4\u05e8\u05e9\u05d0\u05d4] ', PERMIT_C_MARK = '[\u05d4\u05e8\u05e9\u05d0\u05d4 \u05e1\u05d2\u05d5\u05e8\u05d4] ';
 export const NOTE_MARK = '\n\u05d4\u05e2\u05e8\u05d5\u05ea: ';
 export const STATE_SUB = 'works_sub';           // {friday, at, n, none, notified_at}
 export const NOTIFY_GAP_MIN = 15;
@@ -178,14 +187,18 @@ export function buildSafety(st) {
   if (st.flags && st.flags.length) lines.push(CHECK_MARK + st.flags.map(noSemi).join('; '));
   if (st.gate && st.gate.length) lines.push(GATE_MARK + st.gate.map(noSemi).join('; '));
   if (st.notes && st.notes.length) lines.push(NOTE_LINE + st.notes.map(noSemi).join('; '));
+  if (st.permit) lines.push(PERMIT_MARK + st.permit);
+  if (st.permitc) lines.push(PERMIT_C_MARK + st.permitc);
   if (st.rej) lines.unshift(REJ_MARK + st.rej);
   if (st.okn) lines.unshift(OKN_MARK + st.okn);
   return lines.join('\n');
 }
 export function parseSafety(safety) {
-  const st = { blocks: [], chk: {}, files: 0, flags: [], gate: [], notes: [], rej: '', okn: '' };
+  const st = { blocks: [], chk: {}, files: 0, flags: [], gate: [], notes: [], rej: '', okn: '', permit: '', permitc: '' };
   const list = (s) => s.split('; ').map((p) => p.trim()).filter(Boolean);
   String(safety || '').split('\n').forEach((line) => {
+    if (line.indexOf(PERMIT_MARK) === 0) { st.permit = line.slice(PERMIT_MARK.length); return; }
+    if (line.indexOf(PERMIT_C_MARK) === 0) { st.permitc = line.slice(PERMIT_C_MARK.length); return; }
     if (line.indexOf(REJ_MARK) === 0) { st.rej = line.slice(REJ_MARK.length); return; }
     if (line.indexOf(OKN_MARK) === 0) { st.okn = line.slice(OKN_MARK.length); return; }
     if (line.indexOf(CHECK_MARK) === 0) { st.flags = list(line.slice(CHECK_MARK.length)); return; }
@@ -479,6 +492,7 @@ function afterHtml(w, tok) {
     + '<button type="submit" class="btn s" form="' + fid + '">\u05e6\u05d9\u05e8\u05d5\u05e3 \u05d4\u05e7\u05d5\u05d1\u05e5</button><div style="font-size:12px;color:#6b7280">PDF, JPG \u05d0\u05d5 PNG, \u05e2\u05d3 4MB \u05dc\u05e7\u05d5\u05d1\u05e5, \u05e2\u05d3 ' + MAX_FILES + ' \u05e7\u05d1\u05e6\u05d9\u05dd \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4.</div></div>';
   if (NOT_APPROVED.indexOf(w.s) < 0) {
     const hot = w.cats.indexOf('hot') >= 0, lo = w.st.chk.loto;
+    if (w.st.permit) h += '<p>\u05d4\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d4\u05d7\u05ea\u05d5\u05de\u05d4 \u05e0\u05e9\u05dc\u05d7\u05d4 \u05d1\u05de\u05d9\u05d9\u05dc \u05d5\u05ea\u05d5\u05d9\u05e7\u05d4 \u05d0\u05e6\u05dc \u05d4\u05de\u05de\u05d5\u05e0\u05d4 \u05e2\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.</p>';
     h += '<div class="sec"><b>\u05e1\u05d2\u05d9\u05e8\u05ea \u05d4\u05d4\u05d9\u05ea\u05e8</b> (\u05d1\u05e1\u05d5\u05e3 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4, \u05e2\u05dc \u05d9\u05d3\u05d9 \u05d4\u05d0\u05d7\u05e8\u05d0\u05d9)';
     h += '<label class="ck"><input type="checkbox" name="done" value="1" form="' + cid + '"> ' + esc(CLOSE.items[0]) + '</label>';
     h += '<div class="two"><div><label>\u05e9\u05e2\u05ea \u05d4\u05e1\u05d9\u05d5\u05dd *</label><input type="time" name="end" form="' + cid + '"></div>'
@@ -693,7 +707,7 @@ export function closeCheck(st, cats, c) {
   if ((c.rat && !TIME_RE.test(c.rat))) return '\u05e9\u05e2\u05ea \u05d4\u05e9\u05d7\u05e8\u05d5\u05e8 \u05dc\u05d0 \u05ea\u05e7\u05d9\u05e0\u05d4.';
   return '';
 }
-async function submitClose(env, form, tok, friday, nowMs) {
+async function submitClose(env, form, tok, friday, nowMs, bg) {
   const back = backLink(tok), n = Number(form.get('n'));
   if (!(n >= 1 && n <= MAX_N)) return page('\u05e6\u05e8\u05d9\u05da \u05dc\u05ea\u05e7\u05df', '<p>\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4.</p>' + back, 'err', 400);
   const g = (k) => clean(form.get(k), LIM.field);
@@ -710,12 +724,16 @@ async function submitClose(env, form, tok, friday, nowMs) {
   st.blocks = st.blocks.filter((k) => k !== 'close').concat(['close']);
   st.chk.close = { items: [0], end: c.end, c30: c.c30 || '', by: c.by };
   const r = await fetch(SB + '/rest/v1/ptw?id=eq.' + encodeURIComponent(row.id) + '&s=not.in.(' + NOT_APPROVED.map(encodeURIComponent).join(',') + ')', { method: 'PATCH',
-    headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ s: S_CLOSED, te: c.end, safety: buildSafety(st) }) });
+    headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify({ s: S_CLOSED, te: c.end, safety: buildSafety(st) }) });
   if (!r.ok) return page('\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8', '<p>\u05d4\u05e1\u05d2\u05d9\u05e8\u05d4 \u05dc\u05d0 \u05e0\u05e9\u05de\u05e8\u05d4 \u05d1\u05d2\u05dc\u05dc \u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.</p>' + back, 'err', 503);
+  // the closed permit to Michael (stage B), after the closing is saved; it never undoes it. Only by the request that
+  // actually closed the row (security review 05/11/2026: two clicks at once = one closed permit, not two).
+  const closedRows = await r.json().catch(() => null);
+  if (Array.isArray(closedRows) && closedRows.length) await permitLater(env, row.id, true, nowMs, bg);
   return page('\u05d4\u05d4\u05d9\u05ea\u05e8 \u05e0\u05e1\u05d2\u05e8', '<p>\u05d4\u05d9\u05ea\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 ' + n + ' \u05e0\u05e1\u05d2\u05e8 \u05d1\u05e9\u05e2\u05d4 ' + esc(c.end) + '. \u05ea\u05d5\u05d3\u05d4.</p>' + back, 'ok', 200);
 }
 
-async function submit(env, request, nowMs) {
+async function submit(env, request, nowMs, bg) {
   const ct = request.headers.get('content-type') || '';
   if (/multipart\/form-data/i.test(ct)) return submitFile(env, request, nowMs);
   if (!/application\/x-www-form-urlencoded/i.test(ct)) return errPage('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7 \u05db\u05e8\u05d0\u05d5\u05d9. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05de\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8.', 415);
@@ -724,13 +742,13 @@ async function submit(env, request, nowMs) {
   const raw = await request.text();
   if (raw.length > MAX_BODY) return errPage('\u05d4\u05e8\u05e9\u05d9\u05de\u05d4 \u05d0\u05e8\u05d5\u05db\u05d4 \u05de\u05d3\u05d9.', 413);
   const form = new URLSearchParams(raw);
-  if (form.get('op') === 'decide') return submitDecide(env, form, nowMs);
+  if (form.get('op') === 'decide') return submitDecide(env, form, nowMs, bg);
   const tok = String(form.get('k') || '');
   const t = await readWorksToken(env, tok, nowMs);
   if (t.error === 'expired') return errPage('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e4\u05d2. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d1\u05e7\u05e9 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9 \u05de\u05d4\u05de\u05de\u05d5\u05e0\u05d4 \u05e2\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.', 403);
   if (t.error) return errPage('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df.', 403);
   const op = String(form.get('op') || 'list');
-  if (op === 'close') return submitClose(env, form, tok, t.id, nowMs);
+  if (op === 'close') return submitClose(env, form, tok, t.id, nowMs, bg);
   if (op !== 'list') return errPage('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05dc\u05d0 \u05e0\u05ea\u05de\u05db\u05ea.', 400);
   return submitList(env, form, tok, t.id, nowMs);
 }
@@ -768,6 +786,8 @@ export async function onRequest(context) {
   SB = sbFrom(context.env);
   const { request, env } = context;
   const nowMs = Date.now();
+  // the signed permit runs after the answer is sent (Cloudflare keeps the request alive for it)
+  const bg = typeof context.waitUntil === 'function' ? (p) => context.waitUntil(p) : null;
   try {
     if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders(request.headers.get('origin') || '', defaultAllowedOrigins(env), 'POST,OPTIONS') });
     if (!env.SUPABASE_SERVICE_ROLE_KEY) return errPage('\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8.', 500);
@@ -775,7 +795,7 @@ export async function onRequest(context) {
     if (request.method === 'GET') return await showPage(env, new URL(request.url).searchParams.get('k') || '', nowMs);
     if (request.method !== 'POST') return errPage('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05dc\u05d0 \u05e0\u05ea\u05de\u05db\u05ea.', 405);
     if (/application\/json/i.test(request.headers.get('content-type') || '')) return await appOp(env, request, nowMs);
-    return await submit(env, request, nowMs);
+    return await submit(env, request, nowMs, bg);
   } catch (e) {
     return errPage('\u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.', 503);
   }
@@ -840,7 +860,7 @@ async function showDecide(env, tok, nowMs) {
     + '<p><button type="submit" name="act" value="reject" style="background:#b91c1c;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:16px">\u05de\u05d7\u05d6\u05d9\u05e8 \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4 \u05dc\u05ea\u05d9\u05e7\u05d5\u05df</button></p></form>';
   return page('\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4', decideSummary(d) + state + (gate && d.row.s === S_PEND ? '<p class="red">\u05d0\u05d9 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d0\u05e9\u05e8 \u05e2\u05d3\u05d9\u05d9\u05df: \u05d7\u05e1\u05e8 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8.</p>' : '') + form, '', 200);
 }
-async function submitDecide(env, form, nowMs) {
+async function submitDecide(env, form, nowMs, bg) {
   const tok = String(form.get('a') || '').slice(0, 300), act = String(form.get('act') || '');
   const d = await decideRow(env, tok, nowMs);
   if (d.error) return decideErr(d.error);
@@ -873,13 +893,17 @@ async function submitDecide(env, form, nowMs) {
   // and the link. A failed mail never undoes the decision; the page says so.
   let mailed = null;
   try { mailed = await decisionMail(env, d, act, clean(form.get('why') || '', 200), nowMs, mailDeps); } catch (e) { mailed = { error: String((e && e.message) || e).slice(0, 80) }; }
+  // The signed permit (stage B): after the decision is saved and maintenance told; it never undoes the approval.
+  const permit = act === 'approve' ? await permitLater(env, d.id, false, nowMs, bg) : '';
+  const permitLine = !permit ? '' : permit === 'failed' ? '<p class="red">\u05d4\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d4\u05d7\u05ea\u05d5\u05de\u05d4 \u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8\u05d4. \u05d4\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e0\u05e9\u05de\u05e8, \u05d5\u05d4\u05ea\u05e7\u05dc\u05d4 \u05e0\u05e8\u05e9\u05de\u05d4 (\u05d0\u05e4\u05e9\u05e8 \u05dc\u05d9\u05e6\u05d5\u05e8 \u05d0\u05d5\u05ea\u05d4 \u05e9\u05d5\u05d1).</p>'
+    : '<p>' + (permit === 'done' ? '\u05d4\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d4\u05d7\u05ea\u05d5\u05de\u05d4 \u05ea\u05d5\u05d9\u05e7\u05d4 \u05d5\u05e0\u05e9\u05dc\u05d7\u05d4 \u05d1\u05de\u05d9\u05d9\u05dc.' : '\u05d4\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d4\u05d7\u05ea\u05d5\u05de\u05d4 \u05ea\u05ea\u05d5\u05d9\u05e7 \u05d5\u05ea\u05d9\u05e9\u05dc\u05d7 \u05d1\u05de\u05d9\u05d9\u05dc \u05d1\u05d3\u05e7\u05d5\u05ea \u05d4\u05e7\u05e8\u05d5\u05d1\u05d5\u05ea.') + '</p>';
   const mailLine = mailed && mailed.to ? '<p>\u05e0\u05e9\u05dc\u05d7 \u05de\u05d9\u05d9\u05dc \u05dc: ' + esc(mailed.to.join(', ')) +
     (mailed.trial ? ' (\u05e0\u05d9\u05e1\u05d9\u05d5\u05df: \u05e8\u05e7 \u05d0\u05dc\u05d9\u05da, \u05db\u05dc \u05e2\u05d5\u05d3 \u05d4\u05de\u05d9\u05d9\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9 \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4 \u05db\u05d1\u05d5\u05d9)' : '') + '</p>'
     : '<p class="red">\u05d4\u05de\u05d9\u05d9\u05dc \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7 (' + esc((mailed && mailed.error) || '') + ').</p>';
   return page(act === 'approve' ? '\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d0\u05d5\u05e9\u05e8\u05d4' : '\u05d4\u05d4\u05e2\u05e8\u05d5\u05ea \u05e0\u05e9\u05dc\u05d7\u05d5 \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4',
     '<p><b>' + esc(lineOf(d.w)) + '</b></p><p>'
     + (act === 'approve' ? '\u05d4\u05d0\u05d7\u05e8\u05d0\u05d9 \u05e1\u05d5\u05d2\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d9\u05ea\u05e8 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e9\u05dc \u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d1\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4.'
-      : '\u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d9\u05e8\u05d0\u05d5 \u05d0\u05ea \u05d4\u05d4\u05e2\u05e8\u05d5\u05ea \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8, \u05d9\u05ea\u05e7\u05e0\u05d5 \u05d5\u05d9\u05e9\u05dc\u05d7\u05d5 \u05e9\u05d5\u05d1, \u05d5\u05d9\u05d2\u05d9\u05e2 \u05d0\u05dc\u05d9\u05da \u05de\u05d9\u05d9\u05dc \u05d7\u05d3\u05e9.') + '</p>' + mailLine, 'ok', 200);
+      : '\u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d9\u05e8\u05d0\u05d5 \u05d0\u05ea \u05d4\u05d4\u05e2\u05e8\u05d5\u05ea \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8, \u05d9\u05ea\u05e7\u05e0\u05d5 \u05d5\u05d9\u05e9\u05dc\u05d7\u05d5 \u05e9\u05d5\u05d1, \u05d5\u05d9\u05d2\u05d9\u05e2 \u05d0\u05dc\u05d9\u05da \u05de\u05d9\u05d9\u05dc \u05d7\u05d3\u05e9.') + '</p>' + mailLine + permitLine, 'ok', 200);
 }
 
 // The decision to maintenance (05/11/2026): approved (with Michael's notes, if any) or back for a fix with his notes, and
@@ -909,6 +933,91 @@ async function decisionMail(env, d, act, note, nowMs, deps) {
   const to = list ? list.to : [od.email], cc = list ? list.cc : [];
   await sendOut(deps, od.token, to, cc, (list ? '' : TRY_PREFIX) + DECIDE_SUBJECT(ok, d.w, d.friday), decisionHtml(ok, d.w, d.friday, note, worksUrl(tok)));
   return { to, trial: !list };
+}
+
+// ---- the signed permit (stage B, 05/11/2026) ----
+// To maintenance with a copy to Michael: server_state works_permit_to ({to: [], cc: []}, company domain only, like
+// works_mail_to), only while works_mail_on is "true"; otherwise to Michael's own mailbox, marked as a trial. The closed
+// version: to Michael only. A failure of any step: server_state works_permit_err, never a change to the decision.
+export const PERMIT_TO = 'works_permit_to', PERMIT_ERR = 'works_permit_err';
+export const PERMIT_INLINE_MS = 25000;
+export const PERMIT_SUBJECT = (w, friday, closed) => (closed ? '\u05d4\u05e8\u05e9\u05d0\u05d4 \u05e1\u05d2\u05d5\u05e8\u05d4: ' : '\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d7\u05ea\u05d5\u05de\u05d4: ') + String(w.desc || '').replace(/\s+/g, ' ').slice(0, 60) + ' (\u05d9\u05d5\u05dd \u05e9\u05d9\u05e9\u05d9 ' + dmy(friday) + ')';
+export function permitHtml(w, friday, closed, name, webUrl, attached) {
+  const p = (x, st) => '<p style="margin:0 0 10px' + (st || '') + '">' + x + '</p>';
+  return '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2937">'
+    + p('\u05e9\u05dc\u05d5\u05dd,')
+    + p((closed ? '\u05de\u05e6\u05d5\u05e8\u05e4\u05ea \u05d4\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d4\u05e1\u05d2\u05d5\u05e8\u05d4 (\u05e9\u05e2\u05ea \u05d4\u05e1\u05d9\u05d5\u05dd \u05d5\u05de\u05d9 \u05e1\u05d2\u05e8) \u05e9\u05dc \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4: ' : '\u05de\u05e6\u05d5\u05e8\u05e4\u05d5\u05ea \u05d4\u05e8\u05e9\u05d0\u05ea \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d5\u05d4\u05e8\u05e9\u05d0\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea, \u05d7\u05ea\u05d5\u05de\u05d5\u05ea, \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4: ') + '<b>' + esc(lineOf(w)) + '</b>, \u05d9\u05d5\u05dd \u05e9\u05d9\u05e9\u05d9 ' + dmy(friday) + '.')
+    + (closed ? '' : p('\u05d4\u05d4\u05e8\u05e9\u05d0\u05d4 \u05e0\u05de\u05e6\u05d0\u05ea \u05d1\u05d0\u05ea\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d6\u05de\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4. \u05d1\u05e1\u05d9\u05d5\u05dd, \u05d4\u05d0\u05d7\u05e8\u05d0\u05d9 \u05e1\u05d5\u05d2\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d9\u05ea\u05e8 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e9\u05dc \u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea.'))
+    + (attached ? p('\u05d4\u05e7\u05d5\u05d1\u05e5: ' + esc(name) + ' (\u05de\u05ea\u05d5\u05d9\u05e7 \u05d2\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05d4\u05d7\u05ea\u05d5\u05de\u05d5\u05ea).', ';color:#374151')
+      : p('\u05d4\u05e7\u05d5\u05d1\u05e5 \u05d2\u05d3\u05d5\u05dc \u05dc\u05e6\u05d9\u05e8\u05d5\u05e3. \u05d4\u05d5\u05d0 \u05de\u05ea\u05d5\u05d9\u05e7 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05d4\u05d7\u05ea\u05d5\u05de\u05d5\u05ea: ' + (webUrl ? '<a href="' + esc(webUrl) + '">' + esc(name) + '</a>' : esc(name)) + '.'))
+    + SITE.signature + '</div>';
+}
+// The filed path on the row: one line, replaced on a rerun; only while the row is as it was read (a closing between the
+// read and this write is never overwritten: the row is read again once).
+async function markPermit(env, row, mark, path) {
+  let cur = row;
+  for (let i = 0; i < 2; i++) {
+    if (i) { const rr = await sbGet(env, 'ptw?id=eq.' + encodeURIComponent(row.id) + '&select=safety,s,ver'); cur = rr && rr[0]; if (!cur) return false; }
+    const lines = String(cur.safety || '').split('\n').filter((x) => x && x.indexOf(mark) !== 0).concat([mark + path]);
+    const r = await fetch(SB + '/rest/v1/ptw?id=eq.' + encodeURIComponent(row.id) + '&s=eq.' + encodeURIComponent(cur.s) + (cur.ver ? '&ver=eq.' + encodeURIComponent(String(cur.ver)) : ''), { method: 'PATCH',
+      headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify({ safety: lines.join('\n') }) });
+    if (!r.ok) return false;
+    const got = await r.json().catch(() => null);
+    if (!Array.isArray(got) || got.length) return true;
+  }
+  return false;
+}
+// One permit: closed = the closed version (the row must be closed); else the approved one (approved or closed).
+// deps = {accessToken, sendMailTo}. Returns {ok, path, spot, recorded, mailed: {to, cc, trial, attached} | {error}}.
+export async function permitRun(env, id, closed, nowMs, deps, ownerOnly) {
+  const m = WK_ID_RE.exec(String(id || ''));
+  if (!m) return { ok: false, error: 'bad id' };
+  const friday = m[1];
+  const rows = await sbGet(env, 'ptw?id=eq.' + encodeURIComponent(id) + '&select=' + WEEK_COLS + ',ver');
+  const row = rows && rows[0];
+  if (!row) return { ok: false, error: 'missing' };
+  if (closed ? row.s !== S_CLOSED : [S_OK, S_CLOSED].indexOf(row.s) < 0) return { ok: false, error: 'status: ' + row.s };
+  const w = rowToWork(row, friday);
+  const od = await deps.accessToken(env);
+  if (!od || !od.token || !od.email) return { ok: false, error: 'no connected mailbox' };
+  const b = await buildPermit(env, SB, od.token, { w, num: row.num, friday, closed, nowMs });
+  const recorded = await markPermit(env, row, closed ? PERMIT_C_MARK : PERMIT_MARK, b.path).catch(() => false);
+  let list = null;
+  if (!closed && !ownerOnly) {
+    try { if (String(await stateGet(env, 'works_mail_on') || '').trim() === 'true') list = mailList(await stateGet(env, PERMIT_TO)); } catch (e) { list = null; }
+  }
+  const me = String(od.email).toLowerCase();
+  const to = list ? list.to : [me], cc = list ? list.cc.filter((x) => x !== me && to.indexOf(x) < 0).concat(to.indexOf(me) < 0 ? [me] : []) : [];
+  const attached = b.bytes.length <= ATTACH_MAX;
+  let mailed;
+  try {
+    await sendOut(deps, od.token, to, cc, (list || closed ? '' : TRY_PREFIX) + PERMIT_SUBJECT(w, friday, closed), permitHtml(w, friday, closed, b.name, b.webUrl, attached), attached ? [pdfAttachment(b.name, b.bytes)] : []);
+    mailed = { to, cc, trial: !list && !closed, attached };
+  } catch (e) { mailed = { error: String((e && e.message) || e).slice(0, 120) }; }
+  return { ok: true, path: b.path, spot: b.spot, missing: b.missing, recorded, mailed };
+}
+// Never throws: a failure (or a filed permit whose mail did not go) is kept in server_state for Michael and the agents.
+async function permitJob(env, id, closed, nowMs) {
+  let r;
+  try { r = await permitRun(env, id, closed, nowMs, mailDeps); } catch (e) { r = { ok: false, error: String((e && e.message) || e).slice(0, 200) }; }
+  const err = !r.ok ? r.error : r.mailed && r.mailed.error ? 'mail: ' + r.mailed.error : !r.recorded ? 'not recorded on the row: ' + r.path : '';
+  if (err) { try { await stateSet(env, PERMIT_ERR, JSON.stringify({ id, closed: !!closed, at: new Date(nowMs).toISOString(), error: String(err).slice(0, 200) })); } catch (e) { /* nothing more to do */ } }
+  return r;
+}
+// After the answer when the platform allows it (waitUntil), else inline with a cap. 'later' | 'done' | 'failed'.
+async function permitLater(env, id, closed, nowMs, bg) {
+  const job = permitJob(env, id, closed, nowMs);
+  if (bg) { bg(job); return 'later'; }
+  let t;
+  const r = await Promise.race([job, new Promise((res) => { t = setTimeout(() => res({ ok: false, error: 'timeout' }), PERMIT_INLINE_MS); })]);
+  clearTimeout(t);
+  return r.ok ? 'done' : 'failed';
+}
+// routine-db op works_permit (testing and recovery): one work again; the same recipients rule.
+export async function worksPermit(env, id, closed, deps) {
+  SB = sbFrom(env);
+  // The routine-db op: Michael's mailbox only, marked as a trial (security review 05/11/2026: mail to a person waits for him).
+  return permitRun(env, id, !!closed, Date.now(), deps, true);
 }
 
 // ---- the 5-minute clock (wa-morning.js watch) ----
@@ -946,7 +1055,8 @@ export function mailList(raw) {
   return to.length ? { to, cc } : null;
 }
 // The only call that sends mail from this file (graph-writes-test counts it): the weekly link and the approval mail.
-const sendOut = (deps, token, to, cc, subject, html) => deps.sendMailTo(token, to, cc, subject, html, []);
+// The signed permit (05/11/2026, DECISIONS "\u05d4\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d4\u05d7\u05ea\u05d5\u05de\u05d4") goes through it too, with the PDF attached.
+const sendOut = (deps, token, to, cc, subject, html, att) => deps.sendMailTo(token, to, cc, subject, html, att || []);
 // The one place that mails the link: the weekly mail and Michael's trial copy (05/11/2026). list = {to, cc}, or null
 // for the connected account only (Michael's own mailbox; nobody else).
 async function mailWeek(env, friday, list, prefix, nowMs, deps) {

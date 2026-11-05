@@ -24,6 +24,11 @@
 //   assistant_account  {account: 'main'|'gmail', agent?}: 29/10/2026 which Claude account the assistant's WhatsApp messages fire (the ASSISTANT_* or the ASSISTANT2_* pair).
 //   works_try_mail  {}: 05/11/2026 the weekly works-link mail, once, marked as a trial, to Michael's own mailbox only (works.js).
 //   works_approve_mail {}: 05/11/2026 the approval mail (approve / notes buttons) again, for this Friday's works still pending, to Michael's own mailbox only.
+//   works_permit {id: wk-YYYY-MM-DD-n, closed?: true}: 05/11/2026 the signed permit of ONE approved work again (testing,
+//              recovery after works_permit_err): filled from the factory's templates, signed, filed as a NEW file in
+//              18_.../02_הרשאות חתומות/<YYYY-MM> (never replaces one), the row's "[הרשאה]" line updated, and mailed by the
+//              approval's rule (maintenance + Michael only while works_mail_on and works_permit_to; else Michael's own
+//              mailbox, marked as a trial). closed: the closed version (a closed row only), to Michael only. works.js permitRun.
 //   quota_set  {util, resets_at}: the weekly quota as rate_limit_info shows it; the server decides quota_mode.
 //   live       the deployed commit (CF_PAGES_COMMIT_SHA) and the sha256 of the index.html this
 //              deployment serves (env.ASSETS). The cloud is outside Israel, so the country gate
@@ -169,7 +174,7 @@ import { transcribe } from '../_stt.js';
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, FILE_TIMEOUT_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile, sendMailTo } from '../_onedrive.js';
-import { worksTryMail, worksApproveMail } from './works.js';
+import { worksTryMail, worksApproveMail, worksPermit, WK_ID_RE as WORKS_ID_RE } from './works.js';
 import { readZip, entryText } from '../_xlsxpatch.js';
 import { DOMAIN_FORMS } from '../_domains.js';
 import { OD_OCR_DIR, OCR_MODELS, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
@@ -185,7 +190,7 @@ import { DOC_MAX, ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTA
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads',
   'trustees', 'trustee_tasks', 'trustee_winners'];
-export const STATE_READ = ['agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account'];
+export const STATE_READ = ['agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account', 'works_permit_err'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -2118,6 +2123,13 @@ async function routineDbHandle(context) {
     if (body.op === 'works_approve_mail') {
       for (const k of Object.keys(body)) if (['op', 'agent'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       try { return jsonResp(await worksApproveMail(env, new Date(), { accessToken, sendMailTo }), 200, {}); }
+      catch (e) { return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 160) }, 200, {}); }
+    }
+    if (body.op === 'works_permit') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'id', 'closed'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      if (!WORKS_ID_RE.test(String(body.id || ''))) return jsonResp({ ok: false, error: 'id: wk-YYYY-MM-DD-n' }, 400, {});
+      if (body.closed !== undefined && typeof body.closed !== 'boolean') return jsonResp({ ok: false, error: 'closed: true or false' }, 400, {});
+      try { return jsonResp(await worksPermit(env, String(body.id), body.closed === true, { accessToken, sendMailTo }), 200, {}); }
       catch (e) { return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 160) }, 200, {}); }
     }
     if (body.op === 'quota_set') {

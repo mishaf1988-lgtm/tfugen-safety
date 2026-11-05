@@ -20233,6 +20233,8 @@ function _delAllHearingGo(){
 // _PTW_GATE line) or rejects it with a reason; the supervisor closes an approved permit from the link.
 // The signed permit PDF: stage B (STATUS).
 var _PTW_PEND='\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8',_PTW_REJ='\u05e0\u05d3\u05d7\u05d4',_PTW_OK='\u05e4\u05ea\u05d5\u05d7',_PTW_CHK='[\u05dc\u05d1\u05d3\u05d9\u05e7\u05d4] ',_PTW_GATE='[\u05d7\u05e1\u05e8 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8] ',_PTW_NOTE='[\u05d4\u05e2\u05e8\u05d4] ',_PTW_REJM='[\u05e0\u05d3\u05d7\u05d4] ',_PTW_OKN='[\u05d4\u05e2\u05e8\u05d5\u05ea \u05d4\u05de\u05de\u05d5\u05e0\u05d4] ',_PTW_FILES='[\u05e7\u05d1\u05e6\u05d9\u05dd] ';
+// the signed permit works.js filed for an approved work, and its closed version (stage B, 05/11/2026): a path under the safety folder
+var _PTW_PERMIT='[\u05d4\u05e8\u05e9\u05d0\u05d4] ',_PTW_PERMITC='[\u05d4\u05e8\u05e9\u05d0\u05d4 \u05e1\u05d2\u05d5\u05e8\u05d4] ';
 function _ptwIsWk(p){return /^wk-\d{4}-\d{2}-\d{2}-\d{1,2}$/.test(String(p&&p.id||''));}
 function _ptwWkLine(p,mark){var l=String(p&&p.safety||'').split('\n').filter(function(x){return x.indexOf(mark)===0;})[0];return l?l.slice(mark.length):'';}
 function _ptwApi(body){
@@ -20347,6 +20349,8 @@ function rPtw(){
     var gate=wk?_ptwWkLine(p,_PTW_GATE):'',note=wk?_ptwWkLine(p,_PTW_NOTE):'',okn=wk?_ptwWkLine(p,_PTW_OKN):'';
     var wkInfo=(flg?'<div style="color:var(--bad);font-size:11px;white-space:normal">\u26a0\ufe0f '+esc(flg)+'</div>':'')+(gate?'<div style="color:var(--bad);font-size:11px;white-space:normal">\u26d4 '+esc(gate)+'</div>':'')+(note?'<div style="color:var(--c-orange-700,#92400e);font-size:11px;white-space:normal">'+esc(note)+'</div>':'')+(rej?'<div style="color:var(--bad);font-size:11px;white-space:normal">'+esc(_PTW_REJ+': '+rej)+'</div>':'');
     wkInfo+=(okn?'<div style="font-size:11px;white-space:normal">'+esc('\u05d4\u05e2\u05e8\u05d5\u05ea \u05d4\u05de\u05de\u05d5\u05e0\u05d4: '+okn)+'</div>':'');
+    var pmt=wk?(_ptwWkLine(p,_PTW_PERMITC)||_ptwWkLine(p,_PTW_PERMIT)):'';
+    wkInfo+=(pmt?'<div style="font-size:11px;white-space:normal" title="'+esc(pmt)+'">\ud83d\udcc4 '+esc(pmt.split('/').pop())+'</div>':'');
     var rjbtn=wk&&p.s===_PTW_PEND?' <button class="btn btn-sm" style="background:var(--c-green-650,#16a34a);color:var(--c-white,#fff)" data-aid="'+vid+'" onclick="_ptwWkApprove(this.dataset.aid)" title="\u05d0\u05d9\u05e9\u05d5\u05e8">&#10004;</button> <button class="btn btn-d btn-sm" data-rid="'+vid+'" onclick="_ptwWkReject(this.dataset.rid)" title="'+_PTW_REJ+'">&#10006;</button>':'';
     return '<tr><td><span class="b bX">'+esc(p.num||'')+'</span></td><td><strong>'+esc(p.con||'')+'</strong>'+wkInfo+'</td><td style="font-size:11px">'+esc((p.types||'').substring(0,25))+'</td><td>'+fd(p.ds)+'</td><td style="font-size:11px">'+esc(p.ts||'')+'-'+esc(p.te||'')+'</td><td>'+esc(areaTxt)+'</td><td>'+sb(p.s)+'</td><td>'+vbtn+rjbtn+'</td><td>'+dbtn+'</td></tr>';
   }).join('');
