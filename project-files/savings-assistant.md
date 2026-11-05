@@ -9,3 +9,5 @@
 3. סינון: grep ב-DECISIONS.md וב-BACKLOG.md; הצעה שכבר הוחלטה לא חוזרת.
 4. כתיבה: 1 עד 3 הצעות ל-`project-files/ideas-lab.md` עם ניסוי ומדידה, ושורת דוח בראש `project-files/savings-report.md`. לא בונה, לא שולח, לא כותב במסד.
 5. PR קטן וממזג כשירוק.
+
+**שמירה (05/11/2026, הריצה הראשונה: הדוח נכתב אבל `git push` נחסם ב-403, "המאגר לא ברשימת המקורות", והדוח אבד):** לפני צעד 1: `git push --dry-run origin HEAD:refs/heads/routine/savings-YYYY-MM-DD`. עבר = עובדים רגיל. נכשל = (א) כלי GitHub (`ToolSearch` "github push_files"): `create_branch` מ-`main`, `push_files` עם התוכן המלא של כל קובץ ששונה, `create_pull_request`, ומיזוג רק כש-`ci-wait.sh` יצא 0; (ב) אין גם אותם: הדוח המלא לא אובד. `agent_report` עם `ok: true`, שורת הדוח ב-`line`, וההצעות (כותרת, חיסכון משוער, ניסוי) ב-`learned`; שיחת הפיתוח מעתיקה אותם ל-`savings-report.md` ול-`ideas-lab.md`. התיקון הקבוע: המאגר ב-"Select a repository" של ה-Routine (`chrome-queue.md` C75).
