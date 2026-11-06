@@ -68,6 +68,16 @@ check('wa_me: urgent hazard / incident / watchdog by name, anything else is agen
   && waMeKind({ urgent: 'watchdog' }) === 'watchdog' && waMeKind({ urgent: 'reply' }) === 'agent' && waMeKind({}) === 'agent' && WA_ME_URGENT.every((k) => OWNER_NOW_KINDS.indexOf(k) >= 0));
 check('the assistant can read the held list ("what was held")', STATE_READ.indexOf('weekend_held') >= 0 && STATE_READ.indexOf('weekend_held_last') >= 0);
 
+// pairs: the faults regex (watchdog only for the assistant itself) and the ids a reminder is matched by
+const FAULT_RE = /^agentq?:wa-assistant$/;
+check('pairs: the faults watchdog regex matches the assistant, not other agents', ['agent:wa-assistant', 'agentq:wa-assistant'].every((k) => FAULT_RE.test(k))
+  && ['agent:mail-filing', 'agent:wa-assistant-2', 'err:wa-assistant'].every((k) => !FAULT_RE.test(k))
+  && /\^agentq\?:wa-assistant\$/.test(src('_faults.js')));
+{ const one = (ref, kind) => weekendList(JSON.stringify([{ text: 't', kind: kind || 'reminder', ref }]), JSON.stringify([{ id: 'p-20261106100000-abcd', status: 'done' }]), JSON.stringify([{ id: 'dev-20261106100000-aaaa', status: 'done' }])).lines.length;
+  check('pairs: a closed promise or dev id in a reminder ref drops it (3), others stay (3)',
+    one('p-20261106100000-abcd') === 0 && one('promise:p-20261106100000-abcd') === 0 && one('dev dev-20261106100000-aaaa') === 0
+    && one('p-2026110610000-abcd') === 1 && one('p-20261106100000-zzzz') === 1 && one('p-20261106100000-abcd', 'done') === 1); }
+
 // ---------- 3. the Sunday list ----------
 console.log('\n3. the Sunday list');
 let l = [];
