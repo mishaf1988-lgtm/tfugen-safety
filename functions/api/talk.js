@@ -453,7 +453,7 @@ export function missMailHtml(talk, dept, list, url, noIdList) {
     + (list.length ? '<ul style="margin:4px 0 10px">' + list.map(li).join('') + '</ul>' : '')
     + (nl.length ? '<p style="margin:4px 0">' + NO_ID_L + ' (' + nl.length + '):</p><ul style="margin:4px 0 10px;color:#555">' + nl.map(li).join('') + '</ul>' : '')
     + (url ? '<p>\u05d0\u05d9\u05da \u05d7\u05d5\u05ea\u05de\u05d9\u05dd: \u05e1\u05d5\u05e8\u05e7\u05d9\u05dd \u05d0\u05ea \u05d4-QR \u05e9\u05d1\u05db\u05e0\u05d9\u05e1\u05d4, \u05d0\u05d5 \u05e4\u05d5\u05ea\u05d7\u05d9\u05dd \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05d8\u05dc\u05e4\u05d5\u05df, \u05de\u05de\u05dc\u05d0\u05d9\u05dd \u05e9\u05dd, \u05ea"\u05d6 \u05d5\u05de\u05d7\u05dc\u05e7\u05d4 \u05d5\u05d7\u05d5\u05ea\u05de\u05d9\u05dd:<br><a href="' + esc(url) + '">' + esc(url) + '</a></p>' : '')
-    + '<p>\u05ea\u05d5\u05d3\u05d4,<br>' + esc(SITE.owner) + ', ' + esc(SITE.ownerTitle) + '</p></div>';
+    + SITE.signature + '</div>';
 }
 export function talkUrl(tok, lang, g, tr) { return APP_URL + '/api/talk?k=' + encodeURIComponent(tok) + (lang && lang !== 'he' ? '&l=' + lang : '') + (g ? '&g=1' : '') + (tr ? '&t=1' : ''); }
 export function makeTalkToken(env, id, nowMs) { return makeLinkToken(env, PREFIX, id, TALK_TTL_DAYS, nowMs); }
@@ -892,7 +892,7 @@ export async function fileInduction(env, talk, row, sig, lang, nowMs, answers, d
       + '<table>' + cell('\u05e9\u05dd', esc(row.emp_name || '')) + cell('\u05de\u05e1\' \u05ea.\u05d6.', esc(row.id_no || '')) + (row.emp_no ? cell('\u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3', esc(row.emp_no)) : '') + cell('\u05de\u05d7\u05dc\u05e7\u05d4', esc(row.dept || '-')) + (row.phone ? cell('\u05d8\u05dc\u05e4\u05d5\u05df', esc(row.phone)) : '') + (row.job ? cell('\u05ea\u05e4\u05e7\u05d9\u05d3', esc(row.job)) : '') + (row.agency ? cell('\u05d7\u05d1\u05e8\u05ea \u05db\u05d5\u05d7 \u05d0\u05d3\u05dd', esc(row.agency)) : '') + cell('\u05ea\u05d0\u05e8\u05d9\u05da', esc(fdate(day)) + ' ' + esc(hm))
       + (row.quiz_n ? cell('\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05d1\u05e0\u05d4', row.quiz_ok + '/' + row.quiz_n) : '') + '</table>'
       + (out.url ? '<p>\u05ea\u05d5\u05d9\u05e7 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4: <a href="' + esc(out.url) + '">' + esc(name) + '</a></p>' : '')
-      + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc ' + SITE.company + '.</p></div>';
+      + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc ' + SITE.company + '.</p>' + SITE.signature + '</div>';
     await sendMailTo(od.token, to, [], '\u05d8\u05d5\u05e4\u05e1 \u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9 \u05d7\u05ea\u05d5\u05dd: ' + (row.emp_name || '') + ', ' + fdate(day), mail,
       // A form with many photos can pass what a mail carries: then the link above only.
       bytes.length <= MAIL_ATTACH_MAX ? [{ '@odata.type': '#microsoft.graph.fileAttachment', name, contentType: type, contentBytes: b64(bytes) }] : []);
@@ -1097,7 +1097,7 @@ export async function fileForm0801(env, talk, hb, n, miss, nowMs) {
   if (to.length) {
     const mail = '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px"><p>\u05d8\u05d5\u05e4\u05e1 08.01 \u05de\u05d5\u05dc\u05d0: <b>' + esc(talk.title || '') + '</b> (' + esc(fdate(talk.d)) + ')</p><p>\u05d7\u05ea\u05de\u05d5: ' + n + '</p>'
       + (out.miss ? '<p style="color:#b91c1c;font-weight:bold">\u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05e9\u05dc\u05d0 \u05e0\u05d8\u05e2\u05e0\u05d5 \u05dc\u05d8\u05d5\u05e4\u05e1: ' + out.miss + ' (\u05de\u05e1\u05d5\u05de\u05e0\u05d5\u05ea \u05d1\u05d8\u05d5\u05e4\u05e1, \u05e9\u05de\u05d5\u05e8\u05d5\u05ea \u05d1\u05de\u05e2\u05e8\u05db\u05ea)</p>' : '')
-      + (out.url ? '<p><a href="' + esc(out.url) + '">\u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4</a></p>' : '') + '</div>';
+      + (out.url ? '<p><a href="' + esc(out.url) + '">\u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4</a></p>' : '') + SITE.signature + '</div>';
     const att = bytes.length <= MAIL_ATTACH_MAX ? [{ '@odata.type': '#microsoft.graph.fileAttachment', name, contentType: type, contentBytes: b64(bytes) }] : [];
     try { await sendMailTo(od.token, to, [], '\u05d8\u05d5\u05e4\u05e1 08.01: ' + String(talk.title || '').substring(0, 80), mail, att); out.mailed = true; } catch (e) { out.mailErr = String((e && e.message) || e).substring(0, 160); }
   }

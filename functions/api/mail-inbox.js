@@ -149,7 +149,7 @@ async function closeOne(env, token, msg, c) {
       + '<p><strong>\u2705 \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05e1\u05d2\u05e8.</strong></p>'
       + '<p><strong>\u05d4\u05de\u05de\u05e6\u05d0:</strong> ' + esc(f.f || '') + '<br><strong>\u05de\u05d9\u05e7\u05d5\u05dd:</strong> ' + esc(f.loc || '') + '<br><strong>\u05e0\u05e1\u05d2\u05e8 \u05e2\u05dc \u05d9\u05d3\u05d9:</strong> ' + esc(c.name)
       + (photoUrl ? '<br>\ud83d\udcf7 \u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05e9\u05e6\u05d9\u05e8\u05e4\u05ea \u05e0\u05e9\u05de\u05e8\u05d4 \u05db\u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9".' : '<br>\u05dc\u05d0 \u05e6\u05d5\u05e8\u05e4\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4.') + '</p>'
-      + '<p style="color:#6b7280;font-size:12px">\u05e2\u05d5\u05d3\u05db\u05df \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d5\u05d1\u05d9\u05d5\u05de\u05df \u05d4\u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d1\u05d0\u05e7\u05e1\u05dc. ' + esc(APP_URL) + '</p></div>';
+      + '<p style="color:#6b7280;font-size:12px">\u05e2\u05d5\u05d3\u05db\u05df \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d5\u05d1\u05d9\u05d5\u05de\u05df \u05d4\u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d1\u05d0\u05e7\u05e1\u05dc. ' + esc(APP_URL) + '</p>' + SITE.signature + '</div>';
     // No [TS-] tag in this subject: it must never be read back as a reply.
     await sendMail(token, c.from, '\u2705 \u05e0\u05e1\u05d2\u05e8: ' + String(f.f || '').substring(0, 60), html);
   } catch (e) { /* closed; the confirmation is a courtesy */ }
