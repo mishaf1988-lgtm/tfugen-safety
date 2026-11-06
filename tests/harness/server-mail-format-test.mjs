@@ -79,7 +79,7 @@ const RENDER = [
   ['weekly-digest.digestHtml', 'Michael only', digestHtml(digest, '2026-11-06', {}), false],
   ['hazard-report.buildReport', 'dept managers', buildReport('x', hrows, rcpt, {}, '2026-11-06', null, null).html, true],
   ['hazard-report.buildStatus', 'dept managers', buildStatus('x', hrows, rcpt, '', null, '2026-11-06', null, null).html, true],
-  ['talk.missMailHtml', 'dept managers', missMailHtml({ id: 't', title: 'ttl', kind: 'weekly', d: '2026-11-05' }, 'dept', [{ n: 'name' }], 'https://x/y', []), false],
+  ['talk.missMailHtml', 'dept managers', missMailHtml({ id: 't', title: 'ttl', kind: 'weekly', d: '2026-11-05' }, 'dept', [{ n: 'name' }], 'https://x/y', []), true],
   ['works.approvalHtml', 'Michael only', approvalHtml(FRI, [{ w: work }], false), false],
   ['works.askHtml', 'Michael only', askHtml(FRI, { to: ['a@x.il'], cc: ['b@x.il'] }, 'https://x/y'), false],
   ['works.decisionHtml', 'contractor/dept', decisionHtml(true, work, FRI, 'note', 'https://x/y'), true],
@@ -100,11 +100,11 @@ const INLINE = [
   ['api/hazard-report.js', "const html = test ? '<div dir=\"rtl\"", 'await sendMailTo(token, to, cc, (test', false, 'test banner (to Michael), body = buildStatus (rendered above)'],
   ['api/hazard-report.js', "const html = test ? '<div dir=\"rtl\"", 'await sendMailTo(token, to, cc, subject', false, 'test banner (to Michael), body = buildReport (rendered above)'],
   ['api/talk.js', "const html = (test ? '<div dir=\"rtl\"", 'await sendMailTo(od.token, test ? [od.email]', false, 'test banner, body = missMailHtml (rendered above)'],
-  ['api/talk.js', "const mail = '<div dir=\"rtl\"", "await sendMailTo(od.token, to, [], '\\u05d8\\u05d5\\u05e4\\u05e1 \\u05e7\\u05dc\\u05d9\\u05d8\\u05ea", null, 'induction form: Michael + HR'],
-  ['api/talk.js', "const mail = '<div dir=\"rtl\"", "await sendMailTo(od.token, to, [], '\\u05d8\\u05d5\\u05e4\\u05e1 08.01", null, 'form 08.01: Michael + quality cc'],
+  ['api/talk.js', "const mail = '<div dir=\"rtl\"", "await sendMailTo(od.token, to, [], '\\u05d8\\u05d5\\u05e4\\u05e1 \\u05e7\\u05dc\\u05d9\\u05d8\\u05ea", true, 'induction form: Michael + HR'],
+  ['api/talk.js', "const mail = '<div dir=\"rtl\"", "await sendMailTo(od.token, to, [], '\\u05d8\\u05d5\\u05e4\\u05e1 08.01", true, 'form 08.01: Michael + quality cc'],
   ['api/trustee-notify.js', "const html = '<div dir=\"rtl\"", 'await within(sendMail(token, to, subject, html)', false, 'trustee alert to Michael'],
   ['api/close-hazard.js', "const html = '<div dir=\"rtl\"", 'await sendMail(token, to,', false, 'closed notice to Michael'],
-  ['api/mail-inbox.js', "const html = '<div dir=\"rtl\"", 'await sendMail(token, c.from,', null, 'closed notice to the person who replied'],
+  ['api/mail-inbox.js', "const html = '<div dir=\"rtl\"", 'await sendMail(token, c.from,', true, 'closed notice to the person who replied'],
 ];
 for (const [rel, start, end, sig, who] of INLINE) {
   const src = fs.readFileSync(path.join(FN, rel), 'utf8');
