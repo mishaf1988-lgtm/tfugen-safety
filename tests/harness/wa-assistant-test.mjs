@@ -330,6 +330,11 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
     check('learn replaces: when the new text is already open, the old line is still retired', dup.ok && dup.id === dup0.id && JSON.parse(state.assistant_learned).find((x) => /March/.test(x.text)).status === 'replaced', dup);
     const byId = await L({ kind: 'correction', text: 'the crane inspection is every 12 months (Michael corrected)', replaces: nb.find((x) => /crane/.test(x.text)).id });
     check('learn replaces: an id works too', byId.ok && JSON.parse(state.assistant_learned).find((x) => /14 months/.test(x.text)).status === 'replaced', byId);
+    { // retro 03/11/2026 (b): by id too, never another agent's line
+      const qid = JSON.parse(state.assistant_learned).find((x) => /quality line/.test(x.text)).id;
+      const otherId = await L({ kind: 'correction', text: 'compressors every 3 years (id of another agent)', replaces: qid });
+      check('learn replaces: an id of another agent\'s line is refused and that line stays new', otherId.ok === false && JSON.parse(state.assistant_learned).find((x) => x.id === qid).status === 'new', otherId);
+    }
     // pairs (lessons-gate "\u05d6\u05d5\u05d2\u05d5\u05ea:"): the id pattern of replaces, 3 real ids that must match and 3 near ids that must not
     const ids = [];
     for (const n of ['one', 'two', 'three']) ids.push((await L({ kind: 'fact', text: 'pair line number ' + n + ' for the id test' })).id);
