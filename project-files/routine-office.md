@@ -1,6 +1,6 @@
 # Routine יומי: משרד הסוכנים
 
-**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_016Cc2xKxQ9W5AEf75yLhmtA` (שיחה `session_01JT8Fct6Z6Qv2GbaBBqxtQT`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
+**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_015oCa3o5whdXon9dTettfkB` (שיחה `session_01JT8Fct6Z6Qv2GbaBBqxtQT`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
 
 מיכאל, 16/10/2026: "הייתי רוצה מוד בטלפון שאני רואה משרד עם הסוכנים שלי בלחיצה בכפתור". בשאלון: "בצע: עמוד ב-Claude, מוצמד", "בצע: כל בוקר אוטומטית", ועל כל שולחן: מצב, מה עשה ומה למד, מה מחכה לו, עלות לריצה.
 
