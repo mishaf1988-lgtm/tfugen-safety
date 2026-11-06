@@ -80,6 +80,7 @@ async function note(env, value) {
 // recentLine moved to _wa.js (23/10/2026) so routine-db (office_ask) uses it too; re-exported for the tests.
 export { recentLine, RECENT_H, RECENT_N, RECENT_MAX } from '../_wa.js';
 import { domainLine } from '../_domains.js';
+import { stateCas } from '../_cas.js';
 // at = when the server logged the message, to the millisecond (atMs), not Meta's timestamp: 29/10/2026 13:09, three
 // photos and a line sent together carried the same second, two runs passed the same answers, and overlapReply took
 // the second run's reply for the first run's own message, so both answers went out (13:10 and 13:11).
@@ -129,23 +130,31 @@ async function sbJson(env, path, init) {
 }
 
 // Meta retries a webhook it thinks failed: the same message id is handled once.
+// 06/11/2026 (retro 19/10/2026 (b)): the list was read and written back whole, so two webhooks at once could drop each
+// other's id (and forget could drop a newer one). Both now write through stateCas: only over the version read, else again.
+// Pure: raw = the list as stored; { seen: true } when id is in it, else { value } with id added (the newest SEEN_MAX).
+export function seenAdd(raw, id) {
+  const seen = Array.isArray(raw) ? raw : [];
+  if (seen.indexOf(id) >= 0) return { seen: true };
+  return { value: seen.concat([id]).slice(-SEEN_MAX) };
+}
+export function seenDrop(raw, id) {
+  const seen = Array.isArray(raw) ? raw : [];
+  return seen.indexOf(id) >= 0 ? { value: seen.filter((x) => x !== id) } : { write: false };
+}
+const sbH = (env) => { const k = env.SUPABASE_SERVICE_ROLE_KEY; return { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }; };
 async function firstTime(env, id) {
-  const rows = await sbJson(env, 'server_state?key=eq.' + SEEN_KEY + '&select=value');
-  const seen = (rows && rows[0] && Array.isArray(rows[0].value)) ? rows[0].value : [];
-  if (seen.indexOf(id) >= 0) return false;
-  const value = seen.concat([id]).slice(-SEEN_MAX);
-  await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify([{ key: SEEN_KEY, value, updated_at: new Date().toISOString() }]) });
+  let dup = false;
+  const r = await stateCas(sbFrom(env), sbH(env), SEEN_KEY, (raw) => { const a = seenAdd(raw, id); dup = !!a.seen; return a.seen ? { write: false } : a; }, () => tmo(SB_TIMEOUT_MS));
+  if (dup) return false;
+  if (!r.written) throw new Error('seen list not written' + (r.status ? ' ' + r.status : ''));
   return true;
 }
 
 // A fire that failed must not keep the message marked as seen: Meta gets 200 either way and never retries.
 async function forget(env, id) {
   try {
-    const rows = await sbJson(env, 'server_state?key=eq.' + SEEN_KEY + '&select=value');
-    const seen = (rows && rows[0] && Array.isArray(rows[0].value)) ? rows[0].value : [];
-    await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify([{ key: SEEN_KEY, value: seen.filter((x) => x !== id), updated_at: new Date().toISOString() }]) });
+    await stateCas(sbFrom(env), sbH(env), SEEN_KEY, (raw) => seenDrop(raw, id), () => tmo(SB_TIMEOUT_MS));
   } catch (e) { /* the note below still shows fire_status */ }
 }
 
