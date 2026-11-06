@@ -19,7 +19,7 @@
 //   body {watch: true}  the watchdog for a stuck run, every 5 minutes (watchVerdict)
 // The same run writes calendar requests for upcoming expiries (calendarStep, below).
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo, SITE } from '../_shared.js';
-import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, PROMISE_KEY, promiseDue, promiseRemindText, promiseToCheck, eveningAdd, isoWeekAdd, promiseCheckDue, promiseCheckFireText, assistantFire, assistantFireNow } from '../_wa.js';
+import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, WEEKEND_KEY, WEEKEND_LAST_KEY, weekendList, PROMISE_KEY, promiseDue, promiseRemindText, promiseToCheck, eveningAdd, isoWeekAdd, promiseCheckDue, promiseCheckFireText, assistantFire, assistantFireNow } from '../_wa.js';
 import { odConfigured, accessToken, putFile, sendMailTo } from '../_onedrive.js';
 import { worksTick } from './works.js';
 import { meetingDate, checkAndFixDeck, deckGapText } from './hazard-deck.js';
@@ -374,10 +374,10 @@ export async function devRemind(env, now) {
   const x = due[0]; // one a tick: each line carries its own ref for the answer
   let warned = []; try { warned = JSON.parse(warnedRaw || '[]'); } catch (e) { warned = []; }
   const text = devStuckText(x);
-  const r = await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, sbFrom(env)) });
+  const r = await sendToOwner(env, to, text, { kind: 'reminder', ref: 'dev ' + x.id, windowOpen: await ownerWindowOpen(env, sbFrom(env)) });
   // marked warned only when it went out (26/10/2026 retro): a failed send is tried again on the next tick
   if (r.ok) await stateSet(env, DEV_WARN_KEY, JSON.stringify([x.id].concat(Array.isArray(warned) ? warned : []).slice(0, DEV_WARN_MAX)));
-  if (r.ok) await noteLastOut(env, sbFrom(env), text, 'dev ' + x.id);
+  if (r.ok && !r.held) await noteLastOut(env, sbFrom(env), text, 'dev ' + x.id);
   await sb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
     body: JSON.stringify([{ id: 'wd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
       event_type: 'watch', channel: r.ok ? 'whatsapp' : 'whatsapp_error', payload: { title: clip(text, 120), kind: 'dev_stuck', detail: r.error || null } }]) }).catch(() => {});
@@ -399,7 +399,7 @@ async function promiseRemind(env, now) {
   const ids = due.map((x) => x.id);
   list.forEach((x) => { if (x && ids.indexOf(x.id) >= 0) x.reminded_at = now.toISOString(); });
   const text = promiseRemindText(due);
-  const r = await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, sbFrom(env)) });
+  const r = await sendToOwner(env, to, text, { kind: 'reminder', ref: ids.join(' '), windowOpen: await ownerWindowOpen(env, sbFrom(env)) });
   // marked reminded only after it went out (26/10/2026 retro)
   if (r.ok) await stateSet(env, PROMISE_KEY, JSON.stringify(list));
   await sb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
@@ -496,7 +496,7 @@ async function watchReply(env, now) {
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };
   const to = await ownerWa(env, sbFrom(env));
   if (!to) return { ok: false, error: 'no owner number in notification_prefs' };
-  const r = await sendToOwner(env, to, v.text, { windowOpen: true, noTemplate: true });
+  const r = await sendToOwner(env, to, v.text, { kind: 'watchdog', windowOpen: true, noTemplate: true });
   // marked only after it went out (26/10/2026 retro): a failed alert is tried again on the next tick
   if (r.ok) await stateSet(env, WATCH_KEY, v.wamid);
   // Its own event_type, not 'assistant': the weekly retro (retro-prompt.md 7a) counts these, and an
@@ -530,8 +530,8 @@ export async function deckWatch(env, now) {
     const text = deckGapText(meeting, out.gaps, out.fixed);
     const to = env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN ? await ownerWa(env, sbFrom(env)) : null;
     const open = to ? await ownerWindowOpen(env, sbFrom(env), now.getTime()) : false;
-    sent = to ? await sendToOwner(env, to, text, { windowOpen: open }) : { ok: false, error: 'whatsapp not configured' };
-    if (sent.ok) await noteLastOut(env, sbFrom(env), text, 'deck_check').catch(() => {});
+    sent = to ? await sendToOwner(env, to, text, { kind: 'deck', windowOpen: open }) : { ok: false, error: 'whatsapp not configured' };
+    if (sent.ok && !sent.held) await noteLastOut(env, sbFrom(env), text, 'deck_check').catch(() => {});
     out.sent = !!sent.ok;
   }
   await stateSet(env, DECK_CHECK_KEY, JSON.stringify(out));
@@ -555,6 +555,29 @@ export async function stagingPing() {
   return { status: r.status };
 }
 
+// 06/11/2026 (Michael: "I don't work on Friday and Saturday"; in the questionnaire: "do it: collect for Sunday morning").
+// The messages kept on Friday and Saturday (_wa.js weekendHold) come under the morning update as one list: at most
+// WEEKEND_SHOW lines, a reminder already closed (a promise kept, a request done) is dropped, the rest "and N more".
+// Any day the update goes out, not only Sunday: a list that missed Sunday comes on Monday. A read that fails = no list
+// this time; nothing is cleared, so it comes next time.
+export async function weekendStep(env) {
+  const at = new Date().toISOString();
+  try {
+    const raw = await stateGet(env, WEEKEND_KEY);
+    let list = []; try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
+    if (!Array.isArray(list) || !list.length) return { at, raw: [], lines: [], more: 0, total: 0 };
+    const [pr, dv] = await Promise.all([stateGet(env, PROMISE_KEY), stateGet(env, 'dev_inbox')]);
+    return Object.assign({ at, raw: list }, weekendList(list, pr, dv));
+  } catch (e) { return { at, raw: [], lines: [], more: 0, total: 0 }; }
+}
+export function weekendText(wk, compact) {
+  if (!wk || !wk.lines || !wk.lines.length) return '';
+  const head = '\u05de\u05e1\u05d5\u05e3 \u05d4\u05e9\u05d1\u05d5\u05e2 (' + wk.total + ')';
+  const more = wk.more ? '\u05d5\u05e2\u05d5\u05d3 ' + wk.more + ': \u05dc\u05db\u05ea\u05d5\u05d1 "\u05de\u05d4 \u05e0\u05d3\u05d7\u05d4" \u05d5\u05d0\u05e9\u05dc\u05d7.' : '';
+  if (compact) return ' ' + head + ': ' + wk.lines.map((x) => clip(x, 70)).join('; ') + '.' + (more ? ' ' + more : '');
+  return '\n\n' + head + ':\n' + wk.lines.map((x) => '- ' + x).join('\n') + (more ? '\n' + more : '');
+}
+
 // The call itself, with the clock as an argument (tested at 07:47 Israel).
 // 20/10/2026 (Michael: "do it: buttons in WhatsApp"): three questions to tap under the update, inside
 // the window. A tap reaches the assistant as "1. ...", like a typed message.
@@ -567,14 +590,23 @@ export async function run(env, now, body) {
   const cal = await calendarStep(env, now, !!body.dry).catch((e) => ({ error: String(e.message || e).slice(0, 200) }));
   const g = await gather(env, now);
   const open = await ownerWindowOpen(env, sbFrom(env), now.getTime());
-  const text = buildBrief(g.items, g.failed, g.today, !open, g.notes, g.weather, g.devDone, g.learnOpen, false, g.waiting, g.disq, g.contra);
-  if (body.dry) return { ok: true, sent: false, dry: true, text, cal };
+  // 06/11/2026 (weekend quiet, _wa.js weekendHold): what was kept on Friday and Saturday comes with this update
+  const wk = await weekendStep(env);
+  const text = buildBrief(g.items, g.failed, g.today, !open, g.notes, g.weather, g.devDone, g.learnOpen, false, g.waiting, g.disq, g.contra) + weekendText(wk, !open);
+  if (body.dry) return { ok: true, sent: false, dry: true, text, cal, weekend: wk.total };
   if (!body.force && (await stateGet(env, LAST_KEY).catch(() => null)) === g.today) return { ok: true, sent: false, reason: 'already sent today', cal };
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };
   const to = await ownerWa(env, sbFrom(env));
   if (!to) return { ok: false, error: 'no owner number in notification_prefs' };
-  const r = await sendToOwner(env, to, text, { windowOpen: open, choices: open ? MORNING_CHOICES : null });
+  const r = await sendToOwner(env, to, text, { kind: 'morning', windowOpen: open, choices: open ? MORNING_CHOICES : null });
   if (r.ok) { await stateSet(env, LAST_KEY, g.today).catch(() => {}); await noteLastOut(env, sbFrom(env), text, 'morning'); }
+  // sent: the kept lines are done; one added while this ran (after wk.at) stays for the next update
+  if (r.ok && wk.raw.length) {
+    await stateSet(env, WEEKEND_LAST_KEY, JSON.stringify({ at: now.toISOString(), list: wk.raw })).catch(() => {});
+    const cur = await stateGet(env, WEEKEND_KEY).catch(() => null);
+    let left = []; try { left = (JSON.parse(cur || '[]') || []).filter((x) => x && String(x.at) > wk.at); } catch (e) { left = []; }
+    await stateSet(env, WEEKEND_KEY, JSON.stringify(left)).catch(() => {});
+  }
   await sb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
     body: JSON.stringify([{ id: 'wm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
       event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error',

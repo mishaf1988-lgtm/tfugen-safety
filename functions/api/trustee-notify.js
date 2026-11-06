@@ -514,7 +514,7 @@ async function sendWhatsApp(env, to, row, task, src, B, out) {
     const open = await ownerWindowOpen(env, sbFrom(env));
     const text = ask ? hazardAsk(head, kind, loc, finding, !open) : [kind, loc, finding].join(open ? '\n' : '; ');
     // 20/10/2026: inside the window the four choices are also a list to tap (_wa.js choicesPayload).
-    const r = await sendToOwner(env, to, text, { windowOpen: open, choices: ask && open ? HAZARD_OPTIONS : null });
+    const r = await sendToOwner(env, to, text, { kind: 'hazard', windowOpen: open, choices: ask && open ? HAZARD_OPTIONS : null });
     // 19/10/2026: the message id, so a WhatsApp reply to this alert reaches the assistant with what it answers (wa-hook.js).
     if (r.ok) { if (out && r.wamid) out.whatsapp_id = String(r.wamid).slice(0, 120); await noteLastOut(env, sbFrom(env), text, ask ? src.event + ' ' + row.id : null); return 'sent'; }
     return 'error: ' + String(r.error || 'unknown').replace(/^meta /, 'Meta ').replace(/^template /, 'Meta template ');

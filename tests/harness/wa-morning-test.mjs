@@ -301,6 +301,17 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
   check('the morning brief itself does not read the test database (the 5-minute tick does)', stagingCalls.length === 0, stagingCalls);
   j = await run(ENV, new Date('2026-10-19T05:47:00Z'), {});
   check('the 05:47 UTC call (08:47 Israel): not sent', !j.sent && metas.length === n + 1, j);
+  // 06/11/2026 (weekend quiet): what was kept on Friday and Saturday rides on the next morning update, then is cleared
+  { const n0 = metas.length;
+    state.promises = JSON.stringify([{ id: 'p-20261106100000-abcd', status: 'done' }]);
+    state.weekend_held = JSON.stringify([{ at: '2026-11-06T10:00:00.000Z', kind: 'reminder', text: 'reminder that was kept', ref: 'p-20261106100000-abcd' },
+      { at: '2026-11-06T11:00:00.000Z', kind: 'agent', text: 'the weekly report of the quality agent' }]);
+    const jw = await call({ force: true });
+    const body = metas[n0] && JSON.stringify(metas[n0]);
+    check('the morning update carries the kept list (the closed reminder dropped) and clears it', jw.sent && /\u05de\u05e1\u05d5\u05e3 \u05d4\u05e9\u05d1\u05d5\u05e2 \(1\)/.test(JSON.parse(body).template.components[0].parameters[0].text)
+      && body.indexOf('weekly report of the quality agent') >= 0 && body.indexOf('reminder that was kept') < 0 && state.weekend_held === '[]' && JSON.parse(state.weekend_held_last).list.length === 2, { jw, body, held: state.weekend_held });
+    const jn = await call({ force: true });
+    check('the next update: no list', jn.sent && JSON.stringify(metas[metas.length - 1]).indexOf('\u05de\u05e1\u05d5\u05e3 \u05d4\u05e9\u05d1\u05d5\u05e2') < 0); }
 
   console.log('\n4. wiring');
   const mw = fs.readFileSync(new URL('../../functions/_middleware.js', import.meta.url), 'utf8');

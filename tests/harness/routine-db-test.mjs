@@ -11,7 +11,8 @@ import { secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, ilIn
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
-const ENV = { ROUTINE_KEY: 'k-123', SUPABASE_SERVICE_ROLE_KEY: 'srv' };
+// WEEKEND_QUIET off: these suites test the send itself on any day (weekend-owner-test.mjs tests the weekend)
+const ENV = { ROUTINE_KEY: 'k-123', SUPABASE_SERVICE_ROLE_KEY: 'srv', WEEKEND_QUIET: 'off' };
 let calls = [], state = {}, stateVer = {}, raceOnce = null, fires = [], fireSession = 'cse_01POSTMAN';
 let ghCalls = [], mediaMeta = null, claudeReads = [], ownerIn = null;
 globalThis.fetch = async (url, opt = {}) => {

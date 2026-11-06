@@ -401,8 +401,8 @@ async function waOwner(env, text, ref, nowMs) {
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };
   const to = await ownerWa(env, SB);
   if (!to) return { ok: false, error: 'no owner number' };
-  const r = await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, SB, nowMs) });
-  if (r.ok) await noteLastOut(env, SB, text, ref);
+  const r = await sendToOwner(env, to, text, { kind: 'works', ref, windowOpen: await ownerWindowOpen(env, SB, nowMs) });
+  if (r.ok && !r.held) await noteLastOut(env, SB, text, ref);
   return r;
 }
 
