@@ -502,6 +502,21 @@ const callIn = async (body) => {
           draftThreadGate({ ...base, thread_checked: 'michael chose a new mail: questionnaire 11:33 UTC, בצע: מייל חדש עם הקובץ' }) === null
           && !!draftThreadGate({ ...base, thread_checked: 'michael chose a new mail: because' }) && !!draftThreadGate({ ...base, thread_checked: 'flow is broken' }));
       }
+      { const { linkPathBad } = await import('./_build/routine-db.mjs');
+        check('linkPathBad directly (retro 02/11/2026 (b)): encoded .., a broken %, a segment ending in a space or dot, hidden or direction characters are bad; a normal Hebrew path is not',
+          linkPathBad('a/%2e%2e/b') && linkPathBad('a/%2E%2E/b') && linkPathBad('a/%E0%A4%A') && linkPathBad('a/..%20/b') && linkPathBad('a/x./b') && linkPathBad('a/x%20/b')
+          && linkPathBad('a/b%E2%80%AEfdp.exe') && linkPathBad('a/b%E2%80%8B.pdf') && linkPathBad('a\\b.pdf') && linkPathBad('a/b%0a.pdf') && linkPathBad('../a.pdf')
+          && !linkPathBad('Documents/02_%D7%AA%D7%A1%D7%A7%D7%99%D7%A8%D7%99/2026-11-01 report.pdf') && !linkPathBad('a/b c/d.pdf') && !linkPathBad('a/.hidden-not-dotdot/x.pdf'));
+      }
+      { const { ownerChoseNewMail, chosenNewMail } = await import('./_build/routine-db.mjs');
+        check('retro 02/11/2026 (a): "michael chose a new mail" needs a real בצע of Michael in owner_in, not only the words',
+          chosenNewMail({ thread_checked: 'michael chose a new mail: 11:33 UTC, בצע' }) && !chosenNewMail({ thread_checked: 'no thread: x' })
+          && ownerChoseNewMail([{ text: 'בצע' }]) && ownerChoseNewMail([{ text: 'מה עם זה?' }, { text: 'כן, בצע: מייל חדש' }]) && ownerChoseNewMail([{ title: 'בצע.' }])
+          && !ownerChoseNewMail([]) && !ownerChoseNewMail(null) && !ownerChoseNewMail([{ text: 'לבצע את זה מחר?' }]) && !ownerChoseNewMail([{ text: 'מה המצב' }]));
+        const src = (await import('fs')).readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
+        const md = src.slice(src.indexOf("body.op === 'mail_draft'"), src.indexOf("body.op === 'mail_draft'") + 2500);
+        check('retro 02/11/2026 (a): mail_draft reads owner_in and refuses without his בצע', /chosenNewMail\(body\)/.test(md) && /event_type=eq\.owner_in&channel=in\.\(whatsapp,chat\)/.test(md) && /ownerChoseNewMail\(/.test(md));
+      }
       { // 01/11/2026: the weekly check that the branches' controlled forms still exist
         const { formsVerdict } = await import('./_build/routine-db.mjs');
         const { DOMAIN_FORMS } = await import('./_build/_domains.mjs');
@@ -610,6 +625,31 @@ const callIn = async (body) => {
       const i = src.indexOf("if (body.op === 'wa_file')"), seg = src.slice(i, i + 4000);
       const meta = seg.indexOf("?select=size,file'"), content = seg.indexOf(":/content'");
       check('wa_file: the size comes from the item before the content is read, and big = no read', i > 0 && meta > 0 && content > meta && /Number\(mj\.size\) <= DOC_MAX/.test(seg) && /m\.ok && !big \? await fetch/.test(seg)); }
+    { // retro 02/11/2026 (b): the same order run through the handler, not only read in its source
+      const real = globalThis.fetch, seen = [];
+      let size = 20 * 1024 * 1024;
+      globalThis.fetch = async (u, o) => {
+        const url = String(u);
+        if (url.includes('/rest/v1/notification_prefs')) return new Response(JSON.stringify([{ prefs: { trustee_hazard: { whatsapp_to: '972500000000' } } }]), { status: 200 });
+        if (url.startsWith('https://graph.microsoft.com/') && url.includes('/drive/root:/')) {
+          seen.push(url.includes(':/content') ? 'content' : 'meta');
+          if (url.includes(':/content')) return new Response(new Uint8Array([37, 80, 68, 70]), { status: 200 });
+          return new Response(JSON.stringify({ size, file: {} }), { status: 200 });
+        }
+        if (url.startsWith('https://graph.facebook.com/')) { seen.push('send'); return new Response(JSON.stringify({ id: 'm1', messages: [{ id: 'w1' }] }), { status: 200 }); }
+        return real(u, o);
+      };
+      try {
+        const E = { ...ENV, META_PHONE_NUMBER_ID: '1', META_ACCESS_TOKEN: 't' };
+        const r1 = await call({ op: 'wa_file', agent: 'routine-wa-assistant', paths: ['a/big.pdf'] }, 'k-123', 'POST', E);
+        const bigSeen = seen.splice(0);
+        check('wa_file (run): a file over DOC_MAX is refused after the size read, its content never read and nothing sent',
+          r1.json.sent && r1.json.sent[0].error === 'size' && bigSeen.join() === 'meta', { j: r1.json, bigSeen });
+        size = 1000;
+        await call({ op: 'wa_file', agent: 'routine-wa-assistant', paths: ['a/small.pdf'] }, 'k-123', 'POST', E);
+        check('wa_file (run): a small file: the size first, then the content', seen[0] === 'meta' && seen[1] === 'content', seen);
+      } finally { globalThis.fetch = real; }
+    }
     { const { workerJobAdd, workerJobDone, workerFireText, WORKERS, WORKER_FIRE_HEAD } = await import('./_build/routine-db.mjs');
       const now = '2026-10-21T16:00:00.000Z', task = '\u05dc\u05d1\u05d3\u05d5\u05e7 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05de\u05d0\u05dc\u05e2\u05d3';
       const a = workerJobAdd('[]', { agent: 'routine-wa-assistant', worker: WORKERS[2], task }, now);
@@ -904,6 +944,15 @@ const callIn = async (body) => {
     reset();
     x = await call({ ...base, parent: '07_env/missing' });
     check('parent that does not exist: refused, nothing created', !x.json.ok && /parent 404/.test(x.json.error) && Object.keys(drive).length === 3, x.json);
+    { // retro 02/11/2026 (b): the Claude Log wrapper run through onRequest, not a regex on its source
+      const { CLAUDE_LOG_Q } = await import('./_build/_claudelog.mjs');
+      const qn = () => { try { return JSON.parse(state[CLAUDE_LOG_Q] || '[]').length; } catch (e) { return -1; } };
+      reset(); const n0 = qn(); const ok1 = await call({ ...base, name: 'logq1' }); const n1 = qn();
+      const bad = await call({ ...base, parent: '07_env/missing' }); const n2 = qn();
+      check('Claude Log (run, retro 02/11/2026 (b)): a write that answers ok:true queues one line, an ok:false answer with status 200 queues none',
+        ok1.json.ok && n1 === n0 + 1 && bad.status === 200 && !bad.json.ok && n2 === n1, { n0, n1, n2, bad: bad.status });
+      reset();
+    }
     x = await call({ ...base, parent: PAR + '/a.pdf' });
     check('parent that is a file: refused', !x.json.ok && x.json.error === 'parent is not a folder', x.json);
     check('parent with .., empty, too deep, in the old-versions / to-delete / ARCHIVE folders, the mail inbox or the request folder: refused',

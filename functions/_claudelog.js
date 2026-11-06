@@ -62,6 +62,15 @@ export function logLine(body, nowIso) {
   return [ilWhen(nowIso), src, LOG_OPS[body.op], logDetails(body) || body.op, '\u05d1\u05d5\u05e6\u05e2'];
 }
 
+// retro 02/11/2026 (d): ocr_txt answers ok only when every file was read, so the txt files it did write on a partial run
+// were missing from the sheet. Such a run gets its own line: only the written files, outcome "done in part: N/M".
+export function ocrPartialRow(row, out) {
+  if (!row || !out || !Array.isArray(out.files)) return null;
+  const done = out.files.filter((f) => f && f.ok && f.txt);
+  if (!done.length) return null;
+  return [row[0], row[1], row[2], short('txt: ' + done.map((f) => f.txt).join(', '), 400), '\u05d1\u05d5\u05e6\u05e2 \u05d7\u05dc\u05e7\u05d9\u05ea: ' + done.length + '/' + out.files.length];
+}
+
 const parse = (raw) => { try { const v = JSON.parse(raw || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
 
 // The queue after adding a line: ids are the time plus a counter, so they sort; old and surplus lines drop.
