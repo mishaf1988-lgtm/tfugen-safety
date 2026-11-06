@@ -157,7 +157,7 @@ export async function runFaultAlert(env, nowIso) {
     const loud = items.filter((x) => !x.quiet);
     if (loud.length) {
       const to = await ownerWa(env, url);
-      const s = to ? await sendToOwner(env, to, faultText(loud, fix && (fix.fired || fix.already || fix.covered)), { windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
+      const s = to ? await sendToOwner(env, to, faultText(loud, fix && (fix.fired || fix.already || fix.covered)), { kind: loud.some((x) => /^agentq?:wa-assistant$/.test(x.key)) ? 'watchdog' : 'fault', windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
       sentOk = !!(s && s.ok);
     }
   }

@@ -191,7 +191,7 @@ import { DOC_MAX, ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTA
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads',
   'trustees', 'trustee_tasks', 'trustee_winners'];
-export const STATE_READ = ['agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'drafts_id_live', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account', 'works_permit_err'];
+export const STATE_READ = ['agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'drafts_id_live', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account', 'works_permit_err', 'weekend_held', 'weekend_held_last'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -301,6 +301,11 @@ export function devInboxAdd(raw, b, nowIso) {
 // session, a ref "dev ...") counts every such row of the window. Same answers = the same run, its own messages.
 export const OVERLAP_MS = 3 * 60000;
 export const HOLD_REF = /^(promise:|watch)/, HOLD_MS = 5 * 60000;
+// 06/11/2026 (weekend quiet, _wa.js OWNER_HELD_KINDS): a wa_me is 'agent' (kept on Friday and Saturday unless Michael
+// wrote in the last hour), or one of the urgent kinds the run names in body.urgent: a hazard, a safety event or
+// accident, the assistant itself failing. Any other value of body.urgent is ignored ('agent').
+export const WA_ME_URGENT = ['hazard', 'incident', 'watchdog'];
+export function waMeKind(body) { const u = String((body && body.urgent) || ''); return WA_ME_URGENT.indexOf(u) >= 0 ? u : 'agent'; }
 export function overlapReply(answers, ref, rows) {
   if (!Array.isArray(rows) || !rows.length) return null;
   const at = Date.parse(answers || '');
@@ -2349,8 +2354,8 @@ async function routineDbHandle(context) {
         try {
           const to = await ownerWa(env, url);
           const text = waText;
-          const s = to ? await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
-          if (s.ok) await noteLastOut(env, url, text, 'dev');
+          const s = to ? await sendToOwner(env, to, text, { kind: 'done', windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
+          if (s.ok && !s.held) await noteLastOut(env, url, text, 'dev');
           wa = s.ok ? (s.via || 'sent') : (s.error || 'failed');
         } catch (x) { wa = 'failed'; }
       }
@@ -2383,7 +2388,7 @@ async function routineDbHandle(context) {
           const mj = m.ok ? await m.json().catch(() => ({})) : {};
           const big = m.ok && !(mj.file && Number(mj.size) > 0 && Number(mj.size) <= DOC_MAX);
           const d = m.ok && !big ? await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(OD_ROOT + a.rel) + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(30000) }) : m;
-          r = big ? { ok: false, error: mj.file ? 'size' : 'not a file' } : d.ok ? await sendDocToOwner(env, to, new Uint8Array(await d.arrayBuffer()), a.name, i === 0 ? body.caption : '', win, { path: OD_ROOT + a.rel }) : { ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status };
+          r = big ? { ok: false, error: mj.file ? 'size' : 'not a file' } : d.ok ? await sendDocToOwner(env, to, new Uint8Array(await d.arrayBuffer()), a.name, i === 0 ? body.caption : '', win, { kind: 'file', path: OD_ROOT + a.rel }) : { ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status };
         } catch (x) { r = { ok: false, error: 'read' }; }
         sent.push({ name: a.name, ok: !!r.ok, error: r.ok ? undefined : r.error });
       }
@@ -2429,7 +2434,7 @@ async function routineDbHandle(context) {
       if (!af) return jsonResp({ ok: false, error: 'assistant fire not configured' }, 200, {});
       const now = new Date().toISOString();
       // the conversation so far, read before this line is logged (so it is not in it)
-      const rr = await fetch(url + '/rest/v1/notifications_log?select=ts,event_type,payload&event_type=in.(owner_in,assistant)&order=ts.desc&limit=12', { headers: h, signal: tmo(SB_MS) }).then((x) => x.ok ? x.json() : null).catch(() => null);
+      const rr = await fetch(url + '/rest/v1/notifications_log?select=ts,event_type,payload&event_type=in.(owner_in,assistant)&channel=neq.held&order=ts.desc&limit=12', { headers: h, signal: tmo(SB_MS) }).then((x) => x.ok ? x.json() : null).catch(() => null);
       const recent = rr ? recentLine(rr, '', Date.now()) : '';
       const lr = await fetch(url + '/rest/v1/server_state?key=eq.' + LEARN_KEY + '&select=value', { headers: h, signal: tmo(SB_MS) }).then((x) => x.ok ? x.json() : null).catch(() => null);
       const learned = lr && lr[0] ? learnedLine(lr[0].value, LEARNED_MAX) : '';
@@ -2480,8 +2485,8 @@ async function routineDbHandle(context) {
         try {
           const to = await ownerWa(env, url);
           const text = r.job.worker + ': ' + String(body.note).trim();
-          const s = to ? await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
-          if (s.ok) await noteLastOut(env, url, text, 'worker');
+          const s = to ? await sendToOwner(env, to, text, { kind: 'agent', windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
+          if (s.ok && !s.held) await noteLastOut(env, url, text, 'worker');
           wa = s.ok ? (s.via || 'sent') : (s.error || 'failed');
           // logged like wa_me, so wa_review and the weekly retro (7a) see the worker's answer too
           await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
@@ -2665,8 +2670,8 @@ async function routineDbHandle(context) {
       if (body.op === 'promise_done' && body.quiet !== true && env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN) {
         try {
           const to = await ownerWa(env, url), text = promiseDoneText(r.closed, body.note);
-          const s = to ? await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
-          if (s.ok) await noteLastOut(env, url, text, 'promise');
+          const s = to ? await sendToOwner(env, to, text, { kind: 'done', windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
+          if (s.ok && !s.held) await noteLastOut(env, url, text, 'promise');
           wa = s.ok ? (s.via || 'sent') : (s.error || 'failed');
         } catch (x) { wa = 'failed'; }
       }
@@ -3216,8 +3221,8 @@ async function routineDbHandle(context) {
       const head = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 300);
       const text = (head ? head + '\n' : '') + rel.map((p, i) => (i + 1) + '. ' + p).join('\n') + '\n\u05e2\u05dc \u05d0\u05d9\u05d6\u05d4 \u05dc\u05d7\u05ea\u05d5\u05dd? \u05dc\u05dc\u05d7\u05d5\u05e5 \u05e2\u05dc \u05d4\u05de\u05e1\u05e4\u05e8.';
       const choices = checked.map((x) => x.name.replace(/\.pdf$/i, '').slice(0, 16));
-      const s = await sendToOwner(env, to, text, { windowOpen: await ownerWindowOpen(env, url), choices });
-      if (s.ok) await noteLastOut(env, url, text, 'signpick');
+      const s = await sendToOwner(env, to, text, { kind: 'sign', windowOpen: await ownerWindowOpen(env, url), choices });
+      if (s.ok && !s.held) await noteLastOut(env, url, text, 'signpick');
       return jsonResp({ ok: s.ok, sent: s.ok, offered: rel.length, error: s.error || undefined }, 200, {});
     }
     if (body.op === 'sign_request') {
@@ -3259,8 +3264,8 @@ async function routineDbHandle(context) {
       // 21/10/2026 (Michael: "with the request, the form itself"): the document goes first, so the question with
       // the buttons stays his last message (its ref is what "1" answers). A failed document leaves the question as is.
       let doc = null;
-      try { doc = pdfBytes ? await sendDocToOwner(env, to, pdfBytes, c.name, '', win, { path: c.path }) : { ok: false, error: 'read' }; } catch (x) { doc = { ok: false, error: 'document' }; }
-      const s = await sendToOwner(env, to, text, { windowOpen: win, choices: SIGN_CHOICES });
+      try { doc = pdfBytes ? await sendDocToOwner(env, to, pdfBytes, c.name, '', win, { kind: 'sign', path: c.path }) : { ok: false, error: 'read' }; } catch (x) { doc = { ok: false, error: 'document' }; }
+      const s = await sendToOwner(env, to, text, { kind: 'sign', ref, windowOpen: win, choices: SIGN_CHOICES });
       // 22/10/2026 (retro): a question that did not go out must not stay pending: the next sign_request on the same
       // file would answer "already waiting" and Michael would never be asked.
       let markLost = false; // 5 lost races: the request stays pending, so the reply says it
@@ -3276,7 +3281,7 @@ async function routineDbHandle(context) {
           if (mk.conflict) markLost = true;
         } catch (e) { /* the reply below still says it was not sent */ }
       }
-      if (s.ok) await noteLastOut(env, url, text, ref);
+      if (s.ok && !s.held) await noteLastOut(env, url, text, ref);
       try {
         await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
           body: JSON.stringify([{ id: 'wa' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
@@ -3715,15 +3720,16 @@ async function routineDbHandle(context) {
       if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
       const to = await ownerWa(env, url);
       if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
-      const r = await sendToOwner(env, to, body.text, { noTemplate: body.no_template === true, windowOpen: await ownerWindowOpen(env, url), choices: Array.isArray(body.choices) ? body.choices : null });
+      const r = await sendToOwner(env, to, body.text, { kind: waMeKind(body), ref: body.ref, noTemplate: body.no_template === true, windowOpen: await ownerWindowOpen(env, url), choices: Array.isArray(body.choices) ? body.choices : null });
       if (r.duplicate) return jsonResp({ ok: true, duplicate: true, note: 'the same text went out in the last 10 minutes; not sent again' }, 200, {});
+      if (r.held) r.note = 'Friday/Saturday: not sent, kept for the Sunday 07:00 morning list (Michael is off). Urgent (a hazard, a safety event or accident, the assistant down) = send again with "urgent": "hazard" | "incident" | "watchdog"';
       let pendingLost = false;
-      if (askPending && r.ok && Array.isArray(body.choices) && body.choices.length) {
+      if (askPending && r.ok && !r.held && Array.isArray(body.choices) && body.choices.length) {
         const pw = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
           body: JSON.stringify([{ key: askPending.key, value: askPending.value, updated_at: new Date().toISOString() }]) }).catch(() => null);
         pendingLost = !pw || !pw.ok; // the question went out but his tap will find nothing: the caller says so (review 06/11/2026)
       }
-      if (r.ok) await noteLastOut(env, url, body.text, body.ref);
+      if (r.ok && !r.held) await noteLastOut(env, url, body.text, body.ref);
       if (r.ok && DEV_REF.test(String(body.ref || ''))) {
         await stateCas(url, h, DEV_INBOX_KEY, (cur) => { const told = devInboxTold(cur, body.ref, new Date().toISOString()); return told ? { value: JSON.stringify(told) } : { write: false }; }, () => tmo(SB_MS)).catch(() => null);
       }
@@ -3732,7 +3738,7 @@ async function routineDbHandle(context) {
       try {
         await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
           body: JSON.stringify([{ id: 'wa' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
-            event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error',
+            event_type: 'assistant', channel: r.held ? 'held' : r.ok ? 'whatsapp' : 'whatsapp_error',
             payload: { title: ilTimes(String(body.text || '')).replace(/\s+/g, ' ').slice(0, 120), text: ilTimes(String(body.text || '')).slice(0, 1500), via: r.via || null, wamid: r.wamid || null, ref: body.ref ? String(body.ref).slice(0, 40) : 'none', answers: body.answers ? String(body.answers).slice(0, 40) : null, detail: r.error || null, push: ps.sent || 0 } }]) });
       } catch (e) { /* the message went out; a missing log line is not a failure */ }
       return jsonResp(Object.assign({}, r, { push: ps.sent || 0 }, stale ? { stale: true, choices_dropped: !!stale.dropChoices } : {}, pendingLost ? { pending_lost: true, note: 'the question went out but its pending action was not saved: tell Michael the button will not work and ask again' } : {}), 200, {});

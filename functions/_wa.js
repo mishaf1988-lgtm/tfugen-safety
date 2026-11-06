@@ -7,6 +7,7 @@
 // same row trustee-notify.js sends to. No row, no number: nothing is sent and nothing is accepted.
 import { SITE, SB_TIMEOUT_MS, SB_LIVE, tmo } from './_shared.js';
 import { pushOwner } from './_push.js';
+import { stateCas } from './_cas.js';
 
 export const META_API_VERSION = 'v25.0';
 // The utility template for an update when the 24 hour window is closed. One parameter, the text.
@@ -531,9 +532,77 @@ export async function sentLately(env, t, nowMs) {
     return Array.isArray(rows) && rows.some((x) => x && x.text === t.slice(0, 1500));
   } catch (e) { return false; }
 }
+// 06/11/2026 (Michael: "I don't work on Friday and Saturday. Requests to the assistant yes, updates are less relevant";
+// in the questionnaire: "do it: collect for Sunday morning"). Every send to Michael names its kind (opts.kind; for a
+// document src.kind). On Friday and Saturday (Israel) a HELD kind is not sent: it is kept in server_state weekend_held
+// and the morning update (wa-morning.js, Sunday 07:00, or the next one that goes out) carries it as one list.
+// NOW kinds always go at once: a reply to Michael, a hazard or near miss from a trustee, a safety event or accident,
+// a watchdog (the assistant is down or did not answer), and the morning update itself. A held kind within an hour of
+// a message of his (owner_in: WhatsApp, the app chat, the office) is a reply and goes too. A kind that is not in either
+// list goes at once (an urgent message is never stuck); weekend-owner-test.mjs fails on a send with no known kind.
+// sign is NOW (review 06/11/2026): a held question would stay pending with no buttons and no ref, and block a new request for the file
+export const OWNER_NOW_KINDS = ['reply', 'hazard', 'incident', 'watchdog', 'morning', 'sign'];
+export const OWNER_HELD_KINDS = ['reminder', 'done', 'agent', 'fault', 'works', 'deck', 'file'];
+export const OWNER_KINDS = OWNER_NOW_KINDS.concat(OWNER_HELD_KINDS);
+export const WEEKEND_KEY = 'weekend_held', WEEKEND_LAST_KEY = 'weekend_held_last', WEEKEND_MAX = 60, WEEKEND_REPLY_MS = 3600000, WEEKEND_SHOW = 10;
+const IL_WD = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jerusalem', weekday: 'short' });
+export function weekendIL(nowMs) { const d = IL_WD.format(new Date(nowMs || Date.now())); return d === 'Fri' || d === 'Sat'; }
+// Pure: hold this send? lastInMs = Michael's last message (0 = none or unknown).
+export function holdForWeekend(kind, nowMs, lastInMs) {
+  if (OWNER_HELD_KINDS.indexOf(kind) < 0 || !weekendIL(nowMs)) return false;
+  return !(lastInMs && nowMs - lastInMs >= 0 && nowMs - lastInMs < WEEKEND_REPLY_MS);
+}
+// Pure: the held list with one more line (the same text once; the oldest out past WEEKEND_MAX).
+export function weekendAdd(raw, e) {
+  const list = plist(raw).filter((x) => x && x.text);
+  if (!list.some((x) => x.text === e.text)) list.push(e);
+  while (list.length > WEEKEND_MAX) list.shift();
+  return list;
+}
+const PID = /p-\d{14}-[a-z0-9]{4}/g, DID = /dev-\d{14}-[a-z0-9]{4}/g;
+// Pure: what the morning update shows. A reminder whose promises or dev requests are all closed by now is dropped
+// (a promise kept, a request done); the rest, oldest first, up to WEEKEND_SHOW lines, and how many more.
+export function weekendList(raw, promisesRaw, devRaw) {
+  const pr = plist(promisesRaw), dv = plist(devRaw);
+  const closed = (id, l) => { const x = l.find((y) => y && y.id === id); return !!x && x.status !== 'open'; };
+  // only a reminder is dropped: a result ("done", a report) about a closed item is exactly what he should hear (review 06/11/2026)
+  const live = plist(raw).filter((x) => x && x.text).filter((x) => {
+    if (x.kind !== 'reminder') return true;
+    const ref = String(x.ref || ''), ps = ref.match(PID) || [], ds = ref.match(DID) || [];
+    if (!ps.length && !ds.length) return true;
+    return !(ps.every((id) => closed(id, pr)) && ds.every((id) => closed(id, dv)));
+  });
+  const lines = live.slice(0, WEEKEND_SHOW).map((x) => waOneLine(stripInternalIds(x.text), 140)).filter(Boolean);
+  return { lines, more: Math.max(0, live.length - WEEKEND_SHOW), total: live.length, dropped: plist(raw).length - live.length };
+}
+async function lastOwnerIn(env, sbUrl) {
+  const k = env.SUPABASE_SERVICE_ROLE_KEY;
+  const r = await fetch(sbUrl + '/rest/v1/notifications_log?select=ts&event_type=eq.owner_in&order=ts.desc&limit=1',
+    { headers: { apikey: k, Authorization: 'Bearer ' + k }, signal: tmo(SB_TIMEOUT_MS) });
+  if (!r.ok) throw new Error('owner_in ' + r.status);
+  const rows = await r.json();
+  return Array.isArray(rows) && rows[0] ? (Date.parse(rows[0].ts) || 0) : 0;
+}
+// Kept for Sunday = { ok, via: 'held', held: true }. Anything that fails (no key, a read, the write) = null: it is sent.
+export async function weekendHold(env, kind, text, ref, nowMs) {
+  const now = nowMs || Date.now();
+  // WEEKEND_QUIET=off (Cloudflare env) turns it off: everything goes as before
+  if (OWNER_HELD_KINDS.indexOf(kind) < 0 || !weekendIL(now) || !env || !env.SUPABASE_SERVICE_ROLE_KEY || env.WEEKEND_QUIET === 'off') return null;
+  const sbUrl = env.SUPABASE_URL || SB_LIVE, k = env.SUPABASE_SERVICE_ROLE_KEY;
+  try {
+    if (!holdForWeekend(kind, now, await lastOwnerIn(env, sbUrl))) return null;
+    // compare-and-swap (review 06/11/2026): two sends held at the same moment must not overwrite each other
+    const e = { at: new Date(now).toISOString(), kind, text: String(text).trim().slice(0, 600), ref: ref ? String(ref).slice(0, 200) : null };
+    const w = await stateCas(sbUrl, { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }, WEEKEND_KEY,
+      (raw) => ({ value: JSON.stringify(weekendAdd(raw, e)) }), () => tmo(SB_TIMEOUT_MS));
+    return w.written ? { ok: true, via: 'held', held: true, push: 0 } : null;
+  } catch (e) { return null; }
+}
 // opts.repeat (06/11/2026, retro 27/10/2026 (b)): every send is its own event (a trustee report), never a duplicate.
 export async function sendToOwner(env, to, text, opts) {
   if (!String(text || '').trim()) return { ok: false, error: 'empty text' };
+  const held = await weekendHold(env, opts && opts.kind, ilTimes(String(text).trim()), opts && opts.ref);
+  if (held) return held;
   // a question with buttons is never dropped as a duplicate: its pending action is keyed to this very send (27/10/2026 retro)
   if (!o_choices(opts).length && !(opts && opts.repeat) && await sentLately(env, ilTimes(String(text).trim()))) return { ok: true, via: 'dup', duplicate: true, push: 0 };
   const r = (await chatOnly(env)) ? { ok: true, via: 'chat' } : await sendToOwnerRaw(env, to, text, opts);
@@ -546,6 +615,8 @@ export async function sendToOwner(env, to, text, opts) {
 // src.path (25/10/2026, Michael: "the app must be the same as WhatsApp, files and all"): where the file is on the
 // drive, so /chat can open it (api/chat.js, files inside the safety folder only). The bytes are not kept twice.
 export async function sendDocToOwner(env, to, bytes, filename, caption, windowOpen, src) {
+  const held = await weekendHold(env, src && src.kind, '\ud83d\udcce ' + String(filename || '') + (src && src.path ? ' (' + String(src.path).replace(/^.*?\/([^/]+\/[^/]+)$/, '$1') + ')' : '') + (caption ? ': ' + caption : ''), src && src.ref);
+  if (held) return held;
   const r = (await chatOnly(env)) ? { ok: true, via: 'chat' } : await sendDocRaw(env, to, bytes, filename, caption, windowOpen);
   const push = await noteOut(env, '\ud83d\udcce ' + String(filename || '') + (caption ? '\n' + caption : ''), r, 'document',
     { name: String(filename || '').slice(0, 200), file: src && src.path ? String(src.path).slice(0, 400) : null });

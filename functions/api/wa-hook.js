@@ -635,7 +635,7 @@ export async function fastSign(env, r, wamid) {
   await signLog(env, (res.ok ? 'signed: ' + res.name : 'sign failed: ' + t.req.name), Object.assign({ result: res.ok ? 'signed' : 'failed', signed: res.name || null, webUrl: res.webUrl || null, error: res.error || null }, base));
   // 21/10/2026: the signed copy itself, as a document, ready to forward (the text answer follows it).
   if (res.ok && res.bytes) {
-    try { const to = await ownerWa(env, sbFrom(env)); if (to) await sendDocToOwner(env, to, res.bytes, res.name, '', true, { path: t.req.path.split('/').slice(0, -1).concat(res.name).join('/') }); } catch (e) { /* the file is in the folder */ }
+    try { const to = await ownerWa(env, sbFrom(env)); if (to) await sendDocToOwner(env, to, res.bytes, res.name, '', true, { kind: 'reply', path: t.req.path.split('/').slice(0, -1).concat(res.name).join('/') }); } catch (e) { /* the file is in the folder */ }
   }
   if (res.ok) {
     const dir = t.req.path.split('/').slice(0, -1).join('/');
@@ -735,7 +735,7 @@ async function handle(env, raw) {
       if (js.length) await logMark(env, 'fire_join', { wamid: m.id, joins: js.map((x) => x.payload.wamid) });
       return js;
     })().catch(() => []);
-    if (wa) { const a = await sendToOwner(env, owner, ACK_TEXT, { windowOpen: true, noTemplate: true }).catch(() => null); seen.ack = !!(a && a.ok); seen.ack_ms = Date.now() - t0; }
+    if (wa) { const a = await sendToOwner(env, owner, ACK_TEXT, { kind: 'reply', windowOpen: true, noTemplate: true }).catch(() => null); seen.ack = !!(a && a.ok); seen.ack_ms = Date.now() - t0; }
     // 20/10/2026 20:30: a message got "got it" and then nothing, no log line and no fire. The work after the
     // response runs in waitUntil, which Cloudflare stops about 30 seconds after the response; the snapshot
     // read and the fire (20 seconds on a bad day) did not fit. The snapshot is a bonus: SNAP_MS at most,
@@ -745,7 +745,7 @@ async function handle(env, raw) {
     const [g, lr, rr] = await Promise.all([
       Promise.race([gather(env, new Date()), late()]).catch(() => null),
       Promise.race([sbJson(env, 'server_state?key=eq.' + LEARN_KEY + '&select=value'), late()]).catch(() => null),
-      Promise.race([sbJson(env, 'notifications_log?select=ts,event_type,payload&event_type=in.(owner_in,assistant)&order=ts.desc&limit=12'), late()]).catch(() => null),
+      Promise.race([sbJson(env, 'notifications_log?select=ts,event_type,payload&event_type=in.(owner_in,assistant)&channel=neq.held&order=ts.desc&limit=12'), late()]).catch(() => null),
     ]);
     const recent = rr ? recentLine(rr, m.id, Date.now()) : '';
     seen.recent = recent ? recent.split(' || ').length : 0;
@@ -785,7 +785,7 @@ async function handle(env, raw) {
     // 06/11/2026 (STATUS "assistant speed"): one line per fire, so each answer's run can be read later (get_session /
     // list_events on the session: num_turns, model time, tool time). wa_hook_last kept only the last one.
     await logMark(env, 'fire_done', { wamid: m.id, status: seen.fire_status, to: seen.fire_to, fire_ms: seen.fire_ms, pre_fire_ms: seen.pre_fire_ms || null, session: seen.fire_session || null });
-    if (!(fr && fr.ok) && wa) await sendToOwner(env, owner, failText(joins.length), { windowOpen: true, noTemplate: true }).catch(() => null);
+    if (!(fr && fr.ok) && wa) await sendToOwner(env, owner, failText(joins.length), { kind: 'reply', windowOpen: true, noTemplate: true }).catch(() => null);
   }
   await note(env, seen);
 }
@@ -804,7 +804,7 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
         await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
           body: JSON.stringify([{ key: SIGN_PICK_KEY, value: JSON.stringify({ at: new Date().toISOString(), paths: sa.pick.map((x) => x.path) }), updated_at: new Date().toISOString() }]) });
         const pt = signPickText(sa.pick, sa.none);
-        const ps = await sendToOwner(env, owner, pt, { windowOpen: true, noTemplate: true, choices: signPickChoices(sa.pick) }).catch(() => null);
+        const ps = await sendToOwner(env, owner, pt, { kind: 'reply', windowOpen: true, noTemplate: true, choices: signPickChoices(sa.pick) }).catch(() => null);
         if (ps && ps.ok) { seen.fast = 'sign_pick_list'; await noteLastOut(env, sbFrom(env), pt, 'signpick'); await logOut(env, pt, ps); return true; }
       }
       ans = sa.text; ref = 'sign-ask';
@@ -851,7 +851,7 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
     else if (fr0.kind === 'hazard') { ans = await fastHazard(env, fr0); ref = fr0.src + ' ' + fr0.id; }
     else { const g = await gather(env, new Date()); ans = buildBrief(g.items, g.failed, g.today, false, [], null, null, null, true, g.waiting, g.disq); ref = 'brief'; }
   } catch (e) { ans = null; }
-  const sr = ans ? await sendToOwner(env, owner, ans, Object.assign({ windowOpen: true, noTemplate: true }, choices ? { choices } : {})).catch(() => null) : null;
+  const sr = ans ? await sendToOwner(env, owner, ans, Object.assign({ kind: 'reply', windowOpen: true, noTemplate: true }, choices ? { choices } : {})).catch(() => null) : null;
   if (sr && (sr.ok || (chat && ans))) { seen.fast = fr0.kind; await noteLastOut(env, sbFrom(env), ans, ref); await logOut(env, ans, sr); return true; }
   seen.fast_fail = fr0.kind;
   return false;
