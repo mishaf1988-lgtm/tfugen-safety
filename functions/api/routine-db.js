@@ -2979,7 +2979,7 @@ async function routineDbHandle(context) {
       if (sentGate) return jsonResp({ ok: false, error: sentGate }, 400, {});
       const threadGate = draftThreadGate(body);
       if (threadGate) return jsonResp({ ok: false, error: threadGate }, 400, {});
-      if (chosenNewMail(body) && String(body.agent || '') === 'routine-wa-assistant') {
+      if (chosenNewMail(body)) { // any agent name (refute step 06/11/2026: the name is the caller's to choose)
         const or = await fetch(url + '/rest/v1/notifications_log?select=ts,text:payload->>text,title:payload->>title&event_type=eq.owner_in&channel=in.(whatsapp,chat)&ts=gte.' + encodeURIComponent(new Date(Date.now() - CHOSE_NEW_MAIL_MS).toISOString()) + '&order=ts.desc&limit=50', { headers: h, signal: tmo(SB_MS) }).then((x) => (x.ok ? x.json() : null)).catch(() => null);
         if (!ownerChoseNewMail(or)) return jsonResp({ ok: false, error: 'thread_checked "michael chose a new mail": no "\u05d1\u05e6\u05e2" from Michael in the last 24 hours. Ask him on WhatsApp with choices ["\u05d1\u05e6\u05e2","\u05dc\u05d0"] (a new mail without the thread), or reply in the thread with reply_to (retro 02/11/2026)' }, 400, {});
       }
