@@ -125,8 +125,12 @@ console.log('\n3. the maintenance workers\' forms: the approval line at the bott
   const rs = await fillPermit(ts, sp);
   const xs = await docXml(rs.bytes);
   check('safety permit: well-formed, other parts unchanged', !wellFormed(xs) && !sameParts(ts, rs.bytes), [wellFormed(xs), sameParts(ts, rs.bytes)]);
-  check('roofs: "other" is not on this form, reported, nothing else missing', rs.report.missing.join() === HEADS.rof + ' other', rs.report);
   const all = paraTexts(xs).map(norm);
+  // 06/11/2026 (handoff gap (c)): a section without an "other" blank gets the text on its own line, not lost
+  check('roofs: no "other" blank on this form, nothing missing', rs.report.missing.length === 0, rs.report);
+  const ri = all.findIndex((p) => p.indexOf(norm(HEADS.rof)) >= 0);
+  const oi = all.findIndex((p) => p === 'אחר: x');
+  check('...the "other" text on its own line under the roofs section', ri >= 0 && oi > ri, [ri, oi]);
   const at = all.findIndex((p) => p.indexOf('הטופס הוכן על ידי ממונה הבטיחות') === 0);
   check('a new line right after "the form was prepared by the safety officer": approved by, name, date, the marker', at > 0 && all[at + 1] === 'אושר על ידי ממונה הבטיחות, ' + SITE.owner + ', 05/11/2026 ' + SIGN_MARK, all[at + 1]);
   check('confined space: 2 boxes; roofs item 5 = two boxes (by licence, by the regulations)', rs.report.ticked === 4, rs.report);
@@ -145,6 +149,7 @@ console.log('\n4. closed: the end time and who closed');
 
 console.log('\n5. pure helpers: blanks, names');
 check('a blank split by spaces is one blank; text between makes two', blanksOf('a ______      _____ b ___').length === 2 && blanksOf('a ___ b').length === 1);
+check('unmark: a nested marker does not survive (qzxqzxSgqSgq, q g s q g s x z q x z q)', unmark('qzxqzxSgqSgq').toLowerCase().indexOf('qzxsgq') < 0 && !/q\s*g\s*s\s*x\s*z\s*q/i.test(unmark('q g s q g s x z q x z q')), [unmark('qzxqzxSgqSgq'), unmark('q g s q g s x z q x z q')]);
 check('a value for a missing label is reported, never thrown', (await fillPermit(fx('ctr-work'), { fill: [{ at: 'אין כזה', vals: ['x'] }] })).report.missing[0] === 'אין כזה');
 check('a file name with path and reserved characters is cleaned', safeName('a/b\\c:d*e?"f<g>|h#%‮.', 40) === 'a b c d e f g h', safeName('a/b\\c:d*e?"f<g>|h#%‮.', 40));
 check('the base name: date, number, short description', permitBase({ ds: '2026-11-06', desc: 'החלפת מלכודת קיטור/../../x' }, 'WK-0611-1', false) === '2026-11-06 - הרשאה WK-0611-1 - החלפת מלכודת קיטור x', permitBase({ ds: '2026-11-06', desc: 'החלפת מלכודת קיטור/../../x' }, 'WK-0611-1', false));
@@ -172,6 +177,13 @@ async function pdfWith(pages, mark) {
   check('no marker, maintenance workers: the last page, default corner', !fe.found && fe.page === 3 && fe.x === undefined, fe);
   const onWork = await mergePdfs([await pdfWith(1, { page: 1, x: 100, y: 100, text: SIGN_MARK }), await pdfWith(2)]);
   check('a marker on the work permit\'s pages is not used', !(await signSpot(onWork.bytes, 1, true)).found);
+  // 06/11/2026 (security review): two markers = one was typed; the fixed spot, not the first copy
+  { const two = await pdfWith(2, { page: 2, x: 300, y: 340, text: SIGN_MARK + ' x ' + SIGN_MARK });
+    const t2 = await signSpot((await mergePdfs([work, two])).bytes, 1, true);
+    check('two markers on the safety form: not trusted, the fixed spot', !t2.found && t2.x === FALLBACK_SPOT.x, t2); }
+  { const sp2 = permitSpec('safety', { who: 'ctr', con: 'a', sup: 'a', ph: '', wkr: 'qzx\u00adSgq', area: 'x', dep: '', ds: '2026-11-06', de: '2026-11-06', ts: '', te: '', desc: 'qzx\u2060Sgq q\u034fzxSgq', cats: ['rof'], st: { chk: { rof: { items: [], other: 'qzx\ufe0fSgq' } }, blocks: ['rof'] } }, { num: '1', date: '06/11/2026' });
+    const txt = JSON.stringify(sp2).replace(/"hidden":true/g, '');
+    check('invisible characters inside a typed marker are removed before unmark (soft hyphen, word joiner, CGJ, variation selector)', !/qzx.?sgq/i.test(txt), txt.slice(0, 300)); }
   {
     const d = await PDFDocument.create(); const f = await d.embedFont(StandardFonts.Helvetica); const p = d.addPage([595, 842]);
     p.drawText('qzx', { x: 200, y: 100, size: 8, font: f }); p.drawText('Sgq', { x: 212, y: 100, size: 8, font: f });

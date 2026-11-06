@@ -21,7 +21,7 @@
 import { readZip, writeZip, entryText } from './_xlsxpatch.js';
 import { PDFDocument } from './_pdflib.js';
 import { stampPdf, SIGN_BUCKET, SIGN_OBJ, ilDate } from './_sign.js';
-import { findTextSpot } from './_pdftext.js';
+import { findTextSpot, countText } from './_pdftext.js';
 import { GRAPH_TIMEOUT_MS as GRAPH_MS, FILE_TIMEOUT_MS as FILE_MS, SB_TIMEOUT_MS as SB_MS, tmo } from './_shared.js';
 import { SITE } from './_site.js';
 
@@ -179,7 +179,13 @@ export async function fillPermit(bytes, spec) {
       // the blank right after the word "other" (the electrical section's motor / electrician blanks are not it)
       const otherAt = (x) => blanksOf(x.text).find((b) => /\u05d0\u05d7\u05e8\s*$/.test(x.text.slice(0, b[0])));
       const P = body.find((x) => otherAt(x));
-      if (!P) { report.missing.push(sec.head + ' other'); continue; }
+      if (!P) {
+        // A section whose form has no "other" blank (06/11/2026, handoff gap (c)): the text goes on its own line
+        // under the section's last line, so what the worker wrote is not lost.
+        const last = body.length ? body[body.length - 1] : H;
+        last.append += lineAfter(last, '\u05d0\u05d7\u05e8: ' + sec.other); report.filled++;
+        continue;
+      }
       const b = otherAt(P);
       const box = boxesIn(P).filter((i) => i < b[0]).pop();
       if (box !== undefined && setChar(P, box, 'X')) report.ticked++;
@@ -214,8 +220,16 @@ export async function fillPermit(bytes, spec) {
 const dmy = (ymd) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(ymd || '')); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
 // The signature marker never comes from what a link user typed (security review 05/11/2026): "eSign" in a value
 // would move Michael's signature next to it. Removed in both directions, any spacing.
-export const unmark = (s) => String(s).replace(/q\s*z\s*x\s*s\s*g\s*q|q\s*g\s*s\s*x\s*z\s*q/gi, '');
-const one = (s, max) => unmark(norm(String(s || '').replace(/[\r\n]+/g, ', '))).slice(0, max);
+// Until nothing changes (security review 06/11/2026): one pass turned "qzxqzxSgqSgq" into the marker itself.
+export const unmark = (s) => {
+  let x = String(s), y;
+  do { y = x; x = x.replace(/q\s*z\s*x\s*s\s*g\s*q|q\s*g\s*s\s*x\s*z\s*q/gi, ''); } while (x !== y);
+  return x;
+};
+// Invisible format characters out first (soft hyphen, word joiner, CGJ, variation selectors...): a converter that drops
+// them would join the marker back (security review 06/11/2026).
+const INVIS = /[\p{Cf}\u034f\ufe00-\ufe0f]/gu;
+const one = (s, max) => unmark(norm(String(s || '').replace(INVIS, '').replace(/[\r\n]+/g, ', '))).slice(0, max);
 // w: a work as works.js rowToWork gives it (who, con, sup, ph, wkr, area, dep, ds, de, ts, te, desc, cats, st);
 // o: { num, date (DD/MM/YYYY, the approval), closed }. form: 'work' | 'safety'.
 export function permitSpec(form, w, o) {
@@ -323,7 +337,8 @@ export const EMP_SIG_X = 40;
 export async function signSpot(merged, workPages, ctr) {
   const doc = await PDFDocument.load(merged);
   const n = doc.getPageCount();
-  const m = findTextSpot(doc, SIGN_MARK);
+  // More than one marker = one was typed in a field: the fixed spot, never next to a link user's text.
+  const m = countText(doc, SIGN_MARK) === 1 ? findTextSpot(doc, SIGN_MARK) : null;
   // contractors: on the blank after "\u05d7\u05ea\u05d9\u05de\u05d4", its right edge at the marker (the live PDF of 05/11/2026: a left edge at marker-80 put a
   // narrow signature over "\u05e0\u05d9\u05d9\u05d3")
   if (m && m.page > workPages) return { page: m.page, x: ctr ? Math.max(20, Math.round(m.x - 80)) : EMP_SIG_X, right: ctr ? Math.round(m.x - 4) : undefined, y: Math.round(m.y - SIG_DROP), w: SIG_W, found: true };
@@ -350,7 +365,10 @@ export async function buildPermit(env, sbUrl, token, job) {
   const tpl = TEMPLATES[w.who];
   if (!tpl) throw new Error('unknown who');
   const gh = { Authorization: 'Bearer ' + token };
-  const date = ilDate(job.nowMs);
+  // The closed version keeps the day Michael approved (06/11/2026, handoff gap (b)): the line "approved on" and
+  // the signature are his approval, not the closing. Older rows without it: today, as before.
+  const okd = w.st && /^\d{2}\/\d{2}\/\d{4}$/.test(String(w.st.okd || '')) ? w.st.okd : '';
+  const date = closed && okd ? okd : ilDate(job.nowMs);
   const [workT, safeT] = await Promise.all(tpl.map((p) => readTemplate(gh, p)));
   const o = { num: job.num, date, closed };
   const fw = await fillPermit(workT, permitSpec('work', w, o));
