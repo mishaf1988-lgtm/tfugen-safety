@@ -1180,6 +1180,9 @@ const callIn = async (body) => {
       const b = cardBefore(S, V, [E], { e7: 'מיכל' }, CARD_BEFORE_N);
       check('cardBefore: the newest 3 of drafts, quotes and promises about the supplier, by name or address; a quote only of the card\'s items; drafts_made of the same draft once', b.length === 3 && b[0].kind === 'promise' && b[1].kind === 'quote' && b[1].at === '2026-11-02' && b[1].item === 'מיכל' && b[2].kind === 'draft' && b[2].body === 'שלום'
         && cardBefore(S, V, [E], {}, 10).filter((x) => x.kind === 'draft').length === 2 && cardBefore({}, V, [], {}, 3).length === 0 && cardBefore({ quotes: [] }, 'zz', [], null, 3).length === 0, b);
+      { const Q = { stage: 'sent', sent: '2026-11-01' }, ok = ['Q-eq-e7-261201', 'Q-dc-12-270115', 'Q-eq-a_b-261231'], no = ['Q-xx-e7-261201', 'Q-eq-e7-2612', 'eq-e7-261201'];
+        const n1 = (k) => cardBefore({ quotes: { [k]: Q } }, 'zz', [], { e7: 'a', 12: 'b', a_b: 'c' }, 3).length;
+        check('cardBefore pairs: a quote_track key Q-eq|dc-<id>-<YYMMDD> of a card item is read (3), anything else is not (3)', ok.every((k) => n1(k) === 1) && no.every((k) => n1(k) === 0), ok.concat(no).map(n1)); }
       const keep = { ...state };
       state.vendor_contacts = JSON.stringify([[V, E]]); state.drafts_text = JSON.stringify(S.draftsText); state.drafts_made = JSON.stringify(S.draftsMade); state.promises = JSON.stringify(S.promises);
       let rv, rn; try { rv = await call({ op: 'item_card', agent: 'routine-wa-assistant', q: V }); rn = await call({ op: 'item_card', agent: 'routine-wa-assistant', q: 'שלום' }); } finally { state = keep; }
