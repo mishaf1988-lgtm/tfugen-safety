@@ -56,7 +56,7 @@ export function changeMailHtml(label, who, atIso) {
   const d = new Date(atIso);
   const day = d.toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem' }), hm = d.toLocaleTimeString('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hour12: false });
   const esc = (v) => String(v || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  return '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">'
+  return '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">'
     + '<p><b>' + esc(label) + '</b> \u05d4\u05d5\u05d7\u05dc\u05e4\u05d4 \u05d1-' + esc(day) + ' \u05d1\u05e9\u05e2\u05d4 ' + esc(hm) + ', \u05e2\u05dc \u05d9\u05d3\u05d9 ' + esc(who || '\u05dc\u05d0 \u05d9\u05d3\u05d5\u05e2') + '.</p>'
     + '<p>\u05d4\u05d7\u05dc\u05e4\u05ea \u05d1\u05e2\u05e6\u05de\u05da? \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05ea\u05e2\u05dc\u05dd \u05de\u05d4\u05de\u05d9\u05d9\u05dc.</p>'
     + '<p>\u05dc\u05d0 \u05d0\u05ea\u05d4? \u05d4\u05d9\u05db\u05e0\u05e1 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, "\u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd \u05d5\u05e1\u05d9\u05e1\u05de\u05d0\u05d5\u05ea", \u05d5\u05d4\u05d7\u05dc\u05e3 \u05d0\u05ea \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d5\u05d1. \u05db\u05d3\u05d0\u05d9 \u05d2\u05dd \u05dc\u05d4\u05d7\u05dc\u05d9\u05e3 \u05d0\u05ea \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05dc\u05da.</p>'

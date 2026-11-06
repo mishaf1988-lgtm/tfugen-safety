@@ -471,7 +471,7 @@ function expBlock(list, failed) {
 export function digestHtml(d, today, meta) {
   const m = meta || {};
   const h2 = (t, n) => '<h3 style="margin:14px 0 6px;color:#1f3864">' + esc(t) + (n != null ? ' (' + n + ')' : '') + '</h3>';
-  let h = '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">';
+  let h = '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">';
   h += '<h2 style="margin:0 0 6px">' + esc(H.title) + ' ' + esc(fd(today)) + '</h2>';
   h += '<p>' + esc(H.total) + d.open + '</p>';
   const er = m.emptyRegs || [];

@@ -161,7 +161,7 @@ async function notifyManager(env, f, who, note, hasPhoto) {
     const tr = await tokenRow(env);
     if (!hasMail(tr)) return;
     const { token } = await accessToken(env);
-    const html = '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.7">'
+    const html = '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px;line-height:1.7">'
       + '<p><strong>\u2705 ' + (hz ? '\u05d4\u05de\u05e4\u05d2\u05e2' : '\u05d4\u05dc\u05d9\u05e7\u05d5\u05d9') + ' \u05e0\u05e1\u05d2\u05e8 \u05de\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05de\u05d9\u05d9\u05dc.</strong></p>'
       + '<p><strong>\u05d4\u05de\u05de\u05e6\u05d0:</strong> ' + esc(f.f || '') + '<br><strong>\u05de\u05d9\u05e7\u05d5\u05dd:</strong> ' + esc(f.loc || '')
       + '<br><strong>\u05d8\u05d9\u05e4\u05dc:</strong> ' + esc(who) + (note ? '<br><strong>\u05de\u05d4 \u05e0\u05e2\u05e9\u05d4:</strong> ' + esc(note) : '')

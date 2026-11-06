@@ -572,7 +572,7 @@ async function sendEmail(env, to, row, task, src, B) {
     ? '<a href="' + esc(closeUrl(APP_URL, closeTok)) + '" style="background:#15803d;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;margin-left:8px;display:inline-block;margin-bottom:8px">\u2705 \u05e1\u05de\u05df \u05db\u05d8\u05d5\u05e4\u05dc</a> '
     : '';
   const subject = src.emoji + ' ' + src.subject + ' - ' + clean(row.u, 40) + ', ' + clean(task, 40);
-  const html = '<div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">'
+  const html = '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;max-width:600px;margin:0 auto">'
     + '<div style="background:#cc1f1f;padding:16px;text-align:center;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:18px">' + src.emoji + ' ' + esc(src.title) + '</h1><p style="color:#ffcccc;margin:4px 0 0;font-size:12px">' + SITE.company + ' - \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</p></div>'
     + '<div style="background:#fff;padding:20px;border:1px solid #e5e7eb;font-size:14px;line-height:1.7">'
     + '<p><strong>' + esc(src.whoLabel) + ':</strong> ' + who + '</p><p><strong>' + esc(src.lineLabel) + ':</strong> ' + src.lineText(row, task) + '</p><p><strong>\u05ea\u05d0\u05e8\u05d9\u05da:</strong> ' + date + '</p><p><strong>\u05de\u05d9\u05e7\u05d5\u05dd:</strong> ' + loc + '</p><p><strong>\u05d4\u05de\u05de\u05e6\u05d0:</strong> ' + finding + '</p>' + photo

@@ -264,7 +264,7 @@ export function step(prev, list, nowIso) {
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 export function mailHtml(open, fresh, done, appUrl) {
   const li = (t, d) => '<li style="margin-bottom:6px"><b>' + esc(t) + '</b>' + (d ? '<br>' + esc(d) : '') + '</li>';
-  let h = '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">';
+  let h = '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">';
   if (fresh.length) h += '<p style="color:#b91c1c;font-weight:bold">' + (onlySlow(fresh) ? '\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d0\u05d9\u05d8\u05d9\u05ea:' : '\u05d1\u05e2\u05d9\u05d4 \u05d1\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d1\u05d9\u05df \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, \u05d4\u05e7\u05d1\u05e6\u05d9\u05dd \u05d5\u05d4\u05de\u05e6\u05d2\u05ea:') + '</p><ul>' + fresh.map((k) => li(open[k].title, open[k].detail)).join('') + '</ul>';
   if (done.length) h += '<p style="color:#15803d;font-weight:bold">\u05e0\u05e4\u05ea\u05e8:</p><ul>' + done.map((x) => li(x.title, '\u05de-' + ilTime(x.since) + ' \u05e2\u05d3 ' + ilTime(x.until))).join('') + '</ul>';
   const still = Object.keys(open).filter((k) => fresh.indexOf(k) < 0);

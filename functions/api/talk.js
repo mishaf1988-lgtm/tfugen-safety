@@ -448,7 +448,7 @@ export function missMailHtml(talk, dept, list, url, noIdList) {
   const kind = { annual: '\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05e0\u05ea\u05d9\u05ea', quality: '\u05d4\u05d3\u05e8\u05db\u05ea \u05d0\u05d9\u05db\u05d5\u05ea' }[talk.kind] || '\u05d4\u05d3\u05e8\u05db\u05d4';
   const li = (w) => '<li>' + esc(w.n) + (w.dep ? ' <span style="color:#666">(' + esc(w.dep) + ')</span>' : '') + '</li>';
   const nl = Array.isArray(noIdList) ? noIdList : [];
-  return '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6">'
+  return '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px;line-height:1.6">'
     + '<p>\u05e9\u05dc\u05d5\u05dd,</p><p>' + kind + ' <b>' + esc(talk.title || '') + '</b>' + (talk.d ? ' (' + esc(fdate(talk.d)) + ')' : '') + ': \u05e2\u05d5\u05d1\u05d3\u05d9 \u05de\u05d7\u05dc\u05e7\u05ea ' + esc(dept) + ' \u05e9\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05de\u05d5 (' + list.length + '):</p>'
     + (list.length ? '<ul style="margin:4px 0 10px">' + list.map(li).join('') + '</ul>' : '')
     + (nl.length ? '<p style="margin:4px 0">' + NO_ID_L + ' (' + nl.length + '):</p><ul style="margin:4px 0 10px;color:#555">' + nl.map(li).join('') + '</ul>' : '')
@@ -596,7 +596,7 @@ const LOCK_LABEL = { ind: '\u05e1\u05d9\u05e1\u05de\u05ea \u05de\u05e9\u05d0\u05
 export function lockMailHtml(scope, atIso) {
   const d = new Date(atIso);
   const day = d.toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem' }), hm = d.toLocaleTimeString('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hour12: false });
-  return '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">'
+  return '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">'
     + '<p><b>' + (LOCK_LABEL[scope] || scope) + '</b>: 10 \u05e0\u05d9\u05e1\u05d9\u05d5\u05e0\u05d5\u05ea \u05e9\u05d2\u05d5\u05d9\u05d9\u05dd \u05d1\u05e9\u05e2\u05d4 \u05de\u05d0\u05d5\u05ea\u05d4 \u05db\u05ea\u05d5\u05d1\u05ea, \u05d1-' + day + ' \u05d1\u05e9\u05e2\u05d4 ' + hm + '. \u05d4\u05db\u05ea\u05d5\u05d1\u05ea \u05e0\u05e2\u05d5\u05dc\u05d4 \u05dc\u05e9\u05e2\u05d4.</p>'
     + '<p>\u05d0\u05dd \u05d0\u05dc\u05d4 \u05d0\u05e0\u05e9\u05d9\u05dd \u05e9\u05dc\u05db\u05dd (\u05dc\u05de\u05e9\u05dc \u05de\u05d4-WiFi \u05e9\u05dc \u05d4\u05de\u05e4\u05e2\u05dc): \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e4\u05ea\u05d5\u05d7 \u05de\u05d9\u05d3 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, "\u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd \u05d5\u05e1\u05d9\u05e1\u05de\u05d0\u05d5\u05ea", \u05db\u05e4\u05ea\u05d5\u05e8 "\u05e4\u05ea\u05d7 \u05e2\u05db\u05e9\u05d9\u05d5".</p>'
     + '<p>\u05d0\u05dd \u05d6\u05d4 \u05dc\u05d0 \u05de\u05d5\u05db\u05e8 \u05dc\u05db\u05dd: \u05db\u05d3\u05d0\u05d9 \u05dc\u05d4\u05d7\u05dc\u05d9\u05e3 \u05d0\u05ea \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05d1\u05d0\u05d5\u05ea\u05d5 \u05de\u05e7\u05d5\u05dd.</p>'
@@ -887,7 +887,7 @@ export async function fileInduction(env, talk, row, sig, lang, nowMs, answers, d
     if (out.url) await mark({ doc_url: out.url, doc_err: note });
     const to = [od.email, IND_HR].filter((v, i, a) => v && a.indexOf(v) === i);
     const cell = (k, v) => '<tr><td style="padding:4px 10px;font-weight:bold">' + k + '</td><td style="padding:4px 10px">' + v + '</td></tr>';
-    const mail = '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">'
+    const mail = '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">'
       + '<p>\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9 \u05d7\u05ea\u05dd \u05e2\u05dc \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05db\u05e0\u05e1\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05dc\u05de\u05e9\u05de\u05e8\u05ea (\u05d8\u05d5\u05e4\u05e1 08.02.01). \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05d7\u05ea\u05d5\u05dd \u05de\u05e6\u05d5\u05e8\u05e3.</p>'
       + '<table>' + cell('\u05e9\u05dd', esc(row.emp_name || '')) + cell('\u05de\u05e1\' \u05ea.\u05d6.', esc(row.id_no || '')) + (row.emp_no ? cell('\u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3', esc(row.emp_no)) : '') + cell('\u05de\u05d7\u05dc\u05e7\u05d4', esc(row.dept || '-')) + (row.phone ? cell('\u05d8\u05dc\u05e4\u05d5\u05df', esc(row.phone)) : '') + (row.job ? cell('\u05ea\u05e4\u05e7\u05d9\u05d3', esc(row.job)) : '') + (row.agency ? cell('\u05d7\u05d1\u05e8\u05ea \u05db\u05d5\u05d7 \u05d0\u05d3\u05dd', esc(row.agency)) : '') + cell('\u05ea\u05d0\u05e8\u05d9\u05da', esc(fdate(day)) + ' ' + esc(hm))
       + (row.quiz_n ? cell('\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05d1\u05e0\u05d4', row.quiz_ok + '/' + row.quiz_n) : '') + '</table>'
@@ -1095,7 +1095,7 @@ export async function fileForm0801(env, talk, hb, n, miss, nowMs) {
   const cc = String(talk.mail_cc || '').split(/[,;\s]+/).filter((x) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)).slice(0, 5);
   const to = [od.email].concat(cc).filter((v, i, a) => v && a.indexOf(v) === i);
   if (to.length) {
-    const mail = '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px"><p>\u05d8\u05d5\u05e4\u05e1 08.01 \u05de\u05d5\u05dc\u05d0: <b>' + esc(talk.title || '') + '</b> (' + esc(fdate(talk.d)) + ')</p><p>\u05d7\u05ea\u05de\u05d5: ' + n + '</p>'
+    const mail = '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px"><p>\u05d8\u05d5\u05e4\u05e1 08.01 \u05de\u05d5\u05dc\u05d0: <b>' + esc(talk.title || '') + '</b> (' + esc(fdate(talk.d)) + ')</p><p>\u05d7\u05ea\u05de\u05d5: ' + n + '</p>'
       + (out.miss ? '<p style="color:#b91c1c;font-weight:bold">\u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05e9\u05dc\u05d0 \u05e0\u05d8\u05e2\u05e0\u05d5 \u05dc\u05d8\u05d5\u05e4\u05e1: ' + out.miss + ' (\u05de\u05e1\u05d5\u05de\u05e0\u05d5\u05ea \u05d1\u05d8\u05d5\u05e4\u05e1, \u05e9\u05de\u05d5\u05e8\u05d5\u05ea \u05d1\u05de\u05e2\u05e8\u05db\u05ea)</p>' : '')
       + (out.url ? '<p><a href="' + esc(out.url) + '">\u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4</a></p>' : '') + '</div>';
     const att = bytes.length <= MAIL_ATTACH_MAX ? [{ '@odata.type': '#microsoft.graph.fileAttachment', name, contentType: type, contentBytes: b64(bytes) }] : [];
@@ -1642,7 +1642,7 @@ async function makeLink(env, request, ctx) {
     const sent = [], skipped = [], failed = [];
     for (const p of plan) {
       if (!test && !p.to.length) { skipped.push({ dept: p.dept, why: 'no recipient' }); continue; }
-      const html = (test ? '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:13px;background:#fff8e1;border:1px solid #e0c46c;padding:8px;margin-bottom:10px">\u05de\u05d9\u05d9\u05dc \u05d1\u05d3\u05d9\u05e7\u05d4. \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d4\u05d0\u05de\u05d9\u05ea\u05d9\u05ea \u05d9\u05d2\u05d9\u05e2 \u05d0\u05dc: ' + esc(p.to.join(', ') || '-') + '</div>' : '') + missMailHtml(t, p.dept, m.groups[p.dept] || [], url, m.noId[p.dept] || []);
+      const html = (test ? '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:13px;background:#fff8e1;border:1px solid #e0c46c;padding:8px;margin-bottom:10px">\u05de\u05d9\u05d9\u05dc \u05d1\u05d3\u05d9\u05e7\u05d4. \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d4\u05d0\u05de\u05d9\u05ea\u05d9\u05ea \u05d9\u05d2\u05d9\u05e2 \u05d0\u05dc: ' + esc(p.to.join(', ') || '-') + '</div>' : '') + missMailHtml(t, p.dept, m.groups[p.dept] || [], url, m.noId[p.dept] || []);
       const subj = (test ? '\u05d1\u05d3\u05d9\u05e7\u05d4 - ' : '') + '\u05dc\u05d0 \u05d7\u05ea\u05de\u05d5 \u05e2\u05dc ' + String(t.title || '').substring(0, 60) + ' - ' + p.dept;
       try { await sendMailTo(od.token, test ? [od.email] : p.to, test ? [] : p.cc, subj, html, []); sent.push({ dept: p.dept, n: p.names.length, test }); }
       catch (e) { failed.push({ dept: p.dept, error: String((e && e.message) || e).substring(0, 160) }); }
