@@ -145,7 +145,7 @@ async function closeOne(env, token, msg, c) {
   if (!up.ok) return { result: 'close failed ' + up.status, closure: rep.id };
 
   try {
-    const html = '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.7">'
+    const html = '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px;line-height:1.7">'
       + '<p><strong>\u2705 \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05e1\u05d2\u05e8.</strong></p>'
       + '<p><strong>\u05d4\u05de\u05de\u05e6\u05d0:</strong> ' + esc(f.f || '') + '<br><strong>\u05de\u05d9\u05e7\u05d5\u05dd:</strong> ' + esc(f.loc || '') + '<br><strong>\u05e0\u05e1\u05d2\u05e8 \u05e2\u05dc \u05d9\u05d3\u05d9:</strong> ' + esc(c.name)
       + (photoUrl ? '<br>\ud83d\udcf7 \u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05e9\u05e6\u05d9\u05e8\u05e4\u05ea \u05e0\u05e9\u05de\u05e8\u05d4 \u05db\u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9".' : '<br>\u05dc\u05d0 \u05e6\u05d5\u05e8\u05e4\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4.') + '</p>'

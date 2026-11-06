@@ -177,7 +177,7 @@ export function buildReport(dept, rows, rcpt, texts, today, photos, links) {
   const anyClose = open.some((r) => r.close);
   const closeTd = (r) => (!anyClose ? '' : '<td style="' + cell + '">' + (r.close ? '<a href="' + esc(r.close) + '" style="color:#15803d;font-weight:bold;white-space:nowrap">' + CLOSE_LINK + '</a>' : '') + '</td>');
   const photoTd = (r) => (!anyPhoto ? '' : '<td style="' + cell + '">' + (r.photo && r.photo.cid ? '<img src="cid:' + r.photo.cid + '" width="140" alt="" style="display:block;border:0">' : r.photo && r.photo.link ? '<a href="' + esc(r.photo.link) + '">' + PHOTO_LINK + '</a>' : '') + '</td>');
-  const html = '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">'
+  const html = '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">'
     + '<h2 style="margin:0 0 10px">' + esc(title) + '</h2>'
     + '<p>' + esc(texts.open || DEFAULT_OPEN).replace(/\n/g, '<br>') + '</p>'
     + (open.some((r) => r.old) ? '<p style="color:#8a6d00">\u05d4\u05e9\u05d5\u05e8\u05d5\u05ea \u05d4\u05de\u05e1\u05d5\u05de\u05e0\u05d5\u05ea \u05d1\u05e6\u05d1\u05e2 \u05d6\u05d4\u05d1 \u05d4\u05df \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05de\u05e1\u05d9\u05d5\u05e8\u05d9\u05dd \u05e7\u05d5\u05d3\u05de\u05d9\u05dd \u05e9\u05d8\u05e8\u05dd \u05e0\u05e1\u05d2\u05e8\u05d5.</p>' : '')
@@ -205,7 +205,7 @@ export function buildStatus(dept, rows, rcpt, note, since, today, links, photos)
   const th = (a) => '<tr>' + a.map((h) => '<th style="' + cell + ';background:#1f3864;color:#fff">' + esc(h) + '</th>').join('') + '</tr>';
   const sinceTxt = since ? ' \u05de\u05d0\u05d6 ' + fd(since) : '';
   const title = '\u05e1\u05d8\u05d8\u05d5\u05e1 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd - \u05de\u05d7\u05dc\u05e7\u05ea ' + dept + ' - ' + fd(today);
-  const html = '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">'
+  const html = '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">'
     + '<h2 style="margin:0 0 10px">' + esc(title) + '</h2>'
     + (String(note || '').trim() ? '<p>' + esc(note).replace(/\n/g, '<br>') + '</p>' : '')
     + '<p style="font-weight:bold">\u05e0\u05e1\u05d2\u05e8\u05d5' + esc(sinceTxt) + ': ' + closed.length + ' | \u05e2\u05d3\u05d9\u05d9\u05df \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd: ' + rep.count + (rep.overdue ? ' | <span style="color:#b91c1c">\u05e2\u05d1\u05e8\u05d5 \u05d0\u05ea \u05d4\u05d9\u05e2\u05d3: ' + rep.overdue + '</span>' : '') + '</p>'
@@ -345,7 +345,7 @@ export async function onRequest(context) {
         if (!s.open && !s.closed) { skipped.push({ dept, why: '\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d5\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8 \u05d3\u05d1\u05e8' }); continue; }
         if (!test && !s.to.length) { skipped.push({ dept, why: '\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df \u05d1\u05d2\u05d9\u05dc\u05d9\u05d5\u05df \u05e0\u05de\u05e2\u05e0\u05d9\u05dd' }); continue; }
         const to = test ? [me] : s.to, cc = test ? [] : s.cc;
-        const html = test ? '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:13px;background:#fff8e1;border:1px solid #e0c46c;padding:8px;margin-bottom:10px">\u05de\u05d9\u05d9\u05dc \u05d1\u05d3\u05d9\u05e7\u05d4, \u05e0\u05e9\u05dc\u05d7 \u05e8\u05e7 \u05d0\u05dc\u05d9\u05da. \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d0\u05de\u05d9\u05ea\u05d9\u05ea: \u05d0\u05dc ' + esc(s.to.join(', ') || '(\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df)') + ' | \u05e2\u05d5\u05ea\u05e7 ' + esc(s.cc.join(', ')) + '</div>' + s.html : s.html;
+        const html = test ? '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:13px;background:#fff8e1;border:1px solid #e0c46c;padding:8px;margin-bottom:10px">\u05de\u05d9\u05d9\u05dc \u05d1\u05d3\u05d9\u05e7\u05d4, \u05e0\u05e9\u05dc\u05d7 \u05e8\u05e7 \u05d0\u05dc\u05d9\u05da. \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d0\u05de\u05d9\u05ea\u05d9\u05ea: \u05d0\u05dc ' + esc(s.to.join(', ') || '(\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df)') + ' | \u05e2\u05d5\u05ea\u05e7 ' + esc(s.cc.join(', ')) + '</div>' + s.html : s.html;
         try { await sendMailTo(token, to, cc, (test ? '\u05d1\u05d3\u05d9\u05e7\u05d4 - ' : '') + s.title, html, attachments); sent.push({ dept, to, cc, test, since, count: s.open, closed: s.closed, overdue: s.overdue, photos: attachments.length }); await keyMark(env, kind, key, done.concat(sent.filter((x) => !x.again))); }
         catch (e) { failed.push({ dept, error: String((e && e.message) || e).substring(0, 160) }); }
       }
@@ -404,7 +404,7 @@ export async function onRequest(context) {
       if (!test && !rep.to.length) { skipped.push({ dept: rep.dept, why: '\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df \u05d1\u05d2\u05d9\u05dc\u05d9\u05d5\u05df \u05e0\u05de\u05e2\u05e0\u05d9\u05dd' }); continue; }
       const to = test ? [me] : rep.to, cc = test ? [] : rep.cc;
       const subject = (test ? '\u05d1\u05d3\u05d9\u05e7\u05d4 - ' : '') + rep.title;
-      const html = test ? '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:13px;background:#fff8e1;border:1px solid #e0c46c;padding:8px;margin-bottom:10px">\u05de\u05d9\u05d9\u05dc \u05d1\u05d3\u05d9\u05e7\u05d4, \u05e0\u05e9\u05dc\u05d7 \u05e8\u05e7 \u05d0\u05dc\u05d9\u05da. \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d0\u05de\u05d9\u05ea\u05d9\u05ea: \u05d0\u05dc ' + esc(rep.to.join(', ') || '(\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df)') + ' | \u05e2\u05d5\u05ea\u05e7 ' + esc(rep.cc.join(', ')) + '</div>' + rep.html : rep.html;
+      const html = test ? '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:13px;background:#fff8e1;border:1px solid #e0c46c;padding:8px;margin-bottom:10px">\u05de\u05d9\u05d9\u05dc \u05d1\u05d3\u05d9\u05e7\u05d4, \u05e0\u05e9\u05dc\u05d7 \u05e8\u05e7 \u05d0\u05dc\u05d9\u05da. \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d0\u05de\u05d9\u05ea\u05d9\u05ea: \u05d0\u05dc ' + esc(rep.to.join(', ') || '(\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df)') + ' | \u05e2\u05d5\u05ea\u05e7 ' + esc(rep.cc.join(', ')) + '</div>' + rep.html : rep.html;
       try { await sendMailTo(token, to, cc, subject, html, attachments); sent.push({ dept: rep.dept, to, cc, count: rep.count, test, photos: attachments.length }); await keyMark(env, kind, key, done.concat(sent.filter((x) => !x.again))); }
       catch (e) { failed.push({ dept: rep.dept, error: String((e && e.message) || e).substring(0, 160) }); }
     }
