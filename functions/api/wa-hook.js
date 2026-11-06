@@ -760,6 +760,9 @@ async function handle(env, raw) {
     seen.fire_ms = Date.now() - t0;
     if (fr && fr.ok) { const fj = await fr.clone().json().catch(() => null); seen.fire_session = (fj && fj.claude_code_session_id) || null; }
     if (fr && fr.ok) seen.fired++; else { await forget(env, m.id); for (const j of joins) await forget(env, j.payload.wamid); }
+    // 06/11/2026 (STATUS "assistant speed"): one line per fire, so each answer's run can be read later (get_session /
+    // list_events on the session: num_turns, model time, tool time). wa_hook_last kept only the last one.
+    await logMark(env, 'fire_done', { wamid: m.id, status: seen.fire_status, to: seen.fire_to, fire_ms: seen.fire_ms, pre_fire_ms: seen.pre_fire_ms || null, session: seen.fire_session || null });
     if (!(fr && fr.ok) && wa) await sendToOwner(env, owner, failText(joins.length), { windowOpen: true, noTemplate: true }).catch(() => null);
   }
   await note(env, seen);

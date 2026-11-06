@@ -143,6 +143,9 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   check('the time before the fire is noted, and whether the snapshot made it (20/10/2026 20:30: a cut after "got it")', typeof state.wa_hook_last.pre_fire_ms === 'number' && typeof state.wa_hook_last.snap === 'boolean', state.wa_hook_last);
   check('the fire is noted with the session it opened and the milliseconds to the ack and to the fire (20/10/2026: tracing a slow answer)', state.wa_hook_last.fire_session === fireSession && typeof state.wa_hook_last.fire_ms === 'number' && typeof state.wa_hook_last.ack_ms === 'number' && state.wa_hook_last.ack_ms <= state.wa_hook_last.fire_ms, state.wa_hook_last);
 
+  { const fd = logs.filter((x) => x.event_type === 'fire_done' && x.payload && x.payload.wamid === 'wamid.F');
+    check('06/11/2026: one fire_done line per fire, with the session, status and milliseconds, and never the text', fd.length === 1 && fd[0].payload.session === fireSession && fd[0].payload.status === 200 && typeof fd[0].payload.fire_ms === 'number' && !JSON.stringify(fd).includes('secret words'), fd); }
+
   // retro 19/10/2026: a failed fire must not mark the message as seen (Meta gets 200 and never retries)
   const nf = fires.length;
   fireStatus = 500;
