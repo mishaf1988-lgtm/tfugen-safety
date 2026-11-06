@@ -7,6 +7,7 @@
 // same row trustee-notify.js sends to. No row, no number: nothing is sent and nothing is accepted.
 import { SITE, SB_TIMEOUT_MS, SB_LIVE, tmo } from './_shared.js';
 import { pushOwner } from './_push.js';
+import { stateCas } from './_cas.js';
 
 export const META_API_VERSION = 'v25.0';
 // The utility template for an update when the 24 hour window is closed. One parameter, the text.
@@ -539,8 +540,9 @@ export async function sentLately(env, t, nowMs) {
 // a watchdog (the assistant is down or did not answer), and the morning update itself. A held kind within an hour of
 // a message of his (owner_in: WhatsApp, the app chat, the office) is a reply and goes too. A kind that is not in either
 // list goes at once (an urgent message is never stuck); weekend-owner-test.mjs fails on a send with no known kind.
-export const OWNER_NOW_KINDS = ['reply', 'hazard', 'incident', 'watchdog', 'morning'];
-export const OWNER_HELD_KINDS = ['reminder', 'done', 'agent', 'fault', 'sign', 'works', 'deck', 'file'];
+// sign is NOW (review 06/11/2026): a held question would stay pending with no buttons and no ref, and block a new request for the file
+export const OWNER_NOW_KINDS = ['reply', 'hazard', 'incident', 'watchdog', 'morning', 'sign'];
+export const OWNER_HELD_KINDS = ['reminder', 'done', 'agent', 'fault', 'works', 'deck', 'file'];
 export const OWNER_KINDS = OWNER_NOW_KINDS.concat(OWNER_HELD_KINDS);
 export const WEEKEND_KEY = 'weekend_held', WEEKEND_LAST_KEY = 'weekend_held_last', WEEKEND_MAX = 60, WEEKEND_REPLY_MS = 3600000, WEEKEND_SHOW = 10;
 const IL_WD = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jerusalem', weekday: 'short' });
@@ -563,12 +565,14 @@ const PID = /p-\d{14}-[a-z0-9]{4}/g, DID = /dev-\d{14}-[a-z0-9]{4}/g;
 export function weekendList(raw, promisesRaw, devRaw) {
   const pr = plist(promisesRaw), dv = plist(devRaw);
   const closed = (id, l) => { const x = l.find((y) => y && y.id === id); return !!x && x.status !== 'open'; };
+  // only a reminder is dropped: a result ("done", a report) about a closed item is exactly what he should hear (review 06/11/2026)
   const live = plist(raw).filter((x) => x && x.text).filter((x) => {
+    if (x.kind !== 'reminder') return true;
     const ref = String(x.ref || ''), ps = ref.match(PID) || [], ds = ref.match(DID) || [];
     if (!ps.length && !ds.length) return true;
     return !(ps.every((id) => closed(id, pr)) && ds.every((id) => closed(id, dv)));
   });
-  const lines = live.slice(0, WEEKEND_SHOW).map((x) => waOneLine(stripInternalIds(x.text), 140));
+  const lines = live.slice(0, WEEKEND_SHOW).map((x) => waOneLine(stripInternalIds(x.text), 140)).filter(Boolean);
   return { lines, more: Math.max(0, live.length - WEEKEND_SHOW), total: live.length, dropped: plist(raw).length - live.length };
 }
 async function lastOwnerIn(env, sbUrl) {
@@ -587,11 +591,11 @@ export async function weekendHold(env, kind, text, ref, nowMs) {
   const sbUrl = env.SUPABASE_URL || SB_LIVE, k = env.SUPABASE_SERVICE_ROLE_KEY;
   try {
     if (!holdForWeekend(kind, now, await lastOwnerIn(env, sbUrl))) return null;
-    const list = weekendAdd(await stateRow(env, sbUrl, WEEKEND_KEY), { at: new Date(now).toISOString(), kind, text: String(text).trim().slice(0, 600), ref: ref ? String(ref).slice(0, 200) : null });
-    const w = await fetch(sbUrl + '/rest/v1/server_state?on_conflict=key', { method: 'POST', signal: tmo(SB_TIMEOUT_MS),
-      headers: { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify([{ key: WEEKEND_KEY, value: JSON.stringify(list), updated_at: new Date().toISOString() }]) });
-    return w.ok ? { ok: true, via: 'held', held: true, push: 0 } : null;
+    // compare-and-swap (review 06/11/2026): two sends held at the same moment must not overwrite each other
+    const e = { at: new Date(now).toISOString(), kind, text: String(text).trim().slice(0, 600), ref: ref ? String(ref).slice(0, 200) : null };
+    const w = await stateCas(sbUrl, { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }, WEEKEND_KEY,
+      (raw) => ({ value: JSON.stringify(weekendAdd(raw, e)) }), () => tmo(SB_TIMEOUT_MS));
+    return w.written ? { ok: true, via: 'held', held: true, push: 0 } : null;
   } catch (e) { return null; }
 }
 export async function sendToOwner(env, to, text, opts) {

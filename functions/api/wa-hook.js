@@ -723,7 +723,7 @@ async function handle(env, raw) {
     const [g, lr, rr] = await Promise.all([
       Promise.race([gather(env, new Date()), late()]).catch(() => null),
       Promise.race([sbJson(env, 'server_state?key=eq.' + LEARN_KEY + '&select=value'), late()]).catch(() => null),
-      Promise.race([sbJson(env, 'notifications_log?select=ts,event_type,payload&event_type=in.(owner_in,assistant)&order=ts.desc&limit=12'), late()]).catch(() => null),
+      Promise.race([sbJson(env, 'notifications_log?select=ts,event_type,payload&event_type=in.(owner_in,assistant)&channel=neq.held&order=ts.desc&limit=12'), late()]).catch(() => null),
     ]);
     const recent = rr ? recentLine(rr, m.id, Date.now()) : '';
     seen.recent = recent ? recent.split(' || ').length : 0;

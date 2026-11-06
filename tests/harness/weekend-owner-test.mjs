@@ -44,6 +44,8 @@ check('the two lists do not overlap', OWNER_NOW_KINDS.every((k) => OWNER_HELD_KI
 check('the urgent ones are NOW: reply, hazard, incident, watchdog, morning', ['reply', 'hazard', 'incident', 'watchdog', 'morning'].every((k) => OWNER_NOW_KINDS.indexOf(k) >= 0));
 // the senders that must stay urgent, by their code (a reclassification by mistake fails here)
 const src = (f) => fs.readFileSync(path.join(FN, f), 'utf8');
+check('a held line is not an answer: the watch and the recent lines skip channel held', /event_type=eq\.assistant&channel=neq\.held/.test(src('api/wa-morning.js')) && /in\.\(owner_in,assistant\)&channel=neq\.held/.test(src('api/wa-hook.js')));
+check('a sign request goes at once (held, it would stay pending with no buttons)', OWNER_NOW_KINDS.indexOf('sign') >= 0);
 check('trustee hazards and near misses go as hazard', /sendToOwner\(env, to, text, \{ kind: 'hazard'/.test(src('api/trustee-notify.js')));
 check('the "no answer yet" watch goes as watchdog', /sendToOwner\(env, to, v\.text, \{ kind: 'watchdog'/.test(src('api/wa-morning.js')));
 check('every send in wa-hook (answers to Michael) is a reply', src('api/wa-hook.js').split('\n').filter((x) => /\b(sendToOwner|sendDocToOwner)\(/.test(x) && !/^\s*import/.test(x)).every((x) => x.indexOf("kind: 'reply'") >= 0));
@@ -81,28 +83,40 @@ const held = [
   { text: 'a check on a kept promise', kind: 'agent', ref: 'promise:p-20261106100000-abcd' },
 ].concat(Array.from({ length: 12 }, (_, i) => ({ text: 'report ' + i, kind: 'agent' })));
 const w = weekendList(JSON.stringify(held), prom, dev);
-check('closed reminders dropped (promise kept, dev request done), open one kept', w.dropped === 3 && w.lines[0] === 'reminder of an open promise', w);
-check('10 lines at most, and how many more', w.lines.length === WEEKEND_SHOW && WEEKEND_SHOW === 10 && w.more === 3 && w.total === 13, w);
+check('closed reminders dropped (promise kept, dev request done), open one kept', w.dropped === 2 && w.lines[0] === 'reminder of an open promise', w);
+check('a result about a closed item (not a reminder) is kept: it is what he should hear', w.lines.indexOf('a check on a kept promise') >= 0);
+check('10 lines at most, and how many more', w.lines.length === WEEKEND_SHOW && WEEKEND_SHOW === 10 && w.more === 4 && w.total === 14, w);
 check('an internal id is cut from a line', weekendList(JSON.stringify([{ text: 'done dev-20261106100000-zzzz now' }]), '[]', '[]').lines[0].indexOf('dev-2026') < 0);
 const full = weekendText(w, false), compact = weekendText(w, true);
-check('the text: a heading with the count, lines, "and 3 more"', /מסוף השבוע \(13\):/.test(full) && full.split('\n- ').length === 11 && full.indexOf('ועוד 3') >= 0, full);
-check('compact (template, one line): no new lines', compact.indexOf('\n') < 0 && compact.indexOf('ועוד 3') >= 0);
+check('the text: a heading with the count, lines, "and 4 more"', /מסוף השבוע \(14\):/.test(full) && full.split('\n- ').length === 11 && full.indexOf('ועוד 4') >= 0, full);
+check('compact (template, one line): no new lines', compact.indexOf('\n') < 0 && compact.indexOf('ועוד 4') >= 0);
+const longW = { lines: Array.from({ length: 10 }, (_, i) => 'a long report line number ' + i + ' ' + 'x'.repeat(90)), more: 0, total: 10 };
+const fit = weekendText(longW, true, 400);
+check('room left (the template is 1000 characters): only what fits, the rest counted in "and N more", never cut by WhatsApp', fit.length <= 400 && /ועוד \d+/.test(fit) && fit.indexOf('number 0') >= 0 && fit.indexOf('number 9') < 0, fit);
+const none = weekendText(longW, true, 60);
+check('no room for a line: the heading and "write what was held"', none.length <= 80 && none.indexOf('(10)') >= 0 && none.indexOf('number') < 0, none);
 check('keyboard characters only', !/[–—‘’“”…־]/.test(full + compact));
 check('nothing held = nothing added', weekendText({ lines: [] }, false) === '' && weekendText(null, true) === '');
 
 // ---------- 4. with fetch ----------
 console.log('\n4. the send itself (fetch mocked)');
 const ENV = { META_PHONE_NUMBER_ID: 'P1', META_ACCESS_TOKEN: 'mt', SUPABASE_SERVICE_ROLE_KEY: 'k', SUPABASE_URL: 'https://sb.example' };
-let calls = [], ownerInAt = null, ownerInFail = false, writeFail = false, state = null;
+let calls = [], ownerInAt = null, ownerInFail = false, writeFail = false, state = null, lostRace = false, casReads = 0;
 const realNow = Date.now;
 globalThis.fetch = async (u, o = {}) => {
   calls.push({ u: String(u), o });
   u = String(u);
   if (u.indexOf('event_type=eq.owner_in') >= 0) return ownerInFail ? new Response('{}', { status: 500 }) : new Response(JSON.stringify(ownerInAt ? [{ ts: ownerInAt }] : []));
-  if (u.indexOf('server_state?key=eq.' + WEEKEND_KEY) >= 0) return new Response(JSON.stringify(state ? [{ value: state }] : []));
+  // the held list goes through stateCas: read with updated_at, then PATCH (row exists) or POST (first write)
+  if (u.indexOf('key=eq.' + WEEKEND_KEY) >= 0 && (o.method || 'GET') === 'GET') { casReads++; return new Response(JSON.stringify(state ? [{ value: state, updated_at: '2026-01-01T00:00:00.000Z' }] : [])); }
+  if (u.indexOf('key=eq.' + WEEKEND_KEY) >= 0 && o.method === 'PATCH') {
+    if (writeFail) return new Response('{}', { status: 500 });
+    if (lostRace) { lostRace = false; state = JSON.stringify(JSON.parse(state || '[]').concat([{ at: 'x', kind: 'agent', text: 'written by another send in between' }])); return new Response('[]'); }
+    state = JSON.parse(o.body).value; return new Response('[{}]');
+  }
   if (u.indexOf('server_state?on_conflict=key') >= 0) {
     const b = JSON.parse(o.body)[0];
-    if (b.key === WEEKEND_KEY) { if (writeFail) return new Response('{}', { status: 500 }); state = b.value; }
+    if (b.key === WEEKEND_KEY) { if (writeFail) return new Response('{}', { status: 500 }); state = b.value; return new Response('[{}]', { status: 201 }); }
     return new Response('', { status: 201 });
   }
   if (u.indexOf('server_state?key=eq.') >= 0) return new Response('[]');
@@ -139,9 +153,13 @@ const at = (ms) => { Date.now = () => ms; };
     calls = []; ownerInFail = false; writeFail = true;
     r = await sendToOwner(ENV, '9725', 'the held list cannot be written: sent, not lost', { kind: 'agent', windowOpen: true });
     check('Saturday, the write fails: sent', r.ok && !r.held && meta() === 1, r);
-    writeFail = false; calls = [];
-    r = await sendDocToOwner(ENV, '9725', new Uint8Array([0x25, 0x50, 0x44, 0x46]), 'form.pdf', '', true, { kind: 'sign', path: 'a/b/c/form.pdf' });
-    check('Saturday, a document to sign: kept as a line with the file name, nothing to Meta', r.held && meta() === 0 && JSON.parse(state).some((x) => x.text.indexOf('form.pdf') >= 0), r);
+    writeFail = false; calls = []; lostRace = true; casReads = 0;
+    r = await sendToOwner(ENV, '9725', 'held while another send wrote the list', { kind: 'agent', windowOpen: true });
+    const both = JSON.parse(state).map((x) => x.text);
+    check('two holds at once: the second reads again and both lines stay (compare-and-swap)', r.held && casReads === 2 && both.indexOf('written by another send in between') >= 0 && both.indexOf('held while another send wrote the list') >= 0, both);
+    calls = [];
+    r = await sendDocToOwner(ENV, '9725', new Uint8Array([0x25, 0x50, 0x44, 0x46]), 'form.pdf', '', true, { kind: 'file', path: 'a/b/c/form.pdf' });
+    check('Saturday, a file an agent sends: kept as a line with the file name, nothing to Meta', r.held && meta() === 0 && JSON.parse(state).some((x) => x.text.indexOf('form.pdf') >= 0), r);
     calls = [];
     r = await sendDocToOwner(ENV, '9725', new Uint8Array([0x25, 0x50, 0x44, 0x46]), 'asked.pdf', '', true, { kind: 'reply', path: 'a/asked.pdf' });
     check('Saturday, a file he asked for: sent', r.ok && !r.held && meta() === 2, r);

@@ -18,9 +18,10 @@ globalThis.fetch = async (url, opt = {}) => {
   }
   if (url.startsWith(SB + '/rest/v1/notification_prefs')) return new Response(JSON.stringify([{ prefs: { trustee_hazard: { whatsapp_to: '+' + OWNER } } }]), { status: 200 });
   if (url.startsWith(SB + '/rest/v1/server_state')) {
-    if (m === 'POST') { JSON.parse(opt.body).forEach((r) => { state[r.key] = r.value; }); return new Response('', { status: 201 }); }
+    if (m === 'POST') { JSON.parse(opt.body).forEach((r) => { state[r.key] = r.value; }); return new Response('[{}]', { status: 201 }); }
     const k = /key=eq\.([^&]*)/.exec(url)[1];
-    return new Response(JSON.stringify(k in state ? [{ value: state[k] }] : []), { status: 200 });
+    if (m === 'PATCH') { state[k] = JSON.parse(opt.body).value; return new Response('[{}]', { status: 200 }); } // stateCas
+    return new Response(JSON.stringify(k in state ? [{ value: state[k], updated_at: '2026-01-01T00:00:00.000Z' }] : []), { status: 200 });
   }
   if (url.startsWith(SB + '/rest/v1/docs')) return new Response(JSON.stringify(docs), { status: 200 });
   if (url.startsWith(SB + '/rest/v1/equip_inspections')) { equipUrls.push(url); return new Response(JSON.stringify(equip), { status: 200 }); }

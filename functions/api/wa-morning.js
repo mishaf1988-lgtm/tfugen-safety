@@ -22,6 +22,7 @@ import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo, SITE } from '../_shared.js';
 import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, WEEKEND_KEY, WEEKEND_LAST_KEY, weekendList, PROMISE_KEY, promiseDue, promiseRemindText, promiseToCheck, eveningAdd, isoWeekAdd, promiseCheckDue, promiseCheckFireText, assistantFire, assistantFireNow } from '../_wa.js';
 import { odConfigured, accessToken, putFile, sendMailTo } from '../_onedrive.js';
 import { worksTick } from './works.js';
+import { stateCas } from '../_cas.js';
 import { meetingDate, checkAndFixDeck, deckGapText } from './hazard-deck.js';
 import { OCR_ROOT, OCR_INBOX, OCR_AUTO_KEY, OCR_AUTO_GAP_MS, OCR_DONE_MAX, OCR_MAX_PAGES, OCR_MODELS, ocrAutoPick, ocrOne } from '../_ocr.js';
 
@@ -489,7 +490,8 @@ async function watchReply(env, now) {
   if (!last) return { ok: true, sent: false, reason: 'no message' };
   // 21/10/2026: a failed read is "unknown", not "no answer": the first alert ever (13:30 UTC) told Michael
   // a message from 16:19 had no answer, when the answer was logged at 16:20.
-  const outs = await sb(env, 'notifications_log?select=ts,payload&event_type=eq.assistant&ts=gt.' + encodeURIComponent(last.ts) + '&limit=20').catch(() => null);
+  // channel neq held: a line kept for Sunday is not an answer (weekend quiet, review 06/11/2026)
+  const outs = await sb(env, 'notifications_log?select=ts,payload&event_type=eq.assistant&channel=neq.held&ts=gt.' + encodeURIComponent(last.ts) + '&limit=20').catch(() => null);
   if (!Array.isArray(outs)) return { ok: false, sent: false, error: 'could not read the answers' };
   const v = watchVerdict(last, outs, now.getTime(), await stateGet(env, WATCH_KEY).catch(() => null));
   if (!v) return { ok: true, sent: false };
@@ -570,9 +572,18 @@ export async function weekendStep(env) {
     return Object.assign({ at, raw: list }, weekendList(list, pr, dv));
   } catch (e) { return { at, raw: [], lines: [], more: 0, total: 0 }; }
 }
-export function weekendText(wk, compact) {
-  if (!wk || !wk.lines || !wk.lines.length) return '';
+export function weekendText(wk, compact, room) {
+  if (!wk || !wk.lines || (!wk.lines.length && !wk.head)) return '';
   const head = '\u05de\u05e1\u05d5\u05e3 \u05d4\u05e9\u05d1\u05d5\u05e2 (' + wk.total + ')';
+  // lines that do not fit in the room left are counted in "and N more" instead of being cut by WhatsApp
+  if (room != null) {
+    const all = wk.lines;
+    for (let n = all.length; n >= 0; n--) {
+      const t = weekendText({ lines: all.slice(0, n), more: (wk.more || 0) + all.length - n, total: wk.total }, compact);
+      if (t.length <= room || n === 0) return n ? t : weekendText({ lines: [], more: wk.total, total: wk.total, head: true }, compact);
+    }
+  }
+  if (wk.head) return compact ? ' ' + head + ': \u05dc\u05db\u05ea\u05d5\u05d1 "\u05de\u05d4 \u05e0\u05d3\u05d7\u05d4" \u05d5\u05d0\u05e9\u05dc\u05d7.' : '\n\n' + head + ': \u05dc\u05db\u05ea\u05d5\u05d1 "\u05de\u05d4 \u05e0\u05d3\u05d7\u05d4" \u05d5\u05d0\u05e9\u05dc\u05d7.';
   const more = wk.more ? '\u05d5\u05e2\u05d5\u05d3 ' + wk.more + ': \u05dc\u05db\u05ea\u05d5\u05d1 "\u05de\u05d4 \u05e0\u05d3\u05d7\u05d4" \u05d5\u05d0\u05e9\u05dc\u05d7.' : '';
   if (compact) return ' ' + head + ': ' + wk.lines.map((x) => clip(x, 70)).join('; ') + '.' + (more ? ' ' + more : '');
   return '\n\n' + head + ':\n' + wk.lines.map((x) => '- ' + x).join('\n') + (more ? '\n' + more : '');
@@ -592,7 +603,9 @@ export async function run(env, now, body) {
   const open = await ownerWindowOpen(env, sbFrom(env), now.getTime());
   // 06/11/2026 (weekend quiet, _wa.js weekendHold): what was kept on Friday and Saturday comes with this update
   const wk = await weekendStep(env);
-  const text = buildBrief(g.items, g.failed, g.today, !open, g.notes, g.weather, g.devDone, g.learnOpen, false, g.waiting, g.disq, g.contra) + weekendText(wk, !open);
+  const brief = buildBrief(g.items, g.failed, g.today, !open, g.notes, g.weather, g.devDone, g.learnOpen, false, g.waiting, g.disq, g.contra);
+  // the room left: the template carries 1000 characters in one line, free text 4096 (review 06/11/2026: a cut list was cleared)
+  const text = brief + weekendText(wk, !open, (open ? 4096 : 1000) - brief.length - 20);
   if (body.dry) return { ok: true, sent: false, dry: true, text, cal, weekend: wk.total };
   if (!body.force && (await stateGet(env, LAST_KEY).catch(() => null)) === g.today) return { ok: true, sent: false, reason: 'already sent today', cal };
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };
@@ -603,9 +616,12 @@ export async function run(env, now, body) {
   // sent: the kept lines are done; one added while this ran (after wk.at) stays for the next update
   if (r.ok && wk.raw.length) {
     await stateSet(env, WEEKEND_LAST_KEY, JSON.stringify({ at: now.toISOString(), list: wk.raw })).catch(() => {});
-    const cur = await stateGet(env, WEEKEND_KEY).catch(() => null);
-    let left = []; try { left = (JSON.parse(cur || '[]') || []).filter((x) => x && String(x.at) > wk.at); } catch (e) { left = []; }
-    await stateSet(env, WEEKEND_KEY, JSON.stringify(left)).catch(() => {});
+    // compare-and-swap: a line held while this ran (after wk.at) stays for the next update
+    const k = env.SUPABASE_SERVICE_ROLE_KEY;
+    await stateCas(sbFrom(env), { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }, WEEKEND_KEY, (cur) => {
+      let left = []; try { left = (JSON.parse(cur || '[]') || []).filter((x) => x && String(x.at) > wk.at); } catch (e) { left = []; }
+      return { value: JSON.stringify(left) };
+    }, () => tmo(SB_TIMEOUT_MS)).catch(() => {});
   }
   await sb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
     body: JSON.stringify([{ id: 'wm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),

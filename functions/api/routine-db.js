@@ -2335,7 +2335,7 @@ async function routineDbHandle(context) {
       if (!af) return jsonResp({ ok: false, error: 'assistant fire not configured' }, 200, {});
       const now = new Date().toISOString();
       // the conversation so far, read before this line is logged (so it is not in it)
-      const rr = await fetch(url + '/rest/v1/notifications_log?select=ts,event_type,payload&event_type=in.(owner_in,assistant)&order=ts.desc&limit=12', { headers: h, signal: tmo(SB_MS) }).then((x) => x.ok ? x.json() : null).catch(() => null);
+      const rr = await fetch(url + '/rest/v1/notifications_log?select=ts,event_type,payload&event_type=in.(owner_in,assistant)&channel=neq.held&order=ts.desc&limit=12', { headers: h, signal: tmo(SB_MS) }).then((x) => x.ok ? x.json() : null).catch(() => null);
       const recent = rr ? recentLine(rr, '', Date.now()) : '';
       const lr = await fetch(url + '/rest/v1/server_state?key=eq.' + LEARN_KEY + '&select=value', { headers: h, signal: tmo(SB_MS) }).then((x) => x.ok ? x.json() : null).catch(() => null);
       const learned = lr && lr[0] ? learnedLine(lr[0].value, LEARNED_MAX) : '';
