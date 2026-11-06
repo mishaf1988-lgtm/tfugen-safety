@@ -149,6 +149,7 @@ console.log('\n4. closed: the end time and who closed');
 
 console.log('\n5. pure helpers: blanks, names');
 check('a blank split by spaces is one blank; text between makes two', blanksOf('a ______      _____ b ___').length === 2 && blanksOf('a ___ b').length === 1);
+check('unmark: a nested marker does not survive (qzxqzxSgqSgq, q g s q g s x z q x z q)', unmark('qzxqzxSgqSgq').toLowerCase().indexOf('qzxsgq') < 0 && !/q\s*g\s*s\s*x\s*z\s*q/i.test(unmark('q g s q g s x z q x z q')), [unmark('qzxqzxSgqSgq'), unmark('q g s q g s x z q x z q')]);
 check('a value for a missing label is reported, never thrown', (await fillPermit(fx('ctr-work'), { fill: [{ at: 'אין כזה', vals: ['x'] }] })).report.missing[0] === 'אין כזה');
 check('a file name with path and reserved characters is cleaned', safeName('a/b\\c:d*e?"f<g>|h#%‮.', 40) === 'a b c d e f g h', safeName('a/b\\c:d*e?"f<g>|h#%‮.', 40));
 check('the base name: date, number, short description', permitBase({ ds: '2026-11-06', desc: 'החלפת מלכודת קיטור/../../x' }, 'WK-0611-1', false) === '2026-11-06 - הרשאה WK-0611-1 - החלפת מלכודת קיטור x', permitBase({ ds: '2026-11-06', desc: 'החלפת מלכודת קיטור/../../x' }, 'WK-0611-1', false));

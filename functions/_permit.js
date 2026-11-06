@@ -220,7 +220,12 @@ export async function fillPermit(bytes, spec) {
 const dmy = (ymd) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(ymd || '')); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
 // The signature marker never comes from what a link user typed (security review 05/11/2026): "eSign" in a value
 // would move Michael's signature next to it. Removed in both directions, any spacing.
-export const unmark = (s) => String(s).replace(/q\s*z\s*x\s*s\s*g\s*q|q\s*g\s*s\s*x\s*z\s*q/gi, '');
+// Until nothing changes (security review 06/11/2026): one pass turned "qzxqzxSgqSgq" into the marker itself.
+export const unmark = (s) => {
+  let x = String(s), y;
+  do { y = x; x = x.replace(/q\s*z\s*x\s*s\s*g\s*q|q\s*g\s*s\s*x\s*z\s*q/gi, ''); } while (x !== y);
+  return x;
+};
 const one = (s, max) => unmark(norm(String(s || '').replace(/[\r\n]+/g, ', '))).slice(0, max);
 // w: a work as works.js rowToWork gives it (who, con, sup, ph, wkr, area, dep, ds, de, ts, te, desc, cats, st);
 // o: { num, date (DD/MM/YYYY, the approval), closed }. form: 'work' | 'safety'.
