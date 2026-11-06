@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { pdfHasFont } from './_build/_ocr.mjs';
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, ilInstant, incFilePrefix, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, cardBefore, CARD_BEFORE_N, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, refusesWithoutFlow, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, odPdfCheck, OD_PUT_MAX, odArchiveCheck, archiveStampName, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrTxtName, taskAddCheck, TASK_ADD_MAX, taskOpenDup, TASK_SOURCES, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT, isoSwapRequest, isoUpCheck, OD_ISO_SWAP, ISO_SITE_URL, mailGotCheck, mailGotList, MAIL_GOT_MAX } from './_build/routine-db.mjs';
+import { secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, ilInstant, incFilePrefix, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, cardBefore, CARD_BEFORE_N, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftTrashHits, draftDoneId, OD_DRAFT_DONE, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, refusesWithoutFlow, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, odPdfCheck, OD_PUT_MAX, odArchiveCheck, archiveStampName, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrTxtName, taskAddCheck, TASK_ADD_MAX, taskOpenDup, TASK_SOURCES, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT, isoSwapRequest, isoUpCheck, OD_ISO_SWAP, ISO_SITE_URL, mailGotCheck, mailGotList, MAIL_GOT_MAX } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -261,7 +261,7 @@ const callIn = async (body) => {
   })();
   check('od_pull never into the mail-flow folders (draft, file request, inbox, calendar queue, OCR text): those take files through mail_draft / mail_request only (25/10/2026 retro)', (() => {
     const t = (d) => odPullCheck({ agent: 'dev', why: 'to a flow folder', from: 'x/a.txt', dir: d });
-    return OD_TRIGGER_DIRS.length === 11 && OD_TRIGGER_DIRS.every((d) => !!t(d).error) && !!t(OD_DRAFT + '/sub').error && !t('22_x/09_y').error;
+    return OD_TRIGGER_DIRS.length === 12 && OD_TRIGGER_DIRS.every((d) => !!t(d).error) && !!t(OD_DRAFT + '/sub').error && !t('22_x/09_y').error;
   })());
   check('od_mkdir and od_put_pdf refuse every flow-trigger folder, OCR text folder included (01/11/2026, STATUS retro 25/10)', (() => {
     const mk = (parent, name) => odMkdirCheck({ agent: 'dev', why: 'to a flow folder', parent, name });
@@ -1335,6 +1335,36 @@ const callIn = async (body) => {
     // 27/10/2026 (C52): the quality checker reads the drafts' text from drafts_text, newest first, capped
     let xt = []; try { xt = JSON.parse(state[DRAFTS_TEXT_KEY] || '[]'); } catch (e) { xt = []; }
     check('drafts_text: the newest line is the made draft with its text and replaces count, readable by state_get', xt.length >= 1 && xt.length <= DRAFTS_TEXT_MAX && xt[0].body === 'x' && xt[0].agent === 'routine-wa-assistant' && xt[0].replaces === 1 && /tzahi/.test(xt[0].to) && STATE_READ.indexOf(DRAFTS_TEXT_KEY) >= 0 && DRAFTS_TEXT_MAX === 30, xt);
+    // 06/11/2026 (retro 27/10 (a)): the exact Graph id. Flow 3 reports each draft's id in OD_DRAFT_DONE under the request's file name.
+    const ID2 = 'AAMkAGI2TG93AAA-other-mail-AAAAAAEPAAAiIsqMbYjsT5e-T7KzowPTAAAQoAAA';
+    const nowT = Date.now(), iso = new Date(nowT).toISOString(), earlier = new Date(nowT - 3600000).toISOString();
+    const madeId = [draftMadeLine({ to: 'tzahi@x.co.il', subject: 'offer' }, iso, '20261106-aaaa.txt')];
+    const info = (ids, live) => ({ ids, live });
+    check('draftDoneId: only a JSON with a real-looking id; a BOM and spaces pass, junk gives an empty string', draftDoneId('\uFEFF {"id":"' + ID + '"}') === ID && draftDoneId('{"id":"x"}') === '' && draftDoneId('nope') === '' && draftDoneId('{"id":5}') === '');
+    const t1 = { agent: 'routine-wa-assistant', why: 'replaced by the new one', id: ID, subject: 'offer', to: 'tzahi@x.co.il' };
+    check('exact id from the flow: allowed and marked exact', draftTrashCheck(t1, madeId, nowT, info({ '20261106-aaaa.txt': ID }, nowT - 1000)).exact === true);
+    check('the same recipients and subject but another message id (the old gap): refused', /does not match/.test(draftTrashCheck(Object.assign({}, t1, { id: ID2 }), madeId, nowT, info({ '20261106-aaaa.txt': ID }, nowT - 1000)).error || ''));
+    check('made after the flow started reporting but no id reported: refused with "not reported yet"', /not reported the id/.test(draftTrashCheck(t1, madeId, nowT, info({}, nowT - 1000)).error || ''));
+    check('backward compatible: flow not changed yet (no live mark), or a draft made before it: matched by recipients and subject, exact false',
+      draftTrashCheck(t1, madeId, nowT, info({}, null)).exact === false && draftTrashCheck(t1, [draftMadeLine({ to: 'tzahi@x.co.il', subject: 'offer' }, earlier, 'old.txt')], nowT, info({}, nowT - 1000)).exact === false
+      && !draftTrashCheck(t1, [draftMadeLine({ to: 'tzahi@x.co.il', subject: 'offer' }, earlier)], nowT).error);
+    check('draftMadeLine keeps the request file name; draftTrashHits finds the lines by recipients and subject', madeId[0].file === '20261106-aaaa.txt' && draftTrashHits(t1, madeId, nowT).length === 1 && draftTrashHits(Object.assign({}, t1, { to: 'x@x.co.il' }), madeId, nowT).length === 0);
+    // the server reads the reports from OneDrive: draft_trash end to end, then the live mark is written once
+    puts = [];
+    const reported = {}; reported[OD_ROOT + OD_DRAFT_DONE + '/20261106-aaaa.txt'] = JSON.stringify({ id: ID, subject: 'offer' });
+    graph = async (u, opt = {}) => {
+      const d = decodeURIComponent(u);
+      if (opt.method === 'PUT') { puts.push({ url: d, body: opt.body }); return new Response(JSON.stringify({ size: 10 }), { status: 201 }); }
+      if (/:\/children/.test(d)) return new Response(JSON.stringify({ value: [{ name: '20261106-aaaa.txt', createdDateTime: iso }] }), { status: 200 });
+      const k = Object.keys(reported).find((x) => d.indexOf('/root:/' + x + ':/content') > 0);
+      return k ? new Response(reported[k], { status: 200 }) : new Response('{}', { status: 404 });
+    };
+    state[DRAFTS_MADE_KEY] = JSON.stringify(madeId); delete state[DRAFTS_TRASHED_KEY]; delete state['drafts_id_live'];
+    const okx = await call(Object.assign({ op: 'draft_trash' }, t1));
+    check('draft_trash with the exact id: one PUT to the trash folder, exact true, live mark written once with first_at', okx.json.ok && okx.json.exact === true && puts.length === 1 && /"first_at"/.test(String(state['drafts_id_live'] || '')) && STATE_READ.indexOf('drafts_id_live') >= 0, { x: okx.json, st: state['drafts_id_live'] });
+    puts = [];
+    const bx = await call(Object.assign({ op: 'draft_trash' }, t1, { id: ID2 }));
+    check('draft_trash with another message id under the same subject: 400, nothing written', bx.status === 400 && /does not match/.test(bx.json.error) && puts.length === 0, bx.json);
     delete state[DRAFTS_MADE_KEY]; delete state[DRAFTS_TRASHED_KEY]; delete state[DRAFTS_TEXT_KEY];
   }
 
@@ -1354,7 +1384,7 @@ const callIn = async (body) => {
       for (const m of src.matchAll(/(OD_ROOT \+ '_|\\u05d1\\u05d8\\u05d9\\u05d7\\u05d5\\u05ea\/_(?!\\u05d0\\u05d5\\u05d8\\u05d5|\\u05e0\\u05db\\u05e0\\u05e1|\\u05d8\\u05e7\\u05e1\\u05d8|\\u05d2\\u05e8\\u05e1))/g)) direct.push(pth.basename(f));
     }
     check('no new "_" folder straight under the safety folder: a folder a flow reads is OD_AUTO + "/" + its name (add it to OD_AUTO_DIRS)', tops.length === 0 && direct.length === 0, { tops, direct });
-    check('the eight flow folders are inside OD_AUTO (flow 10, iso swaps: 31/10/2026; flow 11, forwards: 02/11/2026)', [OD_REQ, OD_DRAFT, OD_CAL_MOVE, OD_DRAFT_TRASH, OD_CAL_INVITE, OD_ISO_SWAP].every((x) => x.indexOf(OD_AUTO + '/') === 0) && OD_AUTO_DIRS.length === 8);
+    check('the nine flow folders are inside OD_AUTO (flow 10, iso swaps: 31/10/2026; flow 11, forwards: 02/11/2026)', [OD_REQ, OD_DRAFT, OD_CAL_MOVE, OD_DRAFT_TRASH, OD_CAL_INVITE, OD_ISO_SWAP].every((x) => x.indexOf(OD_AUTO + '/') === 0) && OD_AUTO_DIRS.length === 9 && OD_DRAFT_DONE.indexOf(OD_AUTO + '/') === 0);
   }
 
   console.log('\n4e4b. a promise check-in waits while Michael is in a conversation (26/10/2026)');
@@ -2070,7 +2100,7 @@ const callIn = async (body) => {
     check('forwardRequest: a bad id, an id with "/", no subject, no recipient, more than 5, or a 2001-character comment = refused',
       !!forwardRequest({ message_id: 'short', subject: 'x y', to: 'a@b.co' }).error && !!forwardRequest({ message_id: ID, subject: 'x y', to: '' }).error && !!forwardRequest({ message_id: ID + '/x', subject: 'x y', to: 'a@b.co' }).error && !!forwardRequest({ message_id: ID, to: 'a@b.co' }).error
       && !!forwardRequest({ message_id: ID, subject: 'x y', to: 'a@b.co;c@d.co;e@f.co;g@h.co;i@j.co;k@l.co' }).error && !!forwardRequest({ message_id: ID, subject: 'x y', to: 'a@b.co', comment: 'x'.repeat(2001) }).error);
-    check('the forward folder is its own automation folder (the last one), so no other op writes there', OD_FORWARD.endsWith(DIRS[DIRS.length - 1]) && /העברות/.test(OD_FORWARD));
+    check('the forward folder is its own automation folder (index 7), so no other op writes there', OD_FORWARD.endsWith(DIRS[7]) && /העברות/.test(OD_FORWARD));
     const g0 = graph, puts = [];
     graph = async (u, o = {}) => {
       if (/\/me\/messages\//.test(u)) return u.includes(encodeURIComponent(ID)) ? new Response(JSON.stringify({ subject: 'RE: x', hasAttachments: true }), { status: 200 }) : new Response('{}', { status: 404 });

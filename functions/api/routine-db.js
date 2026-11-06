@@ -191,7 +191,7 @@ import { DOC_MAX, ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTA
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads',
   'trustees', 'trustee_tasks', 'trustee_winners'];
-export const STATE_READ = ['agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account', 'works_permit_err', 'weekend_held', 'weekend_held_last'];
+export const STATE_READ = ['agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'drafts_id_live', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account', 'works_permit_err', 'weekend_held', 'weekend_held_last'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -829,7 +829,7 @@ export const OD_SKIP = '\u05dc\u05d0 \u05dc\u05ea\u05d9\u05d5\u05e7';
 // in one folder, OD_AUTO. Each flow keeps its own subfolder. OD_AUTO_DIRS = their names; the old top-level
 // names stay refused as destinations too, in case an old folder is still there.
 export const OD_AUTO = '_\u05d0\u05d5\u05d8\u05d5\u05de\u05e6\u05d9\u05d4';
-export const OD_AUTO_DIRS = ['_\u05d1\u05e7\u05e9\u05d5\u05ea \u05de\u05d4\u05de\u05d9\u05d9\u05dc', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d9\u05d9\u05dc', '_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df', '_\u05d4\u05d6\u05d6\u05d5\u05ea \u05d1\u05d9\u05d5\u05de\u05df', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d7\u05d9\u05e7\u05d4', '_\u05d6\u05d9\u05de\u05d5\u05e0\u05d9\u05dd', '_\u05d4\u05d7\u05dc\u05e4\u05d5\u05ea iso', '_\u05d4\u05e2\u05d1\u05e8\u05d5\u05ea \u05de\u05d9\u05d9\u05dc'];
+export const OD_AUTO_DIRS = ['_\u05d1\u05e7\u05e9\u05d5\u05ea \u05de\u05d4\u05de\u05d9\u05d9\u05dc', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d9\u05d9\u05dc', '_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df', '_\u05d4\u05d6\u05d6\u05d5\u05ea \u05d1\u05d9\u05d5\u05de\u05df', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d7\u05d9\u05e7\u05d4', '_\u05d6\u05d9\u05de\u05d5\u05e0\u05d9\u05dd', '_\u05d4\u05d7\u05dc\u05e4\u05d5\u05ea iso', '_\u05d4\u05e2\u05d1\u05e8\u05d5\u05ea \u05de\u05d9\u05d9\u05dc', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05e9\u05e0\u05d5\u05e6\u05e8\u05d5'];
 export const isAutoTop = (x) => x === OD_AUTO || OD_AUTO_DIRS.indexOf(x) >= 0;
 export const OD_REQ = OD_AUTO + '/' + OD_AUTO_DIRS[0];
 // A Graph / Outlook message id: base64url-ish, as outlook_email_search returns it.
@@ -1021,7 +1021,7 @@ export const MAIL_REQ_ID = /^[A-Za-z0-9_=+\/-]{40,400}$/;
 // mail_forward (02/11/2026, Michael in the assistant's chat: "do it: yes, build it"; DECISIONS 02/11/2026): a forward of a
 // mail with every attachment as it came (zip too), as a draft in Michael's Drafts. Flow 11 "forward drafts" reads the file
 // and calls Graph createForward, which makes a draft and never sends. Pure: the request file, or an error.
-export const OD_FORWARD = OD_AUTO + '/' + OD_AUTO_DIRS[OD_AUTO_DIRS.length - 1];
+export const OD_FORWARD = OD_AUTO + '/' + OD_AUTO_DIRS[7];
 export function forwardRequest(b) {
   const id = String(b.message_id || '');
   // no "/" (security review 02/11/2026): the flow puts the id in the Graph URL as it is
@@ -1066,6 +1066,11 @@ export const OD_CAL_MOVE = OD_AUTO + '/' + OD_AUTO_DIRS[3], CAL_MOVED_KEY = 'cal
 const CAL_T = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 // Pure. Israel wall clock "YYYY-MM-DDTHH:MM" for start and end, from today up to a year ahead, at most 14 days long.
 export const OD_DRAFT_TRASH = OD_AUTO + '/' + OD_AUTO_DIRS[4];
+// 06/11/2026 (Michael in the questionnaire: "change the flow so it moves only the exact draft"; retro 27/10 (a)): flow 3 writes the
+// Graph id of each draft it makes to OD_DRAFT_DONE, under the same file name as the request. The server (never another op: the
+// folder is in OD_AUTO_DIRS, so no od_* op writes there) reads it when a draft is moved to Deleted Items. DRAFT_ID_LIVE_KEY =
+// {first_at}: when the first such file was seen; a draft made after it must have its id there, one made before it is matched as before.
+export const OD_DRAFT_DONE = OD_AUTO + '/' + OD_AUTO_DIRS[8], DRAFT_ID_LIVE_KEY = 'drafts_id_live';
 export const DRAFTS_MADE_KEY = 'drafts_made', DRAFTS_MADE_MAX = 200, DRAFTS_TRASHED_KEY = 'drafts_trashed', DRAFT_TRASH_DAYS = 30;
 const mailSet = (x) => String(x || '').toLowerCase().split(/[;,]/).map((a) => a.trim()).filter(Boolean).sort().join(';');
 // RE: / FW: / Fwd: and the Hebrew Outlook prefixes, repeated
@@ -1124,22 +1129,40 @@ export function draftVsLastOut(draftBody, lastText, lastAt, nowMs) {
   if (pct < DRAFT_VS_UNRELATED_PCT) return null;
   return pct === 100 ? { same: true, lines: lines.length, pct } : { same: false, lines: lines.length, kept, pct, changed: missing.slice(0, 3).map((l) => l.slice(0, 80)) };
 }
-export function draftMadeLine(req, nowIso) {
-  return { at: nowIso, to: mailSet(req.to), subject: String(req.subject || '').slice(0, 200), reply: !!req.reply_to };
+export function draftMadeLine(req, nowIso, file) {
+  return Object.assign({ at: nowIso, to: mailSet(req.to), subject: String(req.subject || '').slice(0, 200), reply: !!req.reply_to }, file ? { file: String(file) } : {});
+}
+// The flow's report file: {"id": "<Graph message id>", ...}. Pure: the id, or '' for anything else.
+export function draftDoneId(text) {
+  let j = null; try { j = JSON.parse(String(text || '').replace(/^\uFEFF/, '').trim()); } catch (e) { return ''; }
+  const id = j && typeof j.id === 'string' ? j.id.trim() : '';
+  return MAIL_REQ_ID.test(id) ? id : '';
 }
 // Pure: b = {agent, why, id, subject, to}; made = drafts_made. The draft must be one the server made: the same
 // recipients, and the same subject (a reply draft takes "RE: <thread>", so for one of those the recipients do).
-export function draftTrashCheck(b, made, nowMs) {
+// 06/11/2026: with idInfo = {ids: {requestFile: graphId}, live: ms|null} the id must also be the one the flow reported for that
+// draft. Without it, or for a draft made before the flow reported ids (live null, or made before it), the old match stands.
+export function draftTrashHits(b, made, nowMs) {
+  const subject = String(b.subject || '').replace(/\s+/g, ' ').trim(), to = mailSet(b.to), since = nowMs - DRAFT_TRASH_DAYS * 864e5;
+  return (Array.isArray(made) ? made : []).filter((m) => m && Date.parse(m.at) >= since && m.to === to && (m.reply || draftSubj(m.subject) === draftSubj(subject)));
+}
+export function draftTrashCheck(b, made, nowMs, idInfo) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
   if (String(b.why || '').trim().length < 5) return { error: 'why required: which newer draft replaced it' };
   const id = String(b.id || '').trim(), subject = String(b.subject || '').replace(/\s+/g, ' ').trim(), to = mailSet(b.to);
   if (!MAIL_REQ_ID.test(id)) return { error: 'bad id: the draft id as outlook_email_search (folderName Drafts) returns it' };
   if (subject.length < 1 || subject.length > 200) return { error: 'subject: the draft subject exactly as in Drafts' };
   if (!to) return { error: 'to: the draft recipients' };
-  const since = nowMs - DRAFT_TRASH_DAYS * 864e5;
-  const hit = (Array.isArray(made) ? made : []).find((m) => m && Date.parse(m.at) >= since && m.to === to && (m.reply || draftSubj(m.subject) === draftSubj(subject)));
-  if (!hit) return { error: 'not a draft the server made in the last 30 days (recipients and subject): Michael\'s own drafts are never touched' };
-  return { id, subject, file: JSON.stringify({ id, subject }) };
+  const hits = draftTrashHits(b, made, nowMs);
+  if (!hits.length) return { error: 'not a draft the server made in the last 30 days (recipients and subject): Michael\'s own drafts are never touched' };
+  const out = { id, subject, file: JSON.stringify({ id, subject }) };
+  if (!idInfo) return out;
+  const ids = idInfo.ids || {}, live = idInfo.live || null;
+  if (hits.some((m) => m.file && ids[m.file] === id)) return Object.assign(out, { exact: true });
+  // not the id of any draft the server made with these recipients and subject: allowed only for a draft whose id was never reported
+  const unknown = hits.filter((m) => !(m.file && ids[m.file]) && !(live && Date.parse(m.at) >= live));
+  if (!unknown.length) return { error: hits.some((m) => m.file && ids[m.file]) ? 'id does not match the draft the server made (recipients and subject match, the id is another message): moving it would be Michael\'s own mail' : 'the flow has not reported the id of this draft yet (folder _\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05e9\u05e0\u05d5\u05e6\u05e8\u05d5): wait a minute and try again, or leave it' };
+  return Object.assign(out, { exact: false });
 }
 // 27/10/2026 (the morning update said "load credit at console.anthropic.com" from the mail filing, after Michael
 // decided twice, 22/10 and 26/10/2026, not to): a line for him that asks to load Claude API credit is refused. Pure.
@@ -2104,6 +2127,36 @@ async function routineDbHandle(context) {
     if (!r.ok) throw new Error('read ' + r.status);
     return r.json();
   };
+  // 06/11/2026: the Graph ids flow 3 reported for the drafts it made (files in OD_DRAFT_DONE named like the request), and when the
+  // first one was seen (written once, so STATUS can tell when the flow started reporting). Never throws: no report = no ids.
+  const draftIds = async (at, files) => {
+    const gh = { Authorization: 'Bearer ' + at.token }, G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
+    const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+    const ids = {};
+    for (const f of (files || []).slice(0, 8)) {
+      const r = await fetch(G + enc(OD_ROOT + OD_DRAFT_DONE + '/' + f) + ':/content', { headers: gh, signal: tmo(GRAPH_MS) }).catch(() => null);
+      const id = r && r.ok ? draftDoneId(await r.text().catch(() => '')) : '';
+      if (id) ids[f] = id;
+    }
+    let live = null;
+    try {
+      const lr = await stateRead(['drafts_id_live']); // a failed read throws to the catch below: no write, no overwrite (security review 06/11/2026)
+      let lv = lr && lr[0] && lr[0].value; if (typeof lv === 'string') { try { lv = JSON.parse(lv); } catch (e) { lv = null; } }
+      live = lv && Date.parse(lv.first_at) > 0 ? Date.parse(lv.first_at) : null;
+      if (!live) {
+        const dr = await fetch(G + enc(OD_ROOT + OD_DRAFT_DONE) + ':/children?$select=name,createdDateTime&$top=50', { headers: gh, signal: tmo(GRAPH_MS) }).catch(() => null);
+        const dj = dr && dr.ok ? await dr.json().catch(() => ({})) : {};
+        const ts = (dj.value || []).map((x) => Date.parse(x.createdDateTime)).filter((x) => x > 0).sort((a, b) => a - b);
+        if (ts.length) {
+          live = ts[0];
+          const iso = new Date(live).toISOString();
+          await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=ignore-duplicates,return=minimal' }, signal: tmo(SB_MS),
+            body: JSON.stringify([{ key: 'drafts_id_live', value: JSON.stringify({ first_at: iso, seen_at: new Date().toISOString() }), updated_at: new Date().toISOString() }]) }).catch(() => null);
+        }
+      }
+    } catch (e) { /* no live mark: every draft is matched as before */ }
+    return { ids, live };
+  };
   try {
     if (body.op === 'select') {
       if (TABLES.indexOf(body.table) < 0) return jsonResp({ ok: false, error: 'table not allowed' }, 400, {});
@@ -2971,15 +3024,16 @@ async function routineDbHandle(context) {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'id', 'subject', 'to'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const rows = await stateRead([DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY]).catch(() => []);
       const val = (k) => { const r = (rows || []).find((x) => x && x.key === k); try { const v = JSON.parse((r && r.value) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
-      const c = draftTrashCheck(body, val(DRAFTS_MADE_KEY), Date.now());
-      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
       const at = await accessToken(env);
+      const made1 = val(DRAFTS_MADE_KEY);
+      const c = draftTrashCheck(body, made1, Date.now(), await draftIds(at, draftTrashHits(body, made1, Date.now()).map((m) => m.file).filter(Boolean)));
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
       const name = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '') + '-' + Math.random().toString(36).slice(2, 8) + '.txt';
       await putFile(at.token, OD_ROOT + OD_DRAFT_TRASH, name, c.file, 'text/plain');
       const line = { at: new Date().toISOString(), subject: c.subject, file: name, agent: body.agent, why: String(body.why).slice(0, 200) };
       await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
         body: JSON.stringify([{ key: DRAFTS_TRASHED_KEY, value: JSON.stringify([line].concat(val(DRAFTS_TRASHED_KEY)).slice(0, 100)), updated_at: line.at }]) }).catch(() => null);
-      return jsonResp({ ok: true, file: OD_DRAFT_TRASH + '/' + name, note: 'the flow moves it to Deleted Items within about 5 minutes (the OneDrive trigger); check Drafts after' }, 200, {});
+      return jsonResp({ ok: true, file: OD_DRAFT_TRASH + '/' + name, exact: !!c.exact, note: 'the flow moves it to Deleted Items within about 5 minutes (the OneDrive trigger); check Drafts after' }, 200, {});
     }
     if (body.op === 'mail_forward') {
       // no "approved" field: like mail_draft it only makes a draft, and Michael sends it himself from Outlook (lesson 169: an
@@ -3033,8 +3087,10 @@ async function routineDbHandle(context) {
         if (!Array.isArray(body.replaces) || body.replaces.length > 5) return jsonResp({ ok: false, error: 'replaces: a list of up to 5 {id, subject, to}' }, 400, {});
         const mr0 = await stateRead([DRAFTS_MADE_KEY]).catch(() => []);
         let made0 = []; try { made0 = JSON.parse((mr0 && mr0[0] && mr0[0].value) || '[]'); } catch (e) { made0 = []; }
+        const at0 = await accessToken(env);
         for (const r of body.replaces) {
-          const c = draftTrashCheck(Object.assign({}, r || {}, { agent: body.agent, why: 'replaced by: ' + String(body.subject || '') }), made0, Date.now());
+          const rb = Object.assign({}, r || {}, { agent: body.agent, why: 'replaced by: ' + String(body.subject || '') });
+          const c = draftTrashCheck(rb, made0, Date.now(), await draftIds(at0, draftTrashHits(rb, made0, Date.now()).map((m) => m.file).filter(Boolean)));
           if (c.error) return jsonResp({ ok: false, error: 'replaces: ' + c.error }, 400, {});
           reps.push(c);
         }
@@ -3063,10 +3119,11 @@ async function routineDbHandle(context) {
       try {
         const mr = await stateRead([DRAFTS_MADE_KEY]).catch(() => []);
         let made = []; try { made = JSON.parse((mr && mr[0] && mr[0].value) || '[]'); } catch (e) { made = []; }
-        const line = draftMadeLine(JSON.parse(d.file), new Date().toISOString());
+        const line = draftMadeLine(JSON.parse(d.file), new Date().toISOString(), name);
         await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
           body: JSON.stringify([{ key: DRAFTS_MADE_KEY, value: JSON.stringify([line].concat(Array.isArray(made) ? made : []).slice(0, DRAFTS_MADE_MAX)), updated_at: line.at }]) });
       } catch (e) { /* the draft request is written; only its later deletion needs this line */ }
+      try { await draftIds(at, []); } catch (e) { /* only marks when flow 3 started reporting ids */ }
       try {
         const xr = await stateRead([DRAFTS_TEXT_KEY]).catch(() => []);
         let xs = []; try { xs = JSON.parse((xr && xr[0] && xr[0].value) || '[]'); } catch (e) { xs = []; }
