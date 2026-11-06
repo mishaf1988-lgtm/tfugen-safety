@@ -69,6 +69,11 @@ export function hasNewer(rows, wamid, myMs) {
   return r.some((x) => x && x.event_type === 'owner_in' && x.payload && x.payload.wamid && x.payload.wamid !== wamid && !x.payload.choice
     && !fast.has(x.payload.wamid) && Date.parse(x.ts) > myMs && Date.parse(x.ts) - myMs <= JOIN_MS);
 }
+// 06/11/2026 (retro 19/10/2026 (c)): any request with some signature header but a wrong signature wrote this row, so
+// anyone could keep the database busy. The note is for the developer: once per BAD_SIG_NOTE_MS per isolate is enough.
+export const BAD_SIG_NOTE_MS = 10 * 60 * 1000;
+let badSigNoteAt = 0;
+export function badSigNoteDue(lastMs, nowMs) { return !lastMs || nowMs - lastMs >= BAD_SIG_NOTE_MS; }
 async function note(env, value) {
   if (!env.SUPABASE_SERVICE_ROLE_KEY) return;
   try {
@@ -164,9 +169,15 @@ async function aboutAlert(env, wamid) {
     const rows = await sbJson(env, 'notifications_log?select=event_type,payload,ts&payload->>wamid=eq.' + encodeURIComponent(wamid) + '&limit=1');
     const r = rows && rows[0];
     if (!r) return '';
-    const p = r.payload || {};
-    return String(r.event_type || '') + ' | ' + String(p.title || '').slice(0, 200) + (p.id ? ' | id ' + String(p.id).slice(0, 64) : '') + (p.ref ? ' | ref ' + String(p.ref).slice(0, 40) : '') + ' | ' + String(r.ts || '');
+    return aboutLine(r);
   } catch (e) { return ''; }
+}
+// 06/11/2026 (retro 27/10/2026 (d)): the title of a trustee report is free text; a "| id x |" inside it could become the
+// id hazardRef reads when the row has no id of its own. The "|" of the free fields is replaced, so only p.id and p.ref
+// make those parts. Pure, tested.
+export function aboutLine(r) {
+  const p = (r && r.payload) || {}, f = (v, n) => String(v || '').replace(/\|/g, '/').slice(0, n);
+  return f(r && r.event_type, 40) + ' | ' + f(p.title, 200) + (p.id ? ' | id ' + f(p.id, 64) : '') + (p.ref ? ' | ref ' + f(p.ref, 40) : '') + ' | ' + f(r && r.ts, 40);
 }
 
 // The fast lane (20/10/2026, Michael in the questionnaire: "do it: a fast lane in the server"; measured
@@ -872,7 +883,7 @@ export async function onRequest(context) {
   const raw = await request.text();
   const sigHeader = request.headers.get('x-hub-signature-256') || '';
   if (!(await metaSigOk(raw, sigHeader, env.META_APP_SECRET))) {
-    if (sigHeader) { const n = note(env, { sig: false, secret_set: !!env.META_APP_SECRET }); if (context.waitUntil) context.waitUntil(n); else await n; }
+    if (sigHeader && badSigNoteDue(badSigNoteAt, Date.now())) { badSigNoteAt = Date.now(); const n = note(env, { sig: false, secret_set: !!env.META_APP_SECRET }); if (context.waitUntil) context.waitUntil(n); else await n; }
     return new Response('forbidden', { status: 403 });
   }
   if (!assistantFire(env) || !env.SUPABASE_SERVICE_ROLE_KEY) { await note(env, { sig: true, fire_configured: false }); return new Response('ok', { status: 200 }); }
