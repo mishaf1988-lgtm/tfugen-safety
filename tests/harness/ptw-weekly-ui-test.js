@@ -19,6 +19,11 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     window._currentUser = { username: 'michael' }; _isAdmin = true; _applyRoleGates();
     window.sdb = function () {}; window.addLog = function () {};
     window.__upd = []; window.sbUpd = function (t, row) { window.__upd.push([t, row]); };
+    // 06/11/2026: approve / return go through the server (works.js op decide); the mock answers like it
+    window.__api = []; window.__ptwApiReal = window._ptwApi; window._ptwApi = function (b) { window.__api.push(b); const row = DB.ptw.find((x) => x.id === b.id);
+      const s = b.act === 'reject' ? 'נדחה' : 'פתוח', safety = b.act === 'reject' ? '[נדחה] ' + b.why + '\n' + row.safety : row.safety;
+      return Promise.resolve({ ok: true, j: { ok: true, s, safety, mailed: { to: ['maint@tapugan.co.il'] }, permit: b.act === 'approve' ? 'later' : '' } }); };
+    const tick = () => new Promise((res) => setTimeout(res, 20));
     window.__toasts = []; window.toast = function (m) { window.__toasts.push(String(m)); };
     window.__copied = null; try { Object.defineProperty(navigator, 'clipboard', { value: { writeText: (t) => { window.__copied = t; return Promise.resolve(); } }, configurable: true }); } catch (e) {}
     DB.ptw = [
@@ -36,9 +41,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     out.summary = document.getElementById('ptw-summary').textContent;
     out.rejBtnOld = !!(rows[1] && rows[1].querySelector('[data-rid]'));
     window.prompt = () => 'חסר מספר נייד של האחראי';
-    rows[0].querySelector('[data-rid]').click();
+    rows[0].querySelector('[data-rid]').click(); await tick();
     const w = DB.ptw.find((x) => x.id === 'wk-2026-11-06-1');
-    out.rej = { s: w.s, safety: w.safety, upd: window.__upd.slice(-1)[0] };
+    out.rej = { s: w.s, safety: w.safety, api: window.__api.slice(-1)[0], upd: window.__upd.length };
     out.rejShown = /נדחה: חסר מספר נייד/.test(document.getElementById('tb-ptw').textContent);
     out.noRejBtnAfter = !document.querySelector('#tb-ptw [data-rid]');
     // approve: blocked while works.js wrote what is missing; allowed without it
@@ -46,11 +51,11 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     DB.ptw.push({ id: 'wk-2026-11-06-3', num: 'WK-0611-3', con: 'y', types: 'עבודה בגובה', ds: '2026-11-06', s: 'ממתין לאישור', safety: 'עבודה בגובה: קסדה\n[הערה] לא צורפו אישורים (תעודות, תסקירים)', desc: 'החלפת נורה בגובה' });
     rPtw();
     out.gateShown = /חסרה בדיקת גזים/.test(document.getElementById('tb-ptw').textContent) && /לא צורפו אישורים/.test(document.getElementById('tb-ptw').textContent);
-    window.confirm = () => true; window.__upd = [];
+    window.confirm = () => true; window.__upd = []; window.__api = [];
     document.querySelector('#tb-ptw [data-aid="wk-2026-11-06-2"]').click();
-    out.gateBlocked = DB.ptw.find((x) => x.id === 'wk-2026-11-06-2').s === 'ממתין לאישור' && !window.__upd.length && /אי אפשר לאשר עדיין/.test(window.__toasts.slice(-1)[0]);
-    document.querySelector('#tb-ptw [data-aid="wk-2026-11-06-3"]').click();
-    out.approved = DB.ptw.find((x) => x.id === 'wk-2026-11-06-3').s === 'פתוח' && window.__upd.length === 1 && window.__upd[0][1].s === 'פתוח';
+    out.gateBlocked = DB.ptw.find((x) => x.id === 'wk-2026-11-06-2').s === 'ממתין לאישור' && !window.__api.length && /אי אפשר לאשר עדיין/.test(window.__toasts.slice(-1)[0]);
+    document.querySelector('#tb-ptw [data-aid="wk-2026-11-06-3"]').click(); await tick();
+    out.approved = DB.ptw.find((x) => x.id === 'wk-2026-11-06-3').s === 'פתוח' && window.__api.length === 1 && window.__api[0].op === 'decide' && window.__api[0].act === 'approve' && !window.__upd.length && /maint@tapugan/.test(window.__toasts.slice(-1)[0]);
     // the signed permit works.js filed (stage B, 05/11/2026): its file name on the list, the closed one first
     DB.ptw.push({ id: 'wk-2026-11-06-4', num: 'WK-0611-4', con: 'z', types: 'עבודות חמות', ds: '2026-11-06', s: 'סגור', safety: 'עבודות חמות: מטף\n[הרשאה] 18_x/02_y/2026-11/2026-11-06 - הרשאה WK-0611-4 - a.pdf\n[הרשאה סגורה] 18_x/02_y/2026-11/2026-11-06 - הרשאה WK-0611-4 - a - סגורה.pdf', desc: 'ריתוך' });
     rPtw();
@@ -59,6 +64,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     out.filesBtn = !!document.querySelector('#ptw-view-card [data-fid="wk-2026-11-06-1"]');
     out.viewXss = !!document.querySelector('#ptw-view-card img');
     window.__linkReq = null;
+    window._ptwApi = window.__ptwApiReal;
     window.fetch = (u, init) => { window.__linkReq = { u: String(u), body: init.body, auth: init.headers.Authorization || '' }; return Promise.resolve(new Response(JSON.stringify({ url: 'https://x.example/api/works?k=abc', friday: '2026-11-06', days: 8 }), { status: 200 })); };
     document.getElementById('ptw-wk-link').click();
     await new Promise((res) => setTimeout(res, 300));
@@ -71,12 +77,12 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('pending badge in yellow', r.badge === 'ממתין לאישור', r.badge);
   check('the summary counts works waiting for approval', /ממתין לאישור: 1/.test(r.summary), r.summary);
   check('no reject button on an ordinary permit', r.rejBtnOld === false);
-  check('reject: status, the reason line first, kept measures, one update', r.rej.s === 'נדחה' && /^\[נדחה\] חסר מספר נייד של האחראי\nחלל מוקף: מונה אחראי/.test(r.rej.safety) && r.rej.upd[0] === 'ptw' && r.rej.upd[1].s === 'נדחה', r.rej);
+  check('reject: through the server (op decide, the reason sent), status and the reason line first from its answer, no direct update', r.rej.s === 'נדחה' && /^\[נדחה\] חסר מספר נייד של האחראי\nחלל מוקף: מונה אחראי/.test(r.rej.safety) && r.rej.api.op === 'decide' && r.rej.api.act === 'reject' && r.rej.api.why === 'חסר מספר נייד של האחראי' && r.rej.upd === 0, r.rej);
   check('the reason shows on the list, the button is gone', r.rejShown && r.noRejBtnAfter);
   check('the permit view escapes too', r.viewXss === false);
   check('what is missing for approval (red) and the notes (yellow) show on the list', r.gateShown);
   check('approve is refused while the gas test is missing (no update, a toast that says why)', r.gateBlocked);
-  check('approve without anything missing: status "open", one update', r.approved);
+  check('approve without anything missing: through the server (op decide), status "open", the toast names where the mail went', r.approved);
   check('the permit view of a work from the link has the attachments button', r.filesBtn);
   check('the signed permit: its file name on the list (the closed version when there is one), not the folders', r.permitShown);
   check('"link to maintenance" asks /api/works for op link with the session, and copies the link with the Friday', r.linkReq && r.linkReq.u === '/api/works' && JSON.parse(r.linkReq.body).op === 'link' && /^Bearer /.test(r.linkReq.auth) && /06\/11\/2026/.test(r.copied || '') && /api\/works\?k=abc/.test(r.copied || ''), [r.linkReq, r.copied]);

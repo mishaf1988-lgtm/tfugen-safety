@@ -756,7 +756,7 @@ async function submit(env, request, nowMs, bg) {
 
 // The app (a manager / admin): this week's link; a work's attachments as links that open for an hour.
 export const SIGN_SEC = 3600;
-async function appOp(env, request, nowMs) {
+async function appOp(env, request, nowMs, bg) {
   const allowed = defaultAllowedOrigins(env);
   const cors = corsHeaders(request.headers.get('origin') || '', allowed, 'POST,OPTIONS');
   if (!isAllowedCaller(request, allowed)) return jsonResp({ error: 'origin not allowed' }, 403, cors);
@@ -780,6 +780,25 @@ async function appOp(env, request, nowMs) {
     const url = (p) => { const e = (Array.isArray(j) ? j : []).find((x) => x && x.path === p && x.signedURL); return e ? (/^https?:/.test(e.signedURL) ? e.signedURL : SB + '/storage/v1' + e.signedURL) : null; };
     return jsonResp({ files: files.map((x, i) => ({ kind: (FILE_KINDS.find((k) => x.name.indexOf(k[0] + '-') === 0) || FILE_KINDS[3])[1], type: x.name.split('.').pop(), size: x.size, url: url(paths[i]) })) }, 200, cors);
   }
+  if (b && b.op === 'decide') {
+    const id = String(b.id || ''), act = String(b.act || '');
+    if (!WK_ID_RE.test(id)) return jsonResp({ error: 'bad id' }, 400, cors);
+    if (act !== 'approve' && act !== 'reject') return jsonResp({ error: 'bad act' }, 400, cors);
+    const rows = await sbGet(env, 'ptw?id=eq.' + encodeURIComponent(id) + '&select=' + WEEK_COLS + ',ver');
+    if (!rows || !rows[0]) return jsonResp({ error: 'missing' }, 404, cors);
+    // Security review 06/11/2026: (1) the approval signs with Michael's signature, so only the admin (Michael) approves;
+    // a manager may return a work for a fix. (2) The decision is about the version the screen showed: maintenance may
+    // send the list again after the app loaded it, so a changed row is refused (as the mail link does with v).
+    if (act === 'approve' && who.role !== 'admin') return jsonResp({ error: 'only the safety officer approves' }, 403, cors);
+    if (rows[0].ver && String(b.ver || '') !== String(rows[0].ver)) return jsonResp({ error: 'changed' }, 409, cors);
+    const d = { id, row: rows[0], w: rowToWork(rows[0], WK_ID_RE.exec(id)[1]), friday: WK_ID_RE.exec(id)[1] };
+    const res = await decideCore(env, d, act, b.why || '', nowMs, bg);
+    if (res.err) {
+      const M = { friday: ['friday passed', 409], state: ['already handled: ' + d.row.s, 409], gate: ['gate: ' + d.w.st.gate.join('; '), 409], why: ['reason needed', 400], act: ['bad act', 400], save: ['save failed', 503], gone: ['already handled', 409] }[res.err];
+      return jsonResp({ error: M[0] }, M[1], cors);
+    }
+    return jsonResp({ ok: true, s: res.s, safety: res.safety, mailed: res.mailed && res.mailed.to ? { to: res.mailed.to, trial: !!res.mailed.trial } : { error: (res.mailed && res.mailed.error) || 'no mail' }, permit: res.permit || '' }, 200, cors);
+  }
   return jsonResp({ error: 'unknown op' }, 400, cors);
 }
 
@@ -796,7 +815,7 @@ export async function onRequest(context) {
     if (request.method === 'GET' && new URL(request.url).searchParams.get('s')) return await showSend(env, new URL(request.url).searchParams.get('s'), nowMs);
     if (request.method === 'GET') return await showPage(env, new URL(request.url).searchParams.get('k') || '', nowMs);
     if (request.method !== 'POST') return errPage('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05dc\u05d0 \u05e0\u05ea\u05de\u05db\u05ea.', 405);
-    if (/application\/json/i.test(request.headers.get('content-type') || '')) return await appOp(env, request, nowMs);
+    if (/application\/json/i.test(request.headers.get('content-type') || '')) return await appOp(env, request, nowMs, bg);
     return await submit(env, request, nowMs, bg);
   } catch (e) {
     return errPage('\u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.', 503);
@@ -894,6 +913,36 @@ async function showDecide(env, tok, nowMs) {
     + '<p><button type="submit" name="act" value="reject" style="background:#b91c1c;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:16px">\u05de\u05d7\u05d6\u05d9\u05e8 \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4 \u05dc\u05ea\u05d9\u05e7\u05d5\u05df</button></p></form>';
   return page('\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4', decideSummary(d) + state + (gate && d.row.s === S_PEND ? '<p class="red">\u05d0\u05d9 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d0\u05e9\u05e8 \u05e2\u05d3\u05d9\u05d9\u05df: \u05d7\u05e1\u05e8 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8.</p>' : '') + form, '', 200);
 }
+// One decision, for the mail page and for the app (06/11/2026): checks, the pending-only save, the mail to maintenance and
+// the signed permit. Returns { err } (a code the caller words) or { s, safety, mailed, permit }.
+async function decideCore(env, d, act, whyRaw, nowMs, bg) {
+  if (new Date(nowMs).toLocaleDateString('en-CA', { timeZone: TZ }) > d.friday) return { err: 'friday' };
+  if (d.row.s !== S_PEND) return { err: 'state' };
+  let body;
+  if (act === 'approve') {
+    if (d.w.st.gate.length) return { err: 'gate' };
+    const okn = clean(whyRaw || '', 200);
+    const rest = String(d.row.safety || '').split('\n').filter((x) => x && x.indexOf(OKN_MARK) !== 0);
+    body = okn ? { s: S_OK, safety: [OKN_MARK + okn].concat(rest).join('\n') } : { s: S_OK };
+  } else if (act === 'reject') {
+    const why = clean(whyRaw || '', 200);
+    if (!why) return { err: 'why' };
+    const rest = String(d.row.safety || '').split('\n').filter((x) => x && x.indexOf(REJ_MARK) !== 0);
+    body = { s: S_REJ, safety: [REJ_MARK + why].concat(rest).join('\n') };
+  } else return { err: 'act' };
+  // Only while still pending: a decision made meanwhile in the app (or a second click) is never overwritten.
+  const r = await fetch(SB + '/rest/v1/ptw?id=eq.' + encodeURIComponent(d.id) + '&s=eq.' + encodeURIComponent(S_PEND) + (d.row.ver ? '&ver=eq.' + encodeURIComponent(String(d.row.ver)) : ''), { method: 'PATCH',
+    headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify(body) });
+  const got = r.ok ? await r.json().catch(() => null) : null;
+  if (!r.ok) return { err: 'save' };
+  if (Array.isArray(got) && !got.length) return { err: 'gone' };
+  // Maintenance hears about it by mail (05/11/2026): the notes and the link. A failed mail never undoes the decision.
+  let mailed = null;
+  try { mailed = await decisionMail(env, d, act, clean(whyRaw || '', 200), nowMs, mailDeps); } catch (e) { mailed = { error: String((e && e.message) || e).slice(0, 80) }; }
+  // The signed permit (stage B): after the decision is saved and maintenance told; it never undoes the approval.
+  const permit = act === 'approve' ? await permitLater(env, d.id, false, nowMs, bg) : '';
+  return { s: body.s, safety: body.safety !== undefined ? body.safety : String(d.row.safety || ''), mailed, permit };
+}
 async function submitDecide(env, form, nowMs, bg) {
   const tok = String(form.get('a') || '').slice(0, 300), act = String(form.get('act') || '');
   const d = await decideRow(env, tok, nowMs);
@@ -903,32 +952,18 @@ async function submitDecide(env, form, nowMs, bg) {
   // is not approved from the mail.
   const v = String(form.get('v') || '');
   if (d.row.ver && v !== String(d.row.ver)) return page('\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d4\u05e9\u05ea\u05e0\u05ea\u05d4', '<p>\u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05e2\u05d3\u05db\u05e0\u05d5 \u05d0\u05ea \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d0\u05d7\u05e8\u05d9 \u05e9\u05e4\u05ea\u05d7\u05ea \u05d0\u05ea \u05d4\u05d3\u05e3. \u05e4\u05ea\u05d7 \u05e9\u05d5\u05d1 \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05de\u05d4\u05de\u05d9\u05d9\u05dc \u05d5\u05e8\u05d0\u05d4 \u05d0\u05ea \u05d4\u05d2\u05e8\u05e1\u05d4 \u05d4\u05d7\u05d3\u05e9\u05d4.</p>', 'err', 409);
-  if (new Date(nowMs).toLocaleDateString('en-CA', { timeZone: TZ }) > d.friday) return page('\u05d4\u05d9\u05d5\u05dd \u05d4\u05d6\u05d4 \u05e2\u05d1\u05e8', '<p>\u05d9\u05d5\u05dd \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05db\u05d1\u05e8 \u05e2\u05d1\u05e8. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d8\u05e4\u05dc \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05de\u05e1\u05da \u05d4\u05d9\u05ea\u05e8\u05d9 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4.</p>', 'err', 409);
-  if (d.row.s !== S_PEND) return page('\u05db\u05d1\u05e8 \u05d8\u05d5\u05e4\u05dc', '<p>\u05de\u05e6\u05d1 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4: ' + esc(d.row.s) + '.</p>', '', 409);
-  let body;
-  if (act === 'approve') {
-    if (d.w.st.gate.length) return page('\u05d0\u05d9 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d0\u05e9\u05e8', '<p class="red">' + esc(d.w.st.gate.join('; ')) + '</p>', 'err', 409);
-    const okn = clean(form.get('why') || '', 200);
-    const rest = String(d.row.safety || '').split('\n').filter((x) => x && x.indexOf(OKN_MARK) !== 0);
-    body = okn ? { s: S_OK, safety: [OKN_MARK + okn].concat(rest).join('\n') } : { s: S_OK };
-  } else if (act === 'reject') {
-    const why = clean(form.get('why') || '', 200);
-    if (!why) return page('\u05e6\u05e8\u05d9\u05da \u05d4\u05e2\u05e8\u05d5\u05ea', '<p>\u05db\u05d3\u05d9 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05d4\u05e2\u05e8\u05d5\u05ea \u05e6\u05e8\u05d9\u05da \u05dc\u05db\u05ea\u05d5\u05d1 \u05d0\u05d5\u05ea\u05df. \u05d7\u05d6\u05d5\u05e8 \u05dc\u05d3\u05e3 \u05d4\u05e7\u05d5\u05d3\u05dd.</p>', 'err', 400);
-    const rest = String(d.row.safety || '').split('\n').filter((x) => x && x.indexOf(REJ_MARK) !== 0);
-    body = { s: S_REJ, safety: [REJ_MARK + why].concat(rest).join('\n') };
-  } else return errPage('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05dc\u05d0 \u05e0\u05ea\u05de\u05db\u05ea.', 400);
-  // Only while still pending: a decision made meanwhile in the app (or a second click) is never overwritten.
-  const r = await fetch(SB + '/rest/v1/ptw?id=eq.' + encodeURIComponent(d.id) + '&s=eq.' + encodeURIComponent(S_PEND) + (d.row.ver ? '&ver=eq.' + encodeURIComponent(String(d.row.ver)) : ''), { method: 'PATCH',
-    headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify(body) });
-  const got = r.ok ? await r.json().catch(() => null) : null;
-  if (!r.ok) return errPage('\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8 \u05d1\u05d2\u05dc\u05dc \u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.', 503);
-  if (Array.isArray(got) && !got.length) return page('\u05db\u05d1\u05e8 \u05d8\u05d5\u05e4\u05dc', '<p>\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05db\u05d1\u05e8 \u05dc\u05d0 \u05de\u05de\u05ea\u05d9\u05e0\u05d4 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8.</p>', '', 409);
-  // Maintenance hears about it by mail (05/11/2026, Michael: "after notes the work has to open again for them"): the notes
-  // and the link. A failed mail never undoes the decision; the page says so.
-  let mailed = null;
-  try { mailed = await decisionMail(env, d, act, clean(form.get('why') || '', 200), nowMs, mailDeps); } catch (e) { mailed = { error: String((e && e.message) || e).slice(0, 80) }; }
-  // The signed permit (stage B): after the decision is saved and maintenance told; it never undoes the approval.
-  const permit = act === 'approve' ? await permitLater(env, d.id, false, nowMs, bg) : '';
+  const res = await decideCore(env, d, act, form.get('why') || '', nowMs, bg);
+  if (res.err) {
+    const e = res.err;
+    if (e === 'friday') return page('\u05d4\u05d9\u05d5\u05dd \u05d4\u05d6\u05d4 \u05e2\u05d1\u05e8', '<p>\u05d9\u05d5\u05dd \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05db\u05d1\u05e8 \u05e2\u05d1\u05e8. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d8\u05e4\u05dc \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05de\u05e1\u05da \u05d4\u05d9\u05ea\u05e8\u05d9 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4.</p>', 'err', 409);
+    if (e === 'state') return page('\u05db\u05d1\u05e8 \u05d8\u05d5\u05e4\u05dc', '<p>\u05de\u05e6\u05d1 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4: ' + esc(d.row.s) + '.</p>', '', 409);
+    if (e === 'gate') return page('\u05d0\u05d9 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d0\u05e9\u05e8', '<p class="red">' + esc(d.w.st.gate.join('; ')) + '</p>', 'err', 409);
+    if (e === 'why') return page('\u05e6\u05e8\u05d9\u05da \u05d4\u05e2\u05e8\u05d5\u05ea', '<p>\u05db\u05d3\u05d9 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05d4\u05e2\u05e8\u05d5\u05ea \u05e6\u05e8\u05d9\u05da \u05dc\u05db\u05ea\u05d5\u05d1 \u05d0\u05d5\u05ea\u05df. \u05d7\u05d6\u05d5\u05e8 \u05dc\u05d3\u05e3 \u05d4\u05e7\u05d5\u05d3\u05dd.</p>', 'err', 400);
+    if (e === 'act') return errPage('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05dc\u05d0 \u05e0\u05ea\u05de\u05db\u05ea.', 400);
+    if (e === 'save') return errPage('\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8 \u05d1\u05d2\u05dc\u05dc \u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.', 503);
+    return page('\u05db\u05d1\u05e8 \u05d8\u05d5\u05e4\u05dc', '<p>\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05db\u05d1\u05e8 \u05dc\u05d0 \u05de\u05de\u05ea\u05d9\u05e0\u05d4 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8.</p>', '', 409);
+  }
+  const { mailed, permit } = res;
   const permitLine = !permit ? '' : permit === 'failed' ? '<p class="red">\u05d4\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d4\u05d7\u05ea\u05d5\u05de\u05d4 \u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8\u05d4. \u05d4\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e0\u05e9\u05de\u05e8, \u05d5\u05d4\u05ea\u05e7\u05dc\u05d4 \u05e0\u05e8\u05e9\u05de\u05d4 (\u05d0\u05e4\u05e9\u05e8 \u05dc\u05d9\u05e6\u05d5\u05e8 \u05d0\u05d5\u05ea\u05d4 \u05e9\u05d5\u05d1).</p>'
     : '<p>' + (permit === 'done' ? '\u05d4\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d4\u05d7\u05ea\u05d5\u05de\u05d4 \u05ea\u05d5\u05d9\u05e7\u05d4 \u05d5\u05e0\u05e9\u05dc\u05d7\u05d4 \u05d1\u05de\u05d9\u05d9\u05dc.' : '\u05d4\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d4\u05d7\u05ea\u05d5\u05de\u05d4 \u05ea\u05ea\u05d5\u05d9\u05e7 \u05d5\u05ea\u05d9\u05e9\u05dc\u05d7 \u05d1\u05de\u05d9\u05d9\u05dc \u05d1\u05d3\u05e7\u05d5\u05ea \u05d4\u05e7\u05e8\u05d5\u05d1\u05d5\u05ea.') + '</p>';
   const mailLine = mailed && mailed.to ? '<p>\u05e0\u05e9\u05dc\u05d7 \u05de\u05d9\u05d9\u05dc \u05dc: ' + esc(mailed.to.join(', ')) +
