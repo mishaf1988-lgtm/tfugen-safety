@@ -648,3 +648,14 @@
   התיקייה לטריגר: אם עוד לא קיימת, Claude יוצר אותה (בקשת ניסיון מהשרת, מיכאל בשאלון 02/11/2026). לא ליצור ידנית.
   דווח: שם הזרימה, שהיא On, ה-URI כפי שמופיע ב-Code view, שהתנאי של 3ב קיים ושלב 4 בתוכו, ומה נעצר ולמה.
   ```
+
+- [ ] **C76. זרימה 3 "טיוטות מהעוזר": לדווח לשרת את מזהה כל טיוטה שנוצרה (06/11/2026, מיכאל בשאלון: "בצע: לשנות את הזרימה (מומלץ)", הצעת הרטרו 27/10 (א); DECISIONS 06/11/2026).** השרת כבר מוכן (תואם לאחור: עובד גם לפני השינוי). הזרימה רק מוסיפה כתיבת קובץ, ושום פעולת שליחה. אחרי הביצוע Claude מאמת לבד: `state_get drafts_id_live`, ואם אין, `mail_draft` אחד למיכאל עצמו (טיוטה בלבד) ובדיקה שהקובץ ב-`_טיוטות שנוצרו` נוצר. דף לטלפון: ארטיפקט "עדכון זרימה 3" (הקישור נשלח לצ'אט הראשי).
+  ```
+  ב-Power Automate (make.powerautomate.com), בחשבון sviva@tapugan.co.il, פתח את הזרימה "טיוטות מהעוזר" לעריכה. לעבוד בלשונית אחת; ניתוק = ניסיון אחד נוסף, ואז לעצור ולדווח מה נשמר. שלב 0: אם כבר יש בזרימה משתנה draftId, להשלים אותו ולא ליצור כפול. לא לשנות שום דבר אחר, לא להוסיף פעולת שליחה.
+  1. מיד אחרי ה-Compose: Initialize variable. Name: draftId, Type: String, Value: ריק.
+  2. בענף של מייל חדש (אחרי "Draft an email message"): Set variable. Name: draftId, Value: ה-Id של ההודעה מהפלט של "Draft an email message" (תוכן דינמי "Id"; ב-Code view זה outputs('Draft_an_email_message')?['body/id']).
+  3. בענף "לא" של ה-Condition על reply_to (תשובה בשרשור), מיד אחרי ה-Send an HTTP request הראשון (createReply): Set variable. Name: draftId, Value: body('Send_an_HTTP_request')?['id'] (לבדוק בשם האמיתי של הפעולה ב-Code view).
+  4. אחרי ה-Condition, מחוץ לשני הענפים: Condition עם empty(variables('draftId')) שווה false. בענף "כן": OneDrive for Business > Create file. Folder Path: /שולחן העבודה/ניהול בטיחות/_אוטומציה/_טיוטות שנוצרו (אם אין תיקייה, השרת לא יוצר אותה: ליצור ב-OneDrive קודם). File Name: שם הקובץ של הטריגר עם הסיומת, מהתוכן הדינמי "File name" של הטריגר (אותו שם כמו קובץ הבקשה, למשל 20261106-ab12cd34ef56ab78.txt). File Content: {"id":"@{variables('draftId')}","subject":"@{outputs('Compose')?['subject']}"}
+  5. שמור, ודא ש-Flow checker 0/0 והזרימה On. אל תריץ בדיקה ידנית.
+  דווח: שהזרימה On, מה כתוב ב-Code view ב-Value של שני ה-Set variable, ב-File Name וב-File Content, ומה נעצר ולמה.
+  ```
