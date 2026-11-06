@@ -1827,6 +1827,31 @@ export function cardLines(list, q, n, pick) {
   return (Array.isArray(list) ? list : []).filter((x) => x && pick(x).toLowerCase().indexOf(k) >= 0)
     .sort((a, b) => String(b.at || '').localeCompare(String(a.at || ''))).slice(0, n);
 }
+// 06/11/2026 (Michael in the questionnaire: "do it: event memory for the assistant"; ideas-lab 21, the first trial:
+// suppliers only, two weeks): "last time" on a supplier card, so the assistant knows what already happened before it
+// answers. Words only, no search by meaning (DECISIONS 1426). Pure: s = {draftsText, draftsMade, quotes, promises},
+// q = the name typed, emails = the supplier's addresses from vendor_contacts, items = {id: name} of the card's rows
+// (a quote_track key is Q-eq|dc-<id>-<expiry>). The newest n events of all four, one line each.
+export const CARD_BEFORE_N = 3;
+export function cardBefore(s, q, emails, items, n) {
+  const k = String(q || '').toLowerCase(), em = (emails || []).map((x) => String(x || '').toLowerCase().trim()).filter((x) => x.indexOf('@') > 0);
+  const hit = (t) => { const x = String(t || '').toLowerCase(); return (k && x.indexOf(k) >= 0) || em.some((e) => x.indexOf(e) >= 0); };
+  const arr = (x) => (Array.isArray(x) ? x : []), out = [], seen = {};
+  const dkey = (d) => String(d.at || '').slice(0, 16) + '|' + draftSubj(d.subject);
+  for (const d of arr(s && s.draftsText)) if (d && hit([d.to, d.cc, d.subject, d.body].join(' '))) {
+    seen[dkey(d)] = 1; out.push({ at: d.at, kind: 'draft', to: d.to, subject: String(d.subject || '').slice(0, 120), body: String(d.body || '').replace(/\s+/g, ' ').slice(0, 160) });
+  }
+  for (const d of arr(s && s.draftsMade)) if (d && !seen[dkey(d)] && hit([d.to, d.subject].join(' '))) out.push({ at: d.at, kind: 'draft', to: d.to, subject: String(d.subject || '').slice(0, 120) });
+  const qt = s && s.quotes && typeof s.quotes === 'object' && !Array.isArray(s.quotes) ? s.quotes : {};
+  for (const key of Object.keys(qt)) {
+    const m = /^Q-(?:eq|dc)-([A-Za-z0-9_-]+)-\d{6}$/.exec(key), v = qt[key] || {};
+    if (!m || !items || !Object.prototype.hasOwnProperty.call(items, m[1])) continue;
+    const at = ['order', 'quote', 'sent'].map((x) => v[x]).find((x) => /^\d{4}-\d{2}-\d{2}/.test(String(x || '')));
+    if (at) out.push({ at, kind: 'quote', item: String(items[m[1]] || '').slice(0, 80), stage: v.stage || null, sent: v.sent || null, quote: v.quote || null, order: v.order || null });
+  }
+  for (const p of arr(s && s.promises)) if (p && hit([p.text, p.who, p.note].join(' '))) out.push({ at: p.done_at || p.at, kind: 'promise', status: p.status, text: String(p.text || '').slice(0, 160), note: p.note ? String(p.note).slice(0, 160) : undefined });
+  return out.filter((x) => x.at).sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, n || CARD_BEFORE_N);
+}
 export const SAVED_RE = /(\u05e0\u05e9\u05de\u05e8|\u05e0\u05e9\u05de\u05e8\u05d4|\u05e0\u05e9\u05de\u05e8\u05d5|\u05e9\u05de\u05e8\u05ea\u05d9|\u05ea\u05d5\u05e7\u05df|\u05ea\u05d5\u05e7\u05e0\u05d4|\u05ea\u05d9\u05e7\u05e0\u05ea\u05d9|\u05d4\u05d2\u05e8\u05e1\u05d4 \u05d4\u05d7\u05d3\u05e9\u05d4|\u05d2\u05e8\u05e1\u05d4 \u05de\u05ea\u05d5\u05e7\u05e0\u05ea)/;
 // Only about a file (a row saved in the database is not this gate's business).
 export const SAVED_FILE_RE = /(\u05e7\u05d5\u05d1\u05e5|\u05d4\u05e7\u05d5\u05d1\u05e5|PDF|\.pdf|\u05d8\u05d5\u05e4\u05e1|\u05d2\u05e8\u05e1\u05d4|\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4|\u05de\u05e1\u05de\u05da)/i;
@@ -2104,16 +2129,20 @@ async function routineDbHandle(context) {
       const [equip, docs, st] = await Promise.all([
         get('equip_inspections?select=id,code,n,loc,vendor,d,e,s,deficiencies,resp_area,notes,file_url&or=(n.ilike.' + like + ',code.ilike.' + like + ',loc.ilike.' + like + ',vendor.ilike.' + like + ')&order=e.asc&limit=5'),
         get('docs?select=id,n,e,s,nt,file_url&n=ilike.' + like + '&order=e.asc&limit=5'),
-        stateRead(['assistant_learned', 'agent_log', 'vendor_contacts']).catch(() => (bad.push('server_state'), []))]);
+        stateRead(['assistant_learned', 'agent_log', 'vendor_contacts', DRAFTS_TEXT_KEY, DRAFTS_MADE_KEY, 'quote_track', PROMISE_KEY]).catch(() => (bad.push('server_state'), []))]);
       const val = (k) => { const r = (st || []).find((x) => x && x.key === k); try { return JSON.parse((r && r.value) || '[]'); } catch (e) { return []; } };
       const vendors = (Array.isArray(val('vendor_contacts')) ? val('vendor_contacts') : []).filter((v) => Array.isArray(v) && String(v[0] || '').indexOf(q) >= 0).slice(0, 5);
       const learned = cardLines(val('assistant_learned'), q, 6, (x) => String(x.text || '') + ' ' + String(x.source || '')).map((x) => ({ at: x.at, kind: x.kind, status: x.status, text: x.text }));
       const log = cardLines(val('agent_log'), q, 5, (x) => String(x.line || '') + ' ' + String(x.for_michael || '')).map((x) => ({ at: x.at, agent: x.agent, line: String(x.line || '').slice(0, 300), for_michael: x.for_michael ? String(x.for_michael).slice(0, 300) : undefined }));
       const contradictions = rowContradictions(equip);
+      // ideas-lab 21 (06/11/2026): suppliers only. A card is about a supplier when q is a known supplier or an equipment row's vendor
+      const isVendor = vendors.length > 0 || (equip || []).some((x) => x && String(x.vendor || '').indexOf(q) >= 0);
+      const items = {}; (equip || []).concat(docs || []).forEach((x) => { if (x && x.id != null) items[String(x.id)] = x.n || x.code || ''; });
+      const before = isVendor ? cardBefore({ draftsText: val(DRAFTS_TEXT_KEY), draftsMade: val(DRAFTS_MADE_KEY), quotes: val('quote_track'), promises: val(PROMISE_KEY) }, q, vendors.map((v) => v[1]), items, CARD_BEFORE_N) : undefined;
       const ids = [].concat((equip || []).map((x) => x.id), (docs || []).map((x) => x.id)).filter(Boolean);
       const links = ids.length ? await get('item_links?select=item_table,item_id,rel,ref,title,at,agent&item_id=in.(' + ids.map((x) => encodeURIComponent('"' + x + '"')).join(',') + ')&order=at.desc&limit=40') : [];
-      return jsonResp({ ok: true, q, equip, docs, vendors, learned, log, contradictions, links, partial: bad.length ? bad : undefined,
-        next: (bad.length ? 'a read failed (' + bad.join(', ') + '): do not say "none found" for it, say it could not be read. ' : '') + 'mail: outlook_email_search by the name and by the supplier, the whole thread, newest first; open quotes and reports; compare the same fields in all (agent-common.md, cross-check); no quote validity date' }, 200, {});
+      return jsonResp({ ok: true, q, equip, docs, vendors, learned, log, contradictions, links, before, partial: bad.length ? bad : undefined,
+        next: (bad.length ? 'a read failed (' + bad.join(', ') + '): do not say "none found" for it, say it could not be read. ' : '') + (before && before.length ? 'before: what already happened with this supplier, newest first; open the answer with one line "\u05d1\u05e4\u05e2\u05dd \u05d4\u05e7\u05d5\u05d3\u05de\u05ea:" from the one that matters (who, what, DD/MM), and do not ask Michael what is already there. ' : '') + 'mail: outlook_email_search by the name and by the supplier, the whole thread, newest first; open quotes and reports; compare the same fields in all (agent-common.md, cross-check); no quote validity date' }, 200, {});
     }
     if (body.op === 'state_get') {
       const keys = (Array.isArray(body.keys) ? body.keys : [body.key]).filter((x) => STATE_READ.indexOf(x) >= 0);
