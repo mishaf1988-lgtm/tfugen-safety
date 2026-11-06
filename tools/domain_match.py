@@ -54,9 +54,22 @@ def near(word, toks):
     return len(word) >= FUZZY_MIN and any(len(t) >= FUZZY_MIN - 1 and lev1(word, t) for t in toks)
 
 
+def _cls(c):
+    return "a-z" if "a" <= c <= "z" else "0-9" if "0" <= c <= "9" else ""
+
+
+def in_text(w, text):
+    """retro 02/11/2026 (c): a Latin word only as a whole word (coa is not inside coach, iso not inside isolate);
+    a Hebrew word stays a substring, since a prefix letter is glued to it. Same rule as functions/_domains.js."""
+    if not all(" " <= c <= "~" for c in w):
+        return w in text
+    a, b = _cls(w[0]), _cls(w[-1])
+    return re.search(("(^|[^" + a + "])" if a else "") + re.escape(w) + ("([^" + b + "]|$)" if b else ""), text) is not None
+
+
 def word_hit(word, text, toks):
     w = word.lower()
-    return w in text or (" " not in w and near(w, toks))
+    return in_text(w, text) or (" " not in w and near(w, toks))
 
 
 def branches(text, idx):

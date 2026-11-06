@@ -118,5 +118,12 @@ check("golden set: 10 questions, each with a source", len(json.load(open(os.path
 # retro 03/11/2026 (STATUS 160 c): a broad word ("הזמנה") loaded the mail branch for "הזמנה לישיבה"
 jsb = subprocess.run(["node", "-e", "import(process.argv[1]).then((m) => console.log(JSON.stringify(JSON.parse(process.argv[2]).map((t) => m.domainsOf(t).map((d) => d.key).includes('mail')))))", "file://" + os.path.join(ROOT, "functions/_domains.js"), json.dumps(["\u05d4\u05d6\u05de\u05e0\u05d4 \u05dc\u05d9\u05e9\u05d9\u05d1\u05d4", "\u05d4\u05d6\u05de\u05e0\u05ea \u05e8\u05db\u05e9 \u05dc\u05e1\u05e4\u05e7"])], capture_output=True, text=True)
 check("an invitation to a meeting does not load mail, a purchase order does", jsb.stdout.strip() == "[false,true]", jsb.stdout + jsb.stderr)
+# retro 02/11/2026 (c): a Latin branch word only as a whole word, in the hook (domain_match) and on the server (_domains.js)
+LAT = ["coach the team", "isolate the line", "biscoaster", "COA for the wastewater", "ISO14001 audit", "new coa.pdf"]
+LAT_EXP = [False, False, False, True, True, True]
+pyl = [any(dm.word_hit(w, t.lower(), dm.tokens(t)) for w in ["coa", "iso"]) for t in LAT]
+jsl = subprocess.run(["node", "-e", "import(process.argv[1]).then((m) => console.log(JSON.stringify(JSON.parse(process.argv[2]).map((t) => m.domainsOf(t).some((d) => d.key === 'env' || d.key === 'iso')))))", "file://" + os.path.join(ROOT, "functions/_domains.js"), json.dumps(LAT)], capture_output=True, text=True)
+check("a Latin word is a whole word: coach and isolate load nothing, COA / ISO14001 / coa.pdf do (hook)", pyl == LAT_EXP, pyl)
+check("a Latin word is a whole word: the server gives the same 6 answers", jsl.stdout.strip() and json.loads(jsl.stdout) == LAT_EXP, jsl.stdout + jsl.stderr[:200])
 print("\n%d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)

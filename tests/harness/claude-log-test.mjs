@@ -1,6 +1,6 @@
 // Claude Log for routine-db writes (02/11/2026, functions/_claudelog.js): a successful write op queues one line, each
 // hazard file takes the lines it has not taken yet, and nothing else (a read op, the file bytes) reaches the sheet.
-import { logLine, logDetails, queueAdd, queuePending, LOG_OPS, LOG_Q_MAX, LOG_RUN_MAX } from './_build/_claudelog.mjs';
+import { logLine, logDetails, queueAdd, queuePending, ocrPartialRow, LOG_OPS, LOG_Q_MAX, LOG_RUN_MAX } from './_build/_claudelog.mjs';
 import fs from 'node:fs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
@@ -49,6 +49,14 @@ const NOW = '2026-11-01T23:10:00.000Z';
   const p = queuePending(big, '');
   check('one run takes at most LOG_RUN_MAX, and says how many wait', p.rows.length === LOG_RUN_MAX && p.more === LOG_Q_MAX - LOG_RUN_MAX);
   check('a broken queue value is read as empty', queuePending('{oops', '').rows.length === 0 && JSON.parse(queueAdd('{oops', ['x'], NOW)).length === 1);
+}
+{ // retro 02/11/2026 (d): a partial ocr_txt run still logs the txt files it wrote
+  const row = logLine({ op: 'ocr_txt', agent: 'filer', why: 'scan', paths: ['a.pdf', 'b.pdf'] }, '2026-11-06T10:00:00.000Z');
+  const p = ocrPartialRow(row, { ok: false, files: [{ name: 'a.pdf', ok: true, txt: 'OCR/a.txt' }, { name: 'b.pdf', ok: false, error: 'azure 500' }] });
+  check('ocr_txt partial: one line with only the written txt and "done in part: 1/2"', p && p[3] === 'txt: OCR/a.txt' && p[4] === '\u05d1\u05d5\u05e6\u05e2 \u05d7\u05dc\u05e7\u05d9\u05ea: 1/2' && p[2] === row[2], p);
+  check('ocr_txt partial: nothing written = no line; no files = no line', ocrPartialRow(row, { ok: false, files: [{ name: 'a', ok: false }] }) === null && ocrPartialRow(row, { ok: false, error: 'x' }) === null && ocrPartialRow(null, { files: [{ ok: true, txt: 'x' }] }) === null);
+  const rdb0 = fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
+  check('routine-db logs a partial ocr_txt through ocrPartialRow', /reqBody\.op === 'ocr_txt' \? ocrPartialRow\(row0, out\)/.test(rdb0));
 }
 { // the wiring: routine-db queues after a successful answer, hazard-file appends and remembers
   const rdb = fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
