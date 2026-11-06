@@ -649,6 +649,38 @@ console.log('\n15. the signed permit (stage B, 05/11/2026): approve -> filled, r
   const exx = ex ? await entryText(readZip(g.files[ex]).find((e) => e.name === 'word/document.xml')) : '';
   check('maintenance workers: their templates, the line "approved by the safety officer" with the marker', !!ex && exx.includes('אושר על ידי ממונה הבטיחות, ' + SITE.owner) && exx.includes(SIGN_MARK) && !(PERMIT_ERR in db.state), [ex, db.state[PERMIT_ERR]]);
   check('a big PDF: the mail carries the link, not the file', permitHtml({ desc: 'x', cats: [] }, FRI, false, 'a.pdf', 'https://od/x', false).includes('href="https://od/x"') && !permitHtml({ desc: 'x', cats: [] }, FRI, false, 'a.pdf', 'https://od/x', true).includes('https://od/x'));
+
+  // the app decides (06/11/2026, Michael: "approve and return from the app"): the same path as the mail link
+  console.log('\n9. the app decides: op decide');
+  { const A = 'wk-2026-11-06-4', B = 'wk-2026-11-06-5', C = 'wk-2026-11-06-6', D = 'wk-2026-11-06-7';
+    [A, B, C, D].forEach((i) => { db.ptw[i] = row(i, { num: 'WK-0611-' + i.slice(-1) }); });
+    db.ptw[B].safety = GATE_MARK + 'חסר מבחן גזים' + '\n' + db.ptw[B].safety;
+    delete db.state[PERMIT_ERR]; db.state.works_mail_on = 'true'; db.state.works_mail_to = JSON.stringify({ to: ['alina@tapugan.co.il'], cc: ['boss@tapugan.co.il'] });
+    db.mails = []; const np0 = g.puts.length;
+    let x = await app({ op: 'decide', id: A, act: 'approve', why: 'לגדר את האזור' }, 'good');
+    check('app approve (weekly mail on): row approved, notes first in safety, the response carries them', x.st === 200 && x.j.ok && x.j.s === S_OK && db.ptw[A].s === S_OK && db.ptw[A].safety.startsWith(OKN_MARK + 'לגדר את האזור') && x.j.safety.startsWith(OKN_MARK + 'לגדר את האזור'), x);
+    check('...the decision mail went to the weekly list (not a trial) and the response says so', db.mails.some((m) => m.subj.indexOf('אושרה: ') === 0 && m.to.join() === 'alina@tapugan.co.il' && m.cc.join() === 'boss@tapugan.co.il' && m.html.includes('הערות הממונה: </b>לגדר את האזור')) && x.j.mailed.to.join() === 'alina@tapugan.co.il' && !x.j.mailed.trial, [x.j.mailed, db.mails.map((m) => m.subj)]);
+    check('...and the signed permit run started and finished (filed, mailed)', x.j.permit === 'done' && g.puts.length > np0 && db.mails.some((m) => m.att.length), [x.j.permit, g.puts.length - np0]);
+    db.state.works_mail_on = 'false'; db.mails = []; const np1 = g.puts.length;
+    x = await app({ op: 'decide', id: C, act: 'approve' }, 'good');
+    check('app approve (weekly mail off): the decision mail is a trial to the owner only', x.st === 200 && x.j.mailed.trial === true && x.j.mailed.to.join() === 'owner@tapugan.co.il' && db.mails.some((m) => m.subj.indexOf(TRY_PREFIX + 'אושרה: ') === 0 && m.to.join() === 'owner@tapugan.co.il'), [x.st, x.j && x.j.mailed, db.mails.map((m) => m.subj)]);
+    check('...no notes: no notes line, the permit filed', db.ptw[C].s === S_OK && db.ptw[C].safety.indexOf(OKN_MARK) < 0 && g.puts.length > np1);
+    db.mails = []; const np2 = g.puts.length;
+    x = await app({ op: 'decide', id: B, act: 'approve' }, 'good');
+    check('app approve with a gate line: 409, still pending, nothing sent, no permit', x.st === 409 && /gate/.test(x.j.error) && db.ptw[B].s === S_PEND && !db.mails.length && g.puts.length === np2, [x.st, x.j]);
+    x = await app({ op: 'decide', id: D, act: 'reject', why: '' }, 'good');
+    check('app reject without a reason: 400, still pending, nothing sent', x.st === 400 && db.ptw[D].s === S_PEND && !db.mails.length, [x.st, x.j]);
+    x = await app({ op: 'decide', id: D, act: 'reject', why: 'להשלים בדיקת גזים' }, 'good');
+    check('app reject with a reason: S_REJ, the REJ_MARK line first, the "for fix" mail, no permit', x.st === 200 && x.j.s === S_REJ && db.ptw[D].s === S_REJ && db.ptw[D].safety.startsWith(REJ_MARK + 'להשלים בדיקת גזים') && x.j.permit === '' && g.puts.length === np2 && db.mails.length === 1 && db.mails[0].subj.indexOf(TRY_PREFIX + 'לתיקון: ') === 0 && db.mails[0].html.includes('להשלים בדיקת גזים'), [x.st, x.j, db.mails.map((m) => m.subj)]);
+    db.mails = [];
+    x = await app({ op: 'decide', id: A, act: 'reject', why: 'x' }, 'good');
+    check('already decided: 409, nothing written or sent', x.st === 409 && db.ptw[A].s === S_OK && !db.mails.length, [x.st, x.j]);
+    x = await app({ op: 'decide', id: B, act: 'reject', why: 'x' }, 'viewer');
+    check('a viewer role: 403, still pending', x.st === 403 && db.ptw[B].s === S_PEND, x.st);
+    x = await app({ op: 'decide', id: B, act: 'reject', why: 'x' });
+    check('no sign-in: 401', x.st === 401 && db.ptw[B].s === S_PEND, x.st);
+    check('a bad id or a bad act: 400', (await app({ op: 'decide', id: '../x', act: 'approve' }, 'good')).st === 400 && (await app({ op: 'decide', id: 'ctr26-1', act: 'approve' }, 'good')).st === 400 && (await app({ op: 'decide', id: B, act: 'nuke' }, 'good')).st === 400 && db.ptw[B].s === S_PEND);
+    delete db.state.works_mail_on; delete db.state.works_mail_to; [A, B, C, D].forEach((i) => delete db.ptw[i]); }
   globalThis.fetch = base;
 }
 Date.now = realNow;

@@ -20253,6 +20253,15 @@ function _ptwWkLink(){
     manual();
   }).catch(function(){toast('\u26a0\ufe0f \u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05e9\u05e8\u05ea');});
 }
+// The app's decision on a weekly work goes through the server (06/11/2026): the same path as the mail link, so maintenance gets its mail and the signed permit is filed.
+function _ptwWkDecided(r,x,okTxt){
+  if(!x.ok||!x.j||!x.j.ok){toast('\u26a0\ufe0f '+'\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8'+(x.j&&x.j.error?': '+x.j.error:''));return;}
+  r.s=x.j.s;r.safety=x.j.safety;sdb();rPtw();
+  var m=x.j.mailed||{},t=okTxt;
+  t+=m.to?' '+'\u05e0\u05e9\u05dc\u05d7 \u05de\u05d9\u05d9\u05dc \u05dc: '+m.to.join(', ')+(m.trial?' '+'(\u05e0\u05d9\u05e1\u05d9\u05d5\u05df: \u05e8\u05e7 \u05d0\u05dc\u05d9\u05da)':'')+'.':' '+'\u05d4\u05de\u05d9\u05d9\u05dc \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7.';
+  if(x.j.permit==='done')t+=' '+'\u05d4\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d4\u05d7\u05ea\u05d5\u05de\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 \u05d1\u05ea\u05d9\u05e7.';else if(x.j.permit==='later')t+=' '+'\u05d4\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d4\u05d7\u05ea\u05d5\u05de\u05d4 \u05e0\u05e9\u05de\u05e8\u05ea \u05d1\u05ea\u05d9\u05e7 \u05e2\u05db\u05e9\u05d9\u05d5.';else if(x.j.permit==='failed')t+=' '+'\u05d4\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d4\u05d7\u05ea\u05d5\u05de\u05d4 \u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8\u05d4.';
+  toast(t,{ok:!!m.to&&x.j.permit!=='failed'});
+}
 // Approve: never while works.js wrote what is missing (the gas test, the fire watch); the link then offers closing.
 function _ptwWkApprove(id){
   if(_viewOnly()){_viewBlock();return;}
@@ -20260,18 +20269,17 @@ function _ptwWkApprove(id){
   var gate=_ptwWkLine(r,_PTW_GATE);
   if(gate){toast('\u05d0\u05d9 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d0\u05e9\u05e8 \u05e2\u05d3\u05d9\u05d9\u05df: '+gate);return;}
   if(!confirm('\u05dc\u05d0\u05e9\u05e8 \u05d0\u05ea \u05ea\u05d7\u05d9\u05dc\u05ea \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4?\n'+String(r.desc||'').slice(0,120)))return;
-  r.s=_PTW_OK;sbUpd('ptw',{id:r.id,s:r.s});sdb();rPtw();
-  toast('\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d0\u05d5\u05e9\u05e8\u05d4. \u05d4\u05d0\u05d7\u05e8\u05d0\u05d9 \u05e1\u05d5\u05d2\u05e8 \u05d0\u05d5\u05ea\u05d4 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05e1\u05d9\u05d5\u05dd \u2713',{ok:true});
+  var okn=prompt('\u05d4\u05e2\u05e8\u05d5\u05ea \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4 (\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4, \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05e9\u05d0\u05d9\u05e8 \u05e8\u05d9\u05e7):');if(okn===null)return;
+  toast('\u05e9\u05d5\u05de\u05e8 \u05d5\u05e9\u05d5\u05dc\u05d7 \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4...');
+  _ptwApi({op:'decide',id:r.id,act:'approve',why:String(okn).replace(/\s+/g,' ').trim().slice(0,200)}).then(function(x){_ptwWkDecided(r,x,'\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d0\u05d5\u05e9\u05e8\u05d4.');}).catch(function(){toast('\u26a0\ufe0f \u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05e9\u05e8\u05ea');});
 }
 function _ptwWkReject(id){
   if(_viewOnly()){_viewBlock();return;}
   var r=(DB.ptw||[]).filter(function(x){return x.id===id;})[0];if(!r)return;
   var why=prompt('\u05e1\u05d9\u05d1\u05ea \u05d4\u05d3\u05d7\u05d9\u05d9\u05d4 (\u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d9\u05e8\u05d0\u05d5 \u05d0\u05d5\u05ea\u05d4 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d9\u05d5\u05db\u05dc\u05d5 \u05dc\u05ea\u05e7\u05df):');if(why===null)return;
   why=String(why).replace(/\s+/g,' ').trim().slice(0,200);if(!why){toast('\u05e6\u05e8\u05d9\u05da \u05dc\u05db\u05ea\u05d5\u05d1 \u05e1\u05d9\u05d1\u05d4');return;}
-  var rest=String(r.safety||'').split('\n').filter(function(x){return x&&x.indexOf(_PTW_REJM)!==0;});
-  r.s=_PTW_REJ;r.safety=[_PTW_REJM+why].concat(rest).join('\n');
-  sbUpd('ptw',{id:r.id,s:r.s,safety:r.safety});sdb();rPtw();
-  toast('\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e0\u05d3\u05d7\u05ea\u05d4. \u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d9\u05e8\u05d0\u05d5 \u05d0\u05ea \u05d4\u05e1\u05d9\u05d1\u05d4 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u2713',{ok:true});
+  toast('\u05e9\u05d5\u05de\u05e8 \u05d5\u05e9\u05d5\u05dc\u05d7 \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4...');
+  _ptwApi({op:'decide',id:r.id,act:'reject',why:why}).then(function(x){_ptwWkDecided(r,x,'\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e0\u05d3\u05d7\u05ea\u05d4.');}).catch(function(){toast('\u26a0\ufe0f \u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05e9\u05e8\u05ea');});
 }
 // The attachments of a work (certificates, inspection reports, insurance): links that open for an hour.
 function _ptwWkFiles(id){
