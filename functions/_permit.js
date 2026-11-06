@@ -21,7 +21,7 @@
 import { readZip, writeZip, entryText } from './_xlsxpatch.js';
 import { PDFDocument } from './_pdflib.js';
 import { stampPdf, SIGN_BUCKET, SIGN_OBJ, ilDate } from './_sign.js';
-import { findTextSpot } from './_pdftext.js';
+import { findTextSpot, countText } from './_pdftext.js';
 import { GRAPH_TIMEOUT_MS as GRAPH_MS, FILE_TIMEOUT_MS as FILE_MS, SB_TIMEOUT_MS as SB_MS, tmo } from './_shared.js';
 import { SITE } from './_site.js';
 
@@ -226,7 +226,10 @@ export const unmark = (s) => {
   do { y = x; x = x.replace(/q\s*z\s*x\s*s\s*g\s*q|q\s*g\s*s\s*x\s*z\s*q/gi, ''); } while (x !== y);
   return x;
 };
-const one = (s, max) => unmark(norm(String(s || '').replace(/[\r\n]+/g, ', '))).slice(0, max);
+// Invisible format characters out first (soft hyphen, word joiner, CGJ, variation selectors...): a converter that drops
+// them would join the marker back (security review 06/11/2026).
+const INVIS = /[\p{Cf}\u034f\ufe00-\ufe0f]/gu;
+const one = (s, max) => unmark(norm(String(s || '').replace(INVIS, '').replace(/[\r\n]+/g, ', '))).slice(0, max);
 // w: a work as works.js rowToWork gives it (who, con, sup, ph, wkr, area, dep, ds, de, ts, te, desc, cats, st);
 // o: { num, date (DD/MM/YYYY, the approval), closed }. form: 'work' | 'safety'.
 export function permitSpec(form, w, o) {
@@ -334,7 +337,8 @@ export const EMP_SIG_X = 40;
 export async function signSpot(merged, workPages, ctr) {
   const doc = await PDFDocument.load(merged);
   const n = doc.getPageCount();
-  const m = findTextSpot(doc, SIGN_MARK);
+  // More than one marker = one was typed in a field: the fixed spot, never next to a link user's text.
+  const m = countText(doc, SIGN_MARK) === 1 ? findTextSpot(doc, SIGN_MARK) : null;
   // contractors: on the blank after "\u05d7\u05ea\u05d9\u05de\u05d4", its right edge at the marker (the live PDF of 05/11/2026: a left edge at marker-80 put a
   // narrow signature over "\u05e0\u05d9\u05d9\u05d3")
   if (m && m.page > workPages) return { page: m.page, x: ctr ? Math.max(20, Math.round(m.x - 80)) : EMP_SIG_X, right: ctr ? Math.round(m.x - 4) : undefined, y: Math.round(m.y - SIG_DROP), w: SIG_W, found: true };

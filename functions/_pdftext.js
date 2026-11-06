@@ -160,6 +160,16 @@ export function findSignSpot(doc) {
 // A marker the server itself put in a document it had rendered (functions/_permit.js, 05/11/2026): where it starts, on
 // the first page that shows it. It may come as one string or split over several shows of one line; both orders are
 // searched. { page (1-based), x, y, size } in points from the bottom left; or null (the caller then uses a fixed spot).
+// How many times the needle (or its reverse) is in the whole document (06/11/2026, security review: a second copy means
+// someone typed it, so the caller does not trust where the first one is).
+export function countText(doc, needle) {
+  let n = 0;
+  for (const pg of doc.getPages()) {
+    const joined = pageTexts(contentOf(pg), fontsOf(pg)).map((t) => t.text).join('');
+    for (const nd of [needle, rev(needle)]) { let i = joined.indexOf(nd); while (i >= 0) { n++; i = joined.indexOf(nd, i + 1); } }
+  }
+  return n;
+}
 export function findTextSpot(doc, needle) {
   const pages = doc.getPages();
   for (let p = 0; p < pages.length; p++) {
