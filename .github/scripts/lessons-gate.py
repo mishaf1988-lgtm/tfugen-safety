@@ -128,6 +128,20 @@ UNCHECKED_DIRS = ("functions/",)
 # proven to catch the bug: the fix taken out on purpose, and which test failed.
 BREAK = re.compile(r"^\s*(break|\u05e9\u05d1\u05d9\u05e8\u05d4)\s*:\s*(\S.{9,})$", re.I | re.M)
 BREAK_DIRS = ("functions/", "index.html", "tools/", ".claude/hooks/", ".github/scripts/", "chat/")
+# 06/11/2026 (Michael: "a sync rule has to go in", after the weekly maintenance mail and the sewage filing were built
+# and the WhatsApp assistant knew nothing of either; CLAUDE.md core rule 4, full sync): a PR that adds a decision or
+# changes the server also updates what the assistant reads (its branch rules, topic files, core instructions), or says
+# in one line why the assistant is not touched: 'עוזר: <what it learned / why not>'.
+ASSISTANT = re.compile(r"^\s*(assistant|\u05e2\u05d5\u05d6\u05e8)\s*:\s*(\S.{3,})$", re.I | re.M)
+SYNC_TRIGGERS = ("DECISIONS.md", "functions/")
+ASSISTANT_FILES = ("project-files/domains/rules/", "project-files/domains/index.json", "project-files/wa-topics/",
+                   "project-files/routine-wa-", "project-files/assistant/", "project-files/agent-common.md")
+
+
+def assistant_synced(files):
+    """True when the PR changed a file the assistant reads (the decisions map alone does not count)."""
+    return any(f.startswith(ASSISTANT_FILES) for f in files) or any(
+        f.startswith("project-files/domains/") and f.endswith(".md") and "/rules/" not in f for f in files)
 
 
 def sensitive(files):
@@ -192,6 +206,10 @@ def check(title, body, files):
     if any(f.startswith(UNCHECKED_DIRS) for f in files) and not UNCHECKED.search(body or ""):
         return False, ("this PR changes server code (functions/). Add a line 'מה לא נבדק: <what was skipped or not tried, "
                        "and a risk Michael should know>' or 'מה לא נבדק: אין' (tfugen-dev, the ladder).")
+    if any(f.startswith(SYNC_TRIGGERS) for f in files) and not assistant_synced(files) and not ASSISTANT.search(body or ""):
+        return False, ("this PR adds a decision or changes the server, and the assistant did not learn it (Michael 06/11/2026: "
+                       "a sync rule). Update what it reads (project-files/domains/rules/<branch>.md, wa-topics/, routine-wa-core.md), "
+                       "or add 'עוזר: <why the assistant is not touched>'.")
     retro_mistake = not RETRO_CLEAN.match(RETRO.search(body or "").group(2).strip())
     if FIX.search(title or "") and not SIBLINGS.search(body or ""):
         return False, ("a fix PR names the siblings of what it fixed: 'אחים: <the grep of the pattern, each place found: "

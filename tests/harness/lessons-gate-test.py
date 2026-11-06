@@ -9,7 +9,7 @@ def check(label, cond, detail=None):
     else: failed += 1; print('  ✗ ' + label + ('  -> ' + str(detail) if detail is not None else ''))
 
 L = gate.LESSONS
-R = 'רטרו: אין\nskill: אין\nמה לא נבדק: אין\nאחים: grep של הדפוס, אין אחר\nשבירה: הסרתי את התיקון, בדיקה 4b נכשלה (2)\n'
+R = 'רטרו: אין\nskill: אין\nמה לא נבדק: אין\nעוזר: לא נוגע, בדיקה\nאחים: grep של הדפוס, אין אחר\nשבירה: הסרתי את התיקון, בדיקה 4b נכשלה (2)\n'
 ok = lambda t, b, f: gate.check(t, R + (b or ''), f)[0]
 check('not a fix PR: ok', ok('Tour screen: due date in one tap', '', ['index.html']))
 Rm = lambda r: 'רטרו: ' + r + '\nskill: אין\nמה לא נבדק: אין\nאחים: grep של הדפוס, אין אחר\nשבירה: הסרתי את התיקון, בדיקה 4b נכשלה (2)\n'
@@ -86,7 +86,7 @@ check('an empty refute line: blocked', not raw('Codes screen', R + 'סקירה: 
 check('an ordinary server file: no review needed', raw('Morning brief', R, ['functions/api/wa-morning.js']))
 R0 = 'רטרו: אין\nskill: אין\n'
 check('server code without an unchecked line: blocked (31/10/2026)', not raw('Morning brief', R0, ['functions/api/wa-morning.js']))
-check('...with a real unchecked line: ok', raw('Morning brief', R0 + 'מה לא נבדק: לא נבדק בטלפון אמיתי', ['functions/api/wa-morning.js']))
+check('...with a real unchecked line: ok', raw('Morning brief', R0 + 'מה לא נבדק: לא נבדק בטלפון אמיתי\nעוזר: לא נוגע', ['functions/api/wa-morning.js']))
 check('...an empty unchecked line: blocked', not raw('Morning brief', R0 + 'מה לא נבדק: ', ['functions/api/wa-morning.js']))
 check('...not required outside functions/', raw('Tour screen', R0, ['index.html', 'STATUS.md']))
 check('a file that takes outside input (trustee photos, a parser): blocked without review', not raw('Log', R, ['functions/api/trustee-log.js']) and not raw('PDF', R, ['functions/_pdftext.js']))
@@ -107,12 +107,12 @@ try:
 finally:
     gate.file_diff = _fd
 # 02/11/2026 (Michael: "do it: required in every fix"): a fix PR carries an "אחים:" line
-R_noSib = 'רטרו: אין\nskill: אין\nמה לא נבדק: אין\n'
+R_noSib = 'רטרו: אין\nskill: אין\nמה לא נבדק: אין\nעוזר: לא נוגע\n'
 check('a Fix PR without a siblings line: blocked, even with its lesson', not gate.check('Fix: x', R_noSib, ['a.js', L])[0])
 check('...with "אחים: <what was searched and found>": ok', gate.check('Fix: x', R_noSib + 'אחים: grep tapIsPrev, 4 אחים, תוקנו', ['a.js', L])[0])
 check('...an empty siblings line: blocked', not gate.check('Fix: x', R_noSib + 'אחים: ', ['a.js', L])[0])
 # 03/11/2026 (Michael: "do it: required in every fix"): a fix PR that changes code proves its test catches the bug
-R_noBrk = 'רטרו: אין\nskill: אין\nמה לא נבדק: אין\nאחים: grep, אין אחר\n'
+R_noBrk = 'רטרו: אין\nskill: אין\nמה לא נבדק: אין\nעוזר: לא נוגע\nאחים: grep, אין אחר\n'
 check('a Fix PR on server code without a break line: blocked', not gate.check('Fix: x', R_noBrk, ['functions/api/wa-morning.js', L])[0])
 check('...on index.html, a hook or a tool: blocked too', all(not gate.check('Fix: x', R_noBrk, [f, L])[0] for f in ['index.html', '.claude/hooks/x.py', 'tools/x.py']))
 check('...with "שבירה: <what was taken out and what failed>": ok', gate.check('Fix: x', R_noBrk + 'שבירה: בלי stateCas נכשלו 3 בבדיקת המרוץ', ['functions/api/wa-morning.js', L])[0])
@@ -135,6 +135,17 @@ try:
     check('a code change with no regex: no pairs line needed', raw('Filter', R, ['functions/api/x.js']))
 finally:
     gate.file_diff = _fd
+# 06/11/2026 (Michael: "a sync rule has to go in"): a new decision or a server change teaches the assistant, or says why not
+R_noSync = 'רטרו: אין\nskill: אין\nמה לא נבדק: אין\n'
+check('sync: a new decision and nothing for the assistant: blocked', not raw('Decision', R_noSync, ['DECISIONS.md', 'STATUS.md']))
+check('sync: ...the decisions map alone does not count', not raw('Decision', R_noSync, ['DECISIONS.md', 'project-files/domains/decisions-map.tsv']))
+check('sync: a server change and nothing for the assistant: blocked', not raw('Weekly mail', R_noSync, ['functions/api/works.js']))
+check('sync: ...with the branch rules changed: ok', raw('Decision', R_noSync, ['DECISIONS.md', 'project-files/domains/rules/env.md']))
+check('sync: ...with a topic file or the core changed: ok', raw('Mail', R_noSync, ['functions/api/works.js', 'project-files/wa-topics/ops.md']) and raw('Mail', R_noSync, ['DECISIONS.md', 'project-files/routine-wa-core.md']))
+check('sync: ...with a branch file changed: ok', raw('Decision', R_noSync, ['DECISIONS.md', 'project-files/domains/env.md']))
+check('sync: ...with "עוזר: <why not>": ok', raw('Weekly mail', R_noSync + 'עוזר: שינוי פנימי בשרת, אין מה לדעת\n', ['functions/api/works.js']))
+check('sync: an empty "עוזר:" line: blocked', not raw('Weekly mail', R_noSync + 'עוזר: \n', ['functions/api/works.js']))
+check('sync: a PR with neither a decision nor server code: no line needed', raw('Status', R_noSync, ['STATUS.md', 'project-files/ideas-lab.md']))
 check('every SENSITIVE path exists in the repo', all(os.path.exists(os.path.join(gate.ROOT, f)) for f in gate.SENSITIVE), [f for f in gate.SENSITIVE if not os.path.exists(os.path.join(gate.ROOT, f))])
 check('an empty review line: blocked', not raw('Codes screen', R + 'סקירה: ', ['functions/api/create-user.js']))
 mig = 'migrations/zz-gate-test-%d.sql' % os.getpid()
