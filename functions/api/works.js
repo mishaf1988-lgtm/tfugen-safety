@@ -786,6 +786,11 @@ async function appOp(env, request, nowMs, bg) {
     if (act !== 'approve' && act !== 'reject') return jsonResp({ error: 'bad act' }, 400, cors);
     const rows = await sbGet(env, 'ptw?id=eq.' + encodeURIComponent(id) + '&select=' + WEEK_COLS + ',ver');
     if (!rows || !rows[0]) return jsonResp({ error: 'missing' }, 404, cors);
+    // Security review 06/11/2026: (1) the approval signs with Michael's signature, so only the admin (Michael) approves;
+    // a manager may return a work for a fix. (2) The decision is about the version the screen showed: maintenance may
+    // send the list again after the app loaded it, so a changed row is refused (as the mail link does with v).
+    if (act === 'approve' && who.role !== 'admin') return jsonResp({ error: 'only the safety officer approves' }, 403, cors);
+    if (rows[0].ver && String(b.ver || '') !== String(rows[0].ver)) return jsonResp({ error: 'changed' }, 409, cors);
     const d = { id, row: rows[0], w: rowToWork(rows[0], WK_ID_RE.exec(id)[1]), friday: WK_ID_RE.exec(id)[1] };
     const res = await decideCore(env, d, act, b.why || '', nowMs, bg);
     if (res.err) {
