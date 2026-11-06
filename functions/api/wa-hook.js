@@ -710,7 +710,9 @@ async function handle(env, raw) {
     if (!owner || m.from !== owner) continue;
     seen.from_owner++;
     await noteOwnerIn(env, sbFrom(env), m.ts ? new Date(m.ts * 1000).toISOString() : new Date().toISOString());
-    if (!(await firstTime(env, m.id))) continue;
+    // one message whose seen-list write failed does not stop the others in this webhook (review 06/11/2026)
+    let first = false; try { first = await firstTime(env, m.id); } catch (e) { await note(env, { sig: true, seen_error: String((e && e.message) || e).slice(0, 80) }); continue; }
+    if (!first) continue;
     const tLog = Date.now(), myIso = new Date(tLog).toISOString();
     await logIn(env, m, myIso);
     // 20/10/2026 (Michael in the questionnaire: "do it: an immediate 'got it' from the server"): the

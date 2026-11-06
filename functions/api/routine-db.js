@@ -3613,9 +3613,11 @@ async function routineDbHandle(context) {
       if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
       const r = await sendToOwner(env, to, body.text, { noTemplate: body.no_template === true, windowOpen: await ownerWindowOpen(env, url), choices: Array.isArray(body.choices) ? body.choices : null });
       if (r.duplicate) return jsonResp({ ok: true, duplicate: true, note: 'the same text went out in the last 10 minutes; not sent again' }, 200, {});
+      let pendingLost = false;
       if (askPending && r.ok && Array.isArray(body.choices) && body.choices.length) {
-        await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
-          body: JSON.stringify([{ key: askPending.key, value: askPending.value, updated_at: new Date().toISOString() }]) });
+        const pw = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+          body: JSON.stringify([{ key: askPending.key, value: askPending.value, updated_at: new Date().toISOString() }]) }).catch(() => null);
+        pendingLost = !pw || !pw.ok; // the question went out but his tap will find nothing: the caller says so (review 06/11/2026)
       }
       if (r.ok) await noteLastOut(env, url, body.text, body.ref);
       if (r.ok && DEV_REF.test(String(body.ref || ''))) {
@@ -3629,7 +3631,7 @@ async function routineDbHandle(context) {
             event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error',
             payload: { title: ilTimes(String(body.text || '')).replace(/\s+/g, ' ').slice(0, 120), text: ilTimes(String(body.text || '')).slice(0, 1500), via: r.via || null, wamid: r.wamid || null, ref: body.ref ? String(body.ref).slice(0, 40) : 'none', answers: body.answers ? String(body.answers).slice(0, 40) : null, detail: r.error || null, push: ps.sent || 0 } }]) });
       } catch (e) { /* the message went out; a missing log line is not a failure */ }
-      return jsonResp(Object.assign({}, r, { push: ps.sent || 0 }, stale ? { stale: true, choices_dropped: !!stale.dropChoices } : {}), 200, {});
+      return jsonResp(Object.assign({}, r, { push: ps.sent || 0 }, stale ? { stale: true, choices_dropped: !!stale.dropChoices } : {}, pendingLost ? { pending_lost: true, note: 'the question went out but its pending action was not saved: tell Michael the button will not work and ask again' } : {}), 200, {});
     }
     // wa_review (20/10/2026, Michael: "not only time, also wisdom, quality and expertise"): the weekly
     // quality review in the retro (retro-prompt.md 7a) reads Michael's messages to his assistant and its
