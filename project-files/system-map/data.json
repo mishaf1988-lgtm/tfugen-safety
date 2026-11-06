@@ -678,7 +678,7 @@
    "reports": true
   },
   {
-   "id": "trig_01Ezy5a5NCysXftdiE8xHoCo",
+   "id": "trig_01APzQCoZHsqJTQTFqvKbRcT",
    "zone": "routines",
    "name": "מעקב הצעות מחיר",
    "what": "",
@@ -713,7 +713,7 @@
    "reports": true
   },
   {
-   "id": "trig_01KKNK11KbArFxmStSuuawww",
+   "id": "trig_01PiJpBmASES4tDqwdePUsH2",
    "zone": "routines",
    "name": "רטרו יומי",
    "what": "",
@@ -733,7 +733,7 @@
    "reports": true
   },
   {
-   "id": "trig_01WzoFsHLwgUUURuhyfFDAvS",
+   "id": "trig_01PxjFyeVEJcsbUaYVSxN5FZ",
    "zone": "routines",
    "name": "הרדאר מלמד את העוזר",
    "what": "",
@@ -813,7 +813,7 @@
    "reports": false
   },
   {
-   "id": "trig_016Cc2xKxQ9W5AEf75yLhmtA",
+   "id": "trig_015oCa3o5whdXon9dTettfkB",
    "zone": "routines",
    "name": "משרד הסוכנים",
    "what": "משרד הסוכנים: עדכון בוקר",
@@ -829,7 +829,7 @@
    "reports": false
   },
   {
-   "id": "trig_01FpFJnEbCfmNuKxsXQjyfcX",
+   "id": "trig_01UcmWkSPWDHkp49BftrPt86",
    "zone": "routines",
    "name": "תפוגות שנתקעו אצל ספק",
    "what": "",
@@ -865,7 +865,7 @@
    "reports": true
   },
   {
-   "id": "trig_01Hqt7G6RLWeJbKEHXFzXWHW",
+   "id": "trig_01XJ5dBUN5dcbDqirQ7uZ6a5",
    "zone": "routines",
    "name": "בודק לתור המשימות למחשב",
    "what": "",
@@ -881,7 +881,7 @@
    "reports": true
   },
   {
-   "id": "trig_01AVa8RiuYtaeXLrtkUsZqKH",
+   "id": "trig_01CkizD1F41kU5BAzEA9DX4q",
    "zone": "routines",
    "name": "בדיקת הניסוי השבועית",
    "what": "",
@@ -906,7 +906,9 @@
    "doc": "routine-rotation.md",
    "key": "rotation",
    "family": "תקשורת ומשרד",
-   "ops": [],
+   "ops": [
+    "relay_fire"
+   ],
    "m365": false,
    "reports": false
   },
@@ -1139,7 +1141,7 @@
    "reports": null
   },
   {
-   "id": "trig_01FKenmRrWQ22S1566BReYri",
+   "id": "trig_017b9VdFUF8bMAdnRezagEvj",
    "zone": "routines",
    "name": "מנהל השיווק",
    "what": "מנהל השיווק: פעמיים בשבוע (קו העסק)",
