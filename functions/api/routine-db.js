@@ -180,7 +180,7 @@ import { readZip, entryText } from '../_xlsxpatch.js';
 import { DOMAIN_FORMS } from '../_domains.js';
 import { OD_OCR_DIR, OCR_MODELS, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
 import { stateCas } from '../_cas.js';
-import { CLAUDE_LOG_Q, logLine, queueAdd } from '../_claudelog.js';
+import { CLAUDE_LOG_Q, logLine, queueAdd, ocrPartialRow } from '../_claudelog.js';
 import { SIGN_KEY, SIGN_CHOICES, signAdd, signMark, signAskText, signPlace } from '../_sign.js';
 import { findSignSpot } from '../_pdftext.js';
 import { rowContradictions } from './wa-morning.js';
@@ -385,7 +385,9 @@ export function learnAdd(raw, b, nowIso) {
   if (b.replaces != null && String(b.replaces).trim()) {
     const q = String(b.replaces).replace(/\s+/g, ' ').trim();
     const open = list.filter((x) => x && x.status === 'new' && x.text !== text);
-    const hits = /^l-\d{14}-[a-z0-9]{1,8}$/.test(q) ? open.filter((x) => x.id === q) : q.length >= 8 ? open.filter((x) => x.agent === agent && String(x.text || '').indexOf(q) >= 0) : [];
+    // 06/11/2026 (retro 03/11/2026 (b)): by id too, only a line of the same agent (as the phrase form). Checked: no
+    // procedure replaces another agent's line (the coach adds its own line, the retro folds with learn_done).
+    const hits = /^l-\d{14}-[a-z0-9]{1,8}$/.test(q) ? open.filter((x) => x.id === q && x.agent === agent) : q.length >= 8 ? open.filter((x) => x.agent === agent && String(x.text || '').indexOf(q) >= 0) : [];
     if (hits.length !== 1) return { error: 'replaces: ' + (hits.length ? hits.length + ' open lines match, give the id' : 'no open line matches (an id, or 8+ characters of one of your own lines)') };
     old = hits[0];
   }
@@ -878,9 +880,21 @@ export function draftThreadGate(b) {
   if (b.reply_to !== undefined && b.reply_to !== null && b.reply_to !== '') return null;
   // 01/11/2026 (Michael in the questionnaire: "do it: a new mail with the file"; flow 3 failed twice on a thread reply with
   // an attachment): a new mail on purpose, when Michael chose it, quoted with his "\u05d1\u05e6\u05e2". Never a made-up "no thread".
-  if (/^michael chose a new mail:.*\u05d1\u05e6\u05e2/i.test(String(b.thread_checked || '').trim())) return null;
+  // 06/11/2026 (retro 02/11/2026 (a)): the words alone could be written by any run; the handler also needs a real
+  // "\u05d1\u05e6\u05e2" of Michael in owner_in within CHOSE_NEW_MAIL_MS (ownerChoseNewMail), or the draft is refused. Only his
+  // own channels (whatsapp, chat): office_ask writes owner_in in channel office with the caller's text (security review).
+  if (chosenNewMail(b)) return null;
   return /^no thread:\s*\S.{9,}/i.test(String(b.thread_checked || '').trim()) ? null
     : 'thread_checked required: search the mailbox (all folders) for an existing thread with these recipients or this subject, right before the draft. Found: pass reply_to (the id of its last mail) so the draft stays in the thread with who approved. None: pass "thread_checked":"no thread: <what you searched, HH:MM UTC>" (29/10/2026: a purchase order went out as a new mail without its thread)';
+}
+export const CHOSE_NEW_MAIL_MS = 24 * 60 * 60 * 1000;
+export function chosenNewMail(b) {
+  return /^michael chose a new mail:.*\u05d1\u05e6\u05e2/i.test(String(b.thread_checked || '').trim());
+}
+// Pure: rows = owner_in rows of the last CHOSE_NEW_MAIL_MS, [{text}] (newest first). True when one of them is Michael's
+// "\u05d1\u05e6\u05e2" as a word (a button tap logs the bare word), so "michael chose a new mail" quotes a real answer.
+export function ownerChoseNewMail(rows) {
+  return (rows || []).some((r) => /(^|[^\u05d0-\u05ea])\u05d1\u05e6\u05e2([^\u05d0-\u05ea]|$)/.test(String((r && (r.text || r.title)) || '')));
 }
 // 01/11/2026 (C70, checked in Chrome: flow 3 failed with ErrorInvalidReferenceItem): the assistant passed as reply_to
 // the id of its own earlier draft, not of a real mail in the thread, and a draft cannot be replied to. The server
@@ -2049,7 +2063,7 @@ export async function onRequest(context) {
       const row0 = reqBody && logLine(reqBody, new Date().toISOString());
       const out = row0 ? await res.clone().json() : null;
       const body = out && out.ok === true ? reqBody : null;
-      const row = body && row0;
+      const row = (body && row0) || (out && reqBody.op === 'ocr_txt' ? ocrPartialRow(row0, out) : null);
       // security review 02/11/2026: a forward the server could not check (403) is not "done" yet; flow 11 checks the subject
       if (row && out.subject_checked === 'flow 11') row[4] = '\u05e0\u05e9\u05dc\u05d7 \u05dc\u05d6\u05e8\u05d9\u05de\u05d4, \u05d4\u05e0\u05d5\u05e9\u05d0 \u05e0\u05d1\u05d3\u05e7 \u05e9\u05dd';
       const env = context.env;
@@ -2075,6 +2089,9 @@ async function routineDbHandle(context) {
   let body = {};
   try { body = await request.json(); } catch (e) { return jsonResp({ ok: false, error: 'bad json' }, 400, {}); }
   delete body.askInternal; // set only by the *_ask ops below, never by a caller (27/10/2026 retro)
+  // 06/11/2026 (retro 27/10/2026 (c)): a *_ask op wrote its pending action before wa_me's gates (stale, overlap, claimGate)
+  // ran, so a question that was never sent replaced the one Michael could still tap. It is written only after the send.
+  let askPending = null;
   const url = env.SUPABASE_URL || SB_DEFAULT, k = env.SUPABASE_SERVICE_ROLE_KEY;
   const h = { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' };
   const stateRead = async (keys) => {
@@ -2994,6 +3011,10 @@ async function routineDbHandle(context) {
       if (sentGate) return jsonResp({ ok: false, error: sentGate }, 400, {});
       const threadGate = draftThreadGate(body);
       if (threadGate) return jsonResp({ ok: false, error: threadGate }, 400, {});
+      if (chosenNewMail(body)) { // any agent name (refute step 06/11/2026: the name is the caller's to choose)
+        const or = await fetch(url + '/rest/v1/notifications_log?select=ts,text:payload->>text,title:payload->>title&event_type=eq.owner_in&channel=in.(whatsapp,chat)&ts=gte.' + encodeURIComponent(new Date(Date.now() - CHOSE_NEW_MAIL_MS).toISOString()) + '&order=ts.desc&limit=50', { headers: h, signal: tmo(SB_MS) }).then((x) => (x.ok ? x.json() : null)).catch(() => null);
+        if (!ownerChoseNewMail(or)) return jsonResp({ ok: false, error: 'thread_checked "michael chose a new mail": no "\u05d1\u05e6\u05e2" from Michael in the last 24 hours. Ask him on WhatsApp with choices ["\u05d1\u05e6\u05e2","\u05dc\u05d0"] (a new mail without the thread), or reply in the thread with reply_to (retro 02/11/2026)' }, 400, {});
+      }
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
       if (String(body.why || '').trim().length < 5) return jsonResp({ ok: false, error: 'why required' }, 400, {});
       const d = draftRequest(body);
@@ -3496,8 +3517,7 @@ async function routineDbHandle(context) {
       const k = Math.random().toString(36).slice(2, 10).padEnd(8, '0'), mv = {};
       for (const f of CAL_MOVE_FIELDS) mv[f] = body[f];
       mv.why = body.why;
-      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
-        body: JSON.stringify([{ key: CAL_MOVE_ASK_KEY, value: JSON.stringify({ k, mv, at: new Date().toISOString() }), updated_at: new Date().toISOString() }]) });
+      askPending = { key: CAL_MOVE_ASK_KEY, value: JSON.stringify({ k, mv, at: new Date().toISOString() }) }; // written after the question went out (retro 27/10/2026 (c))
       body = { op: 'wa_me', agent: body.agent, answers: body.answers, askInternal: true, text: calMoveAskText(c, body), choices: ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'], ref: 'calmove:' + k };
     }
     if (body.op === 'cal_invite_ask') {
@@ -3508,8 +3528,7 @@ async function routineDbHandle(context) {
       const k = Math.random().toString(36).slice(2, 10).padEnd(8, '0'), inv = {};
       for (const f of CAL_INVITE_FIELDS) if (body[f] !== undefined) inv[f] = body[f];
       inv.why = body.why;
-      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
-        body: JSON.stringify([{ key: CAL_INVITE_ASK_KEY, value: JSON.stringify({ k, inv, at: new Date().toISOString() }), updated_at: new Date().toISOString() }]) });
+      askPending = { key: CAL_INVITE_ASK_KEY, value: JSON.stringify({ k, inv, at: new Date().toISOString() }) }; // written after the question went out (retro 27/10/2026 (c))
       body = { op: 'wa_me', agent: body.agent, answers: body.answers, askInternal: true, text: calInviteAskText(c, body), choices: ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'], ref: 'calinvite:' + k };
     }
     if (body.op === 'del_ask') {
@@ -3523,8 +3542,7 @@ async function routineDbHandle(context) {
       const row = rr.ok ? ((await rr.json().catch(() => []))[0] || null) : null;
       if (!row) return jsonResp({ ok: false, error: 'no such row' }, 400, {});
       const k = Array.from(crypto.getRandomValues(new Uint8Array(8))).map((x) => 'abcdefghijklmnopqrstuvwxyz0123456789'[x % 36]).join('');
-      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
-        body: JSON.stringify([{ key: DEL_ASK_KEY, value: JSON.stringify({ k, table, id, why, at: new Date().toISOString() }), updated_at: new Date().toISOString() }]) });
+      askPending = { key: DEL_ASK_KEY, value: JSON.stringify({ k, table, id, why, at: new Date().toISOString() }) }; // written after the question went out (retro 27/10/2026 (c))
       body = { op: 'wa_me', agent: body.agent, answers: body.answers, askInternal: true, text: delAskText(table, row, why), choices: ['\u05de\u05d7\u05e7', '\u05dc\u05d0'], ref: 'del:' + k };
     }
     if (body.op === 'undo_ask') {
@@ -3541,8 +3559,7 @@ async function routineDbHandle(context) {
       if (!er.ok) return jsonResp({ ok: false, error: 'could not check the table (' + er.status + ')' }, 200, {});
       if ((await er.json().catch(() => [1])).length) return jsonResp({ ok: false, error: 'the row is in the table now: nothing to restore' }, 200, {});
       const k = Array.from(crypto.getRandomValues(new Uint8Array(8))).map((x) => 'abcdefghijklmnopqrstuvwxyz0123456789'[x % 36]).join('');
-      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
-        body: JSON.stringify([{ key: UNDO_ASK_KEY, value: JSON.stringify({ k, table, id, at: new Date().toISOString() }), updated_at: new Date().toISOString() }]) });
+      askPending = { key: UNDO_ASK_KEY, value: JSON.stringify({ k, table, id, at: new Date().toISOString() }) }; // written after the question went out (retro 27/10/2026 (c))
       body = { op: 'wa_me', agent: body.agent, answers: body.answers, askInternal: true, text: undoAskText(undo[ix]), choices: ['\u05d4\u05d7\u05d6\u05e8', '\u05dc\u05d0'], ref: 'undo:' + k };
     }
     if (body.op === 'tour_close_ask') {
@@ -3555,8 +3572,7 @@ async function routineDbHandle(context) {
       const row = rr.ok ? ((await rr.json().catch(() => []))[0] || null) : null;
       if (!row) return jsonResp({ ok: false, error: 'no such tour finding' }, 400, {});
       if (row.s !== TOUR_OPEN) return jsonResp({ ok: false, error: 'already closed (s=' + row.s + ')' }, 200, {});
-      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
-        body: JSON.stringify([{ key: TOUR_CLOSE_KEY, value: JSON.stringify({ id, note, at: new Date().toISOString() }), updated_at: new Date().toISOString() }]) });
+      askPending = { key: TOUR_CLOSE_KEY, value: JSON.stringify({ id, note, at: new Date().toISOString() }) }; // written after the question went out (retro 27/10/2026 (c))
       body = { op: 'wa_me', agent: body.agent, answers: body.answers, askInternal: true, text: tourCloseAskText(row, note), choices: ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'], ref: 'tourclose:' + id };
     }
     if (body.op === 'wa_me') {
@@ -3644,6 +3660,12 @@ async function routineDbHandle(context) {
       if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
       const r = await sendToOwner(env, to, body.text, { noTemplate: body.no_template === true, windowOpen: await ownerWindowOpen(env, url), choices: Array.isArray(body.choices) ? body.choices : null });
       if (r.duplicate) return jsonResp({ ok: true, duplicate: true, note: 'the same text went out in the last 10 minutes; not sent again' }, 200, {});
+      let pendingLost = false;
+      if (askPending && r.ok && Array.isArray(body.choices) && body.choices.length) {
+        const pw = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+          body: JSON.stringify([{ key: askPending.key, value: askPending.value, updated_at: new Date().toISOString() }]) }).catch(() => null);
+        pendingLost = !pw || !pw.ok; // the question went out but his tap will find nothing: the caller says so (review 06/11/2026)
+      }
       if (r.ok) await noteLastOut(env, url, body.text, body.ref);
       if (r.ok && DEV_REF.test(String(body.ref || ''))) {
         await stateCas(url, h, DEV_INBOX_KEY, (cur) => { const told = devInboxTold(cur, body.ref, new Date().toISOString()); return told ? { value: JSON.stringify(told) } : { write: false }; }, () => tmo(SB_MS)).catch(() => null);
@@ -3656,7 +3678,7 @@ async function routineDbHandle(context) {
             event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error',
             payload: { title: ilTimes(String(body.text || '')).replace(/\s+/g, ' ').slice(0, 120), text: ilTimes(String(body.text || '')).slice(0, 1500), via: r.via || null, wamid: r.wamid || null, ref: body.ref ? String(body.ref).slice(0, 40) : 'none', answers: body.answers ? String(body.answers).slice(0, 40) : null, detail: r.error || null, push: ps.sent || 0 } }]) });
       } catch (e) { /* the message went out; a missing log line is not a failure */ }
-      return jsonResp(Object.assign({}, r, { push: ps.sent || 0 }, stale ? { stale: true, choices_dropped: !!stale.dropChoices } : {}), 200, {});
+      return jsonResp(Object.assign({}, r, { push: ps.sent || 0 }, stale ? { stale: true, choices_dropped: !!stale.dropChoices } : {}, pendingLost ? { pending_lost: true, note: 'the question went out but its pending action was not saved: tell Michael the button will not work and ask again' } : {}), 200, {});
     }
     // wa_review (20/10/2026, Michael: "not only time, also wisdom, quality and expertise"): the weekly
     // quality review in the retro (retro-prompt.md 7a) reads Michael's messages to his assistant and its

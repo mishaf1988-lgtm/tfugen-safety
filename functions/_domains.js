@@ -31,7 +31,11 @@ export function domainsOf(text) {
   const t = String(text || '').toLowerCase();
   const toks = [];
   for (let w of (t.match(/[\w\u0590-\u05ff.-]+/g) || [])) { w = w.replace(/^[.-]+|[.-]+$/g, ''); for (let i = 0; i < 3 && w.length >= 4; i++) { toks.push(w); if ('\u05d5\u05d4\u05d1\u05dc\u05de\u05e9\u05db'.indexOf(w[0]) < 0) break; w = w.slice(1); } }
-  const hit = (w) => { w = w.toLowerCase(); return t.indexOf(w) >= 0 || (w.indexOf(' ') < 0 && w.length >= 5 && toks.some((x) => lev1(w, x))); };
+  // retro 02/11/2026 (c): a Latin word counts only as a whole word (coa is not inside coach, iso not inside isolate);
+  // a Hebrew word stays a substring, since a prefix letter is glued to it.
+  const cls = (c) => (/[a-z]/.test(c) ? 'a-z' : /[0-9]/.test(c) ? '0-9' : '');
+  const inText = (w) => { if (!/^[\x20-\x7e]+$/.test(w)) return t.indexOf(w) >= 0; const a = cls(w[0]), b = cls(w[w.length - 1]); return new RegExp((a ? '(^|[^' + a + '])' : '') + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + (b ? '([^' + b + ']|$)' : '')).test(t); };
+  const hit = (w) => { w = w.toLowerCase(); return inText(w) || (w.indexOf(' ') < 0 && w.length >= 5 && toks.some((x) => lev1(w, x))); };
   return DOMAINS.filter((d) => d.words.some(hit));
 }
 // The line for the assistant's fire text; empty when no branch matches.

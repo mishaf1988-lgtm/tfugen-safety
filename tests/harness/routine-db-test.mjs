@@ -76,6 +76,17 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   const r = await onRequest({ request: new Request('https://x/api/routine-db', { method, headers: { 'x-routine-key': key, 'content-type': 'application/json' }, body: method === 'POST' ? JSON.stringify(body) : undefined }), env });
   return { status: r.status, json: await r.json() };
 };
+// retro 27/10/2026 (c): an *_ask op keeps its pending action only after the question went out; this call sends it
+const callSent = async (body) => {
+  const real = globalThis.fetch;
+  globalThis.fetch = async (u, o) => {
+    const url = String(u);
+    if (url.includes('/rest/v1/notification_prefs')) return new Response(JSON.stringify([{ prefs: { trustee_hazard: { whatsapp_to: '972500000000' } } }]), { status: 200 });
+    if (url.startsWith('https://graph.facebook.com/') && (o || {}).method === 'POST') return new Response(JSON.stringify({ messages: [{ id: 'wamid.ask' }] }), { status: 200 });
+    return real(u, o);
+  };
+  try { return await call(body, 'k-123', 'POST', { ...ENV, META_PHONE_NUMBER_ID: '1', META_ACCESS_TOKEN: 't' }); } finally { globalThis.fetch = real; }
+};
 // cal_move / cal_invite run only from wa-hook, in process (26/10/2026 retro)
 const callIn = async (body) => {
   const r = await onRequest({ request: new Request('https://x/api/routine-db', { method: 'POST', headers: { 'x-routine-key': 'k-123', 'content-type': 'application/json' }, body: JSON.stringify(body) }), env: ENV, internal: true });
@@ -502,6 +513,21 @@ const callIn = async (body) => {
           draftThreadGate({ ...base, thread_checked: 'michael chose a new mail: questionnaire 11:33 UTC, בצע: מייל חדש עם הקובץ' }) === null
           && !!draftThreadGate({ ...base, thread_checked: 'michael chose a new mail: because' }) && !!draftThreadGate({ ...base, thread_checked: 'flow is broken' }));
       }
+      { const { linkPathBad } = await import('./_build/routine-db.mjs');
+        check('linkPathBad directly (retro 02/11/2026 (b)): encoded .., a broken %, a segment ending in a space or dot, hidden or direction characters are bad; a normal Hebrew path is not',
+          linkPathBad('a/%2e%2e/b') && linkPathBad('a/%2E%2E/b') && linkPathBad('a/%E0%A4%A') && linkPathBad('a/..%20/b') && linkPathBad('a/x./b') && linkPathBad('a/x%20/b')
+          && linkPathBad('a/b%E2%80%AEfdp.exe') && linkPathBad('a/b%E2%80%8B.pdf') && linkPathBad('a\\b.pdf') && linkPathBad('a/b%0a.pdf') && linkPathBad('../a.pdf')
+          && !linkPathBad('Documents/02_%D7%AA%D7%A1%D7%A7%D7%99%D7%A8%D7%99/2026-11-01 report.pdf') && !linkPathBad('a/b c/d.pdf') && !linkPathBad('a/.hidden-not-dotdot/x.pdf'));
+      }
+      { const { ownerChoseNewMail, chosenNewMail } = await import('./_build/routine-db.mjs');
+        check('retro 02/11/2026 (a): "michael chose a new mail" needs a real בצע of Michael in owner_in, not only the words',
+          chosenNewMail({ thread_checked: 'michael chose a new mail: 11:33 UTC, בצע' }) && !chosenNewMail({ thread_checked: 'no thread: x' })
+          && ownerChoseNewMail([{ text: 'בצע' }]) && ownerChoseNewMail([{ text: 'מה עם זה?' }, { text: 'כן, בצע: מייל חדש' }]) && ownerChoseNewMail([{ title: 'בצע.' }])
+          && !ownerChoseNewMail([]) && !ownerChoseNewMail(null) && !ownerChoseNewMail([{ text: 'לבצע את זה מחר?' }]) && !ownerChoseNewMail([{ text: 'מה המצב' }]));
+        const src = (await import('fs')).readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
+        const md = src.slice(src.indexOf("body.op === 'mail_draft'"), src.indexOf("body.op === 'mail_draft'") + 2500);
+        check('retro 02/11/2026 (a): mail_draft reads owner_in and refuses without his בצע', /chosenNewMail\(body\)/.test(md) && /event_type=eq\.owner_in&channel=in\.\(whatsapp,chat\)/.test(md) && /ownerChoseNewMail\(/.test(md));
+      }
       { // 01/11/2026: the weekly check that the branches' controlled forms still exist
         const { formsVerdict } = await import('./_build/routine-db.mjs');
         const { DOMAIN_FORMS } = await import('./_build/_domains.mjs');
@@ -610,6 +636,31 @@ const callIn = async (body) => {
       const i = src.indexOf("if (body.op === 'wa_file')"), seg = src.slice(i, i + 4000);
       const meta = seg.indexOf("?select=size,file'"), content = seg.indexOf(":/content'");
       check('wa_file: the size comes from the item before the content is read, and big = no read', i > 0 && meta > 0 && content > meta && /Number\(mj\.size\) <= DOC_MAX/.test(seg) && /m\.ok && !big \? await fetch/.test(seg)); }
+    { // retro 02/11/2026 (b): the same order run through the handler, not only read in its source
+      const real = globalThis.fetch, seen = [];
+      let size = 20 * 1024 * 1024;
+      globalThis.fetch = async (u, o) => {
+        const url = String(u);
+        if (url.includes('/rest/v1/notification_prefs')) return new Response(JSON.stringify([{ prefs: { trustee_hazard: { whatsapp_to: '972500000000' } } }]), { status: 200 });
+        if (url.startsWith('https://graph.microsoft.com/') && url.includes('/drive/root:/')) {
+          seen.push(url.includes(':/content') ? 'content' : 'meta');
+          if (url.includes(':/content')) return new Response(new Uint8Array([37, 80, 68, 70]), { status: 200 });
+          return new Response(JSON.stringify({ size, file: {} }), { status: 200 });
+        }
+        if (url.startsWith('https://graph.facebook.com/')) { seen.push('send'); return new Response(JSON.stringify({ id: 'm1', messages: [{ id: 'w1' }] }), { status: 200 }); }
+        return real(u, o);
+      };
+      try {
+        const E = { ...ENV, META_PHONE_NUMBER_ID: '1', META_ACCESS_TOKEN: 't' };
+        const r1 = await call({ op: 'wa_file', agent: 'routine-wa-assistant', paths: ['a/big.pdf'] }, 'k-123', 'POST', E);
+        const bigSeen = seen.splice(0);
+        check('wa_file (run): a file over DOC_MAX is refused after the size read, its content never read and nothing sent',
+          r1.json.sent && r1.json.sent[0].error === 'size' && bigSeen.join() === 'meta', { j: r1.json, bigSeen });
+        size = 1000;
+        await call({ op: 'wa_file', agent: 'routine-wa-assistant', paths: ['a/small.pdf'] }, 'k-123', 'POST', E);
+        check('wa_file (run): a small file: the size first, then the content', seen[0] === 'meta' && seen[1] === 'content', seen);
+      } finally { globalThis.fetch = real; }
+    }
     { const { workerJobAdd, workerJobDone, workerFireText, WORKERS, WORKER_FIRE_HEAD } = await import('./_build/routine-db.mjs');
       const now = '2026-10-21T16:00:00.000Z', task = '\u05dc\u05d1\u05d3\u05d5\u05e7 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05de\u05d0\u05dc\u05e2\u05d3';
       const a = workerJobAdd('[]', { agent: 'routine-wa-assistant', worker: WORKERS[2], task }, now);
@@ -904,6 +955,15 @@ const callIn = async (body) => {
     reset();
     x = await call({ ...base, parent: '07_env/missing' });
     check('parent that does not exist: refused, nothing created', !x.json.ok && /parent 404/.test(x.json.error) && Object.keys(drive).length === 3, x.json);
+    { // retro 02/11/2026 (b): the Claude Log wrapper run through onRequest, not a regex on its source
+      const { CLAUDE_LOG_Q } = await import('./_build/_claudelog.mjs');
+      const qn = () => { try { return JSON.parse(state[CLAUDE_LOG_Q] || '[]').length; } catch (e) { return -1; } };
+      reset(); const n0 = qn(); const ok1 = await call({ ...base, name: 'logq1' }); const n1 = qn();
+      const bad = await call({ ...base, parent: '07_env/missing' }); const n2 = qn();
+      check('Claude Log (run, retro 02/11/2026 (b)): a write that answers ok:true queues one line, an ok:false answer with status 200 queues none',
+        ok1.json.ok && n1 === n0 + 1 && bad.status === 200 && !bad.json.ok && n2 === n1, { n0, n1, n2, bad: bad.status });
+      reset();
+    }
     x = await call({ ...base, parent: PAR + '/a.pdf' });
     check('parent that is a file: refused', !x.json.ok && x.json.error === 'parent is not a folder', x.json);
     check('parent with .., empty, too deep, in the old-versions / to-delete / ARCHIVE folders, the mail inbox or the request folder: refused',
@@ -1121,7 +1181,9 @@ const callIn = async (body) => {
       { // cal_invite_ask: the server asks, only his tap sends (26/10/2026, 15:54: the assistant's own cal_invite was blocked)
         const ask = Object.assign({}, inv, { op: 'cal_invite_ask', who: 'Shlomi, Slava' }); delete ask.approved;
         puts = []; state[CAL_INVITE_ASK_KEY] = undefined;
-        const z = await call(ask);
+        const z0 = await call(ask);
+        check('cal_invite_ask: a question that did not go out (WhatsApp not configured) keeps nothing (retro 27/10/2026 (c))', z0.json.error === 'whatsapp not configured' && state[CAL_INVITE_ASK_KEY] === undefined, z0.json);
+        const z = await callSent(ask);
         const st = JSON.parse(state[CAL_INVITE_ASK_KEY] || 'null');
         check('cal_invite_ask: no file written, the invite kept with an 8-char key, nothing approved', z.json && puts.length === 0 && st && /^[a-z0-9]{8}$/.test(st.k) && st.inv.subject === 'Annual training' && !('approved' in st.inv), { z: z.json, st });
         check('cal_invite_ask refuses approved (only his tap approves) and a bad invite', (await call(Object.assign({}, ask, { approved: '\u05d1\u05e6\u05e2' }))).status === 400 && (await call(Object.assign({}, ask, { to: '' }))).status === 400);
@@ -1220,7 +1282,9 @@ const callIn = async (body) => {
     { // cal_move_ask: the server asks, only his tap moves (26/10/2026 retro)
       const ask = { op: 'cal_move_ask', agent: 'routine-wa-assistant', why: 'course day moved', id: ID, subject: 'x course', start: D + 'T08:00', end: D + 'T15:00', was: D + 'T09:00', who: 'Shlomi, Slava' };
       puts = []; state[CAL_MOVE_ASK_KEY] = undefined;
-      const z = await call(ask);
+      const z0 = await call(ask);
+      check('cal_move_ask: a question that did not go out keeps nothing (retro 27/10/2026 (c))', z0.json.error === 'whatsapp not configured' && state[CAL_MOVE_ASK_KEY] === undefined, z0.json);
+      const z = await callSent(ask);
       const st = JSON.parse(state[CAL_MOVE_ASK_KEY] || 'null');
       check('cal_move_ask: no file written, the move kept with an 8-char key, nothing approved', z.json && puts.length === 0 && st && /^[a-z0-9]{8}$/.test(st.k) && st.mv.id === ID && st.mv.start === D + 'T08:00' && !('approved' in st.mv) && STATE_READ.indexOf(CAL_MOVE_ASK_KEY) >= 0, { z: z.json, st });
       check('cal_move_ask refuses approved, a bad was, a past day and an id in who', (await call(Object.assign({}, ask, { approved: '\u05d1\u05e6\u05e2' }))).status === 400 && (await call(Object.assign({}, ask, { was: D + ' 09:00' }))).status === 400 && (await call(Object.assign({}, ask, { start: '2020-01-01T08:00', end: '2020-01-01T09:00' }))).status === 400 && (await call(Object.assign({}, ask, { who: 'AB1234567' }))).status === 400 && !puts.length);
@@ -1355,9 +1419,11 @@ const callIn = async (body) => {
   {
     rows.tour_hazards = [{ id: 'th-12', n: 12, descr: 'נקודות צביטה חשופות', loc: 'מסוע אריזה', s: 'פתוח' }, { id: 'th-3', n: 3, descr: 'x', s: 'סגור' }];
     delete state[TOUR_CLOSE_KEY];
-    const a = await call({ op: 'tour_close_ask', agent: 'routine-wa-assistant', id: 'th-12', note: 'נבדק במקום, המגנים הותקנו' });
+    const a0 = await call({ op: 'tour_close_ask', agent: 'routine-wa-assistant', id: 'th-12', note: 'נבדק במקום, המגנים הותקנו' });
+    check('tour_close_ask: a question that did not go out keeps nothing (retro 27/10/2026 (c))', a0.json.error === 'whatsapp not configured' && !state[TOUR_CLOSE_KEY], a0.json);
+    const a = await callSent({ op: 'tour_close_ask', agent: 'routine-wa-assistant', id: 'th-12', note: 'נבדק במקום, המגנים הותקנו' });
     const st = state[TOUR_CLOSE_KEY] && JSON.parse(state[TOUR_CLOSE_KEY]);
-    check('an open finding: the request kept (id, note), then the question goes out as wa_me (here: WhatsApp not configured)', st && st.id === 'th-12' && /המגנים/.test(st.note) && a.json.error === 'whatsapp not configured' && rows.tour_hazards[0].s === 'פתוח', { a: a.json, st });
+    check('an open finding: the question goes out as wa_me, then the request is kept (id, note); nothing closed by the ask', st && st.id === 'th-12' && /המגנים/.test(st.note) && a.json.ok === true && rows.tour_hazards[0].s === 'פתוח', { a: a.json, st });
     const b = await call({ op: 'tour_close_ask', agent: 'routine-wa-assistant', id: 'th-3', note: 'נבדק במקום, תקין' });
     check('a closed finding, a bad id, a short note, an extra field: refused; nothing closed by the ask itself', !b.json.ok && /already closed/.test(b.json.error)
       && (await call({ op: 'tour_close_ask', agent: 'a-b', id: '12', note: 'נבדק במקום' })).status === 400 && (await call({ op: 'tour_close_ask', agent: 'a-b', id: 'th-12', note: 'x' })).status === 400
@@ -1377,9 +1443,12 @@ const callIn = async (body) => {
   {
     rows.inc = [{ id: 'acc26-28', dt: '2026-02-26', dept: '\u05de\u05d7\u05e1\u05df', d: '\u05de\u05db\u05d4 \u05d1\u05d9\u05d3', s: '\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9' }];
     delete state[DEL_ASK_KEY];
-    const a = await call({ op: 'del_ask', agent: 'routine-wa-assistant', table: 'inc', id: 'acc26-28', why: '\u05e2\u05d5\u05d1\u05d3 \u05e9\u05e2\u05d6\u05d1, \u05de\u05d9\u05db\u05d0\u05dc: \u05dc\u05d0 \u05de\u05d5\u05e1\u05d9\u05e4\u05d9\u05dd' });
+    const dq = { op: 'del_ask', agent: 'routine-wa-assistant', table: 'inc', id: 'acc26-28', why: '\u05e2\u05d5\u05d1\u05d3 \u05e9\u05e2\u05d6\u05d1, \u05de\u05d9\u05db\u05d0\u05dc: \u05dc\u05d0 \u05de\u05d5\u05e1\u05d9\u05e4\u05d9\u05dd' };
+    const a0 = await call(dq);
+    check('del_ask: a question that did not go out keeps nothing (retro 27/10/2026 (c))', a0.json.error === 'whatsapp not configured' && !state[DEL_ASK_KEY], a0.json);
+    const a = await callSent(dq);
     const st = state[DEL_ASK_KEY] && JSON.parse(state[DEL_ASK_KEY]);
-    check('a row: the request kept with a random key, then the question goes out as wa_me; nothing deleted by the ask', st && /^[a-z0-9]{8}$/.test(st.k) && st.table === 'inc' && st.id === 'acc26-28' && a.json.error === 'whatsapp not configured' && rows.inc.length === 1, { a: a.json, st });
+    check('a row: the question goes out as wa_me, then the request is kept with a random key; nothing deleted by the ask', st && /^[a-z0-9]{8}$/.test(st.k) && st.table === 'inc' && st.id === 'acc26-28' && a.json.ok === true && rows.inc.length === 1, { a: a.json, st });
     const bad = async (b) => (await call(Object.assign({ op: 'del_ask', agent: 'routine-wa-assistant', table: 'inc', id: 'acc26-28', why: '\u05e2\u05d5\u05d1\u05d3 \u05e9\u05e2\u05d6\u05d1' }, b))).status === 400;
     check('ncr, ncr_ai, trustee_reports or any table not on the list, a bad id, a short why, an extra field, a missing row: refused',
       await bad({ table: 'ncr' }) && await bad({ table: 'ncr_ai' }) && await bad({ table: 'trustee_reports' }) && await bad({ table: 'emp' }) && await bad({ id: "a'b" }) && await bad({ why: 'x' }) && await bad({ s: 'x' }) && await bad({ id: 'nope' })
@@ -1405,9 +1474,12 @@ const callIn = async (body) => {
     const ROW = { id: 'acc26-28', dt: '2026-02-26', dept: 'x', d: 'y', s: 'z' };
     state[UNDO_KEY] = JSON.stringify([{ table: 'inc', row: ROW, why: 'w', at: '2026-10-28T17:59:00Z' }]);
     delete state[UNDO_ASK_KEY]; rows.inc = [];
-    const a = await call({ op: 'undo_ask', agent: 'routine-wa-assistant', table: 'inc', id: 'acc26-28', why: 'Michael asked to bring it back' });
+    const uq = { op: 'undo_ask', agent: 'routine-wa-assistant', table: 'inc', id: 'acc26-28', why: 'Michael asked to bring it back' };
+    const a0 = await call(uq);
+    check('undo_ask: a question that did not go out keeps nothing (retro 27/10/2026 (c))', a0.json.error === 'whatsapp not configured' && !state[UNDO_ASK_KEY], a0.json);
+    const a = await callSent(uq);
     const st = state[UNDO_ASK_KEY] && JSON.parse(state[UNDO_ASK_KEY]);
-    check('undo_ask: a kept row that is gone: the request kept with a random key, the question goes out as wa_me, nothing inserted', st && /^[a-z0-9]{8}$/.test(st.k) && st.table === 'inc' && st.id === 'acc26-28' && a.json.error === 'whatsapp not configured' && rows.inc.length === 0, { a: a.json, st });
+    check('undo_ask: a kept row that is gone: the question goes out as wa_me, then the request is kept with a random key, nothing inserted', st && /^[a-z0-9]{8}$/.test(st.k) && st.table === 'inc' && st.id === 'acc26-28' && a.json.ok === true && rows.inc.length === 0, { a: a.json, st });
     rows.inc = [ROW];
     const ex = await call({ op: 'undo_ask', agent: 'routine-wa-assistant', table: 'inc', id: 'acc26-28', why: 'Michael asked to bring it back' });
     check('undo_ask: the row is in the table now = refused', ex.json.ok === false && /in the table now/.test(ex.json.error), ex.json);

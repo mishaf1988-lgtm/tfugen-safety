@@ -112,6 +112,7 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   let raw = msgBody(OWNER, 'wamid.A', 'מה המצב?');
   check('an unsigned POST is refused', (await post(raw)).status === 403 && fires.length === 0);
   check('a POST signed with another secret is refused', (await post(raw, await sign(raw, 'other'))).status === 403 && fires.length === 0);
+  check('a wrong secret is noted as sig false', state.wa_hook_last && state.wa_hook_last.sig === false && state.wa_hook_last.secret_set === true, state.wa_hook_last);
   const r1 = await post(raw, await sign(raw, ENV.META_APP_SECRET));
   check('Michael\'s message opens the window: wa_owner_in_at noted', !!state.wa_owner_in_at && Date.parse(state.wa_owner_in_at) === 1792400000 * 1000, state.wa_owner_in_at);
   check('Michael\'s signed message fires the assistant once', r1.status === 200 && fires.length === 1, fires);
@@ -136,7 +137,7 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   check('the last call is noted without number or text', state.wa_hook_last && state.wa_hook_last.sig === true && !JSON.stringify(state.wa_hook_last).includes(OWNER), state.wa_hook_last);
   const bad = msgBody(OWNER, 'wamid.S', 'x');
   await post(bad, await sign(bad, 'wrong'));
-  check('a wrong secret is noted as sig false', state.wa_hook_last && state.wa_hook_last.sig === false && state.wa_hook_last.secret_set === true, state.wa_hook_last);
+  check('retro 19/10/2026 (c): a second wrong signature within 10 minutes writes nothing (no row per bad request)', state.wa_hook_last && state.wa_hook_last.sig === true, state.wa_hook_last);
   const ok2 = msgBody(OWNER, 'wamid.F', 'secret words');
   await post(ok2, await sign(ok2, ENV.META_APP_SECRET));
   check('a fire is noted with its status, not the text', state.wa_hook_last && state.wa_hook_last.fired === 1 && state.wa_hook_last.fire_status === 200 && !JSON.stringify(state.wa_hook_last).includes('secret words'), state.wa_hook_last);
@@ -330,6 +331,11 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
     check('learn replaces: when the new text is already open, the old line is still retired', dup.ok && dup.id === dup0.id && JSON.parse(state.assistant_learned).find((x) => /March/.test(x.text)).status === 'replaced', dup);
     const byId = await L({ kind: 'correction', text: 'the crane inspection is every 12 months (Michael corrected)', replaces: nb.find((x) => /crane/.test(x.text)).id });
     check('learn replaces: an id works too', byId.ok && JSON.parse(state.assistant_learned).find((x) => /14 months/.test(x.text)).status === 'replaced', byId);
+    { // retro 03/11/2026 (b): by id too, never another agent's line
+      const qid = JSON.parse(state.assistant_learned).find((x) => /quality line/.test(x.text)).id;
+      const otherId = await L({ kind: 'correction', text: 'compressors every 3 years (id of another agent)', replaces: qid });
+      check('learn replaces: an id of another agent\'s line is refused and that line stays new', otherId.ok === false && JSON.parse(state.assistant_learned).find((x) => x.id === qid).status === 'new', otherId);
+    }
     // pairs (lessons-gate "\u05d6\u05d5\u05d2\u05d5\u05ea:"): the id pattern of replaces, 3 real ids that must match and 3 near ids that must not
     const ids = [];
     for (const n of ['one', 'two', 'three']) ids.push((await L({ kind: 'fact', text: 'pair line number ' + n + ' for the id test' })).id);
