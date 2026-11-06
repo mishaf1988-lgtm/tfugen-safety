@@ -881,7 +881,8 @@ export function draftThreadGate(b) {
   // 01/11/2026 (Michael in the questionnaire: "do it: a new mail with the file"; flow 3 failed twice on a thread reply with
   // an attachment): a new mail on purpose, when Michael chose it, quoted with his "\u05d1\u05e6\u05e2". Never a made-up "no thread".
   // 06/11/2026 (retro 02/11/2026 (a)): the words alone could be written by any run; the handler also needs a real
-  // "\u05d1\u05e6\u05e2" of Michael in owner_in within CHOSE_NEW_MAIL_MS (ownerChoseNewMail), or the draft is refused.
+  // "\u05d1\u05e6\u05e2" of Michael in owner_in within CHOSE_NEW_MAIL_MS (ownerChoseNewMail), or the draft is refused. Only his
+  // own channels (whatsapp, chat): office_ask writes owner_in in channel office with the caller's text (security review).
   if (chosenNewMail(b)) return null;
   return /^no thread:\s*\S.{9,}/i.test(String(b.thread_checked || '').trim()) ? null
     : 'thread_checked required: search the mailbox (all folders) for an existing thread with these recipients or this subject, right before the draft. Found: pass reply_to (the id of its last mail) so the draft stays in the thread with who approved. None: pass "thread_checked":"no thread: <what you searched, HH:MM UTC>" (29/10/2026: a purchase order went out as a new mail without its thread)';
@@ -2979,7 +2980,7 @@ async function routineDbHandle(context) {
       const threadGate = draftThreadGate(body);
       if (threadGate) return jsonResp({ ok: false, error: threadGate }, 400, {});
       if (chosenNewMail(body) && String(body.agent || '') === 'routine-wa-assistant') {
-        const or = await fetch(url + '/rest/v1/notifications_log?select=ts,text:payload->>text,title:payload->>title&event_type=eq.owner_in&ts=gte.' + encodeURIComponent(new Date(Date.now() - CHOSE_NEW_MAIL_MS).toISOString()) + '&order=ts.desc&limit=50', { headers: h, signal: tmo(SB_MS) }).then((x) => (x.ok ? x.json() : null)).catch(() => null);
+        const or = await fetch(url + '/rest/v1/notifications_log?select=ts,text:payload->>text,title:payload->>title&event_type=eq.owner_in&channel=in.(whatsapp,chat)&ts=gte.' + encodeURIComponent(new Date(Date.now() - CHOSE_NEW_MAIL_MS).toISOString()) + '&order=ts.desc&limit=50', { headers: h, signal: tmo(SB_MS) }).then((x) => (x.ok ? x.json() : null)).catch(() => null);
         if (!ownerChoseNewMail(or)) return jsonResp({ ok: false, error: 'thread_checked "michael chose a new mail": no "\u05d1\u05e6\u05e2" from Michael in the last 24 hours. Ask him on WhatsApp with choices ["\u05d1\u05e6\u05e2","\u05dc\u05d0"] (a new mail without the thread), or reply in the thread with reply_to (retro 02/11/2026)' }, 400, {});
       }
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});

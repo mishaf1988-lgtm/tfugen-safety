@@ -515,7 +515,7 @@ const callIn = async (body) => {
           && !ownerChoseNewMail([]) && !ownerChoseNewMail(null) && !ownerChoseNewMail([{ text: 'לבצע את זה מחר?' }]) && !ownerChoseNewMail([{ text: 'מה המצב' }]));
         const src = (await import('fs')).readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
         const md = src.slice(src.indexOf("body.op === 'mail_draft'"), src.indexOf("body.op === 'mail_draft'") + 2500);
-        check('retro 02/11/2026 (a): mail_draft reads owner_in and refuses without his בצע', /chosenNewMail\(body\)/.test(md) && /event_type=eq\.owner_in/.test(md) && /ownerChoseNewMail\(/.test(md));
+        check('retro 02/11/2026 (a): mail_draft reads owner_in and refuses without his בצע', /chosenNewMail\(body\)/.test(md) && /event_type=eq\.owner_in&channel=in\.\(whatsapp,chat\)/.test(md) && /ownerChoseNewMail\(/.test(md));
       }
       { // 01/11/2026: the weekly check that the branches' controlled forms still exist
         const { formsVerdict } = await import('./_build/routine-db.mjs');
