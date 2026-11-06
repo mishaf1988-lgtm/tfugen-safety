@@ -2135,7 +2135,7 @@ async function routineDbHandle(context) {
     }
     let live = null;
     try {
-      const lr = await stateRead(['drafts_id_live']).catch(() => []);
+      const lr = await stateRead(['drafts_id_live']); // a failed read throws to the catch below: no write, no overwrite (security review 06/11/2026)
       let lv = lr && lr[0] && lr[0].value; if (typeof lv === 'string') { try { lv = JSON.parse(lv); } catch (e) { lv = null; } }
       live = lv && Date.parse(lv.first_at) > 0 ? Date.parse(lv.first_at) : null;
       if (!live) {
@@ -2145,7 +2145,7 @@ async function routineDbHandle(context) {
         if (ts.length) {
           live = ts[0];
           const iso = new Date(live).toISOString();
-          await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+          await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=ignore-duplicates,return=minimal' }, signal: tmo(SB_MS),
             body: JSON.stringify([{ key: 'drafts_id_live', value: JSON.stringify({ first_at: iso, seen_at: new Date().toISOString() }), updated_at: new Date().toISOString() }]) }).catch(() => null);
         }
       }
