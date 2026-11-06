@@ -218,6 +218,7 @@ check('/chat-sw.js is public (the browser fetches it without a login)', mw.inclu
 const rdb = readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
 const wa = rdb.slice(rdb.indexOf("if (body.op === 'wa_me')"), rdb.indexOf("if (body.op === 'wa_review')"));
 const waSrc = readFileSync(new URL('../../functions/_wa.js', import.meta.url), 'utf8');
-check('every message to Michael (sendToOwner, sendDocToOwner) is logged as wa_out and pushed, sent or refused; wa_me reports the count', /export async function sendToOwner[\s\S]{0,800}noteOut\(/.test(waSrc) && /export async function sendDocToOwner[\s\S]{0,700}noteOut\(/.test(waSrc) && /pushOwner\(env, sbUrl, t\)/.test(waSrc) && /push: ps\.sent/.test(wa) && /ps = \{ sent: r\.push/.test(wa));
+// 06/11/2026: the weekend hold (weekendHold) sits before the send; a held message is logged at the Sunday list, not as wa_out
+check('every message to Michael (sendToOwner, sendDocToOwner) is logged as wa_out and pushed, sent or refused; wa_me reports the count', /export async function sendToOwner[\s\S]{0,1200}noteOut\(/.test(waSrc) && /export async function sendDocToOwner[\s\S]{0,1100}noteOut\(/.test(waSrc) && /pushOwner\(env, sbUrl, t\)/.test(waSrc) && /push: ps\.sent/.test(wa) && /ps = \{ sent: r\.push/.test(wa));
 console.log(`\npush-test: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
