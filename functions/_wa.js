@@ -598,12 +598,13 @@ export async function weekendHold(env, kind, text, ref, nowMs) {
     return w.written ? { ok: true, via: 'held', held: true, push: 0 } : null;
   } catch (e) { return null; }
 }
+// opts.repeat (06/11/2026, retro 27/10/2026 (b)): every send is its own event (a trustee report), never a duplicate.
 export async function sendToOwner(env, to, text, opts) {
   if (!String(text || '').trim()) return { ok: false, error: 'empty text' };
   const held = await weekendHold(env, opts && opts.kind, ilTimes(String(text).trim()), opts && opts.ref);
   if (held) return held;
   // a question with buttons is never dropped as a duplicate: its pending action is keyed to this very send (27/10/2026 retro)
-  if (!o_choices(opts).length && await sentLately(env, ilTimes(String(text).trim()))) return { ok: true, via: 'dup', duplicate: true, push: 0 };
+  if (!o_choices(opts).length && !(opts && opts.repeat) && await sentLately(env, ilTimes(String(text).trim()))) return { ok: true, via: 'dup', duplicate: true, push: 0 };
   const r = (await chatOnly(env)) ? { ok: true, via: 'chat' } : await sendToOwnerRaw(env, to, text, opts);
   if (r.error === 'empty text') return r;
   // the buttons too, so the chat shows the same choices (a tap there sends "1. ..." like a tap on WhatsApp)

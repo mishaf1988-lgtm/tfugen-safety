@@ -69,6 +69,11 @@ export function hasNewer(rows, wamid, myMs) {
   return r.some((x) => x && x.event_type === 'owner_in' && x.payload && x.payload.wamid && x.payload.wamid !== wamid && !x.payload.choice
     && !fast.has(x.payload.wamid) && Date.parse(x.ts) > myMs && Date.parse(x.ts) - myMs <= JOIN_MS);
 }
+// 06/11/2026 (retro 19/10/2026 (c)): any request with some signature header but a wrong signature wrote this row, so
+// anyone could keep the database busy. The note is for the developer: once per BAD_SIG_NOTE_MS per isolate is enough.
+export const BAD_SIG_NOTE_MS = 10 * 60 * 1000;
+let badSigNoteAt = 0;
+export function badSigNoteDue(lastMs, nowMs) { return !lastMs || nowMs - lastMs >= BAD_SIG_NOTE_MS; }
 async function note(env, value) {
   if (!env.SUPABASE_SERVICE_ROLE_KEY) return;
   try {
@@ -80,6 +85,7 @@ async function note(env, value) {
 // recentLine moved to _wa.js (23/10/2026) so routine-db (office_ask) uses it too; re-exported for the tests.
 export { recentLine, RECENT_H, RECENT_N, RECENT_MAX } from '../_wa.js';
 import { domainLine } from '../_domains.js';
+import { stateCas } from '../_cas.js';
 // at = when the server logged the message, to the millisecond (atMs), not Meta's timestamp: 29/10/2026 13:09, three
 // photos and a line sent together carried the same second, two runs passed the same answers, and overlapReply took
 // the second run's reply for the first run's own message, so both answers went out (13:10 and 13:11).
@@ -129,23 +135,31 @@ async function sbJson(env, path, init) {
 }
 
 // Meta retries a webhook it thinks failed: the same message id is handled once.
+// 06/11/2026 (retro 19/10/2026 (b)): the list was read and written back whole, so two webhooks at once could drop each
+// other's id (and forget could drop a newer one). Both now write through stateCas: only over the version read, else again.
+// Pure: raw = the list as stored; { seen: true } when id is in it, else { value } with id added (the newest SEEN_MAX).
+export function seenAdd(raw, id) {
+  const seen = Array.isArray(raw) ? raw : [];
+  if (seen.indexOf(id) >= 0) return { seen: true };
+  return { value: seen.concat([id]).slice(-SEEN_MAX) };
+}
+export function seenDrop(raw, id) {
+  const seen = Array.isArray(raw) ? raw : [];
+  return seen.indexOf(id) >= 0 ? { value: seen.filter((x) => x !== id) } : { write: false };
+}
+const sbH = (env) => { const k = env.SUPABASE_SERVICE_ROLE_KEY; return { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }; };
 async function firstTime(env, id) {
-  const rows = await sbJson(env, 'server_state?key=eq.' + SEEN_KEY + '&select=value');
-  const seen = (rows && rows[0] && Array.isArray(rows[0].value)) ? rows[0].value : [];
-  if (seen.indexOf(id) >= 0) return false;
-  const value = seen.concat([id]).slice(-SEEN_MAX);
-  await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify([{ key: SEEN_KEY, value, updated_at: new Date().toISOString() }]) });
+  let dup = false;
+  const r = await stateCas(sbFrom(env), sbH(env), SEEN_KEY, (raw) => { const a = seenAdd(raw, id); dup = !!a.seen; return a.seen ? { write: false } : a; }, () => tmo(SB_TIMEOUT_MS));
+  if (dup) return false;
+  if (!r.written) throw new Error('seen list not written' + (r.status ? ' ' + r.status : ''));
   return true;
 }
 
 // A fire that failed must not keep the message marked as seen: Meta gets 200 either way and never retries.
 async function forget(env, id) {
   try {
-    const rows = await sbJson(env, 'server_state?key=eq.' + SEEN_KEY + '&select=value');
-    const seen = (rows && rows[0] && Array.isArray(rows[0].value)) ? rows[0].value : [];
-    await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify([{ key: SEEN_KEY, value: seen.filter((x) => x !== id), updated_at: new Date().toISOString() }]) });
+    await stateCas(sbFrom(env), sbH(env), SEEN_KEY, (raw) => seenDrop(raw, id), () => tmo(SB_TIMEOUT_MS));
   } catch (e) { /* the note below still shows fire_status */ }
 }
 
@@ -155,9 +169,15 @@ async function aboutAlert(env, wamid) {
     const rows = await sbJson(env, 'notifications_log?select=event_type,payload,ts&payload->>wamid=eq.' + encodeURIComponent(wamid) + '&limit=1');
     const r = rows && rows[0];
     if (!r) return '';
-    const p = r.payload || {};
-    return String(r.event_type || '') + ' | ' + String(p.title || '').slice(0, 200) + (p.id ? ' | id ' + String(p.id).slice(0, 64) : '') + (p.ref ? ' | ref ' + String(p.ref).slice(0, 40) : '') + ' | ' + String(r.ts || '');
+    return aboutLine(r);
   } catch (e) { return ''; }
+}
+// 06/11/2026 (retro 27/10/2026 (d)): the title of a trustee report is free text; a "| id x |" inside it could become the
+// id hazardRef reads when the row has no id of its own. The "|" of the free fields is replaced, so only p.id and p.ref
+// make those parts. Pure, tested.
+export function aboutLine(r) {
+  const p = (r && r.payload) || {}, f = (v, n) => String(v || '').replace(/\|/g, '/').slice(0, n);
+  return f(r && r.event_type, 40) + ' | ' + f(p.title, 200) + (p.id ? ' | id ' + f(p.id, 64) : '') + (p.ref ? ' | ref ' + f(p.ref, 40) : '') + ' | ' + f(r && r.ts, 40);
 }
 
 // The fast lane (20/10/2026, Michael in the questionnaire: "do it: a fast lane in the server"; measured
@@ -690,7 +710,9 @@ async function handle(env, raw) {
     if (!owner || m.from !== owner) continue;
     seen.from_owner++;
     await noteOwnerIn(env, sbFrom(env), m.ts ? new Date(m.ts * 1000).toISOString() : new Date().toISOString());
-    if (!(await firstTime(env, m.id))) continue;
+    // one message whose seen-list write failed does not stop the others in this webhook (review 06/11/2026)
+    let first = false; try { first = await firstTime(env, m.id); } catch (e) { await note(env, { sig: true, seen_error: String((e && e.message) || e).slice(0, 80) }); continue; }
+    if (!first) continue;
     const tLog = Date.now(), myIso = new Date(tLog).toISOString();
     await logIn(env, m, myIso);
     // 20/10/2026 (Michael in the questionnaire: "do it: an immediate 'got it' from the server"): the
@@ -863,7 +885,7 @@ export async function onRequest(context) {
   const raw = await request.text();
   const sigHeader = request.headers.get('x-hub-signature-256') || '';
   if (!(await metaSigOk(raw, sigHeader, env.META_APP_SECRET))) {
-    if (sigHeader) { const n = note(env, { sig: false, secret_set: !!env.META_APP_SECRET }); if (context.waitUntil) context.waitUntil(n); else await n; }
+    if (sigHeader && badSigNoteDue(badSigNoteAt, Date.now())) { badSigNoteAt = Date.now(); const n = note(env, { sig: false, secret_set: !!env.META_APP_SECRET }); if (context.waitUntil) context.waitUntil(n); else await n; }
     return new Response('forbidden', { status: 403 });
   }
   if (!assistantFire(env) || !env.SUPABASE_SERVICE_ROLE_KEY) { await note(env, { sig: true, fire_configured: false }); return new Response('ok', { status: 200 }); }

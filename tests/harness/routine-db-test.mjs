@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { pdfHasFont } from './_build/_ocr.mjs';
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, ilInstant, incFilePrefix, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, refusesWithoutFlow, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, odPdfCheck, OD_PUT_MAX, odArchiveCheck, archiveStampName, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrTxtName, taskAddCheck, TASK_ADD_MAX, taskOpenDup, TASK_SOURCES, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT, isoSwapRequest, isoUpCheck, OD_ISO_SWAP, ISO_SITE_URL, mailGotCheck, mailGotList, MAIL_GOT_MAX } from './_build/routine-db.mjs';
+import { secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, ilInstant, incFilePrefix, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, cardBefore, CARD_BEFORE_N, linkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, refusesWithoutFlow, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, odPdfCheck, OD_PUT_MAX, odArchiveCheck, archiveStampName, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrTxtName, taskAddCheck, TASK_ADD_MAX, taskOpenDup, TASK_SOURCES, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT, isoSwapRequest, isoUpCheck, OD_ISO_SWAP, ISO_SITE_URL, mailGotCheck, mailGotList, MAIL_GOT_MAX } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -76,6 +76,17 @@ let chatLine = () => [];
 const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   const r = await onRequest({ request: new Request('https://x/api/routine-db', { method, headers: { 'x-routine-key': key, 'content-type': 'application/json' }, body: method === 'POST' ? JSON.stringify(body) : undefined }), env });
   return { status: r.status, json: await r.json() };
+};
+// retro 27/10/2026 (c): an *_ask op keeps its pending action only after the question went out; this call sends it
+const callSent = async (body) => {
+  const real = globalThis.fetch;
+  globalThis.fetch = async (u, o) => {
+    const url = String(u);
+    if (url.includes('/rest/v1/notification_prefs')) return new Response(JSON.stringify([{ prefs: { trustee_hazard: { whatsapp_to: '972500000000' } } }]), { status: 200 });
+    if (url.startsWith('https://graph.facebook.com/') && (o || {}).method === 'POST') return new Response(JSON.stringify({ messages: [{ id: 'wamid.ask' }] }), { status: 200 });
+    return real(u, o);
+  };
+  try { return await call(body, 'k-123', 'POST', { ...ENV, META_PHONE_NUMBER_ID: '1', META_ACCESS_TOKEN: 't' }); } finally { globalThis.fetch = real; }
 };
 // cal_move / cal_invite run only from wa-hook, in process (26/10/2026 retro)
 const callIn = async (body) => {
@@ -1171,7 +1182,9 @@ const callIn = async (body) => {
       { // cal_invite_ask: the server asks, only his tap sends (26/10/2026, 15:54: the assistant's own cal_invite was blocked)
         const ask = Object.assign({}, inv, { op: 'cal_invite_ask', who: 'Shlomi, Slava' }); delete ask.approved;
         puts = []; state[CAL_INVITE_ASK_KEY] = undefined;
-        const z = await call(ask);
+        const z0 = await call(ask);
+        check('cal_invite_ask: a question that did not go out (WhatsApp not configured) keeps nothing (retro 27/10/2026 (c))', z0.json.error === 'whatsapp not configured' && state[CAL_INVITE_ASK_KEY] === undefined, z0.json);
+        const z = await callSent(ask);
         const st = JSON.parse(state[CAL_INVITE_ASK_KEY] || 'null');
         check('cal_invite_ask: no file written, the invite kept with an 8-char key, nothing approved', z.json && puts.length === 0 && st && /^[a-z0-9]{8}$/.test(st.k) && st.inv.subject === 'Annual training' && !('approved' in st.inv), { z: z.json, st });
         check('cal_invite_ask refuses approved (only his tap approves) and a bad invite', (await call(Object.assign({}, ask, { approved: '\u05d1\u05e6\u05e2' }))).status === 400 && (await call(Object.assign({}, ask, { to: '' }))).status === 400);
@@ -1221,6 +1234,24 @@ const callIn = async (body) => {
         let rp; try { rp = await call({ op: 'item_card', agent: 'routine-wa-assistant', q: '\u05de\u05d0\u05e8\u05d9\u05db\u05d9\u05dd' }); } finally { globalThis.fetch = prev; }
         check('item_card: a database read that fails is reported as partial and the next step says not to claim "none found" (28/10/2026 retro)', rp.json.ok && Array.isArray(rp.json.partial) && rp.json.partial.indexOf('equip_inspections') >= 0 && /read failed/.test(rp.json.next) && r.json.partial === undefined, rp.json); }
     }
+    { // 06/11/2026 (ideas-lab 21, the first trial: suppliers only): "last time" on a supplier card, by words only
+      const V = 'נגב אקולוגיה', E = 'sales@negev.example';
+      const S = { draftsText: [{ at: '2026-11-01T08:00:00Z', to: E, subject: 'RE: פינוי', body: 'שלום' }, { at: '2026-11-03T08:00:00Z', to: 'x@y.example', subject: 'other', body: 'other' }],
+        draftsMade: [{ at: '2026-11-01T08:00:30Z', to: E, subject: 'פינוי' }, { at: '2026-10-20T08:00:00Z', to: E, subject: 'הצעה' }],
+        quotes: { 'Q-eq-e7-261201': { stage: 'quote', sent: '2026-10-28', quote: '2026-11-02' }, 'Q-eq-e9-261201': { stage: 'sent', sent: '2026-11-05' } },
+        promises: [{ at: '2026-11-04T10:00:00Z', status: 'open', text: 'מעקב: טיוטה ל' + V }, { at: '2026-11-05T10:00:00Z', status: 'open', text: 'other' }] };
+      const b = cardBefore(S, V, [E], { e7: 'מיכל' }, CARD_BEFORE_N);
+      check('cardBefore: the newest 3 of drafts, quotes and promises about the supplier, by name or address; a quote only of the card\'s items; drafts_made of the same draft once', b.length === 3 && b[0].kind === 'promise' && b[1].kind === 'quote' && b[1].at === '2026-11-02' && b[1].item === 'מיכל' && b[2].kind === 'draft' && b[2].body === 'שלום'
+        && cardBefore(S, V, [E], {}, 10).filter((x) => x.kind === 'draft').length === 2 && cardBefore({}, V, [], {}, 3).length === 0 && cardBefore({ quotes: [] }, 'zz', [], null, 3).length === 0, b);
+      { const Q = { stage: 'sent', sent: '2026-11-01' }, ok = ['Q-eq-e7-261201', 'Q-dc-12-270115', 'Q-eq-a_b-261231'], no = ['Q-xx-e7-261201', 'Q-eq-e7-2612', 'eq-e7-261201'];
+        const n1 = (k) => cardBefore({ quotes: { [k]: Q } }, 'zz', [], { e7: 'a', 12: 'b', a_b: 'c' }, 3).length;
+        check('cardBefore pairs: a quote_track key Q-eq|dc-<id>-<YYMMDD> of a card item is read (3), anything else is not (3)', ok.every((k) => n1(k) === 1) && no.every((k) => n1(k) === 0), ok.concat(no).map(n1)); }
+      const keep = { ...state };
+      state.vendor_contacts = JSON.stringify([[V, E]]); state.drafts_text = JSON.stringify(S.draftsText); state.drafts_made = JSON.stringify(S.draftsMade); state.promises = JSON.stringify(S.promises);
+      let rv, rn; try { rv = await call({ op: 'item_card', agent: 'routine-wa-assistant', q: V }); rn = await call({ op: 'item_card', agent: 'routine-wa-assistant', q: 'שלום' }); } finally { state = keep; }
+      check('item_card on a supplier: "before" with the last events and the next step says to open with "בפעם הקודמת:"; not a supplier = no "before" (the trial is suppliers only)', rv.json.ok && Array.isArray(rv.json.before) && rv.json.before.length === 3 && rv.json.before[0].kind === 'promise' && /בפעם הקודמת/.test(rv.json.next)
+        && rn.json.ok && rn.json.before === undefined && !/בפעם/.test(rn.json.next), { v: rv.json.before, n: rn.json.before });
+    }
     { // 27/10/2026 (Michael: "I asked not to write the quote validity"): refused in wa_me and in a draft
       const V1 = '\u05e0\u05d2\u05d1 \u05d0\u05e7\u05d5\u05dc\u05d5\u05d2\u05d9\u05d4 (\u05d4\u05e6\u05e2\u05d4 \u05de\u05e2\u05d5\u05d3\u05db\u05e0\u05ea, \u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 29/10/2026): 23,500 \u05e9"\u05d7', V2 = '\u05d0\u05d1\u05e7\u05e9 \u05d4\u05d7\u05dc\u05d8\u05d4 \u05e2\u05d3 \u05d7\u05de\u05d9\u05e9\u05d9, \u05db\u05d9 \u05d6\u05d4 \u05de\u05d5\u05e2\u05d3 \u05d4\u05ea\u05d5\u05e7\u05e3 \u05e9\u05dc \u05d4\u05d4\u05e6\u05e2\u05d4.', OK = '\u05e0\u05d2\u05d1 \u05d0\u05e7\u05d5\u05dc\u05d5\u05d2\u05d9\u05d4: 23,500 \u05e9"\u05d7, \u05d5\u05e2\u05d5\u05d3 190 \u05e9"\u05d7 \u05dc\u05d8\u05d5\u05df \u05d1\u05d5\u05e6\u05d4.';
       check('quote validity: "the quote is valid until", "by Thursday, the validity date" are caught; a certificate valid until and a plain quote line are not', mentionsQuoteValidity(V1) && mentionsQuoteValidity(V2) && !mentionsQuoteValidity(OK) && !mentionsQuoteValidity('\u05ea\u05e2\u05d5\u05d3\u05ea \u05d4\u05db\u05d9\u05d5\u05dc \u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 04/2027.'));
@@ -1252,7 +1283,9 @@ const callIn = async (body) => {
     { // cal_move_ask: the server asks, only his tap moves (26/10/2026 retro)
       const ask = { op: 'cal_move_ask', agent: 'routine-wa-assistant', why: 'course day moved', id: ID, subject: 'x course', start: D + 'T08:00', end: D + 'T15:00', was: D + 'T09:00', who: 'Shlomi, Slava' };
       puts = []; state[CAL_MOVE_ASK_KEY] = undefined;
-      const z = await call(ask);
+      const z0 = await call(ask);
+      check('cal_move_ask: a question that did not go out keeps nothing (retro 27/10/2026 (c))', z0.json.error === 'whatsapp not configured' && state[CAL_MOVE_ASK_KEY] === undefined, z0.json);
+      const z = await callSent(ask);
       const st = JSON.parse(state[CAL_MOVE_ASK_KEY] || 'null');
       check('cal_move_ask: no file written, the move kept with an 8-char key, nothing approved', z.json && puts.length === 0 && st && /^[a-z0-9]{8}$/.test(st.k) && st.mv.id === ID && st.mv.start === D + 'T08:00' && !('approved' in st.mv) && STATE_READ.indexOf(CAL_MOVE_ASK_KEY) >= 0, { z: z.json, st });
       check('cal_move_ask refuses approved, a bad was, a past day and an id in who', (await call(Object.assign({}, ask, { approved: '\u05d1\u05e6\u05e2' }))).status === 400 && (await call(Object.assign({}, ask, { was: D + ' 09:00' }))).status === 400 && (await call(Object.assign({}, ask, { start: '2020-01-01T08:00', end: '2020-01-01T09:00' }))).status === 400 && (await call(Object.assign({}, ask, { who: 'AB1234567' }))).status === 400 && !puts.length);
@@ -1387,9 +1420,11 @@ const callIn = async (body) => {
   {
     rows.tour_hazards = [{ id: 'th-12', n: 12, descr: 'נקודות צביטה חשופות', loc: 'מסוע אריזה', s: 'פתוח' }, { id: 'th-3', n: 3, descr: 'x', s: 'סגור' }];
     delete state[TOUR_CLOSE_KEY];
-    const a = await call({ op: 'tour_close_ask', agent: 'routine-wa-assistant', id: 'th-12', note: 'נבדק במקום, המגנים הותקנו' });
+    const a0 = await call({ op: 'tour_close_ask', agent: 'routine-wa-assistant', id: 'th-12', note: 'נבדק במקום, המגנים הותקנו' });
+    check('tour_close_ask: a question that did not go out keeps nothing (retro 27/10/2026 (c))', a0.json.error === 'whatsapp not configured' && !state[TOUR_CLOSE_KEY], a0.json);
+    const a = await callSent({ op: 'tour_close_ask', agent: 'routine-wa-assistant', id: 'th-12', note: 'נבדק במקום, המגנים הותקנו' });
     const st = state[TOUR_CLOSE_KEY] && JSON.parse(state[TOUR_CLOSE_KEY]);
-    check('an open finding: the request kept (id, note), then the question goes out as wa_me (here: WhatsApp not configured)', st && st.id === 'th-12' && /המגנים/.test(st.note) && a.json.error === 'whatsapp not configured' && rows.tour_hazards[0].s === 'פתוח', { a: a.json, st });
+    check('an open finding: the question goes out as wa_me, then the request is kept (id, note); nothing closed by the ask', st && st.id === 'th-12' && /המגנים/.test(st.note) && a.json.ok === true && rows.tour_hazards[0].s === 'פתוח', { a: a.json, st });
     const b = await call({ op: 'tour_close_ask', agent: 'routine-wa-assistant', id: 'th-3', note: 'נבדק במקום, תקין' });
     check('a closed finding, a bad id, a short note, an extra field: refused; nothing closed by the ask itself', !b.json.ok && /already closed/.test(b.json.error)
       && (await call({ op: 'tour_close_ask', agent: 'a-b', id: '12', note: 'נבדק במקום' })).status === 400 && (await call({ op: 'tour_close_ask', agent: 'a-b', id: 'th-12', note: 'x' })).status === 400
@@ -1409,9 +1444,12 @@ const callIn = async (body) => {
   {
     rows.inc = [{ id: 'acc26-28', dt: '2026-02-26', dept: '\u05de\u05d7\u05e1\u05df', d: '\u05de\u05db\u05d4 \u05d1\u05d9\u05d3', s: '\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9' }];
     delete state[DEL_ASK_KEY];
-    const a = await call({ op: 'del_ask', agent: 'routine-wa-assistant', table: 'inc', id: 'acc26-28', why: '\u05e2\u05d5\u05d1\u05d3 \u05e9\u05e2\u05d6\u05d1, \u05de\u05d9\u05db\u05d0\u05dc: \u05dc\u05d0 \u05de\u05d5\u05e1\u05d9\u05e4\u05d9\u05dd' });
+    const dq = { op: 'del_ask', agent: 'routine-wa-assistant', table: 'inc', id: 'acc26-28', why: '\u05e2\u05d5\u05d1\u05d3 \u05e9\u05e2\u05d6\u05d1, \u05de\u05d9\u05db\u05d0\u05dc: \u05dc\u05d0 \u05de\u05d5\u05e1\u05d9\u05e4\u05d9\u05dd' };
+    const a0 = await call(dq);
+    check('del_ask: a question that did not go out keeps nothing (retro 27/10/2026 (c))', a0.json.error === 'whatsapp not configured' && !state[DEL_ASK_KEY], a0.json);
+    const a = await callSent(dq);
     const st = state[DEL_ASK_KEY] && JSON.parse(state[DEL_ASK_KEY]);
-    check('a row: the request kept with a random key, then the question goes out as wa_me; nothing deleted by the ask', st && /^[a-z0-9]{8}$/.test(st.k) && st.table === 'inc' && st.id === 'acc26-28' && a.json.error === 'whatsapp not configured' && rows.inc.length === 1, { a: a.json, st });
+    check('a row: the question goes out as wa_me, then the request is kept with a random key; nothing deleted by the ask', st && /^[a-z0-9]{8}$/.test(st.k) && st.table === 'inc' && st.id === 'acc26-28' && a.json.ok === true && rows.inc.length === 1, { a: a.json, st });
     const bad = async (b) => (await call(Object.assign({ op: 'del_ask', agent: 'routine-wa-assistant', table: 'inc', id: 'acc26-28', why: '\u05e2\u05d5\u05d1\u05d3 \u05e9\u05e2\u05d6\u05d1' }, b))).status === 400;
     check('ncr, ncr_ai, trustee_reports or any table not on the list, a bad id, a short why, an extra field, a missing row: refused',
       await bad({ table: 'ncr' }) && await bad({ table: 'ncr_ai' }) && await bad({ table: 'trustee_reports' }) && await bad({ table: 'emp' }) && await bad({ id: "a'b" }) && await bad({ why: 'x' }) && await bad({ s: 'x' }) && await bad({ id: 'nope' })
@@ -1437,9 +1475,12 @@ const callIn = async (body) => {
     const ROW = { id: 'acc26-28', dt: '2026-02-26', dept: 'x', d: 'y', s: 'z' };
     state[UNDO_KEY] = JSON.stringify([{ table: 'inc', row: ROW, why: 'w', at: '2026-10-28T17:59:00Z' }]);
     delete state[UNDO_ASK_KEY]; rows.inc = [];
-    const a = await call({ op: 'undo_ask', agent: 'routine-wa-assistant', table: 'inc', id: 'acc26-28', why: 'Michael asked to bring it back' });
+    const uq = { op: 'undo_ask', agent: 'routine-wa-assistant', table: 'inc', id: 'acc26-28', why: 'Michael asked to bring it back' };
+    const a0 = await call(uq);
+    check('undo_ask: a question that did not go out keeps nothing (retro 27/10/2026 (c))', a0.json.error === 'whatsapp not configured' && !state[UNDO_ASK_KEY], a0.json);
+    const a = await callSent(uq);
     const st = state[UNDO_ASK_KEY] && JSON.parse(state[UNDO_ASK_KEY]);
-    check('undo_ask: a kept row that is gone: the request kept with a random key, the question goes out as wa_me, nothing inserted', st && /^[a-z0-9]{8}$/.test(st.k) && st.table === 'inc' && st.id === 'acc26-28' && a.json.error === 'whatsapp not configured' && rows.inc.length === 0, { a: a.json, st });
+    check('undo_ask: a kept row that is gone: the question goes out as wa_me, then the request is kept with a random key, nothing inserted', st && /^[a-z0-9]{8}$/.test(st.k) && st.table === 'inc' && st.id === 'acc26-28' && a.json.ok === true && rows.inc.length === 0, { a: a.json, st });
     rows.inc = [ROW];
     const ex = await call({ op: 'undo_ask', agent: 'routine-wa-assistant', table: 'inc', id: 'acc26-28', why: 'Michael asked to bring it back' });
     check('undo_ask: the row is in the table now = refused', ex.json.ok === false && /in the table now/.test(ex.json.error), ex.json);

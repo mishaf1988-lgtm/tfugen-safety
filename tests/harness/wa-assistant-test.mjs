@@ -112,6 +112,7 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   let raw = msgBody(OWNER, 'wamid.A', 'מה המצב?');
   check('an unsigned POST is refused', (await post(raw)).status === 403 && fires.length === 0);
   check('a POST signed with another secret is refused', (await post(raw, await sign(raw, 'other'))).status === 403 && fires.length === 0);
+  check('a wrong secret is noted as sig false', state.wa_hook_last && state.wa_hook_last.sig === false && state.wa_hook_last.secret_set === true, state.wa_hook_last);
   const r1 = await post(raw, await sign(raw, ENV.META_APP_SECRET));
   check('Michael\'s message opens the window: wa_owner_in_at noted', !!state.wa_owner_in_at && Date.parse(state.wa_owner_in_at) === 1792400000 * 1000, state.wa_owner_in_at);
   check('Michael\'s signed message fires the assistant once', r1.status === 200 && fires.length === 1, fires);
@@ -136,7 +137,7 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   check('the last call is noted without number or text', state.wa_hook_last && state.wa_hook_last.sig === true && !JSON.stringify(state.wa_hook_last).includes(OWNER), state.wa_hook_last);
   const bad = msgBody(OWNER, 'wamid.S', 'x');
   await post(bad, await sign(bad, 'wrong'));
-  check('a wrong secret is noted as sig false', state.wa_hook_last && state.wa_hook_last.sig === false && state.wa_hook_last.secret_set === true, state.wa_hook_last);
+  check('retro 19/10/2026 (c): a second wrong signature within 10 minutes writes nothing (no row per bad request)', state.wa_hook_last && state.wa_hook_last.sig === true, state.wa_hook_last);
   const ok2 = msgBody(OWNER, 'wamid.F', 'secret words');
   await post(ok2, await sign(ok2, ENV.META_APP_SECRET));
   check('a fire is noted with its status, not the text', state.wa_hook_last && state.wa_hook_last.fired === 1 && state.wa_hook_last.fire_status === 200 && !JSON.stringify(state.wa_hook_last).includes('secret words'), state.wa_hook_last);
