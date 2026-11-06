@@ -1,5 +1,6 @@
 // Pop-ups on Michael's phone (24/10/2026): functions/_push.js, /api/chat?push=1, /chat-sw.js, wa_me.
 // The payload is decrypted here the way the phone does it (RFC 8291), and the VAPID signature checked with the public key.
+import fs from "fs";
 import { readFileSync } from 'node:fs';
 import { vapidKeys, VAPID_KEY, pushEncrypt, vapidAuth, pushOwner, pushSubOk, pushPayload, unb64u, b64u, PUSH_KEY, PUSH_LAST, PUSH_OK_AT, PUSH_GONE } from './_build/_push.mjs';
 import { chatOnly, OWNER_MODE_KEY } from './_build/_wa.mjs';
@@ -143,6 +144,16 @@ console.log('\n3b. how the last push went, for the watchdog (25/10/2026)');
   const sd = await sendToOwner(ENV, '972500000000', txt, { windowOpen: true });
   globalThis.fetch = f1;
   check('sendToOwner: the same text already sent in the last 10 minutes = not sent again, not logged', sd.ok && sd.duplicate && !calls.some((c) => c.url.includes('graph.facebook.com') || (c.url.includes('/notifications_log') && c.m === 'POST')), sd);
+  { // retro 27/10/2026 (b): repeat:true (a trustee report) is never swallowed as a duplicate
+    calls = []; let sent = false;
+    globalThis.fetch = async (u, i) => String(u).includes('graph.facebook.com') ? (sent = true, new Response(JSON.stringify({ messages: [{ id: 'wamid.r' }] }), { status: 200 }))
+      : String(u).includes('/notifications_log?select=payload') ? new Response(JSON.stringify([{ text: txt }]), { status: 200 }) : f1(u, i);
+    const rp = await sendToOwner(ENV, '972500000000', txt, { windowOpen: true, repeat: true });
+    globalThis.fetch = f1;
+    check('sendToOwner repeat:true: the same text within 10 minutes still goes out (a second trustee report)', rp.ok && !rp.duplicate && sent, rp);
+    const tn = fs.readFileSync(new URL('../../functions/api/trustee-notify.js', import.meta.url), 'utf8');
+    check('trustee-notify sends with repeat:true', /HAZARD_OPTIONS : null, repeat: true \}/.test(tn));
+  }
   // 27/10/2026 retro: a send Meta refused is logged as wa_out too (channel whatsapp_error); its retry must not count as a duplicate
   check('sentLately: the lookup leaves out failed sends (channel=neq.whatsapp_error), so a retry of a refused message goes out', lookupUrl.includes('channel=neq.whatsapp_error'), lookupUrl);
   { let graphHit = false; // a mock that applies the filter: the earlier text was a refused send (channel whatsapp_error), the retry must go out
@@ -207,6 +218,6 @@ check('/chat-sw.js is public (the browser fetches it without a login)', mw.inclu
 const rdb = readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
 const wa = rdb.slice(rdb.indexOf("if (body.op === 'wa_me')"), rdb.indexOf("if (body.op === 'wa_review')"));
 const waSrc = readFileSync(new URL('../../functions/_wa.js', import.meta.url), 'utf8');
-check('every message to Michael (sendToOwner, sendDocToOwner) is logged as wa_out and pushed, sent or refused; wa_me reports the count', /export async function sendToOwner[\s\S]{0,700}noteOut\(/.test(waSrc) && /export async function sendDocToOwner[\s\S]{0,700}noteOut\(/.test(waSrc) && /pushOwner\(env, sbUrl, t\)/.test(waSrc) && /push: ps\.sent/.test(wa) && /ps = \{ sent: r\.push/.test(wa));
+check('every message to Michael (sendToOwner, sendDocToOwner) is logged as wa_out and pushed, sent or refused; wa_me reports the count', /export async function sendToOwner[\s\S]{0,800}noteOut\(/.test(waSrc) && /export async function sendDocToOwner[\s\S]{0,700}noteOut\(/.test(waSrc) && /pushOwner\(env, sbUrl, t\)/.test(waSrc) && /push: ps\.sent/.test(wa) && /ps = \{ sent: r\.push/.test(wa));
 console.log(`\npush-test: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
