@@ -179,7 +179,13 @@ export async function fillPermit(bytes, spec) {
       // the blank right after the word "other" (the electrical section's motor / electrician blanks are not it)
       const otherAt = (x) => blanksOf(x.text).find((b) => /\u05d0\u05d7\u05e8\s*$/.test(x.text.slice(0, b[0])));
       const P = body.find((x) => otherAt(x));
-      if (!P) { report.missing.push(sec.head + ' other'); continue; }
+      if (!P) {
+        // A section whose form has no "other" blank (06/11/2026, handoff gap (c)): the text goes on its own line
+        // under the section's last line, so what the worker wrote is not lost.
+        const last = body.length ? body[body.length - 1] : H;
+        last.append += lineAfter(last, '\u05d0\u05d7\u05e8: ' + sec.other); report.filled++;
+        continue;
+      }
       const b = otherAt(P);
       const box = boxesIn(P).filter((i) => i < b[0]).pop();
       if (box !== undefined && setChar(P, box, 'X')) report.ticked++;
@@ -350,7 +356,10 @@ export async function buildPermit(env, sbUrl, token, job) {
   const tpl = TEMPLATES[w.who];
   if (!tpl) throw new Error('unknown who');
   const gh = { Authorization: 'Bearer ' + token };
-  const date = ilDate(job.nowMs);
+  // The closed version keeps the day Michael approved (06/11/2026, handoff gap (b)): the line "approved on" and
+  // the signature are his approval, not the closing. Older rows without it: today, as before.
+  const okd = w.st && /^\d{2}\/\d{2}\/\d{4}$/.test(String(w.st.okd || '')) ? w.st.okd : '';
+  const date = closed && okd ? okd : ilDate(job.nowMs);
   const [workT, safeT] = await Promise.all(tpl.map((p) => readTemplate(gh, p)));
   const o = { num: job.num, date, closed };
   const fw = await fillPermit(workT, permitSpec('work', w, o));

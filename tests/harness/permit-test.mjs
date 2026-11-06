@@ -125,8 +125,12 @@ console.log('\n3. the maintenance workers\' forms: the approval line at the bott
   const rs = await fillPermit(ts, sp);
   const xs = await docXml(rs.bytes);
   check('safety permit: well-formed, other parts unchanged', !wellFormed(xs) && !sameParts(ts, rs.bytes), [wellFormed(xs), sameParts(ts, rs.bytes)]);
-  check('roofs: "other" is not on this form, reported, nothing else missing', rs.report.missing.join() === HEADS.rof + ' other', rs.report);
   const all = paraTexts(xs).map(norm);
+  // 06/11/2026 (handoff gap (c)): a section without an "other" blank gets the text on its own line, not lost
+  check('roofs: no "other" blank on this form, nothing missing', rs.report.missing.length === 0, rs.report);
+  const ri = all.findIndex((p) => p.indexOf(norm(HEADS.rof)) >= 0);
+  const oi = all.findIndex((p) => p === 'אחר: x');
+  check('...the "other" text on its own line under the roofs section', ri >= 0 && oi > ri, [ri, oi]);
   const at = all.findIndex((p) => p.indexOf('הטופס הוכן על ידי ממונה הבטיחות') === 0);
   check('a new line right after "the form was prepared by the safety officer": approved by, name, date, the marker', at > 0 && all[at + 1] === 'אושר על ידי ממונה הבטיחות, ' + SITE.owner + ', 05/11/2026 ' + SIGN_MARK, all[at + 1]);
   check('confined space: 2 boxes; roofs item 5 = two boxes (by licence, by the regulations)', rs.report.ticked === 4, rs.report);

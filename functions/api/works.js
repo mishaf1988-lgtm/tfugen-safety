@@ -35,6 +35,7 @@ import { makeLinkToken, readLinkToken } from '../_closelink.js';
 import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut } from '../_wa.js';
 import { accessToken, sendMailTo } from '../_onedrive.js';
 import { buildPermit, pdfAttachment, ATTACH_MAX } from '../_permit.js';
+import { ilDate } from '../_sign.js';
 // The mail functions the request path uses (the approval mail); a test replaces them.
 export const mailDeps = { accessToken, sendMailTo };
 
@@ -54,6 +55,8 @@ export const CHECK_MARK = '[\u05dc\u05d1\u05d3\u05d9\u05e7\u05d4] ', GATE_MARK =
 // Michael's notes on an approved work (05/11/2026, Michael: "notes are not always a rejection; I approve with my notes").
 export const OKN_MARK = '[\u05d4\u05e2\u05e8\u05d5\u05ea \u05d4\u05de\u05de\u05d5\u05e0\u05d4] ';
 // The signed permit filed for the work, and its closed version (stage B): the path under the safety folder.
+// The day of the approval, DD/MM/YYYY (06/11/2026): the closed permit's signature line keeps it.
+export const OKD_MARK = '[\u05d0\u05d5\u05e9\u05e8 \u05d1-] ';
 export const PERMIT_MARK = '[\u05d4\u05e8\u05e9\u05d0\u05d4] ', PERMIT_C_MARK = '[\u05d4\u05e8\u05e9\u05d0\u05d4 \u05e1\u05d2\u05d5\u05e8\u05d4] ';
 export const NOTE_MARK = '\n\u05d4\u05e2\u05e8\u05d5\u05ea: ';
 export const STATE_SUB = 'works_sub';           // {friday, at, n, none, notified_at}
@@ -190,17 +193,19 @@ export function buildSafety(st) {
   if (st.permit) lines.push(PERMIT_MARK + st.permit);
   if (st.permitc) lines.push(PERMIT_C_MARK + st.permitc);
   if (st.rej) lines.unshift(REJ_MARK + st.rej);
+  if (st.okd) lines.unshift(OKD_MARK + st.okd);
   if (st.okn) lines.unshift(OKN_MARK + st.okn);
   return lines.join('\n');
 }
 export function parseSafety(safety) {
-  const st = { blocks: [], chk: {}, files: 0, flags: [], gate: [], notes: [], rej: '', okn: '', permit: '', permitc: '' };
+  const st = { blocks: [], chk: {}, files: 0, flags: [], gate: [], notes: [], rej: '', okn: '', okd: '', permit: '', permitc: '' };
   const list = (s) => s.split('; ').map((p) => p.trim()).filter(Boolean);
   String(safety || '').split('\n').forEach((line) => {
     if (line.indexOf(PERMIT_MARK) === 0) { st.permit = line.slice(PERMIT_MARK.length); return; }
     if (line.indexOf(PERMIT_C_MARK) === 0) { st.permitc = line.slice(PERMIT_C_MARK.length); return; }
     if (line.indexOf(REJ_MARK) === 0) { st.rej = line.slice(REJ_MARK.length); return; }
     if (line.indexOf(OKN_MARK) === 0) { st.okn = line.slice(OKN_MARK.length); return; }
+    if (line.indexOf(OKD_MARK) === 0) { st.okd = line.slice(OKD_MARK.length).trim(); return; }
     if (line.indexOf(CHECK_MARK) === 0) { st.flags = list(line.slice(CHECK_MARK.length)); return; }
     if (line.indexOf(GATE_MARK) === 0) { st.gate = list(line.slice(GATE_MARK.length)); return; }
     if (line.indexOf(NOTE_LINE) === 0) { st.notes = list(line.slice(NOTE_LINE.length)); return; }
@@ -922,8 +927,9 @@ async function decideCore(env, d, act, whyRaw, nowMs, bg) {
   if (act === 'approve') {
     if (d.w.st.gate.length) return { err: 'gate' };
     const okn = clean(whyRaw || '', 200);
-    const rest = String(d.row.safety || '').split('\n').filter((x) => x && x.indexOf(OKN_MARK) !== 0);
-    body = okn ? { s: S_OK, safety: [OKN_MARK + okn].concat(rest).join('\n') } : { s: S_OK };
+    const rest = String(d.row.safety || '').split('\n').filter((x) => x && x.indexOf(OKN_MARK) !== 0 && x.indexOf(OKD_MARK) !== 0);
+    const okd = OKD_MARK + ilDate(nowMs);
+    body = { s: S_OK, safety: (okn ? [OKN_MARK + okn, okd] : [okd]).concat(rest).join('\n') };
   } else if (act === 'reject') {
     const why = clean(whyRaw || '', 200);
     if (!why) return { err: 'why' };

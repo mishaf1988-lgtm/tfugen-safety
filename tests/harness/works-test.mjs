@@ -5,7 +5,7 @@
 // The 5-minute clock: Wednesday 18:00 the mail (only when works_mail_on), Thursday 12:00 the reminder, Sunday 08:00
 // permits not closed. Mocked network, nothing leaves.
 import { onRequest, makeWorksToken, readWorksToken, fridayOf, CATS, S_PEND, S_CANCEL, S_REJ, S_CLOSED, EMP_LABEL, CHECK_MARK, GATE_MARK, NOTE_LINE, REJ_MARK, kindsIn, ctrKey, ctrIssue,
-  parseSafety, buildSafety, assess, GAS_LIMITS, worksTick, worksTryMail, worksApproveMail, worksMailNow, permitRun, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck, mailDeps, makeOkToken, readOkToken, OK_PREFIX, S_OK, APPROVE_SUBJECT, OKN_MARK, DECIDE_SUBJECT,
+  parseSafety, buildSafety, OKD_MARK, assess, GAS_LIMITS, worksTick, worksTryMail, worksApproveMail, worksMailNow, permitRun, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck, mailDeps, makeOkToken, readOkToken, OK_PREFIX, S_OK, APPROVE_SUBJECT, OKN_MARK, DECIDE_SUBJECT,
   PERMIT_MARK, PERMIT_ERR, PERMIT_TO, PERMIT_SUBJECT, permitHtml, worksPermit, makeSendToken, readSendToken, SEND_PREFIX, askText, ASK_SUBJECT } from './_build/works.mjs';
 import { readFileSync } from 'fs';
 import { readZip, entryText } from './_build/_xlsxpatch.mjs';
@@ -216,7 +216,7 @@ console.log('\n5b. approval from the mail (Michael 05/11/2026: "a mail with appr
   const np = db.patches.length;
   r = await decide(toks[0], 'approve');
   const last = db.patches[np];
-  check('approve: open, only while pending (the update is filtered by status)', r.st === 200 && db.ptw['wk-2026-11-06-1'].s === S_OK && last && Object.keys(last.b).join() === 's', [r.st, last]);
+  check('approve: open, only while pending (the update is filtered by status), the approval day first in safety', r.st === 200 && db.ptw['wk-2026-11-06-1'].s === S_OK && last && Object.keys(last.b).join() === 's,safety' && last.b.safety.startsWith(OKD_MARK), [r.st, last]);
   { const m = db.mails[db.mails.length - 1];
     check('approve while the weekly mail is on: to the maintenance list with its copy, not a trial', m.to.join() === 'alina@tapugan.co.il' && m.cc.join() === 'boss@tapugan.co.il' && m.subj.indexOf(TRY_PREFIX) !== 0 && m.subj.indexOf('אושרה: ') === 0, m && [m.to, m.subj]); }
   r = await decide(toks[0], 'approve');
@@ -665,6 +665,9 @@ console.log('\n15. the signed permit (stage B, 05/11/2026): approve -> filled, r
     x = await app({ op: 'decide', id: C, ver: db.ptw[C].ver, act: 'approve' }, 'admin');
     check('app approve (weekly mail off): the decision mail is a trial to the owner only', x.st === 200 && x.j.mailed.trial === true && x.j.mailed.to.join() === 'owner@tapugan.co.il' && db.mails.some((m) => m.subj.indexOf(TRY_PREFIX + 'אושרה: ') === 0 && m.to.join() === 'owner@tapugan.co.il'), [x.st, x.j && x.j.mailed, db.mails.map((m) => m.subj)]);
     check('...no notes: no notes line, the permit filed', db.ptw[C].s === S_OK && db.ptw[C].safety.indexOf(OKN_MARK) < 0 && g.puts.length > np1);
+    // 06/11/2026 (handoff gap (b)): the day of the approval is kept, so the closed permit signs with it, not the closing day
+    { const okd = parseSafety(db.ptw[C].safety).okd, okdA = parseSafety(db.ptw[A].safety);
+      check('...the approval day is kept in safety (DD/MM/YYYY), with notes or without, and survives a rebuild', /^\d{2}\/\d{2}\/\d{4}$/.test(okd) && /^\d{2}\/\d{2}\/\d{4}$/.test(okdA.okd) && okdA.okn === 'לגדר את האזור' && parseSafety(buildSafety(okdA)).okd === okdA.okd, [okd, okdA]); }
     db.mails = []; const np2 = g.puts.length;
     x = await app({ op: 'decide', id: B, ver: db.ptw[B].ver, act: 'approve' }, 'admin');
     check('app approve with a gate line: 409, still pending, nothing sent, no permit', x.st === 409 && /gate/.test(x.j.error) && db.ptw[B].s === S_PEND && !db.mails.length && g.puts.length === np2, [x.st, x.j]);
