@@ -17029,12 +17029,15 @@ function _scanMark(k){
 
 // Generic notification dispatcher
 // Returns array of channels that fired (for testing/logging).
+function _notifLogOwner(){return !!(_currentUser&&_currentUser.username==='admin');}
 function _notifLog(eventKey,channel,payload){
   try{
     var rec={id:gid(),user_email:_svUser(),event_type:eventKey,channel:channel,payload:payload||{},ts:new Date().toISOString()};
     if(!DB.notifications_log)DB.notifications_log=[];
     DB.notifications_log.push(rec);
-    sbIns('notifications_log',rec);
+    // 06/11/2026 (migrations/2026-11-06_notif_log_owner_only.sql): the log on the server is Michael's alone.
+    // Another manager's browser keeps the line locally; a server insert would be refused and stay in the outbox.
+    if(_notifLogOwner())sbIns('notifications_log',rec);
   }catch(e){console.warn('_notifLog failed',e);}
 }
 function _notifBuildWaArgs(eventKey,payload){

@@ -1,4 +1,4 @@
--- dumped 2026-11-05 from the live project by tools/platform/schema-dump.sql
+-- dumped 2026-11-06 from the live project by tools/platform/schema-dump.sql
 create schema if not exists private;
 
 create extension if not exists "uuid-ossp" with schema extensions;
@@ -1745,6 +1745,8 @@ create policy viewer_no_update on public.notification_prefs as RESTRICTIVE for U
 create policy mfa_required on public.notifications_log as RESTRICTIVE for ALL to authenticated using (( SELECT private.mfa_ok() AS mfa_ok)) with check (( SELECT private.mfa_ok() AS mfa_ok));
 
 create policy notifications_log_admin_manager_all on public.notifications_log as PERMISSIVE for ALL to authenticated using (( SELECT private.is_admin_manager() AS is_admin_manager)) with check (( SELECT private.is_admin_manager() AS is_admin_manager));
+
+create policy notifications_log_owner_only on public.notifications_log as RESTRICTIVE for ALL to authenticated using (((( SELECT auth.jwt() AS jwt) ->> 'email'::text) = 'admin@tfugen.local'::text)) with check (((( SELECT auth.jwt() AS jwt) ->> 'email'::text) = 'admin@tfugen.local'::text));
 
 create policy pwchange_required on public.notifications_log as RESTRICTIVE for ALL to authenticated using ((COALESCE((((( SELECT auth.jwt() AS jwt) -> 'app_metadata'::text) ->> 'must_change_password'::text))::boolean, false) = false)) with check ((COALESCE((((( SELECT auth.jwt() AS jwt) -> 'app_metadata'::text) ->> 'must_change_password'::text))::boolean, false) = false));
 

@@ -7,7 +7,7 @@
 //   GET  ?m=1      the manifest of the home-screen icon (no login: a manifest holds no data).
 //   GET  ?f=<id>&e=<exp>&s=<sig>  a file the server sent him (25/10/2026): the link comes signed in GET's rows (24
 //                  hours), so the phone opens it in its own viewer without a login header; only files in the safety folder.
-import { jsonResp, requireRole, defaultAllowedOrigins, originPasses, corsHeaders, SB_LIVE, SB_TIMEOUT_MS, tmo } from '../_shared.js';
+import { jsonResp, requireRole, ADMIN_EMAIL, defaultAllowedOrigins, originPasses, corsHeaders, SB_LIVE, SB_TIMEOUT_MS, tmo } from '../_shared.js';
 import { assistantFire, assistantFireNow, recentLine, lastOut, hmacHex, ownerWa, LEARN_KEY, learnedLine, learnedLabel, LEARNED_MAX } from '../_wa.js';
 import { fastRoute, runFast, rateOf, rateNote, RATE_CHOICES, mediaName } from './wa-hook.js';
 import { accessToken, putFile } from '../_onedrive.js';
@@ -124,6 +124,9 @@ export async function onRequest(context) {
   // his own assistant: the admin account only (a manager or a reporter has a session too)
   const who = await requireRole(request, env, ['admin']);
   if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
+  // 06/11/2026 (migrations/2026-11-06_notif_log_owner_only.sql): the conversation is Michael's alone, as in the
+  // database. A second user with the role "admin" in app_users passes requireRole, so the owner's email is checked too.
+  if (String((who.user && who.user.email) || '').toLowerCase() !== ADMIN_EMAIL) return jsonResp({ error: 'owner only' }, 403, cors);
   // the admin account has a second factor (index.html, 25/09): a password-only session is not enough here either.
   // requireRole already checked the token with Supabase, so reading its aal claim is safe. 401 sends the page to login.
   if (tokenAal(request) !== 'aal2') return jsonResp({ error: 'mfa required' }, 401, cors);
