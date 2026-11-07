@@ -656,7 +656,8 @@ export function inboundMessages(body) {
       if (!m || !m.id || !m.from) return;
       // 21/10/2026 (Michael sent a screenshot of a gov.il page and the assistant saw only "an image"): a photo or a
       // document keeps its media id, type and file name, and its caption is the text. routine-db wa_media reads it.
-      const md = (m.type === 'image' || m.type === 'document') ? m[m.type] : null;
+      // 07/11/2026: a voice message (audio) keeps its media id too; wa-hook transcribes it (_voice.js)
+      const md = (m.type === 'image' || m.type === 'document' || m.type === 'audio') ? m[m.type] : null;
       const text = m.type === 'text' ? (m.text && m.text.body) : m.type === 'button' ? (m.button && m.button.text)
         : m.type === 'interactive' ? (m.interactive && (m.interactive.button_reply || m.interactive.list_reply || {}).title)
         : md ? (md.caption || '') : '';

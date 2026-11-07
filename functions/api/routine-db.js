@@ -906,8 +906,9 @@ export function chosenNewMail(b) {
 }
 // Pure: rows = owner_in rows of the last CHOSE_NEW_MAIL_MS, [{text}] (newest first). True when one of them is Michael's
 // "\u05d1\u05e6\u05e2" as a word (a button tap logs the bare word), so "michael chose a new mail" quotes a real answer.
+// A voice message (07/11/2026 review: _voice.js) is never an approval here: a transcription slip could read as "\u05d1\u05e6\u05e2".
 export function ownerChoseNewMail(rows) {
-  return (rows || []).some((r) => /(^|[^\u05d0-\u05ea])\u05d1\u05e6\u05e2([^\u05d0-\u05ea]|$)/.test(String((r && (r.text || r.title)) || '')));
+  return (rows || []).some((r) => !(r && r.voice) && /(^|[^\u05d0-\u05ea])\u05d1\u05e6\u05e2([^\u05d0-\u05ea]|$)/.test(String((r && (r.text || r.title)) || '')));
 }
 // 01/11/2026 (C70, checked in Chrome: flow 3 failed with ErrorInvalidReferenceItem): the assistant passed as reply_to
 // the id of its own earlier draft, not of a real mail in the thread, and a draft cannot be replied to. The server
@@ -3079,7 +3080,7 @@ async function routineDbHandle(context) {
       const threadGate = draftThreadGate(body);
       if (threadGate) return jsonResp({ ok: false, error: threadGate }, 400, {});
       if (chosenNewMail(body)) { // any agent name (refute step 06/11/2026: the name is the caller's to choose)
-        const or = await fetch(url + '/rest/v1/notifications_log?select=ts,text:payload->>text,title:payload->>title&event_type=eq.owner_in&channel=in.(whatsapp,chat)&ts=gte.' + encodeURIComponent(new Date(Date.now() - CHOSE_NEW_MAIL_MS).toISOString()) + '&order=ts.desc&limit=50', { headers: h, signal: tmo(SB_MS) }).then((x) => (x.ok ? x.json() : null)).catch(() => null);
+        const or = await fetch(url + '/rest/v1/notifications_log?select=ts,text:payload->>text,title:payload->>title,voice:payload->>voice&event_type=eq.owner_in&channel=in.(whatsapp,chat)&ts=gte.' + encodeURIComponent(new Date(Date.now() - CHOSE_NEW_MAIL_MS).toISOString()) + '&order=ts.desc&limit=50', { headers: h, signal: tmo(SB_MS) }).then((x) => (x.ok ? x.json() : null)).catch(() => null);
         if (!ownerChoseNewMail(or)) return jsonResp({ ok: false, error: 'thread_checked "michael chose a new mail": no "\u05d1\u05e6\u05e2" from Michael in the last 24 hours. Ask him on WhatsApp with choices ["\u05d1\u05e6\u05e2","\u05dc\u05d0"] (a new mail without the thread), or reply in the thread with reply_to (retro 02/11/2026)' }, 400, {});
       }
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});

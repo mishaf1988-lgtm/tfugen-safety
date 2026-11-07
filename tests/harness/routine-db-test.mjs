@@ -531,7 +531,7 @@ const callIn = async (body) => {
         check('retro 02/11/2026 (a): "michael chose a new mail" needs a real בצע of Michael in owner_in, not only the words',
           chosenNewMail({ thread_checked: 'michael chose a new mail: 11:33 UTC, בצע' }) && !chosenNewMail({ thread_checked: 'no thread: x' })
           && ownerChoseNewMail([{ text: 'בצע' }]) && ownerChoseNewMail([{ text: 'מה עם זה?' }, { text: 'כן, בצע: מייל חדש' }]) && ownerChoseNewMail([{ title: 'בצע.' }])
-          && !ownerChoseNewMail([]) && !ownerChoseNewMail(null) && !ownerChoseNewMail([{ text: 'לבצע את זה מחר?' }]) && !ownerChoseNewMail([{ text: 'מה המצב' }]));
+          && !ownerChoseNewMail([{ text: '\ud83c\udfa4 \u05d1\u05e6\u05e2', voice: 'true' }]) && !ownerChoseNewMail([]) && !ownerChoseNewMail(null) && !ownerChoseNewMail([{ text: 'לבצע את זה מחר?' }]) && !ownerChoseNewMail([{ text: 'מה המצב' }]));
         const src = (await import('fs')).readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
         const md = src.slice(src.indexOf("body.op === 'mail_draft'"), src.indexOf("body.op === 'mail_draft'") + 2500);
         check('retro 02/11/2026 (a): mail_draft reads owner_in and refuses without his בצע', /chosenNewMail\(body\)/.test(md) && /event_type=eq\.owner_in&channel=in\.\(whatsapp,chat\)/.test(md) && /ownerChoseNewMail\(/.test(md));
