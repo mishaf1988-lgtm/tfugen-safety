@@ -250,6 +250,9 @@ const SECOND_CONTENT = /\d+ ?\u05d1\u05e8(?![\u05d0-\u05ea])|ppm|\u05de\u05e0"\u
 const SECOND_DECLINED = /(?:\u05e2\u05e0\u05d4|\u05d1\u05d7\u05e8) \u05dc\u05d0(?:\s|$)|\u05dc\u05d0 \u05d4\u05d5\u05db\u05e0/;
 // the gate's own prefix; the fault alert reads it (_faults.js faultItems) to keep this breach off Michael's WhatsApp
 export const SECOND_MISS = '\u05d7\u05e1\u05e8 \u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9 \u05d1\u05e9\u05d0\u05dc\u05d4 \u05e8\u05d2\u05d9\u05e9\u05d4: ';
+// 07/11/2026 (Michael, questionnaire: "less inquiries about faults"): the assistant's deliberate refusal (a request it must
+// not do) is written with this prefix and ok:false; the fault alert treats it like SECOND_MISS: no WhatsApp, no developer inquiry.
+export const EXPECTED_REFUSAL = '\u05e1\u05d9\u05e8\u05d5\u05d1 \u05de\u05db\u05d5\u05d5\u05df: ';
 export function secondCheckGate(e) {
   if (!e || !e.ok || SECOND_CHECK_AGENTS.indexOf(e.agent) < 0) return e;
   const text = String(e.line || '') + ' ' + String(e.learned || '');

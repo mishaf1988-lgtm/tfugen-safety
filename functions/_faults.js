@@ -11,7 +11,7 @@
 import { stateGet, stateSet } from './_onedrive.js';
 import { ownerWa, sendToOwner, ownerWindowOpen } from './_wa.js';
 import { SB_LIVE, tmo } from './_shared.js';
-import { DEV_INBOX_KEY, devInboxAdd, devInboxFired, devFireTarget, devFireText, SECOND_MISS, SECOND_CHECK_AGENTS } from './api/routine-db.js';
+import { DEV_INBOX_KEY, devInboxAdd, devInboxFired, devFireTarget, devFireText, SECOND_MISS, EXPECTED_REFUSAL, SECOND_CHECK_AGENTS } from './api/routine-db.js';
 import { stateCas } from './_cas.js';
 
 export const FAULT_KEY = 'fault_alert', FAULT_LINES = 5, FAULT_FIRST_MS = 20 * 60e3;
@@ -55,7 +55,11 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
     // 03/11/2026 (dev-20261103090001-c5il; Michael in the questionnaire of the assistant chat: "do it: two fixes"): a missing
     // second checker on the assistant's answer is a procedure breach after the answer already reached Michael, not a system
     // fault. It goes to the developer (and the retro and the daily quality check read agent_log), not to his WhatsApp.
-    const quiet = SECOND_CHECK_AGENTS.indexOf(String(r.agent || '')) >= 0 && String(r.line || '').indexOf(SECOND_MISS) === 0;
+    // 07/11/2026 (Michael: "less inquiries about faults"): quiet now means no WhatsApp AND no developer request (runFaultAlert opens a
+    // fix only for the loud items); the line stays in agent_log for the retro and the daily quality check. A deliberate refusal
+    // (EXPECTED_REFUSAL prefix) is quiet the same way. A real failure (error, timeout, no answer to Michael) is loud.
+    const ln = String(r.line || '');
+    const quiet = SECOND_CHECK_AGENTS.indexOf(String(r.agent || '')) >= 0 && (ln.indexOf(SECOND_MISS) === 0 || ln.indexOf(EXPECTED_REFUSAL) === 0);
     add((quiet ? 'agentq:' : 'agent:') + agentKey(r.agent), '\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc, ' + agentKey(r.agent) + ': ' + cut(r.line, 120), 'AGENTDEV', agentSafe(r.agent), m ? m[0] : '', quiet, r.at);
   });
   items.forEach((x) => { sent[x.key] = today; });
@@ -153,8 +157,9 @@ export async function runFaultAlert(env, nowIso) {
   let sentOk = true, fix = null;
   if (items.length) {
     // a fault already reported today was filtered above, so the fix is opened once a day per fault too
-    try { fix = await openFix(env, url, k, items, nowIso, !(prev && prev.fired_day === dayIL(nowIso))); } catch (e) { fix = { ok: false }; }
     const loud = items.filter((x) => !x.quiet);
+    // a quiet item (expected: second checker missing, deliberate refusal) opens no developer request (07/11/2026)
+    if (loud.length) { try { fix = await openFix(env, url, k, loud, nowIso, !(prev && prev.fired_day === dayIL(nowIso))); } catch (e) { fix = { ok: false }; } }
     if (loud.length) {
       const to = await ownerWa(env, url);
       const s = to ? await sendToOwner(env, to, faultText(loud, fix && (fix.fired || fix.already || fix.covered)), { kind: loud.some((x) => /^agentq?:wa-assistant$/.test(x.key)) ? 'watchdog' : 'fault', windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
