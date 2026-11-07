@@ -29,6 +29,21 @@
 
 ## פתוח
 
+- [ ] **C78. זרימה 7 "הזזות ביומן": לבדוק שהאירוע הוא באמת זה שמיכאל ראה, ושהוא המארגן (07/11/2026, מיכאל בשאלון: "בצע: רעיונות הרטרו"; הצעת הרטרו 26/10/2026 (א), STATUS "הצעות הרטרו 26/10/2026").** היום הזרימה מזיזה לפי המזהה בלבד: אם העוזר שולח מזהה של אירוע אחד ונושא של אירוע אחר, מיכאל רואה בשאלה נושא אחד ואירוע אחר זז, והמוזמנים שלו מקבלים עדכון. לשרת אין הרשאת יומן, ולכן הבדיקה נעשית בזרימה. רק קריאה ותנאי, בלי שום שליחה חדשה. אחרי הביצוע Claude מאמת לבד: `cal_move_ask` על אירוע בלי מוזמנים ביומן של מיכאל, ובדיקה שהוא זז (וקובץ עם נושא אחר לא מזיז).
+  ```
+  ב-Power Automate (make.powerautomate.com), בחשבון sviva@tapugan.co.il, פתח את הזרימה "הזזות ביומן" > Edit.
+  1. אחרי ה-Compose: Office 365 Outlook > "Send an HTTP request". Method: GET.
+     URI (Expression): concat('https://graph.microsoft.com/v1.0/me/events/', encodeUriComponent(outputs('Compose')?['id']), '?$select=subject,isOrganizer')
+     שם הפעולה: Get event.
+  2. Control > "Condition", שני תנאים עם And:
+     (א) (Expression) equals(trim(body('Get_event')?['subject']), trim(outputs('Compose')?['subject']))  is equal to  true
+     (ב) (Expression) body('Get_event')?['isOrganizer']  is equal to  true
+  3. גרור את ה-"Send an HTTP request" הקיים (PATCH) לתוך ענף True, בלי לשנות בו כלום.
+  4. בענף False: Control > "Terminate", Status: Failed, Message: subject or organizer mismatch.
+  5. שמור, ודא שהזרימה On, ושה-Flow checker נקי. בדוק ב-Code view שה-URI של ה-GET נכון ("/" בעורך החדש נבלע).
+  דווח: שהזרימה On, שני ה-URI כפי שהם ב-Code view, ושני התנאים.
+  ```
+
 
 - [x] **C70. זרימה 3** **נבדק בכרום 01/11/2026, לא שונה דבר:** ריצה אחת נכשלה (13:19), `createReply` החזיר 400 `ErrorInvalidReferenceItem`, כי `reply_to` היה מזהה של טיוטה (13:16). לולאת הקבצים בענף התשובה כבר קיימת; ההשערה שלי הייתה שגויה. התיקון בצד שלנו (handoff, הבא בתור 1). **הכותרת המקורית:** זרימה 3 "טיוטות מהעוזר": קובץ מצורף בתשובה בתוך שרשור** (01/11/2026, מיכאל: "השאלה היא למה זה נכשל?"; Power Automate שלח לו "טיוטות מהעוזר, 2 כשלונות". תשובה בשרשור בלי קובץ הצליחה ב-13:16, מייל חדש עם קובץ עובד מ-20/10 (C26), ותשובה בשרשור עם קובץ נכשלה פעמיים. ההשערה, לא אומתה: C26 הוסיף קבצים רק לענף "Draft an email message", ולא לענף `createReply`.)
   משימה: לפתוח https://make.powerautomate.com > My flows > "טיוטות מהעוזר" > 28-day run history, ולפתוח את שתי הריצות שנכשלו ב-01/11/2026. לרשום בדיוק איזה צעד נכשל והודעת השגיאה. אם זה ענף התשובה בשרשור: אחרי `Send an HTTP request` של `createReply` (שמחזיר את ה-id של הטיוטה), להוסיף לולאה על `coalesce(outputs('Compose')?['attachments'], json('[]'))`: `Get file content using path` (`items(...)?['path']`) ואז `Send an HTTP request` POST `me/messages/<id של הטיוטה>/attachments` עם `{"@odata.type":"#microsoft.graph.fileAttachment","name":"<name>","contentBytes":"<base64 של התוכן>"}`. לא להוסיף שום פעולת שליחה.
