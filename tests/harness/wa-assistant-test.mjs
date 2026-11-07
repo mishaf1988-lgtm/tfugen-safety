@@ -162,7 +162,10 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
     await post(v, await sign(v, ENV.META_APP_SECRET));
     check('the model failing: the message still reaches the assistant, which asks Michael to type it', fires.length === n0 + 3 && /voice: not transcribed \(stt: model down\); ask Michael to type it/.test(fires[n0 + 2].body.text), fires[n0 + 2] && fires[n0 + 2].body.text);
     {
-      const { voiceText } = await import('./_build/_voice.mjs');
+      const { voiceText, metaMediaHostOk } = await import('./_build/_voice.mjs');
+      const good = ['https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=1', 'https://scontent.xx.fbcdn.net/v/t61/a.ogg', 'https://mmg.whatsapp.net/d/f/abc.enc'];
+      const bad = ['https://evil.example.com/a.ogg', 'https://lookaside.fbsbx.com.evil.io/x', 'http://lookaside.fbsbx.com/x'];
+      check('pairs: Meta\'s three download hosts get the token; a stranger, a look-alike suffix and plain http do not', good.every(metaMediaHostOk) && !bad.some(metaMediaHostOk), { good: good.map(metaMediaHostOk), bad: bad.map(metaMediaHostOk) });
       const big = new Uint8Array(7 * 1024 * 1024); big.set([0x4F, 0x67, 0x67, 0x53]);
       const calls = [];
       const ff = async (u, o) => { calls.push({ u, redirect: o.redirect }); return /graph\.facebook/.test(u) ? new Response(JSON.stringify({ url: 'https://lookaside.fbsbx.com/x', mime_type: 'audio/ogg' }))
