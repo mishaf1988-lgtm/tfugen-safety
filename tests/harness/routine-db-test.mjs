@@ -154,6 +154,22 @@ const callIn = async (body) => {
     delete inc.due;
     const ri = taskAddCheck(inc, T0);
     check('task_add on inc (03/11/2026): a procedure from an investigation is a task on the accident, no due, no assignee', ri.row && ri.row.source_table === 'inc' && ri.row.due === null && ri.row.assignee === null && TASK_SOURCES.inc === 1 && !TASK_SOURCES.tour_hazards, ri);
+    { // committee (07/11/2026, Michael: "do it: a meeting recording to a protocol + tasks")
+      const { TASK_BY_TITLE, taskOpenDup, isPiiKey, PII_KEY_DIR, draftAttach, empNamesCheck, empNamesRows, TABLES } = await import('./_build/routine-db.mjs');
+      check('emp_names: names and department only, never the ID, phone or mail; emp stays out of select; extra fields refused',
+        JSON.stringify(empNamesRows([{ n: ' \u05d3\u05e0\u05d9  \u05db\u05d4\u05df ', dep: '\u05d9\u05d9\u05e6\u05d5\u05e8', eid: '039337423', ph: '0521234567' }, { n: '' }])) === JSON.stringify([{ n: '\u05d3\u05e0\u05d9 \u05db\u05d4\u05df', dep: '\u05d9\u05d9\u05e6\u05d5\u05e8' }])
+        && TABLES.indexOf('emp') < 0 && !!empNamesCheck({ op: 'emp_names', agent: 'x1', why: 'protocol owners', select: 'eid' }).error && !empNamesCheck({ op: 'emp_names', agent: 'routine-wa-assistant', why: 'protocol owners' }).error);
+      const cm = { op: 'task_add', agent: 'routine-wa-assistant', why: '\u05e4\u05e8\u05d5\u05d8\u05d5\u05e7\u05d5\u05dc \u05d5\u05e2\u05d3\u05d4 \u05e9\u05d0\u05d5\u05e9\u05e8', source_table: 'committee', source_id: '2026-10-28', title: '\u05dc\u05d4\u05d7\u05dc\u05d9\u05e3 \u05de\u05d8\u05e4\u05d9\u05dd \u05d1\u05de\u05d7\u05e1\u05df 3' };
+      const rc = taskAddCheck(cm, T0);
+      check('task_add on committee: the meeting day as source_id, no assignee, open', rc.row && rc.row.source_table === 'committee' && rc.row.assignee === null && TASK_SOURCES.committee === 1, rc);
+      check('task_add on committee: a source_id that is not a day, or a future day, is refused', !!taskAddCheck({ ...cm, source_id: 'mtg-1' }, T0).error && !!taskAddCheck({ ...cm, source_id: '2026-12-01' }, T0).error && !!taskAddCheck({ ...cm, source_id: '2026-02-30' }, T0).error);
+      check('committee: several decisions of one meeting are several tasks; the same title again is the duplicate', TASK_BY_TITLE.committee === 1 && !taskOpenDup([{ status: '\u05e4\u05ea\u05d5\u05d7', title: '\u05d0\u05d7\u05e8' }], rc.row) && !!taskOpenDup([{ status: '\u05e4\u05ea\u05d5\u05d7', title: rc.row.title }], rc.row));
+      const KEY = PII_KEY_DIR + '/\u05e9\u05de\u05d9\u05e2\u05d4 2026 (\u05de\u05e4\u05ea\u05d7).xlsx';
+      check('pairs: the key of a hidden copy is never attached (the key folder, "(key)" in the name, a spaced variant); the hidden copy and an ordinary file are',
+        isPiiKey(KEY) && isPiiKey('10_x/a (\u05de\u05e4\u05ea\u05d7).xlsx') && isPiiKey('10_x/a ( \u05de\u05e4\u05ea\u05d7 ).xlsx')
+        && !isPiiKey('10_x/a (\u05de\u05d5\u05e1\u05ea\u05e8).xlsx') && !isPiiKey('10_x/\u05de\u05e4\u05ea\u05d7 \u05d1\u05e8\u05d6\u05d9\u05dd.xlsx') && !isPiiKey('13_x/report.pdf')
+        && /key of a hidden/.test(draftAttach([KEY]).error || '') && /key of a hidden/.test(draftAttach(['10_x/a (\u05de\u05e4\u05ea\u05d7).xlsx'], true).error || '') && !draftAttach(['10_x/a (\u05de\u05d5\u05e1\u05ea\u05e8).xlsx']).error);
+    }
     check('pairs, the duplicate: on inc only an open task with the same title (3 match: same title open, in progress, with spaces around); not a closed one, not a cancelled one, not another procedure of the same accident',
       !!taskOpenDup([{ status: 'פתוח', title: ri.row.title }], ri.row) && !!taskOpenDup([{ status: 'בהתקדמות', title: ri.row.title }], ri.row) && !!taskOpenDup([{ status: 'פתוח', title: '  ' + ri.row.title + ' ' }], ri.row)
       && !taskOpenDup([{ status: 'הושלם', title: ri.row.title }], ri.row) && !taskOpenDup([{ status: 'בוטל', title: ri.row.title }], ri.row) && !taskOpenDup([{ status: 'פתוח', title: 'נוהל אחר' }], ri.row));

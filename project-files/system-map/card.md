@@ -14,6 +14,8 @@
 
 ## העוזר
 - מחברת הלמידה: תיקונים והעדפות של מיכאל
+- פרוטוקול מהקלטה: הקלטת ישיבה בתיקייה: תמלול, טיוטת פרוטוקול, ומשימות אחרי "בצע"
+- הסתרת פרטים: עותק של Excel או Word עם "עובד N" במקום שמות; המפתח לא יוצא מהתיקייה
 - הבטחות ומעקב: בדיקה חוזרת בשעה שקבע
 - רשימת מחר: כל יום ב-15:00
 - עובד לפי דרישה: עובד לפי דרישה: משימה מהעוזר
@@ -71,7 +73,7 @@
 - OCR: קריאת סריקות ותמלול הודעות קוליות, חינמי (Workers AI)
 - claude.js: ה-AI באפליקציה
 - works: רשימת העבודות לשישי: קישור לאחזקה, היתרים לאישור, אישורים מצורפים, סגירה מהטלפון; הרשאה חתומה (PDF) לכל עבודה שאושרה, מתויקת בתיקייה 18 ונשלחת במייל; מייל ברביע
-- routine-db: 76 פעולות שהסוכנים מותרים בהן: agent_report, agents_pause, agents_resume, assistant_account, cal_invite, cal_invite_ask, cal_move, cal_move_ask, claim, claims, 
+- routine-db: 77 פעולות שהסוכנים מותרים בהן: agent_report, agents_pause, agents_resume, assistant_account, cal_invite, cal_invite_ask, cal_move, cal_move_ask, claim, claims, 
 
 ## המסד
 - מסמכים ותוקף: טבלה docs

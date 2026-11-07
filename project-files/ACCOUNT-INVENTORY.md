@@ -153,6 +153,7 @@ Network secret שני (18/10/2026, C20): Host `api.supabase.com`, מפתח Supab
 | `_אוטומציה\_טיוטות למחיקה` | `draft_trash` (השרת; מה נכתב: `server_state.drafts_trashed`, ומה מותר: `drafts_made`) | זרימה 8 |
 | `_אוטומציה\_החלפות iso` | `od_swap` עם `site:'iso'` ו-`iso_up` (השרת) | זרימה 10 |
 | `_אוטומציה\_זימונים` | `cal_invite` (השרת; מה נכתב: `server_state.cal_invited`) | זרימה 9 |
+| `מפתחות הסתרה` (07/11/2026, נוצרת בפעם הראשונה ב-`od_mkdir`) | העוזר: המפתח של עותק מוסתר, `tools/pii-redact.py` | מיכאל בלבד; השרת מסרב לצרף ממנה למייל או לוואטסאפ (`isPiiKey`) |
 | `00_דוחות ומעקב\קטלוג מסמכים.xlsx`, גיליון Claude Log | Cowork | מיכאל |
 | `Apps/Tapugan Safety/_Backups` (cron, monthly, photos, talks, code) | `backup-od` | שחזור. `code`: zip של שני המאגרים פעם בשבוע, 8 אחרונים (17/10/2026) |
 
