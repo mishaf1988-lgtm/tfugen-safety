@@ -194,11 +194,67 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
   .inbox .it+.it::before{content:none}
   .inbox .it+.it{border-top:1px solid var(--line);padding-top:6px}
 }
+/* 27/10/2026 (Michael: "clearer, like offices or people"): the office in 3D on a computer, a figure per worker in its
+   own cubicle. The phone keeps the list. office3d.js draws; the toggle and the data stay in this page. */
+.o3d-host{position:absolute;inset:0;border:3px solid var(--ink-2);border-radius:6px;overflow:hidden;background:var(--wall)}
+.o3d-canvas{display:block}
+.o3d-tag{direction:rtl;display:flex;flex-direction:column;align-items:center;gap:0;padding:2px 8px;border-radius:6px;background:var(--desk);border:1px solid var(--line);
+  font-size:12px;line-height:1.25;white-space:nowrap;cursor:pointer;pointer-events:auto;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.o3d-tag b{font-size:13px}
+.o3d-tag span{font-size:10px;color:var(--ink-2);font-family:var(--f-data)}
+.o3d-tag span:empty{display:none}
+.o3d-tag.s-run{border-color:var(--lamp-run)} .o3d-tag.s-wait{border-color:var(--lamp-wait)} .o3d-tag.s-fail{border-color:var(--lamp-fail)} .o3d-tag.s-done{border-color:var(--lamp-done)}
+.o3d-tag.sel{outline:2px solid var(--accent);outline-offset:1px}
+.o3d-say{direction:rtl;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--lamp-wait);color:#fff;border-radius:8px;padding:2px 8px;font-size:11px;cursor:pointer;pointer-events:auto}
+.v3d{flex:none;min-height:30px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--desk);color:var(--ink);font:inherit;font-size:12px;cursor:pointer}
+.v3d:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:700px){.v3d{display:none}}
+/* 07/11/2026 (Michael, after Paperclip: "operationally and visually better, a hierarchy and decision-making"; in the
+   questionnaire: "do it: an org chart in the office"): a third view. Michael on top with what waits for his decision,
+   the assistant under him, and under it every worker with its tasks, goal (role), cost per run and what it waits for. */
+.vorg{flex:none;min-height:30px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--desk);color:var(--ink);font:inherit;font-size:12px;cursor:pointer}
+.vorg[aria-pressed="true"]{background:var(--accent);color:var(--desk);border-color:var(--accent)}
+.vorg:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.org{position:absolute;inset:0;overflow:auto;border:3px solid var(--ink-2);border-radius:6px;background:var(--room);padding:12px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:0}
+.org .lvl{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;width:100%;position:relative}
+.org .stem{width:2px;height:16px;background:var(--ink-2);flex:none}
+.org .bar{height:2px;background:var(--ink-2);width:calc(100% - 140px);max-width:1200px;flex:none}
+.org .node{box-sizing:border-box;background:var(--desk);border:2px solid var(--line);border-radius:10px;padding:8px 12px;min-width:200px;max-width:320px;text-align:start;font:inherit;color:inherit;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.org .node:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.org .node.top{border-color:var(--accent);min-width:240px}
+.org .node.s-wait{border-color:var(--lamp-wait)} .org .node.s-fail{border-color:var(--lamp-fail)} .org .node.s-run{border-color:var(--lamp-run)}
+.org .node .t{display:flex;align-items:center;gap:6px;font-weight:700;font-size:14px}
+.org .node .t .n{margin-inline-start:auto;font-weight:500;font-size:11px;color:var(--ink-2)}
+.org .node .r{font-size:12px;color:var(--ink-2);line-height:1.35}
+.org .node .wt{font-size:12px;color:var(--lamp-wait);font-weight:500}
+.org .workers{align-items:flex-start}
+.org .col{display:flex;flex-direction:column;align-items:center;gap:0}
+.org .col>.stem{height:12px}
+.org .tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;width:100%}
+.org .tasks li{border-top:1px solid var(--line);padding-top:4px;display:flex;flex-direction:column;gap:1px;cursor:pointer}
+.org .tasks li.s-done .dot{background:var(--lamp-done)} .org .tasks li.s-run .dot{background:var(--lamp-run)} .org .tasks li.s-fail .dot{background:var(--lamp-fail)} .org .tasks li.s-wait .dot{background:var(--lamp-wait)} .org .tasks li.s-never .dot{background:var(--lamp-off);box-shadow:none}
+.org .tasks li .tn{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500}
+.org .tasks li .tg{font-size:11px;color:var(--ink-2);line-height:1.3}
+.org .tasks li .tc{font-size:11px;color:var(--ink-2)}
+.org .tasks li .tw{font-size:11px;color:var(--lamp-wait);font-weight:500}
+.org .path{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px;font-size:11px;color:var(--ink-2);margin:8px 0 2px}
+.org .path b{background:var(--desk);border:1px solid var(--line);border-radius:999px;padding:1px 8px;font-weight:500;color:var(--ink)}
+.org .path b.me{border-color:var(--lamp-wait);color:var(--lamp-wait)}
+@media (max-width:600px){
+  .org{position:static;border-width:2px;padding:8px}
+  .org .bar{display:none}
+  .org .lvl{flex-direction:column;align-items:stretch}
+  .org .col{align-items:stretch}
+  .org .col>.stem{display:none}
+  .org .node{max-width:none;min-width:0}
+}
 </style>
 
 <div class="wrap" dir="rtl">
   <header>
     <h1>משרד הסוכנים</h1>
+    <button type="button" class="v3d" id="v3d" aria-pressed="true">תצוגה רגילה</button>
+    <button type="button" class="vorg" id="vorg" aria-pressed="false">עץ ארגוני</button>
     <div class="stamp" id="stamp">טוען...</div>
   </header>
   <div class="strip" id="strip"></div>
@@ -210,6 +266,8 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
   <section class="dock" id="dock" hidden></section>
 </div>
 
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module" src="office3d.js"></script>
 <script>
 (function(){
   var ROOMS=['חדר המחקר','חדר המסמכים','חדר הדוחות','תזכורות'];
@@ -364,6 +422,59 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
       var ix=ORDER.indexOf(x),iy=ORDER.indexOf(y);return (ix<0?99:ix)-(iy<0?99:iy)||x.localeCompare(y,'he');});
     names.forEach(function(w){groups[w].sort(function(x,y){return (x.order||99)-(y.order||99)||String(x.name).localeCompare(String(y.name),'he');});});
     var wstate=function(w){var best='never';groups[w].forEach(function(t){var s=state(t);if(RANK[s]>RANK[best])best=s;});return best;};
+
+    if(orgMode){
+      // 07/11/2026: the org chart (see the CSS note). Same groups and states as the desks, so nothing new to fetch.
+      var org=el('div','org');org.setAttribute('aria-label','\u05e2\u05e5 \u05d0\u05e8\u05d2\u05d5\u05e0\u05d9: \u05de\u05d9 \u05de\u05d3\u05d5\u05d5\u05d7 \u05dc\u05de\u05d9 \u05d5\u05de\u05d4 \u05de\u05d7\u05db\u05d4 \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4 \u05e9\u05dc\u05da');
+      var num=function(c){var m=/(\d+(?:\.\d+)?)/.exec(String(c||''));return m&&/\$|\u05d3\u05d5\u05dc\u05e8/.test(String(c))?+m[1]:0;};
+      var top=el('button','node top'+(waiting.length?' s-wait':''));top.type='button';
+      var tt=el('div','t');tt.appendChild(el('i','dot'+(waiting.length?' s-wait':' s-done')));tt.appendChild(document.createTextNode('\u05de\u05d9\u05db\u05d0\u05dc'));tt.appendChild(el('span','n','\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea'));top.appendChild(tt);
+      top.appendChild(el('div','r','\u05de\u05d2\u05d3\u05d9\u05e8 \u05de\u05d8\u05e8\u05d5\u05ea, \u05de\u05d0\u05e9\u05e8 \u05d1"\u05d1\u05e6\u05e2", \u05d5\u05e9\u05d5\u05dc\u05d7 \u05d1\u05e2\u05e6\u05de\u05d5 \u05db\u05dc \u05de\u05d9\u05d9\u05dc \u05dc\u05d0\u05d3\u05dd \u05d0\u05d7\u05e8.'));
+      top.appendChild(el('div',waiting.length?'wt':'r',waiting.length?('\u05de\u05d7\u05db\u05d4 \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4 \u05e9\u05dc\u05da: '+waiting.length):'\u05d0\u05d9\u05df \u05de\u05e9\u05d4\u05d5 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da'));
+      top.addEventListener('click',function(){if(waiting.length)inbox.onclick({});});
+      var l1=el('div','lvl');l1.appendChild(top);org.appendChild(l1);
+      var path=el('div','path');path.setAttribute('aria-label','\u05de\u05e1\u05dc\u05d5\u05dc \u05d4\u05d7\u05dc\u05d8\u05d4');
+      ['\u05e1\u05d5\u05db\u05df \u05de\u05db\u05d9\u05df','\u05de\u05d7\u05db\u05d4 \u05dc\u05da','"\u05d1\u05e6\u05e2"','\u05d4\u05e1\u05d5\u05db\u05df \u05de\u05d1\u05e6\u05e2 \u05d5\u05de\u05d3\u05d5\u05d5\u05d7'].forEach(function(x,i){if(i)path.appendChild(document.createTextNode('\u2190'));path.appendChild(el('b',i===1||i===2?'me':null,x));});
+      org.appendChild(path);
+      var card=function(w,role){
+        var s=wstate(w),tasks=groups[w]||[];
+        var n=el('div','node s-'+s);n.setAttribute('role','group');n.setAttribute('aria-label',w);
+        var t=el('div','t');t.appendChild(el('i','dot s-'+s));t.appendChild(document.createTextNode(w));
+        var sum=tasks.reduce(function(a,x){return a+num(x.cost);},0);
+        t.appendChild(el('span','n',tasks.length+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea'+(sum?' \u00b7 '+'\u05db-'+(Math.round(sum*100)/100)+' \u05d3\u05d5\u05dc\u05e8 \u05dc\u05e1\u05d1\u05d1':'')));
+        t.style.cursor='pointer';t.addEventListener('click',function(){sel=(sel===w)?null:w;open=null;render();});
+        n.appendChild(t);if(role)n.appendChild(el('div','r',role));
+        var ul=el('ul','tasks');
+        tasks.slice().sort(function(x,y){return (RANK[state(y)]-RANK[state(x)])||byNext(x,y);}).forEach(function(a){
+          var li=el('li','s-'+state(a));li.tabIndex=0;li.setAttribute('role','button');
+          var tn=el('div','tn');tn.appendChild(el('i','dot'));tn.appendChild(el('span',null,a.name));li.appendChild(tn);
+          if(a.role)li.appendChild(el('div','tg','\u05de\u05d8\u05e8\u05d4: '+clipWords(a.role,phone()?160:90)));
+          var meta2=[];var nx=hm(a.next_run);if(nx)meta2.push('\u05d4\u05d1\u05d0: '+nx);if(a.cost)meta2.push('\u05e2\u05dc\u05d5\u05ea: '+clipWords(a.cost,40));
+          if(meta2.length)li.appendChild(el('div','tc',meta2.join(' \u00b7 ')));
+          if(a.waiting)li.appendChild(el('div','tw','\u05de\u05d7\u05db\u05d4 \u05dc\u05da: '+clipWords(a.waiting,phone()?200:110)));
+          var go=function(){open=w;render();};li.addEventListener('click',go);li.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
+          ul.appendChild(li);
+        });
+        if(tasks.length)n.appendChild(ul);
+        return n;
+      };
+      org.appendChild(el('div','stem'));
+      var l2=el('div','lvl');l2.appendChild(card(ASST,'\u05de\u05e7\u05d1\u05dc \u05de\u05de\u05da \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4, \u05d1\u05e6\'\u05d0\u05d8 \u05d5\u05d1\u05de\u05e9\u05e8\u05d3, \u05d5\u05de\u05d7\u05dc\u05e7 \u05dc\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd.'));org.appendChild(l2);
+      var rest=names.filter(function(w){return w!==ASST;});
+      if(rest.length){
+        org.appendChild(el('div','stem'));org.appendChild(el('div','bar'));
+        var l3=el('div','lvl workers');
+        rest.forEach(function(w){var c=el('div','col');c.appendChild(el('div','stem'));c.appendChild(card(w,''));l3.appendChild(c);});
+        org.appendChild(l3);
+      }
+      floor.appendChild(org);
+    }else if(use3d()){
+      floor.appendChild(host3d);
+      window.office3d.draw(host3d,{names:names,sel:sel,state:wstate,
+        next:function(w){var t=groups[w].filter(function(x){return x.next_run;}).sort(byNext)[0];return t?'הבא: '+hm(t.next_run):'';},
+        reply:function(w){var r=lastReply(w);return r&&!seen[seenKey(r)]?clipWords(r.text,90):'';},
+        pick:function(w){sel=(sel===w)?null:w;open=null;render();}});
+    }else{
     var room=el('section','room office');var wall=el('div','wall');wall.setAttribute('aria-hidden','true');
     for(var w=0;w<5;w++){if(w===2)wall.appendChild(el('span','sign','משרד הסוכנים'));wall.appendChild(el('span','window'));}
     room.appendChild(wall);
@@ -386,6 +497,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
       desks.appendChild(b);
     });
     room.appendChild(desks);floor.appendChild(room);
+    }
     if(open&&groups[open]){
       var d=el('div','detail');d.setAttribute('role','dialog');d.setAttribute('aria-label',open);
       var hd=el('div','hd');hd.appendChild(el('i','dot s-'+wstate(open)));hd.appendChild(el('b',null,open+' ('+groups[open].length+' משימות)'));
@@ -440,6 +552,10 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
   // Worker -> session comes only from meta/workers (below), which the weekly rotation updates;
   // an id written here would go stale within a week (worker-map-test.py).
   var SESS={};
+  // 22/10/2026 (Michael: "I can't talk to my assistant who gives tasks to everyone?"): the assistant has no standing
+  // session (each message opens a new one), so its desk has a box too: the courier hands the line to the server
+  // (routine-db office_ask), which wakes the assistant like a WhatsApp message, and the answer comes on WhatsApp.
+  var ASST='העוזר שלך';
   var dbh=null,chatDocs=[],chats={};
   var STATUS={'new':'נשלח, מחכה לעובד','sent':'נמסר לעובד, מחכה לתשובה','fail':'לא נמסר'};
   function paint(c){
@@ -477,7 +593,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     dock.hidden=false;document.documentElement.classList.add('chatting');
     if(lastReply(sel)&&!seen[seenKey(lastReply(sel))]){markSeen(sel);setTimeout(render,0);}
     if(dock.getAttribute('data-w')!==sel){
-      dock.textContent='';dock.setAttribute('data-w',sel);dock.classList.toggle('slim',!SESS[sel]);
+      dock.textContent='';dock.setAttribute('data-w',sel);dock.classList.toggle('slim',!SESS[sel]&&sel!==ASST);
       var hd=el('div','hd');hd.appendChild(el('i','dot s-'+wstate(sel)));hd.appendChild(el('b',null,'שיחה עם '+sel));
       if(SESS[sel]){var op=el('a','op','פתח את השיחה');op.href='https://claude.ai/code/'+SESS[sel];op.target='_blank';op.rel='noopener';op.title='תשובה מיידית: כותבים בשיחה הקבועה של העובד';hd.appendChild(op);}
       var rn=el('button',null,'\u25B6 \u05e8\u05d5\u05e5');rn.type='button';rn.title='\u05e8\u05d5\u05e5 \u05e2\u05db\u05e9\u05d9\u05d5: \u05d1\u05d7\u05e8 \u05de\u05e9\u05d9\u05de\u05d4';var w1=sel;rn.addEventListener('click',function(){open=w1;render();});hd.appendChild(rn);
@@ -489,7 +605,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
   }
   function chatBox(w){
     var box=el('div','chat');
-    if(!SESS[w]){box.appendChild(el('div','hint',w==='העוזר שלך'?'העוזר והמחשב פועלים בשיחה שלך עם Claude, לא כאן. פונים אליו שם.':'לעובד הזה אין שיחה קבועה, אין עם מי להתכתב.'));return box;}
+    if(!SESS[w]&&w!==ASST){box.appendChild(el('div','hint','לעובד הזה אין שיחה קבועה, אין עם מי להתכתב.'));return box;}
     var c=chats[w];
     if(c){box.appendChild(c.node);paint(c);return box;}
     c={w:w};chats[w]=c;
@@ -499,7 +615,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     var btn=el('button',null,'שלח');btn.type='submit';
     var st=el('div','st');
     form.appendChild(ta);form.appendChild(btn);node.appendChild(form);node.appendChild(st);
-    node.appendChild(el('div','hint','הדוור עובר ב-08:11, 12:11 ו-16:11 (א\'-ה\'), מוסר לעובד ומחזיר את התשובה לכאן. לתשובה מיידית: פתח את השיחה. מייל, מחיקה ופעולה רגישה מחכים לאישור שלך.'));
+    node.appendChild(el('div','hint',w===ASST?'ההודעה מגיעה לעוזר כמו הודעה בוואטסאפ, והוא עונה לך בוואטסאפ וגם כאן. משימות לעובדים הוא מחלק בעצמו. מייל, מחיקה ופעולה רגישה מחכים לאישור שלך.':'הדוור עובר ב-08:11, 12:11 ו-16:11 (א\'-ה\'), מוסר לעובד ומחזיר את התשובה לכאן. לתשובה מיידית: פתח את השיחה. מייל, מחיקה ופעולה רגישה מחכים לאישור שלך.'));
     ta.addEventListener('keydown',function(e){if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();form.requestSubmit?form.requestSubmit():btn.click();}});
     form.addEventListener('submit',function(e){
       e.preventDefault();
@@ -513,7 +629,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
       dbh.collection('chat').add(row).then(function(ref){
         ta.value='';
         return live(w,ref&&ref.id,row.text,node).then(function(ok){
-          st.textContent=ok?'נשלח. התשובה תופיע כאן בעוד כמה דקות.':'נשמר. הדוור ימסור לעובד בסבב הבא (08:11, 12:11, 16:11).';
+          st.textContent=w===ASST?(ok?'נשלח לעוזר. התשובה תגיע בוואטסאפ וגם כאן.':'נשמר. הדוור ימסור לעוזר בסבב הבא (08:11, 12:11, 16:11), והתשובה תגיע בוואטסאפ וגם כאן.'):(ok?'נשלח. התשובה תופיע כאן בעוד כמה דקות.':'נשמר. הדוור ימסור לעובד בסבב הבא (08:11, 12:11, 16:11).');
         });
       }).catch(function(err){st.className='st err';st.textContent='לא נשמר, נסה שוב ['+String(err&&err.code||'?')+']';})
       .then(function(){btn.disabled=false;});
@@ -543,6 +659,21 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
       for(var k=li.length-1;k>0&&ul.scrollHeight>ul.clientHeight+1;k--){li[k].style.display='none';more.textContent='ועוד '+(li.length-k);}
     });
   }
+  // 3D on a computer by default (27/10/2026); the choice is remembered per viewer.
+  var mode3d=true;try{mode3d=localStorage.getItem('office-3d')!=='0';}catch(e){}
+  var host3d=el('div','o3d-host');
+  function use3d(){return mode3d&&!!window.office3d&&!(window.matchMedia&&window.matchMedia('(max-width:700px)').matches);}
+  var v3d=document.getElementById('v3d');
+  function v3dLabel(){v3d.textContent=mode3d?'תצוגה רגילה':'תלת-ממד';v3d.setAttribute('aria-pressed',String(mode3d));}
+  v3dLabel();
+  v3d.addEventListener('click',function(){mode3d=!mode3d;try{localStorage.setItem('office-3d',mode3d?'1':'0');}catch(e){}v3dLabel();render();});
+  window.addEventListener('office3d-ready',function(){render();});
+  // 07/11/2026: the org chart toggle, on a phone too; remembered per viewer like the 3D choice.
+  var orgMode=false;try{orgMode=localStorage.getItem('office-org')==='1';}catch(e){}
+  var vorg=document.getElementById('vorg');
+  function vorgLabel(){vorg.setAttribute('aria-pressed',String(orgMode));v3d.style.display=orgMode?'none':'';}
+  vorgLabel();
+  vorg.addEventListener('click',function(){orgMode=!orgMode;try{localStorage.setItem('office-org',orgMode?'1':'0');}catch(e){}vorgLabel();open=null;render();});
   var raw=[];
   function refresh(){agents=raw.map(function(a){var x=Object.assign({},a);x.next_run=upcoming(a);return x;});render();}
   setInterval(function(){if(raw.length)refresh();},60000);
@@ -566,3 +697,4 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
   });
 })();
 </script>
+
