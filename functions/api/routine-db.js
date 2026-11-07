@@ -221,6 +221,11 @@ export function agentEntry(b, nowIso) {
   // passed on, or "the water report draft is ready". The morning WhatsApp update and the assistant's
   // snapshot carry it; the office is not on the server.
   if (t(b.for_michael)) e.for_michael = t(b.for_michael);
+  // model (07/11/2026, Michael in the questionnaire: "do it: log the model of every answer", AI governance gap 4
+  // "unlogged decisions"): the exact model id the run says it ran on, so a drop in the golden score or a strange answer
+  // can be tied to a model change. Only a plain claude-* id is kept; anything else is dropped, not refused.
+  const m = String(b.model || '').trim().toLowerCase();
+  if (/^claude-[a-z0-9.\[\]-]{3,40}$/.test(m)) e.model = m;
   return e;
 }
 // secondCheckGate (30/10/2026, Michael: "בצע: להוסיף בדיקה לבודק שני בשאלות אמוניה"): the WhatsApp assistant's
