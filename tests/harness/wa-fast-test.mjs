@@ -147,9 +147,31 @@ console.log('\n9. move an event only on his yes to that question (26/10/2026 ret
   check('failText: no joins = FAIL_TEXT as before; 1 = asks to resend the earlier one too; 3 = says how many',
     failText(0) === FAIL_TEXT && failText(1).startsWith(FAIL_TEXT) && failText(1).length > FAIL_TEXT.length && /\b3\b/.test(failText(3)) && !/\b3\b/.test(failText(1)), [failText(1), failText(3)]);
   {
-    const hs = (await import('fs')).readFileSync(new URL('../../functions/api/wa-hook.js', import.meta.url), 'utf8');
-    check('a failed fire forgets every joined message and sends failText(joins.length)',
-      /for \(const j of joins\) await forget\(env, j\.payload\.wamid\)/.test(hs) && /sendToOwner\(env, owner, failText\(joins\.length\)/.test(hs) && !/sendToOwner\(env, owner, FAIL_TEXT,/.test(hs));
+    // run, not read (retro 03/11/2026 (d)): a failed fire forgets the message and every joined one, and sends failText(joins.length)
+    const { forgetFired, sendFailText } = await import('./_build/wa-hook.mjs');
+    let row = { value: ['w0', 'w1', 'w2', 'w3', 'w9'], updated_at: '2026-11-07T10:00:00.000Z' };
+    const sent = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = async (u, o = {}) => {
+      const url = String(u), mth = o.method || 'GET';
+      if (url.includes('graph.facebook.com')) { sent.push(JSON.parse(o.body)); return new Response(JSON.stringify({ messages: [{ id: 'x' }] }), { status: 200 }); }
+      if (url.includes('server_state')) {
+        if (mth === 'GET') return new Response(JSON.stringify([{ value: row.value.slice(), updated_at: row.updated_at }]), { status: 200 });
+        if (mth === 'PATCH') {
+          if (decodeURIComponent(/updated_at=eq\.([^&]*)/.exec(url)[1]) !== row.updated_at) return new Response('[]', { status: 200 });
+          const b = JSON.parse(o.body); row = { value: b.value, updated_at: b.updated_at }; return new Response(JSON.stringify([row]), { status: 200 });
+        }
+      }
+      return new Response('[]', { status: 200 });
+    };
+    const env = { SUPABASE_SERVICE_ROLE_KEY: 'k', SUPABASE_URL: 'https://sb.test', META_PHONE_NUMBER_ID: '1', META_ACCESS_TOKEN: 't' };
+    try {
+      await forgetFired(env, { id: 'w1' }, [{ payload: { wamid: 'w2' } }, { payload: { wamid: 'w3' } }]);
+      check('a failed fire forgets the message and every joined one from the seen list; others stay', JSON.stringify(row.value) === JSON.stringify(['w0', 'w9']), row.value);
+      await sendFailText(env, '972500000000', [{}, {}, {}]);
+      const body = JSON.stringify(sent[sent.length - 1] || {});
+      check('the failure text sent to Michael is failText(joins.length): names 3', sent.length === 1 && body.includes(JSON.stringify(failText(3)).slice(1, -1)) && !body.includes(JSON.stringify(failText(1)).slice(1, -1)), body.slice(0, 300));
+    } finally { globalThis.fetch = realFetch; }
   }
   check('an app chat line (no wamid) is not a newer WhatsApp message', hasNewer([photo, { ts: iso(t + 1000), event_type: 'owner_in', payload: { text: 'x' } }], 'w1', t) === false);
   const ft = fireText({ id: 'w2', text: 'תמיר ל-PDF', type: 'text' }, null, null, '', '', '', joinedLine(j));

@@ -163,6 +163,16 @@ async function forget(env, id) {
   } catch (e) { /* the note below still shows fire_status */ }
 }
 
+// A failed fire forgets the message and every one it took along, and tells Michael how many to resend (retro 03/11/2026 (d):
+// split out so the test runs it instead of reading the source text).
+export async function forgetFired(env, m, joins) {
+  await forget(env, m.id);
+  for (const j of joins) await forget(env, j.payload.wamid);
+}
+export function sendFailText(env, owner, joins) {
+  return sendToOwner(env, owner, failText(joins.length), { kind: 'reply', windowOpen: true, noTemplate: true }).catch(() => null);
+}
+
 async function aboutAlert(env, wamid) {
   if (!wamid) return '';
   try {
@@ -781,11 +791,11 @@ async function handle(env, raw) {
     seen.fire_status = fr ? fr.status : 'network';
     seen.fire_ms = Date.now() - t0;
     if (fr && fr.ok) { const fj = await fr.clone().json().catch(() => null); seen.fire_session = (fj && fj.claude_code_session_id) || null; }
-    if (fr && fr.ok) seen.fired++; else { await forget(env, m.id); for (const j of joins) await forget(env, j.payload.wamid); }
+    if (fr && fr.ok) seen.fired++; else await forgetFired(env, m, joins);
     // 06/11/2026 (STATUS "assistant speed"): one line per fire, so each answer's run can be read later (get_session /
     // list_events on the session: num_turns, model time, tool time). wa_hook_last kept only the last one.
     await logMark(env, 'fire_done', { wamid: m.id, status: seen.fire_status, to: seen.fire_to, fire_ms: seen.fire_ms, pre_fire_ms: seen.pre_fire_ms || null, session: seen.fire_session || null });
-    if (!(fr && fr.ok) && wa) await sendToOwner(env, owner, failText(joins.length), { kind: 'reply', windowOpen: true, noTemplate: true }).catch(() => null);
+    if (!(fr && fr.ok) && wa) await sendFailText(env, owner, joins);
   }
   await note(env, seen);
 }
