@@ -359,7 +359,7 @@ async function sendDocRaw(env, to, bytes, filename, caption, windowOpen) {
   if (!up || !up.ok || !uj.id) return { ok: false, error: 'upload ' + (up ? up.status : 'network') };
   const r = await metaPost(env, { messaging_product: 'whatsapp', to, type: 'document',
     document: { id: uj.id, filename: name, caption: String(caption || '').slice(0, 1000) || undefined } });
-  return r.ok ? { ok: true, via: 'document' } : { ok: false, error: 'send ' + r.status };
+  return r.ok ? { ok: true, via: 'document', wamid: (r.parsed && r.parsed.messages && r.parsed.messages[0] && r.parsed.messages[0].id) || null } : { ok: false, error: 'send ' + r.status };
 }
 
 // 20/10/2026 (the first morning update: Meta answered 200 to the free text and dropped it later,
@@ -506,7 +506,9 @@ export async function noteOut(env, text, r, kind, extra) {
         headers: { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
         body: JSON.stringify([{ id: 'wo' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
           event_type: WA_OUT, channel: r && r.via === 'chat' ? 'chat' : r && r.ok ? 'whatsapp' : 'whatsapp_error',
-          payload: Object.assign({ title: t.replace(/\s+/g, ' ').slice(0, 120), text: t.slice(0, 1500), kind: kind || 'text', via: (r && r.via) || null, detail: (r && r.error) || null }, extra || {}) }]) });
+          payload: Object.assign({ title: t.replace(/\s+/g, ' ').slice(0, 120), text: t.slice(0, 1500), kind: kind || 'text', via: (r && r.via) || null, detail: (r && r.error) || null,
+            // 07/11/2026 (idea 13): the Meta message id and the send kind, so a later failed status finds this text and how urgent it was
+            wamid: (r && r.wamid) || null }, extra || {}) }]) });
     } catch (e) { /* the message itself went (or not) as before */ }
     // 26/10/2026 (Michael: "cancel the notifications through the site, only through WhatsApp"): a pop-up only in
     // the chat-only mode, where it is the one way a message reaches him. On WhatsApp, sent or failed, none.
@@ -609,7 +611,7 @@ export async function sendToOwner(env, to, text, opts) {
   if (r.error === 'empty text') return r;
   // the buttons too, so the chat shows the same choices (a tap there sends "1. ..." like a tap on WhatsApp)
   const cs = o_choices(opts);
-  const push = await noteOut(env, ilTimes(String(text || '').trim()), r, 'text', cs.length ? { choices: cs } : null);
+  const push = await noteOut(env, ilTimes(String(text || '').trim()), r, 'text', Object.assign({ okind: (opts && opts.kind) || null }, cs.length ? { choices: cs } : null));
   return Object.assign(r, { push });
 }
 // src.path (25/10/2026, Michael: "the app must be the same as WhatsApp, files and all"): where the file is on the
@@ -619,7 +621,7 @@ export async function sendDocToOwner(env, to, bytes, filename, caption, windowOp
   if (held) return held;
   const r = (await chatOnly(env)) ? { ok: true, via: 'chat' } : await sendDocRaw(env, to, bytes, filename, caption, windowOpen);
   const push = await noteOut(env, '\ud83d\udcce ' + String(filename || '') + (caption ? '\n' + caption : ''), r, 'document',
-    { name: String(filename || '').slice(0, 200), file: src && src.path ? String(src.path).slice(0, 400) : null });
+    { name: String(filename || '').slice(0, 200), file: src && src.path ? String(src.path).slice(0, 400) : null, okind: (src && src.kind) || null });
   return Object.assign(r, { push });
 }
 
@@ -682,4 +684,167 @@ export function recentLine(rows, curWamid, nowMs) {
       + (r.payload.media_id ? ' [wa_media ' + r.payload.media_id + ']' : ''));
   while (out.length && out.join(' || ').length > RECENT_MAX) out.shift();
   return out.join(' || ');
+}
+
+// ---------- Delivery statuses: failed and delivered (07/11/2026, ideas-lab 13; Michael in the questionnaire: "do it: delivery
+// confirmation on WhatsApp") ----------
+// Meta answers 200 to a send and reports later, only to the webhook, that the message failed (131047: the 24-hour window had
+// closed; other codes: undeliverable). Until now hasStatuses only noted that statuses arrive (the watchdog). Now, for messages to
+// Michael's number only: delivered and failed are logged in notifications_log (event wa_delivery, one row per message and status,
+// a Meta retry is ignored by the row id), and a failed one goes to FAIL_KEY with the text it carried (found by wamid in wa_out or
+// assistant). waFailFlush mails that text to Michael's own mailbox: at once for the first failure, and failures that follow within
+// FAIL_GAP_MS wait and go together in one mail (the watchdog tick, or the next failed status, sends them). Friday and Saturday
+// (weekendIL, DECISIONS "quiet weekend"): only an urgent kind is mailed; the rest wait in FAIL_KEY for Sunday. read is never kept
+// (a phone setting), and nothing is resent on WhatsApp (a resend after a late "delivered" would be a duplicate).
+export const DELIVERY_EVENT = 'wa_delivery', FAIL_MAIL_EVENT = 'wa_fail_mail';
+export const FAIL_KEY = 'wa_fail_pending', FAIL_MAIL_KEY = 'wa_fail_mail_last', FAIL_GAP_MS = 10 * 60000, FAIL_MAX = 30;
+// urgent on a weekend: what the weekend rule sends at once anyway (the morning update itself is not a weekend message)
+export const FAIL_URGENT_KINDS = ['reply', 'hazard', 'incident', 'watchdog', 'sign'];
+export const WAMID_RE = /^[A-Za-z0-9._=+\/-]{8,200}$/;
+// Pure: the delivered/failed statuses of messages to the owner in one webhook body. Anything else (sent, read, another
+// recipient, a malformed id) is dropped; the error code and title are cut to size (the body is outside input).
+export function deliveryStatuses(body, owner) {
+  const out = [], own = digits(owner);
+  if (!own) return out;
+  ((body && body.entry) || []).forEach((e) => ((e && e.changes) || []).forEach((c) => {
+    ((c && c.value && Array.isArray(c.value.statuses) && c.value.statuses) || []).forEach((s) => {
+      if (!s || (s.status !== 'failed' && s.status !== 'delivered')) return;
+      const id = String(s.id || '');
+      if (!WAMID_RE.test(id) || digits(s.recipient_id) !== own) return;
+      const er = Array.isArray(s.errors) && s.errors[0] ? s.errors[0] : null;
+      const code = er && Number.isFinite(Number(er.code)) ? Number(er.code) : null;
+      const ts = Number(s.timestamp) > 0 ? new Date(Number(s.timestamp) * 1000) : null;
+      out.push({ wamid: id, status: s.status, at: ts && !isNaN(ts) ? ts.toISOString() : null, code,
+        title: er ? String(er.title || er.message || '').replace(/[<>]/g, '').slice(0, 160) : null });
+    });
+  }));
+  return out;
+}
+// Pure: urgent on a weekend? A kind that is not known (or an old row with none) counts as urgent, like the weekend rule.
+export function failUrgent(kind) { return !kind || FAIL_URGENT_KINDS.indexOf(kind) >= 0 || OWNER_KINDS.indexOf(kind) < 0; }
+// Pure: the pending list with new failures (one per wamid; the oldest out past FAIL_MAX).
+export function failAdd(raw, adds) {
+  const list = plist(raw).filter((x) => x && x.wamid);
+  (adds || []).forEach((e) => { if (e && e.wamid && !list.some((x) => x.wamid === e.wamid)) list.push(e); });
+  while (list.length > FAIL_MAX) list.shift();
+  return list;
+}
+// Pure: what to mail now. Nothing within FAIL_GAP_MS of the last mail (those wait and go together next time);
+// on a weekend only the urgent ones.
+export function failPlan(raw, lastMs, nowMs) {
+  const list = plist(raw).filter((x) => x && x.wamid);
+  const wk = weekendIL(nowMs);
+  const send = list.filter((x) => !wk || failUrgent(x.kind));
+  if (!send.length) return { send: [], pending: list.length, weekend: wk };
+  if (lastMs && nowMs - lastMs >= 0 && nowMs - lastMs < FAIL_GAP_MS) return { send: [], pending: list.length, wait: true };
+  return { send, pending: list.length };
+}
+const fEsc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const fWhen = (iso) => { const ms = Date.parse(iso); if (!ms) return ''; const p = ilParts(ms); return p.day + '/' + p.month + '/' + p.year + ' ' + p.hour + ':' + p.minute; };
+export function failReason(e) {
+  if (e && e.code === 131047) return '\u05d7\u05dc\u05d5\u05df 24 \u05d4\u05e9\u05e2\u05d5\u05ea \u05e9\u05dc \u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05e0\u05e1\u05d2\u05e8 (\u05dc\u05d0 \u05db\u05ea\u05d1\u05ea \u05dc\u05e2\u05d5\u05d6\u05e8 \u05d9\u05d5\u05ea\u05e8 \u05de\u05d9\u05de\u05de\u05d4)';
+  return '\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05dc\u05d0 \u05de\u05e1\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4' + (e && e.code ? ' ' + e.code : '') + (e && e.title ? ': ' + e.title : '');
+}
+export function failMailSubject(n) { return n > 1 ? '# \u05d4\u05d5\u05d3\u05e2\u05d5\u05ea \u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05d0\u05dc\u05d9\u05da \u05dc\u05d0 \u05e0\u05de\u05e1\u05e8\u05d5 - \u05d4\u05ea\u05d5\u05db\u05df \u05db\u05d0\u05df'.replace('#', n) : '\u05d4\u05d5\u05d3\u05e2\u05ea \u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05d0\u05dc\u05d9\u05da \u05dc\u05d0 \u05e0\u05de\u05e1\u05e8\u05d4 - \u05d4\u05ea\u05d5\u05db\u05df \u05db\u05d0\u05df'; }
+// Pure: the mail to Michael's own mailbox (no signature: not to other people). Keyboard characters only.
+export function failMailHtml(list) {
+  const rows = (list || []).map((e) => '<div style="border:1px solid #ccc;border-radius:6px;padding:8px 10px;margin:8px 0">'
+    + '<div style="color:#555;font-size:13px">' + fEsc(fWhen(e.at)) + (fWhen(e.at) ? ' - ' : '') + fEsc(failReason(e)) + '</div>'
+    + (e.text ? '<div style="white-space:pre-wrap;margin-top:6px">' + fEsc(e.text) + '</div>' : '<div style="margin-top:6px;color:#a00">\u05d4\u05ea\u05d5\u05db\u05df \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0 \u05d1\u05d9\u05d5\u05de\u05df \u05d4\u05d4\u05d5\u05d3\u05e2\u05d5\u05ea</div>')
+    + '</div>').join('');
+  return '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:15px">'
+    + '<p>' + ((list || []).length > 1 ? '\u05db\u05de\u05d4 \u05d4\u05d5\u05d3\u05e2\u05d5\u05ea \u05e9\u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05e9\u05dc\u05d7\u05d4 \u05dc\u05da \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05dc\u05d0 \u05e0\u05de\u05e1\u05e8\u05d5. \u05d6\u05d4 \u05de\u05d4 \u05e9\u05d4\u05d9\u05d4 \u05d1\u05d4\u05df:' : '\u05d4\u05d5\u05d3\u05e2\u05d4 \u05e9\u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05e9\u05dc\u05d7\u05d4 \u05dc\u05da \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05dc\u05d0 \u05e0\u05de\u05e1\u05e8\u05d4. \u05d6\u05d4 \u05de\u05d4 \u05e9\u05d4\u05d9\u05d4 \u05d1\u05d4:') + '</p>' + rows
+    + '<p style="color:#555;font-size:13px">\u05d0\u05dd \u05d7\u05dc\u05d5\u05df 24 \u05d4\u05e9\u05e2\u05d5\u05ea \u05e0\u05e1\u05d2\u05e8: \u05de\u05e1\u05e4\u05d9\u05e7 \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05e2\u05d5\u05d6\u05e8 \u05d4\u05d5\u05d3\u05e2\u05d4 \u05e7\u05e6\u05e8\u05d4 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4, \u05d5\u05d4\u05d4\u05d5\u05d3\u05e2\u05d5\u05ea \u05d4\u05d1\u05d0\u05d5\u05ea \u05d9\u05d2\u05d9\u05e2\u05d5 \u05e9\u05d5\u05d1 \u05db\u05e8\u05d2\u05d9\u05dc. \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7\u05ea \u05e9\u05d5\u05d1 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05dc\u05d1\u05d3, \u05db\u05d3\u05d9 \u05e9\u05dc\u05d0 \u05ea\u05d2\u05d9\u05e2 \u05e4\u05e2\u05de\u05d9\u05d9\u05dd.</p></div>';
+}
+async function failSb(env, path, init) {
+  const k = env.SUPABASE_SERVICE_ROLE_KEY, url = env.SUPABASE_URL || SB_LIVE;
+  const r = await fetch(url + '/rest/v1/' + path, Object.assign({ signal: tmo(SB_TIMEOUT_MS) }, init || {},
+    { headers: Object.assign({ apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }, (init && init.headers) || {}) }));
+  if (!r.ok) throw new Error(path.split('?')[0] + ' ' + r.status);
+  const t = await r.text();
+  try { return t ? JSON.parse(t) : null; } catch (e) { return null; }
+}
+// The text a message carried, by its wamid (wa_out from sendToOwner, assistant from the fast answer).
+async function failSource(env, wamid) {
+  const rows = await failSb(env, 'notifications_log?select=event_type,payload&event_type=in.(' + WA_OUT + ',assistant)&payload->>wamid=eq.' + encodeURIComponent(wamid) + '&order=ts.asc&limit=1').catch(() => null);
+  const r = Array.isArray(rows) && rows[0];
+  if (!r || !r.payload) return { text: '', kind: null, found: false };
+  return { text: String(r.payload.text || '').slice(0, 1500), kind: r.payload.okind || (r.event_type === 'assistant' ? 'reply' : null), found: true };
+}
+// Called by wa-hook for a webhook body with statuses. deps = { accessToken, sendMailTo } (_onedrive.js; a test passes its own).
+// Never throws to the caller's flow (wa-hook wraps it); returns what it did.
+export async function waDeliveryHandle(env, body, owner, deps, nowMs) {
+  if (!env || !env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  const list = deliveryStatuses(body, owner);
+  if (!list.length) return null;
+  const now = nowMs || Date.now(), adds = [];
+  let logged = 0;
+  for (const s of list) {
+    const src = s.status === 'failed' ? await failSource(env, s.wamid) : null;
+    const row = { id: 'wd' + s.status.charAt(0) + '-' + s.wamid, user_email: 'server', ts: new Date(now).toISOString(), event_type: DELIVERY_EVENT,
+      channel: s.status === 'failed' ? 'whatsapp_error' : 'whatsapp',
+      payload: { title: s.status + (src && src.text ? ': ' + src.text.replace(/\s+/g, ' ').slice(0, 100) : ''), wamid: s.wamid, status: s.status, meta_at: s.at, code: s.code, detail: s.title, okind: src ? src.kind : null } };
+    // a Meta retry of the same status: the same id, nothing new (and no second mail)
+    const got = await failSb(env, 'notifications_log?on_conflict=id', { method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates,return=representation' }, body: JSON.stringify([row]) }).catch(() => null);
+    if (!Array.isArray(got) || !got.length) continue;
+    logged++;
+    if (s.status === 'failed') adds.push({ wamid: s.wamid, at: s.at || new Date(now).toISOString(), code: s.code, title: s.title, text: src.text, kind: src.kind });
+  }
+  if (adds.length) {
+    const k = env.SUPABASE_SERVICE_ROLE_KEY;
+    let w = null;
+    try { w = await stateCas(env.SUPABASE_URL || SB_LIVE, { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }, FAIL_KEY,
+      (raw) => ({ value: JSON.stringify(failAdd(raw, adds)) }), () => tmo(SB_TIMEOUT_MS)); } catch (e) { w = null; }
+    // security review 07/11/2026: a list write that failed takes its log rows back, so Meta's retry of the same status is not
+    // ignored as a duplicate and the failure is not lost
+    if (!w || !w.written) {
+      for (const a of adds) await failSb(env, 'notifications_log?id=eq.' + encodeURIComponent('wdf-' + a.wamid), { method: 'DELETE', headers: { Prefer: 'return=minimal' } }).catch(() => null);
+      return { statuses: list.length, logged, failed: adds.length, error: 'pending write failed' };
+    }
+  }
+  const out = { statuses: list.length, logged, failed: adds.length };
+  if (adds.length) out.flush = await waFailFlush(env, deps, now).catch((e) => ({ error: String((e && e.message) || e).slice(0, 120) }));
+  return out;
+}
+// Mails what failPlan says, once: the claim on FAIL_MAIL_KEY (compare-and-swap) stops two callers mailing the same list.
+// A mail that fails gives the claim back and keeps the list, so the next tick tries again.
+export async function waFailFlush(env, deps, nowMs) {
+  if (!env || !env.SUPABASE_SERVICE_ROLE_KEY || !deps) return null;
+  const now = nowMs || Date.now(), url = env.SUPABASE_URL || SB_LIVE, k = env.SUPABASE_SERVICE_ROLE_KEY;
+  const h = { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' };
+  const rawList = await stateRow(env, url, FAIL_KEY);
+  if (!plist(rawList).length) return { pending: 0 };
+  let prev = null;
+  const lastOf = (raw) => { try { const o = typeof raw === 'string' ? JSON.parse(raw) : raw; return (o && Date.parse(o.at)) || 0; } catch (e) { return 0; } };
+  const plan = failPlan(rawList, lastOf(await stateRow(env, url, FAIL_MAIL_KEY)), now);
+  if (!plan.send.length) return { pending: plan.pending, wait: !!plan.wait, weekend: !!plan.weekend };
+  const claim = await stateCas(url, h, FAIL_MAIL_KEY, (raw) => {
+    const t = lastOf(raw);
+    if (t && now - t >= 0 && now - t < FAIL_GAP_MS) return { write: false };
+    prev = raw === undefined ? null : raw;
+    return { value: JSON.stringify({ at: new Date(now).toISOString(), n: plan.send.length }) };
+  }, () => tmo(SB_TIMEOUT_MS));
+  if (!claim.written) return { pending: plan.pending, busy: true };
+  // taken off the list before the mail (security review 07/11/2026): a clean-up that fails after the mail would mail them again
+  const sent = plan.send.map((x) => x.wamid);
+  const took = await stateCas(url, h, FAIL_KEY, (raw) => ({ value: JSON.stringify(plist(raw).filter((x) => x && sent.indexOf(x.wamid) < 0)) }), () => tmo(SB_TIMEOUT_MS)).catch(() => ({ written: false }));
+  if (!took.written) {
+    await stateCas(url, h, FAIL_MAIL_KEY, () => ({ value: prev == null ? JSON.stringify({ at: null }) : prev }), () => tmo(SB_TIMEOUT_MS)).catch(() => null);
+    return { pending: plan.pending, error: 'pending write failed' };
+  }
+  let err = null;
+  try {
+    const od = await deps.accessToken(env);
+    if (!od || !od.token || !od.email) throw new Error('no mailbox');
+    await deps.sendMailTo(od.token, [od.email], [], failMailSubject(plan.send.length), failMailHtml(plan.send), []);
+  } catch (e) { err = String((e && e.message) || e).slice(0, 120); }
+  if (err) {
+    // the mail did not go: the items go back on the list and the claim is given back, so the next tick tries again
+    await stateCas(url, h, FAIL_KEY, (raw) => ({ value: JSON.stringify(failAdd(raw, plan.send)) }), () => tmo(SB_TIMEOUT_MS)).catch(() => null);
+    await stateCas(url, h, FAIL_MAIL_KEY, () => ({ value: prev == null ? JSON.stringify({ at: null }) : prev }), () => tmo(SB_TIMEOUT_MS)).catch(() => null);
+    return { pending: plan.pending, error: err };
+  }
+  await failSb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify([{ id: 'wm' + now.toString(36) + Math.random().toString(36).slice(2, 6),
+    user_email: 'server', ts: new Date(now).toISOString(), event_type: FAIL_MAIL_EVENT, channel: 'email', payload: { title: failMailSubject(sent.length), n: sent.length, wamids: sent } }]) }).catch(() => null);
+  return { mailed: sent.length, pending: plan.pending - sent.length };
 }

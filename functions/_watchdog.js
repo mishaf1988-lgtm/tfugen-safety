@@ -34,9 +34,10 @@
 // connection is what broke, the mail cannot go: the app shows the same list
 // on the home screen (op:'status' -> watch), and says so when this check
 // itself has not run for 45 minutes.
-import { stateGet, stateSet, stateLock, stateUnlock, tokenRow, accessToken, hasMail, sendMail, odConfigured } from './_onedrive.js';
+import { stateGet, stateSet, stateLock, stateUnlock, tokenRow, accessToken, hasMail, sendMail, sendMailTo, odConfigured } from './_onedrive.js';
 import { SITE } from './_site.js';
 import { runFaultAlert } from './_faults.js';
+import { waFailFlush } from './_wa.js';
 
 export const WATCH_KEY = 'sync_watch';
 // The file's prepared rows and the 80% warning (hazard-file.js MAX_ROW - 1, FULL_WARN).
@@ -319,6 +320,8 @@ export async function runWatch(env, appUrl) {
     const r = await watchOnce(env, appUrl);
     // faults since the last tick, one WhatsApp to Michael (31/10/2026, _faults.js); never fails the watch itself
     try { r.faults = await runFaultAlert(env, new Date().toISOString()); } catch (e) { r.faults = { ok: false, error: String((e && e.message) || e).substring(0, 120) }; }
+    // WhatsApp messages to Michael that Meta reported failed and that waited (FAIL_GAP_MS, or the weekend): one mail (07/11/2026, ideas-lab 13)
+    try { r.wa_fail = await waFailFlush(env, { accessToken, sendMailTo }, Date.now()); } catch (e) { r.wa_fail = { error: String((e && e.message) || e).substring(0, 120) }; }
     return r;
   } finally { await stateUnlock(env, WATCH_LOCK, tok); }
 }

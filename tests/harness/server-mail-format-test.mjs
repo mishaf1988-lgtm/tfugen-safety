@@ -17,6 +17,7 @@ import { mailHtml as watchdogHtml } from './_build/_watchdog.mjs';
 import { digestOf, digestHtml } from './_build/weekly-digest.mjs';
 import { buildReport, buildStatus, SIGNATURE } from './_build/hazard-report.mjs';
 import { missMailHtml } from './_build/talk.mjs';
+import { failMailHtml } from './_build/_wa.mjs';
 import { approvalHtml, decisionHtml, permitHtml, mailHtml as worksMailHtml, askHtml } from './_build/works.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -45,6 +46,7 @@ console.log('\n1. every mail call site is known');
 const KNOWN_SITES = {
   'api/hazard-report.js': 2, 'api/weekly-digest.js': 1, 'api/works.js': 1, 'api/mail-inbox.js': 1, 'api/codes.js': 1,
   'api/trustee-gate.js': 1, 'api/talk.js': 4, 'api/trustee-notify.js': 1, 'api/close-hazard.js': 1, '_watchdog.js': 1,
+  '_wa.js': 1, // 07/11/2026: a WhatsApp message to Michael that Meta reported failed, to his own mailbox (failMailHtml, rendered below)
 };
 const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(dir, e.name)) : e.name.endsWith('.js') ? [path.join(dir, e.name)] : []));
 const files = walk(FN), found = {};
@@ -85,6 +87,7 @@ const RENDER = [
   ['works.decisionHtml', 'contractor/dept', decisionHtml(true, work, FRI, 'note', 'https://x/y'), true],
   ['works.permitHtml', 'contractor/dept', permitHtml(work, FRI, false, 'a.pdf', 'https://x/y', true), true],
   ['works.mailHtml', 'contractor list', worksMailHtml(FRI, 'https://x/y'), true],
+  ['_wa.failMailHtml', 'Michael only', failMailHtml([{ at: IL, code: 131047, text: 'x' }]), false],
 ];
 for (const [name, who, html, sig] of RENDER) {
   check(name + ' (' + who + '): produced html', typeof html === 'string' && html.length > 50);

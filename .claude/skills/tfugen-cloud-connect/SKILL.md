@@ -47,3 +47,7 @@ description: How to connect an outside service (Cloudflare, Supabase management,
 - לאמת ב-API: `pages/projects/<p>` מחזיר רק שם וסוג (`secret_text`), אף פעם לא ערך. לספור גם את Production, כדי לוודא שלא השתנה.
 - גרסה שנבנתה לפני שהסוד נוסף לא מכירה אותו. `POST deployments/<id>/retry` בונה אותה מחדש עם המשתנים של היום, ואז לבדוק אותה.
 - הוכחה שהסוד עובד היא קריאה שעוברת דרכו, למשל `PREVIEW_URL=... node tests/staging/e2e.js` (סעיף 6b), ולא רק שורה ברשימת המשתנים.
+
+## הגדרה אצל Meta בלי גישה ללוח שלה (07/11/2026, אישור מסירה בוואטסאפ)
+
+- לפני דף טלפון "הפעל מנוי ב-Meta": לבדוק אם השרת כבר מקבל את מה שצריך. סטטוסים (sent, delivered, failed) מגיעים לאותו webhook של `messages`; הוכחה במסד: `server_state.wa_status_last` נכתב שניות אחרי `wa_meta_out` (`select key, value, updated_at from server_state where key in ('wa_status_last','wa_meta_out')`). כך נחסך דף טלפון ומשימה בכרום שלא היו נחוצים.

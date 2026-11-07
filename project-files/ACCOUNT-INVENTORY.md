@@ -186,6 +186,8 @@ Client ID ו-Tenant: ב-`project-files/ONEDRIVE-SERVER-SETUP.md`. הרשאות d
 
 **המספר של העוזר נפל (24/10/2026):** `wa_me` החזיר 133010, `wa_check` הראה `phone.status` PENDING ו-platform NOT_APPLICABLE. זה מספר הבדיקה של Meta (בלי SIM), ולכן בלי קוד SMS: `routine-db.sh '{"op":"wa_phone","step":"register","pin":"<6 ספרות>"}'` החזיר CONNECTED / CLOUD_API, והודעת בדיקה עברה. ה-PIN (האימות הדו-שלבי של המספר) אצל מיכאל, לא ב-repo. `request_code` במספר הזה נכשל (136024) ואינו נדרש.
 
+**אישור מסירה בוואטסאפ (07/11/2026, רעיון 13):** ה-webhook של Meta (`/api/wa-hook`, מנוי לשדה `messages` באפליקציה ב-Meta) מקבל גם סטטוסים של הודעות שהשרת שלח; נבדק במסד 07/11/2026: `server_state.wa_status_last` נכתב 7 שניות אחרי `wa_meta_out`. אין צורך בשינוי מנוי. `failed` של הודעה למיכאל = מייל לתיבה שלו (חיבור ה-Microsoft של השרת, `Mail.Send`), ו-`delivered` נרשם (`notifications_log` `wa_delivery`). מצב: `server_state` `wa_fail_pending`, `wa_fail_mail_last`.
+
 Worker נפרד: `tapugan-backup-cron` (`workers/backup-cron.js`), גיבוי יומי לבאקט ב-Supabase. סודות שלו: `SUPABASE_SERVICE_KEY`, `MANUAL_KEY` (רק להפעלה ידנית של `/run`; שום אוטומציה לא משתמשת בו. הערך הישן היה גלוי ב-`INFRA-2026-05-06.md` עד 11/10/2026, הוסר מהקובץ ונשאר בהיסטוריית git: להחליף ב-Cloudflare).
 
 ---

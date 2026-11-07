@@ -54,7 +54,7 @@ sed -i "s#'./_pdflib.js'#'./_pdflib.mjs'#" _build/_pdftext.mjs
 sed -i -e "s#'./_xlsxpatch.js'#'./_xlsxpatch.mjs'#" -e "s#'./_pdflib.js'#'./_pdflib.mjs'#" -e "s#'./_sign.js'#'./_sign.mjs'#" -e "s#'./_pdftext.js'#'./_pdftext.mjs'#" -e "s#'./_shared.js'#'./_shared.mjs'#" _build/_permit.mjs
 sed -i "s#'./api/hazard-file.js'#'./hazard-file.mjs'#" _build/_meeting.mjs
 sed -i "s#'./_xlsxpatch.js'#'./_xlsxpatch.mjs'#" _build/_pptx.mjs _build/_deckpatch.mjs
-sed -i -e "s#'./_onedrive.js'#'./_onedrive.mjs'#" -e "s#'./_faults.js'#'./_faults.mjs'#" _build/_watchdog.mjs
+sed -i -e "s#'./_onedrive.js'#'./_onedrive.mjs'#" -e "s#'./_faults.js'#'./_faults.mjs'#" -e "s#'./_wa.js'#'./_wa.mjs'#" _build/_watchdog.mjs
 # _faults (31/10/2026): the fault alert the watchdog sends
 sed -i -e "s#'./_onedrive.js'#'./_onedrive.mjs'#" -e "s#'./_wa.js'#'./_wa.mjs'#" -e "s#'./_shared.js'#'./_shared.mjs'#" -e "s#'./api/routine-db.js'#'./routine-db.mjs'#" -e "s#'./_cas.js'#'./_cas.mjs'#" _build/_faults.mjs
 for f in trustee-log ms-auth trustee-notify mail-inbox close-hazard hazard-file od-read od-pick od-scan hazard-report meeting-data hazard-deck weekly-digest backup-od talk xlsx-gaps routine-db codes weather wa-hook wa-morning chat works; do
