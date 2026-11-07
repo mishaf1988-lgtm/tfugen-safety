@@ -19,8 +19,8 @@ window.claude = { use: (name) => Promise.resolve(name !== 'db' ? null : {
     ['c1', { from: 'worker', worker: 'W2', at: '2026-10-21T06:00:00Z', text: 'word '.repeat(80) + 'END' }],
     ['c2', { from: 'handoff', by: 'W1', worker: 'W2', status: 'wait', at: '2026-10-21T06:01:00Z', text: 't' }],
   ] : [
-    ['trig_A1', { name: 'one', worker: 'W1', order: 1, status: 'done', last_run: '2026-10-17T19:44:49Z' }],
-    ['trig_B2', { name: 'two', worker: 'W1', order: 2, status: 'done', waiting: 'x' }],
+    ['trig_A1', { name: 'one', worker: 'W1', order: 1, cost: 'S (Sonnet 5.5): \u05db-1.3$ \u05dc\u05d9\u05d5\u05dd' , status: 'done', last_run: '2026-10-17T19:44:49Z' }],
+    ['trig_B2', { name: 'two', worker: 'W1', order: 2, cost: 'S (Sonnet 5.5): \u05db-1.3$ \u05dc\u05d9\u05d5\u05dd' , status: 'done', waiting: 'x' }],
     ['trig_C3', { name: 'three', worker: 'W2', status: 'fail', waiting: 'long '.repeat(60) }],
   ]).map(([id, body]) => { const b = Object.freeze(body); return Object.freeze({ id, exists: true, data: () => b }); }) })), 0); return () => {}; } }),
   doc: () => ({ onSnapshot: () => () => {} }),
@@ -74,6 +74,11 @@ window.claude = { use: (name) => Promise.resolve(name !== 'db' ? null : {
   await desk.setContent(html, { waitUntil: 'load' });
   await desk.waitForSelector('button.desk');
   check('computer: the one-screen office with scenes stays', await desk.$eval('button.desk .scene', (sv) => getComputedStyle(sv).display !== 'none'));
+  // 07/11/2026: the org chart read the model number (Sonnet 5.5) as the cost and summed it per task of one session.
+  const orgErr = []; desk.on('pageerror', (e) => orgErr.push(e.message)); await desk.click('#vorg'); await desk.waitForSelector('.org .node');
+  const orgN = await desk.$$eval('.org .node .t .n', (ns) => ns.map((n) => n.textContent));
+  check('org chart: a worker cost is "N$ per day" once per session, not the model number summed', orgN.some((t) => /\u05db-1\.3 \u05d3\u05d5\u05dc\u05e8 \u05dc\u05d9\u05d5\u05dd/.test(t)) && !orgN.some((t) => /5\.5|2\.6|11/.test(t)), orgN);
+  check('org chart: no assistant tasks still draws the chart (no page error)', orgErr.length === 0, orgErr);
   await browser.close();
   console.log('\n' + passed + ' passed, ' + failed + ' failed');
   process.exit(failed ? 1 : 0);

@@ -421,12 +421,14 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
     var names=Object.keys(groups).sort(function(x,y){
       var ix=ORDER.indexOf(x),iy=ORDER.indexOf(y);return (ix<0?99:ix)-(iy<0?99:iy)||x.localeCompare(y,'he');});
     names.forEach(function(w){groups[w].sort(function(x,y){return (x.order||99)-(y.order||99)||String(x.name).localeCompare(String(y.name),'he');});});
-    var wstate=function(w){var best='never';groups[w].forEach(function(t){var s=state(t);if(RANK[s]>RANK[best])best=s;});return best;};
+    var wstate=function(w){var best='never';(groups[w]||[]).forEach(function(t){var s=state(t);if(RANK[s]>RANK[best])best=s;});return best;};
 
     if(orgMode){
       // 07/11/2026: the org chart (see the CSS note). Same groups and states as the desks, so nothing new to fetch.
       var org=el('div','org');org.setAttribute('aria-label','\u05e2\u05e5 \u05d0\u05e8\u05d2\u05d5\u05e0\u05d9: \u05de\u05d9 \u05de\u05d3\u05d5\u05d5\u05d7 \u05dc\u05de\u05d9 \u05d5\u05de\u05d4 \u05de\u05d7\u05db\u05d4 \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4 \u05e9\u05dc\u05da');
-      var num=function(c){var m=/(\d+(?:\.\d+)?)/.exec(String(c||''));return m&&/\$|\u05d3\u05d5\u05dc\u05e8/.test(String(c))?+m[1]:0;};
+      // 07/11/2026 (real data): the first number in "cost" was the model (Sonnet 5.5), and tasks of one worker share a session,
+      // so the sum showed 33$ for 1.3$ a day. Read only "N$ per day/run", once per distinct cost line, summed per unit.
+      var num=function(c){var m=/(\d+(?:\.\d+)?)\s*\$\s*(\u05dc\u05d9\u05d5\u05dd|\u05dc\u05e8\u05d9\u05e6\u05d4)/.exec(String(c||''));return m?{v:+m[1],u:m[2]}:null;};
       var top=el('button','node top'+(waiting.length?' s-wait':''));top.type='button';
       var tt=el('div','t');tt.appendChild(el('i','dot'+(waiting.length?' s-wait':' s-done')));tt.appendChild(document.createTextNode('\u05de\u05d9\u05db\u05d0\u05dc'));tt.appendChild(el('span','n','\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea'));top.appendChild(tt);
       top.appendChild(el('div','r','\u05de\u05d2\u05d3\u05d9\u05e8 \u05de\u05d8\u05e8\u05d5\u05ea, \u05de\u05d0\u05e9\u05e8 \u05d1"\u05d1\u05e6\u05e2", \u05d5\u05e9\u05d5\u05dc\u05d7 \u05d1\u05e2\u05e6\u05de\u05d5 \u05db\u05dc \u05de\u05d9\u05d9\u05dc \u05dc\u05d0\u05d3\u05dd \u05d0\u05d7\u05e8.'));
@@ -440,8 +442,9 @@ h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;line-hei
         var s=wstate(w),tasks=groups[w]||[];
         var n=el('div','node s-'+s);n.setAttribute('role','group');n.setAttribute('aria-label',w);
         var t=el('div','t');t.appendChild(el('i','dot s-'+s));t.appendChild(document.createTextNode(w));
-        var sum=tasks.reduce(function(a,x){return a+num(x.cost);},0);
-        t.appendChild(el('span','n',tasks.length+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea'+(sum?' \u00b7 '+'\u05db-'+(Math.round(sum*100)/100)+' \u05d3\u05d5\u05dc\u05e8 \u05dc\u05e1\u05d1\u05d1':'')));
+        var seenC={},per={};tasks.forEach(function(x){var k=String(x.cost||'');if(seenC[k])return;seenC[k]=1;var c=num(k);if(c)per[c.u]=(per[c.u]||0)+c.v;});
+        var sum=Object.keys(per).map(function(u){return '\u05db-'+(Math.round(per[u]*100)/100)+' \u05d3\u05d5\u05dc\u05e8 '+u;}).join(' + ');
+        t.appendChild(el('span','n',(tasks.length===1?'\u05de\u05e9\u05d9\u05de\u05d4 \u05d0\u05d7\u05ea':tasks.length+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea')+(sum?' \u00b7 '+sum:'')));
         t.style.cursor='pointer';t.addEventListener('click',function(){sel=(sel===w)?null:w;open=null;render();});
         n.appendChild(t);if(role)n.appendChild(el('div','r',role));
         var ul=el('ul','tasks');
