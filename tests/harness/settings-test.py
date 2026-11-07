@@ -24,6 +24,10 @@ check("pr-gate, push-recheck, hebrew-midturn, session-start wired", {"pr-gate.py
 # that never loops (stop_hook_active) and names all eight rules (7-8 from 27/10/2026: too long or technical,
 # a change from what was agreed with no reason; tested on 8 sample replies, 8 right); session-start.py must skip it (no "command").
 rc = [h for g in old["hooks"].get("Stop", []) for h in g["hooks"] if h.get("type") == "prompt"]
+# 07/11/2026 (Michael: "why do you answer me several times here"): the same reply reached him five times, the
+# checker asked again after every rewrite. The stop_hook_active gate comes first, before the rules and the JSON.
+check("rules checker: the once-only gate (stop_hook_active) comes before the rules and before the input JSON",
+      len(rc) == 1 and rc[0]["prompt"].find("stop_hook_active") < rc[0]["prompt"].find("\n1. ") < rc[0]["prompt"].find("$ARGUMENTS"), rc)
 check("rules checker on Stop: one prompt hook, reads last_assistant_message, never loops, eight rules",
       len(rc) == 1 and all(w in rc[0]["prompt"] for w in ("$ARGUMENTS", "stop_hook_active", "last_assistant_message", "\n6. ", "\n8. ")), rc)
 done()
