@@ -81,6 +81,8 @@ jobs:
       # on the next code PR. The repo's .md files that a harness test reads are checked here too.
       - run: python3 tests/harness/skill-size-test.py
       - run: python3 tests/harness/account-inventory-test.py
+      # 07/11/2026 ("self-correcting memory"): an instruction that names code that is gone fails a .md-only PR too.
+      - run: python3 tests/harness/stale-refs-test.py
       - run: python3 tests/harness/system-map-test.py
       - run: python3 tests/harness/claude-md-test.py
       # A handoff PR is .md only too (CLAUDE.md: only the latest handoff in the root).

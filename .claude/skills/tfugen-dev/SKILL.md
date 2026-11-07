@@ -1,6 +1,6 @@
 ---
 name: tfugen-dev
-description: Use when developing features for the TFUGEN Safety Management System (tfugen-safety repo). Enforces project-specific conventions - single-file HTML app, Hebrew text as \uXXXX unicode escapes, Supabase integration with 35+ tables, empty-dates-to-null rule, and the askDel + showView + VIEW_CONFIG pattern. Trigger when editing index.html, ncr-agent.js, functions/api/claude.js, or adding new agents/modules/views to the safety system.
+description: Use when developing features for the TFUGEN Safety Management System (tfugen-safety repo). Enforces project-specific conventions - single-file HTML app, Hebrew text as \uXXXX unicode escapes, Supabase integration with 35+ tables, empty-dates-to-null rule, and the askDel + showView + VIEW_CONFIG pattern. Trigger when editing index.html, functions/api/*.js, or adding new agents/modules/views to the safety system.
 ---
 
 # TFUGEN Safety - Development Skill
@@ -16,7 +16,7 @@ description: Use when developing features for the TFUGEN Safety Management Syste
 ### 1. Single-file HTML
 - כל ה-UI וה-logic נמצא ב-`index.html` אחד
 - אין build step, אין bundler
-- מודולים נפרדים כמו `ncr-agent.js` נטענים כ-`<script src>`
+- אין קבצי סקריפט נפרדים: `index.html` לא טוען `<script src>` משלו (ncr-agent.js הישן לא קיים; נבדק 07/11/2026, `tools/stale-refs.py`)
 
 ### 2. Hebrew as Unicode Escapes
 - **חובה** לכתוב עברית כ-`\uXXXX` ולא כתווים גולמיים

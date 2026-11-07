@@ -19,7 +19,6 @@
 
 אם יש מקום ב-Project, הוסף:
 
-- [`../ncr-agent.js`](../ncr-agent.js) — דוגמה ל-agent קיים (7KB)
 - [`../api/claude.js`](../api/claude.js) — API endpoint
 - **index.html** — גדול מדי (218KB). אל תעלה — במקום זה העלה קטעים רלוונטיים לפי הצורך.
 
