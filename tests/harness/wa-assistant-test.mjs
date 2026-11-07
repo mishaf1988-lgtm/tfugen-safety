@@ -13,9 +13,12 @@ const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co', OWNER = '972501234567';
 let fireStatus = 200;
 const ENV = { META_APP_SECRET: 'app-secret', WA_VERIFY_TOKEN: 'vt-1', ASSISTANT_FIRE_URL: 'https://api.anthropic.com/v1/claude_code/routines/trig_X/fire',
   ASSISTANT_FIRE_TOKEN: 'tok', SUPABASE_SERVICE_ROLE_KEY: 'srv', ROUTINE_KEY: 'k-1', META_PHONE_NUMBER_ID: 'P1', META_ACCESS_TOKEN: 'mt', WEEKEND_QUIET: 'off' }; // weekend: weekend-owner-test.mjs
+let voiceDl = [], aiCalls = [], aiText = '';
 let fireSession = 'cse_01OLD', probe2Auth = [], reviewUrls = [], order = [], hz = {}, hzWrites = [], graph = null, graphCalls = [], fires = [], metas = [], logs = [], state = {}, stateVer = {}, metaReply = () => ({ ok: true, body: { messages: [{ id: 'wamid.OUT1' }] } }), owner = OWNER;
 globalThis.fetch = async (url, opt = {}) => {
   const m = opt.method || 'GET';
+  // 07/11/2026: the download of a WhatsApp voice note (_voice.js); OGG magic so _stt.js takes it
+  if (url.startsWith('https://lookaside.fbsbx.com/')) { voiceDl.push(opt.headers && opt.headers.Authorization); return new Response(new Uint8Array([0x4F, 0x67, 0x67, 0x53, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])); }
   if (url.startsWith(SB + '/rest/v1/notification_prefs')) return new Response(JSON.stringify(owner ? [{ prefs: { trustee_hazard: { whatsapp_to: '+' + owner } } }] : []), { status: 200 });
   if (url.startsWith(SB + '/rest/v1/server_state')) {
     // 30/10/2026 (ideas-lab 12): stateCas reads a version (updated_at) and writes with PATCH only if it is unchanged
@@ -133,6 +136,44 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   await post(r3, await sign(r3, ENV.META_APP_SECRET));
   check('no saved owner number: nothing is fired', fires.length === 2);
   owner = OWNER;
+
+  console.log('\n2b. a voice message (07/11/2026, Michael: "\u05d1\u05e6\u05e2: \u05d4\u05d5\u05d3\u05e2\u05d4 \u05e7\u05d5\u05dc\u05d9\u05ea \u05dc\u05e2\u05d5\u05d6\u05e8")');
+  {
+    const n0 = fires.length;
+    const vb = (id, mid, ctx) => JSON.stringify({ entry: [{ changes: [{ value: { messages: [Object.assign({ from: OWNER, id, timestamp: '1792400000', type: 'audio', audio: { id: mid, mime_type: 'audio/ogg; codecs=opus', voice: true } }, ctx ? { context: { id: ctx } } : {})] } }] }] });
+    const im = inboundMessages(JSON.parse(vb('wamid.V0', '7777700001')));
+    check('an audio message keeps its media id', im.length === 1 && im[0].type === 'audio' && im[0].media && im[0].media.id === '7777700001', im);
+    ENV.AI = { run: async (model, input) => { aiCalls.push({ model, language: input.language, audio: typeof input.audio }); return { text: aiText }; } };
+    graph = (url) => /\/7777700001$/.test(url) ? { body: { url: 'https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=1', mime_type: 'audio/ogg; codecs=opus', file_size: 2000 } }
+      : /\/7777700002$/.test(url) ? { body: { url: 'https://evil.example.com/a.ogg', mime_type: 'audio/ogg', file_size: 2000 } } : null;
+    aiText = '\u05de\u05e6\u05d0\u05ea\u05d9 \u05de\u05d8\u05e3 \u05e4\u05d2 \u05d1\u05de\u05d7\u05e1\u05df 3';
+    let v = vb('wamid.V1', '7777700001');
+    await post(v, await sign(v, ENV.META_APP_SECRET));
+    const t1 = fires[n0] && fires[n0].body.text;
+    check('a voice message fires the assistant with the transcript as the text, marked with the microphone', fires.length === n0 + 1 && t1.indexOf('\ud83c\udfa4 ' + aiText) > 0, t1);
+    check('the fire says it was transcribed and names the model, and does not send it to wa_media (images and PDF only)', /voice: transcribed on arrival by @cf\/openai\/whisper-large-v3-turbo/.test(t1) && !/wa_media/.test(t1), t1);
+    check('Whisper ran once, in Hebrew, on the downloaded audio; the download carried the token', aiCalls.length === 1 && aiCalls[0].model === '@cf/openai/whisper-large-v3-turbo' && aiCalls[0].language === 'he' && voiceDl[0] === 'Bearer mt', { aiCalls, voiceDl });
+    check('the transcript is what the log keeps (owner_in), with voice: true', logs.some((l) => l.event_type === 'owner_in' && l.payload && l.payload.voice === true && String(l.payload.text).indexOf(aiText) >= 0), logs.filter((l) => l.event_type === 'owner_in').slice(-1));
+    v = vb('wamid.V2', '7777700002');
+    await post(v, await sign(v, ENV.META_APP_SECRET));
+    check('a media url outside Meta\'s hosts is not fetched: the assistant hears it was not transcribed', fires.length === n0 + 2 && /voice: not transcribed \(unexpected media host\)/.test(fires[n0 + 1].body.text) && aiCalls.length === 1, fires[n0 + 1] && fires[n0 + 1].body.text);
+    ENV.AI = { run: async () => { throw new Error('model down'); } };
+    v = vb('wamid.V3', '7777700001');
+    await post(v, await sign(v, ENV.META_APP_SECRET));
+    check('the model failing: the message still reaches the assistant, which asks Michael to type it', fires.length === n0 + 3 && /voice: not transcribed \(stt: model down\); ask Michael to type it/.test(fires[n0 + 2].body.text), fires[n0 + 2] && fires[n0 + 2].body.text);
+    {
+      const { voiceText } = await import('./_build/_voice.mjs');
+      const big = new Uint8Array(7 * 1024 * 1024); big.set([0x4F, 0x67, 0x67, 0x53]);
+      const calls = [];
+      const ff = async (u, o) => { calls.push({ u, redirect: o.redirect }); return /graph\.facebook/.test(u) ? new Response(JSON.stringify({ url: 'https://lookaside.fbsbx.com/x', mime_type: 'audio/ogg' }))
+        : new Response(new ReadableStream({ start(c) { c.enqueue(big); c.close(); } })); };
+      const r = await voiceText({ META_ACCESS_TOKEN: 'mt', AI: { run: async () => ({ text: 'x' }) } }, '7777700009', ff);
+      check('a recording over the limit with no size from Meta is stopped while reading, and no redirect is followed (review 07/11/2026)', !r.ok && /too long/.test(r.error) && calls.every((c) => c.redirect === 'manual'), { r, calls });
+    }
+    delete ENV.AI; graph = null;
+    const src = fs.readFileSync(new URL('../../functions/api/wa-hook.js', import.meta.url), 'utf8');
+    check('a voice message never takes the fast lane or a rating (an approval stays a tap or typed text)', /const rt = isVoice\(m\) \? null : rateOf\(/.test(src) && /const fr0 = wa && !isVoice\(m\) \? fastRoute\(/.test(src));
+  }
   check('fireText marks a non-text message', /type: image/.test(fireText({ id: 'w', ts: 0, type: 'image', text: '', context: '' }, '')));
   check('the last call is noted without number or text', state.wa_hook_last && state.wa_hook_last.sig === true && !JSON.stringify(state.wa_hook_last).includes(OWNER), state.wa_hook_last);
   const bad = msgBody(OWNER, 'wamid.S', 'x');
