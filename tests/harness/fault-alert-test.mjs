@@ -36,7 +36,18 @@ const NOW = '2026-10-31T14:50:00.000Z';
   const miss = '\u05d7\u05e1\u05e8 \u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9 \u05d1\u05e9\u05d0\u05dc\u05d4 \u05e8\u05d2\u05d9\u05e9\u05d4: Excel';
   const now = '2026-11-03T09:00:00.000Z';
   const q = faultItems(prev, [], [{ agent: 'routine-wa-assistant', at: '2026-11-03T08:50:00Z', ok: false, line: miss }], now);
-  check('second check missing: the item is quiet (no WhatsApp) but still goes to the developer', q.items.length === 1 && q.items[0].quiet === true && faultDevText(q.items).indexOf('wa-assistant') > 0, q.items);
+  check('second check missing: the item is quiet (no WhatsApp)', q.items.length === 1 && q.items[0].quiet === true, q.items);
+  { // 07/11/2026: expected ok:false opens no developer inquiry; a real failure does
+    const refusal = '\u05e1\u05d9\u05e8\u05d5\u05d1 \u05de\u05db\u05d5\u05d5\u05df: \u05d1\u05e7\u05e9\u05d4 \u05dc\u05d4\u05d5\u05d3\u05e2\u05d4 \u05dc\u05d0\u05d3\u05dd \u05d0\u05d7\u05e8';
+    const rf = faultItems(prev, [], [{ agent: 'wa-assistant', at: '2026-11-03T08:50:00Z', ok: false, line: refusal }], now);
+    check('a deliberate refusal of the assistant is quiet', rf.items.length === 1 && rf.items[0].quiet === true, rf.items);
+    const rr = faultItems(prev, [], [{ agent: 'map-lights', at: '2026-11-03T08:50:00Z', ok: false, line: refusal }], now);
+    check('the refusal prefix is quiet only for the assistant', !rr.items[0].quiet, rr.items);
+    const rl = faultItems(prev, [], [{ agent: 'wa-assistant', at: '2026-11-03T08:50:00Z', ok: false, line: 'wa_me failed 500 timeout' }], now);
+    check('a real failure of the assistant is loud', rl.items.length === 1 && !rl.items[0].quiet, rl.items);
+    const fs2 = fs.readFileSync(new URL('../../functions/_faults.js', import.meta.url), 'utf8');
+    check('the developer request is opened only for loud items (quiet = no inquiry)', /if \(loud\.length\) \{ try \{ fix = await openFix\(env, url, k, loud,/.test(fs2));
+  }
   const l = faultItems(prev, [], [{ agent: 'routine-wa-assistant', at: '2026-11-03T08:50:00Z', ok: false, line: miss }, { agent: 'routine-wa-assistant', at: '2026-11-03T08:55:00Z', ok: false, line: 'wa_me failed 500' }], now);
   check('a real failure of the same agent beside it is its own loud item (the WhatsApp gets it)', l.items.filter((x) => !x.quiet).length === 1, l.items);
   { // 04/11/2026 (retro): a quiet breach already marked as sent today must not hide a real failure of the same agent later in the day
