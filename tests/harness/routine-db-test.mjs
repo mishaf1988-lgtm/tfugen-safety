@@ -439,8 +439,11 @@ const callIn = async (body) => {
   let lg = JSON.parse(state.agent_log);
   check('second report: appended, not replacing; ok false kept; text cut to 300', lg.length === 2 && lg[0].agent === 'routine-quotes' && lg[1].ok === false && lg[1].learned.length === 300, lg);
   // 07/11/2026: the model of every answer (AI governance gap 4); only a claude-* id is kept
-  check('model: a claude id is kept, lower-cased', (await call({ op: 'agent_report', agent: 'routine-wa-assistant', ok: true, line: 'x', model: 'Claude-Opus-5-5' })).json.entry.model === 'claude-opus-5-5');
-  check('model: anything else is dropped, the report still written', (await call({ op: 'agent_report', agent: 'routine-wa-assistant', ok: true, line: 'x', model: 'gpt; drop' })).json.entry.model === undefined);
+  for (const [m, want] of [['Claude-Opus-5-5', 'claude-opus-5-5'], ['claude-sonnet-5-5', 'claude-sonnet-5-5'], ['claude-opus-4-8[1m]', 'claude-opus-4-8[1m]'],
+    ['gpt-4o', undefined], ['claude', undefined], ['claude-opus; drop table', undefined]]) {
+    const ent = (await call({ op: 'agent_report', agent: 'routine-wa-assistant', ok: true, line: 'x', model: m })).json.entry;
+    check('model "' + m + '": ' + (want ? 'kept as ' + want : 'dropped, the report still written'), ent && ent.model === want, ent);
+  }
   state.agent_log = JSON.stringify(JSON.parse(state.agent_log).slice(0, 2));
   check('ok that is not exactly true counts as a failure', (await call({ op: 'agent_report', agent: 'retro', ok: 'yes', line: 'x' })).json.entry.ok === false);
   // 21/10/2026: {status, did} instead of {ok, line} left empty ok:false rows that read as failed runs.
