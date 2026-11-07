@@ -9,7 +9,8 @@ Checks (RULES): tests/harness/lessons-format-test.py when
 when a file under functions/ changed (PR #1502 went red in CI on a new mail
 call site that this static test, under a second, would have caught); from 17/10/2026
 hook-utf8-test.py for a changed hook and settings-test.py for settings.json (lesson 2); from 21/10/2026
-rule1-hebrew-test.js (node) for a changed functions/*.js (CLAUDE.md rule 1, #1826). Red =
+rule1-hebrew-test.js (node) for a changed functions/*.js (CLAUDE.md rule 1, #1826); from 07/11/2026
+domains-test.py for a changed DECISIONS.md (a decision without its decisions-map.tsv line, #2617). Red =
 deny, with the test's last lines as the reason. Anything else passes.
 
 Tests set PUSH_GATE_CHANGED (comma list of changed files) and PUSH_GATE_TEST
@@ -34,6 +35,9 @@ RULES = [
     # 21/10/2026 (Michael: "בצע"): a raw-Hebrew string written into functions/ by a Python script passed
     # raw-hebrew.py (Edit/Write on index.html only) and went red in CI on rule1-hebrew-test.js (#1826).
     (lambda f: f.startswith("functions/") and f.endswith(".js"), "tests/harness/rule1-hebrew-test.js", "21/10/2026: \u05e2\u05d1\u05e8\u05d9\u05ea \u05d2\u05d5\u05dc\u05de\u05d9\u05ea \u05d1\u05e7\u05d5\u05d3 \u05e9\u05e8\u05ea (\u05d7\u05d5\u05e7 1)"),
+    # 07/11/2026 (Michael: "\u05e9\u05d3\u05e8\u05d2"): a new decision without its decisions-map.tsv line went red in CI on
+    # domains-test.py (#2617). Under a second, so every DECISIONS.md change runs it before the push.
+    (lambda f: f in ("DECISIONS.md", "project-files/domains/decisions-map.tsv"), "tests/harness/domains-test.py", "07/11/2026: \u05d4\u05d7\u05dc\u05d8\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05d1\u05dc\u05d9 \u05e9\u05d5\u05e8\u05d4 \u05d1\u05de\u05e4\u05ea \u05d4\u05d4\u05d7\u05dc\u05d8\u05d5\u05ea"),
 ]
 
 

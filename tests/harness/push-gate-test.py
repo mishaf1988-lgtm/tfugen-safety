@@ -17,6 +17,8 @@ def hook(cmd, changed, rc=0, **extra):
 L = '.claude/skills/tfugen-lessons/SKILL.md'
 check('not a push: passes', hook('git status', L) == {})
 check('push, lessons unchanged: passes', hook('git push -u origin x', 'index.html,STATUS.md') == {})
+check('push, DECISIONS.md changed, test red: denied (07/11/2026, #2617)', hook('git push origin x', 'DECISIONS.md', 1).get('permissionDecision') == 'deny')
+check('push, DECISIONS.md changed, test green: passes', hook('git push origin x', 'DECISIONS.md', 0) == {})
 check('push, lessons changed, test green: passes', hook('git push -u origin x', L + ',STATUS.md', 0) == {})
 # Windows (05/10/2026): a piped stdout is cp1255, so a green test that prints a check mark crashed and every push was denied
 check('push, test green but the console is cp1255: passes', hook('git push origin x', L, 0, PYTHONIOENCODING='cp1255') == {})
