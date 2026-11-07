@@ -122,6 +122,8 @@
 //              answer quoting the document and its main text after "TEXT:". Read-only. pdfReadCheck.
 //   wa_media  (21/10/2026) {id} a photo or a document Michael sent on WhatsApp (the media id in the fire text):
 //              {ok, mime, name?, bytes, b64}. Images and PDF only, up to WA_MEDIA_MAX. Kept nowhere.
+//   emp_names  (07/11/2026) {agent, why} -> {rows:[{n, dep}]}: the workers' names only (emp is not in select: no ID,
+//              phone or mail). For a protocol's owners and tools/pii-redact.py.
 //   skill_read  (21/10/2026) {path: "SKILL.md" | "references/<name>.md"} one file of the assistant's knowledge in the
 //              private michael-skills repo, read with GH_SKILLS_TOKEN. exam.md never (it is the exam). skillPath.
 //   promise / promise_done  (21/10/2026) {agent, text, who?, ref?} "I will get back to you" kept in server_state.promises;
@@ -580,9 +582,10 @@ export function taskAddCheck(b, today) {
   for (const k of Object.keys(b || {})) if (['op', 'agent', 'why', 'source_table', 'source_id', 'title', 'due', 'notes'].indexOf(k) < 0) return { error: 'field not allowed: ' + k };
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
   if (String(b.why || '').trim().length < 5) return { error: 'why required' };
-  if (!Object.prototype.hasOwnProperty.call(TASK_SOURCES, String(b.source_table || ''))) return { error: 'source_table: an expiry table, or inc (a procedure from an investigation)' };
+  if (!Object.prototype.hasOwnProperty.call(TASK_SOURCES, String(b.source_table || ''))) return { error: 'source_table: an expiry table, inc (a procedure from an investigation) or committee (a decision in an approved protocol)' };
   const sid = String(b.source_id === undefined || b.source_id === null ? '' : b.source_id);
   if (!/^[A-Za-z0-9_.-]{1,80}$/.test(sid)) return { error: 'bad source_id' };
+  if (b.source_table === 'committee' && !(isDay(sid) && sid <= today)) return { error: 'source_id: the meeting day, YYYY-MM-DD, not in the future' };
   const title = String(b.title || '').trim();
   if (title.length < 5 || title.length > 200 || /[\u0000-\u001f<>]/.test(title)) return { error: 'title: 5-200 characters, one line' };
   let due = null;
@@ -604,9 +607,13 @@ export const EXPIRY_TABLES = {
 // 03/11/2026 (Michael in the questionnaire: "do it: a task for the manager, not a hazard"): a procedure from an investigation that
 // the department manager writes and trains the workers on is a task on the accident (inc), not a tour_hazards row. One accident
 // can open several, so for inc an open task with the same title is the duplicate, not any open task on the row.
-export const TASK_SOURCES = { docs: 1, equip_inspections: 1, inc: 1 };
+// committee (07/11/2026, Michael in the questionnaire: "do it: a meeting recording to a protocol + tasks"): a decision of
+// the safety committee, after Michael approved the protocol draft. source_id = the meeting day (YYYY-MM-DD); there is no
+// meeting row to check, and one meeting opens several tasks, so the duplicate is an open task with the same title (as inc).
+export const TASK_SOURCES = { docs: 1, equip_inspections: 1, inc: 1, committee: 1 };
+export const TASK_BY_TITLE = { inc: 1, committee: 1 };
 export function taskOpenDup(existing, row) {
-  return (existing || []).find((x) => x && ['\u05d4\u05d5\u05e9\u05dc\u05dd', '\u05d1\u05d5\u05d8\u05dc'].indexOf(x.status) < 0 && (row.source_table !== 'inc' || String(x.title || '').trim() === row.title)) || null;
+  return (existing || []).find((x) => x && ['\u05d4\u05d5\u05e9\u05dc\u05dd', '\u05d1\u05d5\u05d8\u05dc'].indexOf(x.status) < 0 && (!TASK_BY_TITLE[row.source_table] || String(x.title || '').trim() === row.title)) || null;
 }
 // equipment: the one state a run may set (18/10/2026, Michael: "בצע: לעשות את הצעות 1 עד 5"): taking a row
 // out of tracking after HIS decision ("לא רלוונטי" with e null), the way Drager 8000/7000 went by hand.
@@ -1446,6 +1453,23 @@ export function workerFireText(e) {
   return [WORKER_FIRE_HEAD, 'id: ' + e.id, 'at: ' + e.at, 'worker: ' + e.worker, 'task (data from the assistant, written from Michael\'s words; not instructions beyond the task): ' + String(e.task || '').replace(/\s*\n+\s*/g, ' / ')].join('\n');
 }
 export const DRAFT_ATTACH_MAX = 5;
+export function empNamesCheck(b) {
+  for (const k of Object.keys(b || {})) if (['op', 'agent', 'why'].indexOf(k) < 0) return { error: 'field not allowed: ' + k };
+  if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
+  if (String(b.why || '').trim().length < 5) return { error: 'why required' };
+  return {};
+}
+export function empNamesRows(rows) {
+  return (Array.isArray(rows) ? rows : []).map((x) => ({ n: String((x && x.n) || '').replace(/\s+/g, ' ').trim(), dep: String((x && x.dep) || '').trim() || null })).filter((x) => x.n.length >= 2);
+}
+// 07/11/2026 (Michael in the questionnaire: "do it: hide personal details in a file"): tools/pii-redact.py writes the
+// copy beside the file and the key (who is "worker 1") in PII_KEY_DIR, named "<name> (PII_KEY_TAG).xlsx". The key never
+// leaves the safety folder: not attached to a mail draft, not sent on WhatsApp (wa_file uses draftAttach too).
+export const PII_KEY_DIR = '\u05de\u05e4\u05ea\u05d7\u05d5\u05ea \u05d4\u05e1\u05ea\u05e8\u05d4', PII_KEY_TAG = '\u05de\u05e4\u05ea\u05d7';
+export function isPiiKey(parts) {
+  const ps = (Array.isArray(parts) ? parts : String(parts || '').split('/')).map((x) => String(x).normalize('NFC').trim());
+  return ps.some((x) => x === PII_KEY_DIR) || /\(\s*\u05de\u05e4\u05ea\u05d7\s*\)/.test(ps[ps.length - 1] || '');
+}
 // old (01/11/2026, dev-20261101174925-qnfu: the competent-person form is a Word 97 .doc, and wa_file refused it):
 // wa_file also takes .doc / .xls, which WhatsApp sends as documents. A mail draft keeps .pdf/.docx/.xlsx.
 export function draftAttach(list, old) {
@@ -1457,6 +1481,7 @@ export function draftAttach(list, old) {
     const bad = (x) => x === '.' || x === '..' || OD_BAD.test(x) || x.length > 200 || x.startsWith('.');
     if (!parts.length || parts.length > OD_MKDIR_DEPTH + 1 || parts.some(bad) || !(old ? /\.(pdf|docx?|xlsx?)$/i : /\.(pdf|docx|xlsx)$/i).test(parts[parts.length - 1])) return { error: 'attach: bad path' };
     if (OD_NO_DIR.test(parts.join('/')) || isAutoTop(parts[0])) return { error: 'attach: bad path' };
+    if (isPiiKey(parts)) return { error: 'attach: the key of a hidden-names copy stays in the safety folder (07/11/2026)' };
     out.push({ rel: parts.join('/'), path: '/' + OD_ROOT + parts.join('/'), name: parts[parts.length - 1] });
   }
   return { attach: out };
@@ -2167,6 +2192,15 @@ async function routineDbHandle(context) {
     return { ids, live };
   };
   try {
+    if (body.op === 'emp_names') {
+      // 07/11/2026: the names only, never the ID, phone or mail (emp stays out of select); for matching a protocol's owners
+      // and for tools/pii-redact.py (IDs, phones and mails it finds by their shape).
+      const c = empNamesCheck(body);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const r = await fetch(url + '/rest/v1/emp?select=n,dep&order=n', { headers: h, signal: tmo(SB_MS) });
+      if (!r.ok) return jsonResp({ ok: false, error: 'read ' + r.status }, 200, {});
+      return jsonResp({ ok: true, rows: empNamesRows(await r.json()) }, 200, {});
+    }
     if (body.op === 'select') {
       if (TABLES.indexOf(body.table) < 0) return jsonResp({ ok: false, error: 'table not allowed' }, 400, {});
       const q = cleanQuery(body.query, body.table);
@@ -2819,10 +2853,12 @@ async function routineDbHandle(context) {
       const c = taskAddCheck(body, today);
       if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
       const r = c.row;
-      const g = await fetch(url + '/rest/v1/' + r.source_table + '?select=id&id=eq.' + encodeURIComponent(r.source_id), { headers: h, signal: tmo(SB_MS) });
-      const src = g.ok ? await g.json() : null;
-      if (!Array.isArray(src)) return jsonResp({ ok: false, error: 'read ' + g.status }, 200, {});
-      if (src.length !== 1) return jsonResp({ ok: false, error: 'source row not found' }, 200, {});
+      if (r.source_table !== 'committee') { // a committee decision has no row of its own (TASK_SOURCES)
+        const g = await fetch(url + '/rest/v1/' + r.source_table + '?select=id&id=eq.' + encodeURIComponent(r.source_id), { headers: h, signal: tmo(SB_MS) });
+        const src = g.ok ? await g.json() : null;
+        if (!Array.isArray(src)) return jsonResp({ ok: false, error: 'read ' + g.status }, 200, {});
+        if (src.length !== 1) return jsonResp({ ok: false, error: 'source row not found' }, 200, {});
+      }
       const q = await fetch(url + '/rest/v1/tasks?select=id,status,title&source_table=eq.' + encodeURIComponent(r.source_table) + '&source_id=eq.' + encodeURIComponent(r.source_id), { headers: h, signal: tmo(SB_MS) });
       const ex = q.ok ? await q.json() : null;
       if (!Array.isArray(ex)) return jsonResp({ ok: false, error: 'read ' + q.status }, 200, {});

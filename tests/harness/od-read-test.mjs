@@ -67,6 +67,23 @@ const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', ONEDRIVE_CLIENT_ID: 'cid', ONEDR
   res = await onRequest({ request: req({ 'x-raw-token': TOK }, { path: '13_סיורי מפגעים/2026/מצגת שבועית.חודשית.pptx', raw: true }), env: ENV });
   const rawBytes = new Uint8Array(await res.arrayBuffer());
   check('raw download with a valid one-off token: the file bytes', res.status === 200 && rawBytes.length === deck.length, [res.status, rawBytes.length]);
+  { // 07/11/2026: a meeting recording (tools/meeting-stt.py) streams through, never read whole, and is capped
+    const inner = globalThis.fetch; let len = '5000';
+    globalThis.fetch = async (u, i) => (String(u).indexOf('graph.microsoft.com') >= 0 ? new Response(new Uint8Array(5000), { status: 200, headers: { 'content-length': len } }) : inner(u, i));
+    const P = '13_x/\u05d4\u05e7\u05dc\u05d8\u05d5\u05ea/\u05d5\u05e2\u05d3\u05d4.m4a';
+    const a = await onRequest({ request: req({ 'x-raw-token': TOK }, { path: P, raw: true }), env: ENV });
+    const ab = new Uint8Array(await a.arrayBuffer());
+    const n = await onRequest({ request: req({ 'x-raw-token': 'x'.repeat(40) }, { path: P, raw: true }), env: ENV });
+    const s = await onRequest({ request: req({ 'x-raw-token': TOK }, { path: P }), env: ENV });
+    len = String(151 * 1024 * 1024);
+    const big = await onRequest({ request: req({ 'x-raw-token': TOK }, { path: P, raw: true }), env: ENV });
+    len = null;
+    globalThis.fetch = async (u, i) => (String(u).indexOf('graph.microsoft.com') >= 0 ? new Response(new Uint8Array(10), { status: 200 }) : inner(u, i));
+    const nolen = await onRequest({ request: req({ 'x-raw-token': TOK }, { path: P, raw: true }), env: ENV });
+    globalThis.fetch = inner;
+    check('a recording (.m4a): raw with the token streams it; without the token or as a sheet read it is refused; over 150 MB or with no size it is refused',
+      a.status === 200 && ab.length === 5000 && n.status === 403 && s.status !== 200 && /over 150 MB/.test(await big.text()) && /size unknown/.test(await nolen.text()), [a.status, ab.length, n.status, s.status]);
+  }
   { const inner = globalThis.fetch, seen = []; globalThis.fetch = async (u, i) => { seen.push(decodeURIComponent(String(u))); return inner(u, i); };
     const a = await onRequest({ request: req({ 'x-raw-token': TOK }, { path: '15_x/a.docx', raw: true, format: 'pdf' }), env: ENV });
     const b = await onRequest({ request: req({ 'x-raw-token': TOK }, { path: '15_x/a.pdf', raw: true, format: 'pdf' }), env: ENV });

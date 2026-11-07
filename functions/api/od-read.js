@@ -17,6 +17,7 @@ import { jsonResp, FILE_TIMEOUT_MS as FILE_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo
 import { odConfigured, accessToken, stateGet } from '../_onedrive.js';
 import { readSheetRows, sheetNames, readZip, entryText } from '../_xlsxpatch.js';
 import { pptxOutline } from '../_pptx.js';
+export const AUDIO_EXT = /\.(m4a|mp3|wav|aac|ogg|opus|webm)$/i, AUDIO_MAX = 150 * 1024 * 1024;
 
 export const ROOT = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/';
 // The log of the skill upload task on Michael's computer (04/10/2026): one fixed file
@@ -33,7 +34,8 @@ export const DESKTOP = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\
 export function safePath(p, raw, root) {
   const parts = String(p || '').split('/').filter(Boolean);
   // jpg/jpeg/png (04/11/2026, the mail-filing agent): photos land in the mail inbox folder and were refused as 'bad path'.
-  const ext = raw ? /\.(xls[xmx]?|pptx|pdf|docx?|txt|csv|jpe?g|png)$/i : /\.(xls[xm]|pptx)$/i;
+  // audio (07/11/2026, Michael: "do it: a meeting recording to a protocol"): a raw read only, for tools/meeting-stt.py
+  const ext = raw ? /\.(xls[xmx]?|pptx|pdf|docx?|txt|csv|jpe?g|png|m4a|mp3|wav|aac|ogg|opus|webm)$/i : /\.(xls[xm]|pptx)$/i;
   if (!parts.length || parts.some((x) => x === '..' || x === '.') || !ext.test(parts[parts.length - 1])) return null;
   // Photos only inside the safety folder: never from the whole desktop or the old ISO folder (security review 04/11/2026).
   if (root && /\.(jpe?g|png)$/i.test(parts[parts.length - 1])) return null;
@@ -133,6 +135,12 @@ export async function onRequest(context) {
     if (body.format !== undefined && !asPdf) return jsonResp({ ok: false, error: 'bad format' }, 400, {});
     const r = await fetch(G + seg(full) + ':/content' + (asPdf ? '?format=pdf' : ''), { headers: { Authorization: 'Bearer ' + token }, signal: tmo(FILE_MS) });
     if (!r.ok) return jsonResp({ ok: false, error: 'onedrive ' + r.status, path: full }, 200, {});
+    // a recording is passed through as a stream (an hour is 30-60 MB), never read into memory, and capped (07/11/2026)
+    if (AUDIO_EXT.test(full)) {
+      if (!rawOk) return jsonResp({ error: 'forbidden' }, 403, {});
+      if (!(+r.headers.get('content-length') > 0) || +r.headers.get('content-length') > AUDIO_MAX) return jsonResp({ ok: false, error: 'audio: size unknown or over ' + (AUDIO_MAX >> 20) + ' MB' }, 200, {});
+      return new Response(r.body, { status: 200, headers: { 'Content-Type': 'application/octet-stream', 'Cache-Control': 'no-store' } });
+    }
     const bytes = new Uint8Array(await r.arrayBuffer());
     if (body.raw === true) {
       if (!rawOk) return jsonResp({ error: 'forbidden' }, 403, {});
