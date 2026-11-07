@@ -23,14 +23,53 @@ check('the same code in another case or with spaces is taken; on its own row it 
 check('"?", "-" and an empty code are never taken (the scan writes "?" when it finds no code)', !f.taken('?', null) && !f.taken('-', null) && !f.taken('', null) && f.key('?') === '');
 check('a new code is free', !f.taken('NEW-9', null));
 
-console.log('\n3. every place the app adds a row checks first');
-const sv = html.slice(html.indexOf('function svEqi(){'), html.indexOf('function svEqi(){') + 1500);
-check('the form: a taken code stops the save with a message, before the row is built', /var _dupEq=_eqiCodeTaken\(gv\('eqi-code'\),id\);\s*if\(_dupEq\)\{toast\([^;]*\);return;\}/.test(sv));
-const xl = html.slice(html.indexOf('function eqiXlOk(){'), html.indexOf('function eqiXlOk(){') + 1200);
-check('the Excel import: a taken code, or one twice in the file, is skipped and counted', /_eqiCodeTaken\(r\.code,null\)/.test(xl) && /_seenC\[k\]/.test(xl) && /_skipC\+\+/.test(xl));
-const xl2 = html.slice(html.indexOf('window.eqiXl2Apply=function(){'), html.indexOf('window.eqiXl2Apply=function(){') + 1500);
-check('the full Excel intake: the same, before any row goes out', /_eqiCodeTaken\(rec\.code,null\)/.test(xl2) && xl2.indexOf('_eqiCodeTaken') < xl2.indexOf("fetch(SBU+'/rest/v1/equip_inspections'"));
-check('the inbox filing: a taken code goes to the notes and the row keeps "?"', /_eqiCodeTaken\(rec\.code,rec\.id\)\)\{rec\.notes=[^;]*;rec\.code='\?';\}/.test(html));
+console.log('\n3. every place the app adds a row checks first, run (retro 03/11/2026 (d): not a regex on the source text)');
+// cut a function (or a branch) out of index.html by its start text and brace matching, and run it with stubs
+const cut = (start) => { const a = html.indexOf(start); let d = 0, k = html.indexOf('{', a); for (let q = k; q < html.length; q++) { if (html[q] === '{') d++; else if (html[q] === '}' && --d === 0) return html.slice(a, q + 1); } return ''; };
+const mk = (body, args, db) => {
+  const log = { toasts: [], posted: [], gvCalls: 0 };
+  const vals = { 'eqi-n': 'Calibrator', 'eqi-code': 'calib-sewage-01 ', 'eqi-id': '' };
+  const env = { DB: db, toast: (m) => log.toasts.push(m), _attachBusy: () => false, g: (k) => ({ value: vals[k] }), gv: (k) => { log.gvCalls++; return vals[k] || ''; },
+    gid: () => 'new-id', sbIns: (t, r) => log.posted.push(r), addLog() {}, sdb() {}, closeEqiXl() {}, rEqi() {}, closeEqiXl2() {}, _sbAuth: () => Promise.resolve(), SBU: 'https://sb.test', sbHUpsert: () => ({}),
+    fetch: async (u, o) => { log.posted.push(JSON.parse(o.body)); return { ok: true }; }, console, window: {}, alert() {}, document: { getElementById: () => ({ style: {}, textContent: '' }) } };
+  return { log, env, run: (extra) => { Object.assign(env, extra || {}); return new Function(...Object.keys(env), body + '; return ' + args + ';')(...Object.values(env)); } };
+};
+const helpers = src;
+const freshDB = () => ({ equip_inspections: [{ id: 'a1', code: 'CALIB-Sewage-01' }] });
+{ // the form
+  const t = mk(helpers + cut('function svEqi(){') + ';svEqi', 'svEqi', freshDB());
+  const f1 = t.run();
+  let threw = false; try { f1(); } catch (e) { threw = true; } // 'calib-sewage-01 ' with another id: taken; a save that goes on hits unstubbed code
+  check('the form: a taken code stops the save with a message, before the row is built (only the description and code were read)', !threw && t.log.toasts.length === 1 && t.log.gvCalls === 2 && t.log.posted.length === 0, t.log);
+  const t2 = mk(helpers + cut('function svEqi(){') + ';svEqi', 'svEqi', freshDB());
+  t2.env.gv = (k) => { t2.log.gvCalls++; return k === 'eqi-code' ? 'BRAND-NEW' : k === 'eqi-n' ? 'x' : ''; };
+  try { t2.run({ gv: t2.env.gv })(); } catch (e) { /* the later DOM calls are not stubbed: only how far it got matters */ }
+  const built = t2.log.gvCalls > 2;
+  check('the form: a free code goes on to build the row (control: the stop above is the code check, not something else)', built === true);
+}
+{ // the Excel import
+  const db = freshDB();
+  const t = mk(helpers + cut('function eqiXlOk(){') + ';eqiXlOk', 'eqiXlOk', db);
+  const f = t.run({ window: { _eqiXlData: [{ code: 'calib-sewage-01', n: 'dup of DB' }, { code: 'X-1', n: 'new' }, { code: ' x-1', n: 'twice in file' }, { code: '?', n: 'no code 1' }, { code: '?', n: 'no code 2' }] } });
+  f();
+  check('the Excel import: a taken code, or one twice in the file, is skipped and counted; rows with no code all go in', t.log.posted.map((r) => r.n).join('|') === 'new|no code 1|no code 2' && t.log.toasts.some((m) => m.startsWith('2 ')), t.log);
+}
+{ // the full Excel intake
+  const db = freshDB();
+  const t = mk(helpers + cut('window.eqiXl2Apply=function(){') + ';', 'window.eqiXl2Apply', db);
+  const win = { _eqiXl2: { items: [{ code: 'CALIB-SEWAGE-01', n: 'dup of DB' }, { code: 'N-5', n: 'new' }, { code: 'n-5', n: 'twice in file' }], history: [] } };
+  const f = t.run({ window: win });
+  f(); await new Promise((r) => setTimeout(r, 20));
+  const sent = t.log.posted.filter((r) => r && r.n);
+  check('the full Excel intake: the same, nothing taken goes out to the database', sent.length === 1 && sent[0].code === 'N-5', t.log.posted);
+}
+{ // the inbox filing (the branch for equip_inspections, run on its own)
+  const head = "}else if(t==='equip_inspections'){", a = html.indexOf(head), body = html.slice(a + head.length, html.indexOf('}else{', a));
+  const run = (code, id) => { const rec = { id }, db = freshDB(); const env = { DB: db, rec, p: { code }, nm: 'file.pdf', uploadedUrl: 'u', clean: (v) => String(v || '').trim(), dateOk: () => null, _eqiCodeTaken: new Function('DB', helpers + 'return _eqiCodeTaken;')(db), sbIns() {} };
+    new Function(...Object.keys(env), body)(...Object.values(env)); return rec; };
+  const r1 = run('CALIB-sewage-01', 'zz'), r2 = run('FREE-3', 'zz');
+  check('the inbox filing: a taken code goes to the notes and the row keeps "?"; a free code stays', r1.code === '?' && /CALIB-sewage-01/.test(r1.notes) && r2.code === 'FREE-3' && !r2.notes, [r1, r2]);
+}
 
 console.log('\nequip-code-uq-test: ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
