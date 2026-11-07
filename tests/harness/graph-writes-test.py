@@ -24,6 +24,7 @@ def check(label, cond, detail=None):
 APPROVED_SEND = {
     'functions/_onedrive.js': 4,       # sendMail + sendMailTo: the two helpers, each with its Graph url
     'functions/_watchdog.js': 1,       # the watchdog mail to Michael: a server task that stopped running (30/09/2026)
+    'functions/_wa.js': 1,             # a WhatsApp message to Michael that Meta reported failed, to his own mailbox (07/11/2026, ideas-lab 13)
     'functions/api/close-hazard.js': 1,  # "closed" mail to the reporter (28/09/2026)
     'functions/api/mail-inbox.js': 1,    # "closed" reply to a mail reporter (29/09/2026)
     'functions/api/trustee-notify.js': 1,  # trustee finding notification (22/09/2026)

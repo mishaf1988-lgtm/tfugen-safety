@@ -15,9 +15,9 @@
 // Machine path in _middleware: Meta calls from outside Israel.
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, SB_LIVE, tmo, SITE } from '../_shared.js';
 import { learnedLabel, LEARNED_MAX } from '../_wa.js';
-import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, hasStatuses, STATUS_KEY, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, assistantFireNow, pickFire, accountOf, ACCOUNT_KEY, forgetAccount, LEARN_KEY, learnedLine, recentLine } from '../_wa.js';
+import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, hasStatuses, STATUS_KEY, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, assistantFireNow, pickFire, accountOf, ACCOUNT_KEY, forgetAccount, LEARN_KEY, learnedLine, recentLine, waDeliveryHandle } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
-import { accessToken } from '../_onedrive.js';
+import { accessToken, sendMailTo } from '../_onedrive.js';
 import { onRequest as routineDb, OD_ROOT, isAutoTop, OD_INBOX, delRefOf, DEL_ASK_KEY, DEL_ASK_MS, DEL_TABLES, UNDO_KEY, UNDO_MAX, undoRefOf, undoPick, UNDO_ASK_KEY, UNDO_ASK_MS, tourRefOf, TOUR_CLOSE_KEY, TOUR_CLOSE_MS, TOUR_OPEN, TOUR_CLOSED, calInviteRefOf, CAL_INVITE_ASK_KEY, CAL_INVITE_ASK_MS, calMoveRefOf, CAL_MOVE_ASK_KEY, CAL_MOVE_ASK_MS } from './routine-db.js';
 import { SIGN_KEY, signRefOf, signAnswer, signTake, signMark, signRun, signDoneText, SIGN_CANCEL_TEXT, SIGN_EXPIRED_TEXT, SIGN_DONE_TEXT } from '../_sign.js';
 
@@ -698,6 +698,8 @@ async function handle(env, raw) {
         await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
           body: JSON.stringify([{ key: STATUS_KEY, value: { at: new Date().toISOString() }, updated_at: new Date().toISOString() }]) });
       } catch (e) { /* the watchdog then says only what it knows */ }
+      // 07/11/2026 (ideas-lab 13): delivered / failed of messages to Michael; a failed one is mailed to his own mailbox
+      try { await waDeliveryHandle(env, body, await ownerWa(env, sbFrom(env)), { accessToken, sendMailTo }, Date.now()); } catch (e) { /* the status note above stands */ }
     }
     return;
   }
