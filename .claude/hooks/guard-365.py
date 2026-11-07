@@ -28,6 +28,8 @@ outlook_delete_draft, only for a draft Claude itself created in this machine's l
 outlook_create_draft writes its id; reply drafts are denied before they are made, "reply" is a NEVER word). It
 moves the draft to Deleted Items (recoverable). Michael's own drafts, any other id and every other delete stay
 denied. The ledger file is closed to Write, Edit and shell commands (a prompt-injected "add this id" line).
+Since 07/11/2026 every ledger line also names the transcript of the session that made the draft, and a delete
+needs that transcript to hold the create_draft call and its answer with the id (in_transcript).
 
 Test:  echo '{"tool_name":"mcp__Microsoft_365__outlook_send_mail","tool_input":{}}' | python3 .claude/hooks/guard-365.py
 """
@@ -91,32 +93,91 @@ FILEISH = re.compile(r"file|folder|drive|sharepoint|onedrive|upload|item", re.I)
 
 
 def ledger():
+    """Entries {"id", "t"}: the draft id and the transcript of the session that created it. A bare id (the shape
+    before 07/11/2026) is not proof any more and is dropped."""
     try:
         with open(LEDGER, encoding="utf-8") as f:
             v = json.load(f)
-        return [x for x in v if isinstance(x, str)] if isinstance(v, list) else []
+        return [x for x in v if isinstance(x, dict) and isinstance(x.get("id"), str)] if isinstance(v, list) else []
     except (OSError, ValueError):
         return []
 
 
-def remember(draft_id):
-    ids = ledger()
-    if draft_id not in ids:
-        ids.append(draft_id)
-        os.makedirs(os.path.dirname(LEDGER), exist_ok=True)
-        with open(LEDGER, "w", encoding="utf-8") as f:
-            json.dump(ids[-200:], f)
+def remember(draft_id, transcript):
+    rows = [x for x in ledger() if x["id"] != draft_id]
+    rows.append({"id": draft_id, "t": str(transcript or "")})
+    os.makedirs(os.path.dirname(LEDGER), exist_ok=True)
+    with open(LEDGER, "w", encoding="utf-8") as f:
+        json.dump(rows[-200:], f)
 
 
-def after_create(name, resp):
+def after_create(name, resp, transcript=""):
     """PostToolUse on a draft Claude just created: keep its id, so only it can be deleted."""
     if name.split("__")[-1] != "outlook_create_draft":
         return
     for t in strings(resp, []):
         m = DRAFT_ID.match(t)
         if m:
-            remember(m.group(1))
+            remember(m.group(1), transcript)
             return
+
+
+TRANSCRIPTS = os.environ.get("GUARD365_TRANSCRIPTS") or os.path.join(os.path.expanduser("~"), ".claude", "projects")
+
+
+def under_transcripts(path):
+    root = os.path.realpath(TRANSCRIPTS)
+    real = os.path.realpath(str(path))
+    return real.startswith(root + os.sep)
+
+
+def in_transcript(draft_id, path):
+    """Second proof (retro 01/11/2026 (e), 07/11/2026, Michael in the questionnaire: "בצע: רעיונות הרטרו"): the ledger
+    is closed to Write/Edit and to shell lines that name it, but a name built in Python ("drafts-" + "made") got past
+    that. So a delete also needs the session transcript Claude Code itself writes: a tool_use of outlook_create_draft
+    whose own tool_result answers "Draft created ... id: <this id>". A hand-written ledger line has no such pair."""
+    # Only a transcript Claude Code itself keeps (security review 07/11/2026: a JSONL written anywhere else could carry a
+    # forged create_draft pair). Write/Edit into that folder are denied in decide().
+    if not path or not path.endswith(".jsonl") or not under_transcripts(path) or not os.path.isfile(path):
+        return False
+    # A draft made by a subagent is in <session>/subagents/*.jsonl next to the main transcript (07/11/2026).
+    side = os.path.join(path[:-len(".jsonl")], "subagents")
+    files = [path] + ([os.path.join(side, x) for x in sorted(os.listdir(side)) if x.endswith(".jsonl")] if os.path.isdir(side) else [])
+    for one in files:
+        if _pair_in(draft_id, one):
+            return True
+    return False
+
+
+def _pair_in(draft_id, path):
+    made, results = set(), []
+    try:
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                try:
+                    row = json.loads(line)
+                except ValueError:
+                    continue
+                msg = row.get("message") if isinstance(row, dict) else None
+                content = msg.get("content") if isinstance(msg, dict) else None
+                if not isinstance(content, list):
+                    continue
+                for c in content:
+                    if not isinstance(c, dict):
+                        continue
+                    if c.get("type") == "tool_use" and str(c.get("name", "")).split("__")[-1] == "outlook_create_draft":
+                        made.add(c.get("id"))
+                    elif c.get("type") == "tool_result" and row.get("type") == "user":
+                        results.append((c.get("tool_use_id"), c.get("content")))
+    except OSError:
+        return False
+    for tid, body in results:
+        if tid in made:
+            for t in strings(body, []):
+                m = DRAFT_ID.match(t)
+                if m and m.group(1) == draft_id:
+                    return True
+    return False
 
 
 def out(decision, reason):
@@ -226,7 +287,13 @@ def strings(v, acc):
 
 def decide(name, ti):
     if name in FILE_TOOLS:
-        if LEDGER_NAME in " ".join(str(ti.get(k, "")) for k in ("file_path", "path", "notebook_path")):
+        target = " ".join(str(ti.get(k, "")) for k in ("file_path", "path", "notebook_path"))
+        # only the .jsonl transcripts: the same folder holds Claude's memory files, which stay writable
+        if any(under_transcripts(str(ti.get(k))) and str(ti.get(k)).lower().endswith(".jsonl")
+               for k in ("file_path", "path", "notebook_path") if ti.get(k)):
+            return ("deny", "Claude Code's own session transcripts are proof for the drafts ledger (07/11/2026); "
+                    "they are written only by Claude Code.")
+        if LEDGER_NAME in target:
             return ("deny", "the ledger of drafts Claude made is written only by the hook itself (a delete is allowed for "
                     "an id in it, so a hand-written id would be a way around Michael's rule 05/10/2026).")
         return None
@@ -260,7 +327,8 @@ def decide(name, ti):
                 "into a 'למחיקה' folder (with his 'בצע'); everything else stays where it is." % short)
     if short == "outlook_delete_draft":
         mid = str(ti.get("messageId", ""))
-        if mid and mid in ledger():
+        row = next((x for x in ledger() if x["id"] == mid), None) if mid else None
+        if row and in_transcript(mid, row.get("t")):
             return ("allow", "a draft Claude created itself (Michael, 30/10/2026): moved to Deleted Items, recoverable.")
         return ("deny", "'%s' is allowed only for a draft Claude itself created (this machine's ledger). "
                 "Michael's own drafts are never deleted (05/10/2026)." % short)
@@ -285,7 +353,7 @@ def decide(name, ti):
 if __name__ == "__main__":
     d = json.load(sys.stdin)
     if d.get("hook_event_name") == "PostToolUse":
-        after_create(str(d.get("tool_name", "")), d.get("tool_response"))
+        after_create(str(d.get("tool_name", "")), d.get("tool_response"), d.get("transcript_path"))
         print("{}")
         sys.exit(0)
     r = decide(str(d.get("tool_name", "")), d.get("tool_input", {}) or {})
