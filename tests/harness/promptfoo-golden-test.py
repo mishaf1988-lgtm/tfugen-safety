@@ -45,5 +45,14 @@ os.environ.pop("ANSWERS", None)
 r = replay.call_api("x", {"config": {"answers": "project-files/research/promptfoo-golden/answers-261102-first.json"}}, {"vars": {"id": "g10"}})
 check("config.answers (the comparison config) is read relative to the repo root", "150" in r.get("output", ""), r)
 check("the provider refuses to run without ANSWERS", "error" in replay.call_api("x", {}, {"vars": {"id": "g1"}}))
+# 08/11/2026 (routine-wa-core.md, "check questions after a recommendation"): the block after "שווה לבדוק:" is not counted in max,
+# and the block itself is 1-2 lines of at most 80 characters. Pairs: three that pass, three that fail.
+_q = {"any": [], "max": 40}
+_b = "תשובה קצרה בעברית על השאלה."
+_n = "\n\nשווה לבדוק:\n"
+check("check questions: two short lines pass, one passes, none passes", not gc.judge(_q, _b + _n + "- ההצעה כוללת גם את הבקר?\n- מתי פג הכיול?") and not gc.judge(_q, _b + _n + "- מתי פג הכיול?") and not gc.judge(_q, _b))
+check("check questions: three lines, an 81-character line, an empty block fail", all(gc.judge(_q, _b + _n + x) for x in ("- א?\n- ב?\n- ג?", "- " + "א" * 79, "")))
+check("check questions do not hide a long answer: the answer itself still counts", gc.judge(_q, _b + " " + "ארוך " * 10 + _n + "- מתי?"))
+
 print("%d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)
