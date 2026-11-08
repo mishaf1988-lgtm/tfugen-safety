@@ -40,6 +40,7 @@
     ],
     "ctr": [
       "c",
+      "cid",
       "created_at",
       "e",
       "file_url",

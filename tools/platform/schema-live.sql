@@ -1,4 +1,4 @@
--- dumped 2026-11-06 from the live project by tools/platform/schema-dump.sql
+-- dumped 2026-11-08 from the live project by tools/platform/schema-dump.sql
 create schema if not exists private;
 
 create extension if not exists "uuid-ossp" with schema extensions;
@@ -29,7 +29,7 @@ create table if not exists public.audit_log (id bigint default nextval('audit_lo
 
 create table if not exists public.auds (id text not null, n text not null, a text, r text, d date, f integer default 0, sc integer, s text default 'planned'::text, f2 date, sm text, created_at timestamp with time zone default now());
 
-create table if not exists public.ctr (id text not null, n text, ty text, c text, ph text, e text, tr text, s text, created_at timestamp with time zone default now(), file_url text);
+create table if not exists public.ctr (id text not null, n text, ty text, c text, ph text, e text, tr text, s text, created_at timestamp with time zone default now(), file_url text, cid text);
 
 create table if not exists public.custom_props (id text not null, entity_table text not null, entity_id text not null, k text not null, v text, ts timestamp with time zone default now() not null);
 
@@ -790,6 +790,24 @@ CREATE OR REPLACE FUNCTION private.ptw_ver()
  LANGUAGE plpgsql
  SET search_path TO ''
 AS $function$ BEGIN NEW.ver := clock_timestamp(); RETURN NEW; END $function$;
+
+CREATE OR REPLACE FUNCTION private.registry_tick()
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare s text;
+begin
+  select decrypted_secret into s from vault.decrypted_secrets where name = 'trustee_notify_secret' limit 1;
+  perform net.http_post(
+    url := 'https://tapugan-safety.pages.dev/api/registry?op=check',
+    body := '{}'::jsonb,
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-notify-secret', coalesce(s, '')),
+    timeout_milliseconds := 60000
+  );
+end
+$function$;
 
 CREATE OR REPLACE FUNCTION private.talk_week(p_day date DEFAULT NULL::date)
  RETURNS jsonb
@@ -2482,6 +2500,8 @@ revoke all on function private.protect_delete() from public, anon, authenticated
 
 revoke all on function private.ptw_ver() from public, anon, authenticated;
 
+revoke all on function private.registry_tick() from public, anon, authenticated;
+
 revoke all on function private.talk_week(p_day date) from public, anon, authenticated;
 
 revoke all on function private.trustee_log_tick() from public, anon, authenticated;
@@ -2545,6 +2565,8 @@ select cron.schedule('db-columns-check', '41 2 1 * *', 'select private.db_column
 select cron.schedule('hazard-file-retry', '*/15 * * * *', 'select private.hazard_file_ping()');
 
 select cron.schedule('od-scan', '50 2 * * *', 'select private.od_scan_tick()');
+
+select cron.schedule('registry_probe', '23 5 * * 2', 'select private.registry_tick()');
 
 select cron.schedule('talk-week', '17 2 * * 0', 'select private.talk_week()');
 

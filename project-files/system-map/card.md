@@ -72,6 +72,7 @@
 - od-read: קריאת קבצים מ-OneDrive
 - OCR: קריאת סריקות ותמלול הודעות קוליות, חינמי (Workers AI)
 - claude.js: ה-AI באפליקציה
+- registry: קבלן מול פנקס הקבלנים הרשומים ומרשם האסבסט (data.gov.il), בכרטיס הקבלן; בדיקה שבועית שהאתר עונה, תקלה במייל השבועי
 - works: רשימת העבודות לשישי: קישור לאחזקה, היתרים לאישור, אישורים מצורפים, סגירה מהטלפון; הרשאה חתומה (PDF) לכל עבודה שאושרה, מתויקת בתיקייה 18 ונשלחת במייל; מייל ברביע
 - routine-db: 77 פעולות שהסוכנים מותרים בהן: agent_report, agents_pause, agents_resume, assistant_account, cal_invite, cal_invite_ask, cal_move, cal_move_ask, claim, claims, 
 

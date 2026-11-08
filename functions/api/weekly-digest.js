@@ -639,6 +639,16 @@ export function odScanProblem(raw, nowMs) {
   if (!r.ok) return t + '\u05e0\u05db\u05e9\u05dc\u05d4 \u05d1-' + ilTime(r.at) + ' (' + String(r.error || '').substring(0, 120) + ')';
   return null;
 }
+// 08/11/2026 (DECISIONS "contractor against the registries"): the weekly probe of data.gov.il (api/registry.js op=check,
+// Tuesdays). A failure or a probe older than 8 days goes to the open problems, so the contractor check never fails silently.
+export function registryProblem(raw, nowMs) {
+  let r = null; try { r = JSON.parse(raw || 'null'); } catch (e) { r = null; }
+  const t = '\u05d1\u05d3\u05d9\u05e7\u05ea \u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05de\u05d5\u05dc \u05d4\u05de\u05e8\u05e9\u05de\u05d9\u05dd \u05d4\u05de\u05de\u05e9\u05dc\u05ea\u05d9\u05d9\u05dd: ';
+  if (!r || !r.at) return t + '\u05dc\u05d0 \u05e8\u05e6\u05d4 \u05e2\u05d3\u05d9\u05d9\u05df';
+  if (nowMs - Date.parse(r.at) > 8 * DAY) return t + '\u05dc\u05d0 \u05e8\u05e6\u05d4 \u05de\u05d0\u05d6 ' + ilTime(r.at);
+  if (!r.ok) return t + '\u05e0\u05db\u05e9\u05dc\u05d4 \u05d1-' + ilTime(r.at) + ' (' + String(r.error || '').substring(0, 120) + ')';
+  return null;
+}
 export function odScanFiles(raw, nowMs) {
   let r = null; try { r = JSON.parse(raw || 'null'); } catch (e) { r = null; }
   return ((r && r.files) || []).filter((f) => f && f.c && nowMs - Date.parse(f.c) <= 7 * DAY);
@@ -912,7 +922,7 @@ async function build(env) {
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,resp,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
-    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift', 'od_scan', 'nevo_versions', 'xlsx_gaps', 'agent_log', 'mail_filing', 'validity_run', 'guess_locks', 'induction_code', 'trustee_code'], true).catch(() => { stFail = true; return {}; }),
+    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift', 'od_scan', 'registry_probe', 'nevo_versions', 'xlsx_gaps', 'agent_log', 'mail_filing', 'validity_run', 'guess_locks', 'induction_code', 'trustee_code'], true).catch(() => { stFail = true; return {}; }),
     emptyRegs(env),
     expiries(env, today),
     talkData(env).catch(() => null),
@@ -929,6 +939,8 @@ async function build(env) {
   if (sc) watchOpen.push(sc);
   const os = odScanProblem(v('od_scan'), Date.now());
   if (os) watchOpen.push(os);
+  const rg = registryProblem(v('registry_probe'), Date.now());
+  if (rg) watchOpen.push(rg);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
   const meta = { plan: pl, meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, openTyped: tk ? openTypedLines(tk.talks, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), mf: mailFilingLine(v('mail_filing'), Date.now()), vd: validityLine(v('validity_run'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()), pendAct: pendingActionsLine(hazards, reports), pwAge: passwordAgeLines(st, env, Date.now()), stateFail: stFail };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }

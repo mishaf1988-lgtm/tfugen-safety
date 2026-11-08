@@ -2,7 +2,7 @@
 "app_users":["active","dept","email","full_name","id","notes","phone","role","ts","username"],
 "audit_log":["changed","id","op","record_id","source","table_name","title","ts","user_email"],
 "auds":["a","created_at","d","f","f2","id","n","r","s","sc","sm"],
-"ctr":["c","created_at","e","file_url","id","n","ph","s","tr","ty"],
+"ctr":["c","cid","created_at","e","file_url","id","n","ph","s","tr","ty"],
 "custom_props":["entity_id","entity_table","id","k","ts","v"],
 "docs":["c","created_at","e","file_url","i","id","n","nt","o","s","u","v"],
 "drl":["created_at","d","dur","id","n","p","sc","ty"],

@@ -68,7 +68,9 @@ const TBLS = ['rsk', 'tr', 'ppe', 'emp', 'ctr', 'ins', 'drl', 'wst', 'hzm', 'env
           const el = g(d);
           if (!el || el.tagName === 'SELECT') return;
           const t = (el.getAttribute('type') || '').toLowerCase();
-          if (t === 'date') el.value = '2026-0' + ((i % 9) + 1) + '-15';
+          // 08/11/2026: a field that takes only N digits (data-digits, the contractor company ID) gets N digits
+          if (el.dataset && el.dataset.digits) el.value = '5'.padEnd(+el.dataset.digits, '1');
+          else if (t === 'date') el.value = '2026-0' + ((i % 9) + 1) + '-15';
           else if (t === 'number') el.value = String(i + 1);
           else el.value = 'A' + i;
         });
