@@ -141,6 +141,12 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 נאכף: `hebrew-reply.py` (Stop) בודק כל קטע טקסט לחוד, `hebrew-reply-test.py`; תזכורת בתחילת כל תור `hebrew-prompt.py`, והודעת `ci-watch.py` בעברית (`hebrew-prompt-test.py`); שאלון ותיאור פעולה באנגלית נחסמים: `questionnaire-hebrew.py`, `desc-hebrew.py`.
 חזר: 79 (29/10: 10 בשיחה אחת, לקח 206; 27/10: 6; 26/10: 6; 25/10: 2; 20/10: שאלון, `questionnaire-hebrew.py`). בלי repo כתיקיית עבודה אין hooks.
 
+**228. עובד בסבב סירב לפתוח את הצ'אט הבא (08/11/2026).**
+מה קרה: בתקרת השרשרת הבקשה הלכה לחוקר (`session_01HFfaw8i2zmdD94JPNpEzFw`, סונט). הוא סירב: הבקשה הגיעה משיחה ולא ממיכאל, ואין לו `create_session`. מיכאל: "תמיד יכלת לפתוח דרך העוזרים, מה השתנה?". מה שעבד: `session_01HFfaw8e1uNhVYnJ4Gwgzjk` עם ציטוט של מיכאל.
+הכלל: לפני `send_message` לעובד בסבב: `get_session` עליו, ולבחור רק עובד שיש לו `create_session` (`turn_handoff.tools`); בבקשה לצטט את מיכאל מילה במילה.
+נאכף: טקסט (`tfugen-sessions`, "בתקרת השרשרת").
+חזר: 0
+
 **14. שיחה ארוכה מדי (01/10/2026).**
 מה קרה: הודעות איטיות ויקרות; "שיחה חדשה" הוטל על מיכאל.
 הכלל: אחרי מיזוג: handoff, `create_session`, `archive_session` אחרון. שלב של תכונה גדולה שמוזג = משימה שנסגרה.
