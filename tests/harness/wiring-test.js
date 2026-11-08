@@ -153,7 +153,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
             if (t === 'checkbox' || t === 'radio') { el.checked = true; return; }
             if (t === 'file' || t === 'hidden') return;
             if (el.tagName === 'SELECT') { if (el.options.length > 1) el.selectedIndex = 1; return; }
-            if (t === 'date') el.value = '2026-06-15';
+            // 08/11/2026: data-digits = a field of N digits only (the contractor company ID)
+            if (el.dataset && el.dataset.digits) el.value = '5'.padEnd(+el.dataset.digits, '1');
+            else if (t === 'date') el.value = '2026-06-15';
             else if (t === 'number') el.value = String(i + 1);
             else if (t === 'time') el.value = '08:30';
             else if (t === 'url') el.value = 'https://example.com/' + i;
