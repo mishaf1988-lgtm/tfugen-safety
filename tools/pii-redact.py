@@ -268,9 +268,17 @@ def main(argv):
     if why:
         print("not supported: " + why, file=sys.stderr)
         return 4
+    if os.path.realpath(out) in {os.path.realpath(x) for x in (src, key, pj)}:
+        print("the output must be a new file: it is the same path as the input, the key or the people list", file=sys.stderr)
+        return 4
     people = json.load(open(pj, encoding="utf-8"))
     r = Redactor(people)
-    (redact_xlsx if ext == "xlsx" else redact_docx)(src, out, r)
+    try:
+        (redact_xlsx if ext == "xlsx" else redact_docx)(src, out, r)
+    except Exception:
+        if os.path.exists(out):
+            os.remove(out)  # a half-written copy must not stay (retro 08/11/2026, challenger)
+        raise
     left = verify(out, people)
     if left:
         try:

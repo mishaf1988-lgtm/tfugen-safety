@@ -35,6 +35,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     const a = t.querySelector('a[href]'); return { rows, sum: g('hzm-summary').textContent, href: a && a.getAttribute('href'), badge: !!t.querySelector('.b.bR, .b.bY, .b.bG') }; });
   const hi = await page.evaluate(() => ['H200', 'H205', 'H250', 'H260', 'H261', 'H228'].map((h) => [h, _hzmRisk(h, '')]));
   check('explosive, pyrophoric and water-reactive statements are high, not medium (retro 08/11/2026)', hi.slice(0, 5).every((x) => x[1] === 'גבוה') && hi[5][1] === 'בינוני', hi);
+  const eu = await page.evaluate(() => [_hzmRisk('EUH205', ''), _hzmRisk('EUH204, H317', ''), _hzmHList('H315H319, h225+H300').join(',')]);
+  check('an EUH code is not read as an H code (EUH205 is not H205), and glued or lowercase codes still are', eu[0] === '', eu);
+  check('EUH205 and EUH204 add no H code; H315H319, h225+H300 give four', eu[1] === 'בינוני' && eu[2] === 'H225,H300,H315,H319', eu);
   check('summary: "חסר SDS: 1"', /חסר SDS:\s*1/.test(r.sum), r.sum);
   const amm = r.rows.find((x) => /אמוניה/.test(x[0])) || [], pro = r.rows.find((x) => /Proseptyl/.test(x[0])) || [];
   check('imported row: risk "-", quantity "-" (not " ל"), SDS "חסר"', amm[2] === '-' && amm[3] === '-' && /חסר/.test(amm[5]), amm);

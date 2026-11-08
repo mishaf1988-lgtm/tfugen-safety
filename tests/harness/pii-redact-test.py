@@ -72,6 +72,10 @@ rc = pr.main([os.path.join(tmp, "hearing.xlsx"), out2, os.path.join(tmp, "lazy-k
 pr.Redactor = saved
 check("a redactor that missed everything: exit 7 and no key written", rc == 7 and not os.path.exists(os.path.join(tmp, "lazy-key.xlsx")) and not os.path.exists(out2), rc)
 
+srcp = os.path.join(tmp, "hearing.xlsx")
+rc = pr.main([srcp, srcp, os.path.join(tmp, "k9.xlsx"), "--people", pj])
+check("an output path equal to the input is refused (exit 4) and the original stays (retro 08/11/2026)", rc == 4 and os.path.exists(srcp), rc)
+
 print("\n4. formats (failure reason 3)")
 for bad in ["scan.pdf", "old.xls", "old.doc", "photo.jpg"]:
     open(os.path.join(tmp, bad), "wb").write(b"x")
