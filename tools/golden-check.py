@@ -43,6 +43,11 @@ def hebrew_style(a):
     return why
 
 
+NUDGE = "\n\u05e9\u05d5\u05d5\u05d4 \u05dc\u05d1\u05d3\u05d5\u05e7:"
+def split_nudge(a):
+    i = a.find(NUDGE)
+    return (a, None) if i < 0 else (a[:i].rstrip(), a[i + len(NUDGE):].strip("\n"))
+
 def judge(q, a):
     a = str(a or "")
     why = []
@@ -54,8 +59,15 @@ def judge(q, a):
     for rx in q.get("none", []):
         if re.search(rx, a):
             why.append("must not: " + rx)
-    if len(a) > int(q.get("max", 400)):
-        why.append("too long: %d > %s" % (len(a), q.get("max", 400)))
+    # 08/11/2026 (routine-wa-core.md, "check questions after a recommendation"): up to 2 short questions after
+    # "\u05e9\u05d5\u05d5\u05d4 \u05dc\u05d1\u05d3\u05d5\u05e7:" are not counted in "max"; the block itself is held to 2 lines of at most 80 characters.
+    core, nudge = split_nudge(a)
+    if len(core) > int(q.get("max", 400)):
+        why.append("too long: %d > %s" % (len(core), q.get("max", 400)))
+    if nudge is not None:
+        lines = [x for x in nudge.split("\n") if x.strip()]
+        if not lines or len(lines) > 2 or any(len(x) > 80 for x in lines):
+            why.append("check questions: 1-2 lines of at most 80 characters")
     if "—" in a:
         why.append("long dash")
     why += ["עברית: " + w for w in hebrew_style(a)]
