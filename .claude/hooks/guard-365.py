@@ -301,6 +301,9 @@ def decide(name, ti):
         cmd = str(ti.get("command", ""))
         if LEDGER_NAME in cmd or re.search(r"drafts-?made", cmd):
             return ("deny", "the ledger of drafts Claude made is written only by the hook itself (see Michael 05/10/2026 and 30/10/2026).")
+        if re.search(r"\.claude[/\\]+projects", cmd) or (os.environ.get("GUARD365_TRANSCRIPTS") and os.environ["GUARD365_TRANSCRIPTS"] in cmd):
+            return ("deny", "a shell command that names Claude Code's transcripts folder: the transcripts are proof for the drafts "
+                    "ledger (retro 08/11/2026), so a shell could forge a pair. Read them with the Read or Grep tool.")
         if GRAPH_WRITE.search(cmd):
             return ("deny", "a direct Graph write (curl / Invoke-RestMethod to graph.microsoft.com with POST/DELETE/PATCH/PUT). "
                     "Michael (05/10/2026): Microsoft 365 is written only through the connector, under its rules.")

@@ -33,6 +33,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   // The page: missing SDS counted, link shown, no invented quantity or risk, no expiry badge.
   let r = await page.evaluate(() => { goPage('hzm'); rHzm(); const t = g('tb-hzm'); const rows = [...t.querySelectorAll('tr')].map((x) => [...x.children].map((c) => c.textContent.trim()));
     const a = t.querySelector('a[href]'); return { rows, sum: g('hzm-summary').textContent, href: a && a.getAttribute('href'), badge: !!t.querySelector('.b.bR, .b.bY, .b.bG') }; });
+  const hi = await page.evaluate(() => ['H200', 'H205', 'H250', 'H260', 'H261', 'H228'].map((h) => [h, _hzmRisk(h, '')]));
+  check('explosive, pyrophoric and water-reactive statements are high, not medium (retro 08/11/2026)', hi.slice(0, 5).every((x) => x[1] === 'גבוה') && hi[5][1] === 'בינוני', hi);
   check('summary: "חסר SDS: 1"', /חסר SDS:\s*1/.test(r.sum), r.sum);
   const amm = r.rows.find((x) => /אמוניה/.test(x[0])) || [], pro = r.rows.find((x) => /Proseptyl/.test(x[0])) || [];
   check('imported row: risk "-", quantity "-" (not " ל"), SDS "חסר"', amm[2] === '-' && amm[3] === '-' && /חסר/.test(amm[5]), amm);
