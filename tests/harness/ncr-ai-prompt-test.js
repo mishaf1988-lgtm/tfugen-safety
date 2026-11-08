@@ -50,6 +50,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('asks Gemini (claude.js falls back to Llama)', body && body.model === 'gemini', body && body.model);
   check('the root cause must explain how the system allowed it, not restate or blame', /נוהל חסר, הדרכה, פיקוח, ציוד, תכנון/.test(prompt) && /לא מאשימה עובד/.test(prompt), prompt.slice(0, 300));
   check('the action must name the items in the description, with who and until when', /בשמם/.test(prompt) && /מי, ועד מתי/.test(prompt), prompt.slice(0, 300));
+  check('no-blame wording (08/11/2026): blaming phrasings named, and an example of what changes', /ניסוח בלי האשמה/.test(prompt) && /התרשל/.test(prompt) && /לא שם לב/.test(prompt) && /מה משנים/.test(prompt));
   check('generic phrasings are named as forbidden', /לעדכן נהלים/.test(prompt) && /לחזק מודעות/.test(prompt));
   check('several findings in one description are handled separately', /יותר מממצא אחד/.test(prompt));
   check('no invented numbers, standards or dates', /בלי להמציא/.test(prompt));
