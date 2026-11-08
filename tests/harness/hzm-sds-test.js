@@ -57,6 +57,27 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('the attach area is cleared after save (next new form starts empty)', !r.after, r.after);
   check('a new material starts with no risk level (not "נמוך" by default)', r.i && r.i.r.hs === '', r.i && r.i.r.hs);
 
+  // Hazard statements (H) and the suggested risk (08/11/2026, Michael: "the scale + large quantity").
+  r = await page.evaluate(() => ({
+    big: _hzmRisk('H314, H331', 'מרבי מאושר בהיתר רעלים 70011 (03/09/2026): 12.71 טון.'),
+    small: _hzmRisk('H314', 'מרבי מאושר בהיתר רעלים 70011 (03/09/2026): 500 ק"ג.'),
+    cmr: _hzmRisk('H350', ''), irr: _hzmRisk('h319', ''), none: _hzmRisk('', 'x'), noem: _hzmRisk('H314', ''),
+    list: _hzmHList('h314,H290 H314; xyz H999 H1234'), kg: _hzmMaxKg('מרבי מאושר בהיתר רעלים 70011 (03/09/2026): 3 טון.') }));
+  check('high + approved maximum over 1 ton (12.71 טון): קריטי', r.big === 'קריטי', r);
+  check('high + 500 ק"ג: גבוה; high with no quantity written: גבוה', r.small === 'גבוה' && r.noem === 'גבוה', r);
+  check('proven carcinogen H350: קריטי; irritant H319 (lower case typed): בינוני; no H: no suggestion', r.cmr === 'קריטי' && r.irr === 'בינוני' && r.none === '', r);
+  check('codes are cleaned: upper case, no duplicates, sorted, junk dropped', JSON.stringify(r.list) === '["H290","H314"]', r.list);
+  check('3 טון reads as 3000 kg', r.kg === 3000, r.kg);
+  r = await page.evaluate(() => { DB.hzm[0].h = 'H314, H331'; rHzm(); const row = [...g('tb-hzm').querySelectorAll('tr')].find((x) => /אמוניה/.test(x.textContent)); return [...row.children].map((c) => c.textContent.trim()); });
+  check('table: the H line under the name, and "מוצע: קריטי" while the risk is not saved', /H314, H331/.test(r[0]) && r[2] === 'מוצע: קריטי', r);
+  r = await page.evaluate(() => { _genEdit('hzm', 'z1'); const o = { h: g('hzm-h').value, sug: g('hzm-h-sug').textContent, hs0: g('hzm-hs').value }; svHzm(); return Object.assign(o, { upd: window.__upd.slice(-1)[0] }); });
+  check('edit: the field is filled and the suggestion shows', r.h === 'H314, H331' && /סיכון מוצע: קריטי/.test(r.sug), r);
+  check('saving without pressing "להחיל" keeps the risk empty, and saves the codes', r.hs0 === '' && !r.upd.r.hs && r.upd.r.h === 'H314, H331', r.upd && r.upd.r);
+  r = await page.evaluate(() => { _genEdit('hzm', 'z1'); g('hzm-h').value = 'h331 H314 H314'; _hzmHSug(); _hzmHApply(); const sug = g('hzm-h-sug').textContent; svHzm(); return { sug, upd: window.__upd.slice(-1)[0] }; });
+  check('"להחיל" puts the suggestion in the risk field, and the save writes it with clean codes', r.upd.r.hs === 'קריטי' && r.upd.r.h === 'H314, H331' && /✓/.test(r.sug), r);
+  r = await page.evaluate(() => { _genEdit('hzm', 'z2'); g('hzm-h').value = ''; svHzm(); return window.__upd.slice(-1)[0]; });
+  check('an empty field saves null, not ""', r.r.h === null, r.r.h);
+
   // Web vitals: once per page load, only when synced, never by a viewer.
   r = await page.evaluate(() => {
     window.__ob = []; window._wvSent = false; window._wv = { LCP: 900, FCP: 500 };
