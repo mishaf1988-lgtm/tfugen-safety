@@ -3,7 +3,7 @@
 // (Graph conversion of an HTML page; the HTML itself when that fails) and mailed with the file to
 // Michael and hr-tap@. The signature is saved first: a OneDrive or mail failure never loses it,
 // and the reason lands on the row (doc_err). A weekly talk sends nothing.
-import { onRequest, makeTalkToken, inductionHtml, quizAnswers, makeCodeCookie, IND_HR, IND_ROOT, docsOf, MAX_DOCS } from './_build/talk.mjs';
+import { onRequest, makeTalkToken, inductionHtml, quizAnswers, makeCodeCookie, IND_HR, IND_ROOT, docsOf, MAX_DOCS, equipFields, equipBox, EQ_L, EQ_RET_DEF } from './_build/talk.mjs';
 import { LOGO_JPG } from './_build/_logo.mjs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
@@ -94,6 +94,43 @@ console.log('\n2. a new worker signs');
   check('the mail carries the signed form and the link to the folder', mail && mail.attachments && mail.attachments[0].contentType === 'application/pdf' && /\.pdf$/.test(mail.attachments[0].name) && mail.body.content.includes('od.example') && mail.subject.includes('איוון פטרוב'), mail && mail.subject);
   const p = w.patches[w.patches.length - 1];
   check('the row keeps the folder link and when it was mailed', p && p.b.doc_url && p.b.mailed_at && p.b.doc_err === null && p.u.includes('id=eq.' + w.inserts[0].id), p);
+}
+
+console.log('\n2c. the equipment declaration (08/11/2026, Michael: HR fills, the worker signs, HR writes to whom it is returned)');
+{
+  const fd = (o) => { const f = new FormData(); for (const [a, b] of Object.entries(o)) f.append(a, b); return f; };
+  const e = equipFields(fd({ eqq0: '1', eqq1: '2', eqq2: '', eqq3: '1', eqd3: 'מברג, פטיש', eqq4: '0', eqn0: 'אפוד זוהר', eqf0: '1', eqn1: 'x', eqf1: '3', eqr: 'מחסן טכני' }));
+  check('items with a quantity only, the tools detail, a free row, and to whom', JSON.stringify(e) === JSON.stringify({ items: [{ n: "צ'יפ אישי", q: 1 }, { n: 'נעלי עבודה', q: 2 }, { n: 'כלי עבודה', q: 1, d: 'מברג, פטיש' }, { n: 'אפוד זוהר', q: 1 }], ret: 'מחסן טכני' }), e);
+  check('nothing handed over: null (no declaration page)', equipFields(fd({ eqq0: '', eqq1: '0', eqn0: 'אפוד' })) === null);
+  // pairs (Michael 02/11/2026): 3 real quantities that count, 3 that do not
+  const q = (v) => { const r = equipFields(fd({ eqq1: v })); return r ? r.items[0].q : 0; };
+  check('pairs: "1", "2", "١٢" (Arabic digits) count as 1, 2, 12', q('1') === 1 && q('2') === 2 && q('١٢') === 12, [q('1'), q('2'), q('١٢')]);
+  check('pairs: "-1", "1000", "abc" do not count', q('-1') === 0 && q('1000') === 0 && q('abc') === 0, [q('-1'), q('1000'), q('abc')]);
+  const x = equipFields(fd({ eqn0: '<script>alert(1)</script>', eqf0: '1', eqr: '' }));
+  check('angle brackets dropped from a free item, empty "to whom" = HR', x && !/[<>]/.test(x.items[0].n) && x.ret === EQ_RET_DEF, x);
+  const box = equipBox('ru', { dir: 'ltr' });
+  check('the page block: HR table in Hebrew, the declaration in the worker\'s language', box.includes('ממלאים משאבי אנוש') && box.includes('name="eqq1"') && box.includes('name="eqd3"') && box.includes('name="eqr"') && box.includes(EQ_L.ru.t) && box.includes('class="eqret"'), box.slice(0, 300));
+  check('4 languages carry the declaration with the "to whom" place', ['he', 'ar', 'ru', 'am'].every((l) => EQ_L[l] && EQ_L[l].t && EQ_L[l].d1 && EQ_L[l].d2.includes('{ret}')));
+  const row = { id: 'r1', emp_name: 'דני', id_no: '123', equip: e };
+  const h = inductionHtml(T.ind, row, 'QQ', 'ru', { day: '2026-11-08', hm: '07:05' }, [], ['QUJD']);
+  const at = h.indexOf('הצהרה על קבלת ציוד והחזרתו');
+  check('the PDF: a declaration page with the logo, the items, to whom, the date, name, ID and the same signature', at > 0 && h.indexOf('data:image/jpeg;base64,' + LOGO_JPG, h.lastIndexOf('page-break-before', at)) < at && h.includes('נעלי עבודה') && h.includes('כלי עבודה: מברג, פטיש') && h.includes('<b>מחסן טכני</b>') && h.includes('שלא הוחזר') && h.includes('08/11/2026') && (h.match(/data:image\/png;base64,QQ/g) || []).length === 2 && h.includes('קרא את ההצהרה ב'), h.slice(at, at + 400));
+  check('the declaration page comes before the photographed documents', at < h.indexOf('מסמך שצולם בקליטה'));
+  check('the main table says the declaration was signed', h.includes('נחתמה, בעמוד ההצהרה'));
+  const none = inductionHtml(T.ind, { id: 'r1', emp_name: 'דני', id_no: '1' }, 'QQ', 'he', { day: '2026-11-08', hm: '07:05' }, []);
+  check('no equipment: no declaration page, and the form says so', !none.includes('הצהרה על קבלת ציוד והחזרתו') && none.includes('לא נמסר ציוד בקליטה'));
+  const bidi = equipFields(fd({ eqn0: 'אפוד\u202e\u200b זוהר', eqf0: '1', eqr: 'מחסן\u2066' }));
+  check('direction and zero-width marks are dropped from what HR types (security review)', bidi && !/[\u200b-\u200f\u202a-\u202e\u2066-\u2069]/.test(JSON.stringify(bidi)), bidi);
+  const old = inductionHtml(T.ind, { id: 'r0', emp_name: 'x', id_no: '1', read_at: '2026-10-20T08:00:00Z', equip: null }, 'QQ', 'he', { day: '2026-10-20', hm: '08:00' }, []);
+  check('a form signed before 08/11/2026, sent again: no claim about equipment', !old.includes('לא נמסר ציוד בקליטה') && !old.includes('הצהרת ציוד'));
+  reset();
+  await sign('ind1', { eqq1: '1', eqq2: '2', eqr: 'משאבי אנוש' });
+  check('signing: the row keeps the equipment', w.inserts[0] && JSON.stringify(w.inserts[0].equip) === JSON.stringify({ items: [{ n: 'נעלי עבודה', q: 1 }, { n: 'בגדי עבודה', q: 2 }], ret: 'משאבי אנוש' }), w.inserts[0] && w.inserts[0].equip);
+  const src = w.puts.find((p) => p.path.startsWith('Apps/Tapugan Safety/'));
+  check('signing: the filed form carries the declaration page', src && src.txt.includes('הצהרה על קבלת ציוד והחזרתו') && src.txt.includes('בגדי עבודה'));
+  reset();
+  await sign('ind1');
+  check('signing with nothing handed over: equip null', w.inserts[0] && w.inserts[0].equip === null, w.inserts[0] && w.inserts[0].equip);
 }
 
 console.log('\n2b. documents photographed at the induction (13/10/2026, Michael: embedded in the PDF)');
