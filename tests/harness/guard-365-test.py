@@ -241,6 +241,8 @@ led_write(KEEP + [{'id': FORGED, 't': OUTSIDE}])
 check_env('a perfect forged pair in a JSONL outside Claude Code\'s transcripts folder is denied (security review)', {'tool_name': DEL, 'tool_input': {'messageId': FORGED}}, 'deny')
 for tool in ['Write', 'Edit']:
     check_env(tool + ' into the transcripts folder is denied', {'tool_name': tool, 'tool_input': {'file_path': os.path.join(TDIR, 'x.jsonl'), 'content': '{}'}}, 'deny')
+check_env('a shell command that writes into the transcripts folder is denied (retro 08/11/2026)', {'tool_name': 'Bash', 'tool_input': {'command': "python3 -c \"open('%s','a').write('{}')\"" % os.path.join(TDIR, 'x.jsonl')}}, 'deny')
+check_env('a shell command naming the dot-claude projects folder is denied', {'tool_name': 'Bash', 'tool_input': {'command': "echo x >> ~/.claude/projects/p/s.jsonl"}}, 'deny')
 check_env('Write of a memory file in the same folder still passes', {'tool_name': 'Write', 'tool_input': {'file_path': os.path.join(TDIR, 'memory', 'MEMORY.md'), 'content': 'x'}}, 'pass')
 check_env('Write elsewhere still passes', {'tool_name': 'Write', 'tool_input': {'file_path': '/home/user/x.jsonl', 'content': '{}'}}, 'pass')
 SUB = 'AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AzWOnlEnvT0Cf1PLfXWwjNwAIJ3zS6FFF'

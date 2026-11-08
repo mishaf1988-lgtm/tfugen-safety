@@ -15,7 +15,7 @@ verify(), which shares no code with the replacing: any worker's full name (eithe
 e-mail left in it fails the run (exit 7) and the copy must not be used. Exit: 0 clean; 2 usage; 4 unsupported format
 (failure reason 3: a scan or a PDF is refused, not half-done); 7 a detail left.
 """
-import json, re, sys, unicodedata
+import json, os, re, sys, unicodedata
 
 WORKER_WORD = "עובד"          # "worker"
 HIDDEN = "[מוסתר]"         # "[hidden]"
@@ -268,11 +268,23 @@ def main(argv):
     if why:
         print("not supported: " + why, file=sys.stderr)
         return 4
+    if os.path.realpath(out) in {os.path.realpath(x) for x in (src, key, pj)}:
+        print("the output must be a new file: it is the same path as the input, the key or the people list", file=sys.stderr)
+        return 4
     people = json.load(open(pj, encoding="utf-8"))
     r = Redactor(people)
-    (redact_xlsx if ext == "xlsx" else redact_docx)(src, out, r)
+    try:
+        (redact_xlsx if ext == "xlsx" else redact_docx)(src, out, r)
+    except Exception:
+        if os.path.exists(out):
+            os.remove(out)  # a half-written copy must not stay (retro 08/11/2026, challenger)
+        raise
     left = verify(out, people)
     if left:
+        try:
+            os.remove(out)  # the copy still holds details: it must not stay in a synced folder (retro 08/11/2026)
+        except OSError:
+            pass
         print(json.dumps({"ok": False, "left": left[:20]}, ensure_ascii=False))
         return 7
     write_key(key, r.key_rows())
