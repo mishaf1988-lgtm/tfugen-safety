@@ -18,6 +18,9 @@ const A = (name, exp) => ({ Name: name, LicenseNumber: '46194', LicenseType: 'מ
   check('a Hebrew name passes', cleanQ('  נגב   אקולוגיה ') === 'נגב אקולוגיה');
   check('one letter, 61 letters, empty: refused', cleanQ('א') === null && cleanQ('א'.repeat(61)) === null && cleanQ('') === null);
   check('URL and control characters are stripped, not passed on', cleanQ('a/b?c=d#e%0A') === 'a b c d e 0A', cleanQ('a/b?c=d#e%0A'));
+  // pairs (Michael 02/11/2026): three real contractor names pass whole, three inputs are refused
+  check('pairs: 3 real names from the register pass unchanged', ['נגב אקולוגיה אגשח בעמ', 'ט.ד.י. משאבים', 'לאור הנדסה'].every((n) => cleanQ(n) === n));
+  check('pairs: 3 inputs refused (one letter, only marks, 61 letters)', [ 'א', '%%%///', 'ב'.repeat(61)].every((n) => cleanQ(n) === null));
   check('company ID: 9 digits, dashes dropped', cleanCid('51-234567-8') === '512345678' && cleanCid('12345678') === null && cleanCid('1234567890') === null);
 
   console.log('\n2. records to the card');
