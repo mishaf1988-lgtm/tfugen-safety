@@ -6567,8 +6567,8 @@ function _drlFndBadge(id){
 // Not in the contractors register = information only (it covers building and engineering works); an expired asbestos
 // licence = red; a failed call = "not checked", never "fine".
 function _ctrRegLine(p,pick){
-  return '<div style="padding:6px 8px;border:1px solid var(--c-gray-150,#ddd);border-radius:8px;margin-top:4px">'+esc(p.name)+(p.city?', '+esc(p.city):'')+', '+'\u05d7.\u05e4'+' '+esc(p.cid)+(p.anaf&&p.anaf.length?'<br><span style="color:var(--c-gray-600,#555)">'+esc(p.anaf.join(', '))+'</span>':'')+
-    (pick?' <button type="button" class="btn btn-s btn-sm" data-cid="'+esc(p.cid)+'" onclick="g(\'ctr-cid\').value=this.dataset.cid;_ctrReg()">\u05d6\u05d4 \u05d4\u05e7\u05d1\u05dc\u05df</button>':'')+'</div>';
+  return '<div style="padding:6px 8px;border:1px solid var(--c-gray-150,#ddd);border-radius:8px;margin-top:4px">'+esc(p.name)+(p.city?', '+esc(p.city):'')+(p.cid?', \u05d7.\u05e4 '+esc(p.cid):'')+(p.anaf&&p.anaf.length?'<br><span style="color:var(--c-gray-600,#555)">'+esc(p.anaf.join(', '))+'</span>':'')+
+    (pick&&p.cid?' <button type="button" class="btn btn-s btn-sm" data-cid="'+esc(p.cid)+'" onclick="g(\'ctr-cid\').value=this.dataset.cid;_ctrReg()">\u05d6\u05d4 \u05d4\u05e7\u05d1\u05dc\u05df</button>':'')+'</div>';
 }
 function _ctrReg(){
   var box=g('ctr-reg');if(!box)return;

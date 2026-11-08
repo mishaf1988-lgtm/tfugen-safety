@@ -116,6 +116,7 @@ const A = (name, exp) => ({ Name: name, LicenseNumber: '46194', LicenseType: 'מ
   const fn = html.slice(html.indexOf('function _ctrReg(){'), html.indexOf('function svCtr(){'));
   check('the card calls /api/registry with the user token', /\/api\/registry\?op=ctr&/.test(fn) && /_vitreHdr\(\)/.test(fn));
   check('"not in the register" only on a full answer; a failure says "not checked"', /else if\(j\.ok\)h\+=/.test(fn) && /\.catch\(function\(\)\{box\.innerHTML=/.test(fn));
+  check('a sole trader (no company ID in the register): no ID shown, no pick button', /\(p\.cid\?', \\u05d7\.\\u05e4 '\+esc\(p\.cid\):''\)/.test(html) && /pick&&p\.cid\?/.test(html));
   check('registry values are escaped', /esc\(p\.name\)/.test(html) && /esc\(a\.name\)/.test(fn));
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
