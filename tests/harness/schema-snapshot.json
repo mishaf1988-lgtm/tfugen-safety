@@ -609,6 +609,7 @@
       "device",
       "emp_id",
       "emp_name",
+      "equip",
       "id",
       "id_no",
       "lang",
