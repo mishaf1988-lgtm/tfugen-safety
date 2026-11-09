@@ -29,7 +29,8 @@ import { makeLinkToken, readLinkToken } from '../_closelink.js';
 import { hebrewName, hebrewText, heName, heText, plainQuotes } from '../_ai.js';
 import { accessToken, putFile, sendMailTo, trashFile } from '../_onedrive.js';
 import { LOGO_JPG } from '../_logo.js';
-import { ownerWa, sendToOwner, ownerWindowOpen, keyboardText } from '../_wa.js';
+import { ownerWa, sendToOwner, ownerWindowOpen, keyboardText, waOneLine } from '../_wa.js';
+import { stateCas } from '../_cas.js';
 import { readRecipients } from './hazard-report.js';
 import { REPORT_DEPTS } from './hazard-file.js';
 
@@ -941,11 +942,11 @@ export function equipAlertText(row, out, sigLen) {
   if (!e || !Array.isArray(e.items) || !e.items.length) return null;
   const bad = [];
   if (!(sigLen > 0)) bad.push('\u05d0\u05d9\u05df \u05d7\u05ea\u05d9\u05de\u05d4 \u05d1\u05d8\u05d5\u05e4\u05e1');
-  if (!out.mailed) bad.push('\u05d4\u05de\u05d9\u05d9\u05dc \u05dc\u05d0 \u05d9\u05e6\u05d0' + (out.err ? ' (' + keyboardText(String(out.err)).slice(0, 80) + ')' : ''));
+  if (!out.mailed) bad.push('\u05d4\u05de\u05d9\u05d9\u05dc \u05dc\u05d0 \u05d9\u05e6\u05d0' + (out.err ? ' (' + waOneLine(keyboardText(String(out.err)), 80) + ')' : ''));
   else if (!out.attached) bad.push('\u05d4-PDF \u05d2\u05d3\u05d5\u05dc \u05de\u05d3\u05d9 \u05d5\u05dc\u05d0 \u05e6\u05d5\u05e8\u05e3 \u05dc\u05de\u05d9\u05d9\u05dc, \u05e0\u05e9\u05dc\u05d7 \u05e8\u05e7 \u05e7\u05d9\u05e9\u05d5\u05e8');
   if (out.mailed && !out.pdf) bad.push('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05e0\u05e9\u05de\u05e8 \u05db-HTML \u05d5\u05dc\u05d0 \u05db-PDF');
   if (!bad.length) return null;
-  return '\u05e7\u05dc\u05d9\u05d8\u05d4 \u05e2\u05dd \u05d4\u05e6\u05d4\u05e8\u05ea \u05e6\u05d9\u05d5\u05d3 \u05dc\u05d0 \u05d9\u05e6\u05d0\u05d4 \u05ea\u05e7\u05d9\u05e0\u05d4, ' + keyboardText(row.emp_name || '') + ':\n' + bad.map((b) => '- ' + b).join('\n') + (out.mailed ? '' : '\n\u05d0\u05e4\u05e9\u05e8 \u05dc\u05dc\u05d7\u05d5\u05e5 "\u05e9\u05dc\u05d7 \u05e9\u05d5\u05d1" \u05dc\u05d9\u05d3 \u05e9\u05dd \u05d4\u05e2\u05d5\u05d1\u05d3 \u05d1\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05d7\u05d5\u05ea\u05de\u05d9\u05dd \u05d1\u05e7\u05dc\u05d9\u05d8\u05d4.');
+  return '\u05e7\u05dc\u05d9\u05d8\u05d4 \u05e2\u05dd \u05d4\u05e6\u05d4\u05e8\u05ea \u05e6\u05d9\u05d5\u05d3 \u05dc\u05d0 \u05d9\u05e6\u05d0\u05d4 \u05ea\u05e7\u05d9\u05e0\u05d4, ' + waOneLine(keyboardText(row.emp_name || ''), 80) + ':\n' + bad.map((b) => '- ' + b).join('\n') + (out.mailed ? '' : '\n\u05d0\u05e4\u05e9\u05e8 \u05dc\u05dc\u05d7\u05d5\u05e5 "\u05e9\u05dc\u05d7 \u05e9\u05d5\u05d1" \u05dc\u05d9\u05d3 \u05e9\u05dd \u05d4\u05e2\u05d5\u05d1\u05d3 \u05d1\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05d7\u05d5\u05ea\u05de\u05d9\u05dd \u05d1\u05e7\u05dc\u05d9\u05d8\u05d4.');
 }
 // Review 09/11/2026: one message an hour at most (a worker with the link could file many forms with big photos, each
 // one "not attached"), and no wa_last_out: the worker's name must not reach the assistant's context as Michael's last message.
@@ -954,16 +955,23 @@ export async function equipAlert(env, text, ref, nowMs) {
   try {
     if (!text || !env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return null;
     const now = nowMs || Date.now();
-    const g = await fetch(SB + '/rest/v1/server_state?key=eq.' + EQUIP_ALERT_KEY + '&select=value', { headers: sbH(env) });
-    const last = g.ok ? Date.parse(((await g.json()) || [])[0]?.value || '') : NaN;
-    if (last && now - last < EQUIP_ALERT_MS) return { ok: false, skipped: 'hour' };
+    const H = Object.assign({ 'Content-Type': 'application/json' }, sbH(env)), U = SB;
+    // The hour is taken atomically BEFORE the send (stateCas), so many signings at once send one message; it is given back
+    // when nothing went out (no number, a refusal, an error). Retro 09/11/2026: a stamp written after the send left a race
+    // of seconds; a stamp before it burned the hour on a failure.
+    let prev;
+    const got = await stateCas(U, H, EQUIP_ALERT_KEY, (raw) => {
+      prev = raw;
+      const last = Date.parse(raw || '');
+      if (last && now - last < EQUIP_ALERT_MS) return { write: false };
+      return { value: new Date(now).toISOString() };
+    });
+    if (!got.written) return { ok: false, skipped: 'hour' };
+    const give = async () => { try { await stateCas(U, H, EQUIP_ALERT_KEY, () => ({ value: prev || '1970-01-01T00:00:00.000Z' })); } catch (e) { /* the hour stays used */ } };
     const to = await ownerWa(env, SB);
-    if (!to) return null;
+    if (!to) { await give(); return null; }
     const sent = await sendToOwner(env, to, text, { kind: 'fault', ref, windowOpen: await ownerWindowOpen(env, SB) });
-    // The hour is used up only by a message that went out or was held (retro 09/11/2026): no number, a refusal or an
-    // error no longer swallows the next alert.
-    if (sent && sent.ok) await fetch(SB + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }),
-      body: JSON.stringify([{ key: EQUIP_ALERT_KEY, value: new Date(now).toISOString(), updated_at: new Date(now).toISOString() }]) });
+    if (!(sent && sent.ok)) await give();
     return sent;
   } catch (e) { return null; }
 }
