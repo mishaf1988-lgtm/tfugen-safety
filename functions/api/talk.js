@@ -238,13 +238,24 @@ export function equipFields(form) {
 }
 const fillRet = (s, ret, f) => String(s).split('{ret}').map(f).join(ret);
 // The equipment block on the worker's page: HR's table (Hebrew), then the declaration in the worker's language.
+// 09/11/2026 (Michael: "מאשר", on making HR choose): an empty box was read as "no equipment" though HR may have
+// skipped it. HR now picks one of two (eqc = yes / no, required on the page). Pure: null = fine, or the Hebrew error.
+// A form without eqc (a page opened before this change) passes as before.
+export function equipCheck(eqc, eq) {
+  const c = String(eqc || '');
+  if (!c) return null;
+  if (c !== 'yes' && c !== 'no') return '\u05d1\u05d7\u05d9\u05e8\u05d4 \u05dc\u05d0 \u05ea\u05e7\u05d9\u05e0\u05d4 \u05d1\u05d4\u05e6\u05d4\u05e8\u05ea \u05d4\u05e6\u05d9\u05d5\u05d3.';
+  if (c === 'yes' && !eq) return '\u05e1\u05d5\u05de\u05df "\u05e0\u05de\u05e1\u05e8 \u05e6\u05d9\u05d5\u05d3" \u05d0\u05d1\u05dc \u05dc\u05d0 \u05e0\u05e8\u05e9\u05de\u05d4 \u05db\u05de\u05d5\u05ea \u05dc\u05d0\u05e3 \u05e4\u05e8\u05d9\u05d8. \u05d9\u05e9 \u05dc\u05e8\u05e9\u05d5\u05dd \u05db\u05de\u05d5\u05ea, \u05d0\u05d5 \u05dc\u05e1\u05de\u05df "\u05dc\u05d0 \u05e0\u05de\u05e1\u05e8 \u05e6\u05d9\u05d5\u05d3".';
+  if (c === 'no' && eq) return '\u05e1\u05d5\u05de\u05df "\u05dc\u05d0 \u05e0\u05de\u05e1\u05e8 \u05e6\u05d9\u05d5\u05d3" \u05d0\u05d1\u05dc \u05e0\u05e8\u05e9\u05de\u05d5 \u05db\u05de\u05d5\u05d9\u05d5\u05ea. \u05d9\u05e9 \u05dc\u05de\u05d7\u05d5\u05e7 \u05d0\u05ea \u05d4\u05db\u05de\u05d5\u05d9\u05d5\u05ea, \u05d0\u05d5 \u05dc\u05e1\u05de\u05df "\u05e0\u05de\u05e1\u05e8 \u05e6\u05d9\u05d5\u05d3".';
+  return null;
+}
 export function equipBox(lang, L) {
   const E = EQ_L[lang] || EQ_L.he, st = 'box-sizing:border-box;font-size:16px;padding:8px;border:1px solid #d1d5db;border-radius:8px';
   const qIn = (nm) => '<input name="' + nm + '" id="' + nm + '" inputmode="numeric" maxlength="3" autocomplete="off" dir="ltr" aria-label="\u05db\u05de\u05d5\u05ea" placeholder="0" style="' + st + ';width:72px;text-align:center">';
   const row = (lab, inp) => '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><div style="flex:1">' + lab + '</div>' + inp + '</div>';
   return '<div id="eqbox" style="border:2px solid #1e3a8a;border-radius:8px;padding:10px 12px;margin-bottom:12px">'
     + '<div dir="rtl" lang="he"><div style="font-weight:700;color:#1e3a8a">' + esc(EQ_L.he.t) + '</div>'
-    + '<div style="font-size:13px;color:#6b7280;margin-bottom:8px">\u05de\u05de\u05dc\u05d0\u05d9\u05dd \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9: \u05db\u05de\u05d5\u05ea \u05dc\u05db\u05dc \u05e4\u05e8\u05d9\u05d8 \u05e9\u05e0\u05de\u05e1\u05e8. \u05dc\u05d0 \u05e0\u05de\u05e1\u05e8 \u05e6\u05d9\u05d5\u05d3: \u05dc\u05d4\u05e9\u05d0\u05d9\u05e8 \u05e8\u05d9\u05e7.</div>'
+    + '<div style="font-size:13px;color:#6b7280;margin-bottom:6px">\u05de\u05de\u05dc\u05d0\u05d9\u05dd \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9. \u05d7\u05d5\u05d1\u05d4 \u05dc\u05d1\u05d7\u05d5\u05e8 \u05d0\u05d7\u05ea:</div>' + '<label style="display:flex;gap:8px;align-items:center;margin:4px 0;font-weight:700"><input type="radio" name="eqc" value="yes" required style="width:22px;height:22px">\u05e0\u05de\u05e1\u05e8 \u05e6\u05d9\u05d5\u05d3 (\u05dc\u05e8\u05e9\u05d5\u05dd \u05db\u05de\u05d5\u05ea \u05dc\u05db\u05dc \u05e4\u05e8\u05d9\u05d8)</label>' + '<label style="display:flex;gap:8px;align-items:center;margin:4px 0;font-weight:700"><input type="radio" name="eqc" value="no" required style="width:22px;height:22px">\u05dc\u05d0 \u05e0\u05de\u05e1\u05e8 \u05e6\u05d9\u05d5\u05d3</label>' + '<div style="font-size:13px;color:#6b7280;margin:6px 0">\u05db\u05de\u05d5\u05ea \u05dc\u05db\u05dc \u05e4\u05e8\u05d9\u05d8 \u05e9\u05e0\u05de\u05e1\u05e8:</div>'
     + EQ_ITEMS.map((n, i) => row('<label for="eqq' + i + '">' + esc(n) + '</label>' + (i === EQ_TOOLS ? '<input name="eqd' + i + '" id="eqd' + i + '" maxlength="80" autocomplete="off" placeholder="\u05e4\u05d9\u05e8\u05d5\u05d8 \u05db\u05dc\u05d9 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4" aria-label="\u05e4\u05d9\u05e8\u05d5\u05d8 \u05db\u05dc\u05d9 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4" style="' + st + ';width:100%;margin-top:4px">' : ''), qIn('eqq' + i))).join('')
     + Array.from({ length: EQ_FREE }, (_, i) => row('<input name="eqn' + i + '" id="eqn' + i + '" maxlength="40" autocomplete="off" placeholder="\u05e4\u05e8\u05d9\u05d8 \u05e0\u05d5\u05e1\u05e3" aria-label="\u05e4\u05e8\u05d9\u05d8 \u05e0\u05d5\u05e1\u05e3" style="' + st + ';width:100%">', qIn('eqf' + i))).join('')
     + '<label for="eqr" style="display:block;font-weight:700;margin:8px 0 4px">\u05de\u05d7\u05d6\u05d9\u05e8\u05d9\u05dd \u05d1\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05dc</label><input name="eqr" id="eqr" maxlength="40" autocomplete="off" value="' + esc(EQ_RET_DEF) + '" style="' + st + ';width:100%"></div>'
@@ -1658,6 +1669,8 @@ async function signCore(env, request, ctx, form, c) {
     const [job, agency] = await Promise.all([textHe(env, request, f.v.job), f.v.agency ? textHe(env, request, f.v.agency) : null]);
     if (!job || (f.v.agency && !agency)) return bad('errNameT', 'errHe', 422);
     indV = { ...f.v, job, agency };
+    const eqErr = equipCheck(form.get('eqc'), equipFields(form));
+    if (eqErr) return page(IL.errT, '<p>' + esc(eqErr) + '</p>' + back, 'err', 400, '', lang);
   }
 
   const who = emp.out ? '&emp_id=like.' + encodeURIComponent(emp.key + '*') : '&emp_id=eq.' + encodeURIComponent(emp.id);
