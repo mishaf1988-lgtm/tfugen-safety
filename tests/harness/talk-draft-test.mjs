@@ -147,6 +147,7 @@ check('job, agency and company go through textHe (heText first, then the assista
   check('the photo restored exactly as it was, not shrunk again (C5)', ind.docs.length === 1 && ind.docs[0] === stored, [ind.docs.length, stored.length, ind.docs[0] && ind.docs[0].length]);
   check('the signature restored on the induction page too', (await ink()) > 50);
   insertOk = true; inserts = 0;
+  await page.check('input[name=eqc][value=no]'); // 09/11/2026: HR must choose given/none
   await Promise.all([page.waitForNavigation(), page.click('#go')]);
   check('...and the browser lets it be sent (no empty "worker number" refusal)', inserts === 1 && /תודה/.test(await page.textContent('body')), [inserts, (await page.textContent('body')).slice(0, 80)]);
 
