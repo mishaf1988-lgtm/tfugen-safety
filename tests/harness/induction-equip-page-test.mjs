@@ -4,7 +4,7 @@
 // typed by HR shows inside the declaration at once (the script runs under the CSP), the Russian page shows
 // the declaration in Russian, and a weekly talk has no such block. A screenshot for the eye: EQ_SHOT=<path>.
 import { createRequire } from 'module';
-import { onRequest, makeTalkToken, makeCodeCookie, inductionHtml } from './_build/talk.mjs';
+import { onRequest, makeTalkToken, makeCodeCookie, inductionHtml, equipAlertText, equipAlert } from './_build/talk.mjs';
 const require = createRequire(import.meta.url);
 let pw; try { pw = require('playwright'); } catch (e) { pw = require('playwright-core'); }
 let pass = 0, fail = 0;
@@ -49,6 +49,30 @@ const ru = await onRequest({ request: new Request('https://tapugan-safety.pages.
 const ruH = await ru.text();
 check('a Russian page: the HR table stays Hebrew, the declaration is in Russian', /ממלאים משאבי אנוש/.test(ruH) && /Декларация о получении и возврате оборудования/.test(ruH), ruH.length);
 check('a weekly talk has no equipment block', !wk.html.includes('id="eqbox"'));
+
+// 09/11/2026: the WhatsApp alert when an induction with equipment did not go out whole.
+{
+  const R = { id: 'r1', emp_name: 'דני כהן', equip: { items: [{ n: 'נעלי עבודה', q: 1 }], ret: 'משאבי אנוש' } };
+  const good = { mailed: true, attached: true, pdf: true, err: null };
+  check('alert: all well = no message', equipAlertText(R, good, 900) === null);
+  check('alert: no equipment = no message, even when the mail failed', equipAlertText({ id: 'r2', emp_name: 'x', equip: null }, { mailed: false }, 0) === null);
+  const big = equipAlertText(R, Object.assign({}, good, { attached: false }), 900);
+  check('alert: PDF too big to attach is named, with the worker', /לא צורף למייל/.test(big) && /דני כהן/.test(big) && !/שלח שוב/.test(big), big);
+  const nomail = equipAlertText(R, { mailed: false, attached: false, pdf: false, err: 'mail 503' }, 900);
+  check('alert: mail not sent says why and offers "send again"', /המייל לא יצא \(mail 503\)/.test(nomail) && /שלח שוב/.test(nomail) && !/HTML/.test(nomail), nomail);
+  check('alert: no signature and HTML instead of PDF', /אין חתימה/.test(equipAlertText(R, good, 0)) && /HTML/.test(equipAlertText(R, Object.assign({}, good, { pdf: false }), 900)));
+}
+{
+  // the hourly cap (review 09/11/2026): a message an hour ago or less = no WhatsApp call at all
+  const save = globalThis.fetch; const calls = [];
+  const now = Date.parse('2026-11-09T08:00:00Z');
+  globalThis.fetch = async (u, o) => { u = String(u); calls.push(u + ' ' + ((o && o.method) || 'GET'));
+    if (u.includes('server_state?key=eq.induction_equip_alert')) return new Response(JSON.stringify([{ value: new Date(now - 600000).toISOString() }]), { status: 200 });
+    return new Response('{}', { status: 599 }); };
+  const r = await equipAlert(Object.assign({}, ENV, { META_PHONE_NUMBER_ID: 'p', META_ACCESS_TOKEN: 't' }), 'טקסט', 'induction r1', now);
+  check('alert: a second one within the hour is skipped, nothing sent', r && r.skipped === 'hour' && calls.length === 1, { r, calls });
+  globalThis.fetch = save;
+}
 if (process.env.EQ_PDF) {
   const h = inductionHtml(T.ind1, { id: 'r1', emp_name: 'דני כהן', id_no: '123456789', equip: { items: [{ n: 'נעלי עבודה', q: 1 }, { n: 'כלי עבודה', q: 1, d: 'מברג, פטיש' }], ret: 'משאבי אנוש' } }, 'iVBORw0KGgo=', 'he', { day: '2026-11-08', hm: '07:05' }, []);
   const p2 = await (await browser.newContext({ viewport: { width: 794, height: 1123 }, deviceScaleFactor: 1 })).newPage();

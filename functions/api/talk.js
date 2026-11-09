@@ -29,6 +29,7 @@ import { makeLinkToken, readLinkToken } from '../_closelink.js';
 import { hebrewName, hebrewText, heName, heText, plainQuotes } from '../_ai.js';
 import { accessToken, putFile, sendMailTo, trashFile } from '../_onedrive.js';
 import { LOGO_JPG } from '../_logo.js';
+import { ownerWa, sendToOwner, ownerWindowOpen } from '../_wa.js';
 import { readRecipients } from './hazard-report.js';
 import { REPORT_DEPTS } from './hazard-file.js';
 
@@ -932,8 +933,39 @@ async function graphPdf(token, seg, ms) {
 // cut in the middle (waitUntil has 30 seconds) used to leave "being sent" forever; now the row shows the
 // last step that was done. dropped: photos the server could not take (too big), noted in doc_err.
 // kept: photos waiting in Storage; when the form did not go out, the row says they are kept for a resend.
+// 09/11/2026 (Michael in the questionnaire: "בצע: וואטסאפ מיד"): an induction with equipment whose mail did not go out
+// whole (no mail, the PDF not attached, an HTML instead of a PDF, no signature) was seen by no one. Pure: the
+// WhatsApp text, or null when all is well or there is no equipment. One message per filing; held on the weekend (kind fault).
+export function equipAlertText(row, out, sigLen) {
+  const e = row && row.equip;
+  if (!e || !Array.isArray(e.items) || !e.items.length) return null;
+  const bad = [];
+  if (!(sigLen > 0)) bad.push('\u05d0\u05d9\u05df \u05d7\u05ea\u05d9\u05de\u05d4 \u05d1\u05d8\u05d5\u05e4\u05e1');
+  if (!out.mailed) bad.push('\u05d4\u05de\u05d9\u05d9\u05dc \u05dc\u05d0 \u05d9\u05e6\u05d0' + (out.err ? ' (' + String(out.err).slice(0, 80) + ')' : ''));
+  else if (!out.attached) bad.push('\u05d4-PDF \u05d2\u05d3\u05d5\u05dc \u05de\u05d3\u05d9 \u05d5\u05dc\u05d0 \u05e6\u05d5\u05e8\u05e3 \u05dc\u05de\u05d9\u05d9\u05dc, \u05e0\u05e9\u05dc\u05d7 \u05e8\u05e7 \u05e7\u05d9\u05e9\u05d5\u05e8');
+  if (out.mailed && !out.pdf) bad.push('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05e0\u05e9\u05de\u05e8 \u05db-HTML \u05d5\u05dc\u05d0 \u05db-PDF');
+  if (!bad.length) return null;
+  return '\u05e7\u05dc\u05d9\u05d8\u05d4 \u05e2\u05dd \u05d4\u05e6\u05d4\u05e8\u05ea \u05e6\u05d9\u05d5\u05d3 \u05dc\u05d0 \u05d9\u05e6\u05d0\u05d4 \u05ea\u05e7\u05d9\u05e0\u05d4, ' + (row.emp_name || '') + ':\n' + bad.map((b) => '- ' + b).join('\n') + (out.mailed ? '' : '\n\u05d0\u05e4\u05e9\u05e8 \u05dc\u05dc\u05d7\u05d5\u05e5 "\u05e9\u05dc\u05d7 \u05e9\u05d5\u05d1" \u05dc\u05d9\u05d3 \u05e9\u05dd \u05d4\u05e2\u05d5\u05d1\u05d3 \u05d1\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05d7\u05d5\u05ea\u05de\u05d9\u05dd \u05d1\u05e7\u05dc\u05d9\u05d8\u05d4.');
+}
+// Review 09/11/2026: one message an hour at most (a worker with the link could file many forms with big photos, each
+// one "not attached"), and no wa_last_out: the worker's name must not reach the assistant's context as Michael's last message.
+export const EQUIP_ALERT_KEY = 'induction_equip_alert', EQUIP_ALERT_MS = 3600000;
+export async function equipAlert(env, text, ref, nowMs) {
+  try {
+    if (!text || !env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return null;
+    const now = nowMs || Date.now();
+    const g = await fetch(SB + '/rest/v1/server_state?key=eq.' + EQUIP_ALERT_KEY + '&select=value', { headers: sbH(env) });
+    const last = g.ok ? Date.parse(((await g.json()) || [])[0]?.value || '') : NaN;
+    if (last && now - last < EQUIP_ALERT_MS) return { ok: false, skipped: 'hour' };
+    await fetch(SB + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }),
+      body: JSON.stringify([{ key: EQUIP_ALERT_KEY, value: new Date(now).toISOString(), updated_at: new Date(now).toISOString() }]) });
+    const to = await ownerWa(env, SB);
+    if (!to) return null;
+    return await sendToOwner(env, to, text, { kind: 'fault', ref, windowOpen: await ownerWindowOpen(env, SB) });
+  } catch (e) { return null; }
+}
 export async function fileInduction(env, talk, row, sig, lang, nowMs, answers, docs, dropped, kept) {
-  const out = { pdf: false, url: null, mailed: false, err: null, name: null };
+  const out = { pdf: false, url: null, mailed: false, attached: false, err: null, name: null };
   const note = dropped > 0 ? dropped + ' \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05dc\u05d0 \u05e0\u05db\u05e0\u05e1\u05d5 \u05dc\u05d8\u05d5\u05e4\u05e1 (\u05d2\u05d3\u05d5\u05dc\u05d9\u05dd \u05de\u05d3\u05d9)' : null;
   const mark = async (b) => {
     try { await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(row.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify(b) }); } catch (e) { /* the signature is saved */ }
@@ -974,11 +1006,14 @@ export async function fileInduction(env, talk, row, sig, lang, nowMs, answers, d
       // A form with many photos can pass what a mail carries: then the link above only.
       bytes.length <= MAIL_ATTACH_MAX ? [{ '@odata.type': '#microsoft.graph.fileAttachment', name, contentType: type, contentBytes: b64(bytes) }] : []);
     out.mailed = true;
+    out.attached = bytes.length <= MAIL_ATTACH_MAX;
   } catch (e) { out.err = String((e && e.message) || e).substring(0, 200); }
   // Step 3, shown next to the signature in "who signed": filed, mailed, or why not.
   const keptNote = kept > 0 && !(out.url && out.mailed) ? kept + ' ' + DOCS_KEPT_NOTE : null;
   const err = [out.err, note, keptNote].filter(Boolean).join('; ') || null;
   await mark(Object.assign(out.url ? { doc_url: out.url } : {}, { mailed_at: out.mailed ? new Date().toISOString() : null, doc_err: err }));
+  // The alert text only: the callers send it after dropping the photos (review 09/11/2026), within waitUntil's time.
+  out.alertText = equipAlertText(row, out, sig ? sig.length : 0);
   return out;
 }
 
@@ -1664,7 +1699,7 @@ async function signCore(env, request, ctx, form, c) {
     // they exist nowhere else. Deleted once the form is filed and mailed; kept for a resend otherwise.
     const kept = docs.length ? await keepDocs(env, row.id, docs) : [];
     const job = fileInduction(env, talk, row, sig, lang, undefined, [], docs, sent.length - docs.length, kept.length)
-      .then((out) => (out.url && out.mailed && kept.length ? dropDocs(env, kept) : null)).catch(() => null);
+      .then(async (out) => { if (out.url && out.mailed && kept.length) await dropDocs(env, kept); if (out.alertText) await equipAlert(env, out.alertText, 'induction ' + row.id); }).catch(() => null);
     if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(job); else await job;
   }
   // The typed number onto the card, only while the card is still empty (never over a number
@@ -1750,6 +1785,7 @@ async function makeLink(env, request, ctx) {
     const out = await fileInduction(env, t, row, sig, row.lang, undefined, [], kept.docs, dm ? +dm[1] : 0, kept.paths.length);
     const ok = !!(out.url && out.mailed);
     if (ok && kept.paths.length) await dropDocs(env, kept.paths);
+    if (out.alertText) await equipAlert(env, out.alertText, 'induction ' + row.id);
     return jsonResp({ ok, url: out.url, mailed: out.mailed, docs: kept.docs.length, error: out.err }, ok ? 200 : 502, cors);
   }
   // Form 08.01 with everyone who signed (14/10/2026): any kind, published or closed.
