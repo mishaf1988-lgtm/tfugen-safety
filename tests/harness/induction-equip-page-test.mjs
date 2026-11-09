@@ -67,11 +67,46 @@ check('a weekly talk has no equipment block', !wk.html.includes('id="eqbox"'));
   const save = globalThis.fetch; const calls = [];
   const now = Date.parse('2026-11-09T08:00:00Z');
   globalThis.fetch = async (u, o) => { u = String(u); calls.push(u + ' ' + ((o && o.method) || 'GET'));
-    if (u.includes('server_state?key=eq.induction_equip_alert')) return new Response(JSON.stringify([{ value: new Date(now - 600000).toISOString() }]), { status: 200 });
+    if (u.includes('key=eq.induction_equip_alert')) return new Response(JSON.stringify([{ value: new Date(now - 600000).toISOString() }]), { status: 200 });
     return new Response('{}', { status: 599 }); };
   const r = await equipAlert(Object.assign({}, ENV, { META_PHONE_NUMBER_ID: 'p', META_ACCESS_TOKEN: 't' }), 'טקסט', 'induction r1', now);
   check('alert: a second one within the hour is skipped, nothing sent', r && r.skipped === 'hour' && calls.length === 1, { r, calls });
   globalThis.fetch = save;
+}
+{
+  // retro 09/11/2026: a send that did not go out must not use up the hour; the worker's name has keyboard characters only;
+  // a resend from Michael's button raises no WhatsApp
+  const save = globalThis.fetch;
+  const now = Date.parse('2026-11-09T08:00:00Z');
+  const E2 = Object.assign({}, ENV, { META_PHONE_NUMBER_ID: 'p', META_ACCESS_TOKEN: 't' });
+  const run = async (metaOk, times) => {
+    const st = new Map(); let meta = 0;
+    globalThis.fetch = async (u, o) => { u = String(u); const m = (o && o.method) || 'GET';
+      if (u.includes('graph.facebook.com')) { meta++; await new Promise((r) => setTimeout(r, 20)); return metaOk ? new Response(JSON.stringify({ messages: [{ id: 'wamid.1' }] }), { status: 200 }) : new Response('{"error":{"code":1}}', { status: 400 }); }
+      if (u.includes('notification_prefs')) return new Response(JSON.stringify([{ prefs: { trustee_hazard: { whatsapp_to: '972501234567' } } }]), { status: 200 });
+      if (u.includes('server_state')) {
+        const key = (/key=eq\.([^&]+)/.exec(u) || [])[1];
+        if (m === 'GET') { await new Promise((r) => setTimeout(r, 5)); const v = st.get(key); return new Response(JSON.stringify(v ? [{ value: v.value, updated_at: v.at }] : []), { status: 200 }); }
+        const body = JSON.parse((o && o.body) || '[]'); const rec = Array.isArray(body) ? body[0] : body;
+        if (m === 'POST') { if (st.has(rec.key)) return new Response('[]', { status: 200 }); st.set(rec.key, { value: rec.value, at: rec.updated_at }); return new Response(JSON.stringify([rec]), { status: 201 }); }
+        if (m === 'PATCH') { const cur = st.get(key); const want = decodeURIComponent((/updated_at=eq\.([^&]+)/.exec(u) || [])[1] || ''); if (!cur || cur.at !== want) return new Response('[]', { status: 200 }); st.set(key, { value: rec.value, at: rec.updated_at }); return new Response(JSON.stringify([rec]), { status: 200 }); }
+      }
+      return new Response('[]', { status: 200 }); };
+    const rs = []; for (let i = 0; i < times; i++) rs.push(equipAlert(E2, 'טקסט ' + i, 'induction r' + i, now));
+    const out = await Promise.all(rs);
+    return { meta, state: st.get('induction_equip_alert'), out };
+  };
+  const bad = await run(false, 1);
+  check('alert: a send that failed gives the hour back (the stored time is not "now")', bad.meta === 1 && (!bad.state || Date.parse(bad.state.value) < now), bad);
+  const good = await run(true, 1);
+  check('alert: a send that went out uses the hour (the stored time is now)', good.meta === 1 && good.state && Date.parse(good.state.value) === now, good);
+  const par = await run(true, 4);
+  check('alert: four signings at once send one message (the hour is taken atomically)', par.meta === 1, par);
+  globalThis.fetch = save;
+  const dash = equipAlertText({ id: 'r3', emp_name: 'דני \u2014 כהן \u201cx\u201d\n- המייל יצא תקין', equip: { items: [{ n: 'נעלי עבודה', q: 1 }] } }, { mailed: false, err: 'שגיאה \u2014 503' }, 900);
+  check('alert: no long dash, no curly quotes and no injected line from a name', dash && !/[\u2013\u2014\u201c\u201d]/.test(dash) && !/\n- \u05d4\u05de\u05d9\u05d9\u05dc \u05d9\u05e6\u05d0 \u05ea\u05e7\u05d9\u05df/.test(dash), dash);
+  const src = (await import('node:fs')).readFileSync(new URL('../../functions/api/talk.js', import.meta.url), 'utf8');
+  check('alert: only the signing path sends it, not the resend button', (src.match(/await equipAlert\(/g) || []).length === 1, (src.match(/await equipAlert\(/g) || []).length);
 }
 if (process.env.EQ_PDF) {
   const h = inductionHtml(T.ind1, { id: 'r1', emp_name: 'דני כהן', id_no: '123456789', equip: { items: [{ n: 'נעלי עבודה', q: 1 }, { n: 'כלי עבודה', q: 1, d: 'מברג, פטיש' }], ret: 'משאבי אנוש' } }, 'iVBORw0KGgo=', 'he', { day: '2026-11-08', hm: '07:05' }, []);
