@@ -59,7 +59,7 @@ export const OKN_MARK = '[\u05d4\u05e2\u05e8\u05d5\u05ea \u05d4\u05de\u05de\u05d
 export const OKD_MARK = '[\u05d0\u05d5\u05e9\u05e8 \u05d1-] ';
 export const PERMIT_MARK = '[\u05d4\u05e8\u05e9\u05d0\u05d4] ', PERMIT_C_MARK = '[\u05d4\u05e8\u05e9\u05d0\u05d4 \u05e1\u05d2\u05d5\u05e8\u05d4] ';
 export const NOTE_MARK = '\n\u05d4\u05e2\u05e8\u05d5\u05ea: ';
-export const STATE_SUB = 'works_sub';           // {friday, at, n, none, notified_at}
+export const STATE_SUB = 'works_sub';           // {friday, at, n, none, notified_at, held_at}
 export const NOTIFY_GAP_MIN = 15;
 const TZ = 'Asia/Jerusalem';
 
@@ -397,6 +397,18 @@ async function stateSet(env, key, value) {
   if (!r.ok) throw new Error('state ' + r.status);
 }
 const parseJson = (v) => { try { const o = JSON.parse(v || 'null'); return o && typeof o === 'object' ? o : null; } catch (e) { return null; } };
+// Pure (retro 08/11/2026): a send kept for Sunday (weekend quiet, wa.held) is not "Michael was told". It is noted as
+// held_at, never notified_at; the gap between two sends counts from either, so resubmits do not pile up held lines.
+export function subNoteSend(sub, wa, nowIso) {
+  if (wa && wa.ok && wa.held) sub.held_at = nowIso;
+  else if (wa && wa.ok) sub.notified_at = nowIso;
+  return sub;
+}
+export function subDue(prev, friday, nowMs) {
+  if (!prev || prev.friday !== friday) return true;
+  const last = Math.max(Date.parse(prev.notified_at || '') || 0, Date.parse(prev.held_at || '') || 0);
+  return !last || nowMs - last >= NOTIFY_GAP_MIN * 60000;
+}
 async function waOwner(env, text, ref, nowMs) {
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { ok: false, error: 'whatsapp not configured' };
   const to = await ownerWa(env, SB);
@@ -622,11 +634,11 @@ async function submitList(env, form, tok, friday, nowMs) {
   const nowIso = new Date(nowMs).toISOString();
   let prev = null; try { prev = parseJson(await stateGet(env, STATE_SUB)); } catch (e) { prev = null; }
   const again = !!(prev && prev.friday === friday);
-  const due = !again || !prev.notified_at || nowMs - Date.parse(prev.notified_at) >= NOTIFY_GAP_MIN * 60000;
-  const sub = { friday, at: nowIso, n: plan.write.length, none: !plan.write.length, notified_at: again ? prev.notified_at || null : null };
+  const due = subDue(prev, friday, nowMs);
+  const sub = { friday, at: nowIso, n: plan.write.length, none: !plan.write.length, notified_at: again ? prev.notified_at || null : null, held_at: again ? prev.held_at || null : null };
   if (due) {
     const wa = await waOwner(env, submitText(friday, plan.write, again), 'works ' + friday, nowMs).catch(() => ({ ok: false }));
-    if (wa.ok) sub.notified_at = nowIso;
+    subNoteSend(sub, wa, nowIso);
     if (plan.write.length) { try { await approvalMail(env, friday, plan.write, again, nowMs, mailDeps); sub.mailed_at = nowIso; } catch (e) { sub.mail_error = String((e && e.message) || e).slice(0, 120); } }
   }
   try { await stateSet(env, STATE_SUB, JSON.stringify(sub)); } catch (e) { /* the rows are saved; only the reminder may ask again */ }

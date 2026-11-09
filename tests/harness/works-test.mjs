@@ -6,7 +6,7 @@
 // permits not closed. Mocked network, nothing leaves.
 import { onRequest, makeWorksToken, readWorksToken, fridayOf, CATS, S_PEND, S_CANCEL, S_REJ, S_CLOSED, EMP_LABEL, CHECK_MARK, GATE_MARK, NOTE_LINE, REJ_MARK, kindsIn, ctrKey, ctrIssue,
   parseSafety, buildSafety, OKD_MARK, assess, GAS_LIMITS, worksTick, worksTryMail, worksApproveMail, worksMailNow, permitRun, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck, mailDeps, makeOkToken, readOkToken, OK_PREFIX, S_OK, APPROVE_SUBJECT, OKN_MARK, DECIDE_SUBJECT,
-  PERMIT_MARK, PERMIT_ERR, PERMIT_TO, PERMIT_SUBJECT, permitHtml, worksPermit, makeSendToken, readSendToken, SEND_PREFIX, askText, ASK_SUBJECT } from './_build/works.mjs';
+  PERMIT_MARK, PERMIT_ERR, PERMIT_TO, PERMIT_SUBJECT, permitHtml, worksPermit, makeSendToken, readSendToken, SEND_PREFIX, askText, ASK_SUBJECT, subNoteSend, subDue } from './_build/works.mjs';
 import { readFileSync } from 'fs';
 import { readZip, entryText } from './_build/_xlsxpatch.mjs';
 import { PDFDocument, PDFName, StandardFonts } from './_build/_pdflib.mjs';
@@ -187,6 +187,15 @@ check('confined space without a gas test: missing for approval, naming what', b.
 check('the sign-off fields stay empty for stage B', !('sg1n' in a) && !('sg4n' in a));
 check('Michael gets one WhatsApp with counts, the red flag and the app link', db.wa.length === 1 && /התקבלה: 2 עבודות/.test(waText(db.wa[0])) && /נגב אקולוגיה/.test(waText(db.wa[0])) && /חסרה בדיקת גזים/.test(waText(db.wa[0])) && waText(db.wa[0]).includes('/#ptw'), db.wa.map(waText));
 check('works_sub notes the Friday', JSON.parse(db.state.works_sub).friday === FRI);
+
+console.log('\n5h. a send kept for Sunday is not "told" (retro 08/11/2026)');
+{ const t0 = '2026-11-06T08:00:00.000Z', ms0 = Date.parse(t0);
+  check('held: held_at, notified_at stays empty', (() => { const x = subNoteSend({ notified_at: null }, { ok: true, via: 'held', held: true }, t0); return x.held_at === t0 && !x.notified_at; })());
+  check('sent: notified_at', subNoteSend({}, { ok: true }, t0).notified_at === t0);
+  check('failed: neither', (() => { const x = subNoteSend({}, { ok: false }, t0); return !x.notified_at && !x.held_at; })());
+  check('due: another Friday or nothing before', subDue(null, FRI, ms0) && subDue({ friday: '2026-10-30', held_at: t0 }, FRI, ms0));
+  check('not due within the gap after a held send', !subDue({ friday: FRI, held_at: t0 }, FRI, ms0 + 60000));
+  check('due after the gap', subDue({ friday: FRI, held_at: t0 }, FRI, ms0 + 16 * 60000) && subDue({ friday: FRI }, FRI, ms0)); }
 
 console.log('\n5b. approval from the mail (Michael 05/11/2026: "a mail with approve buttons")');
 { const am = db.mails.filter((x) => x.subj === APPROVE_SUBJECT(FRI, false));
