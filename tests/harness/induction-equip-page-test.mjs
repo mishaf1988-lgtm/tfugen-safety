@@ -4,7 +4,7 @@
 // typed by HR shows inside the declaration at once (the script runs under the CSP), the Russian page shows
 // the declaration in Russian, and a weekly talk has no such block. A screenshot for the eye: EQ_SHOT=<path>.
 import { createRequire } from 'module';
-import { onRequest, makeTalkToken, makeCodeCookie, inductionHtml, equipAlertText, equipAlert } from './_build/talk.mjs';
+import { onRequest, makeTalkToken, makeCodeCookie, inductionHtml, equipAlertText, equipAlert, equipCheck } from './_build/talk.mjs';
 const require = createRequire(import.meta.url);
 let pw; try { pw = require('playwright'); } catch (e) { pw = require('playwright-core'); }
 let pass = 0, fail = 0;
@@ -41,7 +41,7 @@ await page.fill('#eqr', 'מחסן טכני');
 check('HR types "מחסן טכני": the declaration shows it at once (the script runs under the CSP)', (await page.textContent('.eqret')) === 'מחסן טכני');
 await page.fill('#eqr', '');
 check('cleared: back to HR', (await page.textContent('.eqret')) === 'משאבי אנוש');
-check('no quantity is required: the form still sends with an empty table', await page.evaluate(() => [...document.querySelectorAll('#eqbox input')].every((i) => !i.required)));
+check('no quantity is required, only the given/none choice (09/11/2026)', await page.evaluate(() => [...document.querySelectorAll('#eqbox input')].every((i) => !i.required || (i.type === 'radio' && i.name === 'eqc')) && document.querySelectorAll('#eqbox input[name=eqc][required]').length === 2));
 if (process.env.EQ_SHOT) { await page.fill('#eqq1', '1'); await page.fill('#eqq2', '2'); await page.locator('#eqbox').screenshot({ path: process.env.EQ_SHOT }); }
 check('no page errors under the CSP', errs.length === 0, errs);
 const ruK = await makeTalkToken(ENV, 'ind1');
@@ -107,6 +107,14 @@ check('a weekly talk has no equipment block', !wk.html.includes('id="eqbox"'));
   check('alert: no long dash, no curly quotes and no injected line from a name', dash && !/[\u2013\u2014\u201c\u201d]/.test(dash) && !/\n- \u05d4\u05de\u05d9\u05d9\u05dc \u05d9\u05e6\u05d0 \u05ea\u05e7\u05d9\u05df/.test(dash), dash);
   const src = (await import('node:fs')).readFileSync(new URL('../../functions/api/talk.js', import.meta.url), 'utf8');
   check('alert: only the signing path sends it, not the resend button', (src.match(/await equipAlert\(/g) || []).length === 1, (src.match(/await equipAlert\(/g) || []).length);
+}
+// 09/11/2026: HR must choose "equipment given" or "none" (Michael: "מאשר")
+{
+  const it = { items: [{ n: 'נעלי עבודה', q: 1 }], ret: 'משאבי אנוש' };
+  check('choice: yes with items, no without, and an old page without the choice all pass', equipCheck('yes', it) === null && equipCheck('no', null) === null && equipCheck('', null) === null && equipCheck(null, it) === null);
+  check('choice: "given" with no quantity is refused', /לא נרשמה כמות/.test(equipCheck('yes', null) || ''));
+  check('choice: "none" with quantities is refused', /נרשמו כמויות/.test(equipCheck('no', it) || ''));
+  check('choice: a forged value is refused', !!equipCheck('maybe', null));
 }
 if (process.env.EQ_PDF) {
   const h = inductionHtml(T.ind1, { id: 'r1', emp_name: 'דני כהן', id_no: '123456789', equip: { items: [{ n: 'נעלי עבודה', q: 1 }, { n: 'כלי עבודה', q: 1, d: 'מברג, פטיש' }], ret: 'משאבי אנוש' } }, 'iVBORw0KGgo=', 'he', { day: '2026-11-08', hm: '07:05' }, []);
