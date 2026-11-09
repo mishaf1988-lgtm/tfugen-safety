@@ -73,6 +73,21 @@ check('a weekly talk has no equipment block', !wk.html.includes('id="eqbox"'));
   check('alert: a second one within the hour is skipped, nothing sent', r && r.skipped === 'hour' && calls.length === 1, { r, calls });
   globalThis.fetch = save;
 }
+{
+  // retro 09/11/2026: a send that did not go out must not use up the hour; the worker's name has keyboard characters only;
+  // a resend from Michael's button raises no WhatsApp
+  const save = globalThis.fetch; const calls = [];
+  globalThis.fetch = async (u, o) => { u = String(u); calls.push(u + ' ' + ((o && o.method) || 'GET'));
+    if (u.includes('server_state?key=eq.induction_equip_alert')) return new Response('[]', { status: 200 });
+    return new Response('{}', { status: 599 }); };
+  await equipAlert(Object.assign({}, ENV, { META_PHONE_NUMBER_ID: 'p', META_ACCESS_TOKEN: 't' }), 'טקסט', 'induction r9', Date.parse('2026-11-09T08:00:00Z'));
+  check('alert: a send that did not go out writes no hour stamp', !calls.some((c) => /server_state\?on_conflict=key POST/.test(c)), calls);
+  globalThis.fetch = save;
+  const dash = equipAlertText({ id: 'r3', emp_name: 'דני \u2014 כהן \u201cx\u201d', equip: { items: [{ n: 'נעלי עבודה', q: 1 }] } }, { mailed: false, err: 'שגיאה \u2014 503' }, 900);
+  check('alert: no long dash and no curly quotes in the text', dash && !/[\u2013\u2014\u201c\u201d]/.test(dash), dash);
+  const src = (await import('node:fs')).readFileSync(new URL('../../functions/api/talk.js', import.meta.url), 'utf8');
+  check('alert: only the signing path sends it, not the resend button', (src.match(/await equipAlert\(/g) || []).length === 1, (src.match(/await equipAlert\(/g) || []).length);
+}
 if (process.env.EQ_PDF) {
   const h = inductionHtml(T.ind1, { id: 'r1', emp_name: 'דני כהן', id_no: '123456789', equip: { items: [{ n: 'נעלי עבודה', q: 1 }, { n: 'כלי עבודה', q: 1, d: 'מברג, פטיש' }], ret: 'משאבי אנוש' } }, 'iVBORw0KGgo=', 'he', { day: '2026-11-08', hm: '07:05' }, []);
   const p2 = await (await browser.newContext({ viewport: { width: 794, height: 1123 }, deviceScaleFactor: 1 })).newPage();
