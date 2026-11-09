@@ -13848,7 +13848,7 @@ function _tskMenu(taskId,anchor){
     b.onclick=function(e){e.stopPropagation();closeMenu();fn();};
     menu.appendChild(b);
   }
-  function sep(){var d=document.createElement('div');d.style.cssText='height:1px;background:var(--c-gray-50-5,#eee);margin:4px 8px';menu.appendChild(d);}
+  function sep(){var d=document.createElement('div');d.setAttribute('role','separator');d.style.cssText='height:1px;background:var(--c-gray-50-5,#eee);margin:4px 8px';menu.appendChild(d);}
   function closeMenu(){if(menu.parentNode)menu.parentNode.removeChild(menu);document.removeEventListener('click',outside,true);document.removeEventListener('keydown',keyEsc,true);}
   function outside(e){if(!menu.contains(e.target))closeMenu();}
   function keyEsc(e){if(e.key==='Escape')closeMenu();}
@@ -13889,7 +13889,7 @@ window._topMoreMenu=function(anchor){
     b.onclick=function(e){e.stopPropagation();closeMenu();fn();};
     menu.appendChild(b);
   }
-  function sep(){var d=document.createElement('div');d.style.cssText='height:1px;background:var(--c-gray-50-5,#eee);margin:4px 8px';menu.appendChild(d);}
+  function sep(){var d=document.createElement('div');d.setAttribute('role','separator');d.style.cssText='height:1px;background:var(--c-gray-50-5,#eee);margin:4px 8px';menu.appendChild(d);}
   function closeMenu(){if(menu.parentNode)menu.parentNode.removeChild(menu);document.removeEventListener('click',outside,true);document.removeEventListener('keydown',keyEsc,true);}
   function outside(e){if(!menu.contains(e.target)&&e.target!==anchor)closeMenu();}
   function keyEsc(e){if(e.key==='Escape')closeMenu();}
@@ -13953,7 +13953,7 @@ window._popMenu=function(anchor,menuId,fill){
     b.onclick=function(e){e.stopPropagation();closeMenu();fn();};
     menu.appendChild(b);
   }
-  function sep(){var d=document.createElement('div');d.style.cssText='height:1px;background:var(--c-gray-50-5,#eee);margin:4px 8px';menu.appendChild(d);}
+  function sep(){var d=document.createElement('div');d.setAttribute('role','separator');d.style.cssText='height:1px;background:var(--c-gray-50-5,#eee);margin:4px 8px';menu.appendChild(d);}
   fill(item,sep);
   document.body.appendChild(menu);
   // Keep the menu inside the viewport: an anchor near the left edge (RTL rows
