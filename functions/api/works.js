@@ -398,7 +398,7 @@ async function stateSet(env, key, value) {
 }
 const parseJson = (v) => { try { const o = JSON.parse(v || 'null'); return o && typeof o === 'object' ? o : null; } catch (e) { return null; } };
 // Pure (retro 08/11/2026): a send kept for Sunday (weekend quiet, wa.held) is not "Michael was told". It is noted as
-// held_at, never notified_at; the gap between two sends counts from either, so resubmits within NOTIFY_GAP_MIN do not pile up held lines (a resubmit after the gap is held again, with its own text; retro 10/11/2026).
+// held_at, never notified_at; the gap between two sends counts from either, so resubmits within NOTIFY_GAP_MIN do not pile up held lines (after the gap a resubmit is held again: held_at moves, and a line is added only when its text differs, weekendAdd keeps the same text once; retro 10/11/2026).
 export function subNoteSend(sub, wa, nowIso) {
   if (wa && wa.ok && wa.held) sub.held_at = nowIso;
   else if (wa && wa.ok) sub.notified_at = nowIso;

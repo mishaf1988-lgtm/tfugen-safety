@@ -404,7 +404,7 @@ check('Friday submit: held for Sunday, no WhatsApp call, works_sub has held_at a
 const heldBefore = db.state.weekend_held;
 NOW += 5 * 60000;
 await postF([['none', '1']]);
-check('a second submit within the gap adds no held line and no message', db.state.weekend_held === heldBefore && db.wa.length === 0, { wa: db.wa.length });
+check('a second submit within the gap adds no held line and no message, and works_sub keeps the first held_at (not renewed)', db.state.weekend_held === heldBefore && db.wa.length === 0 && JSON.parse(db.state.works_sub).held_at === subF.held_at, { wa: db.wa.length, held_at: JSON.parse(db.state.works_sub).held_at, first: subF.held_at });
 NOW = Date.parse('2026-11-05T08:00:00Z'); resetDb();
 
 console.log('\n10. the copy-link op (app)');
