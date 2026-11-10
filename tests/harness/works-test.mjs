@@ -393,6 +393,20 @@ c = await close(9, { done: '1', end: '12:00', by: 'אלינה' });
 check('Saturday: a permit is still closed from the link', c.st === 200 && db.ptw['wk-2026-11-06-9'].s === S_CLOSED);
 NOW = Date.parse('2026-11-05T08:00:00Z');
 
+// retro 10/11/2026: a list submitted on Friday (Israel): the message is held for Sunday, so works_sub says held, not "notified",
+// and a second submit within the gap sends nothing more. A mock that reaches the real send, and each branch broken on purpose.
+resetDb(); NOW = Date.parse('2026-11-06T06:00:00Z');
+const tokF = await makeWorksToken(ENV, FRI, NOW);
+const postF = async (fields) => { const q = new URLSearchParams(); for (const [k, v] of [['k', tokF]].concat(fields)) q.append(k, v); const rr = await onRequest({ request: new Request(URL0, { method: 'POST', body: q.toString(), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }), env: ENV }); return { st: rr.status, h: await rr.text() }; };
+let fr = await postF([['none', '1']]);
+let subF = db.state.works_sub ? JSON.parse(db.state.works_sub) : {};
+check('Friday submit: held for Sunday, no WhatsApp call, works_sub has held_at and no notified_at', fr.st === 200 && db.wa.length === 0 && subF.held_at && !subF.notified_at && !!db.state.weekend_held, { st: fr.st, wa: db.wa.length, subF, held: !!db.state.weekend_held });
+const heldBefore = db.state.weekend_held;
+NOW += 5 * 60000;
+await postF([['none', '1']]);
+check('a second submit within the gap adds no held line and no message', db.state.weekend_held === heldBefore && db.wa.length === 0, { wa: db.wa.length });
+NOW = Date.parse('2026-11-05T08:00:00Z'); resetDb();
+
 console.log('\n10. the copy-link op (app)');
 ap = await app({ op: 'link' }, 'good');
 check('a manager gets this week\'s link', ap.st === 200 && ap.j.friday === FRI && ap.j.url.startsWith(ORIGIN + '/api/works?k='), ap);
