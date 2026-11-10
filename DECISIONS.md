@@ -4302,3 +4302,6 @@ Meta סיווגה את `tfugen_assistant_update` כ-MARKETING (0.0353 דולר �
 
 ## 10/11/2026: Fable 5.2 רק לבדיקות עומק
 מיכאל בשאלון אחרי ניסוי ISO 2027 (פירוט ב-`project-files/model-compare.md`, סוף הקובץ): "בצע: Fable רק לבדיקות עומק (מומלץ)". **נבחר: מומלץ.** Fable מצא יותר ממצאים נכונים שמיכאל לא ידע (נתון התאונות בסקר ההנהלה), בלי טעות מהותית, באותו זמן, בפי 2.1 עלות. המפקח המדומה (`trig_01L7gduHbG8d72fn8fDp7LUP`) ודוח הציות (`trig_01DU2kgbfF66zPMDywVLt6UW`) עוברים ל-`claude-fable-5-2` במאמץ גבוה; `update_trigger` נדחה ("created via http_api"), ולכן C81 בדפדפן. העוזר בוואטסאפ והצ'אט הראשי נשארים על אופוס. סיכון: לפי מייל העדכון, Fable כלול במנוי Pro רק עד 16/11/2026; בדיקה ב-01/12/2026 שהדוח רץ באמת על Fable.
+
+## 10/11/2026: defuddle וכלי Obsidian לא מאומצים
+מיכאל שלח פוסט על חמישה כלים פתוחים של Obsidian (obsidian-skills, defuddle, clipper, help, importer). ארבעת כלי Obsidian כבר נדחו ב-27/10/2026 (פתקים במחשב, והסוכנים בענן). defuddle (ניקוי דף אינטרנט לפני קריאה): הסוכנים שקוראים אתרים (נבו, הרדאר, החוקר) כבר עובדים עם WebFetch עם prompt ממוקד, ולכן תפריטים ובאנרים לא מגיעים אליהם (נבדק ב-`routine-nevo-versions.md` צעד 2, `routine-radar-learn.md`, `routine-researcher.md`). מיכאל בשאלון: "לא לאמץ (מומלץ)". **נבחר: מומלץ.**
