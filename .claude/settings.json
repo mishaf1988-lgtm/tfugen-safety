@@ -307,5 +307,5 @@
   },
   "awaySummaryEnabled": false,
   "promptSuggestionEnabled": false,
-  "idleCompaction": false
+  "idleCompaction": true
 }
