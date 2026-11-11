@@ -3811,10 +3811,12 @@ async function routineDbHandle(context) {
       // 11/11/2026: a sensitive answer with a safety figure needs the second checker's quote (secondSendGate)
       const sg = env.SECOND_SEND_GATE === 'off' ? null : secondSendGate(body);
       if (sg) {
-        const pv = (await stateRead([SECOND_GATE_KEY]).catch(() => []))[0];
-        const v = secondValve(pv && pv.value, Date.now());
-        await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-          body: JSON.stringify([{ key: SECOND_GATE_KEY, value: JSON.stringify(v.state), updated_at: v.state.at }]), signal: tmo(SB_MS) }).catch(() => null);
+        // 11/11/2026 (ideas-lab 12): two stopped answers at once each read n and wrote n+1, so one stop was not
+        // counted and the valve opened late. stateCas: written only if the row is as read; a save in between = count again.
+        let v = null;
+        const nowMs = Date.now();
+        await stateCas(url, h, SECOND_GATE_KEY, (raw) => { v = secondValve(raw, nowMs); return { value: JSON.stringify(v.state) }; }, () => tmo(SB_MS)).catch(() => null);
+        if (!v) v = secondValve(null, nowMs);
         if (!v.release) return jsonResp({ ok: false, error: sg }, 400, {});
         if (String(body.text || '').indexOf(SECOND_UNVERIFIED) < 0) body.text = String(body.text || '') + '\n' + SECOND_UNVERIFIED + '.';
       }
