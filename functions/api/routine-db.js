@@ -536,9 +536,24 @@ export function claimApply(map, b, nowIso) {
   if (cur && cur.session !== session) return { map: null, ans: { mine: false, item, holder: cur } };
   if (b.release === true) { delete m[item]; return { map: m, ans: { mine: false, item, released: !!cur } }; }
   m[item] = { session, at: nowIso, note: String(b.note || '').replace(/\s+/g, ' ').trim().slice(0, 120) };
+  // files (11/11/2026, Michael: "do it: coordination between the agents that fix"): the retro and the main chat fixed the
+  // same bug at the same hour under two item names (#2697, #2698). A claim may list the files it will change, and the
+  // answer names every fresh claim of another session on one of them. It is a warning, not a refusal: two fixes in one
+  // big file are often unrelated, so the caller reads the note and decides.
+  const files = claimFiles(b.files);
+  if (files.length) m[item].files = files;
+  const overlap = files.length ? Object.keys(m).filter((k) => k !== item && m[k].session !== session && (m[k].files || []).some((f) => files.indexOf(f) >= 0))
+    .map((k) => ({ item: k, session: m[k].session, at: m[k].at, note: m[k].note, files: m[k].files.filter((f) => files.indexOf(f) >= 0) })) : [];
   const keys = Object.keys(m).sort((a, c) => Date.parse(m[c].at) - Date.parse(m[a].at));
   keys.slice(CLAIM_MAX).forEach((k) => { delete m[k]; });
-  return { map: m, ans: { mine: true, item, claim: m[item] } };
+  return { map: m, ans: Object.assign({ mine: true, item, claim: m[item] }, overlap.length ? { overlap } : {}) };
+}
+// Up to 8 repo paths, as git prints them; anything else is dropped (the list is data another agent reads).
+export function claimFiles(x) {
+  const a = Array.isArray(x) ? x : (typeof x === 'string' ? x.split(',') : []);
+  const out = [];
+  a.forEach((f) => { const v = String(f || '').trim().replace(/^\.\//, ''); if (/^[A-Za-z0-9_][A-Za-z0-9._\/-]{0,119}$/.test(v) && v.indexOf('..') < 0 && out.indexOf(v) < 0) out.push(v); });
+  return out.slice(0, 8);
 }
 // mail_filing / validity_run (11/10/2026): run counts of the mail-filing and validity Routines, for the weekly mail.
 // iso_tasks (24/10/2026): the ISO prep list the assistant manages (routine-wa-assistant.md, "ISO management").
