@@ -102,6 +102,8 @@ globalThis.fetch = async (u, o = {}) => {
   check('the joined mail says the content was not found for the third', /לא נמצא/.test(mails[1].html));
   const f2 = await waFailFlush(env, deps, THU + FAIL_GAP_MS + 3000);
   check('nothing pending: no mail', f2.pending === 0 && mails.length === 2);
+  // retro 11/11/2026 (lesson 210): another worker claimed the mail a few ms "after" our now: no second mail
+  check('failPlan: a claim 5 ms ahead waits; one 2 minutes ahead (a bad clock) does not block', failPlan(JSON.stringify([{ wamid: 'w', kind: 'hazard' }]), THU + 5, THU).wait === true && !failPlan(JSON.stringify([{ wamid: 'w', kind: 'hazard' }]), THU + 120000, THU).wait);
   // security review 07/11/2026: the pending list cannot be written = the log row is taken back, so Meta's retry is not lost
   const W4 = 'wamid.HBgMOTcyNTAxMjM0NTY3FQIAERgSAAA4';
   db.stateDown = true;
