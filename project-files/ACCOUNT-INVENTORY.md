@@ -36,6 +36,7 @@
 | `trig_01APzQCoZHsqJTQTFqvKbRcT` | מעקב הצעות מחיר | מוצ"ש 22:47 | `routine-quotes.md` | `session_01HFfaw84di3M2mqdh6499jY` |
 | `trig_016ft9sEQH3PKT6pCfF5YMXX` (מ-01/11/2026, C68; הישן `trig_01PrGDTUzea2ewuNBTApskNc` מושהה) | חוקר העוזר | א'-ה' 06:47 | `routine-researcher.md` | שיחה חדשה בכל ריצה, סונט |
 | `trig_01PiJpBmASES4tDqwdePUsH2` | רטרו יומי | א'-ה' 07:52 | `retro-prompt.md` | `session_01HFfaw8i2zmdD94JPNpEzFw` |
+| `trig_01XGrqU6JWc73ER7WozWdjbh` (11/11/2026, **כבוי עד C82**) | רטרו יומי בשיחה חדשה (יחליף את השורה למעלה) | א'-ה' 07:52 | `retro-prompt.md` | שיחה חדשה בכל ריצה, סונט |
 | `trig_01PxjFyeVEJcsbUaYVSxN5FZ` | הרדאר מלמד את העוזר | ב' 08:37 | `routine-radar-learn.md` | `session_01HFfaw8i2zmdD94JPNpEzFw` |
 | `trig_01Xx4uqzZmT1J9xFW4ADZQf4` (מ-01/11/2026, C68; הישן `trig_01F6R3kkBFwxJMhrgVDJqvbF` מושהה) | חוקר ההמצאות | ו' 08:47 | `routine-inventor.md` | שיחה חדשה בכל ריצה, סונט |
 | `trig_013mrn2cFrC79hD8vnTpbHd9` | הדרכה שבועית מהשטח | א' 05:53 | `routine-talk-field.md` | משימת צ'אט מתוזמנת (Cowork), שיחה חדשה בכל ריצה, בלי מאגר (28/10/2026; המזהה הקודם `trig_01VcYN6AFgRJTbxpmf3MYXdN` כבוי) |

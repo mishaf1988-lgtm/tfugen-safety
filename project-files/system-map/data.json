@@ -748,6 +748,26 @@
    "reports": true
   },
   {
+   "id": "trig_01XGrqU6JWc73ER7WozWdjbh` (11/11/2026, **כבוי עד C82**)",
+   "zone": "routines",
+   "name": "רטרו יומי בשיחה חדשה",
+   "what": "רטרו יומי בשיחה חדשה (יחליף את השורה למעלה)",
+   "when": "א'-ה' 07:52",
+   "when_full": "א'-ה' 07:52",
+   "doc": "retro-prompt.md",
+   "key": "retro",
+   "family": "למידה ומחקר",
+   "ops": [
+    "agent_report",
+    "learn",
+    "learn_done",
+    "state_get",
+    "wa_review"
+   ],
+   "m365": false,
+   "reports": true
+  },
+  {
    "id": "trig_01PxjFyeVEJcsbUaYVSxN5FZ",
    "zone": "routines",
    "name": "הרדאר מלמד את העוזר",
