@@ -737,7 +737,7 @@ export function failPlan(raw, lastMs, nowMs) {
   const wk = weekendIL(nowMs);
   const send = list.filter((x) => !wk || failUrgent(x.kind));
   if (!send.length) return { send: [], pending: list.length, weekend: wk };
-  if (lastMs && nowMs - lastMs >= 0 && nowMs - lastMs < FAIL_GAP_MS) return { send: [], pending: list.length, wait: true };
+  if (lastMs && nowMs - lastMs >= -60000 && nowMs - lastMs < FAIL_GAP_MS) return { send: [], pending: list.length, wait: true };
   return { send, pending: list.length };
 }
 const fEsc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -821,7 +821,8 @@ export async function waFailFlush(env, deps, nowMs) {
   if (!plan.send.length) return { pending: plan.pending, wait: !!plan.wait, weekend: !!plan.weekend };
   const claim = await stateCas(url, h, FAIL_MAIL_KEY, (raw) => {
     const t = lastOf(raw);
-    if (t && now - t >= 0 && now - t < FAIL_GAP_MS) return { write: false };
+    // retro 11/11/2026 (lesson 210): a claim another worker wrote a moment "after" our now still holds (up to a minute ahead)
+    if (t && now - t >= -60000 && now - t < FAIL_GAP_MS) return { write: false };
     prev = raw === undefined ? null : raw;
     return { value: JSON.stringify({ at: new Date(now).toISOString(), n: plan.send.length }) };
   }, () => tmo(SB_TIMEOUT_MS));
