@@ -960,6 +960,7 @@
     "claim",
     "dev_done",
     "dev_request",
+    "learn",
     "select",
     "state_get",
     "wa_me"

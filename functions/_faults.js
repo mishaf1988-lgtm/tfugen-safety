@@ -11,7 +11,7 @@
 import { stateGet, stateSet } from './_onedrive.js';
 import { ownerWa, sendToOwner, ownerWindowOpen } from './_wa.js';
 import { SB_LIVE, tmo } from './_shared.js';
-import { DEV_INBOX_KEY, devInboxAdd, devInboxFired, devFireTarget, devFireText, SECOND_MISS, EXPECTED_REFUSAL, SECOND_CHECK_AGENTS } from './api/routine-db.js';
+import { DEV_INBOX_KEY, devInboxAdd, devInboxFired, devFireTarget, devFireText, SECOND_MISS, EXPECTED_REFUSAL, SECOND_CHECK_AGENTS, WA_RULES_HASH } from './api/routine-db.js';
 import { stateCas } from './_cas.js';
 
 // 'dev' is not here (security review 11/11/2026): other agents report under it, and the server's own dev_done line would hide its failure from the morning update
@@ -143,6 +143,64 @@ async function openFix(env, url, k, items, nowIso, fireOk) {
       e.fired_session = fj.claude_code_session_id;
       await stateCas(url, h, DEV_INBOX_KEY, (cur) => { const l = devInboxFired(cur, r.id, fj.claude_code_session_id); return l ? { value: JSON.stringify(l) } : { write: false }; }, () => tmo(10000)).catch(() => null);
     }
+    return { ok: true, id: r.id, fired: fr.ok };
+  } catch (x) { return { ok: true, id: r.id, fired: false }; }
+}
+// The golden questions run by themselves (11/11/2026, Michael in the questionnaire: "do it: the assistant's check runs by
+// itself"). That morning a change to the assistant's instructions dropped the golden score from 8 to 6, and it was
+// seen only because the questions were run by hand. The deployed code carries a hash of the instruction files
+// (WA_RULES_HASH, tools/domains-build.py). A watchdog tick that sees a hash it did not see before marks the run as
+// pending; when the hash has stood still for GOLDEN_SETTLE_MS (several merges in a row are one run), at most once in
+// GOLDEN_GAP_MS, on a working day between 07:00 and 20:00 in Israel, one request opens for the immediate developer
+// (agent golden-auto, routine-dev-fire.md step 3g), which runs the ten questions and fixes or reports. The first hash
+// ever seen is the baseline and runs nothing. Pure: prev = the stored state or null; hour and dow in Israel.
+export const GOLDEN_KEY = 'golden_auto', GOLDEN_SETTLE_MS = 30 * 60e3, GOLDEN_GAP_MS = 6 * 3600e3, GOLDEN_AGENT = 'golden-auto';
+export const GOLDEN_TEXT = 'the assistant\'s instruction files changed on main (routine-wa-core.md, routine-wa-assistant.md or wa-topics/): run the golden questions now, as project-files/assistant-golden.md and routine-dev-fire.md step 3g say, and close this request with the score';
+export function goldenStep(prev, hash, nowIso, hourIL, dowIL) {
+  const now = Date.parse(nowIso);
+  if (!hash) return { state: prev || null, fire: false, changed: false };
+  if (!prev || !prev.hash) return { state: { hash, seen_at: nowIso }, fire: false, changed: true };
+  let st = prev, changed = false;
+  if (st.hash !== hash) { st = { ...st, hash, seen_at: nowIso, pending: true }; changed = true; }
+  if (!st.pending) return { state: st, fire: false, changed };
+  const settled = now - Date.parse(st.seen_at) >= GOLDEN_SETTLE_MS;
+  const gap = !st.fired_at || now - Date.parse(st.fired_at) >= GOLDEN_GAP_MS;
+  const hours = dowIL >= 0 && dowIL <= 4 && hourIL >= 7 && hourIL < 20;
+  return { state: st, fire: settled && gap && hours, changed };
+}
+const hourDowIL = (iso) => {
+  const p = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jerusalem', weekday: 'short', hour: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(iso));
+  const g = (t) => (p.find((x) => x.type === t) || {}).value;
+  return { hour: Number(g('hour')), dow: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(g('weekday')) };
+};
+// one open golden-auto request at a time; the fire is the same as the fault alert's
+export async function runGolden(env, nowIso) {
+  const k = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!k) return { ok: false, error: 'no service key' };
+  const url = env.SUPABASE_URL || SB_LIVE, h = { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' };
+  let st; try { st = await stateGet(env, [GOLDEN_KEY, DEV_INBOX_KEY], true); } catch (e) { return { ok: false, error: 'state read failed' }; }
+  let prev = null; try { prev = JSON.parse((st[GOLDEN_KEY] && st[GOLDEN_KEY].value) || 'null'); } catch (e) { prev = null; }
+  const t = hourDowIL(nowIso), g = goldenStep(prev, WA_RULES_HASH, nowIso, t.hour, t.dow);
+  if (!g.fire) { if (g.changed) await stateSet(env, { [GOLDEN_KEY]: JSON.stringify(g.state) }); return { ok: true, fired: false, pending: !!(g.state && g.state.pending) }; }
+  let r = null;
+  const w = await stateCas(url, h, DEV_INBOX_KEY, (cur) => {
+    let list = []; try { list = JSON.parse(cur || '[]'); } catch (e) { list = []; }
+    if (Array.isArray(list) && list.some((x) => x && x.status === 'open' && x.agent === GOLDEN_AGENT)) { r = { already: true }; return { write: false }; }
+    r = devInboxAdd(cur, { agent: GOLDEN_AGENT, text: GOLDEN_TEXT }, nowIso);
+    return r.error ? { write: false } : { value: JSON.stringify(r.list) };
+  }, () => tmo(10000), 2).catch(() => null); // two tries at most (security review 11/11/2026): this runs under the watch lock
+  if (r && r.already) { await stateSet(env, { [GOLDEN_KEY]: JSON.stringify({ ...g.state, pending: false, fired_at: nowIso }) }); return { ok: true, fired: false, already: true }; }
+  if (!r || r.error || !w || !w.written) return { ok: false, error: (r && r.error) || 'dev_inbox write' };
+  await stateSet(env, { [GOLDEN_KEY]: JSON.stringify({ ...g.state, pending: false, fired_at: nowIso, fired_hash: WA_RULES_HASH }) });
+  const ft = r.created ? devFireTarget(env) : null;
+  if (!ft) return { ok: true, id: r.id, fired: false };
+  const e = r.list.find((x) => x && x.id === r.id);
+  try {
+    const fr = await fetch(ft.url, { method: 'POST', signal: tmo(10000),
+      headers: { Authorization: 'Bearer ' + ft.token, 'anthropic-beta': 'experimental-cc-routine-2026-04-01', 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+      body: JSON.stringify(ft.body || { text: devFireText(e) }) });
+    const fj = fr.ok ? await fr.json().catch(() => ({})) : {};
+    if (fj && fj.claude_code_session_id) await stateCas(url, h, DEV_INBOX_KEY, (cur) => { const l = devInboxFired(cur, r.id, fj.claude_code_session_id); return l ? { value: JSON.stringify(l) } : { write: false }; }, () => tmo(10000), 2).catch(() => null);
     return { ok: true, id: r.id, fired: fr.ok };
   } catch (x) { return { ok: true, id: r.id, fired: false }; }
 }
