@@ -54,7 +54,7 @@ export function joinCandidates(rows, wamid, myMs) {
   for (const x of r) if (x && x.event_type === 'fire_join' && x.payload && Array.isArray(x.payload.joins)) { takers.add(x.payload.wamid); x.payload.joins.forEach((w) => taken.add(w)); }
   return r.filter((x) => x && x.event_type === 'owner_in' && x.payload && x.payload.wamid && x.payload.wamid !== wamid && !x.payload.choice
     && !fast.has(x.payload.wamid) && !takers.has(x.payload.wamid) && !taken.has(x.payload.wamid)
-    && myMs - Date.parse(x.ts) >= 0 && myMs - Date.parse(x.ts) <= JOIN_MS)
+    && myMs - Date.parse(x.ts) >= 0 && myMs - Date.parse(x.ts) <= JOIN_MS) // clock-ok: only messages before mine join; a later one fires on its own
     .sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
 }
 // The line the joined messages go in, oldest first, each with its media id so the run can read the photo.
