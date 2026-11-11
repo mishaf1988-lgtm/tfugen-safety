@@ -89,6 +89,8 @@
 //              (zip too) as a draft in Michael's Drafts, through flow 11 (createForward). Never sends.
 //   mail_draft  (20/10/2026) a draft in Michael's Outlook via the third Power Automate flow: {agent, why, to, subject, body,
 //              attach?: [up to 5 .pdf/.docx/.xlsx paths in the safety folder, each checked to exist]}. Never sent.
+//              item?: {table, id} (11/11/2026): the draft belongs to that row, the server writes the item link (autoLinkRow);
+//              the same field on wa_file, and expiry_set with doc links by itself.
 //   relay_fire  (20/10/2026) wake the postman now, without text (its own session), at most once in 2 minutes;
 //              needs POSTMAN_FIRE_TOKEN. {agent, expect_session?} -> {fired, status, session, landed?}.
 //   od_put_pdf  (20/10/2026) ONE new file {agent, why, dir, name, b64} (PDF, Word, Excel, pptx, and from 29/10/2026
@@ -1926,6 +1928,31 @@ export function linkRow(b) {
   if (hasInternalId(title) || hasPersonalNo(title + ' ' + ref)) return { error: 'no internal ids or personal numbers' };
   return { row: { item_table: table, item_id: id, rel: b.rel, ref, title, agent: b.agent } };
 }
+// autoLinkRow (11/11/2026, Michael in the questionnaire: "do it: all three in order"; changes the 27/10/2026 interview
+// answer "the agents alone"): in two weeks the agents wrote 4 links. The server now writes the link itself when an op
+// already names the item: expiry_set carries the row and the document the date came from; mail_draft and wa_file take
+// an optional "item": {table, id}. Pure: the item_links row, or null (no item, or the link would not pass linkRow).
+export function autoLinkRow(op, b, dayIL) {
+  if (!b || typeof b !== 'object') return null;
+  const one = (x) => String(x === undefined || x === null ? '' : x).replace(/\s+/g, ' ').trim();
+  let c = null;
+  if (op === 'expiry_set') {
+    const doc = one(b.doc);
+    if (doc.length < 3) return null;
+    c = linkRow({ agent: b.agent, table: b.table, id: b.id, rel: 'report', ref: doc.slice(0, 600), title: (one(b.why) || doc).slice(0, 200) });
+  } else if (op === 'mail_draft' || op === 'wa_file') {
+    const it = b.item && typeof b.item === 'object' ? b.item : null;
+    if (!it) return null;
+    if (op === 'mail_draft') {
+      const subj = one(b.subject);
+      c = linkRow({ agent: b.agent, table: it.table, id: it.id, rel: 'mail', ref: (subj + (dayIL ? ', ' + dayIL : '')).slice(0, 600), title: (one(b.why) || subj).slice(0, 200) });
+    } else {
+      const path = one(Array.isArray(b.paths) ? b.paths[0] : '');
+      c = linkRow({ agent: b.agent, table: it.table, id: it.id, rel: 'file', ref: path.slice(0, 600), title: (one(b.caption) || path.split('/').pop()).slice(0, 200) });
+    }
+  }
+  return c && c.row ? c.row : null;
+}
 export function cardQuery(q) {
   const s = String(q || '').replace(/[%*,()"'\\]/g, ' ').replace(/\s+/g, ' ').trim();
   return s.length >= 2 && s.length <= 60 ? s : null;
@@ -2208,6 +2235,19 @@ async function routineDbHandle(context) {
     if (!r.ok) throw new Error('read ' + r.status);
     return r.json();
   };
+  // 11/11/2026 (autoLinkRow): the link is a by-product, so it never fails the op that carries it. known = the op itself
+  // already read the row; otherwise the item is looked up first, like link_add.
+  const linkAuto = async (row, known) => {
+    if (!row) return false;
+    try {
+      if (!known) {
+        const ex = await fetch(url + '/rest/v1/' + row.item_table + '?select=id&id=eq.' + encodeURIComponent(row.item_id), { headers: h, signal: tmo(SB_MS) }).then((r) => (r.ok ? r.json() : []));
+        if (!Array.isArray(ex) || ex.length !== 1) return false;
+      }
+      const w = await fetch(url + '/rest/v1/item_links?on_conflict=item_table,item_id,rel,ref', { method: 'POST', headers: { ...h, Prefer: 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify([row]), signal: tmo(SB_MS) });
+      return !!w.ok;
+    } catch (e) { return false; }
+  };
   // 06/11/2026: the Graph ids flow 3 reported for the drafts it made (files in OD_DRAFT_DONE named like the request), and when the
   // first one was seen (written once, so STATUS can tell when the flow started reporting). Never throws: no report = no ids.
   const draftIds = async (at, files) => {
@@ -2456,7 +2496,7 @@ async function routineDbHandle(context) {
     // files from the safety folder sent to Michael on WhatsApp as documents. Only to him, only inside the 24-hour window
     // (a document has no template), and only paths draftAttach allows (inside the safety folder, PDF / Word / Excel, .doc and .xls too).
     if (body.op === 'wa_file') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths', 'caption'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths', 'caption', 'item'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
       const c = draftAttach(body.paths, true);
       if (c.error || !c.attach.length) return jsonResp({ ok: false, error: (c.error || 'paths: 1-5').replace('attach', 'paths') }, 400, {});
@@ -2489,7 +2529,8 @@ async function routineDbHandle(context) {
           event_type: 'assistant', channel: ok.length ? 'whatsapp' : 'whatsapp_error',
           payload: { title: ('[' + ok.length + '/' + sent.length + ' files] ' + sent.map((x) => x.name).join(', ')).slice(0, 120), text: sent.map((x) => x.name + (x.ok ? '' : ' (' + x.error + ')')).join('\n').slice(0, 1500), via: 'document', agent: body.agent } }]) }).catch(() => null);
       if (win === false) return jsonResp({ ok: false, sent, chat: true, error: 'window closed: Michael has not written in 23 hours, the WhatsApp copy did not go out; the files are in his app chat (/chat), tell him so' }, 200, {});
-      return jsonResp({ ok: ok.length === sent.length, sent, chat: true }, 200, {});
+      const linked = ok.length ? await linkAuto(autoLinkRow('wa_file', body), false) : false;
+      return jsonResp({ ok: ok.length === sent.length, sent, chat: true, linked }, 200, {});
     }
     if (body.op === 'drill_ask') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'row', 'text'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
@@ -2950,7 +2991,8 @@ async function routineDbHandle(context) {
       if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status, detail: (await w.text()).slice(0, 300) }, 200, {});
       const after = await w.json();
       if (!Array.isArray(after) || after.length !== 1) return jsonResp({ ok: false, error: 'write touched ' + (Array.isArray(after) ? after.length : '?') + ' rows' }, 200, {});
-      return jsonResp({ ok: true, changed: true, before: rows[0], after: after[0] }, 200, {});
+      const linked = await linkAuto(autoLinkRow('expiry_set', body), true);
+      return jsonResp({ ok: true, changed: true, before: rows[0], after: after[0], linked }, 200, {});
     }
     if (body.op === 'equip_add') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'doc', 'code', 'n', 'loc', 'vendor', 'inspector', 'd', 'e', 'report_number', 'file_url'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
@@ -3154,7 +3196,7 @@ async function routineDbHandle(context) {
       return jsonResp({ ok: true, file: OD_FORWARD + '/' + name, size: f.size || null, subject: mj ? (mj.subject || null) : String(body.subject).trim(), subject_checked: mj ? 'server' : 'flow 11', attachments: mj ? !!mj.hasAttachments : null, note: 'the forward draft with every attachment appears in Drafts within about 5 minutes; Michael sends it from Outlook' }, 200, {});
     }
     if (body.op === 'mail_draft') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'cc', 'subject', 'body', 'attach', 'reply_to', 'checked', 'thread_checked', 'replaces'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'cc', 'subject', 'body', 'attach', 'reply_to', 'checked', 'thread_checked', 'replaces', 'item'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (mentionsQuoteValidity(body.body)) return jsonResp({ ok: false, error: 'the draft gives a quote validity date: drop it (Michael 26/10 and 27/10/2026)' }, 400, {});
       const attGate = draftAttachGate(body);
       if (attGate) return jsonResp({ ok: false, error: attGate }, 400, {});
@@ -3241,7 +3283,8 @@ async function routineDbHandle(context) {
         await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
           body: JSON.stringify([{ key: DRAFTS_TRASHED_KEY, value: JSON.stringify(trashed.filter((x) => x.file).map((x) => ({ at: now, subject: x.subject, file: x.file, agent: body.agent, why: 'replaced by ' + String(body.subject || '').slice(0, 120) })).concat(Array.isArray(tl) ? tl : []).slice(0, 100)), updated_at: now }]) }).catch(() => null);
       }
-      return jsonResp(Object.assign({ ok: true, file: OD_DRAFT + '/' + name, size: f.size || null, attachments: d.attach.length }, trashed.length ? { replaced: trashed, note: 'the replaced drafts go to Deleted Items within about 5 minutes' } : {}, vs ? { vs_last_out: vs, vs_note: vs.same ? 'same text as the last WhatsApp message' : 'differs from the last WhatsApp message in ' + (vs.lines - vs.kept) + ' of ' + vs.lines + ' lines: say so to Michael, or fix the draft' } : {}), 200, {});
+      const linked = await linkAuto(autoLinkRow('mail_draft', body, new Date().toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem' })), false);
+      return jsonResp(Object.assign({ ok: true, file: OD_DRAFT + '/' + name, size: f.size || null, attachments: d.attach.length, linked }, trashed.length ? { replaced: trashed, note: 'the replaced drafts go to Deleted Items within about 5 minutes' } : {}, vs ? { vs_last_out: vs, vs_note: vs.same ? 'same text as the last WhatsApp message' : 'differs from the last WhatsApp message in ' + (vs.lines - vs.kept) + ' of ' + vs.lines + ' lines: say so to Michael, or fix the draft' } : {}), 200, {});
     }
     if (body.op === 'od_put_pdf') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'dir', 'name', 'b64'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
