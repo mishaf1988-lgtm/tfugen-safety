@@ -146,6 +146,7 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
       check('the evening list: one check at 15:00 on a working day, never twice, never on Friday or out of the hour (23/10/2026)', e1 && e1.length === 1 && e1[0].check === EVENING_CHECK && /from the database/.test(EVENING_CHECK) && e1[0].check_at && eveningAdd(JSON.stringify(e1), '2026-10-25', 0, EVENING_HOUR, 'x') === null && eveningAdd('[]', '2026-10-23', 5, EVENING_HOUR, 'x') === null && eveningAdd('[]', '2026-10-25', 0, 14, 'x') === null, e1); }
     check('promise: the reminder says what and who it waits on', /the six labels \(\u05de\u05d7\u05db\u05d4 \u05dcdev\)/.test(promiseRemindText(l)));
     const d = promiseDone(JSON.stringify(l), { id: l[0].id }, 'fixed', 'now');
+    check('promise_done text: a dev request closed as not fixed (fixed:false, no note) says not fixed, not done (11/11/2026, finding c)', promiseDoneText([{ text: 'x' }], '', false) === '\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df: x.' && promiseDoneText([{ text: 'x' }], '', true) === '\u05d1\u05d5\u05e6\u05e2: x.' && promiseDoneText([{ text: 'x' }], '') === '\u05d1\u05d5\u05e6\u05e2: x.');
     check('promise_done text: done, what, note', promiseDoneText(d.closed, 'fixed') === '\u05d1\u05d5\u05e6\u05e2: the six labels. fixed' && d.list[0].status === 'done');
     check('promise text: internal ids cut, long dash made keyboard', promiseAdd('[]', { agent: 'a-b', text: 'x \u2014 y dev-20261021075805-mq3v' }, 'now').list[0].text === 'x - y');
   }
