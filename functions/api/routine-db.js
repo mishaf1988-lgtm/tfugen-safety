@@ -181,7 +181,8 @@ import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile, sendMailTo } from '../_onedrive.js';
 import { worksTryMail, worksApproveMail, worksPermit, WK_ID_RE as WORKS_ID_RE, worksMailNow } from './works.js';
 import { readZip, entryText } from '../_xlsxpatch.js';
-import { DOMAIN_FORMS } from '../_domains.js';
+import { DOMAIN_FORMS, WA_RULES_HASH } from '../_domains.js';
+export { WA_RULES_HASH };
 import { OD_OCR_DIR, OCR_MODELS, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
 import { stateCas } from '../_cas.js';
 import { CLAUDE_LOG_Q, logLine, queueAdd, ocrPartialRow } from '../_claudelog.js';
@@ -195,7 +196,7 @@ import { DOC_MAX, ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTA
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads',
   'trustees', 'trustee_tasks', 'trustee_winners'];
-export const STATE_READ = ['second_gate', 'agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'drafts_id_live', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account', 'works_permit_err', 'weekend_held', 'weekend_held_last', 'wa_fail_mail_last'];
+export const STATE_READ = ['golden_auto', 'second_gate', 'agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'drafts_id_live', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account', 'works_permit_err', 'weekend_held', 'weekend_held_last', 'wa_fail_mail_last'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -331,6 +332,7 @@ export function languageGate(e) {
 // (the office board refused the assistant's write as exfiltration). Every development conversation sees
 // the open ones at start (session-start.py), and the postman passes new ones on. dev_done closes one.
 export const DEV_INBOX_KEY = 'dev_inbox', DEV_INBOX_MAX = 50;
+export const SERVER_REQUESTERS = ['golden-auto', 'fault-alert'];
 export function devInboxAdd(raw, b, nowIso) {
   const agent = String(b.agent || ''), text = String(b.text || '').replace(/\r\n/g, '\n').trim();
   if (!/^[a-z0-9-]{2,40}$/.test(agent)) return { error: 'bad agent name' };
@@ -2421,6 +2423,9 @@ async function routineDbHandle(context) {
       const raw = rows && rows[0] && rows[0].value;
       // 25/10/2026 (Michael in the questionnaire: "do it: add"): a request said 13:42 for 12:43, the day the clock went back.
       // Times written as UTC ("10:43 UTC", ISO with Z) become Israel time here, as in the messages to Michael.
+      // security review 11/11/2026 (lesson 209): the server's own requesters are not a name an agent may send; a request under
+      // golden-auto would silence the next golden run and be closed with no note (routine-dev-fire.md step 3g)
+      if (body.op === 'dev_request' && SERVER_REQUESTERS.indexOf(String(body.agent || '')) >= 0) return jsonResp({ ok: false, error: 'agent ' + body.agent + ': reserved for the server; use your own agent name' }, 400, {});
       if (body.op === 'dev_request') body.text = ilTimes(body.text);
       // 28/10/2026: the note goes to Michael as is; 27/10 13:40 it said scans stop without API credit (they run on ocr_txt).
       if (body.op === 'dev_done' && asksApiCredit(body.note)) return jsonResp({ ok: false, error: 'note: API credit is not loaded (Michael decided no); a scan is read with ocr_txt. Drop that line' }, 400, {});

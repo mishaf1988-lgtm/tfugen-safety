@@ -5,6 +5,19 @@ Run after changing index.json:  python3 tools/domains-build.py   (domains-test.p
 import json, os
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 esc = lambda s: ''.join('\\u%04x' % ord(c) if ord(c) > 127 else c for c in s)
+def wa_rules_hash():
+    """One hash of everything the WhatsApp assistant reads as its instructions (11/11/2026, Michael in the questionnaire:
+    "do it: the assistant's check runs by itself"). The server holds it in the deployed code, so a deployment whose
+    hash differs from the last one it saw means the instructions changed, and the golden questions are due."""
+    import glob, hashlib
+    files = ['project-files/routine-wa-core.md', 'project-files/routine-wa-assistant.md'] + sorted(
+        os.path.relpath(f, ROOT).replace(os.sep, '/') for f in glob.glob(os.path.join(ROOT, 'project-files/wa-topics/*.md')))
+    h = hashlib.sha256()
+    for f in files:
+        h.update(f.encode('utf-8') + b'\0' + open(os.path.join(ROOT, f), 'rb').read().replace(b'\r\n', b'\n') + b'\0')
+    return h.hexdigest()[:16]
+
+
 def build():
     idx = json.load(open(os.path.join(ROOT, 'project-files/domains/index.json'), encoding='utf-8'))
     rows = []
@@ -43,7 +56,9 @@ def build():
             "  return ds.length ? 'domain (read first, before any step: the checklist at the top of the branch file, then only the lines of the branch file and of its rules file that hold words of this message, grep -i; the whole file when you make a document or the lines do not answer): ' + ds.map((d) => d.file + ' + project-files/domains/rules/' + d.key + '.md').join(', ') : '';\n"
             '}\n'
             '// The controlled forms of every branch (paths under the desktop), checked weekly by routine-db forms_check.\n'
-            'export const DOMAIN_FORMS = DOMAINS.flatMap((d) => d.forms.map((path) => ({ domain: d.key, path })));\n')
+            'export const DOMAIN_FORMS = DOMAINS.flatMap((d) => d.forms.map((path) => ({ domain: d.key, path })));\n'
+            '// The hash of the assistant\'s instruction files (routine-wa-core.md, routine-wa-assistant.md, wa-topics/): _faults.js goldenStep.\n'
+            "export const WA_RULES_HASH = '" + wa_rules_hash() + "';\n")
 if __name__ == '__main__':
     open(os.path.join(ROOT, 'functions/_domains.js'), 'w', encoding='utf-8').write(build())
     print('functions/_domains.js written')

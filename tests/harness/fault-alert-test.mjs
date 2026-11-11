@@ -1,6 +1,6 @@
 // Fault alert (31/10/2026, functions/_faults.js): every watchdog tick tells Michael, in ONE WhatsApp, about errors in
 // users' browsers and agents that reported a failure since the last tick; the same fault once a day.
-import { faultItems, faultText, faultDevText, faultTodo, FAULT_FIXERS, FAULT_LINES, FAULT_FIRST_MS } from './_build/_faults.mjs';
+import { faultItems, faultText, faultDevText, faultTodo, FAULT_FIXERS, goldenStep, GOLDEN_SETTLE_MS, GOLDEN_GAP_MS, GOLDEN_TEXT, FAULT_LINES, FAULT_FIRST_MS } from './_build/_faults.mjs';
 import { devInboxAdd } from './_build/routine-db.mjs';
 import fs from 'node:fs';
 let pass = 0, fail = 0;
@@ -40,6 +40,25 @@ const NOW = '2026-10-31T14:50:00.000Z';
   const q = r.items.filter((x) => x.quiet).map((x) => x.key).sort(), loud = r.items.filter((x) => !x.quiet).map((x) => x.key);
   check('a failed fixer (dev-fire, dev-safety) is quiet; another agent that failed is still loud', q.join() === 'agentq:dev-fire,agentq:dev-safety' && loud.join() === 'agent:mail-filing', r.items);
   check('FAULT_FIXERS: the three fired developers only; a failure under the shared name "dev" stays loud', FAULT_FIXERS.join() === 'dev-fire,dev-safety,dev-runner' && faultItems(prev, [], [{ agent: 'dev', at: '2026-11-11T05:55:00Z', ok: false, line: 'x' }], '2026-11-11T06:00:00.000Z').items.every((x) => !x.quiet));
+}
+{ // 11/11/2026: the golden questions run by themselves after the assistant's instructions changed (goldenStep)
+  const T = (m) => new Date(Date.parse('2026-11-11T08:00:00.000Z') + m * 60e3).toISOString(); // Wednesday, 10:00 in Israel
+  const g0 = goldenStep(null, 'aaa', T(0), 10, 3);
+  check('golden: the first hash ever seen is the baseline, nothing runs', g0.fire === false && g0.changed === true && g0.state.hash === 'aaa' && !g0.state.pending);
+  const same = goldenStep(g0.state, 'aaa', T(600), 10, 3);
+  check('golden: the same hash again does nothing and writes nothing', same.fire === false && same.changed === false);
+  const g1 = goldenStep(g0.state, 'bbb', T(5), 10, 3);
+  check('golden: a new hash is pending, and does not run before it has stood still for the settle time', g1.fire === false && g1.changed === true && g1.state.pending === true && g1.state.seen_at === T(5));
+  const g2 = goldenStep(g1.state, 'ccc', T(20), 10, 3);
+  check('golden: a second change inside the settle time restarts the wait (several merges are one run)', g2.fire === false && g2.state.hash === 'ccc' && g2.state.seen_at === T(20) && goldenStep(g2.state, 'ccc', T(49), 10, 3).fire === false);
+  const g3 = goldenStep(g2.state, 'ccc', new Date(Date.parse(T(20)) + GOLDEN_SETTLE_MS).toISOString(), 10, 3);
+  check('golden: after the settle time it fires once', g3.fire === true && g3.changed === false);
+  const fired = { ...g3.state, pending: false, fired_at: T(50) };
+  check('golden: after the run nothing is pending', goldenStep(fired, 'ccc', T(60), 11, 3).fire === false);
+  const g4 = goldenStep(fired, 'ddd', T(60), 11, 3), late = new Date(Date.parse(T(50)) + GOLDEN_GAP_MS).toISOString();
+  check('golden: another change the same day waits for the gap since the last run, then fires', goldenStep(g4.state, 'ddd', T(100), 11, 3).fire === false && goldenStep(g4.state, 'ddd', late, 16, 3).fire === true);
+  check('golden: never at night, on Friday or on Saturday; it stays pending for the next working hour', goldenStep(g1.state, 'bbb', T(120), 22, 3).fire === false && goldenStep(g1.state, 'bbb', T(120), 6, 3).fire === false && goldenStep(g1.state, 'bbb', T(120), 10, 5).fire === false && goldenStep(g1.state, 'bbb', T(120), 10, 6).fire === false && goldenStep(g1.state, 'bbb', T(120), 10, 0).fire === true);
+  check('golden: no hash in the build = nothing; the request text names the procedure', goldenStep(g0.state, '', T(0), 10, 3).fire === false && /assistant-golden\.md/.test(GOLDEN_TEXT) && GOLDEN_TEXT.length >= 10 && GOLDEN_TEXT.length <= 1500);
 }
 { // 03/11/2026 (dev-20261103090001-c5il): a missing second checker goes to the developer, not to Michael's WhatsApp
   const prev = { at: '2026-11-03T08:00:00.000Z', sent: {} };
