@@ -1463,7 +1463,7 @@ export function workerJobAdd(raw, b, nowIso) {
   if (list.length >= WORKER_JOBS_MAX && !list.some((x) => x && x.status !== 'open')) return { error: 'jobs full' };
   const id = 'job-' + nowIso.replace(/\D/g, '').slice(0, 14) + '-' + Math.random().toString(36).slice(2, 6);
   list.push({ id, at: nowIso, agent, worker, task, status: 'open' });
-  while (list.length > WORKER_JOBS_MAX) { const i = list.findIndex((x) => x.status !== 'open'); list.splice(i >= 0 ? i : 0, 1); }
+  while (list.length > WORKER_JOBS_MAX) { const i = list.findIndex((x) => !x || x.status !== 'open'); list.splice(i >= 0 ? i : 0, 1); }
   return { list, id, created: true };
 }
 export function workerJobDone(raw, id, note, nowIso) {
