@@ -341,6 +341,32 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
     check('learn: a line is kept, with an id', a1.ok && /^l-\d{14}-/.test(a1.id) && JSON.parse(state.assistant_learned).length === 1, a1);
     const a2 = await L({ kind: 'preference', text: '\u05ea\u05de\u05d9\u05d3 \u05dc\u05e2\u05e0\u05d5\u05ea \u05e2\u05dd \u05de\u05e7\u05d5\u05e8 \u05dc\u05d7\u05d5\u05e7' });
     check('learn: the same open line again is the same line', a2.ok && a2.id === a1.id && JSON.parse(state.assistant_learned).length === 1, a2);
+    { // 11/11/2026 (ideas-lab 12): another agent saves a line between this read and this write. The old POST with
+      // merge-duplicates wrote the list it had read and the other line was gone; stateCas sees the version moved,
+      // reads again and keeps both. Deterministic: the other save is made inside the first PATCH, before it lands.
+      const f0 = globalThis.fetch; let raced = 0;
+      globalThis.fetch = async (u, o = {}) => {
+        if (!raced && (o.method || 'GET') === 'PATCH' && String(u).indexOf('key=eq.assistant_learned') > 0) {
+          raced = 1;
+          const cur = JSON.parse(state.assistant_learned);
+          cur.push({ id: 'l-20261111000000-race', at: new Date().toISOString(), agent: 'routine-retro', kind: 'fact', text: 'a line the retro saved in between', status: 'new' });
+          state.assistant_learned = JSON.stringify(cur); stateVer.assistant_learned = 'v-race';
+        }
+        return f0(u, o);
+      };
+      const ra = await L({ kind: 'fact', text: 'the line written from a stale read of the notebook' });
+      globalThis.fetch = f0;
+      const nbR = JSON.parse(state.assistant_learned);
+      check('learn: a line saved by another agent between the read and the write is kept, and the new line too (stateCas, ideas-lab 12)', raced === 1 && ra.ok && nbR.some((x) => x.id === 'l-20261111000000-race') && nbR.some((x) => x.id === ra.id), { raced, ra, n: nbR.length });
+      state.assistant_learned = JSON.stringify(nbR.filter((x) => x.id !== 'l-20261111000000-race' && x.id !== ra.id));
+    }
+    { // a version that keeps moving: 5 tries, then an honest "write conflict", and nothing claimed as saved
+      const f0 = globalThis.fetch;
+      globalThis.fetch = async (u, o = {}) => { if ((o.method || 'GET') === 'PATCH' && String(u).indexOf('key=eq.assistant_learned') > 0) stateVer.assistant_learned = 'v-' + Math.random(); return f0(u, o); };
+      const rc = await L({ kind: 'fact', text: 'a line that never finds a quiet moment to be saved' });
+      globalThis.fetch = f0;
+      check('learn: a row that changes on every try ends in ok:false "write conflict", and the line is not in the notebook', rc.ok === false && /write conflict/.test(rc.error) && !/never finds a quiet/.test(state.assistant_learned), rc);
+    }
     const bad = await Promise.all([L({ kind: 'gossip', text: 'something long enough' }), L({ kind: 'fact', text: 'short' }), L({ kind: 'fact', text: 'passed to dev-20261021053745-tqu3 today' })]);
     check('learn: a bad kind, a short text or an internal id is refused', bad.every((x) => x.ok === false), bad);
     const s1 = await L({ kind: 'source', text: 'NH3 detector check every 6 months', source: 'reg 7(b)' });
