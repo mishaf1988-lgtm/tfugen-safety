@@ -1955,6 +1955,13 @@ export function autoLinkRow(op, b, dayIL) {
   }
   return c && c.row ? c.row : null;
 }
+// devDoneLead (11/11/2026, Michael in the questionnaire: "do it: an automatic hand-over mechanism"): every dev_done note went to
+// Michael as "\u05ea\u05d5\u05e7\u05df: ...", also when the request was closed with nothing fixed (11/11/2026 07:50: "fixed: the weekly test
+// did not run", while it still had not run). The closer now says which: "fixed": true = fixed, false = not fixed (and the note
+// says who it waits for), and with no "fixed" the message makes no claim. Pure.
+export function devDoneLead(fixed) {
+  return fixed === true ? '\u05ea\u05d5\u05e7\u05df: ' : fixed === false ? '\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df: ' : '\u05e2\u05d3\u05db\u05d5\u05df \u05de\u05d4\u05e4\u05d9\u05ea\u05d5\u05d7: ';
+}
 export function cardQuery(q) {
   const s = String(q || '').replace(/[%*,()"'\\]/g, ' ').replace(/\s+/g, ' ').trim();
   return s.length >= 2 && s.length <= 60 ? s : null;
@@ -2481,7 +2488,7 @@ async function routineDbHandle(context) {
         }
       } catch (x) { /* the request itself is written */ }
       let wa = null;
-      const waText = body.op !== 'dev_done' ? '' : String(body.note || '').trim() ? '\u05ea\u05d5\u05e7\u05df: ' + stripInternalIds(body.note) : promiseDoneText(closed, '');
+      const waText = body.op !== 'dev_done' ? '' : String(body.note || '').trim() ? devDoneLead(body.fixed) + stripInternalIds(body.note) : promiseDoneText(closed, '');
       if (waText && env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN) {
         try {
           const to = await ownerWa(env, url);

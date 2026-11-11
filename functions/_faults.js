@@ -14,6 +14,8 @@ import { SB_LIVE, tmo } from './_shared.js';
 import { DEV_INBOX_KEY, devInboxAdd, devInboxFired, devFireTarget, devFireText, SECOND_MISS, EXPECTED_REFUSAL, SECOND_CHECK_AGENTS } from './api/routine-db.js';
 import { stateCas } from './_cas.js';
 
+// 'dev' is not here (security review 11/11/2026): other agents report under it, and the server's own dev_done line would hide its failure from the morning update
+export const FAULT_FIXERS = ['dev-fire', 'dev-safety', 'dev-runner'];
 export const FAULT_KEY = 'fault_alert', FAULT_LINES = 5, FAULT_FIRST_MS = 20 * 60e3;
 const dayIL = (iso) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(iso));
 const cut = (s, n) => { s = String(s || '').replace(/[a-z][a-z0-9+.-]*:\/\/\S+|www\.\S+/gi, '[link]').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 3) + '...' : s; };
@@ -59,7 +61,11 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
     // fix only for the loud items); the line stays in agent_log for the retro and the daily quality check. A deliberate refusal
     // (EXPECTED_REFUSAL prefix) is quiet the same way. A real failure (error, timeout, no answer to Michael) is loud.
     const ln = String(r.line || '');
-    const quiet = SECOND_CHECK_AGENTS.indexOf(String(r.agent || '')) >= 0 && (ln.indexOf(SECOND_MISS) === 0 || ln.indexOf(EXPECTED_REFUSAL) === 0);
+    // 11/11/2026 (Michael: 4 WhatsApp messages in a quarter of an hour on one failed weekly test): the developer that was
+    // fired to fix a fault and could not (FAULT_FIXERS) is the same fault going on, not a new one. Its failure is quiet: no
+    // second alert, and no second request that would fire it on its own failure. It tells Michael itself what it waits
+    // for (routine-dev-fire.md step 6), and the line stays in agent_log and in the morning update's failed agents.
+    const quiet = FAULT_FIXERS.indexOf(agentKey(r.agent)) >= 0 || (SECOND_CHECK_AGENTS.indexOf(String(r.agent || '')) >= 0 && (ln.indexOf(SECOND_MISS) === 0 || ln.indexOf(EXPECTED_REFUSAL) === 0));
     add((quiet ? 'agentq:' : 'agent:') + agentKey(r.agent), '\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc, ' + agentKey(r.agent) + ': ' + cut(r.line, 120), 'AGENTDEV', agentSafe(r.agent), m ? m[0] : '', quiet, r.at);
   });
   items.forEach((x) => { sent[x.key] = today; });

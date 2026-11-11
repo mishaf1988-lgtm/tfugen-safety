@@ -1,6 +1,6 @@
 // Fault alert (31/10/2026, functions/_faults.js): every watchdog tick tells Michael, in ONE WhatsApp, about errors in
 // users' browsers and agents that reported a failure since the last tick; the same fault once a day.
-import { faultItems, faultText, faultDevText, faultTodo, FAULT_LINES, FAULT_FIRST_MS } from './_build/_faults.mjs';
+import { faultItems, faultText, faultDevText, faultTodo, FAULT_FIXERS, FAULT_LINES, FAULT_FIRST_MS } from './_build/_faults.mjs';
 import { devInboxAdd } from './_build/routine-db.mjs';
 import fs from 'node:fs';
 let pass = 0, fail = 0;
@@ -30,6 +30,16 @@ const NOW = '2026-10-31T14:50:00.000Z';
     { agent: 'dev-fire', at: '2026-10-31T13:00:00Z', ok: false, line: 'old' }];
   const r = faultItems(prev, [], log, NOW);
   check('an agent that failed since the last tick, once, by its short name', r.items.length === 1 && r.items[0].key === 'agent:map-lights', r.items);
+}
+{ // 11/11/2026: the developer that was fired on a fault and failed is the same fault going on: quiet, no second alert
+  const prev = { at: '2026-11-11T05:40:00.000Z', sent: { 'agent:staging-e2e': '2026-11-11' } };
+  const log = [{ agent: 'dev-fire', at: '2026-11-11T05:51:01Z', ok: false, line: '11/11/2026: staging-e2e was not run again today' },
+    { agent: 'routine-dev-safety', at: '2026-11-11T05:52:00Z', ok: false, line: 'could not push' },
+    { agent: 'routine-mail-filing', at: '2026-11-11T05:53:00Z', ok: false, line: 'timeout' }];
+  const r = faultItems(prev, [], log, '2026-11-11T06:00:00.000Z');
+  const q = r.items.filter((x) => x.quiet).map((x) => x.key).sort(), loud = r.items.filter((x) => !x.quiet).map((x) => x.key);
+  check('a failed fixer (dev-fire, dev-safety) is quiet; another agent that failed is still loud', q.join() === 'agentq:dev-fire,agentq:dev-safety' && loud.join() === 'agent:mail-filing', r.items);
+  check('FAULT_FIXERS: the three fired developers only; a failure under the shared name "dev" stays loud', FAULT_FIXERS.join() === 'dev-fire,dev-safety,dev-runner' && faultItems(prev, [], [{ agent: 'dev', at: '2026-11-11T05:55:00Z', ok: false, line: 'x' }], '2026-11-11T06:00:00.000Z').items.every((x) => !x.quiet));
 }
 { // 03/11/2026 (dev-20261103090001-c5il): a missing second checker goes to the developer, not to Michael's WhatsApp
   const prev = { at: '2026-11-03T08:00:00.000Z', sent: {} };
