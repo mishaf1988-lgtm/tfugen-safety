@@ -1243,6 +1243,7 @@ const callIn = async (body) => {
       const w = calls.slice(before).find((c) => /item_links\?on_conflict=/.test(c.url));
       check('link_add: checks the item exists, then one insert that ignores a duplicate', r.json.ok && w && w.method === 'POST' && JSON.parse(w.body)[0].rel === 'quote', { j: r.json, w });
       check('link_add: an extra field is refused', (await call({ op: 'link_add', ...L, s: 'x' })).status === 400);
+      check('linkRow: direction marks and zero-width characters are dropped from ref and title', linkRow({ ...L, ref: 'Tra\u202ebelsi 3594', title: 'new\u200b quote' }).row.ref === 'Trabelsi 3594' && linkRow({ ...L, ref: 'Trabelsi 3594', title: 'new\u200b quote' }).row.title === 'new quote');
       // 11/11/2026: the server writes the link itself when the op already names the item
       const E = { op: 'expiry_set', agent: 'routine-mail-filing', table: 'equip_inspections', id: 'q1', why: 'tasqir 2026', doc: '02_reports/2026/t.pdf', e: '2027-06-01' };
       const a1 = autoLinkRow('expiry_set', E);

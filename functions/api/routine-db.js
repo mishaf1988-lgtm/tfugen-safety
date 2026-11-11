@@ -1922,7 +1922,9 @@ export function linkRow(b) {
   const id = String(b.id === undefined || b.id === null ? '' : b.id);
   if (!/^[A-Za-z0-9_.-]{1,80}$/.test(id)) return { error: 'bad id' };
   if (LINK_RELS.indexOf(String(b.rel || '')) < 0) return { error: 'rel: ' + LINK_RELS.join(' | ') };
-  const ref = String(b.ref || '').trim(), title = String(b.title || '').replace(/\s+/g, ' ').trim();
+  // security review 11/11/2026: direction marks and zero-width characters are dropped, so a link reads as it is stored
+  const vis = (x) => String(x || '').replace(/[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g, '');
+  const ref = vis(b.ref).trim(), title = vis(b.title).replace(/\s+/g, ' ').trim();
   if (ref.length < 3 || ref.length > 600 || /[\r\n]/.test(ref)) return { error: 'ref: the mail subject and date, the file path or the quote number, 3-600 characters' };
   if (title.length < 2 || title.length > 200) return { error: 'title: what it is, for Michael, 2-200 characters' };
   if (hasInternalId(title) || hasPersonalNo(title + ' ' + ref)) return { error: 'no internal ids or personal numbers' };
