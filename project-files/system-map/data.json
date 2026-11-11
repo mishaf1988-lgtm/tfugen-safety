@@ -906,8 +906,7 @@
    "key": "staging-e2e",
    "family": "בקרה ופיתוח",
    "ops": [
-    "agent_report",
-    "select"
+    "agent_report"
    ],
    "m365": false,
    "reports": true
