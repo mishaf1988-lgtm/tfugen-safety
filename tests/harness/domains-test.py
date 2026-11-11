@@ -54,6 +54,12 @@ for ln in open(os.path.join(ROOT, "project-files/domains/decisions-map.tsv"), en
 heads = [l[3:].strip() for l in open(os.path.join(ROOT, "DECISIONS.md"), encoding="utf-8") if l.startswith("## ")]
 unmapped = [h for h in heads if h not in mp]
 check("every decision in DECISIONS.md has a branch in decisions-map.tsv (a new decision adds a line: <line>\\t<heading>\\t<key>)", not unmapped, unmapped[:5])
+# 11/11/2026: two decisions were written under "### DD/MM/YYYY" and so were never mapped to a branch; the check above
+# reads only "## " headings. A dated "###" heading from 11/11/2026 on is a decision in the wrong heading level.
+import re as _re
+late = [l.strip()[:60] for l in open(os.path.join(ROOT, "DECISIONS.md"), encoding="utf-8")
+        if (lambda m: m and (m.group(3), m.group(2), m.group(1)) >= ("2026", "11", "11"))(_re.match(r"### (\d{2})/(\d{2})/(\d{4})", l))]
+check("a new decision is a '## DD/MM/YYYY' heading (a dated '###' from 11/11/2026 on is not mapped to a branch)", not late, late[:3])
 check("decisions-map.tsv uses only real branch keys or general", all(v in keys for v in mp.values()), sorted(set(mp.values()) - keys))
 for k, v in doms.items():
     rp = os.path.join(ROOT, "project-files/domains/rules/" + k + ".md")
