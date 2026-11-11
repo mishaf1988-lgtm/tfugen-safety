@@ -739,6 +739,7 @@
    "family": "למידה ומחקר",
    "ops": [
     "agent_report",
+    "claim",
     "learn",
     "learn_done",
     "state_get",
@@ -759,6 +760,7 @@
    "family": "למידה ומחקר",
    "ops": [
     "agent_report",
+    "claim",
     "learn",
     "learn_done",
     "state_get",

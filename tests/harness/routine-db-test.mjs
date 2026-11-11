@@ -748,6 +748,22 @@ const callIn = async (body) => {
     const r = claimApply({ x1: { session: 'session_zzzzzzzzzz', at: old } }, { item: 'x1', session: A }, new Date().toISOString());
     check('a claim older than ' + CLAIM_HOURS + ' hours: expired, taken over', r.ans.mine === true && !!r.map.x1 && r.map.x1.session.startsWith('session_012U'), r);
     check('one key per BACKLOG number: prefix and part suffix dropped', ['backlog-13.21b', 'BACKLOG-13.21', '13.21b', '13.21-modals', '13.21'].every((x) => claimItem(x) === '13.21') && claimItem('c10') === 'c10' && claimItem('status-lo-letiyuk') === 'status-lo-letiyuk' && claimItem('9.31') === '9.31');
+    { // 11/11/2026: files on a claim, and the overlap warning (two agents fixed one bug under two names)
+      const { claimFiles } = await import('./_build/routine-db.mjs');
+      const t = new Date().toISOString();
+      const r1 = claimApply({}, { item: 'retro-valve', session: A, note: 'second valve resets', files: ['functions/api/routine-db.js', 'tests/harness/routine-db-test.mjs'] }, t);
+      const r2 = claimApply(r1.map, { item: 'second-gate-fix', session: B, note: 'valve race', files: 'functions/api/routine-db.js,functions/_wa.js' }, t);
+      check('claim files: another session on the same file is named in overlap, with its note and only the shared file', r1.ans.mine && !r1.ans.overlap && r2.ans.mine === true && r2.ans.overlap.length === 1 && r2.ans.overlap[0].item === 'retro-valve' && r2.ans.overlap[0].note === 'second valve resets' && r2.ans.overlap[0].files.join() === 'functions/api/routine-db.js', r2.ans);
+      const r3 = claimApply(r2.map, { item: 'other-thing', session: A, files: ['functions/api/routine-db.js'] }, t);
+      check('claim files: my own other claim on the file is not an overlap, the other session one is', r3.ans.overlap.length === 1 && r3.ans.overlap[0].item === 'second-gate-fix', r3.ans);
+      check('claim files: no files = no overlap field, and a claim with no files is never named', !claimApply(r2.map, { item: 'plain', session: A }, t).ans.overlap && !claimApply({ p: { session: B, at: t, note: 'n' } }, { item: 'qq-item', session: A, files: ['a.js'] }, t).ans.overlap);
+      check('claim files: an expired claim on the file does not warn', !claimApply({ old1: { session: B, at: new Date(Date.now() - (CLAIM_HOURS + 1) * 3600e3).toISOString(), files: ['a.js'] } }, { item: 'qq-item', session: A, files: ['a.js'] }, t).ans.overlap);
+      check('claimFiles: a list or a comma string, ./ dropped, 8 at most; a path with .., a space or a quote is dropped', claimFiles('./a.js, b/c.md').join() === 'a.js,b/c.md' && claimFiles(['../x', 'a b', 'q"r', 'ok.js', 'ok.js']).join() === 'ok.js' && claimFiles(Array.from({ length: 12 }, (_, i) => 'f' + i + '.js')).length === 8 && claimFiles(null).length === 0);
+      const live = await call({ op: 'claim', item: 'overlap-live-a', session: A, files: ['x/y.js'] });
+      const live2 = await call({ op: 'claim', item: 'overlap-live-b', session: B, files: ['x/y.js'] });
+      check('claim files through the op: stored, and the second session is warned', live.json.mine && JSON.parse(state[CLAIM_KEY])['overlap-live-a'].files.join() === 'x/y.js' && live2.json.mine === true && live2.json.overlap[0].item === 'overlap-live-a', live2.json);
+      await call({ op: 'claim', item: 'overlap-live-a', session: A, release: true }); await call({ op: 'claim', item: 'overlap-live-b', session: B, release: true });
+    }
     check('bad item or session: 400, nothing written', (await call({ op: 'claim', item: 'a b; drop', session: A })).status === 400 && (await call({ op: 'claim', item: 'ok-item', session: 'x' })).status === 400 && claimSession('cse_abcdefgh') === 'session_abcdefgh');
   }
 
