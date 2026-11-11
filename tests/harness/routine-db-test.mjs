@@ -1244,6 +1244,12 @@ const callIn = async (body) => {
       check('link_add: checks the item exists, then one insert that ignores a duplicate', r.json.ok && w && w.method === 'POST' && JSON.parse(w.body)[0].rel === 'quote', { j: r.json, w });
       check('link_add: an extra field is refused', (await call({ op: 'link_add', ...L, s: 'x' })).status === 400);
       check('linkRow: direction marks and zero-width characters are dropped from ref and title', linkRow({ ...L, ref: 'Tra\u202ebelsi 3594', title: 'new\u200b quote' }).row.ref === 'Trabelsi 3594' && linkRow({ ...L, ref: 'Trabelsi 3594', title: 'new\u200b quote' }).row.title === 'new quote');
+      { // pairs (11/11/2026): three refs with a hidden character that must be cleaned, three real refs that must stay as they are
+        const dirty = ['02_reports/2026/t\u202e.pdf', '\u200fTrabelsi 3594, 26/10/2026', 'RE: calibration\ufeff quote'];
+        const clean = ['02_\u05ea\u05e1\u05e7\u05d9\u05e8\u05d9 \u05e6\u05d9\u05d5\u05d3/2026/\u05e1\u05dc \u05d4\u05e8\u05de\u05d4 1.3.pdf', 'Trabelsi 3594, 26/10/2026', 'RE: \u05db\u05d9\u05d5\u05dc \u05d1\u05e7\u05e8 \u05d4\u05d2\u05d6, 29/10/2026'];
+        check('linkRow pairs: 3 refs with a hidden character are cleaned, 3 real refs (Hebrew path, quote number, mail subject) are kept as they are',
+          dirty.every((r) => { const o = linkRow({ ...L, ref: r }).row.ref; return o !== r && !/[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/.test(o); }) && clean.every((r) => linkRow({ ...L, ref: r }).row.ref === r));
+      }
       // 11/11/2026: the server writes the link itself when the op already names the item
       const E = { op: 'expiry_set', agent: 'routine-mail-filing', table: 'equip_inspections', id: 'q1', why: 'tasqir 2026', doc: '02_reports/2026/t.pdf', e: '2027-06-01' };
       const a1 = autoLinkRow('expiry_set', E);
