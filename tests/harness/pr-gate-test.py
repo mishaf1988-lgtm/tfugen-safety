@@ -33,4 +33,17 @@ out = run("pr-gate.py", {"tool_name": "Bash", "cwd": R, "tool_input": {"command"
 check("another tool: pass", out == "{}", out)
 out = run("pr-gate.py", dict(base, tool_input={"title": "x", "body": ""}), dict(env, CLAUDE_PROJECT_DIR="/nonexistent"), cwd="/")
 check("gate file missing: pass (CI still checks), no crash", out == "{}", out)
+# 11/11/2026: the files come from the PR's head branch, not from the directory the session stands in
+import importlib.util, os, subprocess, tempfile
+spec = importlib.util.spec_from_file_location("pr_gate", os.path.join(R, ".claude/hooks/pr-gate.py"))
+pg = importlib.util.module_from_spec(spec); spec.loader.exec_module(pg)
+with tempfile.TemporaryDirectory() as t:
+    g = lambda *a: subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t"] + list(a), cwd=t, capture_output=True, text=True)
+    g("init", "-q", "-b", "main"); open(os.path.join(t, "a.txt"), "w").write("a"); g("add", "-A"); g("commit", "-q", "-m", "a")
+    g("update-ref", "refs/remotes/origin/main", "HEAD")
+    g("checkout", "-q", "-b", "routine/other"); os.makedirs(os.path.join(t, "functions/api")); open(os.path.join(t, "functions/api/routine-db.js"), "w").write("x"); g("add", "-A"); g("commit", "-q", "-m", "b")
+    g("checkout", "-q", "main"); g("checkout", "-q", "-b", "routine/here"); open(os.path.join(t, "STATUS.md"), "w").write("s"); g("add", "-A"); g("commit", "-q", "-m", "c")
+    os.environ.pop("PR_GATE_CHANGED", None)
+    check("the PR's head branch decides the files, not the checked-out branch", pg.changed(t, "routine/other") == ["functions/api/routine-db.js"] and pg.changed(t, "routine/here") == ["STATUS.md"], pg.changed(t, "routine/other"))
+    check("an unknown head, an owner:branch head, or a head that looks like an option falls back safely", pg.changed(t, "no-such") == ["STATUS.md"] and pg.changed(t, "me:routine/other") == ["functions/api/routine-db.js"] and pg.head_ref(t, "--upload-pack=x") == "HEAD" and pg.head_ref(t, None) == "HEAD")
 done()

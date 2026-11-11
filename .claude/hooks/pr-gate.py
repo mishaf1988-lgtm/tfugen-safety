@@ -3,7 +3,7 @@
 retro and skill lines before the PR is opened (lessons-gate.py runs the same
 check in CI, but only after the PR exists, so a missing line costs a red round
 and an edit). Runs check(title, body, files) from .github/scripts/lessons-gate.py
-on `git diff --name-only origin/main...HEAD`. Red = deny with the reason.
+on `git diff --name-only origin/main...<the PR's head branch>` (HEAD when git does not know the branch). Red = deny with the reason.
 
 Tests set PR_GATE_CHANGED (comma list) instead of git.
 Test:  python3 tests/harness/pr-gate-test.py
@@ -24,12 +24,27 @@ def root(d):
         return cwd
 
 
-def changed(cwd):
+def head_ref(cwd, head):
+    """The branch the PR is opened from, when git knows it (11/11/2026: a PR built in a second worktree was checked
+    against the files of the directory the session stood in, passed here and failed in CI three times)."""
+    head = str(head or "").split(":")[-1].strip()
+    if not head or not all(c.isalnum() or c in "/._-" for c in head) or head.startswith("-"):
+        return "HEAD"
+    for ref in ("origin/" + head, head):
+        try:
+            if subprocess.run(["git", "rev-parse", "--verify", "--quiet", ref + "^{commit}"], cwd=cwd, capture_output=True, timeout=10).returncode == 0:
+                return ref
+        except Exception:
+            pass
+    return "HEAD"
+
+
+def changed(cwd, head=None):
     env = os.environ.get("PR_GATE_CHANGED")
     if env is not None:
         return [x for x in env.split(",") if x]
-    p = subprocess.run(["git", "diff", "--name-only", "origin/main...HEAD"], cwd=cwd, capture_output=True, text=True, timeout=20)
-    return p.stdout.split()
+    p = subprocess.run(["git", "-c", "core.quotepath=off", "diff", "--name-only", "origin/main..." + head_ref(cwd, head)], cwd=cwd, capture_output=True, text=True, timeout=20)
+    return [x for x in p.stdout.split("\n") if x]
 
 
 def main():
@@ -44,13 +59,14 @@ def main():
     try:
         spec = importlib.util.spec_from_file_location("lessons_gate", os.path.join(cwd, GATE))
         gate = importlib.util.module_from_spec(spec); spec.loader.exec_module(gate)
-        ok, why = gate.check(inp.get("title", ""), inp.get("body", ""), changed(cwd))
+        files = changed(cwd, inp.get("head"))
+        ok, why = gate.check(inp.get("title", ""), inp.get("body", ""), files)
     except Exception:
         print("{}"); return        # the gate is missing or broken: CI still checks
     if ok:
         # 31/10/2026 (retro, PR 2334): a mobile number in a .md file passed the merge and failed pii-md-test only in CI.
         # A PR that changes a .md file runs the same test here, before it is opened. PR_GATE_PII_CMD replaces the command in tests.
-        if any(f.endswith(".md") for f in changed(cwd)):
+        if any(f.endswith(".md") for f in files):
             cmd = os.environ.get("PR_GATE_PII_CMD") or "%s -I tests/harness/pii-md-test.py" % sys.executable
             try:
                 r = subprocess.run(cmd, shell=True, cwd=cwd, capture_output=True, text=True, encoding="utf-8", timeout=60)
