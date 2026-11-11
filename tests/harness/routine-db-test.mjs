@@ -2157,6 +2157,12 @@ const callIn = async (body) => {
     const sgr = await call({ op: 'wa_me', agent: 'routine-wa-assistant', text: '\u05e2\u05dc\u05d5\u05dc \u05dc\u05d9\u05e4\u05d5\u05dc \u05dc\u05d9\u05d5\u05ea\u05e8 \u05de-2 \u05de\u05d8\u05e8 (\u05ea\u05e7\u05e0\u05d4 1)' });
     const sgs = JSON.parse(state.second_gate);
     check('cas: second_gate counts a stop saved in between, so the third stop inside ten minutes is released (before: n=2 was written over n=2)', raceOnce === null && sgs.total === 3 && sgs.released === 1 && sgs.n === 0, { sgs, j: sgr.json });
+    // 11/11/2026 (the wide trial's review): the count never saves (the row changes on every try): the valve stays shut
+    state.second_gate = JSON.stringify({ n: 2, at: new Date(Date.now() - 60000).toISOString(), total: 2, released: 0 }); stateVer.second_gate = 'v-sg3';
+    let sgN = 0; const racer = (k) => { if (k !== 'second_gate') return; sgN++; stateVer[k] = 'v-sgr' + sgN; raceOnce = racer; }; raceOnce = racer;
+    const sgu = await call({ op: 'wa_me', agent: 'routine-wa-assistant', text: '\u05e2\u05dc\u05d5\u05dc \u05dc\u05d9\u05e4\u05d5\u05dc \u05dc\u05d9\u05d5\u05ea\u05e8 \u05de-2 \u05de\u05d8\u05e8 (\u05ea\u05e7\u05e0\u05d4 1)' });
+    raceOnce = null;
+    check('cas: a third stop whose count could not be saved is not released (the answer is stopped, nothing saved)', sgu.status === 400 && sgN >= 2 && JSON.parse(state.second_gate).released === 0, { sgN, j: sgu.json });
     raceOnce = null; if (sgBefore === undefined) { delete state.second_gate; delete stateVer.second_gate; } else { state.second_gate = sgBefore; stateVer.second_gate = sgVer; }
   }
 

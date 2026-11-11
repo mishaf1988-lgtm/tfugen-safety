@@ -173,6 +173,13 @@ const hourDowIL = (iso) => {
   const g = (t) => (p.find((x) => x.type === t) || {}).value;
   return { hour: Number(g('hour')), dow: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(g('weekday')) };
 };
+// A golden-auto request is still open (11/11/2026, the wide trial's review, finding a): the change that request was opened
+// for stays covered, but a newer change of the instructions must not be swallowed. It stays pending, so once the open
+// request is closed the next watch round opens one for it. fired_at moves only when a request was really opened.
+export function goldenAlready(st) {
+  if (!st) return st;
+  return { ...st, pending: !!st.hash && st.hash !== st.fired_hash };
+}
 // one open golden-auto request at a time; the fire is the same as the fault alert's
 export async function runGolden(env, nowIso) {
   const k = env.SUPABASE_SERVICE_ROLE_KEY;
@@ -189,7 +196,7 @@ export async function runGolden(env, nowIso) {
     r = devInboxAdd(cur, { agent: GOLDEN_AGENT, text: GOLDEN_TEXT }, nowIso);
     return r.error ? { write: false } : { value: JSON.stringify(r.list) };
   }, () => tmo(10000), 2).catch(() => null); // two tries at most (security review 11/11/2026): this runs under the watch lock
-  if (r && r.already) { await stateSet(env, { [GOLDEN_KEY]: JSON.stringify({ ...g.state, pending: false, fired_at: nowIso }) }); return { ok: true, fired: false, already: true }; }
+  if (r && r.already) { const a = goldenAlready(g.state); await stateSet(env, { [GOLDEN_KEY]: JSON.stringify(a) }); return { ok: true, fired: false, already: true, pending: a.pending }; }
   if (!r || r.error || !w || !w.written) return { ok: false, error: (r && r.error) || 'dev_inbox write' };
   await stateSet(env, { [GOLDEN_KEY]: JSON.stringify({ ...g.state, pending: false, fired_at: nowIso, fired_hash: WA_RULES_HASH }) });
   const ft = r.created ? devFireTarget(env) : null;

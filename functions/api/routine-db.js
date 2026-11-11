@@ -2511,7 +2511,7 @@ async function routineDbHandle(context) {
         }
       } catch (x) { /* the request itself is written */ }
       let wa = null;
-      const waText = body.op !== 'dev_done' ? '' : String(body.note || '').trim() ? devDoneLead(body.fixed) + stripInternalIds(body.note) : promiseDoneText(closed, '');
+      const waText = body.op !== 'dev_done' ? '' : String(body.note || '').trim() ? devDoneLead(body.fixed) + stripInternalIds(body.note) : promiseDoneText(closed, '', body.fixed);
       if (waText && env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN) {
         try {
           const to = await ownerWa(env, url);
@@ -3865,8 +3865,10 @@ async function routineDbHandle(context) {
         let v = null;
         // 11/11/2026 retro: the time is read on each try. Read once before the CAS, the retry saw the other stop's "at"
         // as later than now, took it as not fresh and counted from one again, the very race the CAS is for.
-        await stateCas(url, h, SECOND_GATE_KEY, (raw) => { v = secondValve(raw, Date.now()); return { value: JSON.stringify(v.state) }; }, () => tmo(SB_MS)).catch(() => null);
-        if (!v) v = secondValve(null, Date.now());
+        const vw = await stateCas(url, h, SECOND_GATE_KEY, (raw) => { v = secondValve(raw, Date.now()); return { value: JSON.stringify(v.state) }; }, () => tmo(SB_MS)).catch(() => null);
+        // 11/11/2026 (the wide trial's review): a count that was not saved does not open the valve, as a failed read
+        // never did; otherwise every stop while the row cannot be written would be "the third" and go out unverified.
+        if (!v || !vw || !vw.written) v = secondValve(null, Date.now());
         if (!v.release) return jsonResp({ ok: false, error: sg }, 400, {});
         if (String(body.text || '').indexOf(SECOND_UNVERIFIED) < 0) body.text = String(body.text || '') + '\n' + SECOND_UNVERIFIED + '.';
       }

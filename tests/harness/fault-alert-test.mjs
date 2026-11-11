@@ -1,6 +1,6 @@
 // Fault alert (31/10/2026, functions/_faults.js): every watchdog tick tells Michael, in ONE WhatsApp, about errors in
 // users' browsers and agents that reported a failure since the last tick; the same fault once a day.
-import { faultItems, faultText, faultDevText, faultTodo, FAULT_FIXERS, goldenStep, GOLDEN_SETTLE_MS, GOLDEN_GAP_MS, GOLDEN_TEXT, FAULT_LINES, FAULT_FIRST_MS } from './_build/_faults.mjs';
+import { faultItems, faultText, faultDevText, faultTodo, FAULT_FIXERS, goldenStep, goldenAlready, GOLDEN_SETTLE_MS, GOLDEN_GAP_MS, GOLDEN_TEXT, FAULT_LINES, FAULT_FIRST_MS } from './_build/_faults.mjs';
 import { devInboxAdd } from './_build/routine-db.mjs';
 import fs from 'node:fs';
 let pass = 0, fail = 0;
@@ -58,6 +58,11 @@ const NOW = '2026-10-31T14:50:00.000Z';
   const g4 = goldenStep(fired, 'ddd', T(60), 11, 3), late = new Date(Date.parse(T(50)) + GOLDEN_GAP_MS).toISOString();
   check('golden: another change the same day waits for the gap since the last run, then fires', goldenStep(g4.state, 'ddd', T(100), 11, 3).fire === false && goldenStep(g4.state, 'ddd', late, 16, 3).fire === true);
   check('golden: never at night, on Friday or on Saturday; it stays pending for the next working hour', goldenStep(g1.state, 'bbb', T(120), 22, 3).fire === false && goldenStep(g1.state, 'bbb', T(120), 6, 3).fire === false && goldenStep(g1.state, 'bbb', T(120), 10, 5).fire === false && goldenStep(g1.state, 'bbb', T(120), 10, 6).fire === false && goldenStep(g1.state, 'bbb', T(120), 10, 0).fire === true);
+  // 11/11/2026 (finding a of the wide trial): a request still open must not swallow a newer change
+  const openOld = goldenAlready({ hash: 'eee', seen_at: T(0), pending: true, fired_at: T(-60), fired_hash: 'ddd' });
+  check('golden: a request still open for an older change: the newer change stays pending, fired_at does not move', openOld.pending === true && openOld.fired_at === T(-60) && openOld.hash === 'eee');
+  check('golden: a request still open for this same change: nothing more is pending', goldenAlready({ hash: 'ddd', seen_at: T(0), pending: true, fired_at: T(-60), fired_hash: 'ddd' }).pending === false);
+  check('golden: runGolden uses goldenAlready when a request is open, not pending:false', /r && r\.already\) \{ const a = goldenAlready\(g\.state\)/.test(fs.readFileSync(new URL('../../functions/_faults.js', import.meta.url), 'utf8')));
   check('golden: no hash in the build = nothing; the request text names the procedure', goldenStep(g0.state, '', T(0), 10, 3).fire === false && /assistant-golden\.md/.test(GOLDEN_TEXT) && GOLDEN_TEXT.length >= 10 && GOLDEN_TEXT.length <= 1500);
 }
 { // 03/11/2026 (dev-20261103090001-c5il): a missing second checker goes to the developer, not to Michael's WhatsApp

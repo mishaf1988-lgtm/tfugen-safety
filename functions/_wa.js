@@ -145,10 +145,12 @@ export function promiseDone(raw, key, note, nowIso) {
   closed.forEach((x) => { x.status = 'done'; x.done_at = nowIso; if (note) x.note = ptext(note, 300); });
   return { list, closed };
 }
-export function promiseDoneText(closed, note) {
-  const n = ptext(note, 400);
-  if (!closed.length) return n ? '\u05d1\u05d5\u05e6\u05e2: ' + n : '';
-  return '\u05d1\u05d5\u05e6\u05e2: ' + closed.map((x) => x.text).join('; ') + (n ? '. ' + n : '.');
+// fixed === false (11/11/2026, finding c of the wide trial): a dev request closed as not fixed, with no note, said
+// "\u05d1\u05d5\u05e6\u05e2:" on the promise it kept; it now says "\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df:" (as devDoneLead).
+export function promiseDoneText(closed, note, fixed) {
+  const n = ptext(note, 400), lead = fixed === false ? '\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df: ' : '\u05d1\u05d5\u05e6\u05e2: ';
+  if (!closed.length) return n ? lead + n : '';
+  return lead + closed.map((x) => x.text).join('; ') + (n ? '. ' + n : '.');
 }
 // The ones to remind about now: open, never reminded, older than PROMISE_REMIND_H, no check scheduled ahead, between 08:00 and 19:59 in Israel.
 export function promiseDue(raw, nowMs, hourIL) {
