@@ -2093,6 +2093,15 @@ const callIn = async (body) => {
     const di = JSON.parse(state.dev_inbox).map((x) => x.text);
     check('cas: dev_request keeps a request saved in between', dr.json.ok === true && di.includes('another request saved meanwhile') && di.some((x) => /race test/.test(x)), { j: dr.json, di });
     raceOnce = null; if (inboxBefore === undefined) delete state.dev_inbox; else state.dev_inbox = inboxBefore;
+    // 11/11/2026 (ideas-lab 12): second_gate. Another stopped answer is counted between our read and our write. Before,
+    // both wrote n=2 and the third stop inside ten minutes was not released; now the count is redone on the newer row.
+    const sgBefore = state.second_gate, sgVer = stateVer.second_gate;
+    state.second_gate = JSON.stringify({ n: 1, at: new Date(Date.now() - 60000).toISOString(), total: 1, released: 0 }); stateVer.second_gate = 'v-sg1';
+    raceOnce = (k) => { if (k !== 'second_gate') return; state[k] = JSON.stringify({ n: 2, at: new Date().toISOString(), total: 2, released: 0 }); stateVer[k] = 'v-sg2'; };
+    const sgr = await call({ op: 'wa_me', agent: 'routine-wa-assistant', text: '\u05e2\u05dc\u05d5\u05dc \u05dc\u05d9\u05e4\u05d5\u05dc \u05dc\u05d9\u05d5\u05ea\u05e8 \u05de-2 \u05de\u05d8\u05e8 (\u05ea\u05e7\u05e0\u05d4 1)' });
+    const sgs = JSON.parse(state.second_gate);
+    check('cas: second_gate counts a stop saved in between, so the third stop inside ten minutes is released (before: n=2 was written over n=2)', raceOnce === null && sgs.total === 3 && sgs.released === 1 && sgs.n === 0, { sgs, j: sgr.json });
+    raceOnce = null; if (sgBefore === undefined) { delete state.second_gate; delete stateVer.second_gate; } else { state.second_gate = sgBefore; stateVer.second_gate = sgVer; }
   }
 
   // 02/11/2026 (retro 22/10/2026 (a)): a retried office_ask / drill_ask for a row that already fired does not fire again
