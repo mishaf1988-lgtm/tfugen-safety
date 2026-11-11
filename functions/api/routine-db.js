@@ -193,7 +193,7 @@ import { DOC_MAX, ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTA
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads',
   'trustees', 'trustee_tasks', 'trustee_winners'];
-export const STATE_READ = ['agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'drafts_id_live', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account', 'works_permit_err', 'weekend_held', 'weekend_held_last', 'wa_fail_mail_last'];
+export const STATE_READ = ['second_gate', 'agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'drafts_id_live', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account', 'works_permit_err', 'weekend_held', 'weekend_held_last', 'wa_fail_mail_last'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -268,6 +268,53 @@ export function secondCheckGate(e) {
   if (SECOND_DOCMETA.test(text) && !SECOND_CONTENT.test(text)) return e;
   if (SECOND_DECLINED.test(text) && !SECOND_CONTENT.test(text)) return e;
   return { ...e, ok: false, line: (SECOND_MISS + e.line).slice(0, 300) };
+}
+// secondSendGate (11/11/2026, Michael in the questionnaire: "do it: the server stops before sending"; changes the
+// 03/11/2026 note "not built: blocking wa_me"). The closing-report gate above only marks the miss after the answer
+// went out: in two weeks the second checker was skipped 10 times against 19 done. Here the answer itself is read: a
+// sensitive text (ammonia, hazardous materials, law) that states a safety figure (150 bar, 0 ppm, 2 metres, a quantity,
+// "every 14 months") goes out only with "second": {"source", "quote"}, the sentence the second checker read in the
+// source, and every figure in the answer must be in that quote. The honest way out stays: {"unverified": "<why>"} with
+// the line "\u05dc\u05d0 \u05d0\u05d9\u05de\u05ea\u05ea\u05d9 \u05e2\u05d3 \u05d4\u05e1\u05d5\u05e3" in the text. Run on the 770 answers of the 30 days before: 20 stops (2.6%), one of them
+// a false one. Pure: null = send, or the error text. SECOND_SEND_GATE=off (Cloudflare env) turns it off.
+const SECOND_FIG = /\d+(?:[.,]\d+)? ?(?:\u05d1\u05e8(?![\u05d0-\u05ea])|ppm|\u05de\u05d8\u05e8|\u05de"\u05e7|\u05dc\u05d9\u05d8\u05e8|\u05e7"\u05d2|\u05d8\u05d5\u05df|\u05de\u05e2\u05dc\u05d5\u05ea|dB)|(?:\u05db\u05dc|\u05d0\u05d7\u05ea \u05dc-?|\u05e4\u05e2\u05dd \u05d1-?) ?\d+ (?:\u05d7\u05d5\u05d3\u05e9\u05d9\u05dd|\u05e9\u05e0\u05d9\u05dd|\u05d9\u05de\u05d9\u05dd|\u05e9\u05d1\u05d5\u05e2\u05d5\u05ea|\u05e9\u05e2\u05d5\u05ea)/gi;
+export const SECOND_UNVERIFIED = '\u05dc\u05d0 \u05d0\u05d9\u05de\u05ea\u05ea\u05d9 \u05e2\u05d3 \u05d4\u05e1\u05d5\u05e3';
+const figNums = (t) => (String(t || '').match(SECOND_FIG) || []).map((m) => (m.match(/\d+(?:[.,]\d+)?/) || [''])[0].replace(',', '.')).filter(Boolean);
+export function secondSendGate(b) {
+  if (!b || SECOND_CHECK_AGENTS.indexOf(String(b.agent || '')) < 0 || b.askInternal === true) return null;
+  const text = String(b.text || '');
+  if (!SECOND_SENSITIVE.test(text) || SECOND_REFUSAL.test(text)) return null;
+  const figs = Array.from(new Set(figNums(text)));
+  if (!figs.length) return null;
+  const s = b.second && typeof b.second === 'object' ? b.second : null;
+  const how = 'run the second checker on the source itself (prof.md), then send again with "second": {"source": "<procedure and section, or the link>", "quote": "<the sentence it read there, word for word>"}. Could not verify: "second": {"unverified": "<why>"} and the line "' + SECOND_UNVERIFIED + ': <what>" in the text';
+  if (!s) return 'second check: a sensitive answer with a safety figure (' + figs.join(', ') + ') and no "second": ' + how;
+  if (s.unverified) return String(s.unverified).trim().length >= 5 && text.indexOf(SECOND_UNVERIFIED) >= 0 ? null : 'second check: "unverified" needs a reason and the line "' + SECOND_UNVERIFIED + ': <what>" in the text';
+  const q = String(s.quote || '').replace(/,(?=\d)/g, '.');
+  if (String(s.source || '').trim().length < 5 || q.trim().length < 15) return 'second check: "second" needs "source" and "quote" (the sentence from the source, 15 characters or more): ' + how;
+  if (q.trim() === text.trim() || text.indexOf(q.trim()) >= 0) return 'second check: the quote is the answer itself, not the source: quote the sentence as it is written in the source';
+  const missing = figs.filter((n) => !new RegExp('(?<![\\d.])' + n.replace('.', '\\.') + '(?![\\d]|\\.\\d)').test(q));
+  if (missing.length) return 'second check: ' + missing.join(', ') + ' is in the answer and not in the quote from the source: fix the answer to what the source says, or quote the sentence that has it';
+  return null;
+}
+// What the log keeps of "second", so the quality checker and the coach can hold the quote against the source.
+export function secondLog(s) {
+  if (!s || typeof s !== 'object') return null;
+  const o = {};
+  if (s.source) o.source = String(s.source).slice(0, 200);
+  if (s.quote) o.quote = String(s.quote).slice(0, 500);
+  if (s.unverified) o.unverified = String(s.unverified).slice(0, 200);
+  return Object.keys(o).length ? o : null;
+}
+// The way out when a run is stuck (three stops inside ten minutes): the answer goes out with the line added, and the
+// closing report turns red as before. Pure: prev = the stored {n, at}, returns {state, release}.
+export const SECOND_GATE_KEY = 'second_gate', SECOND_GATE_MAX = 3, SECOND_GATE_MS = 600000;
+export function secondValve(prev, nowMs) {
+  let p = null; try { p = typeof prev === 'string' ? JSON.parse(prev) : prev; } catch (e) { p = null; }
+  const fresh = p && Number(p.n) > 0 && nowMs - Date.parse(p.at) >= 0 && nowMs - Date.parse(p.at) < SECOND_GATE_MS;
+  const n = (fresh ? Number(p.n) : 0) + 1;
+  const release = n >= SECOND_GATE_MAX;
+  return { release, state: { n: release ? 0 : n, at: new Date(nowMs).toISOString(), total: ((p && Number(p.total)) || 0) + 1, released: ((p && Number(p.released)) || 0) + (release ? 1 : 0) } };
 }
 // languageGate (30/10/2026, handoff gap: two Haiku run summaries came out in English): the assistant's closing
 // report with no Hebrew letter at all turns red like the second-check one; the text is kept, nothing is refused.
@@ -3703,6 +3750,16 @@ async function routineDbHandle(context) {
       if (body.askInternal !== true && /ref\s*(calmove|calinvite|tourclose|del|undo):/i.test(String(body.text || ''))) return jsonResp({ ok: false, error: 'the text carries a reserved ref (del:, undo:, calmove:, calinvite:, tourclose:): drop it' }, 400, {});
       if (body.askInternal !== true && /^(calmove|calinvite|tourclose|del|undo):/i.test(String(body.ref || ''))) return jsonResp({ ok: false, error: 'ref calmove:/calinvite:/tourclose:/del:/undo: reserved for the *_ask ops; use another ref' }, 400, {});
       if (mentionsQuoteValidity(body.text)) return jsonResp({ ok: false, error: 'the text gives a quote validity date: drop it (Michael 26/10 and 27/10/2026: "a quote I send is always valid"); write the supplier, the price, what is included and the difference' }, 400, {});
+      // 11/11/2026: a sensitive answer with a safety figure needs the second checker's quote (secondSendGate)
+      const sg = env.SECOND_SEND_GATE === 'off' ? null : secondSendGate(body);
+      if (sg) {
+        const pv = (await stateRead([SECOND_GATE_KEY]).catch(() => []))[0];
+        const v = secondValve(pv && pv.value, Date.now());
+        await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify([{ key: SECOND_GATE_KEY, value: JSON.stringify(v.state), updated_at: v.state.at }]), signal: tmo(SB_MS) }).catch(() => null);
+        if (!v.release) return jsonResp({ ok: false, error: sg }, 400, {});
+        if (String(body.text || '').indexOf(SECOND_UNVERIFIED) < 0) body.text = String(body.text || '') + '\n' + SECOND_UNVERIFIED + '.';
+      }
       const tg = triageGate(body);
       if (tg) return jsonResp({ ok: false, error: tg }, 400, {});
       const cg = claimGate(body.text, body.checked);
@@ -3784,7 +3841,7 @@ async function routineDbHandle(context) {
         await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
           body: JSON.stringify([{ id: 'wa' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
             event_type: 'assistant', channel: r.held ? 'held' : r.ok ? 'whatsapp' : 'whatsapp_error',
-            payload: { title: ilTimes(String(body.text || '')).replace(/\s+/g, ' ').slice(0, 120), text: ilTimes(String(body.text || '')).slice(0, 1500), via: r.via || null, wamid: r.wamid || null, ref: body.ref ? String(body.ref).slice(0, 40) : 'none', answers: body.answers ? String(body.answers).slice(0, 40) : null, detail: r.error || null, push: ps.sent || 0 } }]) });
+            payload: { title: ilTimes(String(body.text || '')).replace(/\s+/g, ' ').slice(0, 120), text: ilTimes(String(body.text || '')).slice(0, 1500), via: r.via || null, wamid: r.wamid || null, ref: body.ref ? String(body.ref).slice(0, 40) : 'none', answers: body.answers ? String(body.answers).slice(0, 40) : null, detail: r.error || null, push: ps.sent || 0, second: secondLog(body.second) } }]) });
       } catch (e) { /* the message went out; a missing log line is not a failure */ }
       return jsonResp(Object.assign({}, r, { push: ps.sent || 0 }, stale ? { stale: true, choices_dropped: !!stale.dropChoices } : {}, pendingLost ? { pending_lost: true, note: 'the question went out but its pending action was not saved: tell Michael the button will not work and ask again' } : {}), 200, {});
     }
@@ -3794,10 +3851,10 @@ async function routineDbHandle(context) {
     if (body.op === 'wa_review') {
       const days = Math.min(7, Math.max(1, Number(body.days) || 7));
       const since = new Date(Date.now() - days * 864e5).toISOString();
-      const r = await fetch(url + '/rest/v1/notifications_log?select=ts,event_type,payload->>text,payload->>title,payload->>fast,payload->>via'
+      const r = await fetch(url + '/rest/v1/notifications_log?select=ts,event_type,payload->>text,payload->>title,payload->>fast,payload->>via,payload->second'
         + '&event_type=in.(owner_in,assistant,watch)&channel=eq.whatsapp&ts=gte.' + encodeURIComponent(since) + '&order=ts.desc&limit=300', { headers: h, signal: tmo(SB_MS) }); // the newest 300 (29/10/2026 retro: ascending gave the oldest 300 and the last 3 days of the week were never reviewed), turned back to ascending below
       if (!r.ok) return jsonResp({ ok: false, error: 'read ' + r.status }, 200, {});
-      const rows = (await r.json()).reverse().map((x) => ({ ts: x.ts, who: x.event_type === 'owner_in' ? 'michael' : x.event_type === 'watch' ? 'watch' : 'assistant', text: x.text || x.title || '', fast: x.fast === 'true', via: x.via || null }));
+      const rows = (await r.json()).reverse().map((x) => ({ ts: x.ts, who: x.event_type === 'owner_in' ? 'michael' : x.event_type === 'watch' ? 'watch' : 'assistant', text: x.text || x.title || '', fast: x.fast === 'true', via: x.via || null, ...(x.second ? { second: x.second } : {}) }));
       return jsonResp({ ok: true, days, rows, turns: waTurns(rows) }, 200, {});
     }
     if (body.op === 'wa_phone') {
