@@ -770,6 +770,27 @@
    "reports": true
   },
   {
+   "id": "trig_01WbNQpw5yDaBvtUZybwyb7m",
+   "zone": "routines",
+   "name": "סקירת קוד עמוקה שבועית",
+   "what": "סקירת קוד עמוקה שבועית: Fable קורא את שינויי הקוד של השבוע ומעביר ממצאים מוכחים למפתח (11/11/2026, מיכאל: \"אשר תוספת\")",
+   "when": "ד' 12:23",
+   "when_full": "ד' 12:23",
+   "doc": "routine-deep-review.md",
+   "key": "deep-review",
+   "family": "תקשורת ומשרד",
+   "ops": [
+    "agent_report",
+    "claim",
+    "claims",
+    "dev_request",
+    "state_get",
+    "wa_me"
+   ],
+   "m365": false,
+   "reports": true
+  },
+  {
    "id": "trig_01PxjFyeVEJcsbUaYVSxN5FZ",
    "zone": "routines",
    "name": "הרדאר מלמד את העוזר",

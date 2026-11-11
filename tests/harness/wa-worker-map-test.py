@@ -17,6 +17,7 @@ NOT_WORKER = {
     'routine-wa-core.md': 'the assistant itself, the short core split from routine-wa-assistant.md (30/10/2026, under test)',
     'routine-chat-relay.md': 'the postman, delivers only',
     'routine-coach.md': 'the coach, drills the assistant from the office, takes no worker tasks (01/11/2026)',
+    'routine-deep-review.md': 'weekly deep code review on Fable, read-only, sends proven findings to the immediate developer, takes no tasks (11/11/2026)',
     'routine-dev-safety.md': 'daily safety net, re-sends a stuck dev request to the immediate developer, no code (01/11/2026)',
     'routine-rotation.md': 'the recruiter, replaces sessions',
     'routine-db-columns.md': 'replaced by a database cron (03/10/2026)',
