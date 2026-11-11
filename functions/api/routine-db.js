@@ -314,7 +314,8 @@ export function secondLog(s) {
 export const SECOND_GATE_KEY = 'second_gate', SECOND_GATE_MAX = 3, SECOND_GATE_MS = 600000;
 export function secondValve(prev, nowMs) {
   let p = null; try { p = typeof prev === 'string' ? JSON.parse(prev) : prev; } catch (e) { p = null; }
-  const fresh = p && Number(p.n) > 0 && nowMs - Date.parse(p.at) >= 0 && nowMs - Date.parse(p.at) < SECOND_GATE_MS;
+  // retro 11/11/2026: a stop saved a moment "after" this one (a retry, or another server's clock) is fresh, up to a minute ahead
+  const fresh = p && Number(p.n) > 0 && nowMs - Date.parse(p.at) >= -60000 && nowMs - Date.parse(p.at) < SECOND_GATE_MS;
   const n = (fresh ? Number(p.n) : 0) + 1;
   const release = n >= SECOND_GATE_MAX;
   return { release, state: { n: release ? 0 : n, at: new Date(nowMs).toISOString(), total: ((p && Number(p.total)) || 0) + 1, released: ((p && Number(p.released)) || 0) + (release ? 1 : 0) } };
@@ -3813,10 +3814,11 @@ async function routineDbHandle(context) {
       if (sg) {
         // 11/11/2026 (ideas-lab 12): two stopped answers at once each read n and wrote n+1, so one stop was not
         // counted and the valve opened late. stateCas: written only if the row is as read; a save in between = count again.
+        // retro 11/11/2026 (HIGH): the time is taken inside mutate. With one time taken before, a retry read a row another
+        // stop wrote a few ms later, saw it as "from the future" (not fresh) and reset n to 1, the race this was meant to fix.
         let v = null;
-        const nowMs = Date.now();
-        await stateCas(url, h, SECOND_GATE_KEY, (raw) => { v = secondValve(raw, nowMs); return { value: JSON.stringify(v.state) }; }, () => tmo(SB_MS)).catch(() => null);
-        if (!v) v = secondValve(null, nowMs);
+        await stateCas(url, h, SECOND_GATE_KEY, (raw) => { v = secondValve(raw, Date.now()); return { value: JSON.stringify(v.state) }; }, () => tmo(SB_MS)).catch(() => null);
+        if (!v) v = secondValve(null, Date.now());
         if (!v.release) return jsonResp({ ok: false, error: sg }, 400, {});
         if (String(body.text || '').indexOf(SECOND_UNVERIFIED) < 0) body.text = String(body.text || '') + '\n' + SECOND_UNVERIFIED + '.';
       }

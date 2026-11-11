@@ -2033,6 +2033,7 @@ const callIn = async (body) => {
     const t0 = Date.parse('2026-11-11T08:00:00Z');
     const v1 = secondValve(null, t0), v2 = secondValve(JSON.stringify(v1.state), t0 + 60000), v3 = secondValve(v2.state, t0 + 120000);
     check('send gate valve: two stops, the third inside ten minutes is released and counted', !v1.release && !v2.release && v3.release && v3.state.n === 0 && v3.state.total === 3 && v3.state.released === 1 && SECOND_GATE_MAX === 3);
+    check('send gate valve (retro 11/11/2026): a stop saved a few ms after this one counts, one from 2 minutes ahead does not', secondValve({ n: 2, at: new Date(t0 + 5).toISOString(), total: 2, released: 0 }, t0).release === true && secondValve({ n: 2, at: new Date(t0 + 120000).toISOString() }, t0).state.n === 1);
     check('send gate valve: a stop after ten minutes starts again at one; garbage in the state is one', secondValve(v2.state, t0 + 60000 + SECOND_GATE_MS).state.n === 1 && secondValve('{bad', t0).state.n === 1 && STATE_READ.includes(SECOND_GATE_KEY)); }
   // 30/10/2026: ammonia answers need a second checker in the closing report; otherwise the report turns red.
   const sc = (agent, ok, line, learned) => secondCheckGate({ agent, ok, line, learned: learned || '' });
@@ -2097,7 +2098,8 @@ const callIn = async (body) => {
     // both wrote n=2 and the third stop inside ten minutes was not released; now the count is redone on the newer row.
     const sgBefore = state.second_gate, sgVer = stateVer.second_gate;
     state.second_gate = JSON.stringify({ n: 1, at: new Date(Date.now() - 60000).toISOString(), total: 1, released: 0 }); stateVer.second_gate = 'v-sg1';
-    raceOnce = (k) => { if (k !== 'second_gate') return; state[k] = JSON.stringify({ n: 2, at: new Date().toISOString(), total: 2, released: 0 }); stateVer[k] = 'v-sg2'; };
+    raceOnce = (k) => { if (k !== 'second_gate') return; state[k] = JSON.stringify({ n: 2, at: new Date(Date.now() + 5).toISOString(), total: 2, released: 0 }); stateVer[k] = 'v-sg2'; }; // retro 11/11/2026: the other stop is a few ms later than our read, every run (was flaky 1 in 5)
+    await new Promise((z) => setTimeout(z, 0));
     const sgr = await call({ op: 'wa_me', agent: 'routine-wa-assistant', text: '\u05e2\u05dc\u05d5\u05dc \u05dc\u05d9\u05e4\u05d5\u05dc \u05dc\u05d9\u05d5\u05ea\u05e8 \u05de-2 \u05de\u05d8\u05e8 (\u05ea\u05e7\u05e0\u05d4 1)' });
     const sgs = JSON.parse(state.second_gate);
     check('cas: second_gate counts a stop saved in between, so the third stop inside ten minutes is released (before: n=2 was written over n=2)', raceOnce === null && sgs.total === 3 && sgs.released === 1 && sgs.n === 0, { sgs, j: sgr.json });
