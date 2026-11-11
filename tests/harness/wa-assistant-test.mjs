@@ -415,7 +415,9 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
     const c = await call({ op: 'dev_done', id: d.id, note: 'the six are lifting machines now (dev-20261021075805-mq3v)' });
     const last = metas[metas.length - 1] || {};
     const body = JSON.stringify(last);
-    check('dev_done with a note: one WhatsApp to Michael, "fixed:" first, no internal id', c.ok && c.wa && metas.length === nm + 1 && /\u05ea\u05d5\u05e7\u05df: the six/.test(body) && !/dev-2026/.test(body), { c, body });
+    check('dev_done with a note and no "fixed": one WhatsApp to Michael that claims nothing ("an update from development:"), no internal id', c.ok && c.wa && metas.length === nm + 1 && /\u05e2\u05d3\u05db\u05d5\u05df \u05de\u05d4\u05e4\u05d9\u05ea\u05d5\u05d7: the six/.test(body) && !/\u05ea\u05d5\u05e7\u05df/.test(body) && !/dev-2026/.test(body), { c, body });
+    { const { devDoneLead } = await import('./_build/routine-db.mjs');
+      check('devDoneLead (11/11/2026): "fixed" only when the closer says so, "not fixed" when it says so, no claim otherwise', devDoneLead(true) === '\u05ea\u05d5\u05e7\u05df: ' && devDoneLead(false) === '\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df: ' && devDoneLead(undefined) === '\u05e2\u05d3\u05db\u05d5\u05df \u05de\u05d4\u05e4\u05d9\u05ea\u05d5\u05d7: ' && devDoneLead('true') === devDoneLead(undefined)); }
     const nm2 = metas.length;
     await call({ op: 'dev_done', id: 'dev-none' });
     check('dev_done of an unknown request: no WhatsApp', metas.length === nm2);

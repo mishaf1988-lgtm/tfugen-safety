@@ -304,7 +304,7 @@ def report(cwd):
         out += ["", "-- 🔒 פריטים תפוסים: %d (claim.sh). לא לכתוב להם קוד; לבחור פריט אחר או לקרוא את השיחה (list_events) --" % len(held)] + held
     dev = dev_inbox(cwd)
     if dev:
-        out += ["", "-- 🛠️ בקשות לפיתוח: %d פתוחות (dev_inbox). לטפל, ובסוף routine-db dev_done עם id ו-note --" % len(dev)] + dev
+        out += ["", "-- 🛠️ בקשות לפיתוח: %d פתוחות (dev_inbox). לטפל, ובסוף routine-db dev_done עם id, note ו-fixed (true רק כשנפתר ונבדק, false כשלא) --" % len(dev)] + dev
     chrome = chrome_open(cwd)
     if chrome:
         out += ["", "-- 🌐 משימות לכרום: %d פתוחות (project-files/chrome-queue.md). להזכיר למיכאל --" % len(chrome)] + chrome
