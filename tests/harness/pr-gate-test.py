@@ -46,4 +46,16 @@ with tempfile.TemporaryDirectory() as t:
     os.environ.pop("PR_GATE_CHANGED", None)
     check("the PR's head branch decides the files, not the checked-out branch", pg.changed(t, "routine/other") == ["functions/api/routine-db.js"] and pg.changed(t, "routine/here") == ["STATUS.md"], pg.changed(t, "routine/other"))
     check("an unknown head, an owner:branch head, or a head that looks like an option falls back safely", pg.changed(t, "no-such") == ["STATUS.md"] and pg.changed(t, "me:routine/other") == ["functions/api/routine-db.js"] and pg.head_ref(t, "--upload-pack=x") == "HEAD" and pg.head_ref(t, None) == "HEAD")
+    # 11/11/2026 retro: the PR's own files are what lessons-gate and pii-md-test read, not the directory the session stands in
+    os.makedirs(os.path.join(t, ".github/scripts"), exist_ok=True)
+    g("checkout", "-q", "routine/other"); open(os.path.join(t, ".github/scripts/lessons-gate.py"), "w").write("def check(t, b, f):\n    return True, ''\n")
+    open(os.path.join(t, "x.md"), "w").write("BAD number"); g("add", "-A"); g("commit", "-q", "-m", "d"); g("checkout", "-q", "routine/here")
+    d, cl = pg.src_dir(t, "routine/other")
+    check("src_dir: a branch not checked out here gets a worktree of its own files, removed by cleanup", d != t and open(os.path.join(d, "x.md")).read() == "BAD number" and cl is not None and (cl() or True) and not os.path.exists(d), d)
+    check("src_dir: the branch checked out here is this directory", pg.src_dir(t, "HEAD") == (t, None) and pg.src_dir(t, "routine/here")[0] == t)
+    pii = "grep -q BAD x.md 2>/dev/null && exit 1 || exit 0"
+    out = run("pr-gate.py", dict(base, cwd=t, tool_input={"title": "x", "body": "x", "head": "routine/other"}), {"CLAUDE_PROJECT_DIR": t, "PR_GATE_PII_CMD": pii})
+    check("a PR from another branch with a number in its .md is denied here, though this directory has no such file (before: passed, failed in CI)", deny(out) and "pii-md-test" in out, out)
+    out = run("pr-gate.py", dict(base, cwd=t, tool_input={"title": "x", "body": "x", "head": "routine/here"}), {"CLAUDE_PROJECT_DIR": t, "PR_GATE_PII_CMD": pii})
+    check("the same check on the clean branch passes", out == "{}", out)
 done()
