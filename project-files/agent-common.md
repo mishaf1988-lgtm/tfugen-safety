@@ -98,6 +98,7 @@
 3. פורומים (r/ClaudeAI, Hacker News, GitHub Discussions): **רק כרמז**. שיטה מפורום נכנסת לניסוי רק אחרי שנמצאה במקור 1-2, או שנבדקה אצלנו בפועל.
 
 ## ידע משותף (נבדק; תאריך ומקור לכל שורה)
+- **"write conflict, try again" מ-`routine-db`** (11/11/2026, רעיון 12, DECISIONS 30/10/2026): סוכן אחר שמר באותו מפתח באותו רגע (`learn`, `promise`, `sign_request`, `dev_request`, `agent_report`). לשלוח את אותה פעולה שוב פעם אחת; שוב אותה תשובה = לא נשמר, לדווח `ok:false` ולא "נשמר".
 
 **כלים ו-Routines**
 - פרומפט של Routine: קצר וקבוע, קורא את ההוראות מקובץ ב-repo. `update_trigger` עם `prompt` עובד רק מהשיחה שאליה הטריגר יורה (08/10/2026; `tfugen-db` 7).

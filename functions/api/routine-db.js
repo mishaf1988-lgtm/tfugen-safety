@@ -2824,15 +2824,16 @@ async function routineDbHandle(context) {
     }
     if (body.op === 'learn' || body.op === 'learn_done') {
       const now = new Date().toISOString();
-      const rows = await stateRead([LEARN_KEY]);
-      const raw = rows && rows[0] && rows[0].value;
-      const r = body.op === 'learn' ? learnAdd(raw, body, now) : learnDone(raw, String(body.id || ''), body.where, now);
+      // 11/11/2026 (ideas-lab 12, DECISIONS 11/11/2026 "three next upgrades"): two lessons at once (the assistant and the
+      // retro, the coach and the quality checker) each read the notebook and wrote it whole, so the later one dropped the
+      // earlier line. Now written only if the row is as it was read; a save in between = read again and add again.
+      let r;
+      const cas = await stateCas(url, h, LEARN_KEY, (raw) => {
+        r = body.op === 'learn' ? learnAdd(raw, body, now) : learnDone(raw, String(body.id || ''), body.where, now);
+        return r.error ? { write: false } : { value: JSON.stringify(r.list) };
+      }, () => tmo(SB_MS));
       if (r.error) return jsonResp({ ok: false, error: r.error }, 400, {});
-      const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', {
-        method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify([{ key: LEARN_KEY, value: JSON.stringify(r.list), updated_at: now }]), signal: tmo(SB_MS),
-      });
-      if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status }, 200, {});
+      if (!cas.written) return jsonResp({ ok: false, error: cas.conflict ? 'write conflict, try again' : 'write ' + cas.status }, 200, {});
       return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'new').length, replaced: r.replaced }, 200, {});
     }
     // out_log (27/10/2026, Michael in the interview: the quality checker reads what the agents sent him, the drafts and
