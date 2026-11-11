@@ -762,7 +762,12 @@ const callIn = async (body) => {
       const live = await call({ op: 'claim', item: 'overlap-live-a', session: A, files: ['x/y.js'] });
       const live2 = await call({ op: 'claim', item: 'overlap-live-b', session: B, files: ['x/y.js'] });
       check('claim files through the op: stored, and the second session is warned', live.json.mine && JSON.parse(state[CLAIM_KEY])['overlap-live-a'].files.join() === 'x/y.js' && live2.json.mine === true && live2.json.overlap[0].item === 'overlap-live-a', live2.json);
-      await call({ op: 'claim', item: 'overlap-live-a', session: A, release: true }); await call({ op: 'claim', item: 'overlap-live-b', session: B, release: true });
+      const ovRow = calls.filter((c) => c.method === 'POST' && /notifications_log/.test(c.url)).map((c) => JSON.parse(c.body)[0]).filter((r) => r.event_type === 'claim_overlap').pop();
+      check('claim overlap is logged once (claim_overlap, channel claims, the two items and the shared file), and a plain claim logs nothing', ovRow && ovRow.channel === 'claims' && ovRow.payload.item === 'overlap-live-b' && ovRow.payload.with.join() === 'overlap-live-a' && ovRow.payload.files.join() === 'x/y.js' && calls.filter((c) => c.method === 'POST' && /notifications_log/.test(c.url) && /claim_/.test(c.body)).length === 1, ovRow);
+      await call({ op: 'claim', item: 'overlap-live-a', session: A, release: true });
+      const n0 = calls.filter((c) => /claim_dup/.test(c.body || '')).length;
+      await call({ op: 'claim', item: 'overlap-live-b', session: B, release: true, dup: true });
+      check('a release as a duplicate is logged (claim_dup); a plain release is not', n0 === 0 && calls.filter((c) => /claim_dup/.test(c.body || '')).length === 1);
     }
     check('bad item or session: 400, nothing written', (await call({ op: 'claim', item: 'a b; drop', session: A })).status === 400 && (await call({ op: 'claim', item: 'ok-item', session: 'x' })).status === 400 && claimSession('cse_abcdefgh') === 'session_abcdefgh');
   }

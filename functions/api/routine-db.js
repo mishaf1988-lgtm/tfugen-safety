@@ -2946,6 +2946,14 @@ async function routineDbHandle(context) {
         if (res.error) return jsonResp({ ok: false, error: res.error }, res.error === 'claims map unreadable' ? 200 : 400, {});
         if (res.map && !w.written) return jsonResp({ ok: false, error: 'write ' + (w.error || w.status || 'conflict') }, 200, {});
       }
+      // 11/11/2026 (Michael: "do it: count the duplicates saved"): one log row per overlap warning, and one when a claim
+      // is released as a duplicate ("dup": true, claim.sh --release-dup), so a month later the number is a query, not a guess.
+      const cEv = res.ans && res.ans.overlap ? 'claim_overlap' : (res.ans && res.ans.released && body.dup === true ? 'claim_dup' : null);
+      if (cEv) {
+        await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
+          body: JSON.stringify([{ id: 'cl' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now, event_type: cEv, channel: 'claims',
+            payload: { item: res.ans.item, session: claimSession(body.session), with: (res.ans.overlap || []).map((o) => o.item), files: (res.ans.overlap || []).reduce((a, o) => a.concat(o.files), []).slice(0, 8) } }]) }).catch(() => null);
+      }
       return jsonResp({ ok: true, ...res.ans }, 200, {});
     }
     if (body.op === 'hazard_choice') {

@@ -3,6 +3,7 @@
 # (12/10/2026, lesson 10: two sessions built the retro proposals in parallel).
 # Usage: bash project-files/claim.sh <item> [note]      take it (item: a-z 0-9 . _ -)
 #        bash project-files/claim.sh <item> --release   give it back when merged
+#        bash project-files/claim.sh <item> --release-dup   give it back because another session has the same fix (counted)
 #        bash project-files/claim.sh --list             the fresh claims
 #        bash project-files/claim.sh <item> "<note>" --files a.js,b.md   also say which files the fix changes
 # Exit 0 = yours. Exit 6 = yours, but another session has a fresh claim on one of these files (printed, 11/11/2026:
@@ -18,8 +19,8 @@ if [ "${1:-}" = "--list" ]; then exec bash "$dir/routine-db.sh" '{"op":"claims"}
 item="${1:-}"
 [ -n "$item" ] || { echo "usage: claim.sh <item> [note|--release] | --list" >&2; exit 2; }
 [ -n "$sid" ] || { echo "no session id in the environment" >&2; exit 2; }
-if [ "${2:-}" = "--release" ]; then
-  body=$(python3 -c 'import json,sys; print(json.dumps({"op":"claim","item":sys.argv[1],"session":sys.argv[2],"release":True}))' "$item" "$sid")
+if [ "${2:-}" = "--release" ] || [ "${2:-}" = "--release-dup" ]; then
+  body=$(python3 -c 'import json,sys; print(json.dumps({"op":"claim","item":sys.argv[1],"session":sys.argv[2],"release":True,"dup":sys.argv[3]=="--release-dup"}))' "$item" "$sid" "$2")
 else
   files=""; [ "${3:-}" = "--files" ] && files="${4:-}"
   body=$(python3 -c 'import json,sys; print(json.dumps({"op":"claim","item":sys.argv[1],"session":sys.argv[2],"note":sys.argv[3],"files":[f for f in sys.argv[4].split(",") if f]}))' "$item" "$sid" "${2:-}" "$files")
