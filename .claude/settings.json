@@ -6,6 +6,7 @@
       "mcp__github__pull_request_read",
       "mcp__Supabase__execute_sql",
       "mcp__supabase__execute_sql",
+      "mcp__ea272696-c3b4-4b3b-bbcf-628f340e74ab__execute_sql",
       "mcp__github__list_pull_requests",
       "mcp__github__actions_list",
       "mcp__github__actions_get",
