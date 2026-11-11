@@ -465,6 +465,27 @@ const callIn = async (body) => {
   // 21/10/2026: {status, did} instead of {ok, line} left empty ok:false rows that read as failed runs.
   check('an empty report (no line, no for_michael): refused, log untouched', (await call({ op: 'agent_report', agent: 'routine-wa-assistant', status: 'done', did: 'x' })).status === 400 && JSON.parse(state.agent_log).length === 3);
   check('a bad agent name: refused, log untouched', (await call({ op: 'agent_report', agent: 'Bad Name; drop' })).status === 400 && JSON.parse(state.agent_log).length === 3);
+  // 11/11/2026 (DECISIONS "four upgrades", the agents' log): every report is also one permanent notifications_log row
+  {
+    const n0 = calls.length;
+    const rep = await call({ op: 'agent_report', agent: 'routine-quotes', ok: true, line: 'קבוע', learned: 'אין' });
+    const arRows = calls.slice(n0).filter((c) => c.method === 'POST' && /notifications_log/.test(c.url)).map((c) => JSON.parse(c.body)[0]);
+    check('agent_report: one permanent row (event_type agent_report, channel agents, the entry as payload, ts = its time), archived:true', arRows.length === 1 && arRows[0].event_type === 'agent_report' && arRows[0].channel === 'agents' && arRows[0].payload.line === 'קבוע' && arRows[0].ts === rep.json.entry.at && rep.json.archived === true, arRows);
+    const n1 = calls.length;
+    await call({ op: 'agent_report', agent: 'Bad Name; drop' });
+    check('a refused report writes no permanent row', !calls.slice(n1).some((c) => c.method === 'POST' && /notifications_log/.test(c.url)));
+    const n2 = calls.length;
+    const rd = await call({ op: 'agent_log_since', since: '2026-11-10', agent: 'retro', limit: 5000 });
+    const q = (calls.slice(n2).find((c) => /notifications_log\?select=ts,payload/.test(c.url)) || {}).url || '';
+    check('agent_log_since: reads agent_report rows after the time, one agent, oldest first, limit capped at 1000', rd.json.ok && /event_type=eq\.agent_report/.test(q) && /ts=gt\.2026-11-10T00%3A00%3A00\.000Z/.test(q) && /payload->>agent=eq\.retro/.test(q) && /order=ts\.asc/.test(q) && /limit=1000$/.test(q), q);
+    check('agent_log_since: a bad time, a bad agent or another field is refused', (await call({ op: 'agent_log_since', since: 'yesterday' })).status === 400 && (await call({ op: 'agent_log_since', since: '2026-11-10', agent: 'x;drop' })).status === 400 && (await call({ op: 'agent_log_since', since: '2026-11-10', table: 'ncr' })).status === 400);
+    state.agent_log = JSON.stringify(JSON.parse(state.agent_log).slice(0, 3));
+    for (const s of ['2026-11-10', '2026-11-10T07:41:00Z', '2026-11-10T07:41:00.123Z']) check('agent_log_since: "' + s + '" accepted', (await call({ op: 'agent_log_since', since: s })).json.ok === true);
+    for (const s of ['10/11/2026', '2026-11-10&event_type=neq.x', '2026-13-45']) check('agent_log_since: "' + s + '" refused', (await call({ op: 'agent_log_since', since: s })).status === 400);
+    // security review 11/11/2026: ~67 reports a day would push real notifications out of the screen's 500-row window
+    const ix = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+    check('the app leaves agent_report rows out of the notifications screen and its CSV', /var _sbWhere=\{notifications_log:'&event_type=neq\.agent_report'\}/.test(ix) && /\+\(_sbWhere\[tbl\]\|\|''\)\+'&order='/.test(ix) && /notifications_log\?select='\+encodeURIComponent\(cols\)\+_sbWhere\.notifications_log\+/.test(ix));
+  }
   state.agent_log = JSON.stringify(Array.from({ length: AGENT_LOG_MAX }, (_, i) => ({ agent: 'a', at: String(i) })));
   await call({ op: 'agent_report', agent: 'retro', ok: true, line: 'x' });
   lg = JSON.parse(state.agent_log);

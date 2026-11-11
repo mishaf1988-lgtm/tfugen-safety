@@ -2924,7 +2924,29 @@ async function routineDbHandle(context) {
         return { value: JSON.stringify(log) };
       }, () => tmo(SB_MS));
       if (!cw.written) return jsonResp({ ok: false, error: 'write ' + (cw.status || (cw.conflict ? 'conflict' : 'failed')) }, 200, {});
-      return jsonResp({ ok: true, entry: e, kept: log.length }, 200, {});
+      // 11/11/2026 (Michael in the questionnaire: "do it: complete the agents' log"; DECISIONS 11/11/2026 "four upgrades"):
+      // agent_log keeps ~200 rows (about 3 days), and agent-log.md got them only when the retro pushed, so 109 reports
+      // were lost. Every report is also one permanent row in notifications_log (event_type agent_report), never trimmed;
+      // agent_log_since reads them back and tools/agent-log-sync.py writes the missing ones into the file.
+      const arch = await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
+        body: JSON.stringify([{ id: 'ar' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: e.at, event_type: 'agent_report', channel: 'agents', payload: e }]) })
+        .then((r) => r.ok).catch(() => false);
+      return jsonResp({ ok: true, entry: e, kept: log.length, archived: arch }, 200, {});
+    }
+    if (body.op === 'agent_log_since') {
+      for (const k of Object.keys(body)) if (['op', 'since', 'agent', 'limit'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const since = String(body.since || '');
+      if (!/^\d{4}-\d\d-\d\d(T\d\d:\d\d(:\d\d(\.\d{1,3})?)?Z?)?$/.test(since) || isNaN(Date.parse(since))) return jsonResp({ ok: false, error: 'since: YYYY-MM-DD or an ISO time' }, 400, {});
+      if (body.agent !== undefined && !/^[a-z0-9-]{2,40}$/.test(String(body.agent))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
+      const lim = Math.max(1, Math.min(1000, parseInt(body.limit, 10) || 500));
+      const q = 'notifications_log?select=ts,payload&event_type=eq.agent_report&ts=gt.' + encodeURIComponent(new Date(Date.parse(since)).toISOString()) +
+        (body.agent ? '&payload->>agent=eq.' + encodeURIComponent(String(body.agent)) : '') + '&order=ts.asc&limit=' + lim;
+      const r = await fetch(url + '/rest/v1/' + q, { headers: h, signal: tmo(SB_MS) }).catch(() => null);
+      if (!r || !r.ok) return jsonResp({ ok: false, error: 'read ' + (r ? r.status : 'failed') }, 200, {});
+      const got = await r.json().catch(() => null);
+      if (!Array.isArray(got)) return jsonResp({ ok: false, error: 'read failed' }, 200, {});
+      const rows = got.map((x) => x && x.payload).filter((x) => x && x.agent && x.at);
+      return jsonResp({ ok: true, rows, more: got.length === lim }, 200, {});
     }
     if (body.op === 'claim' || body.op === 'claims') {
       const now = new Date().toISOString();
