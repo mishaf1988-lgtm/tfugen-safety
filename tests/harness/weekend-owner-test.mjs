@@ -63,6 +63,7 @@ check('every NOW kind goes on Saturday', OWNER_NOW_KINDS.every((k) => !holdForWe
 check('an unknown or missing kind goes (an urgent message is never stuck)', !holdForWeekend(undefined, SAT, 0) && !holdForWeekend('xyz', SAT, 0));
 check('a held kind 30 minutes after a message of his goes (a reply)', !holdForWeekend('agent', SAT, SAT - 30 * 60000));
 check('a held kind 2 hours after his message waits', holdForWeekend('agent', SAT, SAT - 2 * 3600000));
+check('lesson 210: his message stamped 5 ms after our now is still a reply (goes); one 2 minutes ahead is not trusted (waits)', !holdForWeekend('agent', SAT, SAT + 5) && holdForWeekend('agent', SAT, SAT + 120000));
 check('Sunday to Thursday nothing waits', OWNER_HELD_KINDS.every((k) => !holdForWeekend(k, THU, 0) && !holdForWeekend(k, SUN, 0)));
 check('wa_me: urgent hazard / incident / watchdog by name, anything else is agent', waMeKind({ urgent: 'incident' }) === 'incident' && waMeKind({ urgent: 'hazard' }) === 'hazard'
   && waMeKind({ urgent: 'watchdog' }) === 'watchdog' && waMeKind({ urgent: 'reply' }) === 'agent' && waMeKind({}) === 'agent' && WA_ME_URGENT.every((k) => OWNER_NOW_KINDS.indexOf(k) >= 0));

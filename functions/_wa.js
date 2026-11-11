@@ -552,7 +552,8 @@ export function weekendIL(nowMs) { const d = IL_WD.format(new Date(nowMs || Date
 // Pure: hold this send? lastInMs = Michael's last message (0 = none or unknown).
 export function holdForWeekend(kind, nowMs, lastInMs) {
   if (OWNER_HELD_KINDS.indexOf(kind) < 0 || !weekendIL(nowMs)) return false;
-  return !(lastInMs && nowMs - lastInMs >= 0 && nowMs - lastInMs < WEEKEND_REPLY_MS);
+  // lesson 210: his message stamped a moment after our now (the database clock) is still "just now", up to a minute ahead
+  return !(lastInMs && nowMs - lastInMs >= -60000 && nowMs - lastInMs < WEEKEND_REPLY_MS);
 }
 // Pure: the held list with one more line (the same text once; the oldest out past WEEKEND_MAX).
 export function weekendAdd(raw, e) {
