@@ -196,7 +196,7 @@ export async function runGolden(env, nowIso) {
     r = devInboxAdd(cur, { agent: GOLDEN_AGENT, text: GOLDEN_TEXT }, nowIso);
     return r.error ? { write: false } : { value: JSON.stringify(r.list) };
   }, () => tmo(10000), 2).catch(() => null); // two tries at most (security review 11/11/2026): this runs under the watch lock
-  if (r && r.already) { const a = goldenAlready(g.state); await stateSet(env, { [GOLDEN_KEY]: JSON.stringify(a) }); return { ok: true, fired: false, already: true, pending: a.pending }; }
+  if (r && r.already) { const a = goldenAlready(g.state); if (g.changed || a.pending !== g.state.pending) await stateSet(env, { [GOLDEN_KEY]: JSON.stringify(a) }); return { ok: true, fired: false, already: true, pending: a.pending }; }
   if (!r || r.error || !w || !w.written) return { ok: false, error: (r && r.error) || 'dev_inbox write' };
   await stateSet(env, { [GOLDEN_KEY]: JSON.stringify({ ...g.state, pending: false, fired_at: nowIso, fired_hash: WA_RULES_HASH }) });
   const ft = r.created ? devFireTarget(env) : null;
