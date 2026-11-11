@@ -314,7 +314,8 @@ export function secondLog(s) {
 export const SECOND_GATE_KEY = 'second_gate', SECOND_GATE_MAX = 3, SECOND_GATE_MS = 600000;
 export function secondValve(prev, nowMs) {
   let p = null; try { p = typeof prev === 'string' ? JSON.parse(prev) : prev; } catch (e) { p = null; }
-  const fresh = p && Number(p.n) > 0 && nowMs - Date.parse(p.at) >= 0 && nowMs - Date.parse(p.at) < SECOND_GATE_MS;
+  // a stop stamped a little after now (another worker's clock, 11/11/2026 retro) is fresh too: only the size of the gap counts
+  const fresh = p && Number(p.n) > 0 && Math.abs(nowMs - Date.parse(p.at)) < SECOND_GATE_MS;
   const n = (fresh ? Number(p.n) : 0) + 1;
   const release = n >= SECOND_GATE_MAX;
   return { release, state: { n: release ? 0 : n, at: new Date(nowMs).toISOString(), total: ((p && Number(p.total)) || 0) + 1, released: ((p && Number(p.released)) || 0) + (release ? 1 : 0) } };
@@ -1951,7 +1952,9 @@ export function autoLinkRow(op, b, dayIL) {
       const subj = one(b.subject);
       c = linkRow({ agent: b.agent, table: it.table, id: it.id, rel: 'mail', ref: (subj + (dayIL ? ', ' + dayIL : '')).slice(0, 600), title: (one(b.why) || subj).slice(0, 200) });
     } else {
-      const path = one(Array.isArray(b.paths) ? b.paths[0] : '');
+      // 11/11/2026 retro: the caller passes only the files that went out, and the path is cleaned like draftAttach does
+      // (no leading or doubled slash), so the link is to a file that was sent and the same file gives the same ref.
+      const path = one(Array.isArray(b.paths) ? b.paths[0] : '').split('/').map((x) => x.trim()).filter(Boolean).join('/');
       c = linkRow({ agent: b.agent, table: it.table, id: it.id, rel: 'file', ref: path.slice(0, 600), title: (one(b.caption) || path.split('/').pop()).slice(0, 200) });
     }
   }
@@ -2522,7 +2525,7 @@ async function routineDbHandle(context) {
       // its path), so the files are read and logged and only the WhatsApp copy fails (25/10/2026)
       const at = await accessToken(env);
       const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
-      const sent = [];
+      const sent = [], sentRel = [];
       for (let i = 0; i < c.attach.length; i++) {
         const a = c.attach[i];
         let r;
@@ -2535,6 +2538,7 @@ async function routineDbHandle(context) {
           r = big ? { ok: false, error: mj.file ? 'size' : 'not a file' } : d.ok ? await sendDocToOwner(env, to, new Uint8Array(await d.arrayBuffer()), a.name, i === 0 ? body.caption : '', win, { kind: 'file', path: OD_ROOT + a.rel }) : { ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status };
         } catch (x) { r = { ok: false, error: 'read' }; }
         sent.push({ name: a.name, ok: !!r.ok, error: r.ok ? undefined : r.error });
+        if (r.ok) sentRel.push(a.rel);
       }
       const ok = sent.filter((x) => x.ok);
       // logged like wa_me, so wa_review sees what went out
@@ -2543,7 +2547,7 @@ async function routineDbHandle(context) {
           event_type: 'assistant', channel: ok.length ? 'whatsapp' : 'whatsapp_error',
           payload: { title: ('[' + ok.length + '/' + sent.length + ' files] ' + sent.map((x) => x.name).join(', ')).slice(0, 120), text: sent.map((x) => x.name + (x.ok ? '' : ' (' + x.error + ')')).join('\n').slice(0, 1500), via: 'document', agent: body.agent } }]) }).catch(() => null);
       if (win === false) return jsonResp({ ok: false, sent, chat: true, error: 'window closed: Michael has not written in 23 hours, the WhatsApp copy did not go out; the files are in his app chat (/chat), tell him so' }, 200, {});
-      const linked = ok.length ? await linkAuto(autoLinkRow('wa_file', body), false) : false;
+      const linked = ok.length ? await linkAuto(autoLinkRow('wa_file', { ...body, paths: sentRel }), false) : false;
       return jsonResp({ ok: ok.length === sent.length, sent, chat: true, linked }, 200, {});
     }
     if (body.op === 'drill_ask') {
@@ -3814,9 +3818,10 @@ async function routineDbHandle(context) {
         // 11/11/2026 (ideas-lab 12): two stopped answers at once each read n and wrote n+1, so one stop was not
         // counted and the valve opened late. stateCas: written only if the row is as read; a save in between = count again.
         let v = null;
-        const nowMs = Date.now();
-        await stateCas(url, h, SECOND_GATE_KEY, (raw) => { v = secondValve(raw, nowMs); return { value: JSON.stringify(v.state) }; }, () => tmo(SB_MS)).catch(() => null);
-        if (!v) v = secondValve(null, nowMs);
+        // 11/11/2026 retro: the time is read on each try. Read once before the CAS, the retry saw the other stop's "at"
+        // as later than now, took it as not fresh and counted from one again, the very race the CAS is for.
+        await stateCas(url, h, SECOND_GATE_KEY, (raw) => { v = secondValve(raw, Date.now()); return { value: JSON.stringify(v.state) }; }, () => tmo(SB_MS)).catch(() => null);
+        if (!v) v = secondValve(null, Date.now());
         if (!v.release) return jsonResp({ ok: false, error: sg }, 400, {});
         if (String(body.text || '').indexOf(SECOND_UNVERIFIED) < 0) body.text = String(body.text || '') + '\n' + SECOND_UNVERIFIED + '.';
       }

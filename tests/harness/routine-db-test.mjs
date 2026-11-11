@@ -662,7 +662,7 @@ const callIn = async (body) => {
       const meta = seg.indexOf("?select=size,file'"), content = seg.indexOf(":/content'");
       check('wa_file: the size comes from the item before the content is read, and big = no read', i > 0 && meta > 0 && content > meta && /Number\(mj\.size\) <= DOC_MAX/.test(seg) && /m\.ok && !big \? await fetch/.test(seg)); }
     { // retro 02/11/2026 (b): the same order run through the handler, not only read in its source
-      const real = globalThis.fetch, seen = [];
+      const real = globalThis.fetch, seen = [], links = [];
       let size = 20 * 1024 * 1024;
       globalThis.fetch = async (u, o) => {
         const url = String(u);
@@ -673,6 +673,7 @@ const callIn = async (body) => {
           return new Response(JSON.stringify({ size, file: {} }), { status: 200 });
         }
         if (url.startsWith('https://graph.facebook.com/')) { seen.push('send'); return new Response(JSON.stringify({ id: 'm1', messages: [{ id: 'w1' }] }), { status: 200 }); }
+        if (url.includes('/rest/v1/item_links')) { links.push(JSON.parse(o.body)); return new Response('[]', { status: 201 }); }
         return real(u, o);
       };
       try {
@@ -684,6 +685,15 @@ const callIn = async (body) => {
         size = 1000;
         await call({ op: 'wa_file', agent: 'routine-wa-assistant', paths: ['a/small.pdf'] }, 'k-123', 'POST', E);
         check('wa_file (run): a small file: the size first, then the content', seen[0] === 'meta' && seen[1] === 'content', seen);
+        // 11/11/2026 retro: the link went to paths[0] as written, also when only another file went out
+        size = 20 * 1024 * 1024; links.length = 0;
+        const fe = globalThis.fetch;
+        globalThis.fetch = async (u, o) => { if (String(u).includes('server_state?key=eq.wa_owner_in_at')) return new Response(JSON.stringify([{ value: new Date().toISOString() }]), { status: 200 }); if (String(u).includes('/drive/root:/') && String(u).includes('small') && !String(u).includes(':/content')) return new Response(JSON.stringify({ size: 1000, file: {} }), { status: 200 }); return fe(u, o); };
+        const r3 = await call({ op: 'wa_file', agent: 'routine-wa-assistant', paths: ['a/big.pdf', '/a//small.pdf'], item: { table: 'docs', id: 'd1' } }, 'k-123', 'POST', E);
+        globalThis.fetch = fe;
+        const lr = links.flat();
+        check('wa_file (run): the item link is to the file that went out, its path cleaned, not to paths[0] that was refused',
+          r3.json.sent && r3.json.sent[0].ok === false && r3.json.sent[1].ok === true && lr.length === 1 && lr[0].ref === 'a/small.pdf', { j: r3.json, lr });
       } finally { globalThis.fetch = real; }
     }
     { const { workerJobAdd, workerJobDone, workerFireText, WORKERS, WORKER_FIRE_HEAD } = await import('./_build/routine-db.mjs');
@@ -1263,6 +1273,9 @@ const callIn = async (body) => {
         a2 && a2.rel === 'mail' && a2.ref === 'Calibration quote, 11/11/2026' && a3 && a3.rel === 'file' && a3.title === 't.pdf' && a3.item_table === 'docs'
         && autoLinkRow('mail_draft', { ...M, item: undefined }) === null && autoLinkRow('mail_draft', { ...M, item: { table: 'emp', id: 'x' } }) === null
         && autoLinkRow('mail_draft', { ...M, why: 'see trig_01ABCDEFGHJKMNPQRSTVWXYZ' }) === null && autoLinkRow('task_add', M) === null && autoLinkRow('expiry_set', null) === null, { a2, a3 });
+      const a4 = autoLinkRow('wa_file', { agent: 'routine-wa-assistant', paths: ['/02_reports//2026/t.pdf '], item: { table: 'docs', id: 'd1' } });
+      check('autoLinkRow wa_file: the path is cleaned like draftAttach (same file, same ref), and no file sent = no link (11/11/2026 retro)',
+        a4 && a4.ref === '02_reports/2026/t.pdf' && autoLinkRow('wa_file', { agent: 'routine-wa-assistant', paths: [], item: { table: 'docs', id: 'd1' } }) === null, a4);
     }
     { // 27/10/2026: item_card, everything the database knows about one item
       check('cardQuery: trimmed, filter characters dropped, 2-60 characters', cardQuery('  \u05de\u05d0\u05e8\u05d9\u05db\u05d9\u05dd  ') === '\u05de\u05d0\u05e8\u05d9\u05db\u05d9\u05dd' && cardQuery('a,b(c)*') === 'a b c' && cardQuery('x') === null && cardQuery('y'.repeat(61)) === null);
@@ -2033,7 +2046,8 @@ const callIn = async (body) => {
     const t0 = Date.parse('2026-11-11T08:00:00Z');
     const v1 = secondValve(null, t0), v2 = secondValve(JSON.stringify(v1.state), t0 + 60000), v3 = secondValve(v2.state, t0 + 120000);
     check('send gate valve: two stops, the third inside ten minutes is released and counted', !v1.release && !v2.release && v3.release && v3.state.n === 0 && v3.state.total === 3 && v3.state.released === 1 && SECOND_GATE_MAX === 3);
-    check('send gate valve: a stop after ten minutes starts again at one; garbage in the state is one', secondValve(v2.state, t0 + 60000 + SECOND_GATE_MS).state.n === 1 && secondValve('{bad', t0).state.n === 1 && STATE_READ.includes(SECOND_GATE_KEY)); }
+    check('send gate valve: a stop after ten minutes starts again at one; garbage in the state is one', secondValve(v2.state, t0 + 60000 + SECOND_GATE_MS).state.n === 1 && secondValve('{bad', t0).state.n === 1 && STATE_READ.includes(SECOND_GATE_KEY));
+    check('send gate valve: a stop stamped a moment after now (the CAS retry, another clock) still counts (11/11/2026 retro: it went back to one)', secondValve({ n: 2, at: new Date(t0 + 5).toISOString() }, t0).release === true && secondValve({ n: 1, at: new Date(t0 + 5000).toISOString() }, t0).state.n === 2); }
   // 30/10/2026: ammonia answers need a second checker in the closing report; otherwise the report turns red.
   const sc = (agent, ok, line, learned) => secondCheckGate({ agent, ok, line, learned: learned || '' });
   const A = '\u05d0\u05de\u05d5\u05e0\u05d9\u05d4', SH = '\u05d1\u05d5\u05d3\u05e7 \u05e9\u05e0\u05d9';
@@ -2097,7 +2111,7 @@ const callIn = async (body) => {
     // both wrote n=2 and the third stop inside ten minutes was not released; now the count is redone on the newer row.
     const sgBefore = state.second_gate, sgVer = stateVer.second_gate;
     state.second_gate = JSON.stringify({ n: 1, at: new Date(Date.now() - 60000).toISOString(), total: 1, released: 0 }); stateVer.second_gate = 'v-sg1';
-    raceOnce = (k) => { if (k !== 'second_gate') return; state[k] = JSON.stringify({ n: 2, at: new Date().toISOString(), total: 2, released: 0 }); stateVer[k] = 'v-sg2'; };
+    raceOnce = (k) => { if (k !== 'second_gate') return; state[k] = JSON.stringify({ n: 2, at: new Date(Date.now() + 5000).toISOString(), total: 2, released: 0 }); stateVer[k] = 'v-sg2'; };
     const sgr = await call({ op: 'wa_me', agent: 'routine-wa-assistant', text: '\u05e2\u05dc\u05d5\u05dc \u05dc\u05d9\u05e4\u05d5\u05dc \u05dc\u05d9\u05d5\u05ea\u05e8 \u05de-2 \u05de\u05d8\u05e8 (\u05ea\u05e7\u05e0\u05d4 1)' });
     const sgs = JSON.parse(state.second_gate);
     check('cas: second_gate counts a stop saved in between, so the third stop inside ten minutes is released (before: n=2 was written over n=2)', raceOnce === null && sgs.total === 3 && sgs.released === 1 && sgs.n === 0, { sgs, j: sgr.json });
