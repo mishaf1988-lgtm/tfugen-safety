@@ -480,6 +480,9 @@ const callIn = async (body) => {
     check('agent_log_since: reads agent_report rows after the time, one agent, oldest first, limit capped at 1000', rd.json.ok && /event_type=eq\.agent_report/.test(q) && /ts=gt\.2026-11-10T00%3A00%3A00\.000Z/.test(q) && /payload->>agent=eq\.retro/.test(q) && /order=ts\.asc/.test(q) && /limit=1000$/.test(q), q);
     check('agent_log_since: a bad time, a bad agent or another field is refused', (await call({ op: 'agent_log_since', since: 'yesterday' })).status === 400 && (await call({ op: 'agent_log_since', since: '2026-11-10', agent: 'x;drop' })).status === 400 && (await call({ op: 'agent_log_since', since: '2026-11-10', table: 'ncr' })).status === 400);
     state.agent_log = JSON.stringify(JSON.parse(state.agent_log).slice(0, 3));
+    // security review 11/11/2026: ~67 reports a day would push real notifications out of the screen's 500-row window
+    const ix = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+    check('the app leaves agent_report rows out of the notifications screen and its CSV', /var _sbWhere=\{notifications_log:'&event_type=neq\.agent_report'\}/.test(ix) && /\+\(_sbWhere\[tbl\]\|\|''\)\+'&order='/.test(ix) && /notifications_log\?select='\+encodeURIComponent\(cols\)\+_sbWhere\.notifications_log\+/.test(ix));
   }
   state.agent_log = JSON.stringify(Array.from({ length: AGENT_LOG_MAX }, (_, i) => ({ agent: 'a', at: String(i) })));
   await call({ op: 'agent_report', agent: 'retro', ok: true, line: 'x' });

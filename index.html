@@ -3905,6 +3905,9 @@ var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection
 // the server for the whole thing at the moment it is clicked, so nothing the
 // manager can export today becomes smaller.
 var _sbLimit={notifications_log:500};
+// 11/11/2026: every agent's run report is also a permanent notifications_log row (event_type agent_report, the
+// agents' log). They are not notifications: kept out of the screen, the unread count, the 500-row window and the CSV.
+var _sbWhere={notifications_log:'&event_type=neq.agent_report'};
 // ---- 5.1 : the browser read one page and called it the whole table ----
 // PostgREST caps a response at db-max-rows (1000 by default) and says so in
 // Content-Range \u2014 which nothing read. _sbMergePull then treats what came back
@@ -3986,7 +3989,7 @@ function _sbGetOnce(tbl,isRetry){
   // user-triggered writes (sbIns / sbUpd / sbDel) jump the queue. Hint
   // is silently ignored on browsers that don't support it (Firefox <132).
   return _sbAuth().then(function(){
-    return _sbFetchAll(SBU+'/rest/v1/'+tbl+'?select='+encodeURIComponent(cols)+'&order='+ord,cap);
+    return _sbFetchAll(SBU+'/rest/v1/'+tbl+'?select='+encodeURIComponent(cols)+(_sbWhere[tbl]||'')+'&order='+ord,cap);
   }).then(function(res){
     // A read cut at the page limit is not the whole table: keep the cache rather than drop the rest.
     if(res&&res.ok){_sbAuthBad=0;return (Array.isArray(res.rows)&&!res.truncated)?res.rows:null;}
@@ -16369,7 +16372,7 @@ function _notifLogExport(){
   toast('\u05de\u05d5\u05e9\u05da \u05d0\u05ea \u05d4\u05d9\u05d5\u05de\u05df \u05d4\u05de\u05dc\u05d0...');
   var cols=(_sbCols&&_sbCols.notifications_log)||'*';
   _sbAuth().then(function(){
-    return fetch(SBU+'/rest/v1/notifications_log?select='+encodeURIComponent(cols)+'&order=ts.desc',{headers:sbH()});
+    return fetch(SBU+'/rest/v1/notifications_log?select='+encodeURIComponent(cols)+_sbWhere.notifications_log+'&order=ts.desc',{headers:sbH()});
   }).then(function(r){return r.ok?r.json():null;})
     .then(function(j){_notifLogWriteCsv(Array.isArray(j)?j:null);})
     .catch(function(){_notifLogWriteCsv(null);});

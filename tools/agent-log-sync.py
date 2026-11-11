@@ -81,11 +81,19 @@ def main(argv):
     if not since:
         since = (datetime.strptime(last, '%d/%m/%Y') - timedelta(days=1)).strftime('%Y-%m-%d') if last else '2026-10-09'
     got = {}
-    rc, a = call({'op': 'agent_log_since', 'since': since, 'limit': 1000})
-    if rc == 3:
-        print('ROUTINE_KEY missing', file=sys.stderr)
-        return 3
-    perm = a.get('rows', []) if rc == 0 and a else []
+    perm, cur = [], since
+    for _ in range(50):  # pages of 1000, oldest first; "more" = there may be another page after the last row
+        rc, a = call({'op': 'agent_log_since', 'since': cur, 'limit': 1000})
+        if rc == 3:
+            print('ROUTINE_KEY missing', file=sys.stderr)
+            return 3
+        if rc != 0 or not a:
+            break
+        page = a.get('rows', [])
+        perm += page
+        if not a.get('more') or not page:
+            break
+        cur = page[-1]['at']
     rc2, b = call({'op': 'state_get', 'keys': ['agent_log']})
     recent = []
     if rc2 == 0 and b:
