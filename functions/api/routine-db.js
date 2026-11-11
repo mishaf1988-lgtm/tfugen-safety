@@ -2624,14 +2624,15 @@ async function routineDbHandle(context) {
     if (body.op === 'worker_now' || body.op === 'worker_done') {
       const now = new Date().toISOString();
       if (body.op === 'worker_done' && (hasInternalId(body.note) || hasPersonalNo(body.note))) return jsonResp({ ok: false, error: 'note: no internal ids or passport numbers (it goes to Michael)' }, 400, {});
-      const rows = await stateRead([WORKER_JOBS_KEY]);
-      const raw = rows && rows[0] && rows[0].value;
-      const r = body.op === 'worker_now' ? workerJobAdd(raw, body, now) : workerJobDone(raw, String(body.id || ''), body.note, now);
-      if (r.error) return jsonResp({ ok: false, error: r.error }, 400, {});
-      const save = (list) => fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify([{ key: WORKER_JOBS_KEY, value: JSON.stringify(list), updated_at: now }]), signal: tmo(SB_MS) });
-      const w = await save(r.list);
-      if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status }, 200, {});
+      // 11/11/2026 (ideas-lab 12, one key per PR): two jobs at once each read the list and wrote it back, so one was lost.
+      // stateCas: written only if the row is as read; a job saved in between = add (or close) again on the newer list.
+      let r = null;
+      const w = await stateCas(url, h, WORKER_JOBS_KEY, (raw) => {
+        r = body.op === 'worker_now' ? workerJobAdd(raw, body, now) : workerJobDone(raw, String(body.id || ''), body.note, now);
+        return r.error ? { write: false } : { value: JSON.stringify(r.list) };
+      }, () => tmo(SB_MS)).catch((e) => ({ written: false, error: String(e && e.message || e) }));
+      if (r && r.error) return jsonResp({ ok: false, error: r.error }, 400, {});
+      if (!w.written) return jsonResp({ ok: false, error: 'write ' + (w.error || w.status || 'conflict') }, 200, {});
       let fired = null, wa = null;
       if (body.op === 'worker_now' && r.created && env.WORKER_FIRE_TOKEN) {
         const e = r.list.find((x) => x && x.id === r.id);
@@ -2642,7 +2643,16 @@ async function routineDbHandle(context) {
           const fj = fr.ok ? await fr.json().catch(() => ({})) : {};
           fired = { status: fr.status, session: (fj && fj.claude_code_session_id) || null };
         } catch (x) { fired = { status: 'network', session: null }; }
-        if (fired.session) { e.fired_session = fired.session; await save(r.list).catch(() => null); }
+        if (fired.session) {
+          e.fired_session = fired.session;
+          await stateCas(url, h, WORKER_JOBS_KEY, (raw) => {
+            let list = []; try { list = JSON.parse(raw || '[]'); } catch (x) { return { write: false }; }
+            const j = Array.isArray(list) ? list.find((x) => x && x.id === r.id) : null;
+            if (!j) return { write: false };
+            j.fired_session = fired.session;
+            return { value: JSON.stringify(list) };
+          }, () => tmo(SB_MS)).catch(() => null);
+        }
       }
       // The worker's answer goes to Michael's WhatsApp now, under the worker's name.
       if (body.op === 'worker_done' && env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN) {

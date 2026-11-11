@@ -2149,6 +2149,16 @@ const callIn = async (body) => {
     const di = JSON.parse(state.dev_inbox).map((x) => x.text);
     check('cas: dev_request keeps a request saved in between', dr.json.ok === true && di.includes('another request saved meanwhile') && di.some((x) => /race test/.test(x)), { j: dr.json, di });
     raceOnce = null; if (inboxBefore === undefined) delete state.dev_inbox; else state.dev_inbox = inboxBefore;
+    // 11/11/2026 (ideas-lab 12, one key per PR): worker_jobs. A job saved between our read and our write is kept.
+    { const { WORKERS } = await import('./_build/routine-db.mjs');
+      const jobsBefore = state.worker_jobs, jobsVer = stateVer.worker_jobs;
+      state.worker_jobs = '[]'; stateVer.worker_jobs = 'v-wj0';
+      raceOnce = (k) => { if (k !== 'worker_jobs') return; state[k] = JSON.stringify([{ id: 'job-other-1', at: new Date().toISOString(), agent: 'other', worker: WORKERS[1], task: 'another job saved meanwhile', status: 'open' }]); stateVer[k] = 'v-wj-other'; };
+      const wr = await call({ op: 'worker_now', agent: 'routine-wa-assistant', worker: WORKERS[2], task: '\u05dc\u05d1\u05d3\u05d5\u05e7 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05dc\u05de\u05e8\u05d5\u05e5' });
+      const wj = JSON.parse(state.worker_jobs).map((x) => x.task);
+      check('cas: worker_now keeps a job saved in between (before: the second write dropped it)', wr.json.ok === true && raceOnce === null && wj.includes('another job saved meanwhile') && wj.length === 2, { j: wr.json, wj });
+      raceOnce = null; if (jobsBefore === undefined) { delete state.worker_jobs; delete stateVer.worker_jobs; } else { state.worker_jobs = jobsBefore; stateVer.worker_jobs = jobsVer; }
+    }
     // 11/11/2026 (ideas-lab 12): second_gate. Another stopped answer is counted between our read and our write. Before,
     // both wrote n=2 and the third stop inside ten minutes was not released; now the count is redone on the newer row.
     const sgBefore = state.second_gate, sgVer = stateVer.second_gate;
