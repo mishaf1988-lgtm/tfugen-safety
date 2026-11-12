@@ -1198,6 +1198,8 @@ export function agentsPause(until, nowMs) {
   return { paused: true, until, at: new Date(nowMs).toISOString() };
 }
 export const DRAFTS_TEXT_KEY = 'drafts_text', DRAFTS_TEXT_MAX = 30, DRAFTS_TEXT_BODY = 2000;
+// Pure: a drafts_* list as stored (a JSON string, or the array itself) -> an array; anything broken = [] (12/11/2026, stateCas).
+export function draftsArr(raw) { let v = raw; if (typeof v === 'string') { try { v = JSON.parse(v || '[]'); } catch (e) { return []; } } return Array.isArray(v) ? v : []; }
 export function draftTextLine(b, nowIso) {
   return { at: nowIso, agent: String(b.agent || ''), to: mailSet(b.to), cc: mailSet(b.cc), subject: String(b.subject || '').slice(0, 200),
     body: String(b.body || '').slice(0, DRAFTS_TEXT_BODY), reply: !!b.reply_to, replaces: Array.isArray(b.replaces) ? b.replaces.length : 0 };
@@ -3278,8 +3280,8 @@ async function routineDbHandle(context) {
       const name = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '') + '-' + Math.random().toString(36).slice(2, 8) + '.txt';
       await putFile(at.token, OD_ROOT + OD_DRAFT_TRASH, name, c.file, 'text/plain');
       const line = { at: new Date().toISOString(), subject: c.subject, file: name, agent: body.agent, why: String(body.why).slice(0, 200) };
-      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
-        body: JSON.stringify([{ key: DRAFTS_TRASHED_KEY, value: JSON.stringify([line].concat(val(DRAFTS_TRASHED_KEY)).slice(0, 100)), updated_at: line.at }]) }).catch(() => null);
+      // stateCas (12/11/2026, ideas-lab 12): two drafts trashed at once kept only one line; now added on the list as it is
+      await stateCas(url, h, DRAFTS_TRASHED_KEY, (raw) => ({ value: JSON.stringify([line].concat(draftsArr(raw)).slice(0, 100)) }), () => tmo(SB_MS)).catch(() => null);
       return jsonResp({ ok: true, file: OD_DRAFT_TRASH + '/' + name, exact: !!c.exact, note: 'the flow moves it to Deleted Items within about 5 minutes (the OneDrive trigger); check Drafts after' }, 200, {});
     }
     if (body.op === 'mail_forward') {
@@ -3364,19 +3366,14 @@ async function routineDbHandle(context) {
       const f = await putFile(at.token, OD_ROOT + OD_DRAFT, name, d.file, 'text/plain');
       // 26/10/2026: what draft_trash may later move to Deleted Items (only drafts made here)
       try {
-        const mr = await stateRead([DRAFTS_MADE_KEY]).catch(() => []);
-        let made = []; try { made = JSON.parse((mr && mr[0] && mr[0].value) || '[]'); } catch (e) { made = []; }
+        // stateCas (12/11/2026): two drafts at once lost a line, and draft_trash then refused the lost one
         const line = draftMadeLine(JSON.parse(d.file), new Date().toISOString(), name);
-        await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
-          body: JSON.stringify([{ key: DRAFTS_MADE_KEY, value: JSON.stringify([line].concat(Array.isArray(made) ? made : []).slice(0, DRAFTS_MADE_MAX)), updated_at: line.at }]) });
+        await stateCas(url, h, DRAFTS_MADE_KEY, (raw) => ({ value: JSON.stringify([line].concat(draftsArr(raw)).slice(0, DRAFTS_MADE_MAX)) }), () => tmo(SB_MS));
       } catch (e) { /* the draft request is written; only its later deletion needs this line */ }
       try { await draftIds(at, []); } catch (e) { /* only marks when flow 3 started reporting ids */ }
       try {
-        const xr = await stateRead([DRAFTS_TEXT_KEY]).catch(() => []);
-        let xs = []; try { xs = JSON.parse((xr && xr[0] && xr[0].value) || '[]'); } catch (e) { xs = []; }
         const tl = draftTextLine(body, new Date().toISOString());
-        await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
-          body: JSON.stringify([{ key: DRAFTS_TEXT_KEY, value: JSON.stringify([tl].concat(Array.isArray(xs) ? xs : []).slice(0, DRAFTS_TEXT_MAX)), updated_at: tl.at }]) });
+        await stateCas(url, h, DRAFTS_TEXT_KEY, (raw) => ({ value: JSON.stringify([tl].concat(draftsArr(raw)).slice(0, DRAFTS_TEXT_MAX)) }), () => tmo(SB_MS));
       } catch (e) { /* only the quality checker reads this */ }
       let vs = null;
       try {
@@ -3390,11 +3387,9 @@ async function routineDbHandle(context) {
         try { await putFile(at.token, OD_ROOT + OD_DRAFT_TRASH, tn, c.file, 'text/plain'); trashed.push({ subject: c.subject, file: tn }); } catch (e) { trashed.push({ subject: c.subject, error: 'write' }); }
       }
       if (trashed.length) {
-        const tr = await stateRead([DRAFTS_TRASHED_KEY]).catch(() => []);
-        let tl = []; try { tl = JSON.parse((tr && tr[0] && tr[0].value) || '[]'); } catch (e) { tl = []; }
         const now = new Date().toISOString();
-        await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
-          body: JSON.stringify([{ key: DRAFTS_TRASHED_KEY, value: JSON.stringify(trashed.filter((x) => x.file).map((x) => ({ at: now, subject: x.subject, file: x.file, agent: body.agent, why: 'replaced by ' + String(body.subject || '').slice(0, 120) })).concat(Array.isArray(tl) ? tl : []).slice(0, 100)), updated_at: now }]) }).catch(() => null);
+        const add = trashed.filter((x) => x.file).map((x) => ({ at: now, subject: x.subject, file: x.file, agent: body.agent, why: 'replaced by ' + String(body.subject || '').slice(0, 120) }));
+        await stateCas(url, h, DRAFTS_TRASHED_KEY, (raw) => ({ value: JSON.stringify(add.concat(draftsArr(raw)).slice(0, 100)) }), () => tmo(SB_MS)).catch(() => null);
       }
       const linked = await linkAuto(autoLinkRow('mail_draft', body, new Date().toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem' })), false);
       return jsonResp(Object.assign({ ok: true, file: OD_DRAFT + '/' + name, size: f.size || null, attachments: d.attach.length, linked }, trashed.length ? { replaced: trashed, note: 'the replaced drafts go to Deleted Items within about 5 minutes' } : {}, vs ? { vs_last_out: vs, vs_note: vs.same ? 'same text as the last WhatsApp message' : 'differs from the last WhatsApp message in ' + (vs.lines - vs.kept) + ' of ' + vs.lines + ' lines: say so to Michael, or fix the draft' } : {}), 200, {});
