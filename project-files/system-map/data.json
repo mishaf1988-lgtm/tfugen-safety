@@ -1296,7 +1296,7 @@
    "name": "העוזר בוואטסאפ",
    "what": "העוזר בוואטסאפ: מסלול מהיר (סונט `claude-sonnet-5-5`, 12/11/2026, מיכאל: \"עשה את התוספת\"; DECISIONS 12/11/2026 \"נתב מודלים\"). שאלות קריאה קצרות שהשרת סיווג (`fastModel`)",
    "when": "מפעיל API בלבד",
-   "when_full": "מפעיל API בלבד (ASSISTANT_FAST_FIRE_TOKEN, C83), שיחה חדשה בכל הפעלה; בלי טוקן כבוי",
+   "when_full": "מפעיל API בלבד (ASSISTANT_FAST_FIRE_TOKEN ומתג ASSISTANT_FAST_ON=1 ב-Cloudflare, פעיל מ-12/11/2026; לכיבוי: למחוק את המתג), שיחה חדשה בכל הפעלה; מחבר Microsoft 365",
    "doc": "routine-wa-core.md (אותו פרומפט כמו העוזר)",
    "key": "wa-core",
    "family": "תקשורת ומשרד",
