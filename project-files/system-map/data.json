@@ -562,6 +562,7 @@
     "agent_report",
     "expiry_set",
     "ocr_txt",
+    "state_get",
     "state_set",
     "task_add"
    ],
