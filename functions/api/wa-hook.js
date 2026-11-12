@@ -797,14 +797,16 @@ async function handle(env, raw) {
     const af0 = await assistantFireNow(env);
     // 12/11/2026 (ideas-lab 30): a short read-only question to the fast Routine (Sonnet); its fire failing = Opus as before
     const ff = fastModel(m, about, joins.length) ? fastFire(env, af0) : null;
+    // security review 12/11/2026: the fast fire waits 8 s (two fires must fit Cloudflare's 30 s), and Opus is fired only
+    // when the fast one answered with an error status; a timeout may already have started the fast run (two answers)
     const fireTo = (a) => fetch(a.url, {
-      method: 'POST', signal: tmo(20000),
+      method: 'POST', signal: tmo(a.which === 'fast' ? 8000 : 20000),
       headers: { Authorization: 'Bearer ' + a.token, 'anthropic-beta': 'experimental-cc-routine-2026-04-01',
         'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
     }).catch(() => null);
     let af = ff || af0, fr = af ? await fireTo(af) : null;
-    if (ff && !(fr && fr.ok)) { seen.fast_failed = fr ? fr.status : 'network'; af = af0; fr = af ? await fireTo(af) : null; }
+    if (ff && fr && !fr.ok) { seen.fast_failed = fr.status; af = af0; fr = af ? await fireTo(af) : null; } else if (ff && !fr) seen.fast_failed = 'network';
     seen.fire_to = af ? af.which : null;
     seen.fire_status = fr ? fr.status : 'network';
     seen.fire_ms = Date.now() - t0;
