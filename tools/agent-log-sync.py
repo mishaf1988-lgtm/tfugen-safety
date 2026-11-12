@@ -48,23 +48,39 @@ def clean(s):
 
 def il_day(iso):
     t = datetime.fromisoformat(str(iso).replace('Z', '+00:00'))
-    # Israel time without tzdata: +2 in winter, +3 in summer (last Friday of March to last Sunday of October)
+    # Israel time without tzdata: +2 in winter, +3 in summer (the Friday before the last Sunday of March to the last Sunday of October)
     y = t.year
-    mar = max(d for d in range(25, 32) if datetime(y, 3, d).weekday() == 4)
+    mar = max(d for d in range(25, 32) if datetime(y, 3, d).weekday() == 6) - 2  # the Friday before the last Sunday of March
     octo = max(d for d in range(25, 32) if datetime(y, 10, d).weekday() == 6)
     summer = datetime(y, 3, mar, tzinfo=timezone.utc) <= t < datetime(y, 10, octo, tzinfo=timezone.utc)
     return (t + timedelta(hours=3 if summer else 2)).strftime('%d/%m/%Y')
 
 
+# The file is in a public repo and pii-md-test fails the PR on a mobile number or a personal address (retro 12/11/2026:
+# the same line would be written again on every run), so they are replaced before the line is written.
+MOBILE = re.compile(r'(?<![\d.])(?:\+?972[-. ]?\(?0?\)?[-. ]?|0)\(?5\d\)?(?:[-. ]?\d){7}(?![\d])')
+LANDLINE = re.compile(r'(?<![\d.])(?:\+?972[-. ]?|0)[23489][-. ]?\d{3}[-. ]?\d{4}(?![\d])')
+NINE = re.compile(r'(?<![\d])\d{9}(?![\d])')  # an Israeli ID is nine digits
+EMAIL = re.compile(r'[\w][\w._%+-]*@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}')  # \w: a Hebrew local part too
+
+
+def scrub(t):
+    t = EMAIL.sub('<\u05db\u05ea\u05d5\u05d1\u05ea>', t)
+    t = MOBILE.sub('<\u05e0\u05d9\u05d9\u05d3>', t)
+    t = LANDLINE.sub('<\u05d8\u05dc\u05e4\u05d5\u05df>', t)
+    return NINE.sub('<\u05de\u05e1\u05e4\u05e8>', t)
+
+
 def key(day, agent, text):
-    return (day, agent.strip(), clean(text).replace(FAIL, '')[:60])
+    # the failure mark is part of the key (retro 12/11/2026): a failed report is not swallowed by a success with the same opening
+    return (day, agent.strip(), FAIL in clean(text), clean(text).replace(FAIL, '')[:60])
 
 
 def fmt(e):
-    line = clean(e.get('line')) or clean(e.get('for_michael'))
+    line = scrub(clean(e.get('line')) or clean(e.get('for_michael')))
     if e.get('ok') is not True:
         line = FAIL + line
-    return '%s | %s | %s | %s%s' % (il_day(e['at']), e['agent'], line, LEARNED, clean(e.get('learned')) or NONE)
+    return '%s | %s | %s | %s%s' % (il_day(e['at']), e['agent'], line, LEARNED, scrub(clean(e.get('learned'))) or NONE)
 
 
 def main(argv):
