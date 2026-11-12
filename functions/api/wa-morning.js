@@ -43,6 +43,11 @@ export const keyboard = (s) => String(s || '').replace(/[\u2013\u2014\u05be]/g, 
 export const clip = (s, n) => {
   s = keyboard(s).replace(/\s+/g, ' ').trim().replace(/^(.{3,80}?) - (?=\1)/, '');
   if (s.length <= n) return s;
+  // 12/11/2026 (the assistant chat: the 05:47 update cut the quality checker's note mid-sentence, inside a quote): end on a
+  // whole sentence when one fits in the first part; only a first sentence longer than that is cut on a word, with "..."
+  const head = s.slice(0, n + 1); let end = -1;
+  head.replace(/[.!?;](?=\s|$)/g, (m, i) => { if (i < n) end = i; return m; });
+  if (end >= n * 0.4) return s.slice(0, end + (s[end] === ';' ? 0 : 1)).replace(/[\s,;:\-]+$/, '') + (s[end] === ';' ? '.' : '');
   let c = s.slice(0, n - 3); const sp = c.lastIndexOf(' ');
   if (sp > n * 0.5) c = c.slice(0, sp);
   return c.replace(/[\s,;:.\-]+$/, '') + '...';
