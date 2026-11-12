@@ -460,6 +460,10 @@ const callIn = async (body) => {
     const ent = (await call({ op: 'agent_report', agent: 'routine-wa-assistant', ok: true, line: 'x', model: m })).json.entry;
     check('model "' + m + '": ' + (want ? 'kept as ' + want : 'dropped, the report still written'), ent && ent.model === want, ent);
   }
+  for (const [imp, want] of [['internal', 'internal'], ['owner', 'owner'], ['high', undefined]]) {
+    const ent = (await call({ op: 'agent_report', agent: 'map-lights', ok: false, line: 'x', impact: imp })).json.entry;
+    check('impact "' + imp + '": ' + (want ? 'kept' : 'dropped, the report still written') + ' (12/11/2026)', ent && ent.impact === want, ent);
+  }
   { // 12/11/2026: completeness counts on the report, and partial_check
     const { partialCheck } = await import('./_build/routine-db.mjs');
     const ent = (await call({ op: 'agent_report', agent: 'routine-mail-filing', ok: true, line: 'x', todo: 40, done: 12, left: 28, left_what: 'stack reports mail 11/11: 3 of 10 left' })).json.entry;

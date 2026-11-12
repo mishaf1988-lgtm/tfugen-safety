@@ -1,7 +1,7 @@
 // Fault alert (31/10/2026, functions/_faults.js): every watchdog tick tells Michael, in ONE WhatsApp, about errors in
 // users' browsers and agents that reported a failure since the last tick; the same fault once a day.
-import { faultItems, faultText, faultDevText, faultTodo, FAULT_FIXERS, goldenStep, goldenAlready, GOLDEN_SETTLE_MS, GOLDEN_GAP_MS, GOLDEN_TEXT, FAULT_LINES, FAULT_FIRST_MS } from './_build/_faults.mjs';
-import { devInboxAdd } from './_build/routine-db.mjs';
+import { faultItems, faultText, faultDevText, faultTodo, FAULT_FIXERS, goldenStep, goldenAlready, faultInternal, faultEscalate, faultEscalateText, FAULT_ESCALATE_MS, GOLDEN_SETTLE_MS, GOLDEN_GAP_MS, GOLDEN_TEXT, FAULT_LINES, FAULT_FIRST_MS } from './_build/_faults.mjs';
+import { devInboxAdd, DEV_RESENT_NOTE } from './_build/routine-db.mjs';
 import fs from 'node:fs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
@@ -29,7 +29,7 @@ const NOW = '2026-10-31T14:50:00.000Z';
     { agent: 'wa-assistant', at: '2026-10-31T14:11:00Z', ok: true, line: 'fine' },
     { agent: 'dev-fire', at: '2026-10-31T13:00:00Z', ok: false, line: 'old' }];
   const r = faultItems(prev, [], log, NOW);
-  check('an agent that failed since the last tick, once, by its short name', r.items.length === 1 && r.items[0].key === 'agent:map-lights', r.items);
+  check('an agent that failed since the last tick, once, by its short name', r.items.length === 1 && r.items[0].key === 'agenti:map-lights', r.items); // internal since 12/11/2026, its own key
 }
 { // 11/11/2026: the developer that was fired on a fault and failed is the same fault going on: quiet, no second alert
   const prev = { at: '2026-11-11T05:40:00.000Z', sent: { 'agent:staging-e2e': '2026-11-11' } };
@@ -38,7 +38,7 @@ const NOW = '2026-10-31T14:50:00.000Z';
     { agent: 'routine-mail-filing', at: '2026-11-11T05:53:00Z', ok: false, line: 'timeout' }];
   const r = faultItems(prev, [], log, '2026-11-11T06:00:00.000Z');
   const q = r.items.filter((x) => x.quiet).map((x) => x.key).sort(), loud = r.items.filter((x) => !x.quiet).map((x) => x.key);
-  check('a failed fixer (dev-fire, dev-safety) is quiet; another agent that failed is still loud', q.join() === 'agentq:dev-fire,agentq:dev-safety' && loud.join() === 'agent:mail-filing', r.items);
+  check('a failed fixer (dev-fire, dev-safety) is quiet; another agent that failed still opens a request (held for 3 hours since 12/11/2026)', q.join() === 'agentq:dev-fire,agentq:dev-safety' && loud.join() === 'agenti:mail-filing', r.items);
   check('FAULT_FIXERS: the three fired developers only; a failure under the shared name "dev" stays loud', FAULT_FIXERS.join() === 'dev-fire,dev-safety,dev-runner' && faultItems(prev, [], [{ agent: 'dev', at: '2026-11-11T05:55:00Z', ok: false, line: 'x' }], '2026-11-11T06:00:00.000Z').items.every((x) => !x.quiet));
 }
 { // 11/11/2026: the golden questions run by themselves after the assistant's instructions changed (goldenStep)
@@ -92,7 +92,7 @@ const NOW = '2026-10-31T14:50:00.000Z';
   const o = faultItems(prev, [], [{ agent: 'routine-map-lights', at: '2026-11-03T08:50:00Z', ok: false, line: miss }, { agent: 'wa-assistant', at: '2026-11-03T08:51:00Z', ok: false, line: 'x ' + miss }], now);
   check('only the assistant, and only the gate prefix at the start, is quiet', o.items.every((x) => !x.quiet), o.items);
   const fsrc = fs.readFileSync(new URL('../../functions/_faults.js', import.meta.url), 'utf8');
-  check('the WhatsApp gets only the loud items, and none at all when every item is quiet', /const loud = items\.filter\(\(x\) => !x\.quiet\)/.test(fsrc) && /if \(loud\.length\)/.test(fsrc) && /faultText\(loud,/.test(fsrc));
+  check('the WhatsApp gets only the loud items, and none at all when every item is quiet', /const loud = items\.filter\(\(x\) => !x\.quiet\)/.test(fsrc) && /if \(loud\.length\)/.test(fsrc) && /if \(owner\.length\)/.test(fsrc) && /faultText\(owner,/.test(fsrc));
 }
 { // the text
   const items = Array.from({ length: FAULT_LINES + 3 }, (_, i) => ({ key: 'k' + i, text: 'x' + i }));
@@ -108,7 +108,7 @@ const NOW = '2026-10-31T14:50:00.000Z';
   check('a test error is closed without a fix (the request says so)', d.indexOf('dev_done') > 0);
   check('the message says the fix already started when it did, and the morning check when it did not', faultText(items, true) !== faultText(items, false) && /\u05d4\u05de\u05e4\u05ea\u05d7/.test(faultText(items, true)));
   const fsrc = fs.readFileSync(new URL('../../functions/_faults.js', import.meta.url), 'utf8');
-  check('the message says the fix started only when the developer was really fired (fired, already open, or the failure cites its own request; not no-fire)', /faultText\(loud, fix && \(fix\.fired \|\| fix\.already \|\| fix\.covered\)\)/.test(fsrc));
+  check('the message says the fix started only when the developer was really fired (fired, already open, or the failure cites its own request; not no-fire)', /faultText\(owner, fix && \(fix\.fired \|\| fix\.already \|\| fix\.covered\)\)/.test(fsrc));
   check('the fire goes through devFireTarget, only for a new request, once a day', /const ft = r\.created && fireOk \? devFireTarget\(env\) : null/.test(fsrc) && /fired_day/.test(fsrc));
   check('one open fault-alert request at a time', /x\.agent === 'fault-alert'/.test(fsrc) && /already: true/.test(fsrc));
 }
@@ -161,6 +161,35 @@ const NOW = '2026-10-31T14:50:00.000Z';
   const fsrc = fs.readFileSync(new URL('../../functions/_faults.js', import.meta.url), 'utf8');
   check('a failed audit_log read does not move the mark (no lost faults)', /if \(!r \|\| !r\.ok\) return/.test(fsrc) && /if \(sentOk\) await stateSet/.test(fsrc));
   check('no raw Hebrew in the server file', !/[א-ת]/.test(fsrc));
+}
+{ // 12/11/2026 (Michael: "a fault must be handled; only if it was not handled, alert"; DECISIONS 12/11/2026): the four cases
+  const fsrc = fs.readFileSync(new URL('../../functions/_faults.js', import.meta.url), 'utf8');
+  const at = '2026-11-12T05:59:26.848Z', now = '2026-11-12T06:00:00.000Z', prev = { at: '2026-11-12T05:45:00.000Z', sent: {} };
+  const one = (r) => faultItems(prev, [], [{ at, ok: false, line: 'x', ...r }], now).items[0];
+  // 1. every agent's failure goes to the developer first, no WhatsApp
+  check('case 1: map-lights (the 08:00 alert), validity, mail filing: to the developer, not at once (internal, not quiet)', [one({ agent: 'map-lights' }), one({ agent: 'routine-validity' }), one({ agent: 'routine-mail-filing' })].every((x) => x.internal === true && !x.quiet));
+  check('case 1: the WhatsApp gets only what is not internal, the dev request gets them all', /const owner = loud\.filter\(\(x\) => !x\.internal\)/.test(fsrc) && /faultText\(owner,/.test(fsrc) && /openFix\(env, url, k, loud,/.test(fsrc));
+  // 4. at once: the app, the assistant, a report that says it stops Michael
+  const app = faultItems(prev, [{ ts: at, title: JSON.stringify({ m: 'x is undefined', f: 'index.html', l: 1 }) }], [], now).items[0];
+  check('case 4: an error in the app and the assistant failing go at once; impact owner too', app && !app.internal && !one({ agent: 'routine-wa-assistant' }).internal && !one({ agent: 'wa-assistant', impact: 'internal' }).internal && !one({ agent: 'routine-validity', impact: 'owner' }).internal && faultInternal({ agent: 'x', impact: 'bad' }) === true);
+  const morning = faultItems(prev, [], [{ agent: 'routine-validity', at, ok: false, line: 'side write' }], now);
+  const later = faultItems(morning.fault, [], [{ agent: 'routine-validity', at: '2026-11-12T09:00:00.000Z', ok: false, line: 'real', impact: 'owner' }], '2026-11-12T09:05:00.000Z').items;
+  check('case 4: a held failure in the morning does not hide one that stops Michael later that day (own key)', morning.items[0].key === 'agenti:validity' && later.length === 1 && !later[0].internal, later);
+  // 2 and 3: held, then handled or said once after 3 hours
+  const T = (h) => new Date(Date.parse(now) + h * 3600e3).toISOString();
+  const held = [{ text: 'a', at: now, req: 'dev-1' }, { text: 'b', at: now, req: 'dev-2' }, { text: 'c', at: now, req: '' }];
+  const inbox = [{ id: 'dev-1', status: 'done' }, { id: 'dev-2', status: 'open' }];
+  const e1 = faultEscalate(held, inbox, T(2.9));
+  check('case 2: a request closed (fixed or not) drops its fault; nothing is said before 3 hours', e1.due.length === 0 && e1.keep.map((x) => x.text).join() === 'b,c');
+  const resent = faultEscalate([{ text: 'r', at: now, req: 'dev-9' }], [{ id: 'dev-9', status: 'done', note: DEV_RESENT_NOTE }], T(1));
+  check('case 3: a request closed by the evening resend is not handled: kept, then said at 3 hours from the fault', resent.due.length === 0 && resent.keep.length === 1 && faultEscalate(resent.keep, [{ id: 'dev-9', status: 'done', note: DEV_RESENT_NOTE }], T(3)).due.join() === 'r');
+  check('case 3: held faults point at the request opened now before the one the line cites; a failed at-once send still keeps held', /req: \(fix && fix\.id\) \|\| x\.ref \|\| ''/.test(fsrc) && /else if \(prev\) await stateSet\(env, \{ \[FAULT_KEY\]: JSON\.stringify\(\{ \.\.\.prev, held \}\) \}\)/.test(fsrc));
+  const e2 = faultEscalate(e1.keep, inbox, T(3));
+  check('case 3: still open after 3 hours, or with no request at all: said once, then not held', e2.due.join() === 'b,c' && e2.keep.length === 0 && FAULT_ESCALATE_MS === 3 * 3600e3);
+  check('case 3: the message says not fixed in 3 hours and lists the faults; no raw ids', /^\u26a0\ufe0f \u05ea\u05e7\u05dc\u05d4 \u05e9\u05dc\u05d0 \u05ea\u05d5\u05e7\u05e0\u05d4 \u05ea\u05d5\u05da 3 \u05e9\u05e2\u05d5\u05ea:\n- b\n- c\n/.test(faultEscalateText(['b', 'c'])));
+  check('case 3: a failed send or an unreadable inbox keeps them for the next tick; held only after the at-once part was sent', /if \(ok\) held = esc\.keep/.test(fsrc) && /if \(Array\.isArray\(inbox\)\)/.test(fsrc) && /if \(sentOk\) items\.filter\(\(x\) => !x\.quiet && x\.internal\)/.test(fsrc) && /fault\.held = held/.test(fsrc));
+  const rsrc = fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
+  check('case 2: a fault-alert request closed as fixed, or resent by the evening net, sends no WhatsApp (not fixed still does)', /quietFixed = !!\(closedReq && closedReq\.agent === 'fault-alert' && \(body\.fixed === true \|\| String\(body\.note \|\| ''\)\.trim\(\) === DEV_RESENT_NOTE\)\)/.test(rsrc) && fs.readFileSync(new URL('../../project-files/routine-dev-safety.md', import.meta.url), 'utf8').includes('"note":"' + 'הבקשה נשלחה שוב למפתח, כי לא טופלה תוך 3 שעות.' + '"') && /body\.op !== 'dev_done' \|\| quietFixed \? ''/.test(rsrc));
 }
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

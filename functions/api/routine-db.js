@@ -226,6 +226,9 @@ export function agentEntry(b, nowIso) {
   // passed on, or "the water report draft is ready". The morning WhatsApp update and the assistant's
   // snapshot carry it; the office is not on the server.
   if (t(b.for_michael)) e.for_michael = t(b.for_michael);
+  // impact (12/11/2026, DECISIONS "a fault goes to the developer first"): "owner" = this failure stops Michael, say it at
+  // once; "internal" (or nothing) = to the developer first, Michael only if not handled within 3 hours. Else dropped.
+  if (b.impact === 'internal' || b.impact === 'owner') e.impact = b.impact;
   // model (07/11/2026, Michael in the questionnaire: "do it: log the model of every answer", AI governance gap 4
   // "unlogged decisions"): the exact model id the run says it ran on, so a drop in the golden score or a strange answer
   // can be tied to a model change. Only a plain claude-* id is kept; anything else is dropped, not refused.
@@ -1985,6 +1988,7 @@ export function autoLinkRow(op, b, dayIL) {
 // Michael as "\u05ea\u05d5\u05e7\u05df: ...", also when the request was closed with nothing fixed (11/11/2026 07:50: "fixed: the weekly test
 // did not run", while it still had not run). The closer now says which: "fixed": true = fixed, false = not fixed (and the note
 // says who it waits for), and with no "fixed" the message makes no claim. Pure.
+export const DEV_RESENT_NOTE = '\u05d4\u05d1\u05e7\u05e9\u05d4 \u05e0\u05e9\u05dc\u05d7\u05d4 \u05e9\u05d5\u05d1 \u05dc\u05de\u05e4\u05ea\u05d7, \u05db\u05d9 \u05dc\u05d0 \u05d8\u05d5\u05e4\u05dc\u05d4 \u05ea\u05d5\u05da 3 \u05e9\u05e2\u05d5\u05ea.';
 export function devDoneLead(fixed) {
   return fixed === true ? '\u05ea\u05d5\u05e7\u05df: ' : fixed === false ? '\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df: ' : '\u05e2\u05d3\u05db\u05d5\u05df \u05de\u05d4\u05e4\u05d9\u05ea\u05d5\u05d7: ';
 }
@@ -2533,7 +2537,13 @@ async function routineDbHandle(context) {
         }
       } catch (x) { /* the request itself is written */ }
       let wa = null;
-      const waText = body.op !== 'dev_done' ? '' : String(body.note || '').trim() ? devDoneLead(body.fixed) + stripInternalIds(body.note) : promiseDoneText(closed, '', body.fixed);
+      // 12/11/2026 (Michael: "a fault must be handled; only if it was not handled, alert"): a fault-alert request closed as
+      // fixed sends no WhatsApp; its note is in the morning update (the agent_log line above). Not fixed still goes.
+      const closedReq = body.op === 'dev_done' ? r.list.find((x) => x && x.id === String(body.id || '')) : null;
+      // the evening safety net's resend of a fault-alert request (routine-dev-safety.md 3b) is quiet too: by then the watchdog
+      // already said it once at 3 hours (faultEscalate), and a second message on the same fault is what Michael asked to stop
+      const quietFixed = !!(closedReq && closedReq.agent === 'fault-alert' && (body.fixed === true || String(body.note || '').trim() === DEV_RESENT_NOTE));
+      const waText = body.op !== 'dev_done' || quietFixed ? '' : String(body.note || '').trim() ? devDoneLead(body.fixed) + stripInternalIds(body.note) : promiseDoneText(closed, '', body.fixed);
       if (waText && env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN) {
         try {
           const to = await ownerWa(env, url);
