@@ -29,7 +29,7 @@ permissions:
 
 jobs:
   changes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # 12/11/2026: ubuntu-latest moved to 26.04, Playwright 1.56.1 has no chromium there
     outputs:
       code: ${{ steps.diff.outputs.code }}
     steps:
@@ -50,7 +50,7 @@ jobs:
   # through env, never into the script text: PR text is untrusted input.
   lessons:
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # 12/11/2026: ubuntu-latest moved to 26.04, Playwright 1.56.1 has no chromium there
     steps:
       - uses: actions/checkout@v4
         with:
@@ -111,7 +111,7 @@ jobs:
   harness:
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # 12/11/2026: ubuntu-latest moved to 26.04, Playwright 1.56.1 has no chromium there
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -141,7 +141,7 @@ jobs:
   tests:
     needs: [changes, lessons, harness]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # 12/11/2026: ubuntu-latest moved to 26.04, Playwright 1.56.1 has no chromium there
     steps:
       - run: |
           echo "changes=${{ needs.changes.result }} code=${{ needs.changes.outputs.code }} lessons=${{ needs.lessons.result }} harness=${{ needs.harness.result }}"
