@@ -11,11 +11,46 @@
 import { stateGet, stateSet } from './_onedrive.js';
 import { ownerWa, sendToOwner, ownerWindowOpen } from './_wa.js';
 import { SB_LIVE, tmo } from './_shared.js';
-import { DEV_INBOX_KEY, devInboxAdd, devInboxFired, devFireTarget, devFireText, SECOND_MISS, EXPECTED_REFUSAL, SECOND_CHECK_AGENTS, WA_RULES_HASH } from './api/routine-db.js';
+import { DEV_INBOX_KEY, devInboxAdd, devInboxFired, devFireTarget, devFireText, SECOND_MISS, EXPECTED_REFUSAL, SECOND_CHECK_AGENTS, WA_RULES_HASH, DEV_RESENT_NOTE } from './api/routine-db.js';
 import { stateCas } from './_cas.js';
 
 // 'dev' is not here (security review 11/11/2026): other agents report under it, and the server's own dev_done line would hide its failure from the morning update
 export const FAULT_FIXERS = ['dev-fire', 'dev-safety', 'dev-runner'];
+// 12/11/2026 (Michael in the assistant chat, after a 08:00 alert on map-lights that had updated its lights and only failed a
+// side write: "a fault must be handled; only if it was not handled, alert", and in the questionnaire: "do it: after 3 hours
+// (recommended)", "do it: alert at once (recommended)" on a fault that stops him). DECISIONS 12/11/2026.
+//   1. every agent's failure goes to the developer first (the request opens as before), with no WhatsApp;
+//   2. fixed (dev_done fixed:true on a fault-alert request): no "fixed" WhatsApp, its line is in the morning update;
+//   3. not fixed within FAULT_ESCALATE_MS, or the developer wrote he cannot (dev_done fixed:false, "not fixed:"): one message;
+//   4. at once: an error in the app (client_error), the WhatsApp assistant failing (Michael got no answer), or a
+//      report that says impact "owner" (it stops Michael).
+export const FAULT_ESCALATE_MS = 3 * 3600e3, FAULT_HELD_MAX = 20;
+export function faultInternal(r) {
+  // the WhatsApp assistant's failure means Michael got no answer: always at once, whatever it says (security review 12/11/2026)
+  if (SECOND_CHECK_AGENTS.indexOf(String((r && r.agent) || '')) >= 0) return false;
+  return String((r && r.impact) || '') !== 'owner';
+}
+// Pure: the held faults (not sent at once) against the inbox. A request closed = handled (fixed: nothing to say; not
+// fixed: dev_done already told Michael "not fixed:"). Still open, or no request at all, FAULT_ESCALATE_MS after it was
+// held = due: one message now. Returns {due: [text], keep: [held]}.
+export function faultEscalate(held, inbox, nowIso) {
+  const now = Date.parse(nowIso), byId = {};
+  (Array.isArray(inbox) ? inbox : []).forEach((x) => { if (x && x.id) byId[x.id] = x; });
+  const due = [], keep = [];
+  (Array.isArray(held) ? held : []).forEach((x) => {
+    if (!x || !x.text || !x.at) return;
+    const q = x.req ? byId[x.req] : null;
+    // closed by the evening resend (routine-dev-safety.md 3b) is not handled: counted from the fault's own time (security review 12/11/2026)
+    if (q && q.status === 'done' && String(q.note || '').trim() !== DEV_RESENT_NOTE) return;
+    if (now - Date.parse(x.at) >= FAULT_ESCALATE_MS) due.push(x.text); else keep.push(x);
+  });
+  return { due, keep: keep.slice(-FAULT_HELD_MAX) };
+}
+export function faultEscalateText(due) {
+  const lines = due.slice(0, FAULT_LINES).map((t) => '- ' + t);
+  if (due.length > FAULT_LINES) lines.push('- \u05d5\u05e2\u05d5\u05d3 ' + (due.length - FAULT_LINES));
+  return '\u26a0\ufe0f \u05ea\u05e7\u05dc\u05d4 \u05e9\u05dc\u05d0 \u05ea\u05d5\u05e7\u05e0\u05d4 \u05ea\u05d5\u05da 3 \u05e9\u05e2\u05d5\u05ea:\n' + lines.join('\n') + '\n\u05d4\u05de\u05e4\u05ea\u05d7 \u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05e1\u05d2\u05e8 \u05d0\u05d5\u05ea\u05d4, \u05d5\u05dc\u05d0 \u05db\u05ea\u05d1 \u05e9\u05e6\u05e8\u05d9\u05da \u05de\u05de\u05da \u05de\u05e9\u05d4\u05d5. \u05d3\u05d7\u05d5\u05e3? \u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05db\u05d0\u05df.';
+}
 export const FAULT_KEY = 'fault_alert', FAULT_LINES = 5, FAULT_FIRST_MS = 20 * 60e3;
 const dayIL = (iso) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(iso));
 const cut = (s, n) => { s = String(s || '').replace(/[a-z][a-z0-9+.-]*:\/\/\S+|www\.\S+/gi, '[link]').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 3) + '...' : s; };
@@ -30,15 +65,16 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
   const sent = {};
   Object.entries((prev && prev.sent) || {}).forEach(([k, d]) => { if (d === today) sent[k] = d; });
   const items = [];
-  const add = (key, text, dev, agent, ref, quiet, at) => {
+  const add = (key, text, dev, agent, ref, quiet, at, internal) => {
     if (sent[key]) return;
     const had = items.find((x) => x.key === key);
     // a second failure of the same agent with no request of its own: the item is no longer covered by one
     // and a real failure beside a quiet one makes the item loud
-    if (had) { if (had.ref && had.ref !== ref) delete had.ref; if (!quiet) delete had.quiet; return; }
+    if (had) { if (had.ref && had.ref !== ref) delete had.ref; if (!quiet) delete had.quiet; if (!internal) delete had.internal; return; }
     const it = agent ? { key, text, dev, agent } : { key, text, dev };
     if (ref) { it.ref = ref; if (at) it.ref_at = String(at); }
     if (quiet) it.quiet = true;
+    if (internal) it.internal = true;
     items.push(it);
   };
   (errRows || []).forEach((r) => {
@@ -66,7 +102,10 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
     // second alert, and no second request that would fire it on its own failure. It tells Michael itself what it waits
     // for (routine-dev-fire.md step 6), and the line stays in agent_log and in the morning update's failed agents.
     const quiet = FAULT_FIXERS.indexOf(agentKey(r.agent)) >= 0 || (SECOND_CHECK_AGENTS.indexOf(String(r.agent || '')) >= 0 && (ln.indexOf(SECOND_MISS) === 0 || ln.indexOf(EXPECTED_REFUSAL) === 0));
-    add((quiet ? 'agentq:' : 'agent:') + agentKey(r.agent), '\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc, ' + agentKey(r.agent) + ': ' + cut(r.line, 120), 'AGENTDEV', agentSafe(r.agent), m ? m[0] : '', quiet, r.at);
+    // its own key (security review 12/11/2026): an internal failure in the morning marked "agent:x" as said today, and a
+    // real failure of the same agent later that day was then dropped, with no WhatsApp and no request
+    const internal = !quiet && faultInternal(r);
+    add((quiet ? 'agentq:' : internal ? 'agenti:' : 'agent:') + agentKey(r.agent), '\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc, ' + agentKey(r.agent) + ': ' + cut(r.line, 120), 'AGENTDEV', agentSafe(r.agent), m ? m[0] : '', quiet, r.at, internal);
   });
   items.forEach((x) => { sent[x.key] = today; });
   return { items, fault: { at: nowIso, sent } };
@@ -231,14 +270,37 @@ export async function runFaultAlert(env, nowIso) {
     const loud = items.filter((x) => !x.quiet);
     // a quiet item (expected: second checker missing, deliberate refusal) opens no developer request (07/11/2026)
     if (loud.length) { try { fix = await openFix(env, url, k, loud, nowIso, !(prev && prev.fired_day === dayIL(nowIso))); } catch (e) { fix = { ok: false }; } }
-    if (loud.length) {
+    // an internal failure (12/11/2026, faultInternal) opens the request above and stays out of Michael's WhatsApp
+    const owner = loud.filter((x) => !x.internal);
+    if (owner.length) {
       const to = await ownerWa(env, url);
-      const s = to ? await sendToOwner(env, to, faultText(loud, fix && (fix.fired || fix.already || fix.covered)), { kind: loud.some((x) => /^agentq?:wa-assistant$/.test(x.key)) ? 'watchdog' : 'fault', windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
+      const s = to ? await sendToOwner(env, to, faultText(owner, fix && (fix.fired || fix.already || fix.covered)), { kind: owner.some((x) => /^agentq?:wa-assistant$/.test(x.key)) ? 'watchdog' : 'fault', windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
       sentOk = !!(s && s.ok);
     }
   }
+  // 12/11/2026: what was not sent at once is held with its request, and said once if still not handled after 3 hours
+  let held = Array.isArray(prev && prev.held) ? prev.held.slice() : [];
+  if (sentOk) items.filter((x) => !x.quiet && x.internal).forEach((x) => held.push({ text: x.text, at: nowIso, req: (fix && fix.id) || x.ref || '' }));
+  if (held.length) {
+    let inbox = null; try { const ib = await stateGet(env, [DEV_INBOX_KEY], true); inbox = JSON.parse((ib[DEV_INBOX_KEY] && ib[DEV_INBOX_KEY].value) || '[]'); } catch (e) { inbox = null; }
+    // an unreadable inbox is not "nothing handled": keep them all for the next tick
+    if (Array.isArray(inbox)) {
+      const esc = faultEscalate(held, inbox, nowIso);
+      let ok = true;
+      if (esc.due.length) {
+        const to = await ownerWa(env, url);
+        const s = to ? await sendToOwner(env, to, faultEscalateText(esc.due), { kind: 'fault', windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
+        ok = !!(s && s.ok);
+      }
+      if (ok) held = esc.keep;
+    }
+  }
+  fault.held = held;
   // not sent: the mark does not move, so the same faults are tried again next tick
   if (fix && fix.fired) fault.fired_day = dayIL(nowIso); else if (prev && prev.fired_day) fault.fired_day = prev.fired_day;
   if (sentOk) await stateSet(env, { [FAULT_KEY]: JSON.stringify(fault) });
-  return { ok: true, items: items.length, sent: items.length ? sentOk : false, fix };
+  // the at-once send failed: the mark stays (the same faults are tried again), but what the 3-hour check did is kept, so a
+  // message it sent is not sent again every tick (security review 12/11/2026)
+  else if (prev) await stateSet(env, { [FAULT_KEY]: JSON.stringify({ ...prev, held }) });
+  return { ok: true, items: items.length, sent: items.length ? sentOk : false, fix, held: held.length };
 }

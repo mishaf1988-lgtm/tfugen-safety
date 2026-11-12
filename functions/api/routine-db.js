@@ -226,9 +226,18 @@ export function agentEntry(b, nowIso) {
   // passed on, or "the water report draft is ready". The morning WhatsApp update and the assistant's
   // snapshot carry it; the office is not on the server.
   if (t(b.for_michael)) e.for_michael = t(b.for_michael);
+  // impact (12/11/2026, DECISIONS "a fault goes to the developer first"): "owner" = this failure stops Michael, say it at
+  // once; "internal" (or nothing) = to the developer first, Michael only if not handled within 3 hours. Else dropped.
+  if (b.impact === 'internal' || b.impact === 'owner') e.impact = b.impact;
   // model (07/11/2026, Michael in the questionnaire: "do it: log the model of every answer", AI governance gap 4
   // "unlogged decisions"): the exact model id the run says it ran on, so a drop in the golden score or a strange answer
   // can be tied to a model change. Only a plain claude-* id is kept; anything else is dropped, not refused.
+  // todo / done / left (12/11/2026, Michael in the assistant chat's questionnaire: "do it: a completeness check at the end of
+  // every job (recommended)"; the stack reports of 11/11 were filed 7 of 10): how much there was to do, how much was done,
+  // how much is left, and left_what = the unit left half done (a mail, an accident, a document). Counts, not only words in
+  // the line, so partial_check can find a unit left half done for more than one run. Anything else is dropped.
+  ['todo', 'done', 'left'].forEach((k) => { const n = b[k]; if (Number.isInteger(n) && n >= 0 && n <= 100000) e[k] = n; });
+  if (t(b.left_what)) e.left_what = t(b.left_what);
   const m = String(b.model || '').trim().toLowerCase();
   if (/^claude-[a-z0-9.\[\]-]{3,40}$/.test(m)) e.model = m;
   return e;
@@ -1979,8 +1988,25 @@ export function autoLinkRow(op, b, dayIL) {
 // Michael as "\u05ea\u05d5\u05e7\u05df: ...", also when the request was closed with nothing fixed (11/11/2026 07:50: "fixed: the weekly test
 // did not run", while it still had not run). The closer now says which: "fixed": true = fixed, false = not fixed (and the note
 // says who it waits for), and with no "fixed" the message makes no claim. Pure.
+export const DEV_RESENT_NOTE = '\u05d4\u05d1\u05e7\u05e9\u05d4 \u05e0\u05e9\u05dc\u05d7\u05d4 \u05e9\u05d5\u05d1 \u05dc\u05de\u05e4\u05ea\u05d7, \u05db\u05d9 \u05dc\u05d0 \u05d8\u05d5\u05e4\u05dc\u05d4 \u05ea\u05d5\u05da 3 \u05e9\u05e2\u05d5\u05ea.';
 export function devDoneLead(fixed) {
   return fixed === true ? '\u05ea\u05d5\u05e7\u05df: ' : fixed === false ? '\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df: ' : '\u05e2\u05d3\u05db\u05d5\u05df \u05de\u05d4\u05e4\u05d9\u05ea\u05d5\u05d7: ';
+}
+// partialCheck (12/11/2026, completeness check): an agent whose last two reports both say something is left (left > 0 or
+// left_what), so the same work stayed half done for more than one run. Pure: log = agent_log rows, oldest first.
+export function partialCheck(log) {
+  const last = Object.create(null); // an agent named "constructor" is not Object (security review 12/11/2026)
+  (Array.isArray(log) ? log : []).forEach((x) => {
+    if (!x || !x.agent || x.left === undefined && !x.left_what) { if (x && x.agent && last[x.agent]) last[x.agent].push(null); return; }
+    (last[x.agent] = last[x.agent] || []).push(x);
+  });
+  const out = [];
+  Object.keys(last).forEach((a) => {
+    const l = last[a], cur = l[l.length - 1], prev = l[l.length - 2];
+    const open = (x) => x && ((x.left || 0) > 0 || !!x.left_what);
+    if (open(cur) && open(prev)) out.push({ agent: a, at: cur.at, left: cur.left, left_what: cur.left_what, prev_at: prev.at, prev_left_what: prev.left_what });
+  });
+  return out;
 }
 export function cardQuery(q) {
   const s = String(q || '').replace(/[%*,()"'\\]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -2511,7 +2537,13 @@ async function routineDbHandle(context) {
         }
       } catch (x) { /* the request itself is written */ }
       let wa = null;
-      const waText = body.op !== 'dev_done' ? '' : String(body.note || '').trim() ? devDoneLead(body.fixed) + stripInternalIds(body.note) : promiseDoneText(closed, '', body.fixed);
+      // 12/11/2026 (Michael: "a fault must be handled; only if it was not handled, alert"): a fault-alert request closed as
+      // fixed sends no WhatsApp; its note is in the morning update (the agent_log line above). Not fixed still goes.
+      const closedReq = body.op === 'dev_done' ? r.list.find((x) => x && x.id === String(body.id || '')) : null;
+      // the evening safety net's resend of a fault-alert request (routine-dev-safety.md 3b) is quiet too: by then the watchdog
+      // already said it once at 3 hours (faultEscalate), and a second message on the same fault is what Michael asked to stop
+      const quietFixed = !!(closedReq && closedReq.agent === 'fault-alert' && (body.fixed === true || String(body.note || '').trim() === DEV_RESENT_NOTE));
+      const waText = body.op !== 'dev_done' || quietFixed ? '' : String(body.note || '').trim() ? devDoneLead(body.fixed) + stripInternalIds(body.note) : promiseDoneText(closed, '', body.fixed);
       if (waText && env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN) {
         try {
           const to = await ownerWa(env, url);
@@ -2904,6 +2936,13 @@ async function routineDbHandle(context) {
         return { domain: f.domain, path: f.path, status: r ? r.status : 0 };
       }));
       return jsonResp(formsVerdict(res), 200, {});
+    }
+    if (body.op === 'partial_check') {
+      for (const k of Object.keys(body)) if (['op', 'agent'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const rows = await stateRead(['agent_log']).catch(() => null);
+      if (!rows) return jsonResp({ ok: false, error: 'read failed' }, 200, {});
+      let log = []; try { log = JSON.parse((rows[0] && rows[0].value) || '[]'); } catch (x) { log = []; }
+      return jsonResp({ ok: true, partial: partialCheck(log) }, 200, {});
     }
     if (body.op === 'resp_check') {
       for (const k of Object.keys(body)) if (['op', 'agent'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
