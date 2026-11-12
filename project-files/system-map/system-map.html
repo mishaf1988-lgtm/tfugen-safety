@@ -611,8 +611,12 @@ renderer.setAnimationLoop((now) => {
   }
   renderAcct(null, null);
   const pz = document.getElementById('pause');
-  db.doc('live/pause').onSnapshot((snap) => {
-    const d = snap.exists ? snap.data() : null; pz.className = '';
+  // 12/11/2026 (fault map-lights): the Routine is approved to write live/status only, so live/pause was refused every run.
+  // The bar now comes from live/status.pause (same fields); the old live/pause doc is only a fallback when status has none.
+  let pzOld = null, pzNew = null;
+  function renderPause() {
+    const d = pzNew || pzOld;
+    pz.className = '';
     if (!d) { pz.hidden = true; renderAcct(null, null); return; }
     const until = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d.until || '');
     const paused = d.paused && until && Date.parse(d.until + 'T00:00:00+02:00') > Date.now();
@@ -621,9 +625,11 @@ renderer.setAnimationLoop((now) => {
     // the assistant's account (29/10/2026, Michael: "a switch button too"): the page cannot call the server (CSP), so a button
     // opens WhatsApp to the assistant with the switch phrase typed in; one tap on send and the server switches, with no AI.
     renderAcct(d.assistant, d.assistant_at);
-  }, () => {});
+  }
+  db.doc('live/pause').onSnapshot((snap) => { pzOld = snap.exists ? snap.data() : null; renderPause(); }, () => {});
   db.doc('live/status').onSnapshot((snap) => {
     LIVE = snap.exists ? snap.data() : null; statusCache.clear(); paintZones();
+    pzNew = LIVE && LIVE.pause && typeof LIVE.pause === 'object' ? LIVE.pause : null; renderPause();
     if (cur === '3d') { if (open) { const o = open; openZone(o); } else if (!traceTimer) overview(); } else renderCur();
   }, () => {});
 })();
