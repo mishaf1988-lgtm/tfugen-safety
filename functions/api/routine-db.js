@@ -229,6 +229,12 @@ export function agentEntry(b, nowIso) {
   // model (07/11/2026, Michael in the questionnaire: "do it: log the model of every answer", AI governance gap 4
   // "unlogged decisions"): the exact model id the run says it ran on, so a drop in the golden score or a strange answer
   // can be tied to a model change. Only a plain claude-* id is kept; anything else is dropped, not refused.
+  // todo / done / left (12/11/2026, Michael in the assistant chat's questionnaire: "do it: a completeness check at the end of
+  // every job (recommended)"; the stack reports of 11/11 were filed 7 of 10): how much there was to do, how much was done,
+  // how much is left, and left_what = the unit left half done (a mail, an accident, a document). Counts, not only words in
+  // the line, so partial_check can find a unit left half done for more than one run. Anything else is dropped.
+  ['todo', 'done', 'left'].forEach((k) => { const n = b[k]; if (Number.isInteger(n) && n >= 0 && n <= 100000) e[k] = n; });
+  if (t(b.left_what)) e.left_what = t(b.left_what);
   const m = String(b.model || '').trim().toLowerCase();
   if (/^claude-[a-z0-9.\[\]-]{3,40}$/.test(m)) e.model = m;
   return e;
@@ -1982,6 +1988,22 @@ export function autoLinkRow(op, b, dayIL) {
 export function devDoneLead(fixed) {
   return fixed === true ? '\u05ea\u05d5\u05e7\u05df: ' : fixed === false ? '\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df: ' : '\u05e2\u05d3\u05db\u05d5\u05df \u05de\u05d4\u05e4\u05d9\u05ea\u05d5\u05d7: ';
 }
+// partialCheck (12/11/2026, completeness check): an agent whose last two reports both say something is left (left > 0 or
+// left_what), so the same work stayed half done for more than one run. Pure: log = agent_log rows, oldest first.
+export function partialCheck(log) {
+  const last = {};
+  (Array.isArray(log) ? log : []).forEach((x) => {
+    if (!x || !x.agent || x.left === undefined && !x.left_what) { if (x && x.agent && last[x.agent]) last[x.agent].push(null); return; }
+    (last[x.agent] = last[x.agent] || []).push(x);
+  });
+  const out = [];
+  Object.keys(last).forEach((a) => {
+    const l = last[a], cur = l[l.length - 1], prev = l[l.length - 2];
+    const open = (x) => x && ((x.left || 0) > 0 || !!x.left_what);
+    if (open(cur) && open(prev)) out.push({ agent: a, at: cur.at, left: cur.left, left_what: cur.left_what, prev_at: prev.at, prev_left_what: prev.left_what });
+  });
+  return out;
+}
 export function cardQuery(q) {
   const s = String(q || '').replace(/[%*,()"'\\]/g, ' ').replace(/\s+/g, ' ').trim();
   return s.length >= 2 && s.length <= 60 ? s : null;
@@ -2904,6 +2926,13 @@ async function routineDbHandle(context) {
         return { domain: f.domain, path: f.path, status: r ? r.status : 0 };
       }));
       return jsonResp(formsVerdict(res), 200, {});
+    }
+    if (body.op === 'partial_check') {
+      for (const k of Object.keys(body)) if (['op', 'agent'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const rows = await stateRead(['agent_log']).catch(() => null);
+      if (!rows) return jsonResp({ ok: false, error: 'read failed' }, 200, {});
+      let log = []; try { log = JSON.parse((rows[0] && rows[0].value) || '[]'); } catch (x) { log = []; }
+      return jsonResp({ ok: true, partial: partialCheck(log) }, 200, {});
     }
     if (body.op === 'resp_check') {
       for (const k of Object.keys(body)) if (['op', 'agent'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});

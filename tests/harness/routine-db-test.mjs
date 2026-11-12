@@ -460,6 +460,19 @@ const callIn = async (body) => {
     const ent = (await call({ op: 'agent_report', agent: 'routine-wa-assistant', ok: true, line: 'x', model: m })).json.entry;
     check('model "' + m + '": ' + (want ? 'kept as ' + want : 'dropped, the report still written'), ent && ent.model === want, ent);
   }
+  { // 12/11/2026: completeness counts on the report, and partial_check
+    const { partialCheck } = await import('./_build/routine-db.mjs');
+    const ent = (await call({ op: 'agent_report', agent: 'routine-mail-filing', ok: true, line: 'x', todo: 40, done: 12, left: 28, left_what: 'stack reports mail 11/11: 3 of 10 left' })).json.entry;
+    check('counts: todo, done, left and left_what are kept', ent.todo === 40 && ent.done === 12 && ent.left === 28 && /stack reports/.test(ent.left_what), ent);
+    const bad = (await call({ op: 'agent_report', agent: 'routine-mail-filing', ok: true, line: 'x', todo: -1, done: 1.5, left: '3' })).json.entry;
+    check('counts: a negative, a fraction or a string is dropped, the report still written', bad && bad.todo === undefined && bad.done === undefined && bad.left === undefined, bad);
+    const L = (agent, left, w, at) => ({ agent, at, ok: true, line: 'x', ...(left === null ? {} : { left }), ...(w ? { left_what: w } : {}) });
+    const p = partialCheck([L('a', 3, 'mail A', '1'), L('b', 2, '', '1'), L('a', 1, 'mail A', '2'), L('b', 0, '', '2'), L('c', 5, '', '1'), L('c', null, '', '2'), L('d', 4, '', '1')]);
+    check('partial_check: left twice in a row = found (a); done in between (b), a report with no counts after (c), one report only (d) = not', p.length === 1 && p[0].agent === 'a' && p[0].left_what === 'mail A' && p[0].prev_at === '1', p);
+    check('partial_check: a left_what with left 0 still counts as half done', partialCheck([L('e', 0, 'mail B', '1'), L('e', 0, 'mail B', '2')]).length === 1);
+    const pc = await call({ op: 'partial_check', agent: 'routine-quality' });
+    check('partial_check op: reads agent_log and answers; another field is refused', pc.json.ok === true && Array.isArray(pc.json.partial) && (await call({ op: 'partial_check', agent: 'routine-quality', table: 'x' })).status === 400, pc.json);
+  }
   state.agent_log = JSON.stringify(JSON.parse(state.agent_log).slice(0, 2));
   check('ok that is not exactly true counts as a failure', (await call({ op: 'agent_report', agent: 'retro', ok: 'yes', line: 'x' })).json.entry.ok === false);
   // 21/10/2026: {status, did} instead of {ok, line} left empty ok:false rows that read as failed runs.
