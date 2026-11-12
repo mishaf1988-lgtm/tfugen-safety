@@ -30,6 +30,14 @@ out = als.fmt({"at": "2026-11-11T10:00:00Z", "agent": "x", "ok": True,
                "learned": "write to yossi.cohen@tapugan.co.il"})
 check("a personal address and two mobile numbers are replaced in the line", "@" not in out.split("|")[2] and "052-1234567" not in out and "765 4321" not in out, out)
 check("an address in the learned part is replaced too", "@" not in out.split("|")[3], out)
+for label, raw in [("a dotted mobile 054.794.0073", "054.794.0073"), ("a mobile with brackets (054)7940073", "(054)7940073"), ("972(0)547940073", "972(0)547940073"),
+                   ("a landline 03-1234567", "03-1234567"), ("a landline 09 7654321", "09 7654321"), ("a nine digit ID 032145678", "032145678"),
+                   ("an address with a Hebrew local part", "\u05d3\u05df@acme.co.il")]:
+    o = als.fmt({"at": "2026-11-11T10:00:00Z", "agent": "x", "ok": True, "line": "call " + raw + " now", "learned": "none"}).split("|")[2]
+    check(label + " is replaced", raw not in o and "<" in o, o)
+check("a PR number, a date and a size stay", als.fmt({"at": "2026-11-11T10:00:00Z", "agent": "x", "ok": True, "line": "PR 2669 merged 11/11/2026, 4096 bytes, 222 passed", "learned": "none"}).split("|")[2].strip() == "PR 2669 merged 11/11/2026, 4096 bytes, 222 passed")
+a = "run finished, 3 findings fixed in the report"
+check("a failed report is not the same key as a success with the same opening", als.key("11/11/2026", "x", a) != als.key("11/11/2026", "x", als.FAIL + a))
 check("an ordinary line stays as it was", als.fmt({"at": "2026-11-11T10:00:00Z", "agent": "y", "ok": True, "line": "3 findings fixed, PR 2669", "learned": "none"}).split("|")[2].strip() == "3 findings fixed, PR 2669")
 check("a report that did not succeed starts with the failure mark", als.fmt({"at": "2026-11-11T10:00:00Z", "agent": "z", "ok": False, "line": "no key"}).split("|")[2].strip().startswith(als.FAIL.strip()))
 

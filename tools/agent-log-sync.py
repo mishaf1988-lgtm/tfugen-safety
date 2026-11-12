@@ -58,16 +58,22 @@ def il_day(iso):
 
 # The file is in a public repo and pii-md-test fails the PR on a mobile number or a personal address (retro 12/11/2026:
 # the same line would be written again on every run), so they are replaced before the line is written.
-MOBILE = re.compile(r'(?<![\d.])(?:\+?972[- ]?|0)5\d(?:[- ]?\d){7}(?![\d])')
-EMAIL = re.compile(r'[A-Za-z0-9][A-Za-z0-9._%+-]*@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}')
+MOBILE = re.compile(r'(?<![\d.])(?:\+?972[-. ]?\(?0?\)?[-. ]?|0)\(?5\d\)?(?:[-. ]?\d){7}(?![\d])')
+LANDLINE = re.compile(r'(?<![\d.])(?:\+?972[-. ]?|0)[23489][-. ]?\d{3}[-. ]?\d{4}(?![\d])')
+NINE = re.compile(r'(?<![\d])\d{9}(?![\d])')  # an Israeli ID is nine digits
+EMAIL = re.compile(r'[\w][\w._%+-]*@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}')  # \w: a Hebrew local part too
 
 
 def scrub(t):
-    return MOBILE.sub('<\u05e0\u05d9\u05d9\u05d3>', EMAIL.sub('<\u05db\u05ea\u05d5\u05d1\u05ea>', t))
+    t = EMAIL.sub('<\u05db\u05ea\u05d5\u05d1\u05ea>', t)
+    t = MOBILE.sub('<\u05e0\u05d9\u05d9\u05d3>', t)
+    t = LANDLINE.sub('<\u05d8\u05dc\u05e4\u05d5\u05df>', t)
+    return NINE.sub('<\u05de\u05e1\u05e4\u05e8>', t)
 
 
 def key(day, agent, text):
-    return (day, agent.strip(), clean(text).replace(FAIL, '')[:60])
+    # the failure mark is part of the key (retro 12/11/2026): a failed report is not swallowed by a success with the same opening
+    return (day, agent.strip(), FAIL in clean(text), clean(text).replace(FAIL, '')[:60])
 
 
 def fmt(e):
