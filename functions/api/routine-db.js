@@ -557,9 +557,13 @@ export function claimSession(x) { const v = String(x || '').trim().replace(/^cse
 // One key per BACKLOG number (13/10/2026, lesson 10): "backlog-13.21b" and "13.21" never collided,
 // and the same part was built twice (#1479, #1480). A prefix and a part suffix are dropped.
 export function claimItem(x) { const v = String(x || '').trim().toLowerCase().replace(/^backlog[-_.]?/, '').replace(/^(\d+(?:\.\d+)+)(?:[a-z]|[-_][a-z0-9._-]*)$/, '$1'); return /^[a-z0-9][a-z0-9._-]{1,59}$/.test(v) ? v : null; }
+// status-md (12/11/2026, Michael in the questionnaire: "do it: a queue for the tracking file"): the queue for STATUS.md.
+// Held for 20 minutes (a PR's CI and merge), and by one branch at a time: the note is the branch, and the same session
+// with another branch is refused too (several PRs of one session conflicted on 11/11/2026). tools/status-queue.py.
+export const CLAIM_SHORT = { 'status-md': 20 * 60e3 };
 export function claimsFresh(map, nowMs) {
   const out = {};
-  Object.keys(map && typeof map === 'object' ? map : {}).forEach((k) => { const c = map[k]; if (c && c.session && nowMs - Date.parse(c.at) <= CLAIM_HOURS * 3600e3) out[k] = c; });
+  Object.keys(map && typeof map === 'object' ? map : {}).forEach((k) => { const c = map[k]; if (c && c.session && nowMs - Date.parse(c.at) <= (Object.hasOwn(CLAIM_SHORT, k) ? CLAIM_SHORT[k] : CLAIM_HOURS * 3600e3)) out[k] = c; });
   return out;
 }
 // The new map and the answer. A fresh claim of another session is not touched.
@@ -568,6 +572,7 @@ export function claimApply(map, b, nowIso) {
   if (!item || !session) return { error: 'bad item or session' };
   const m = claimsFresh(map, Date.parse(nowIso)), cur = m[item];
   if (cur && cur.session !== session) return { map: null, ans: { mine: false, item, holder: cur } };
+  if (cur && Object.hasOwn(CLAIM_SHORT, item) && b.release !== true && cur.note !== String(b.note || '').replace(/\s+/g, ' ').trim().slice(0, 120)) return { map: null, ans: { mine: false, item, holder: cur } };
   if (b.release === true) { delete m[item]; return { map: m, ans: { mine: false, item, released: !!cur } }; }
   m[item] = { session, at: nowIso, note: String(b.note || '').replace(/\s+/g, ' ').trim().slice(0, 120) };
   // files (11/11/2026, Michael: "do it: coordination between the agents that fix"): the retro and the main chat fixed the

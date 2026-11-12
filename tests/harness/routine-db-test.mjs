@@ -800,6 +800,16 @@ const callIn = async (body) => {
     { // 11/11/2026: files on a claim, and the overlap warning (two agents fixed one bug under two names)
       const { claimFiles } = await import('./_build/routine-db.mjs');
       const t = new Date().toISOString();
+    { // 12/11/2026 (Michael: "do it: a queue for the tracking file"): status-md, one branch at a time, 20 minutes
+      const t0 = '2026-11-12T10:00:00.000Z', S1 = 'session_aaaaaaaaaaaa', S2 = 'session_bbbbbbbbbbbb';
+      const q1 = claimApply({}, { item: 'status-md', session: S1, note: 'routine/a' }, t0);
+      const same = claimApply(q1.map, { item: 'status-md', session: S1, note: 'routine/a' }, '2026-11-12T10:05:00.000Z');
+      const other = claimApply(q1.map, { item: 'status-md', session: S1, note: 'routine/b' }, '2026-11-12T10:05:00.000Z');
+      const sess2 = claimApply(q1.map, { item: 'status-md', session: S2, note: 'routine/c' }, '2026-11-12T10:05:00.000Z');
+      const late = claimApply(q1.map, { item: 'status-md', session: S2, note: 'routine/c' }, '2026-11-12T10:21:00.000Z');
+      const rel = claimApply(q1.map, { item: 'status-md', session: S1, release: true }, '2026-11-12T10:05:00.000Z');
+      check('status-md: the same branch renews; another branch of the same session and another session wait', q1.ans.mine && same.ans.mine && other.ans.mine === false && other.ans.holder.note === 'routine/a' && sess2.ans.mine === false);
+      check('status-md: free after 20 minutes, and after a release by its holder', late.ans.mine === true && rel.ans.released === true && !rel.map['status-md']); }
       const r1 = claimApply({}, { item: 'retro-valve', session: A, note: 'second valve resets', files: ['functions/api/routine-db.js', 'tests/harness/routine-db-test.mjs'] }, t);
       const r2 = claimApply(r1.map, { item: 'second-gate-fix', session: B, note: 'valve race', files: 'functions/api/routine-db.js,functions/_wa.js' }, t);
       check('claim files: another session on the same file is named in overlap, with its note and only the shared file', r1.ans.mine && !r1.ans.overlap && r2.ans.mine === true && r2.ans.overlap.length === 1 && r2.ans.overlap[0].item === 'retro-valve' && r2.ans.overlap[0].note === 'second valve resets' && r2.ans.overlap[0].files.join() === 'functions/api/routine-db.js', r2.ans);

@@ -25,6 +25,8 @@ sys.stdin.reconfigure(encoding="utf-8")  # Claude Code sends UTF-8; Windows read
 LESSONS = ".claude/skills/tfugen-lessons/SKILL.md"
 TEST = "tests/harness/lessons-format-test.py"
 # (does a changed file need it, the test, the lesson it came from)
+# the tracking files every PR appends to at the same place (the same list as in tools/status-queue.py)
+QUEUED = ("STATUS.md", "DECISIONS.md", "project-files/domains/decisions-map.tsv")
 RULES = [
     (lambda f: f == LESSONS, TEST, "\u05dc\u05e7\u05d7 41: \u05e7\u05d5\u05d1\u05e5 \u05d4\u05dc\u05e7\u05d7\u05d9\u05dd \u05d4\u05e9\u05ea\u05e0\u05d4"),
     (lambda f: f.startswith("functions/"), "tests/harness/graph-writes-test.py", "14/10/2026: \u05e7\u05d5\u05d3 \u05e9\u05e8\u05ea \u05d4\u05e9\u05ea\u05e0\u05d4"),
@@ -37,6 +39,9 @@ RULES = [
     (lambda f: f.startswith("functions/") and f.endswith(".js"), "tests/harness/rule1-hebrew-test.js", "21/10/2026: \u05e2\u05d1\u05e8\u05d9\u05ea \u05d2\u05d5\u05dc\u05de\u05d9\u05ea \u05d1\u05e7\u05d5\u05d3 \u05e9\u05e8\u05ea (\u05d7\u05d5\u05e7 1)"),
     # 07/11/2026 (Michael: "\u05e9\u05d3\u05e8\u05d2"): a new decision without its decisions-map.tsv line went red in CI on
     # domains-test.py (#2617). Under a second, so every DECISIONS.md change runs it before the push.
+    # 12/11/2026 (Michael in the questionnaire: "\u05d1\u05e6\u05e2: \u05ea\u05d5\u05e8 \u05dc\u05e7\u05d5\u05d1\u05e5 \u05d4\u05de\u05e2\u05e7\u05d1"): PRs that each add a line to STATUS.md conflicted on GitHub
+    # (3 times on 11/11/2026). The queue: main's STATUS.md merged in first, and one branch at a time (tools/status-queue.py).
+    (lambda f: f in QUEUED, "tools/status-queue.py", "12/11/2026: \u05ea\u05d5\u05e8 \u05dc\u05e7\u05d1\u05e6\u05d9 \u05d4\u05de\u05e2\u05e7\u05d1"),
     (lambda f: f in ("DECISIONS.md", "project-files/domains/decisions-map.tsv"), "tests/harness/domains-test.py", "07/11/2026: \u05d4\u05d7\u05dc\u05d8\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05d1\u05dc\u05d9 \u05e9\u05d5\u05e8\u05d4 \u05d1\u05de\u05e4\u05ea \u05d4\u05d4\u05d7\u05dc\u05d8\u05d5\u05ea"),
 ]
 
