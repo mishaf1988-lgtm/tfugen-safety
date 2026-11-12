@@ -563,7 +563,7 @@ export function claimItem(x) { const v = String(x || '').trim().toLowerCase().re
 export const CLAIM_SHORT = { 'status-md': 20 * 60e3 };
 export function claimsFresh(map, nowMs) {
   const out = {};
-  Object.keys(map && typeof map === 'object' ? map : {}).forEach((k) => { const c = map[k]; if (c && c.session && nowMs - Date.parse(c.at) <= (CLAIM_SHORT[k] || CLAIM_HOURS * 3600e3)) out[k] = c; });
+  Object.keys(map && typeof map === 'object' ? map : {}).forEach((k) => { const c = map[k]; if (c && c.session && nowMs - Date.parse(c.at) <= (Object.hasOwn(CLAIM_SHORT, k) ? CLAIM_SHORT[k] : CLAIM_HOURS * 3600e3)) out[k] = c; });
   return out;
 }
 // The new map and the answer. A fresh claim of another session is not touched.
@@ -572,7 +572,7 @@ export function claimApply(map, b, nowIso) {
   if (!item || !session) return { error: 'bad item or session' };
   const m = claimsFresh(map, Date.parse(nowIso)), cur = m[item];
   if (cur && cur.session !== session) return { map: null, ans: { mine: false, item, holder: cur } };
-  if (cur && CLAIM_SHORT[item] && b.release !== true && cur.note !== String(b.note || '').replace(/\s+/g, ' ').trim().slice(0, 120)) return { map: null, ans: { mine: false, item, holder: cur } };
+  if (cur && Object.hasOwn(CLAIM_SHORT, item) && b.release !== true && cur.note !== String(b.note || '').replace(/\s+/g, ' ').trim().slice(0, 120)) return { map: null, ans: { mine: false, item, holder: cur } };
   if (b.release === true) { delete m[item]; return { map: m, ans: { mine: false, item, released: !!cur } }; }
   m[item] = { session, at: nowIso, note: String(b.note || '').replace(/\s+/g, ' ').trim().slice(0, 120) };
   // files (11/11/2026, Michael: "do it: coordination between the agents that fix"): the retro and the main chat fixed the
