@@ -408,6 +408,11 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     check('clip: a head written twice is printed once', twice === '\u05d6\u05d5\u05d2 \u05de\u05d0\u05e8\u05d9\u05da \u05d1\u05d0\u05d5\u05e8\u05da 1650', twice);
     const long = clip('aaaa bbbb cccc dddd eeee ffff gggg', 20);
     check('clip: a cut ends on a whole word, with ...', long === 'aaaa bbbb cccc...' && long.length <= 20, long);
+    // 12/11/2026: the 05:47 update stopped inside a quote; a cut ends on a whole sentence when one fits
+    const q = 'a1 b1 c1 d1 e1 f1 g1 h1 i1 j1. then "yes" right after a question that was not asked at all';
+    check('clip: ends on the last whole sentence that fits (no "...", no open quote)', clip(q, 60) === 'a1 b1 c1 d1 e1 f1 g1 h1 i1 j1.', clip(q, 60));
+    check('clip: a semicolon closes a sentence too', clip('aaaa bbbb cccc dddd eeee; ffff gggg hhhh iiii jjjj kkkk', 40) === 'aaaa bbbb cccc dddd eeee.', clip('aaaa bbbb cccc dddd eeee; ffff gggg hhhh iiii jjjj kkkk', 40));
+    check('clip: a first sentence longer than 40% is not dropped for a tiny one; a long first sentence is cut on a word', clip('ok. aaaa bbbb cccc dddd eeee ffff gggg hhhh', 30) === 'ok. aaaa bbbb cccc dddd...' && clip('v1.2 aaaa bbbb cccc dddd eeee ffff', 20).endsWith('...'), [clip('ok. aaaa bbbb cccc dddd eeee ffff gggg hhhh', 30), clip('v1.2 aaaa bbbb cccc dddd eeee ffff', 20)]);
     check('clip: short text unchanged, a dash that is not a repeat stays', clip('a - b', 50) === 'a - b' && clip('VARIOGARD - x', 50) === 'VARIOGARD - x');
   }
   { // 02/11/2026 (the assistant's chat, Michael: "do it: fix it in the server"): the update of 02/11/2026 07:47, as sent
