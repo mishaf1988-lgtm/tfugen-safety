@@ -24,6 +24,8 @@ export const FAULT_FIXERS = ['dev-fire', 'dev-safety', 'dev-runner'];
 // "internal" makes any agent's failure internal, "owner" makes one of these loud.
 export const INTERNAL_AGENTS = ['map-lights', 'staging-e2e', 'cowork-check', 'retro', 'quality', 'additions-log', 'deep-review', 'savings-assistant'];
 export function faultInternal(r) {
+  // the WhatsApp assistant's failure means Michael got no answer: never internal, whatever it says (security review 12/11/2026)
+  if (SECOND_CHECK_AGENTS.indexOf(String((r && r.agent) || '')) >= 0) return false;
   const imp = String((r && r.impact) || '');
   if (imp === 'internal') return true;
   if (imp === 'owner') return false;
@@ -80,7 +82,10 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
     // second alert, and no second request that would fire it on its own failure. It tells Michael itself what it waits
     // for (routine-dev-fire.md step 6), and the line stays in agent_log and in the morning update's failed agents.
     const quiet = FAULT_FIXERS.indexOf(agentKey(r.agent)) >= 0 || (SECOND_CHECK_AGENTS.indexOf(String(r.agent || '')) >= 0 && (ln.indexOf(SECOND_MISS) === 0 || ln.indexOf(EXPECTED_REFUSAL) === 0));
-    add((quiet ? 'agentq:' : 'agent:') + agentKey(r.agent), '\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc, ' + agentKey(r.agent) + ': ' + cut(r.line, 120), 'AGENTDEV', agentSafe(r.agent), m ? m[0] : '', quiet, r.at, !quiet && faultInternal(r));
+    // its own key (security review 12/11/2026): an internal failure in the morning marked "agent:x" as said today, and a
+    // real failure of the same agent later that day was then dropped, with no WhatsApp and no request
+    const internal = !quiet && faultInternal(r);
+    add((quiet ? 'agentq:' : internal ? 'agenti:' : 'agent:') + agentKey(r.agent), '\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc, ' + agentKey(r.agent) + ': ' + cut(r.line, 120), 'AGENTDEV', agentSafe(r.agent), m ? m[0] : '', quiet, r.at, internal);
   });
   items.forEach((x) => { sent[x.key] = today; });
   return { items, fault: { at: nowIso, sent } };

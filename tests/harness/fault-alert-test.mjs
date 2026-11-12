@@ -29,7 +29,7 @@ const NOW = '2026-10-31T14:50:00.000Z';
     { agent: 'wa-assistant', at: '2026-10-31T14:11:00Z', ok: true, line: 'fine' },
     { agent: 'dev-fire', at: '2026-10-31T13:00:00Z', ok: false, line: 'old' }];
   const r = faultItems(prev, [], log, NOW);
-  check('an agent that failed since the last tick, once, by its short name', r.items.length === 1 && r.items[0].key === 'agent:map-lights', r.items);
+  check('an agent that failed since the last tick, once, by its short name', r.items.length === 1 && r.items[0].key === 'agenti:map-lights', r.items); // internal since 12/11/2026, its own key
 }
 { // 11/11/2026: the developer that was fired on a fault and failed is the same fault going on: quiet, no second alert
   const prev = { at: '2026-11-11T05:40:00.000Z', sent: { 'agent:staging-e2e': '2026-11-11' } };
@@ -170,7 +170,11 @@ const NOW = '2026-10-31T14:50:00.000Z';
   check('internal: routine-quality and retro are internal; the assistant and mail filing are not', one({ agent: 'routine-quality' }).internal === true && one({ agent: 'retro' }).internal === true && !one({ agent: 'routine-wa-assistant' }).internal && !one({ agent: 'routine-mail-filing' }).internal);
   check('internal: the report\'s impact wins both ways', one({ agent: 'routine-validity', impact: 'internal' }).internal === true && !one({ agent: 'map-lights', impact: 'owner' }).internal && faultInternal({ agent: 'x', impact: 'bad' }) === false);
   const both = faultItems(prev, [], [{ agent: 'routine-validity', at, ok: false, line: 'a', impact: 'internal' }, { agent: 'routine-validity', at: '2026-11-12T05:59:30.000Z', ok: false, line: 'b' }], now).items;
-  check('internal: one internal and one real failure of the same agent = loud (to WhatsApp)', both.length === 1 && !both[0].internal, both);
+  check('internal: one internal and one real failure of the same agent = two items, the real one goes to WhatsApp', both.length === 2 && both.filter((x) => !x.internal).length === 1 && both.find((x) => !x.internal).key === 'agent:validity', both);
+  const morning = faultItems(prev, [], [{ agent: 'routine-validity', at, ok: false, line: 'side write', impact: 'internal' }], now);
+  const later = faultItems(morning.fault, [], [{ agent: 'routine-validity', at: '2026-11-12T09:00:00.000Z', ok: false, line: 'real' }], '2026-11-12T09:05:00.000Z').items;
+  check('internal: an internal failure in the morning does not hide a real one of the same agent later that day (own key)', morning.items[0].key === 'agenti:validity' && later.length === 1 && !later[0].internal, later);
+  check('internal: the WhatsApp assistant is never internal, even with impact internal', !one({ agent: 'routine-wa-assistant', impact: 'internal' }).internal && !one({ agent: 'wa-assistant', impact: 'internal' }).internal);
   check('internal: the WhatsApp gets only items that are not internal, the dev request gets them all', /const owner = loud\.filter\(\(x\) => !x\.internal\)/.test(fsrc) && /faultText\(owner,/.test(fsrc) && /openFix\(env, url, k, loud,/.test(fsrc) && INTERNAL_AGENTS.includes('map-lights'));
 }
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
