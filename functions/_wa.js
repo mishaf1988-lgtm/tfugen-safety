@@ -175,11 +175,17 @@ export function promiseToCheck(raw, ids, nowIso) {
 // 27/10/2026: the list said two inspection reports "arrived today" from the mail of that day; they were not in it.
 // The database said "waiting for the report". So the item state comes from the database.
 export const EVENING_HOUR = 15, EVENING_CHECK = 'evening list: what is planned for the next working day (contractor work and permits in the mail, inspections, visits in the calendar, expiries this week) and what each one still lacks; the state of each expiry item from the database (d, e, notes), never from a mail that arrived; then a section waiting-for-Michael: the open del_ask request if there is one (at most one; state del_ask, with its table and id), every dev_inbox item closed in the last 24 hours, and every promise that waits for his answer, each with the one tap or answer he needs; an item already told to him whose state did not change is not written again on Monday to Thursday (read your own lists with wa_review first; promises.md, the no-repeat rule, 11/11/2026): it comes back on Sunday once, when something changed, or when 3 days or fewer are left; an item that already expired and a safety event are always written, every day; no contractor work in the mail = no line; one wa_me, then promise_done quiet';
+// The weekly summary (12/11/2026, Michael: "approve", ideas-lab 34): on Thursday the check is the week's summary and not
+// the list for tomorrow, so it replaces a message and adds none (he asked for fewer repeats, 11/11/2026). What was closed
+// this week, what has waited for him more than 14 days (numbered, "<n> not relevant" drops it), and three priorities for
+// next week. What is urgent stays: an expired item, a safety event, and what is planned for Sunday.
+export const WEEK_DOW = 4, WEEK_CHECK = 'weekly summary (Thursday, instead of the evening list; promises.md, "weekly summary"): one wa_me, up to 900 characters, four short parts. (1) closed this week: tasks closed, expiries renewed (expiry_set in the log), mails he answered, promises done; counts and up to 3 names. (2) waiting for Michael more than 14 days: open promises that wait for his answer, tasks and expired items with no plan, each numbered with how long it waits; he answers "<number> not relevant" and it is dropped (promise_done quiet, or learn so it does not come back). (3) three priorities for next week, by expiry date and severity, from the database (d, e, notes), never from a mail that arrived. (4) Sunday: what is planned for the next working day, one line, only if there is something. An item that already expired and a safety event are always written. Read your own lists with wa_review first; no contractor work in the mail = no line; then promise_done quiet';
 export function eveningAdd(raw, dayIL, dow, hourIL, nowIso) {
   if (!(dow >= 0 && dow <= 4) || hourIL !== EVENING_HOUR) return null;
   const list = plist(raw), id = 'p-evening-' + dayIL.replace(/-/g, '');
   if (list.some((x) => x && x.id === id)) return null;
-  list.push({ id, at: nowIso, agent: 'wa-morning', text: '\u05e8\u05e9\u05d9\u05de\u05ea \u05de\u05d7\u05e8', status: 'open', check_at: nowIso, check: EVENING_CHECK, reminded_at: nowIso });
+  const week = dow === WEEK_DOW;
+  list.push({ id, at: nowIso, agent: 'wa-morning', text: week ? '\u05e1\u05d9\u05db\u05d5\u05dd \u05e9\u05d1\u05d5\u05e2' : '\u05e8\u05e9\u05d9\u05de\u05ea \u05de\u05d7\u05e8', status: 'open', check_at: nowIso, check: week ? WEEK_CHECK : EVENING_CHECK, reminded_at: nowIso });
   return list;
 }
 // The weekly ISO review (24/10/2026, Michael: "teach the assistant to manage ISO"): on Sunday at 10:00 the server
