@@ -30,5 +30,16 @@ check('a prompt without step 0 fails', len(problems('a', 'x\n---\n1. צעד\n---
 check('step 0 that is not the first line fails', len(problems('a', 'x\n---\n1. צעד\n0. agent-common.md\n---\n')) == 1)
 check('a prompt with no closing --- fails', len(problems('a', 'x\n---\n0. agent-common.md\n')) == 1)
 check('a replaced Routine is skipped', problems('a', '**הוחלף, לא נחוץ**\n---\n1. צעד\n---\n') == [])
+# Completeness check (12/11/2026, Michael in a questionnaire in the assistant chat: "בצע: בדיקת שלמות בסוף כל
+# עבודה (מומלץ)"): every agent that works in batches or on a list reports todo/done/left (and left_what), and
+# starts from the previous run's left_what. partial_check (quality checker) only sees what is reported.
+BATCH = ['routine-mail-filing.md', 'routine-validity.md', 'routine-od-scan.md', 'routine-supplier-followup.md']
+def batch_problems(name, text):
+    lines = text.split('\n'); marks = [i for i, l in enumerate(lines) if l == '---']
+    prompt = '\n'.join(lines[marks[0] + 1:marks[1]]) if len(marks) >= 2 else ''
+    return [name + ': ' + w for w in ('"todo"', '"done"', '"left"', 'left_what', 'agent_log') if w not in prompt]
+real = [p for b in BATCH for p in batch_problems(b, open(os.path.join(ROOT, 'project-files', b), encoding='utf-8').read())]
+check('every batch agent reports todo/done/left/left_what and reads its last agent_log', real == [], real)
+check('a batch prompt without left_what fails', len(batch_problems('a', 'x\n---\n"todo" "done" "left" agent_log\n---\n')) == 1)
 print('%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)
