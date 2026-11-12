@@ -1,7 +1,7 @@
 // Fault alert (31/10/2026, functions/_faults.js): every watchdog tick tells Michael, in ONE WhatsApp, about errors in
 // users' browsers and agents that reported a failure since the last tick; the same fault once a day.
 import { faultItems, faultText, faultDevText, faultTodo, FAULT_FIXERS, goldenStep, goldenAlready, faultInternal, faultEscalate, faultEscalateText, FAULT_ESCALATE_MS, GOLDEN_SETTLE_MS, GOLDEN_GAP_MS, GOLDEN_TEXT, FAULT_LINES, FAULT_FIRST_MS } from './_build/_faults.mjs';
-import { devInboxAdd, DEV_RESENT_NOTE } from './_build/routine-db.mjs';
+import { devInboxAdd, devInboxDone, devFaultSiblings, faultAgentsOf, DEV_SIBLING_MS, DEV_RESENT_NOTE } from './_build/routine-db.mjs';
 import fs from 'node:fs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
@@ -190,6 +190,25 @@ const NOW = '2026-10-31T14:50:00.000Z';
   check('case 3: a failed send or an unreadable inbox keeps them for the next tick; held only after the at-once part was sent', /if \(ok\) held = esc\.keep/.test(fsrc) && /if \(Array\.isArray\(inbox\)\)/.test(fsrc) && /if \(sentOk\) items\.filter\(\(x\) => !x\.quiet && x\.internal\)/.test(fsrc) && /fault\.held = held/.test(fsrc));
   const rsrc = fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
   check('case 2: a fault-alert request closed as fixed, or resent by the evening net, sends no WhatsApp (not fixed still does)', /quietFixed = !!\(closedReq && closedReq\.agent === 'fault-alert' && \(body\.fixed === true \|\| String\(body\.note \|\| ''\)\.trim\(\) === DEV_RESENT_NOTE\)\)/.test(rsrc) && fs.readFileSync(new URL('../../project-files/routine-dev-safety.md', import.meta.url), 'utf8').includes('"note":"' + 'הבקשה נשלחה שוב למפתח, כי לא טופלה תוך 3 שעות.' + '"') && /body\.op !== 'dev_done' \|\| quietFixed \? ''/.test(rsrc));
+}
+{ // 12/11/2026 (STATUS "repeat fault"): the retro asked for a fix 14:08, the alert opened its own request 14:15 on the same failure;
+  // closing the retro's request closes the alert's too, quietly; an alert on another agent or with browser errors stays
+  const mk = (id, at, agent, text, status) => ({ id, at, agent, text, status: status || 'open' });
+  const alertOn = (names, errs) => faultDevText((errs ? [{ dev: 'ERRDEV' }] : []).concat(names.map((a) => ({ dev: 'AGENTDEV', agent: a }))));
+  check('faultAgentsOf reads the names the alert wrote', JSON.stringify(faultAgentsOf(alertOn(['retro', 'map-lights']))) === '["retro","map-lights"]');
+  const list = [mk('dev-1', '2026-11-12T12:08:00Z', 'retro', 'the retro failed'), mk('dev-2', '2026-11-12T12:15:00Z', 'fault-alert', alertOn(['retro'])),
+    mk('dev-3', '2026-11-12T12:20:00Z', 'fault-alert', alertOn(['retro', 'coach'])), mk('dev-4', '2026-11-12T12:25:00Z', 'fault-alert', alertOn(['retro'], true)),
+    mk('dev-5', '2026-11-12T12:30:00Z', 'fault-alert', alertOn(['coach'])), mk('dev-6', new Date(Date.parse('2026-11-12T12:08:00Z') + DEV_SIBLING_MS + 60e3).toISOString(), 'fault-alert', alertOn(['retro']))];
+  const r = devInboxDone(JSON.stringify(list), 'dev-1', 'fixed', '2026-11-12T12:28:00Z');
+  const st = (id) => r.list.find((x) => x.id === id).status;
+  check('closing the agent request closes the alert on that agent alone', st('dev-1') === 'done' && st('dev-2') === 'done' && JSON.stringify(r.also) === '["dev-2"]', r.also);
+  check('an alert that also names another agent, has browser errors, names another agent, or came hours later stays open', ['dev-3', 'dev-4', 'dev-5', 'dev-6'].every((id) => st(id) === 'open'));
+  check('the sibling is closed as fixed, so it says nothing to Michael', r.list.find((x) => x.id === 'dev-2').fixed === true);
+  const r2 = devInboxDone(JSON.stringify(list), 'dev-2', 'x', '2026-11-12T12:28:00Z');
+  check('closing an alert request closes nothing else', !r2.also && r2.list.filter((x) => x.status === 'done').length === 1);
+  const rr = devInboxDone(JSON.stringify([mk('dev-a', '2026-11-12T12:08:00Z', 'routine-retro-prompt', 'x'), mk('dev-b', '2026-11-12T12:10:00Z', 'fault-alert', alertOn(['retro']))]), 'dev-a', 'ok', '2026-11-12T12:28:00Z');
+  check('the agent name is matched by its short form (routine-retro-prompt = retro)', JSON.stringify(rr.also) === '["dev-b"]');
+  check('golden-auto, a server requester, closes nothing', devFaultSiblings([mk('g', '2026-11-12T12:08:00Z', 'golden-auto', 'x'), mk('f', '2026-11-12T12:10:00Z', 'fault-alert', alertOn(['golden-auto']))], { id: 'g', at: '2026-11-12T12:08:00Z', agent: 'golden-auto' }, NOW).length === 0);
 }
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
