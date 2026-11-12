@@ -14,7 +14,7 @@
 // notifications_log (payload.wamid), so the assistant knows what Michael is answering.
 // Machine path in _middleware: Meta calls from outside Israel.
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, SB_LIVE, tmo, SITE } from '../_shared.js';
-import { learnedLabel, LEARNED_MAX } from '../_wa.js';
+import { learnedLabel, LEARNED_MAX, fastModel, fastFire } from '../_wa.js';
 import { isVoice, voiceText, VOICE_MARK, VOICE_MODEL } from '../_voice.js';
 import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, hasStatuses, STATUS_KEY, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, assistantFireNow, pickFire, accountOf, ACCOUNT_KEY, forgetAccount, LEARN_KEY, learnedLine, recentLine, waDeliveryHandle } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
@@ -794,14 +794,18 @@ async function handle(env, raw) {
     }
     await note(env, Object.assign({ stage: 'firing' }, seen));
     const text = fireText(m, about, prev, snap, learned, recent, joins.length ? joinedLine(joins) : '', tLog);
-    const af = await assistantFireNow(env);
-    seen.fire_to = af ? af.which : null;
-    const fr = !af ? null : await fetch(af.url, {
+    const af0 = await assistantFireNow(env);
+    // 12/11/2026 (ideas-lab 30): a short read-only question to the fast Routine (Sonnet); its fire failing = Opus as before
+    const ff = fastModel(m, about, joins.length) ? fastFire(env, af0) : null;
+    const fireTo = (a) => fetch(a.url, {
       method: 'POST', signal: tmo(20000),
-      headers: { Authorization: 'Bearer ' + af.token, 'anthropic-beta': 'experimental-cc-routine-2026-04-01',
+      headers: { Authorization: 'Bearer ' + a.token, 'anthropic-beta': 'experimental-cc-routine-2026-04-01',
         'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
     }).catch(() => null);
+    let af = ff || af0, fr = af ? await fireTo(af) : null;
+    if (ff && !(fr && fr.ok)) { seen.fast_failed = fr ? fr.status : 'network'; af = af0; fr = af ? await fireTo(af) : null; }
+    seen.fire_to = af ? af.which : null;
     seen.fire_status = fr ? fr.status : 'network';
     seen.fire_ms = Date.now() - t0;
     if (fr && fr.ok) { const fj = await fr.clone().json().catch(() => null); seen.fire_session = (fj && fj.claude_code_session_id) || null; }

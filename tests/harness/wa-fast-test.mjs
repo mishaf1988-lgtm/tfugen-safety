@@ -2,7 +2,7 @@
 // A number 1-4 that answers a hazard alert, and "what is urgent" / "expiries", are answered by wa-hook
 // itself by rules; everything else, and anything unclear, still goes to the assistant.
 import { failText, FAIL_TEXT, ownerInPayload, recentLine, RECENT_MAX, accountCmdOf, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX, joinCandidates, joinedLine, hasNewer, JOIN_MS, fireText, fastDel, DEL_NO, DEL_GONE, fastUndo, UNDO_NO, UNDO_GONE } from './_build/wa-hook.mjs';
-import { HAZARD_OPTIONS, hazardAsk, assistantFire, pickFire, accountOf, fireUrlOf } from './_build/_wa.mjs';
+import { HAZARD_OPTIONS, hazardAsk, assistantFire, pickFire, accountOf, fireUrlOf, fastModel, fastFire, ASSISTANT_FAST_TRIGGER } from './_build/_wa.mjs';
 import { rateAgain } from './_build/chat.mjs';
 
 let pass = 0, fail = 0;
@@ -307,5 +307,15 @@ await (async () => {
   w = db({ undo: '{not json' }); a = await fastUndo(ENV, { id: 'cd34ef56', yes: true });
   check('an unreadable log: nothing inserted, the log untouched', a === null && !w.inserted && w.state.undo_log === '{not json');
 })();
+// 12/11/2026 (ideas-lab 30, Michael: "do the addition"): a short read-only question to the fast Routine (Sonnet)
+{
+  const yes = ['\u05de\u05d4 \u05e4\u05d2 \u05d4\u05e9\u05d1\u05d5\u05e2?', '\u05de\u05ea\u05d9 \u05d4\u05db\u05d9\u05d5\u05dc \u05e9\u05dc \u05d4\u05de\u05dc\u05d2\u05d6\u05d4', '\u05db\u05de\u05d4 \u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea', '\u05d9\u05e9 \u05de\u05e9\u05d4\u05d5 \u05d3\u05d7\u05d5\u05e3?', '\u05d0\u05d9\u05e4\u05d4 \u05d4\u05e0\u05d5\u05d4\u05dc \u05e9\u05dc \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4?', '\u05de\u05d4 \u05d1\u05e8\u05d0\u05e9\u05d5\u05df?', '\u05db\u05de\u05d4 \u05de\u05dc\u05d2\u05d6\u05d5\u05ea \u05d9\u05e9?'], no = ['\u05ea\u05db\u05d9\u05df \u05d8\u05d9\u05d5\u05d8\u05d4 \u05dc\u05e1\u05e4\u05e7', '\u05de\u05d4 \u05e2\u05dd \u05d4\u05de\u05d9\u05d9\u05dc \u05e9\u05dc \u05d2\u05d6\u05d9\u05ea', '\u05de\u05d4 \u05e7\u05e8\u05d4 \u05d1\u05ea\u05d0\u05d5\u05e0\u05d4 \u05d0\u05ea\u05de\u05d5\u05dc', '\u05ea\u05d5\u05d3\u05d4', '\u05d1\u05e6\u05e2', '\u05de\u05d4 \u05d4\u05de\u05e6\u05d1 \u05e2\u05dd \u05d3\u05dc\u05d9\u05e4\u05ea \u05d4\u05d0\u05de\u05d5\u05e0\u05d9\u05d4', '\u05e9\u05dc\u05d7 \u05dc\u05d9 \u05d0\u05ea \u05d4\u05d8\u05d5\u05e4\u05e1', '\u05de\u05d4 \u05db\u05ea\u05d5\u05d1 \u05d1\u05e1\u05e2\u05d9\u05e3 5 \u05d5\u05de\u05d4 \u05e6\u05e8\u05d9\u05da \u05dc\u05e2\u05d3\u05db\u05df', '\u05de\u05d4 \u05e2\u05dd \u05d4\u05d2\u05d6 \u05d1\u05de\u05d3\u05d7\u05e1\u05d9\u05dd?', '\u05de\u05d4 \u05e2\u05dd \u05d4\u05d0\u05e9?', '\u05d5\u05de\u05d4 \u05e2\u05dd \u05d4\u05ea\u05d0\u05d5\u05e0\u05d4'];
+  check('fastModel: short read-only questions go fast (also "\u05de\u05dc\u05d2\u05d6\u05d4" is not gas, "\u05e8\u05d0\u05e9\u05d5\u05df" is not fire)', yes.every((x) => fastModel({ text: x }, null, 0)), yes.filter((x) => !fastModel({ text: x }, null, 0)));
+  check('fastModel: a write, a draft, a form, a mail, safety words, "thanks" and "do it" stay on Opus', no.every((x) => !fastModel({ text: x }, null, 0)), no.filter((x) => fastModel({ text: x }, null, 0)));
+  check('fastModel: a reply to a message, joined lines, a file, a button and a long line stay on Opus', !fastModel({ text: '\u05de\u05d4 \u05e4\u05d2?' }, 'x', 0) && !fastModel({ text: '\u05de\u05d4 \u05e4\u05d2?' }, null, 2) && !fastModel({ text: '\u05de\u05d4 \u05d6\u05d4?', media: {} }, null, 0) && !fastModel({ text: '\u05de\u05d4 \u05e4\u05d2?', choice: '1' }, null, 0) && !fastModel({ text: '\u05de\u05d4 \u05e4\u05d2 ' + 'x'.repeat(80) }, null, 0));
+  const old = { url: 'u', token: 't', which: 'old' };
+  check('fastFire: only with ASSISTANT_FAST_TRIGGER token, only the main account', fastFire({}, old) === null && fastFire({ ASSISTANT_FAST_FIRE_TOKEN: 'k' }, { which: 'new' }) === null
+    && fastFire({ ASSISTANT_FAST_FIRE_TOKEN: 'k' }, old).url === fireUrlOf(ASSISTANT_FAST_TRIGGER) && fastFire({ ASSISTANT_FAST_FIRE_TOKEN: 'k' }, old).which === 'fast');
+}
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
