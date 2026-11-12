@@ -740,6 +740,12 @@ const callIn = async (body) => {
       const a = workerJobAdd('[]', { agent: 'routine-wa-assistant', worker: WORKERS[2], task }, now);
       check('worker_now: a job for a known worker is created', a.created && a.list.length === 1 && a.list[0].status === 'open' && /^job-\d{14}-/.test(a.id), a);
       check('worker_now: the same open task again is the same job', workerJobAdd(JSON.stringify(a.list), { agent: 'routine-wa-assistant', worker: WORKERS[2], task }, now).created !== true);
+      // 12/11/2026: a job saved but never fired (the request broke after the write) is fired again by a retry, not by a
+      // retry within a minute (a fire still in flight), and never once it has a fired_session
+      const later = '2026-10-21T16:02:00.000Z', soon = '2026-10-21T16:00:30.000Z';
+      const again = (list, at) => workerJobAdd(JSON.stringify(list), { agent: 'routine-wa-assistant', worker: WORKERS[2], task }, at);
+      check('worker_now: same job, no fired_session, 2 minutes later = refire; 30 seconds later = no refire', again(a.list, later).refire === true && again(a.list, soon).refire === false && again(a.list, later).created !== true);
+      check('worker_now: same job that has a fired_session = no refire', again(a.list.map((x) => Object.assign({}, x, { fired_session: 'session_x' })), later).refire === false);
       check('worker_now: an unknown worker is refused', !!workerJobAdd('[]', { agent: 'routine-wa-assistant', worker: 'x', task }, now).error);
       const d = workerJobDone(JSON.stringify(a.list), a.id, '\u05e0\u05d1\u05d3\u05e7, \u05d4\u05d4\u05e6\u05e2\u05d4 \u05d1\u05ea\u05d5\u05e7\u05e3', now);
       check('worker_done: closes once, with the note; a second close is refused', d.job && d.job.status === 'done' && !!workerJobDone(JSON.stringify(d.list), a.id, '\u05e9\u05d5\u05d1 \u05e9\u05d5\u05d1', now).error, d);
