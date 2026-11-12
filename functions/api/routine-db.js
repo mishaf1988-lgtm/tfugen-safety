@@ -2565,18 +2565,17 @@ async function routineDbHandle(context) {
       // assistant tells him "you will get a message when it is fixed", so the close goes to his WhatsApp now,
       // not only to the next morning update. Ids are cut out; a failed send does not undo the close.
       // 21/10/2026: the promise a dev request made (below) is kept or closed with it.
+      // 12/11/2026 (ideas-lab 12, one key per PR): through stateCas, so a promise the assistant saved between this read
+      // and this write is kept (before: the whole list was written over it). mutate is pure: closed is reset on every try.
       let closed = [];
       try {
-        const pr = await stateRead([PROMISE_KEY]);
-        const praw = pr && pr[0] && pr[0].value;
-        const p = body.op === 'dev_request'
-          ? promiseAdd(praw, { agent: body.agent, text: body.promise || ('\u05d1\u05e7\u05e9\u05ea \u05e4\u05d9\u05ea\u05d5\u05d7: ' + String(body.text || '').slice(0, 120)), who: '\u05e4\u05d9\u05ea\u05d5\u05d7', ref: r.id }, now)
-          : promiseDone(praw, { ref: String(body.id || '') }, body.note, now);
-        if (!p.error) {
-          closed = p.closed || [];
-          await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-            body: JSON.stringify([{ key: PROMISE_KEY, value: JSON.stringify(p.list), updated_at: now }]), signal: tmo(SB_MS) });
-        }
+        await stateCas(url, h, PROMISE_KEY, (praw) => {
+          const p = body.op === 'dev_request'
+            ? promiseAdd(praw, { agent: body.agent, text: body.promise || ('\u05d1\u05e7\u05e9\u05ea \u05e4\u05d9\u05ea\u05d5\u05d7: ' + String(body.text || '').slice(0, 120)), who: '\u05e4\u05d9\u05ea\u05d5\u05d7', ref: r.id }, now)
+            : promiseDone(praw, { ref: String(body.id || '') }, body.note, now);
+          closed = p.error ? [] : (p.closed || []);
+          return p.error ? { write: false } : { value: JSON.stringify(p.list) };
+        }, () => tmo(SB_MS));
       } catch (x) { /* the request itself is written */ }
       let wa = null;
       // 12/11/2026 (Michael: "a fault must be handled; only if it was not handled, alert"): a fault-alert request closed as
