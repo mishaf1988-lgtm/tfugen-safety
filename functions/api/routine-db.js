@@ -215,12 +215,37 @@ export function trimLog(log, max = AGENT_LOG_MAX, keep = AGENT_LOG_KEEP) {
   }
   return log.filter((_, i) => keepIdx.has(i));
 }
+// scrubPii (12/11/2026, Michael in the questionnaire: "do it: filter personal details on the server (recommended)"; retro
+// 12/11/2026): a mail address, a mobile, a landline and a nine-digit number in a report's line and learned are replaced
+// before the report is stored (agent_log and the permanent row in notifications_log). The same four patterns and the same
+// placeholders as tools/agent-log-sync.py scrub(); tests/harness/pii-samples.json is run through both. Pure.
+export const PII_MAIL = '<\u05db\u05ea\u05d5\u05d1\u05ea>', PII_MOBILE = '<\u05e0\u05d9\u05d9\u05d3>', PII_PHONE = '<\u05d8\u05dc\u05e4\u05d5\u05df>', PII_NINE = '<\u05de\u05e1\u05e4\u05e8>';
+export const PII_IN_MAX = 1000;
+export function scrubPii(t) {
+  return String(t === undefined || t === null ? '' : t)
+    .replace(/[\p{L}\p{N}_][\p{L}\p{N}_.%+-]*@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/gu, PII_MAIL)
+    .replace(/(?<![\d.])(?:\+?972[-. ]?\(?0?\)?[-. ]?|0)\(?5\d\)?(?:[-. ]?\d){7}(?!\d)/g, PII_MOBILE)
+    .replace(/(?<![\d.])(?:\+?972[-. ]?|0)[23489][-. ]?\d{3}[-. ]?\d{4}(?!\d)/g, PII_PHONE)
+    .replace(/(?<!\d)\d{9}(?!\d)/g, PII_NINE);
+}
+// The permanent row is never trimmed, so there for_michael and left_what are scrubbed too (security review 12/11/2026);
+// agent_log (about 3 days) keeps them as written, for the morning update and the next run. Pure.
+export function agentArchive(e) {
+  const a = Object.assign({}, e);
+  ['for_michael', 'left_what'].forEach((k) => { if (a[k]) a[k] = scrubPii(a[k]); });
+  return a;
+}
 // One run report, cleaned: a short agent name and three short texts.
 export function agentEntry(b, nowIso) {
   const name = String(b.agent || '');
   if (!/^[a-z0-9-]{2,40}$/.test(name)) return null;
   const t = (x) => String(x === undefined || x === null ? '' : x).replace(/\s+/g, ' ').trim().slice(0, 300);
-  const e = { agent: name, at: nowIso, ok: b.ok === true, line: t(b.line), learned: t(b.learned) };
+  // line and learned are scrubbed (scrubPii) before the cut to 300. for_michael is not: it goes only to Michael, who may need
+  // the supplier's number in it; left_what is not: the next run searches for it as written.
+  // Order (security review 12/11/2026): whitespace joined first (a number broken over two lines was missed), cut to
+  // PII_IN_MAX before the scrub (a very long input is quadratic), then scrubbed, then cut to 300.
+  const sc = (x) => t(scrubPii(String(x === undefined || x === null ? '' : x).replace(/\s+/g, ' ').trim().slice(0, PII_IN_MAX)));
+  const e = { agent: name, at: nowIso, ok: b.ok === true, line: sc(b.line), learned: sc(b.learned) };
   // for_michael (20/10/2026, Michael: "the assistant must know how to do or pass a task and get data back"):
   // what Michael has to know or do from this run, e.g. a worker's answer to a task the WhatsApp assistant
   // passed on, or "the water report draft is ready". The morning WhatsApp update and the assistant's
@@ -2995,7 +3020,7 @@ async function routineDbHandle(context) {
       // were lost. Every report is also one permanent row in notifications_log (event_type agent_report), never trimmed;
       // agent_log_since reads them back and tools/agent-log-sync.py writes the missing ones into the file.
       const arch = await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
-        body: JSON.stringify([{ id: 'ar' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: e.at, event_type: 'agent_report', channel: 'agents', payload: e }]) })
+        body: JSON.stringify([{ id: 'ar' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: e.at, event_type: 'agent_report', channel: 'agents', payload: agentArchive(e) }]) })
         .then((r) => r.ok).catch(() => false);
       return jsonResp({ ok: true, entry: e, kept: log.length, archived: arch }, 200, {});
     }
