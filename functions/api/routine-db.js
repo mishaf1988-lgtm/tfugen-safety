@@ -215,12 +215,26 @@ export function trimLog(log, max = AGENT_LOG_MAX, keep = AGENT_LOG_KEEP) {
   }
   return log.filter((_, i) => keepIdx.has(i));
 }
+// scrubPii (12/11/2026, Michael in the questionnaire: "do it: filter personal details on the server (recommended)"; retro
+// 12/11/2026): a mail address, a mobile, a landline and a nine-digit number in a report's line and learned are replaced
+// before the report is stored (agent_log and the permanent row in notifications_log). The same four patterns and the same
+// placeholders as tools/agent-log-sync.py scrub(); tests/harness/pii-samples.json is run through both. Pure.
+export const PII_MAIL = '<\u05db\u05ea\u05d5\u05d1\u05ea>', PII_MOBILE = '<\u05e0\u05d9\u05d9\u05d3>', PII_PHONE = '<\u05d8\u05dc\u05e4\u05d5\u05df>', PII_NINE = '<\u05de\u05e1\u05e4\u05e8>';
+export function scrubPii(t) {
+  return String(t === undefined || t === null ? '' : t)
+    .replace(/[\p{L}\p{N}_][\p{L}\p{N}_.%+-]*@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/gu, PII_MAIL)
+    .replace(/(?<![\d.])(?:\+?972[-. ]?\(?0?\)?[-. ]?|0)\(?5\d\)?(?:[-. ]?\d){7}(?!\d)/g, PII_MOBILE)
+    .replace(/(?<![\d.])(?:\+?972[-. ]?|0)[23489][-. ]?\d{3}[-. ]?\d{4}(?!\d)/g, PII_PHONE)
+    .replace(/(?<!\d)\d{9}(?!\d)/g, PII_NINE);
+}
 // One run report, cleaned: a short agent name and three short texts.
 export function agentEntry(b, nowIso) {
   const name = String(b.agent || '');
   if (!/^[a-z0-9-]{2,40}$/.test(name)) return null;
   const t = (x) => String(x === undefined || x === null ? '' : x).replace(/\s+/g, ' ').trim().slice(0, 300);
-  const e = { agent: name, at: nowIso, ok: b.ok === true, line: t(b.line), learned: t(b.learned) };
+  // line and learned are scrubbed (scrubPii) before the cut to 300. for_michael is not: it goes only to Michael, who may need
+  // the supplier's number in it; left_what is not: the next run searches for it as written.
+  const e = { agent: name, at: nowIso, ok: b.ok === true, line: t(scrubPii(b.line)), learned: t(scrubPii(b.learned)) };
   // for_michael (20/10/2026, Michael: "the assistant must know how to do or pass a task and get data back"):
   // what Michael has to know or do from this run, e.g. a worker's answer to a task the WhatsApp assistant
   // passed on, or "the water report draft is ready". The morning WhatsApp update and the assistant's
