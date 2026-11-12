@@ -16,6 +16,19 @@ import { stateCas } from './_cas.js';
 
 // 'dev' is not here (security review 11/11/2026): other agents report under it, and the server's own dev_done line would hide its failure from the morning update
 export const FAULT_FIXERS = ['dev-fire', 'dev-safety', 'dev-runner'];
+// 12/11/2026 (Michael in the assistant chat's questionnaire: "do it: only what touches me (recommended)", after a 08:00 alert
+// on map-lights that had updated its lights and only failed a side write): WhatsApp only for a fault that touches Michael
+// (the app, the assistant not answering, a message or file not sent or saved, wrong data). A failure of an internal agent
+// (display, internal check, blocked tool, a side write when the main work was done) goes to the developer quietly: the
+// dev request still opens, no WhatsApp, and the morning update keeps its line. The report's own "impact" wins:
+// "internal" makes any agent's failure internal, "owner" makes one of these loud.
+export const INTERNAL_AGENTS = ['map-lights', 'staging-e2e', 'cowork-check', 'retro', 'quality', 'additions-log', 'deep-review', 'savings-assistant'];
+export function faultInternal(r) {
+  const imp = String((r && r.impact) || '');
+  if (imp === 'internal') return true;
+  if (imp === 'owner') return false;
+  return INTERNAL_AGENTS.indexOf(agentKey(r && r.agent)) >= 0;
+}
 export const FAULT_KEY = 'fault_alert', FAULT_LINES = 5, FAULT_FIRST_MS = 20 * 60e3;
 const dayIL = (iso) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(iso));
 const cut = (s, n) => { s = String(s || '').replace(/[a-z][a-z0-9+.-]*:\/\/\S+|www\.\S+/gi, '[link]').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 3) + '...' : s; };
@@ -30,15 +43,16 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
   const sent = {};
   Object.entries((prev && prev.sent) || {}).forEach(([k, d]) => { if (d === today) sent[k] = d; });
   const items = [];
-  const add = (key, text, dev, agent, ref, quiet, at) => {
+  const add = (key, text, dev, agent, ref, quiet, at, internal) => {
     if (sent[key]) return;
     const had = items.find((x) => x.key === key);
     // a second failure of the same agent with no request of its own: the item is no longer covered by one
     // and a real failure beside a quiet one makes the item loud
-    if (had) { if (had.ref && had.ref !== ref) delete had.ref; if (!quiet) delete had.quiet; return; }
+    if (had) { if (had.ref && had.ref !== ref) delete had.ref; if (!quiet) delete had.quiet; if (!internal) delete had.internal; return; }
     const it = agent ? { key, text, dev, agent } : { key, text, dev };
     if (ref) { it.ref = ref; if (at) it.ref_at = String(at); }
     if (quiet) it.quiet = true;
+    if (internal) it.internal = true;
     items.push(it);
   };
   (errRows || []).forEach((r) => {
@@ -66,7 +80,7 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
     // second alert, and no second request that would fire it on its own failure. It tells Michael itself what it waits
     // for (routine-dev-fire.md step 6), and the line stays in agent_log and in the morning update's failed agents.
     const quiet = FAULT_FIXERS.indexOf(agentKey(r.agent)) >= 0 || (SECOND_CHECK_AGENTS.indexOf(String(r.agent || '')) >= 0 && (ln.indexOf(SECOND_MISS) === 0 || ln.indexOf(EXPECTED_REFUSAL) === 0));
-    add((quiet ? 'agentq:' : 'agent:') + agentKey(r.agent), '\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc, ' + agentKey(r.agent) + ': ' + cut(r.line, 120), 'AGENTDEV', agentSafe(r.agent), m ? m[0] : '', quiet, r.at);
+    add((quiet ? 'agentq:' : 'agent:') + agentKey(r.agent), '\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc, ' + agentKey(r.agent) + ': ' + cut(r.line, 120), 'AGENTDEV', agentSafe(r.agent), m ? m[0] : '', quiet, r.at, !quiet && faultInternal(r));
   });
   items.forEach((x) => { sent[x.key] = today; });
   return { items, fault: { at: nowIso, sent } };
@@ -231,9 +245,11 @@ export async function runFaultAlert(env, nowIso) {
     const loud = items.filter((x) => !x.quiet);
     // a quiet item (expected: second checker missing, deliberate refusal) opens no developer request (07/11/2026)
     if (loud.length) { try { fix = await openFix(env, url, k, loud, nowIso, !(prev && prev.fired_day === dayIL(nowIso))); } catch (e) { fix = { ok: false }; } }
-    if (loud.length) {
+    // an internal failure (12/11/2026, faultInternal) opens the request above and stays out of Michael's WhatsApp
+    const owner = loud.filter((x) => !x.internal);
+    if (owner.length) {
       const to = await ownerWa(env, url);
-      const s = to ? await sendToOwner(env, to, faultText(loud, fix && (fix.fired || fix.already || fix.covered)), { kind: loud.some((x) => /^agentq?:wa-assistant$/.test(x.key)) ? 'watchdog' : 'fault', windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
+      const s = to ? await sendToOwner(env, to, faultText(owner, fix && (fix.fired || fix.already || fix.covered)), { kind: owner.some((x) => /^agentq?:wa-assistant$/.test(x.key)) ? 'watchdog' : 'fault', windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
       sentOk = !!(s && s.ok);
     }
   }

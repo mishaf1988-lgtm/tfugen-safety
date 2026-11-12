@@ -460,6 +460,10 @@ const callIn = async (body) => {
     const ent = (await call({ op: 'agent_report', agent: 'routine-wa-assistant', ok: true, line: 'x', model: m })).json.entry;
     check('model "' + m + '": ' + (want ? 'kept as ' + want : 'dropped, the report still written'), ent && ent.model === want, ent);
   }
+  for (const [imp, want] of [['internal', 'internal'], ['owner', 'owner'], ['high', undefined]]) {
+    const ent = (await call({ op: 'agent_report', agent: 'map-lights', ok: false, line: 'x', impact: imp })).json.entry;
+    check('impact "' + imp + '": ' + (want ? 'kept' : 'dropped, the report still written') + ' (12/11/2026)', ent && ent.impact === want, ent);
+  }
   state.agent_log = JSON.stringify(JSON.parse(state.agent_log).slice(0, 2));
   check('ok that is not exactly true counts as a failure', (await call({ op: 'agent_report', agent: 'retro', ok: 'yes', line: 'x' })).json.entry.ok === false);
   // 21/10/2026: {status, did} instead of {ok, line} left empty ok:false rows that read as failed runs.

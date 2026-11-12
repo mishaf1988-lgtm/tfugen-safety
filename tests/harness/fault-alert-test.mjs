@@ -1,6 +1,6 @@
 // Fault alert (31/10/2026, functions/_faults.js): every watchdog tick tells Michael, in ONE WhatsApp, about errors in
 // users' browsers and agents that reported a failure since the last tick; the same fault once a day.
-import { faultItems, faultText, faultDevText, faultTodo, FAULT_FIXERS, goldenStep, goldenAlready, GOLDEN_SETTLE_MS, GOLDEN_GAP_MS, GOLDEN_TEXT, FAULT_LINES, FAULT_FIRST_MS } from './_build/_faults.mjs';
+import { faultItems, faultText, faultDevText, faultTodo, FAULT_FIXERS, goldenStep, goldenAlready, faultInternal, INTERNAL_AGENTS, GOLDEN_SETTLE_MS, GOLDEN_GAP_MS, GOLDEN_TEXT, FAULT_LINES, FAULT_FIRST_MS } from './_build/_faults.mjs';
 import { devInboxAdd } from './_build/routine-db.mjs';
 import fs from 'node:fs';
 let pass = 0, fail = 0;
@@ -92,7 +92,7 @@ const NOW = '2026-10-31T14:50:00.000Z';
   const o = faultItems(prev, [], [{ agent: 'routine-map-lights', at: '2026-11-03T08:50:00Z', ok: false, line: miss }, { agent: 'wa-assistant', at: '2026-11-03T08:51:00Z', ok: false, line: 'x ' + miss }], now);
   check('only the assistant, and only the gate prefix at the start, is quiet', o.items.every((x) => !x.quiet), o.items);
   const fsrc = fs.readFileSync(new URL('../../functions/_faults.js', import.meta.url), 'utf8');
-  check('the WhatsApp gets only the loud items, and none at all when every item is quiet', /const loud = items\.filter\(\(x\) => !x\.quiet\)/.test(fsrc) && /if \(loud\.length\)/.test(fsrc) && /faultText\(loud,/.test(fsrc));
+  check('the WhatsApp gets only the loud items, and none at all when every item is quiet', /const loud = items\.filter\(\(x\) => !x\.quiet\)/.test(fsrc) && /if \(loud\.length\)/.test(fsrc) && /if \(owner\.length\)/.test(fsrc) && /faultText\(owner,/.test(fsrc));
 }
 { // the text
   const items = Array.from({ length: FAULT_LINES + 3 }, (_, i) => ({ key: 'k' + i, text: 'x' + i }));
@@ -108,7 +108,7 @@ const NOW = '2026-10-31T14:50:00.000Z';
   check('a test error is closed without a fix (the request says so)', d.indexOf('dev_done') > 0);
   check('the message says the fix already started when it did, and the morning check when it did not', faultText(items, true) !== faultText(items, false) && /\u05d4\u05de\u05e4\u05ea\u05d7/.test(faultText(items, true)));
   const fsrc = fs.readFileSync(new URL('../../functions/_faults.js', import.meta.url), 'utf8');
-  check('the message says the fix started only when the developer was really fired (fired, already open, or the failure cites its own request; not no-fire)', /faultText\(loud, fix && \(fix\.fired \|\| fix\.already \|\| fix\.covered\)\)/.test(fsrc));
+  check('the message says the fix started only when the developer was really fired (fired, already open, or the failure cites its own request; not no-fire)', /faultText\(owner, fix && \(fix\.fired \|\| fix\.already \|\| fix\.covered\)\)/.test(fsrc));
   check('the fire goes through devFireTarget, only for a new request, once a day', /const ft = r\.created && fireOk \? devFireTarget\(env\) : null/.test(fsrc) && /fired_day/.test(fsrc));
   check('one open fault-alert request at a time', /x\.agent === 'fault-alert'/.test(fsrc) && /already: true/.test(fsrc));
 }
@@ -161,6 +161,17 @@ const NOW = '2026-10-31T14:50:00.000Z';
   const fsrc = fs.readFileSync(new URL('../../functions/_faults.js', import.meta.url), 'utf8');
   check('a failed audit_log read does not move the mark (no lost faults)', /if \(!r \|\| !r\.ok\) return/.test(fsrc) && /if \(sentOk\) await stateSet/.test(fsrc));
   check('no raw Hebrew in the server file', !/[א-ת]/.test(fsrc));
+}
+{ // 12/11/2026 (Michael: "do it: only what touches me"): an internal agent's failure goes to the developer, not to WhatsApp
+  const at = '2026-11-12T05:59:26.848Z', now = '2026-11-12T06:00:00.000Z', prev = { at: '2026-11-12T05:45:00.000Z', sent: {} };
+  const fsrc = fs.readFileSync(new URL('../../functions/_faults.js', import.meta.url), 'utf8');
+  const one = (r) => faultItems(prev, [], [{ at, ok: false, line: 'x', ...r }], now).items[0];
+  check('internal: map-lights (the 12/11 08:00 alert) is internal, not quiet (the dev request still opens)', one({ agent: 'map-lights' }).internal === true && !one({ agent: 'map-lights' }).quiet);
+  check('internal: routine-quality and retro are internal; the assistant and mail filing are not', one({ agent: 'routine-quality' }).internal === true && one({ agent: 'retro' }).internal === true && !one({ agent: 'routine-wa-assistant' }).internal && !one({ agent: 'routine-mail-filing' }).internal);
+  check('internal: the report\'s impact wins both ways', one({ agent: 'routine-validity', impact: 'internal' }).internal === true && !one({ agent: 'map-lights', impact: 'owner' }).internal && faultInternal({ agent: 'x', impact: 'bad' }) === false);
+  const both = faultItems(prev, [], [{ agent: 'routine-validity', at, ok: false, line: 'a', impact: 'internal' }, { agent: 'routine-validity', at: '2026-11-12T05:59:30.000Z', ok: false, line: 'b' }], now).items;
+  check('internal: one internal and one real failure of the same agent = loud (to WhatsApp)', both.length === 1 && !both[0].internal, both);
+  check('internal: the WhatsApp gets only items that are not internal, the dev request gets them all', /const owner = loud\.filter\(\(x\) => !x\.internal\)/.test(fsrc) && /faultText\(owner,/.test(fsrc) && /openFix\(env, url, k, loud,/.test(fsrc) && INTERNAL_AGENTS.includes('map-lights'));
 }
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
