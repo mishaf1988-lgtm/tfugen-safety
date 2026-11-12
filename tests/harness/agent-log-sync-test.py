@@ -28,6 +28,9 @@ print("\nthe public file: no personal detail")
 out = als.fmt({"at": "2026-11-11T10:00:00Z", "agent": "x", "ok": True,
                "line": "draft to dan@acme.co.il, call 052-1234567 or +972 54 765 4321",
                "learned": "write to yossi.cohen@tapugan.co.il"})
+import json as _json
+_S = _json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "pii-samples.json"), encoding="utf-8"))
+check("pii-samples.json: scrub gives the same result as the server's scrubPii (routine-db-test runs the same file)", all(als.scrub(x["in"]) == x["out"] for x in _S), [als.scrub(x["in"]) for x in _S if als.scrub(x["in"]) != x["out"]])
 check("a personal address and two mobile numbers are replaced in the line", "@" not in out.split("|")[2] and "052-1234567" not in out and "765 4321" not in out, out)
 check("an address in the learned part is replaced too", "@" not in out.split("|")[3], out)
 for label, raw in [("a dotted mobile 054.794.0073", "054.794.0073"), ("a mobile with brackets (054)7940073", "(054)7940073"), ("972(0)547940073", "972(0)547940073"),
