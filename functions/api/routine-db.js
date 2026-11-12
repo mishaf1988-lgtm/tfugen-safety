@@ -1991,7 +1991,7 @@ export function devDoneLead(fixed) {
 // partialCheck (12/11/2026, completeness check): an agent whose last two reports both say something is left (left > 0 or
 // left_what), so the same work stayed half done for more than one run. Pure: log = agent_log rows, oldest first.
 export function partialCheck(log) {
-  const last = {};
+  const last = Object.create(null); // an agent named "constructor" is not Object (security review 12/11/2026)
   (Array.isArray(log) ? log : []).forEach((x) => {
     if (!x || !x.agent || x.left === undefined && !x.left_what) { if (x && x.agent && last[x.agent]) last[x.agent].push(null); return; }
     (last[x.agent] = last[x.agent] || []).push(x);

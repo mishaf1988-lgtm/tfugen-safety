@@ -469,6 +469,7 @@ const callIn = async (body) => {
     const L = (agent, left, w, at) => ({ agent, at, ok: true, line: 'x', ...(left === null ? {} : { left }), ...(w ? { left_what: w } : {}) });
     const p = partialCheck([L('a', 3, 'mail A', '1'), L('b', 2, '', '1'), L('a', 1, 'mail A', '2'), L('b', 0, '', '2'), L('c', 5, '', '1'), L('c', null, '', '2'), L('d', 4, '', '1')]);
     check('partial_check: left twice in a row = found (a); done in between (b), a report with no counts after (c), one report only (d) = not', p.length === 1 && p[0].agent === 'a' && p[0].left_what === 'mail A' && p[0].prev_at === '1', p);
+    check('partial_check: an agent named constructor does not break it (security review)', partialCheck([L('constructor', 1, 'x', '1'), L('constructor', 1, 'x', '2')]).length === 1);
     check('partial_check: a left_what with left 0 still counts as half done', partialCheck([L('e', 0, 'mail B', '1'), L('e', 0, 'mail B', '2')]).length === 1);
     const pc = await call({ op: 'partial_check', agent: 'routine-quality' });
     check('partial_check op: reads agent_log and answers; another field is refused', pc.json.ok === true && Array.isArray(pc.json.partial) && (await call({ op: 'partial_check', agent: 'routine-quality', table: 'x' })).status === 400, pc.json);
