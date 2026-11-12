@@ -745,6 +745,10 @@ const callIn = async (body) => {
       const later = '2026-10-21T16:02:00.000Z', soon = '2026-10-21T16:00:30.000Z';
       const again = (list, at) => workerJobAdd(JSON.stringify(list), { agent: 'routine-wa-assistant', worker: WORKERS[2], task }, at);
       check('worker_now: same job, no fired_session, 2 minutes later = refire; 30 seconds later = no refire', again(a.list, later).refire === true && again(a.list, soon).refire === false && again(a.list, later).created !== true);
+      const r1 = again(a.list, later), r1b = again(r1.list, '2026-10-21T16:02:20.000Z');
+      check('worker_now: a refire is written (refire_at, refires), so a second retry right after (or at once, on the newer list) does not fire again', r1.refire === true && r1.list[0].refires === 1 && r1.list[0].refire_at === later && r1b.refire !== true);
+      let lst = a.list, n = 0; for (let m = 2; m < 12; m += 2) { const x = again(lst, '2026-10-21T16:' + String(m).padStart(2, '0') + ':00.000Z'); if (x.refire) n++; lst = x.list; }
+      check('worker_now: at most WORKER_REFIRE_MAX refires when no session ever comes back', n === 3, n);
       check('worker_now: same job that has a fired_session = no refire', again(a.list.map((x) => Object.assign({}, x, { fired_session: 'session_x' })), later).refire === false);
       check('worker_now: an unknown worker is refused', !!workerJobAdd('[]', { agent: 'routine-wa-assistant', worker: 'x', task }, now).error);
       const d = workerJobDone(JSON.stringify(a.list), a.id, '\u05e0\u05d1\u05d3\u05e7, \u05d4\u05d4\u05e6\u05e2\u05d4 \u05d1\u05ea\u05d5\u05e7\u05e3', now);

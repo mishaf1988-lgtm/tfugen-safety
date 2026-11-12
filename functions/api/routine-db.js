@@ -1461,7 +1461,7 @@ export function devFireText(e) {
 export const WORKER_TRIGGER = 'trig_011UyDNeQ1NV72NNyXJxwxtE', WORKER_JOBS_KEY = 'worker_jobs', WORKER_JOBS_MAX = 50;
 export const WORKERS = ['\u05de\u05e0\u05d4\u05dc \u05d4\u05ea\u05e4\u05e2\u05d5\u05dc', '\u05e8\u05db\u05d6 \u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd', '\u05e8\u05db\u05d6 \u05d4\u05e8\u05db\u05e9', '\u05e8\u05db\u05d6 \u05d4\u05d3\u05d5\u05d7\u05d5\u05ea', '\u05d4\u05d7\u05d5\u05e7\u05e8'];
 export const WORKER_FIRE_HEAD = '[\u05de\u05e9\u05d9\u05de\u05d4 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05de\u05d4\u05e9\u05e8\u05ea, \u05e0\u05d1\u05d3\u05e7 \u05d1\u05e9\u05e8\u05ea]';
-export const WORKER_REFIRE_MS = 60000;
+export const WORKER_REFIRE_MS = 60000, WORKER_REFIRE_MAX = 3;
 export function workerJobAdd(raw, b, nowIso) {
   const agent = String(b.agent || ''), worker = String(b.worker || '').trim(), task = String(b.task || '').replace(/\r\n/g, '\n').trim();
   if (!/^[a-z0-9-]{2,40}$/.test(agent)) return { error: 'bad agent name' };
@@ -1472,8 +1472,15 @@ export function workerJobAdd(raw, b, nowIso) {
   if (!Array.isArray(list)) list = [];
   const same = list.find((x) => x && x.status === 'open' && x.worker === worker && x.task === task);
   // 12/11/2026 (security review of #2713): the job was saved but the request broke before the fire, so a retry found it and
-  // never fired the worker. No fired_session and older than WORKER_REFIRE_MS (a fire still in flight is not doubled) = fire again.
-  if (same) return { list, id: same.id, refire: !same.fired_session && Date.parse(nowIso) - Date.parse(same.at) >= WORKER_REFIRE_MS };
+  // never fired the worker. No fired_session, WORKER_REFIRE_MS since the job or the last refire (a fire still in flight is not
+  // doubled) and fewer than WORKER_REFIRE_MAX refires = fire again. The refire is written (refire_at, refires) inside stateCas,
+  // so of two retries at once only one fires, and a fire that never returns a session stops after WORKER_REFIRE_MAX (security review).
+  if (same) {
+    const last = Math.max(Date.parse(same.at) || 0, Date.parse(same.refire_at || '') || 0);
+    if (same.fired_session || (same.refires || 0) >= WORKER_REFIRE_MAX || Date.parse(nowIso) - last < WORKER_REFIRE_MS) return { list, id: same.id };
+    same.refire_at = nowIso; same.refires = (same.refires || 0) + 1;
+    return { list, id: same.id, refire: true };
+  }
   if (list.length >= WORKER_JOBS_MAX && !list.some((x) => x && x.status !== 'open')) return { error: 'jobs full' };
   const id = 'job-' + nowIso.replace(/\D/g, '').slice(0, 14) + '-' + Math.random().toString(36).slice(2, 6);
   list.push({ id, at: nowIso, agent, worker, task, status: 'open' });
@@ -2666,10 +2673,10 @@ async function routineDbHandle(context) {
       let r = null;
       const w = await stateCas(url, h, WORKER_JOBS_KEY, (raw) => {
         r = body.op === 'worker_now' ? workerJobAdd(raw, body, now) : workerJobDone(raw, String(body.id || ''), body.note, now);
-        return r.error ? { write: false } : (body.op === 'worker_now' && !r.created) ? { write: false } : { value: JSON.stringify(r.list) };
+        return r.error ? { write: false } : (body.op === 'worker_now' && !r.created && !r.refire) ? { write: false } : { value: JSON.stringify(r.list) };
       }, () => tmo(SB_MS)).catch((e) => ({ written: false, error: String(e && e.message || e) }));
       if (r && r.error) return jsonResp({ ok: false, error: r.error }, 400, {});
-      if (!w.written && !(r && body.op === 'worker_now' && !r.created && !w.error && !w.status && !w.conflict)) return jsonResp({ ok: false, error: 'write ' + (w.error || w.status || 'conflict') }, 200, {});
+      if (!w.written && !(r && body.op === 'worker_now' && !r.created && !r.refire && !w.error && !w.status && !w.conflict)) return jsonResp({ ok: false, error: 'write ' + (w.error || w.status || 'conflict') }, 200, {});
       let fired = null, wa = null;
       if (body.op === 'worker_now' && (r.created || r.refire) && env.WORKER_FIRE_TOKEN) {
         const e = r.list.find((x) => x && x.id === r.id);
