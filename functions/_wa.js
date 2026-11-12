@@ -324,9 +324,11 @@ export function fastModel(m, about, joins) {
   return !fastHits(words, FAST_ACT) && !fastHits(words, FAST_SAFE);
 }
 export const ASSISTANT_FAST_TRIGGER = 'trig_01H7nGfmT4NDgs9N9odMp6se';
-// the fast pair: only the main account, only when its token is set (ASSISTANT_FAST_FIRE_TOKEN); otherwise null = Opus
+// the fast pair: only the main account, only when its token is set (ASSISTANT_FAST_FIRE_TOKEN) and the switch
+// ASSISTANT_FAST_ON is '1' (12/11/2026: the token was saved before the Routine had its Microsoft 365 connector, and a
+// fast run without it cannot read mail or the calendar); otherwise null = Opus
 export function fastFire(env, af) {
-  return af && af.which === 'old' && env.ASSISTANT_FAST_FIRE_TOKEN ? { url: fireUrlOf(ASSISTANT_FAST_TRIGGER), token: env.ASSISTANT_FAST_FIRE_TOKEN, which: 'fast' } : null;
+  return af && af.which === 'old' && env.ASSISTANT_FAST_FIRE_TOKEN && env.ASSISTANT_FAST_ON === '1' ? { url: fireUrlOf(ASSISTANT_FAST_TRIGGER), token: env.ASSISTANT_FAST_FIRE_TOKEN, which: 'fast' } : null;
 }
 
 export function digits(s) { return String(s == null ? '' : s).replace(/[^0-9]/g, ''); }

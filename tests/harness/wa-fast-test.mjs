@@ -315,8 +315,9 @@ await (async () => {
   check('fastModel: a reply to a message, joined lines, a file, a button and a long line stay on Opus', !fastModel({ text: '\u05de\u05d4 \u05e4\u05d2?' }, 'x', 0) && !fastModel({ text: '\u05de\u05d4 \u05e4\u05d2?' }, null, 2) && !fastModel({ text: '\u05de\u05d4 \u05d6\u05d4?', media: {} }, null, 0) && !fastModel({ text: '\u05de\u05d4 \u05e4\u05d2?', choice: '1' }, null, 0) && !fastModel({ text: '\u05de\u05d4 \u05e4\u05d2 ' + 'x'.repeat(80) }, null, 0));
   check('fastModel: infinitives, slashes, English and hidden characters stay on Opus', ['\u05de\u05d4 \u05e2\u05dd \u05dc\u05de\u05d7\u05d5\u05e7 \u05d0\u05ea \u05d4\u05e9\u05d5\u05e8\u05d4?', '\u05de\u05ea\u05d9 \u05dc\u05e9\u05dc\u05d5\u05d7?', '\u05db\u05de\u05d4 \u05dc\u05d4\u05d5\u05e1\u05d9\u05e3?', '\u05d0\u05d9\u05e4\u05d4 \u05d4\u05d2\u05d6/\u05d4\u05d7\u05e9\u05de\u05dc?', 'send the mail?', '\u05de\u05d4 \u200b\u05ea\u05e9\u05dc\u05d7?'].every((x) => !fastModel({ text: x }, null, 0)));
   const old = { url: 'u', token: 't', which: 'old' };
-  check('fastFire: only with ASSISTANT_FAST_TRIGGER token, only the main account', fastFire({}, old) === null && fastFire({ ASSISTANT_FAST_FIRE_TOKEN: 'k' }, { which: 'new' }) === null
-    && fastFire({ ASSISTANT_FAST_FIRE_TOKEN: 'k' }, old).url === fireUrlOf(ASSISTANT_FAST_TRIGGER) && fastFire({ ASSISTANT_FAST_FIRE_TOKEN: 'k' }, old).which === 'fast');
+  const on = { ASSISTANT_FAST_FIRE_TOKEN: 'k', ASSISTANT_FAST_ON: '1' };
+  check('fastFire: only with the token and the switch ASSISTANT_FAST_ON, only the main account', fastFire({}, old) === null && fastFire({ ASSISTANT_FAST_FIRE_TOKEN: 'k' }, old) === null && fastFire(on, { which: 'new' }) === null
+    && fastFire(on, old).url === fireUrlOf(ASSISTANT_FAST_TRIGGER) && fastFire(on, old).which === 'fast');
 }
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
