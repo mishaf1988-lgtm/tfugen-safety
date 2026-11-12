@@ -2198,6 +2198,18 @@ const callIn = async (body) => {
     const di = JSON.parse(state.dev_inbox).map((x) => x.text);
     check('cas: dev_request keeps a request saved in between', dr.json.ok === true && di.includes('another request saved meanwhile') && di.some((x) => /race test/.test(x)), { j: dr.json, di });
     raceOnce = null; if (inboxBefore === undefined) delete state.dev_inbox; else state.dev_inbox = inboxBefore;
+    // 12/11/2026 (ideas-lab 12, one key per PR): the promise a dev request adds goes through stateCas too. A promise the
+    // assistant saves between our read and our write is kept (before: the old list was written over it).
+    { const pBefore = state.promises, pVer = stateVer.promises;
+      state.promises = '[]'; stateVer.promises = 'v-pr0';
+      let hit = 0; const racer = (k) => { if (k !== 'promises') { raceOnce = racer; return; } hit++; state[k] = JSON.stringify([{ id: 'p-meanwhile', at: new Date().toISOString(), agent: 'wa-assistant', text: 'a promise saved meanwhile', status: 'open' }]); stateVer[k] = 'v-pr-other'; };
+      raceOnce = racer;
+      const pr = await call({ op: 'dev_request', agent: 'routine-quality', text: 'a request whose promise races another, long enough to pass' });
+      raceOnce = null;
+      const pl = JSON.parse(state.promises).map((x) => x.text);
+      check('cas: dev_request keeps a promise saved in between (before: the promise list was written over it)', pr.json.ok === true && hit === 1 && pl.includes('a promise saved meanwhile') && pl.length === 2, { j: pr.json, pl, hit });
+      if (pBefore === undefined) { delete state.promises; delete stateVer.promises; } else { state.promises = pBefore; stateVer.promises = pVer; }
+    }
     // 11/11/2026 (ideas-lab 12, one key per PR): worker_jobs. A job saved between our read and our write is kept.
     { const { WORKERS } = await import('./_build/routine-db.mjs');
       const jobsBefore = state.worker_jobs, jobsVer = stateVer.worker_jobs;
