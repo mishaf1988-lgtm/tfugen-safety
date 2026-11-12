@@ -731,9 +731,9 @@
    "reports": true
   },
   {
-   "id": "trig_01PiJpBmASES4tDqwdePUsH2",
+   "id": "trig_01PiJpBmASES4tDqwdePUsH2` (**כבוי 12/11/2026**, הוחלף בשורה למטה; להדליק חזרה רק אם החדש נכשל)",
    "zone": "routines",
-   "name": "רטרו יומי",
+   "name": "רטרו יומי בשיחה קבועה",
    "what": "",
    "when": "א'-ה' 07:52",
    "when_full": "א'-ה' 07:52",
@@ -752,10 +752,10 @@
    "reports": true
   },
   {
-   "id": "trig_01XGrqU6JWc73ER7WozWdjbh` (11/11/2026, **כבוי עד C82**)",
+   "id": "trig_01XGrqU6JWc73ER7WozWdjbh` (11/11/2026; **פעיל מ-12/11/2026**, אחרי שמיכאל חיבר את המאגר, C82)",
    "zone": "routines",
    "name": "רטרו יומי בשיחה חדשה",
-   "what": "רטרו יומי בשיחה חדשה (יחליף את השורה למעלה)",
+   "what": "",
    "when": "א'-ה' 07:52",
    "when_full": "א'-ה' 07:52",
    "doc": "retro-prompt.md",
