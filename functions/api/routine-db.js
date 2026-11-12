@@ -463,7 +463,42 @@ export function devInboxDone(raw, id, note, nowIso) {
   // closed stays as it was, so a second call writes nothing, logs nothing and sends Michael nothing.
   if (x.status === 'done') return { list, already: true };
   x.status = 'done'; x.done_at = nowIso; x.note = String(note || '').slice(0, 300);
-  return { list };
+  // 12/11/2026 (STATUS "repeat fault", Michael: "the assistant's message, check it"): the retro failed 14:08 and asked for a fix itself;
+  // the fault alert opened its own request on the same failure at 14:15. The agent's request was closed at 14:28 with a note
+  // to Michael, the alert's stayed open, and at 16:20 he got a reminder on a thing already explained. Closing an agent's own
+  // request now closes, quietly, an open fault-alert request on that agent alone from the same hours.
+  const also = devFaultSiblings(list, x, nowIso);
+  return also.length ? { list, also } : { list };
+}
+// Pure: the open fault-alert requests that the close of agent request x also settles. Only a request that names x's agent
+// and nothing else (no browser errors, no other agent), opened from 1 hour before x to DEV_SIBLING_MS after it: a fault on
+// another agent, or a later failure of the same one, stays open. Mutates the matches to done; returns their ids.
+export const DEV_SIBLING_MS = 3 * 3600e3;
+const FAULT_AGENTS_MARK = '\u05e1\u05d5\u05db\u05e0\u05d9\u05dd \u05e9\u05e0\u05db\u05e9\u05dc\u05d5: ';
+const FAULT_ERRS_MARK = '\u05e9\u05d2\u05d9\u05d0\u05d5\u05ea \u05d7\u05d3\u05e9\u05d5\u05ea \u05d1\u05d3\u05e4\u05d3\u05e4\u05df';
+const faultAgentName = (s) => String(s || '').replace(/^routine-/, '').replace(/-prompt$/, '').replace(/\.md$/, '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+export function faultAgentsOf(text) {
+  const t = String(text || ''), i = t.indexOf(FAULT_AGENTS_MARK);
+  if (i < 0) return [];
+  const rest = t.slice(i + FAULT_AGENTS_MARK.length), j = rest.indexOf(' (');
+  return (j < 0 ? rest : rest.slice(0, j)).split(', ').map((a) => a.trim()).filter(Boolean);
+}
+export function devFaultSiblings(list, x, nowIso) {
+  if (!x || x.agent === 'fault-alert' || SERVER_REQUESTERS.indexOf(String(x.agent || '')) >= 0) return [];
+  const who = faultAgentName(x.agent), t0 = Date.parse(x.at);
+  if (!who || !Number.isFinite(t0)) return [];
+  const ids = [];
+  for (const y of (Array.isArray(list) ? list : [])) {
+    if (!y || y === x || y.status !== 'open' || y.agent !== 'fault-alert') continue;
+    const t = Date.parse(y.at);
+    if (!Number.isFinite(t) || t < t0 - 3600e3 || t > t0 + DEV_SIBLING_MS) continue;
+    if (String(y.text || '').indexOf(FAULT_ERRS_MARK) >= 0) continue;
+    const names = faultAgentsOf(y.text);
+    if (names.length !== 1 || faultAgentName(names[0]) !== who) continue;
+    y.status = 'done'; y.done_at = nowIso; y.fixed = true; y.note = ('\u05e0\u05e1\u05d2\u05e8 \u05d9\u05d7\u05d3 \u05e2\u05dd ' + x.id).slice(0, 300);
+    ids.push(y.id);
+  }
+  return ids;
 }
 // The assistant's notebook (21/10/2026, _wa.js LEARN_KEY). A new line is kept until the retro folds it; the
 // same open text again is the same line; a full notebook of open lines refuses instead of dropping one.
@@ -2595,7 +2630,7 @@ async function routineDbHandle(context) {
         } catch (x) { wa = 'failed'; }
       }
       const eta = body.op === 'dev_request' ? devEta(Date.now()) : undefined;
-      return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length, wa, fired, eta }, 200, {});
+      return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length, wa, fired, eta, also: r.also }, 200, {});
     }
     // wa_file (22/10/2026, Michael to the assistant: "I asked to get the files here", and "the link is broken"): 1-5
     // files from the safety folder sent to Michael on WhatsApp as documents. Only to him, only inside the 24-hour window
