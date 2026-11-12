@@ -294,6 +294,43 @@ export async function assistantFireNow(env) {
   return pickFire(env, acctCache.v);
 }
 
+// 12/11/2026 (Michael: "do the addition", ideas-lab 30): a short read-only question goes to the assistant's fast
+// Routine on Sonnet; anything that writes, drafts, fills a form, or touches safety stays on Opus. Conservative on purpose:
+// a miss only costs speed (Opus answers), a wrong "fast" could cost quality. Pure: m = the inbound message, about = the
+// message it replies to (any reply stays on Opus), joins = how many lines were joined into this fire.
+export const FAST_MODEL_MAX = 80;
+export const FAST_Q_RE = /^(\u05de\u05d4|\u05de\u05ea\u05d9|\u05db\u05de\u05d4|\u05d0\u05d9\u05e4\u05d4|\u05de\u05d9|\u05d9\u05e9|\u05d4\u05d0\u05dd|\u05d0\u05d9\u05d6\u05d4|\u05d0\u05d9\u05dc\u05d5|\u05dc\u05de\u05d4)( |$)/;
+export const FAST_ACT = ['\u05ea\u05db\u05d9\u05df', '\u05d4\u05db\u05df', '\u05ea\u05e9\u05dc\u05d7', '\u05e9\u05dc\u05d7', '\u05ea\u05db\u05ea\u05d5\u05d1', '\u05db\u05ea\u05d5\u05d1', '\u05d8\u05d9\u05d5\u05d8\u05d4', '\u05de\u05d9\u05d9\u05dc', '\u05ea\u05e2\u05d3\u05db\u05df', '\u05e2\u05d3\u05db\u05df', '\u05ea\u05e8\u05e9\u05d5\u05dd', '\u05e8\u05e9\u05d5\u05dd', '\u05ea\u05e7\u05d1\u05e2', '\u05e7\u05d1\u05e2', '\u05ea\u05d6\u05de\u05df', '\u05d8\u05d5\u05e4\u05e1', '\u05ea\u05de\u05dc\u05d0', '\u05de\u05dc\u05d0', '\u05ea\u05d7\u05ea\u05d5\u05dd', '\u05d7\u05ea\u05d5\u05dd', '\u05d7\u05ea\u05d9\u05de', '\u05ea\u05de\u05d7\u05e7', '\u05de\u05d7\u05e7', '\u05ea\u05e2\u05d1\u05d9\u05e8', '\u05d4\u05e2\u05d1\u05e8', '\u05ea\u05d6\u05db\u05d9\u05e8', '\u05ea\u05d6\u05db\u05d5\u05e8\u05ea', '\u05d1\u05e6\u05e2', '\u05ea\u05d5\u05e1\u05d9\u05e3', '\u05d4\u05d5\u05e1\u05e3', '\u05ea\u05e1\u05d2\u05d5\u05e8', '\u05e1\u05d2\u05d5\u05e8', '\u05ea\u05e4\u05ea\u05d7', '\u05e4\u05ea\u05d7', '\u05ea\u05e1\u05e8\u05d5\u05e7', '\u05e1\u05e8\u05d9\u05e7', '\u05ea\u05d1\u05d3\u05d5\u05e7', '\u05d1\u05d3\u05d5\u05e7', '\u05ea\u05d6\u05de\u05d9\u05df', '\u05d4\u05d6\u05de\u05df', '\u05ea\u05d5\u05e8\u05d9\u05d3', '\u05ea\u05e9\u05e0\u05d4', '\u05e9\u05e0\u05d4', '\u05dc\u05de\u05d7\u05d5\u05e7', '\u05dc\u05e9\u05dc\u05d5\u05d7', '\u05dc\u05d4\u05d5\u05e1\u05d9\u05e3', '\u05dc\u05e7\u05d1\u05d5\u05e2', '\u05dc\u05e4\u05ea\u05d5\u05d7', '\u05dc\u05d4\u05e2\u05d1\u05d9\u05e8', '\u05dc\u05d4\u05db\u05d9\u05df', '\u05dc\u05e1\u05e8\u05d5\u05e7', '\u05dc\u05d4\u05d6\u05de\u05d9\u05df', '\u05dc\u05e9\u05e0\u05d5\u05ea', '\u05dc\u05d4\u05d5\u05e8\u05d9\u05d3', '\u05ea\u05e9\u05dc\u05d5\u05d7', '\u05dc\u05d4\u05d6\u05db\u05d9\u05e8', '\u05dc\u05ea\u05d6\u05de\u05df'];
+export const FAST_SAFE = ['\u05ea\u05d0\u05d5\u05e0', '\u05e4\u05e6\u05d9\u05e2', '\u05e0\u05e4\u05e6\u05e2', '\u05e4\u05d2\u05d9\u05e2', '\u05d3\u05dc\u05d9\u05e4', '\u05e9\u05e8\u05d9\u05e4', '\u05d0\u05e9', '\u05e4\u05d9\u05e0\u05d5\u05d9', '\u05de\u05e4\u05d2\u05e2', '\u05d0\u05d9\u05e8\u05d5\u05e2', '\u05d7\u05d9\u05e8\u05d5\u05dd', '\u05d0\u05de\u05d5\u05e0\u05d9\u05d4', '\u05d2\u05d6', '\u05e0\u05e9\u05d9\u05de', '\u05db\u05de\u05e2\u05d8', '\u05e1\u05db\u05e0', '\u05de\u05e1\u05d5\u05db\u05df', '\u05d4\u05e8\u05e2\u05dc', '\u05e7\u05e8\u05d9\u05e0', '\u05d7\u05e9\u05de\u05dc'];
+// a word and the same word without one or two prefix letters (ו ה ב ל מ ש כ); a stem of 2 letters must be the whole
+// word (or + ים), so "מלגזה" is not "גז" and "ראשון" is not "אש"
+function fastStems(w) {
+  const out = [w]; const P = '\u05d5\u05d4\u05d1\u05dc\u05de\u05e9\u05db';
+  if (w.length > 2 && P.indexOf(w[0]) >= 0) out.push(w.slice(1));
+  if (w.length > 3 && P.indexOf(w[0]) >= 0 && P.indexOf(w[1]) >= 0) out.push(w.slice(2));
+  if (w.length > 4 && P.indexOf(w[0]) >= 0 && P.indexOf(w[1]) >= 0 && P.indexOf(w[2]) >= 0) out.push(w.slice(3));
+  return out;
+}
+function fastHits(words, list) {
+  return words.some((w) => fastStems(w).some((x) => list.some((k) => k.length <= 2 ? (x === k || x === k + '\u05d9\u05dd') : x.indexOf(k) === 0)));
+}
+export function fastModel(m, about, joins) {
+  if (!m || m.media || m.choice || about || joins) return false;
+  // security review 12/11/2026: hidden characters and Latin letters (an English request) never take the fast lane
+  const t = String(m.text || '').replace(/[\u200b-\u200f\u2060\ufeff\u00ad]/g, '').replace(/\s+/g, ' ').trim();
+  if (!t || t.length > FAST_MODEL_MAX || /\n/.test(String(m.text)) || /[A-Za-z]/.test(t)) return false;
+  if (!FAST_Q_RE.test(t) && !/\?$/.test(t)) return false;
+  const words = t.split(/[^\u05d0-\u05ea0-9]+/).filter(Boolean);
+  return !fastHits(words, FAST_ACT) && !fastHits(words, FAST_SAFE);
+}
+export const ASSISTANT_FAST_TRIGGER = 'trig_01H7nGfmT4NDgs9N9odMp6se';
+// the fast pair: only the main account, only when its token is set (ASSISTANT_FAST_FIRE_TOKEN) and the switch
+// ASSISTANT_FAST_ON is '1' (12/11/2026: the token was saved before the Routine had its Microsoft 365 connector, and a
+// fast run without it cannot read mail or the calendar); otherwise null = Opus
+export function fastFire(env, af) {
+  return af && af.which === 'old' && env.ASSISTANT_FAST_FIRE_TOKEN && env.ASSISTANT_FAST_ON === '1' ? { url: fireUrlOf(ASSISTANT_FAST_TRIGGER), token: env.ASSISTANT_FAST_FIRE_TOKEN, which: 'fast' } : null;
+}
+
 export function digits(s) { return String(s == null ? '' : s).replace(/[^0-9]/g, ''); }
 export function waOneLine(s, max) {
   return String(s == null ? '' : s).replace(/\s*\n+\s*/g, ' | ').replace(/[\t ]{2,}/g, ' ').trim().slice(0, max || 1000);
