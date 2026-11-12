@@ -16,20 +16,39 @@ import { stateCas } from './_cas.js';
 
 // 'dev' is not here (security review 11/11/2026): other agents report under it, and the server's own dev_done line would hide its failure from the morning update
 export const FAULT_FIXERS = ['dev-fire', 'dev-safety', 'dev-runner'];
-// 12/11/2026 (Michael in the assistant chat's questionnaire: "do it: only what touches me (recommended)", after a 08:00 alert
-// on map-lights that had updated its lights and only failed a side write): WhatsApp only for a fault that touches Michael
-// (the app, the assistant not answering, a message or file not sent or saved, wrong data). A failure of an internal agent
-// (display, internal check, blocked tool, a side write when the main work was done) goes to the developer quietly: the
-// dev request still opens, no WhatsApp, and the morning update keeps its line. The report's own "impact" wins:
-// "internal" makes any agent's failure internal, "owner" makes one of these loud.
-export const INTERNAL_AGENTS = ['map-lights', 'staging-e2e', 'cowork-check', 'retro', 'quality', 'additions-log', 'deep-review', 'savings-assistant'];
+// 12/11/2026 (Michael in the assistant chat, after a 08:00 alert on map-lights that had updated its lights and only failed a
+// side write: "a fault must be handled; only if it was not handled, alert", and in the questionnaire: "do it: after 3 hours
+// (recommended)", "do it: alert at once (recommended)" on a fault that stops him). DECISIONS 12/11/2026.
+//   1. every agent's failure goes to the developer first (the request opens as before), with no WhatsApp;
+//   2. fixed (dev_done fixed:true on a fault-alert request): no "fixed" WhatsApp, its line is in the morning update;
+//   3. not fixed within FAULT_ESCALATE_MS, or the developer wrote he cannot (dev_done fixed:false, "not fixed:"): one message;
+//   4. at once: an error in the app (client_error), the WhatsApp assistant failing (Michael got no answer), or a
+//      report that says impact "owner" (it stops Michael).
+export const FAULT_ESCALATE_MS = 3 * 3600e3, FAULT_HELD_MAX = 20;
 export function faultInternal(r) {
-  // the WhatsApp assistant's failure means Michael got no answer: never internal, whatever it says (security review 12/11/2026)
+  // the WhatsApp assistant's failure means Michael got no answer: always at once, whatever it says (security review 12/11/2026)
   if (SECOND_CHECK_AGENTS.indexOf(String((r && r.agent) || '')) >= 0) return false;
-  const imp = String((r && r.impact) || '');
-  if (imp === 'internal') return true;
-  if (imp === 'owner') return false;
-  return INTERNAL_AGENTS.indexOf(agentKey(r && r.agent)) >= 0;
+  return String((r && r.impact) || '') !== 'owner';
+}
+// Pure: the held faults (not sent at once) against the inbox. A request closed = handled (fixed: nothing to say; not
+// fixed: dev_done already told Michael "not fixed:"). Still open, or no request at all, FAULT_ESCALATE_MS after it was
+// held = due: one message now. Returns {due: [text], keep: [held]}.
+export function faultEscalate(held, inbox, nowIso) {
+  const now = Date.parse(nowIso), byId = {};
+  (Array.isArray(inbox) ? inbox : []).forEach((x) => { if (x && x.id) byId[x.id] = x; });
+  const due = [], keep = [];
+  (Array.isArray(held) ? held : []).forEach((x) => {
+    if (!x || !x.text || !x.at) return;
+    const q = x.req ? byId[x.req] : null;
+    if (q && q.status === 'done') return;
+    if (now - Date.parse(x.at) >= FAULT_ESCALATE_MS) due.push(x.text); else keep.push(x);
+  });
+  return { due, keep: keep.slice(-FAULT_HELD_MAX) };
+}
+export function faultEscalateText(due) {
+  const lines = due.slice(0, FAULT_LINES).map((t) => '- ' + t);
+  if (due.length > FAULT_LINES) lines.push('- \u05d5\u05e2\u05d5\u05d3 ' + (due.length - FAULT_LINES));
+  return '\u26a0\ufe0f \u05ea\u05e7\u05dc\u05d4 \u05e9\u05dc\u05d0 \u05ea\u05d5\u05e7\u05e0\u05d4 \u05ea\u05d5\u05da 3 \u05e9\u05e2\u05d5\u05ea:\n' + lines.join('\n') + '\n\u05d4\u05de\u05e4\u05ea\u05d7 \u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05e1\u05d2\u05e8 \u05d0\u05d5\u05ea\u05d4, \u05d5\u05dc\u05d0 \u05db\u05ea\u05d1 \u05e9\u05e6\u05e8\u05d9\u05da \u05de\u05de\u05da \u05de\u05e9\u05d4\u05d5. \u05d3\u05d7\u05d5\u05e3? \u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05db\u05d0\u05df.';
 }
 export const FAULT_KEY = 'fault_alert', FAULT_LINES = 5, FAULT_FIRST_MS = 20 * 60e3;
 const dayIL = (iso) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(iso));
@@ -258,8 +277,26 @@ export async function runFaultAlert(env, nowIso) {
       sentOk = !!(s && s.ok);
     }
   }
+  // 12/11/2026: what was not sent at once is held with its request, and said once if still not handled after 3 hours
+  let held = Array.isArray(prev && prev.held) ? prev.held.slice() : [];
+  if (sentOk) items.filter((x) => !x.quiet && x.internal).forEach((x) => held.push({ text: x.text, at: nowIso, req: x.ref || (fix && fix.id) || '' }));
+  if (held.length) {
+    let inbox = null; try { const ib = await stateGet(env, [DEV_INBOX_KEY], true); inbox = JSON.parse((ib[DEV_INBOX_KEY] && ib[DEV_INBOX_KEY].value) || '[]'); } catch (e) { inbox = null; }
+    // an unreadable inbox is not "nothing handled": keep them all for the next tick
+    if (Array.isArray(inbox)) {
+      const esc = faultEscalate(held, inbox, nowIso);
+      let ok = true;
+      if (esc.due.length) {
+        const to = await ownerWa(env, url);
+        const s = to ? await sendToOwner(env, to, faultEscalateText(esc.due), { kind: 'fault', windowOpen: await ownerWindowOpen(env, url) }) : { ok: false, error: 'no owner' };
+        ok = !!(s && s.ok);
+      }
+      if (ok) held = esc.keep;
+    }
+  }
+  fault.held = held;
   // not sent: the mark does not move, so the same faults are tried again next tick
   if (fix && fix.fired) fault.fired_day = dayIL(nowIso); else if (prev && prev.fired_day) fault.fired_day = prev.fired_day;
   if (sentOk) await stateSet(env, { [FAULT_KEY]: JSON.stringify(fault) });
-  return { ok: true, items: items.length, sent: items.length ? sentOk : false, fix };
+  return { ok: true, items: items.length, sent: items.length ? sentOk : false, fix, held: held.length };
 }

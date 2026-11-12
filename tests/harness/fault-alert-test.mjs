@@ -1,6 +1,6 @@
 // Fault alert (31/10/2026, functions/_faults.js): every watchdog tick tells Michael, in ONE WhatsApp, about errors in
 // users' browsers and agents that reported a failure since the last tick; the same fault once a day.
-import { faultItems, faultText, faultDevText, faultTodo, FAULT_FIXERS, goldenStep, goldenAlready, faultInternal, INTERNAL_AGENTS, GOLDEN_SETTLE_MS, GOLDEN_GAP_MS, GOLDEN_TEXT, FAULT_LINES, FAULT_FIRST_MS } from './_build/_faults.mjs';
+import { faultItems, faultText, faultDevText, faultTodo, FAULT_FIXERS, goldenStep, goldenAlready, faultInternal, faultEscalate, faultEscalateText, FAULT_ESCALATE_MS, GOLDEN_SETTLE_MS, GOLDEN_GAP_MS, GOLDEN_TEXT, FAULT_LINES, FAULT_FIRST_MS } from './_build/_faults.mjs';
 import { devInboxAdd } from './_build/routine-db.mjs';
 import fs from 'node:fs';
 let pass = 0, fail = 0;
@@ -38,7 +38,7 @@ const NOW = '2026-10-31T14:50:00.000Z';
     { agent: 'routine-mail-filing', at: '2026-11-11T05:53:00Z', ok: false, line: 'timeout' }];
   const r = faultItems(prev, [], log, '2026-11-11T06:00:00.000Z');
   const q = r.items.filter((x) => x.quiet).map((x) => x.key).sort(), loud = r.items.filter((x) => !x.quiet).map((x) => x.key);
-  check('a failed fixer (dev-fire, dev-safety) is quiet; another agent that failed is still loud', q.join() === 'agentq:dev-fire,agentq:dev-safety' && loud.join() === 'agent:mail-filing', r.items);
+  check('a failed fixer (dev-fire, dev-safety) is quiet; another agent that failed still opens a request (held for 3 hours since 12/11/2026)', q.join() === 'agentq:dev-fire,agentq:dev-safety' && loud.join() === 'agenti:mail-filing', r.items);
   check('FAULT_FIXERS: the three fired developers only; a failure under the shared name "dev" stays loud', FAULT_FIXERS.join() === 'dev-fire,dev-safety,dev-runner' && faultItems(prev, [], [{ agent: 'dev', at: '2026-11-11T05:55:00Z', ok: false, line: 'x' }], '2026-11-11T06:00:00.000Z').items.every((x) => !x.quiet));
 }
 { // 11/11/2026: the golden questions run by themselves after the assistant's instructions changed (goldenStep)
@@ -162,20 +162,31 @@ const NOW = '2026-10-31T14:50:00.000Z';
   check('a failed audit_log read does not move the mark (no lost faults)', /if \(!r \|\| !r\.ok\) return/.test(fsrc) && /if \(sentOk\) await stateSet/.test(fsrc));
   check('no raw Hebrew in the server file', !/[א-ת]/.test(fsrc));
 }
-{ // 12/11/2026 (Michael: "do it: only what touches me"): an internal agent's failure goes to the developer, not to WhatsApp
-  const at = '2026-11-12T05:59:26.848Z', now = '2026-11-12T06:00:00.000Z', prev = { at: '2026-11-12T05:45:00.000Z', sent: {} };
+{ // 12/11/2026 (Michael: "a fault must be handled; only if it was not handled, alert"; DECISIONS 12/11/2026): the four cases
   const fsrc = fs.readFileSync(new URL('../../functions/_faults.js', import.meta.url), 'utf8');
+  const at = '2026-11-12T05:59:26.848Z', now = '2026-11-12T06:00:00.000Z', prev = { at: '2026-11-12T05:45:00.000Z', sent: {} };
   const one = (r) => faultItems(prev, [], [{ at, ok: false, line: 'x', ...r }], now).items[0];
-  check('internal: map-lights (the 12/11 08:00 alert) is internal, not quiet (the dev request still opens)', one({ agent: 'map-lights' }).internal === true && !one({ agent: 'map-lights' }).quiet);
-  check('internal: routine-quality and retro are internal; the assistant and mail filing are not', one({ agent: 'routine-quality' }).internal === true && one({ agent: 'retro' }).internal === true && !one({ agent: 'routine-wa-assistant' }).internal && !one({ agent: 'routine-mail-filing' }).internal);
-  check('internal: the report\'s impact wins both ways', one({ agent: 'routine-validity', impact: 'internal' }).internal === true && !one({ agent: 'map-lights', impact: 'owner' }).internal && faultInternal({ agent: 'x', impact: 'bad' }) === false);
-  const both = faultItems(prev, [], [{ agent: 'routine-validity', at, ok: false, line: 'a', impact: 'internal' }, { agent: 'routine-validity', at: '2026-11-12T05:59:30.000Z', ok: false, line: 'b' }], now).items;
-  check('internal: one internal and one real failure of the same agent = two items, the real one goes to WhatsApp', both.length === 2 && both.filter((x) => !x.internal).length === 1 && both.find((x) => !x.internal).key === 'agent:validity', both);
-  const morning = faultItems(prev, [], [{ agent: 'routine-validity', at, ok: false, line: 'side write', impact: 'internal' }], now);
-  const later = faultItems(morning.fault, [], [{ agent: 'routine-validity', at: '2026-11-12T09:00:00.000Z', ok: false, line: 'real' }], '2026-11-12T09:05:00.000Z').items;
-  check('internal: an internal failure in the morning does not hide a real one of the same agent later that day (own key)', morning.items[0].key === 'agenti:validity' && later.length === 1 && !later[0].internal, later);
-  check('internal: the WhatsApp assistant is never internal, even with impact internal', !one({ agent: 'routine-wa-assistant', impact: 'internal' }).internal && !one({ agent: 'wa-assistant', impact: 'internal' }).internal);
-  check('internal: the WhatsApp gets only items that are not internal, the dev request gets them all', /const owner = loud\.filter\(\(x\) => !x\.internal\)/.test(fsrc) && /faultText\(owner,/.test(fsrc) && /openFix\(env, url, k, loud,/.test(fsrc) && INTERNAL_AGENTS.includes('map-lights'));
+  // 1. every agent's failure goes to the developer first, no WhatsApp
+  check('case 1: map-lights (the 08:00 alert), validity, mail filing: to the developer, not at once (internal, not quiet)', [one({ agent: 'map-lights' }), one({ agent: 'routine-validity' }), one({ agent: 'routine-mail-filing' })].every((x) => x.internal === true && !x.quiet));
+  check('case 1: the WhatsApp gets only what is not internal, the dev request gets them all', /const owner = loud\.filter\(\(x\) => !x\.internal\)/.test(fsrc) && /faultText\(owner,/.test(fsrc) && /openFix\(env, url, k, loud,/.test(fsrc));
+  // 4. at once: the app, the assistant, a report that says it stops Michael
+  const app = faultItems(prev, [{ ts: at, title: JSON.stringify({ m: 'x is undefined', f: 'index.html', l: 1 }) }], [], now).items[0];
+  check('case 4: an error in the app and the assistant failing go at once; impact owner too', app && !app.internal && !one({ agent: 'routine-wa-assistant' }).internal && !one({ agent: 'wa-assistant', impact: 'internal' }).internal && !one({ agent: 'routine-validity', impact: 'owner' }).internal && faultInternal({ agent: 'x', impact: 'bad' }) === true);
+  const morning = faultItems(prev, [], [{ agent: 'routine-validity', at, ok: false, line: 'side write' }], now);
+  const later = faultItems(morning.fault, [], [{ agent: 'routine-validity', at: '2026-11-12T09:00:00.000Z', ok: false, line: 'real', impact: 'owner' }], '2026-11-12T09:05:00.000Z').items;
+  check('case 4: a held failure in the morning does not hide one that stops Michael later that day (own key)', morning.items[0].key === 'agenti:validity' && later.length === 1 && !later[0].internal, later);
+  // 2 and 3: held, then handled or said once after 3 hours
+  const T = (h) => new Date(Date.parse(now) + h * 3600e3).toISOString();
+  const held = [{ text: 'a', at: now, req: 'dev-1' }, { text: 'b', at: now, req: 'dev-2' }, { text: 'c', at: now, req: '' }];
+  const inbox = [{ id: 'dev-1', status: 'done' }, { id: 'dev-2', status: 'open' }];
+  const e1 = faultEscalate(held, inbox, T(2.9));
+  check('case 2: a request closed (fixed or not) drops its fault; nothing is said before 3 hours', e1.due.length === 0 && e1.keep.map((x) => x.text).join() === 'b,c');
+  const e2 = faultEscalate(e1.keep, inbox, T(3));
+  check('case 3: still open after 3 hours, or with no request at all: said once, then not held', e2.due.join() === 'b,c' && e2.keep.length === 0 && FAULT_ESCALATE_MS === 3 * 3600e3);
+  check('case 3: the message says not fixed in 3 hours and lists the faults; no raw ids', /^\u26a0\ufe0f \u05ea\u05e7\u05dc\u05d4 \u05e9\u05dc\u05d0 \u05ea\u05d5\u05e7\u05e0\u05d4 \u05ea\u05d5\u05da 3 \u05e9\u05e2\u05d5\u05ea:\n- b\n- c\n/.test(faultEscalateText(['b', 'c'])));
+  check('case 3: a failed send or an unreadable inbox keeps them for the next tick; held only after the at-once part was sent', /if \(ok\) held = esc\.keep/.test(fsrc) && /if \(Array\.isArray\(inbox\)\)/.test(fsrc) && /if \(sentOk\) items\.filter\(\(x\) => !x\.quiet && x\.internal\)/.test(fsrc) && /fault\.held = held/.test(fsrc));
+  const rsrc = fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
+  check('case 2: a fault-alert request closed as fixed, or resent by the evening net, sends no WhatsApp (not fixed still does)', /quietFixed = !!\(closedReq && closedReq\.agent === 'fault-alert' && \(body\.fixed === true \|\| String\(body\.note \|\| ''\)\.trim\(\) === DEV_RESENT_NOTE\)\)/.test(rsrc) && fs.readFileSync(new URL('../../project-files/routine-dev-safety.md', import.meta.url), 'utf8').includes('"note":"' + 'הבקשה נשלחה שוב למפתח, כי לא טופלה תוך 3 שעות.' + '"') && /body\.op !== 'dev_done' \|\| quietFixed \? ''/.test(rsrc));
 }
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
