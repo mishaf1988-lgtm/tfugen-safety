@@ -1,7 +1,7 @@
 // Fault alert (31/10/2026, functions/_faults.js): every watchdog tick tells Michael, in ONE WhatsApp, about errors in
 // users' browsers and agents that reported a failure since the last tick; the same fault once a day.
 import { faultItems, faultText, faultDevText, faultTodo, FAULT_FIXERS, goldenStep, goldenAlready, faultInternal, faultEscalate, faultEscalateText, FAULT_ESCALATE_MS, GOLDEN_SETTLE_MS, GOLDEN_GAP_MS, GOLDEN_TEXT, FAULT_LINES, FAULT_FIRST_MS } from './_build/_faults.mjs';
-import { devInboxAdd } from './_build/routine-db.mjs';
+import { devInboxAdd, DEV_RESENT_NOTE } from './_build/routine-db.mjs';
 import fs from 'node:fs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
@@ -181,6 +181,9 @@ const NOW = '2026-10-31T14:50:00.000Z';
   const inbox = [{ id: 'dev-1', status: 'done' }, { id: 'dev-2', status: 'open' }];
   const e1 = faultEscalate(held, inbox, T(2.9));
   check('case 2: a request closed (fixed or not) drops its fault; nothing is said before 3 hours', e1.due.length === 0 && e1.keep.map((x) => x.text).join() === 'b,c');
+  const resent = faultEscalate([{ text: 'r', at: now, req: 'dev-9' }], [{ id: 'dev-9', status: 'done', note: DEV_RESENT_NOTE }], T(1));
+  check('case 3: a request closed by the evening resend is not handled: kept, then said at 3 hours from the fault', resent.due.length === 0 && resent.keep.length === 1 && faultEscalate(resent.keep, [{ id: 'dev-9', status: 'done', note: DEV_RESENT_NOTE }], T(3)).due.join() === 'r');
+  check('case 3: held faults point at the request opened now before the one the line cites; a failed at-once send still keeps held', /req: \(fix && fix\.id\) \|\| x\.ref \|\| ''/.test(fsrc) && /else if \(prev\) await stateSet\(env, \{ \[FAULT_KEY\]: JSON\.stringify\(\{ \.\.\.prev, held \}\) \}\)/.test(fsrc));
   const e2 = faultEscalate(e1.keep, inbox, T(3));
   check('case 3: still open after 3 hours, or with no request at all: said once, then not held', e2.due.join() === 'b,c' && e2.keep.length === 0 && FAULT_ESCALATE_MS === 3 * 3600e3);
   check('case 3: the message says not fixed in 3 hours and lists the faults; no raw ids', /^\u26a0\ufe0f \u05ea\u05e7\u05dc\u05d4 \u05e9\u05dc\u05d0 \u05ea\u05d5\u05e7\u05e0\u05d4 \u05ea\u05d5\u05da 3 \u05e9\u05e2\u05d5\u05ea:\n- b\n- c\n/.test(faultEscalateText(['b', 'c'])));

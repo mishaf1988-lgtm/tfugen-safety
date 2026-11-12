@@ -11,7 +11,7 @@
 import { stateGet, stateSet } from './_onedrive.js';
 import { ownerWa, sendToOwner, ownerWindowOpen } from './_wa.js';
 import { SB_LIVE, tmo } from './_shared.js';
-import { DEV_INBOX_KEY, devInboxAdd, devInboxFired, devFireTarget, devFireText, SECOND_MISS, EXPECTED_REFUSAL, SECOND_CHECK_AGENTS, WA_RULES_HASH } from './api/routine-db.js';
+import { DEV_INBOX_KEY, devInboxAdd, devInboxFired, devFireTarget, devFireText, SECOND_MISS, EXPECTED_REFUSAL, SECOND_CHECK_AGENTS, WA_RULES_HASH, DEV_RESENT_NOTE } from './api/routine-db.js';
 import { stateCas } from './_cas.js';
 
 // 'dev' is not here (security review 11/11/2026): other agents report under it, and the server's own dev_done line would hide its failure from the morning update
@@ -40,7 +40,8 @@ export function faultEscalate(held, inbox, nowIso) {
   (Array.isArray(held) ? held : []).forEach((x) => {
     if (!x || !x.text || !x.at) return;
     const q = x.req ? byId[x.req] : null;
-    if (q && q.status === 'done') return;
+    // closed by the evening resend (routine-dev-safety.md 3b) is not handled: counted from the fault's own time (security review 12/11/2026)
+    if (q && q.status === 'done' && String(q.note || '').trim() !== DEV_RESENT_NOTE) return;
     if (now - Date.parse(x.at) >= FAULT_ESCALATE_MS) due.push(x.text); else keep.push(x);
   });
   return { due, keep: keep.slice(-FAULT_HELD_MAX) };
@@ -279,7 +280,7 @@ export async function runFaultAlert(env, nowIso) {
   }
   // 12/11/2026: what was not sent at once is held with its request, and said once if still not handled after 3 hours
   let held = Array.isArray(prev && prev.held) ? prev.held.slice() : [];
-  if (sentOk) items.filter((x) => !x.quiet && x.internal).forEach((x) => held.push({ text: x.text, at: nowIso, req: x.ref || (fix && fix.id) || '' }));
+  if (sentOk) items.filter((x) => !x.quiet && x.internal).forEach((x) => held.push({ text: x.text, at: nowIso, req: (fix && fix.id) || x.ref || '' }));
   if (held.length) {
     let inbox = null; try { const ib = await stateGet(env, [DEV_INBOX_KEY], true); inbox = JSON.parse((ib[DEV_INBOX_KEY] && ib[DEV_INBOX_KEY].value) || '[]'); } catch (e) { inbox = null; }
     // an unreadable inbox is not "nothing handled": keep them all for the next tick
@@ -298,5 +299,8 @@ export async function runFaultAlert(env, nowIso) {
   // not sent: the mark does not move, so the same faults are tried again next tick
   if (fix && fix.fired) fault.fired_day = dayIL(nowIso); else if (prev && prev.fired_day) fault.fired_day = prev.fired_day;
   if (sentOk) await stateSet(env, { [FAULT_KEY]: JSON.stringify(fault) });
+  // the at-once send failed: the mark stays (the same faults are tried again), but what the 3-hour check did is kept, so a
+  // message it sent is not sent again every tick (security review 12/11/2026)
+  else if (prev) await stateSet(env, { [FAULT_KEY]: JSON.stringify({ ...prev, held }) });
   return { ok: true, items: items.length, sent: items.length ? sentOk : false, fix, held: held.length };
 }
