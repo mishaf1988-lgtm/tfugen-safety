@@ -1,6 +1,6 @@
 # Routine יומי: בודק לתור המשימות למחשב ולשיחות העובדות
 
-**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_01XJ5dBUN5dcbDqirQ7uZ6a5` (שיחה `session_01JT8Fct6Z6Qv2GbaBBqxtQT`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
+**הטריגר הפעיל (20/10/2026, לפי `ACCOUNT-INVENTORY.md`):** `trig_01W2tz2yTW23AjNvu5evCTdL` (שיחה `session_01JT8Fct6Z6Qv2GbaBBqxtQT`). מזהים אחרים בקובץ הם היסטוריה; לפני `fire_trigger` או `update_trigger`: `get_trigger` על המזהה.
 
 מיכאל, 18/10/2026, בשאלון: "בצע: בודק לתור המחשב". הרקע: משימה שנכנסת לתור (`cowork-queue.md`) נבדקת היום ב-`send_later` של השיחה שהכניסה אותה. שיחה בתקרת השרשרת לא יכולה לקבוע תזכורת (18/10/2026, `t-2026-10-18-nh3-signed` נכנסה בלי בדיקה), ומשימה תקועה לא נראית לאיש.
 
