@@ -63,6 +63,12 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 ## בדיקות שבודקות את הדבר הנכון
 
+**217. commit ו-push אחרי בדיקה שנכשלה, באותה פקודה (13/11/2026, #2772).**
+מה קרה: גרש לא מוברח במחרוזת `WEEK_CHECK` שבר את `_wa.js`; הבדיקה קרסה, אבל `;` המשיך ל-commit ול-push.
+הכלל: בדיקה, commit ו-push מחוברים ב-`&&`, לא ב-`;`. אחרי עריכת מחרוזת בקובץ JS: `node --check <file>`.
+נאכף: טקסט.
+חזר: 0.
+
 **57. hooks שקטים ב-Windows (05/10/2026, PR זה).**
 מה קרה: stdout ב-cp1255 ואימוג'י: session-start נפל בשקט. שיחה מחוץ לריפו: hooks לא נטענו.
 הכלל: hook קובע stdout ו-stdin ל-UTF-8, ובבדיקות `encoding="utf-8"`. בדיקה חיה רק מתיקיית הריפו, בלי `PYTHONUTF8=1`.
