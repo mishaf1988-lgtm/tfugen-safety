@@ -67,6 +67,11 @@ for (const bad of [null, undefined, {}, { ms: 5 }, 42]) {
   const p = ssePcm(sse);
   check('ssePcm: audio parts from both API shapes are joined in order; the rate is read; a non-JSON event is skipped', p.pcm.length === 20 && p.pcm[0] === 1 && p.pcm[10] === 3 && p.rate === 24000, p);
   check('ssePcm: an answer with no audio gives no bytes', ssePcm('data: {"x":1}\n').pcm.length === 0);
+  const one = (ev) => ssePcm(ev).pcm.length;
+  const A = { inlineData: { mimeType: 'audio/L16;codec=pcm;rate=24000', data: b64([1, 0, 1, 0, 1, 0, 1, 0, 1]) } };
+  check('ssePcm pairs: "data:" with no space, a bare JSON line and an array event are read', one('data:' + JSON.stringify(A) + '\n') === 9 && one(JSON.stringify(A) + '\n') === 9 && one('data: ' + JSON.stringify([A]) + '\n') === 9);
+  check('ssePcm pairs: an "event:" line, a text part and an image part are not audio', one('event: content.delta\n') === 0 && one('data: ' + JSON.stringify({ text: 'שלום', data: 'xxxxxxxxxxxx' }) + '\n') === 0 && one('data: ' + JSON.stringify({ inlineData: { mimeType: 'image/png', data: b64([1, 2, 3, 4, 5, 6, 7, 8, 9]) } }) + '\n') === 0);
+  check('ssePcm: the rate comes from the mime type when there is no sample_rate field', ssePcm('data: ' + JSON.stringify({ inlineData: { mimeType: 'audio/L16;rate=16000', data: b64([1, 0, 1, 0, 1, 0, 1, 0, 1]) } })).rate === 16000);
   const w = wavOf(new Uint8Array([1, 0, 2, 0]), 24000), v = new DataView(w.buffer);
   check('wavOf: a 44-byte RIFF/WAVE header, mono 16-bit at the rate, then the samples', w.length === 48 && String.fromCharCode(...w.slice(0, 4)) === 'RIFF' && String.fromCharCode(...w.slice(8, 12)) === 'WAVE' && v.getUint16(22, true) === 1 && v.getUint32(24, true) === 24000 && v.getUint16(34, true) === 16 && v.getUint32(40, true) === 4 && w[44] === 1);
   const f0 = globalThis.fetch;
