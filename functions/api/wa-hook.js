@@ -14,12 +14,12 @@
 // notifications_log (payload.wamid), so the assistant knows what Michael is answering.
 // Machine path in _middleware: Meta calls from outside Israel.
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, SB_LIVE, tmo, SITE } from '../_shared.js';
-import { learnedLabel, LEARNED_MAX, fastModel, fastFire, waTyping } from '../_wa.js';
+import { learnedLabel, LEARNED_MAX, fastModel, fastFire, waTyping, ownerMatch, waUid, ownerUidOf, OWNER_UID_KEY } from '../_wa.js';
 import { isVoice, voiceText, VOICE_MARK, VOICE_MODEL } from '../_voice.js';
 import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, hasStatuses, STATUS_KEY, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, assistantFireNow, pickFire, accountOf, ACCOUNT_KEY, forgetAccount, LEARN_KEY, learnedLine, recentLine, waDeliveryHandle } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 import { accessToken, sendMailTo } from '../_onedrive.js';
-import { onRequest as routineDb, OD_ROOT, isAutoTop, OD_INBOX, delRefOf, DEL_ASK_KEY, DEL_ASK_MS, DEL_TABLES, UNDO_KEY, UNDO_MAX, undoRefOf, undoPick, UNDO_ASK_KEY, UNDO_ASK_MS, tourRefOf, TOUR_CLOSE_KEY, TOUR_CLOSE_MS, TOUR_OPEN, TOUR_CLOSED, calInviteRefOf, CAL_INVITE_ASK_KEY, CAL_INVITE_ASK_MS, calMoveRefOf, CAL_MOVE_ASK_KEY, CAL_MOVE_ASK_MS } from './routine-db.js';
+import { onRequest as routineDb, DEV_INBOX_KEY, devInboxAdd, OD_ROOT, isAutoTop, OD_INBOX, delRefOf, DEL_ASK_KEY, DEL_ASK_MS, DEL_TABLES, UNDO_KEY, UNDO_MAX, undoRefOf, undoPick, UNDO_ASK_KEY, UNDO_ASK_MS, tourRefOf, TOUR_CLOSE_KEY, TOUR_CLOSE_MS, TOUR_OPEN, TOUR_CLOSED, calInviteRefOf, CAL_INVITE_ASK_KEY, CAL_INVITE_ASK_MS, calMoveRefOf, CAL_MOVE_ASK_KEY, CAL_MOVE_ASK_MS } from './routine-db.js';
 import { SIGN_KEY, signRefOf, signAnswer, signTake, signMark, signRun, signDoneText, SIGN_CANCEL_TEXT, SIGN_EXPIRED_TEXT, SIGN_DONE_TEXT } from '../_sign.js';
 
 export const FAIL_TEXT = '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05dc\u05e2\u05d5\u05d6\u05e8. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.';
@@ -704,6 +704,33 @@ async function logOut(env, text, r) {
         event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error', payload: { title: String(text).replace(/\s+/g, ' ').slice(0, 120), text: String(text).slice(0, 1500), via: r.via || null, wamid: r.wamid || null, fast: true } }]) });
   } catch (e) { /* the answer went out; a missing log line is not a failure */ }
 }
+// The owner's BSUID (13/11/2026): written only here, from a Meta-signed message that carried his own number. Not in STATE_WRITE
+// or STATE_READ of routine-db, so no agent reads or sets it.
+async function ownerUidRead(env, owner) {
+  try {
+    const rows = await sbJson(env, 'server_state?select=value&key=eq.' + OWNER_UID_KEY, {});
+    return ownerUidOf(rows && rows[0] && rows[0].value, owner);
+  } catch (e) { return ''; }
+}
+async function ownerUidSave(env, uid, owner) {
+  const k = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!k || !waUid(uid) || !owner) return;
+  try {
+    await stateCas(env.SUPABASE_URL || SB_LIVE, { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }, OWNER_UID_KEY,
+      (cur) => (ownerUidOf(cur, owner) === uid ? { write: false } : { value: JSON.stringify({ uid, phone: owner, at: new Date().toISOString() }) }), () => tmo(SB_TIMEOUT_MS));
+  } catch (e) { /* learned again from his next message */ }
+}
+// A message with no number while no BSUID is known may be Michael himself, unanswered: one open developer request (the same
+// open text is not added twice, devInboxAdd), no text from the message in it.
+export const NO_PHONE_TEXT = 'wa-hook: \u05d4\u05d2\u05d9\u05e2\u05d4 \u05d4\u05d5\u05d3\u05e2\u05ea \u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05d1\u05dc\u05d9 \u05de\u05e1\u05e4\u05e8 \u05d8\u05dc\u05e4\u05d5\u05df (\u05e9\u05dd \u05de\u05e9\u05ea\u05de\u05e9, BSUID) \u05d5\u05d0\u05d9\u05df BSUID \u05e9\u05de\u05d5\u05e8 \u05e9\u05dc \u05de\u05d9\u05db\u05d0\u05dc. \u05d0\u05dd \u05d6\u05d4 \u05d4\u05d5\u05d0, \u05d4\u05e2\u05d5\u05d6\u05e8 \u05dc\u05d0 \u05e2\u05e0\u05d4. \u05dc\u05d1\u05d3\u05d5\u05e7 wa_hook_last (no_phone) \u05d5\u05d0\u05ea owner_wa_uid; \u05dc\u05d0 \u05dc\u05e9\u05de\u05d5\u05e8 BSUID \u05d1\u05d9\u05d3 \u05d1\u05dc\u05d9 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e9\u05dc \u05de\u05d9\u05db\u05d0\u05dc.';
+async function noPhoneAlert(env) {
+  const k = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!k) return;
+  try {
+    await stateCas(env.SUPABASE_URL || SB_LIVE, { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }, DEV_INBOX_KEY,
+      (cur) => { const r = devInboxAdd(cur, { agent: 'wa-hook', text: NO_PHONE_TEXT }, new Date().toISOString()); return r.error || !r.created ? { write: false } : { value: JSON.stringify(r.list) }; }, () => tmo(SB_TIMEOUT_MS));
+  } catch (e) { /* the count in wa_hook_last stands */ }
+}
 async function handle(env, raw) {
   let body; try { body = JSON.parse(raw); } catch (e) { return; }
   const msgs = inboundMessages(body);
@@ -723,8 +750,15 @@ async function handle(env, raw) {
   // to the fire, and the session the fire opened, so one answer can be traced end to end (get_session on it).
   const t0 = Date.now();
   const seen = { sig: true, msgs: msgs.length, owner_saved: !!owner, from_owner: 0, fired: 0, fire_status: null };
+  // 13/11/2026 (WhatsApp usernames): Michael is known by his number, and by the BSUID learned from a message that carried
+  // his number. The saved BSUID is read only when a message needs it (one with no number, or his with a BSUID to learn).
+  let savedUid = '';
+  if (owner && msgs.some((m) => m.uid)) savedUid = await ownerUidRead(env, owner);
   for (const m of msgs) {
-    if (!owner || m.from !== owner) continue;
+    const who = ownerMatch(m, owner, savedUid);
+    if (!who) { if (owner && !m.from) { seen.no_phone = (seen.no_phone || 0) + 1; if (!savedUid) await noPhoneAlert(env); } continue; }
+    if (who === 'phone' && m.uid && m.uid !== savedUid) { savedUid = m.uid; await ownerUidSave(env, m.uid, owner); seen.uid_learned = true; }
+    if (who === 'uid') seen.by_uid = (seen.by_uid || 0) + 1;
     seen.from_owner++;
     await noteOwnerIn(env, sbFrom(env), m.ts ? new Date(m.ts * 1000).toISOString() : new Date().toISOString());
     // one message whose seen-list write failed does not stop the others in this webhook (review 06/11/2026)
