@@ -362,13 +362,15 @@ export async function headFetch(u, o, ms) {
   const ac = new AbortController(), tm = setTimeout(() => ac.abort(), ms || FETCH_MS);
   try { return await fetch(u, { ...(o || {}), signal: ac.signal }); } finally { clearTimeout(tm); }
 }
-export async function ttsUpstream(env, text, lang) {
+// mime (13/11/2026, the voice-reply trial): another output the interactions API may give (audio/mpeg, audio/ogg); the
+// generateContent fallback always answers PCM, and ssePcm reports which one came.
+export async function ttsUpstream(env, text, lang, mime) {
   if (!env.GEMINI_API_KEY) return { status: 503, err: 'no key' };
   const model = env.TTS_MODEL || TTS_MODEL, voice = env.TTS_VOICE || TTS_VOICE;
   const H = { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY };
   let r = await headFetch(GEM + '/interactions', { method: 'POST', headers: H, body: JSON.stringify({
     model, stream: true, input: [{ type: 'user_input', content: [{ type: 'text', text }] }],
-    response_format: { type: 'audio', mime_type: 'audio/l16', sample_rate: 24000 },
+    response_format: mime ? { type: 'audio', mime_type: mime } : { type: 'audio', mime_type: 'audio/l16', sample_rate: 24000 },
     generation_config: { speech_config: [{ voice, language: TTS_LANG[lang] || 'he-IL' }] } }) });
   if (r.ok && r.body) return { r };
   const e1 = r.status + ' ' + String(await r.text().catch(() => '')).substring(0, 160);
@@ -389,7 +391,7 @@ export function ssePcm(sse) {
     const m = String(o.mime_type || o.mimeType || '');
     if (typeof o.data === 'string' && o.data.length > 8 && (/audio/i.test(m) || o.type === 'audio')) {
       const r = +(o.sample_rate || o.sampleRate || 0) || +((/rate=(\d+)/.exec(m) || [])[1] || 0);
-      parts.push({ d: o.data, r });
+      parts.push({ d: o.data, r, m });
       return;
     }
     for (const k in o) if (k !== 'data') walk(o[k]);
@@ -402,7 +404,7 @@ export function ssePcm(sse) {
   const bufs = parts.map((p) => Uint8Array.from(atob(p.d), (c) => c.charCodeAt(0)));
   const n = bufs.reduce((a, b) => a + b.length, 0), pcm = new Uint8Array(n);
   let o = 0; bufs.forEach((b) => { pcm.set(b, o); o += b.length; });
-  return { pcm, rate: (parts.find((p) => p.r) || {}).r || 24000 };
+  return { pcm, rate: (parts.find((p) => p.r) || {}).r || 24000, mime: ((parts[0] || {}).m || '').split(';')[0].trim().toLowerCase() };
 }
 // Pure: 16-bit mono PCM -> a WAV file (a 44-byte header).
 export function wavOf(pcm, rate) {
@@ -415,12 +417,14 @@ export function wavOf(pcm, rate) {
   return out;
 }
 // The whole reading as a WAV file, or {error}.
-export async function ttsWav(env, text, lang) {
-  const up = await ttsUpstream(env, text, lang || 'he');
+export async function ttsWav(env, text, lang, mime) {
+  const up = await ttsUpstream(env, text, lang || 'he', mime);
   if (!up.r) return { error: up.err || ('status ' + up.status) };
-  const { pcm, rate } = ssePcm(await up.r.text());
+  const { pcm, rate, mime: got } = ssePcm(await up.r.text());
   if (!pcm.length) return { error: 'no audio in the answer' };
-  return { bytes: wavOf(pcm, rate), rate };
+  // an encoded answer (mp3, ogg) is a file already; only raw PCM is wrapped
+  if (got && !/l16|pcm|wav/.test(got)) return { bytes: pcm, rate, mime: got };
+  return { bytes: wavOf(pcm, rate), rate, mime: 'audio/wav' };
 }
 const SAY_H = { 'Content-Type': 'text/event-stream; charset=utf-8', 'X-Content-Type-Options': 'nosniff', 'X-Robots-Tag': 'noindex' };
 // The same text in the same voice is the same audio: kept in the edge cache for a week, so a

@@ -191,7 +191,7 @@ import { findSignSpot } from '../_pdftext.js';
 import { rowContradictions } from './wa-morning.js';
 import { respUnknown } from './hazard-report.js';
 import { ttsWav } from './talk.js';
-export const TTS_GEMINI = 'gemini', TTS_GEMINI_FILE = 'hakraa-ivrit.wav';
+export const TTS_GEMINI = 'gemini', TTS_GEMINI_FILE = 'hakraa-ivrit.wav', TTS_FMTS = ['audio/mpeg', 'audio/ogg', 'audio/mp3'];
 import { PDFDocument } from '../_pdflib.js';
 import { DOC_MAX, ownerWa, sendToOwner, sendDocToOwner, sendVoiceToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, learnedLine, learnedLabel, LEARNED_MAX, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, assistantFireNow, fireUrlOf, sameSession, recentLine, ilTimes , pickFire, ACCOUNT_KEY } from '../_wa.js';
 
@@ -2801,7 +2801,7 @@ async function routineDbHandle(context) {
     // line aloud with each candidate model and sends it to Michael as a voice message, so he can judge the Hebrew. A probe
     // only: no ordinary answer goes through it, and the text is the caller's own, never a row from the database.
     if (body.op === 'tts_probe') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'text', 'model', 'send'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'text', 'model', 'send', 'fmt'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const text = String(body.text || '').trim();
       if (text.length < 4 || text.length > 300) return jsonResp({ ok: false, error: 'text: 4-300 characters' }, 400, {});
       // 13/11/2026: 'gemini' = the Hebrew voice the induction page already reads with (talk.js ttsUpstream, Gemini TTS, voice
@@ -2809,12 +2809,16 @@ async function routineDbHandle(context) {
       // message (aac, mp4, mpeg, amr, ogg-opus only), so for the trial it goes as a WAV document.
       if (body.model === TTS_GEMINI) {
         const t0 = Date.now();
-        let w; try { w = await ttsWav(env, text, 'he'); } catch (e) { w = { error: String((e && e.message) || e).slice(0, 200) }; }
+        // fmt: ask for an encoded output WhatsApp plays as a voice message (the WAV document did not open on his phone, 13/11/2026)
+        const fmt = TTS_FMTS.indexOf(String(body.fmt || '')) >= 0 ? String(body.fmt) : null;
+        let w; try { w = await ttsWav(env, text, 'he', fmt); } catch (e) { w = { error: String((e && e.message) || e).slice(0, 200) }; }
         const r = { model: TTS_GEMINI, ms: Date.now() - t0 };
-        if (w.error) r.error = String(w.error).slice(0, 300); else r.bytes = w.bytes.length;
+        if (w.error) r.error = String(w.error).slice(0, 300); else { r.bytes = w.bytes.length; r.mime = w.mime; }
         if (!w.error && body.send !== false) {
           const to = await ownerWa(env, url);
-          const s = to ? await sendDocToOwner(env, to, w.bytes, TTS_GEMINI_FILE, null, await ownerWindowOpen(env, url), { kind: 'reply' }) : { ok: false, error: 'no owner' };
+          const voice = w.mime === 'audio/mpeg' || w.mime === 'audio/ogg';
+          const s = !to ? { ok: false, error: 'no owner' } : voice ? await sendVoiceToOwner(env, to, w.bytes, w.mime, await ownerWindowOpen(env, url))
+            : await sendDocToOwner(env, to, w.bytes, TTS_GEMINI_FILE, null, await ownerWindowOpen(env, url), { kind: 'reply' });
           r.sent = s.ok ? (s.via || 'sent') : s.error;
         }
         return jsonResp({ ok: true, chars: text.length, models: [r] }, 200, {});
