@@ -1,4 +1,4 @@
--- dumped 2026-11-08 from the live project by tools/platform/schema-dump.sql
+-- dumped 2026-11-13 from the live project by tools/platform/schema-dump.sql (the invoices statements added from the same queries; full dump 2026-11-08)
 create schema if not exists private;
 
 create extension if not exists "uuid-ossp" with schema extensions;
@@ -60,6 +60,8 @@ create table if not exists public.inc (id text not null, d text not null, dt tim
 create table if not exists public.ins (id text not null, d text, a text, i text, sc text, fn text, ac text, s text, created_at timestamp with time zone default now());
 
 create table if not exists public.inspection_types (id text not null, name text not null, scope_table text, recur_count integer default 1 not null, recur_unit text default 'year'::text not null, next_due date, responsible text, notes text, active boolean default true not null, ts timestamp with time zone default now() not null);
+
+create table if not exists public.invoices (id text not null, supplier text not null, supplier_key text not null, num text not null, amount numeric(12,2), inv_date date, received_at timestamp with time zone, forwarded_at timestamp with time zone, approved_at timestamp with time zone, has_report boolean, report_ref text, chk boolean default false not null, note text, src text, ts timestamp with time zone default now() not null, updated_at timestamp with time zone default now() not null);
 
 create table if not exists public.issue_types (id text not null, name text not null, parent_id text, level smallint not null, category text, notes text, ts timestamp with time zone default now() not null);
 
@@ -176,6 +178,12 @@ alter table public.inc add constraint inc_pkey PRIMARY KEY (id);
 alter table public.ins add constraint ins_pkey PRIMARY KEY (id);
 
 alter table public.inspection_types add constraint inspection_types_pkey PRIMARY KEY (id);
+
+alter table public.invoices add constraint invoices_amount_check CHECK (((amount IS NULL) OR ((amount >= (0)::numeric) AND (amount <= (100000000)::numeric))));
+
+alter table public.invoices add constraint invoices_pkey PRIMARY KEY (id);
+
+alter table public.invoices add constraint invoices_supplier_num_key UNIQUE (supplier_key, num);
 
 alter table public.issue_types add constraint issue_types_level_check CHECK (((level >= 1) AND (level <= 3)));
 
@@ -1264,6 +1272,8 @@ alter table public.ins enable row level security;
 
 alter table public.inspection_types enable row level security;
 
+alter table public.invoices enable row level security;
+
 alter table public.issue_types enable row level security;
 
 alter table public.item_links enable row level security;
@@ -2241,6 +2251,8 @@ revoke all on table public.inspection_types from anon, authenticated;
 grant DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE on table public.inspection_types to anon;
 
 grant DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE on table public.inspection_types to authenticated;
+
+revoke all on table public.invoices from anon, authenticated;
 
 revoke all on table public.issue_types from anon, authenticated;
 
