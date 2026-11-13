@@ -79,7 +79,7 @@
 - claude.js: ה-AI באפליקציה
 - registry: קבלן מול פנקס הקבלנים הרשומים ומרשם האסבסט (data.gov.il), בכרטיס הקבלן; בדיקה שבועית שהאתר עונה, תקלה במייל השבועי
 - works: רשימת העבודות לשישי: קישור לאחזקה, היתרים לאישור, אישורים מצורפים, סגירה מהטלפון; הרשאה חתומה (PDF) לכל עבודה שאושרה, מתויקת בתיקייה 18 ונשלחת במייל; מייל ברביע
-- routine-db: 80 פעולות שהסוכנים מותרים בהן: agent_log_since, agent_report, agents_pause, agents_resume, assistant_account, cal_invite, cal_invite_ask, cal_move, cal_move_ask
+- routine-db: 81 פעולות שהסוכנים מותרים בהן: agent_log_since, agent_report, agents_pause, agents_resume, assistant_account, cal_invite, cal_invite_ask, cal_move, cal_move_ask
 
 ## המסד
 - מסמכים ותוקף: טבלה docs

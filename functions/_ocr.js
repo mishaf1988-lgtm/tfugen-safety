@@ -53,10 +53,12 @@ export function pdfJpegs(buf, max) {
   }
   return out;
 }
-export async function aiOcr(env, model, jpg, mime) {
+export async function aiOcr(env, model, jpg, mime) { return aiSee(env, model, jpg, mime, OCR_PROMPT, 1500); }
+// One image and one fixed prompt to a Workers AI vision model (13/11/2026: aiOcr with the prompt as a parameter).
+export async function aiSee(env, model, jpg, mime, prompt, maxTokens) {
   let bin = ''; for (let i = 0; i < jpg.length; i += 0x8000) bin += String.fromCharCode.apply(null, jpg.subarray(i, i + 0x8000));
-  const input = model.indexOf('llama-3.2') >= 0 ? { prompt: OCR_PROMPT, image: Array.from(jpg), max_tokens: 1500 }
-    : { messages: [{ role: 'user', content: [{ type: 'text', text: OCR_PROMPT }, { type: 'image_url', image_url: { url: 'data:' + (mime || 'image/jpeg') + ';base64,' + btoa(bin) } }] }], max_tokens: 1500 };
+  const input = model.indexOf('llama-3.2') >= 0 ? { prompt, image: Array.from(jpg), max_tokens: maxTokens }
+    : { messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: 'data:' + (mime || 'image/jpeg') + ';base64,' + btoa(bin) } }] }], max_tokens: maxTokens };
   const r = await env.AI.run(model, input);
   return String((r && (r.response || (r.choices && r.choices[0] && r.choices[0].message && r.choices[0].message.content))) || '').trim();
 }
