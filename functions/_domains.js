@@ -46,4 +46,4 @@ export function domainLine(text) {
 // The controlled forms of every branch (paths under the desktop), checked weekly by routine-db forms_check.
 export const DOMAIN_FORMS = DOMAINS.flatMap((d) => d.forms.map((path) => ({ domain: d.key, path })));
 // The hash of the assistant's instruction files (routine-wa-core.md, routine-wa-assistant.md, wa-topics/): _faults.js goldenStep.
-export const WA_RULES_HASH = '03abd0f9a8953f21';
+export const WA_RULES_HASH = 'bb7f682af2721b6f';
