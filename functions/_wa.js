@@ -736,12 +736,35 @@ export function hasStatuses(body) {
   return ((body && body.entry) || []).some((e) => ((e && e.changes) || []).some((c) => !!(c && c.value && Array.isArray(c.value.statuses) && c.value.statuses.length)));
 }
 // The messages Michael sent, from one webhook body. Statuses (delivered, read) are not messages.
+// A user's BSUID as Meta sends it: two capital letters (country), a dot, up to 128 letters and digits. A parent BSUID
+// ("US.ENT....") is another thing and is not taken. Anything else = ''.
+export const OWNER_UID_KEY = 'owner_wa_uid';
+export function waUid(v) { const s = String(v || ''); return /^[A-Z]{2}\.[A-Za-z0-9]{1,128}$/.test(s) ? s : ''; }
+// Pure: is this message Michael's? 'phone' = his number is on it. 'uid' = no number on it at all, and its BSUID is the one
+// learned from a signed message that carried his number. A number that is not his is never his, whatever the BSUID says
+// (Meta makes a new BSUID when the number changes). '' = not his.
+export function ownerMatch(m, owner, savedUid) {
+  if (!m || !owner) return '';
+  if (m.from) return m.from === owner ? 'phone' : '';
+  return m.uid && waUid(savedUid) && m.uid === savedUid ? 'uid' : '';
+}
+// Pure: the saved row (a JSON string {uid, phone, at}; server_state.value is text) -> the BSUID, only when it was learned from
+// the number that is the owner's now (security review 13/11/2026: a BSUID learned while another number sat in the settings
+// must not outlive that number). Anything else = ''.
+export function ownerUidOf(raw, owner) {
+  let v = raw; if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { v = null; } }
+  return v && typeof v === 'object' && owner && v.phone === owner ? waUid(v.uid) : '';
+}
 export function inboundMessages(body) {
   const out = [];
   ((body && body.entry) || []).forEach((e) => ((e && e.changes) || []).forEach((c) => {
     const v = c && c.value;
     ((v && v.messages) || []).forEach((m) => {
-      if (!m || !m.id || !m.from) return;
+      // 13/11/2026 (WhatsApp usernames; Meta "Business-scoped user IDs"): a user with a username can arrive with no phone
+      // number: `from` is omitted and `from_user_id` holds the BSUID. Such a message is kept (from: ''), so the hook can
+      // match the owner by the BSUID it learned, or say that a message came with no number, instead of dropping it unseen.
+      const uid = m && waUid(m.from_user_id);
+      if (!m || !m.id || (!m.from && !uid)) return;
       // 21/10/2026 (Michael sent a screenshot of a gov.il page and the assistant saw only "an image"): a photo or a
       // document keeps its media id, type and file name, and its caption is the text. routine-db wa_media reads it.
       // 07/11/2026: a voice message (audio) keeps its media id too; wa-hook transcribes it (_voice.js)
@@ -750,7 +773,7 @@ export function inboundMessages(body) {
         : m.type === 'interactive' ? (m.interactive && (m.interactive.button_reply || m.interactive.list_reply || {}).title)
         : md ? (md.caption || '') : '';
       const pick = m.type === 'interactive' && m.interactive ? (m.interactive.button_reply || m.interactive.list_reply || {}).id : '';
-      out.push({ id: String(m.id).slice(0, 120), from: digits(m.from), ts: Number(m.timestamp) || 0, type: String(m.type || ''),
+      out.push({ id: String(m.id).slice(0, 120), from: digits(m.from || ''), uid, ts: Number(m.timestamp) || 0, type: String(m.type || ''),
         choice: /^c([1-9]|10)$/.test(String(pick || '')) ? Number(String(pick).slice(1)) : null,
         text: String(text || '').slice(0, 3000), context: m.context && m.context.id ? String(m.context.id).slice(0, 120) : '',
         media: md && /^[0-9]{5,30}$/.test(String(md.id || '')) ? { id: String(md.id), mime: String(md.mime_type || '').slice(0, 80), name: String(md.filename || '').slice(0, 120) } : null });
