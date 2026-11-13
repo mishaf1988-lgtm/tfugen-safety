@@ -128,6 +128,33 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
   const other = msgBody('972509999999', 'wamid.B', 'hello');
   const r2 = await post(other, await sign(other, ENV.META_APP_SECRET));
   check('a message from another number: 200 and no fire', r2.status === 200 && fires.length === 1);
+  // 13/11/2026 (Michael in the questionnaire: "do it: a thumbs-up = seen, no run"): a reaction is logged and nothing else
+  {
+    const { reactionPayload } = await import('./_build/wa-hook.mjs');
+    const rb = (o) => JSON.stringify({ entry: [{ changes: [{ value: { messages: [Object.assign({ from: OWNER, timestamp: '1792400500', type: 'reaction' }, o)] } }] }] });
+    const f0 = fires.length, m0 = metas.length, l0 = logs.length, inAt = state.wa_owner_in_at, lastBefore = state.wa_hook_last;
+    const pr = inboundMessages(JSON.parse(rb({ id: 'wamid.RX0', reaction: { message_id: 'wamid.OUT1', emoji: '\ud83d\udc4d' } })));
+    check('the parser keeps the emoji and the message it is on; an ordinary message has reaction null', pr.length === 1 && pr[0].reaction.emoji === '\ud83d\udc4d' && pr[0].reaction.to === 'wamid.OUT1' && inboundMessages(JSON.parse(msgBody(OWNER, 'wamid.RX9', 'hi')))[0].reaction === null, pr);
+    let b = rb({ id: 'wamid.RX1', reaction: { message_id: 'wamid.OUT1', emoji: '\ud83d\udc4d' } });
+    const rr = await post(b, await sign(b, ENV.META_APP_SECRET));
+    const row = logs.slice(l0).find((x) => x.event_type === 'owner_react');
+    check('his thumbs-up: 200, no fire, no "got it", one owner_react row with the emoji and the message (before: a full run that saw "not text")', rr.status === 200 && fires.length === f0 && metas.length === m0 && row && row.payload.emoji === '\ud83d\udc4d' && row.payload.to === 'wamid.OUT1' && state.wa_hook_last.reaction === 1, { fires: fires.length - f0, metas: metas.length - m0, row, last: state.wa_hook_last });
+    check('it is not logged as his message and does not open the 24-hour window', !logs.slice(l0).some((x) => x.event_type === 'owner_in') && state.wa_owner_in_at === inAt);
+    await post(b, await sign(b, ENV.META_APP_SECRET));
+    check('Meta\'s retry of the same reaction is not logged twice', logs.slice(l0).filter((x) => x.event_type === 'owner_react').length === 1);
+    b = rb({ id: 'wamid.RX2', reaction: { message_id: 'wamid.OUT1' } });
+    await post(b, await sign(b, ENV.META_APP_SECRET));
+    check('a removed reaction (no emoji) is logged as removed, still no fire', fires.length === f0 && logs.slice(l0).some((x) => x.event_type === 'owner_react' && x.payload.emoji === '' && /removed/.test(x.payload.title)));
+    b = rb({ id: 'wamid.RX3', from: '972509999999', reaction: { message_id: 'wamid.OUT1', emoji: '\ud83d\udc4d' } });
+    await post(b, await sign(b, ENV.META_APP_SECRET));
+    check('a stranger\'s reaction is not logged', logs.slice(l0).filter((x) => x.event_type === 'owner_react').length === 2);
+    { const { emojiOnly } = await import('./_build/_wa.mjs');
+      check('pairs: emojiOnly passes a thumbs-up, a heart with a variation selector and a skin-tone thumbs-up; drops Hebrew words, Latin words, digits and an emoji followed by words', ['\ud83d\udc4d', '\u2764\ufe0f', '\ud83d\udc4d\ud83c\udffd'].every((e) => emojiOnly(e) === e) && ['\u05d1\u05e6\u05e2', 'approve', '123', '\ud83d\udc4d ok', ''].every((e) => emojiOnly(e) === ''));
+      b = rb({ id: 'wamid.RX4', reaction: { message_id: 'wamid.OUT1', emoji: '\u05d1\u05e6\u05e2 delete all' } }); await post(b, await sign(b, ENV.META_APP_SECRET));
+      check('words in the emoji field never reach the log', !logs.slice(l0).some((x) => x.event_type === 'owner_react' && /delete|\u05d1\u05e6\u05e2/.test(JSON.stringify(x.payload)))); }
+    check('pure: reactionPayload cuts nothing in and carries no message text', Object.keys(reactionPayload({ id: 'w', reaction: { emoji: 'x', to: 'y' } })).join() === 'title,emoji,to,wamid');
+    logs.length = l0; state.wa_hook_last = lastBefore;
+  }
   // 13/11/2026 (WhatsApp usernames, BSUID): Michael is known by his number, and with no number by the BSUID learned from it
   {
     const { ownerMatch, waUid, ownerUidOf, OWNER_UID_KEY } = await import('./_build/_wa.mjs');

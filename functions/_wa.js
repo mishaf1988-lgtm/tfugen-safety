@@ -755,6 +755,8 @@ export function ownerUidOf(raw, owner) {
   let v = raw; if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { v = null; } }
   return v && typeof v === 'object' && owner && v.phone === owner ? waUid(v.uid) : '';
 }
+// Pure: an emoji and nothing else (security review 13/11/2026: the field must never carry words), up to 16 code units; else ''.
+export function emojiOnly(v) { const e = String(v || ''); return e.length <= 16 && /^[\p{Extended_Pictographic}\p{Emoji_Component}\u200d\ufe0f]+$/u.test(e) && !/^[0-9#*]+$/.test(e) ? e : ''; }
 export function inboundMessages(body) {
   const out = [];
   ((body && body.entry) || []).forEach((e) => ((e && e.changes) || []).forEach((c) => {
@@ -776,7 +778,10 @@ export function inboundMessages(body) {
       out.push({ id: String(m.id).slice(0, 120), from: digits(m.from || ''), uid, ts: Number(m.timestamp) || 0, type: String(m.type || ''),
         choice: /^c([1-9]|10)$/.test(String(pick || '')) ? Number(String(pick).slice(1)) : null,
         text: String(text || '').slice(0, 3000), context: m.context && m.context.id ? String(m.context.id).slice(0, 120) : '',
-        media: md && /^[0-9]{5,30}$/.test(String(md.id || '')) ? { id: String(md.id), mime: String(md.mime_type || '').slice(0, 80), name: String(md.filename || '').slice(0, 120) } : null });
+        media: md && /^[0-9]{5,30}$/.test(String(md.id || '')) ? { id: String(md.id), mime: String(md.mime_type || '').slice(0, 80), name: String(md.filename || '').slice(0, 120) } : null ,
+        // 13/11/2026 (Michael: "do it: a thumbs-up = seen, no run"): an emoji reaction keeps the emoji and the message it is on.
+        // Removing a reaction arrives with no emoji.
+        reaction: m.type === 'reaction' && m.reaction ? { emoji: emojiOnly(m.reaction.emoji), to: String(m.reaction.message_id || '').slice(0, 120) } : null });
     });
   }));
   return out;

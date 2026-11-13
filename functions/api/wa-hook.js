@@ -676,6 +676,18 @@ export function ownerInPayload(m) {
   if (isVoice(m)) { p.voice = true; if (m.voiceErr) p.voice_err = String(m.voiceErr).slice(0, 120); }
   return p;
 }
+// Pure: the log row of a reaction: the emoji (or '' when he removed it) and the message it is on. No text of any message.
+export function reactionPayload(m) {
+  const r = (m && m.reaction) || {};
+  return { title: 'reaction ' + String(r.emoji || '(removed)'), emoji: String(r.emoji || ''), to: String(r.to || ''), wamid: m && m.id };
+}
+async function logReaction(env, m) {
+  try {
+    await sbJson(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify([{ id: 'wr' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
+        event_type: 'owner_react', channel: 'whatsapp', payload: reactionPayload(m) }]) });
+  } catch (e) { /* a missing log line costs only the review */ }
+}
 async function logIn(env, m, ts) {
   try {
     await sbJson(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
@@ -760,6 +772,16 @@ async function handle(env, raw) {
     if (who === 'phone' && m.uid && m.uid !== savedUid) { savedUid = m.uid; await ownerUidSave(env, m.uid, owner); seen.uid_learned = true; }
     if (who === 'uid') seen.by_uid = (seen.by_uid || 0) + 1;
     seen.from_owner++;
+    // 13/11/2026 (Michael in the questionnaire: "do it: a thumbs-up = seen, no run"): an emoji reaction used to fire a full
+    // run that saw only "not text". Now it is logged (which emoji, on which message) and nothing else happens: no "got it",
+    // no fire, and it never approves anything; approval stays the word or the button. It does not open the 24-hour window
+    // either (not counted as his message), so a later send is not attempted as free text on the strength of an emoji.
+    if (m.type === 'reaction') {
+      seen.reaction = (seen.reaction || 0) + 1;
+      let firstR = false; try { firstR = await firstTime(env, m.id); } catch (e) { firstR = false; seen.reaction_err = true; }
+      if (firstR) await logReaction(env, m);
+      continue;
+    }
     await noteOwnerIn(env, sbFrom(env), m.ts ? new Date(m.ts * 1000).toISOString() : new Date().toISOString());
     // one message whose seen-list write failed does not stop the others in this webhook (review 06/11/2026)
     let first = false; try { first = await firstTime(env, m.id); } catch (e) { await note(env, { sig: true, seen_error: String((e && e.message) || e).slice(0, 80) }); continue; }
