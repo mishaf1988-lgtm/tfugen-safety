@@ -476,7 +476,44 @@ const callIn = async (body) => {
     check('partial_check: an agent named constructor does not break it (security review)', partialCheck([L('constructor', 1, 'x', '1'), L('constructor', 1, 'x', '2')]).length === 1);
     check('partial_check: a left_what with left 0 still counts as half done', partialCheck([L('e', 0, 'mail B', '1'), L('e', 0, 'mail B', '2')]).length === 1);
     const pc = await call({ op: 'partial_check', agent: 'routine-quality' });
-    check('partial_check op: reads agent_log and answers; another field is refused', pc.json.ok === true && Array.isArray(pc.json.partial) && (await call({ op: 'partial_check', agent: 'routine-quality', table: 'x' })).status === 400, pc.json);
+    check('partial_check op: reads agent_log and answers; another field is refused', pc.json.ok === true && Array.isArray(pc.json.partial) && Array.isArray(pc.json.unowned) && (await call({ op: 'partial_check', agent: 'routine-quality', table: 'x' })).status === 400, pc.json);
+  }
+  { // 13/11/2026: the handoff's last stage, every "waiting for" gets an owner (real lines from agent-log.md)
+    const { waitParse, waitSeen, waitUnowned, waitRoutable, WAIT_UNOWNED_MS } = await import('./_build/routine-db.mjs');
+    const to = (s) => waitParse(s).map((w) => w.to).join(',');
+    check('wait: "waiting for the developer on duty" = dev', to('22/10/2026 | dev-fire | מחכה למפתח התורן') === 'dev');
+    check('wait: "waiting for the main chat" (both apostrophes) = dev', to('#2675 מוזג. מחכה לצ׳אט הראשי: להריץ את 31 הבדיקות') === 'dev' && to("ממתין לצ'אט הראשי") === 'dev');
+    check('wait: "waiting for Michael" and "waiting for you" = michael', to('לא תוקן דבר. מחכה למיכאל: (1) טופס 14 הדרכת צוותי חירום') === 'michael' && to('נשלחה, מחכה לך: מסד ניסוי') === 'michael');
+    check('wait: a supplier, CI or a folder = other', to('Variogard פג 25/08 וגלאי אמוניה 12/11 מחכים להצעת גזית') === 'other' && to('PR 2732 ממתין ל-CI') === 'other');
+    check('wait: "0 waiting for an answer" and a quoted "waiting for Michael" are not waits', to('12 מיילים נבדקו, 0 מחכים לתשובה, אין הודעה') === '' && to('לסמן כ"לא נקראה" ולא כ"מחכה למיכאל"') === '');
+    check('wait: "not fixed, waiting for ..." is a wait (the word before is not "not")', to('לא תוקן, מחכה למיכאל') === 'michael');
+    const w1 = waitParse('נבדק. מחכה למיכאל: טופס 26.04 לא בתיקייה. ועוד משהו');
+    check('wait: the clause ends at its sentence; a decimal point (26.04) does not end it', w1.length === 1 && w1[0].what === 'מחכה למיכאל: טופס 26.04 לא בתיקייה', w1);
+    check('wait: the developer and the server requesters are not routed to themselves', !waitRoutable('dev-fire') && !waitRoutable('dev') && !waitRoutable('fault-alert') && waitRoutable('cowork-check') && waitRoutable('developer-x'));
+    const k = waitParse('מחכה למיכאל: X')[0].key;
+    check('wait: seen = the same agent\'s previous report had it; another agent\'s does not count', waitSeen([{ agent: 'a', wait: [{ key: k }] }, { agent: 'b' }], 'a', k) && !waitSeen([{ agent: 'a', wait: [{ key: k }] }, { agent: 'a' }], 'a', k) && !waitSeen([{ agent: 'b', wait: [{ key: k }] }], 'a', k));
+    const o = waitParse('מחכים להצעת גזית')[0], now = '2026-11-13T12:00:00Z', ago = (ms) => new Date(Date.parse(now) - ms).toISOString();
+    const W = (agent, at, w) => ({ agent, at, ok: true, line: 'x', ...(w ? { wait: [w] } : {}) });
+    const u = waitUnowned([W('a', ago(WAIT_UNOWNED_MS + 3600e3), o), W('a', ago(3600e3), o), W('b', ago(WAIT_UNOWNED_MS + 3600e3), o), W('b', ago(60e3)), W('c', ago(3600e3), o)], now);
+    check('wait: unowned = an "other" wait in the agent\'s reports one after another for more than a day (a); gone from the latest (b), new (c) = not', u.length === 1 && u[0].agent === 'a' && u[0].since === ago(WAIT_UNOWNED_MS + 3600e3), u);
+    check('wait: a wait for Michael or the developer is never unowned', waitUnowned([W('m', ago(3 * WAIT_UNOWNED_MS), waitParse('מחכה למיכאל: X')[0]), W('m', ago(60e3), waitParse('מחכה למיכאל: X')[0])], now).length === 0);
+    const r1 = (await call({ op: 'agent_report', agent: 'cowork-check', ok: true, line: '2 נחסמו. מחכה למיכאל: t-2026-10-11-pump-reports-mail נחסמה' })).json;
+    check('agent_report: a wait for Michael with no for_michael gets one from the line', r1.ok && /^מחכה למיכאל: t-2026-10-11/.test(r1.entry.for_michael || '') && r1.entry.wait[0].to === 'michael', r1);
+    const r2 = (await call({ op: 'agent_report', agent: 'cowork-check', ok: true, line: '2 נחסמו. מחכה למיכאל: אחר', for_michael: 'כתבתי בעצמי' })).json;
+    check('agent_report: a for_michael the agent wrote is kept as it is', r2.ok && r2.entry.for_michael === 'כתבתי בעצמי', r2);
+    const { asksApiCredit: aac } = await import('./_build/routine-db.mjs');
+    const cr = 'מחכה למיכאל: לטעון קרדיט API כדי לקרוא סריקות';
+    const r6 = (await call({ op: 'agent_report', agent: 'routine-validity', ok: true, line: 'נבדקו 3. ' + cr })).json;
+    check('agent_report: a copied wait that asks for API credit is not copied (the same gate as a written for_michael; security review 13/11/2026)', aac(cr) && r6.ok && !r6.entry.for_michael, r6);
+    const r3 = (await call({ op: 'agent_report', agent: 'routine-wa-assistant', ok: true, line: 'רשימת מחר נשלחה, מחכה לך: מסד ניסוי' })).json;
+    check('agent_report: the WhatsApp assistant\'s wait for Michael is not copied (it said it to him itself)', r3.ok && !r3.entry.for_michael && r3.entry.wait[0].to === 'michael', r3);
+    const { waitDevText } = await import('./_build/routine-db.mjs');
+    const r4 = (await call({ op: 'agent_report', agent: 'savings-assistant', ok: true, line: 'דוח נכתב. מחכה לצ׳אט הראשי: להריץ בדיקה' })).json;
+    const r5 = (await call({ op: 'agent_report', agent: 'dev-fire', ok: true, line: 'מחכה למפתח התורן' })).json;
+    check('agent_report: a wait for the main chat opens one dev request; the developer\'s own does not', r4.ok && r4.routed.length === 1 && /^dev-/.test(r4.routed[0]) && r5.ok && r5.routed.length === 0, { r4, r5 });
+    // leave the shared inbox as the dev_request checks below expect it
+    delete state.dev_inbox;
+    check('wait: the dev request names the agent only, never the line (security review 02/11/2026)', /cowork-check/.test(waitDevText('cowork-check')) && waitDevText('a') === waitDevText('a') && waitDevText('cowork-check').length < 400);
   }
   state.agent_log = JSON.stringify(JSON.parse(state.agent_log).slice(0, 2));
   check('ok that is not exactly true counts as a failure', (await call({ op: 'agent_report', agent: 'retro', ok: 'yes', line: 'x' })).json.entry.ok === false);
