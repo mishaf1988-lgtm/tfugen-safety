@@ -190,6 +190,8 @@ import { SIGN_KEY, SIGN_CHOICES, signAdd, signMark, signAskText, signPlace } fro
 import { findSignSpot } from '../_pdftext.js';
 import { rowContradictions } from './wa-morning.js';
 import { respUnknown } from './hazard-report.js';
+import { ttsWav } from './talk.js';
+export const TTS_GEMINI = 'gemini', TTS_GEMINI_FILE = 'hakraa-ivrit.wav';
 import { PDFDocument } from '../_pdflib.js';
 import { DOC_MAX, ownerWa, sendToOwner, sendDocToOwner, sendVoiceToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, learnedLine, learnedLabel, LEARNED_MAX, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, assistantFireNow, fireUrlOf, sameSession, recentLine, ilTimes , pickFire, ACCOUNT_KEY } from '../_wa.js';
 
@@ -2800,11 +2802,26 @@ async function routineDbHandle(context) {
     // only: no ordinary answer goes through it, and the text is the caller's own, never a row from the database.
     if (body.op === 'tts_probe') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'text', 'model', 'send'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
-      if (!env.AI || typeof env.AI.run !== 'function') return jsonResp({ ok: false, error: 'Workers AI binding missing' }, 200, {});
       const text = String(body.text || '').trim();
       if (text.length < 4 || text.length > 300) return jsonResp({ ok: false, error: 'text: 4-300 characters' }, 400, {});
+      // 13/11/2026: 'gemini' = the Hebrew voice the induction page already reads with (talk.js ttsUpstream, Gemini TTS, voice
+      // Charon, he-IL; Michael approved its quality 10/10/2026). Its audio is raw PCM, which WhatsApp does not take as a voice
+      // message (aac, mp4, mpeg, amr, ogg-opus only), so for the trial it goes as a WAV document.
+      if (body.model === TTS_GEMINI) {
+        const t0 = Date.now();
+        let w; try { w = await ttsWav(env, text, 'he'); } catch (e) { w = { error: String((e && e.message) || e).slice(0, 200) }; }
+        const r = { model: TTS_GEMINI, ms: Date.now() - t0 };
+        if (w.error) r.error = String(w.error).slice(0, 300); else r.bytes = w.bytes.length;
+        if (!w.error && body.send !== false) {
+          const to = await ownerWa(env, url);
+          const s = to ? await sendDocToOwner(env, to, w.bytes, TTS_GEMINI_FILE, null, await ownerWindowOpen(env, url), { kind: 'reply' }) : { ok: false, error: 'no owner' };
+          r.sent = s.ok ? (s.via || 'sent') : s.error;
+        }
+        return jsonResp({ ok: true, chars: text.length, models: [r] }, 200, {});
+      }
+      if (!env.AI || typeof env.AI.run !== 'function') return jsonResp({ ok: false, error: 'Workers AI binding missing' }, 200, {});
       const models = TTS_MODELS.filter((m) => !body.model || m.id === body.model);
-      if (!models.length) return jsonResp({ ok: false, error: 'model: ' + TTS_MODELS.map((m) => m.id).join(' | ') }, 400, {});
+      if (!models.length) return jsonResp({ ok: false, error: 'model: ' + TTS_MODELS.map((m) => m.id).concat([TTS_GEMINI]).join(' | ') }, 400, {});
       const res = [];
       for (const m of models) {
         const t0 = Date.now();
