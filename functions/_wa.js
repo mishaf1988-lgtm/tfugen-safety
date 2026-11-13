@@ -378,7 +378,7 @@ async function noteMetaOut(env) {
 // not a message to him, so it must not move META_OUT_KEY (the delivery check) or wa_last_out. Never throws; 3 seconds.
 export const TYPING_MS = 3000;
 export function typingPayload(wamid) {
-  const id = String(wamid || '');
+  const id = typeof wamid === 'string' ? wamid : '';
   return /^wamid\.[A-Za-z0-9+/=_-]{10,200}$/.test(id) ? { messaging_product: 'whatsapp', status: 'read', message_id: id, typing_indicator: { type: 'text' } } : null;
 }
 export async function waTyping(env, wamid) {

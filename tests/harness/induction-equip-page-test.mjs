@@ -78,7 +78,9 @@ check('a weekly talk has no equipment block', !wk.html.includes('id="eqbox"'));
   // a resend from Michael's button raises no WhatsApp
   const save = globalThis.fetch;
   const now = Date.parse('2026-11-09T08:00:00Z');
-  const E2 = Object.assign({}, ENV, { META_PHONE_NUMBER_ID: 'p', META_ACCESS_TOKEN: 't' });
+  // WEEKEND_QUIET off (13/11/2026): on a Friday or Saturday the alert was held for Sunday (weekendHold) and never reached
+  // Meta, so these three checks failed two days a week; they test the hour lock, not the weekend.
+  const E2 = Object.assign({}, ENV, { META_PHONE_NUMBER_ID: 'p', META_ACCESS_TOKEN: 't', WEEKEND_QUIET: 'off' });
   const run = async (metaOk, times) => {
     const st = new Map(); let meta = 0;
     globalThis.fetch = async (u, o) => { u = String(u); const m = (o && o.method) || 'GET';
