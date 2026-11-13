@@ -2814,7 +2814,7 @@ async function routineDbHandle(context) {
         if (w.error) r.error = String(w.error).slice(0, 300); else r.bytes = w.bytes.length;
         if (!w.error && body.send !== false) {
           const to = await ownerWa(env, url);
-          const s = to ? await sendDocToOwner(env, to, w.bytes, TTS_GEMINI_FILE, null, await ownerWindowOpen(env, url)) : { ok: false, error: 'no owner' };
+          const s = to ? await sendDocToOwner(env, to, w.bytes, TTS_GEMINI_FILE, null, await ownerWindowOpen(env, url), { kind: 'reply' }) : { ok: false, error: 'no owner' };
           r.sent = s.ok ? (s.via || 'sent') : s.error;
         }
         return jsonResp({ ok: true, chars: text.length, models: [r] }, 200, {});
