@@ -2,6 +2,7 @@
 // back whole. Two webhooks at once dropped each other's id, and Meta's retry of the dropped one ran the assistant twice.
 // firstTime and forget now write through stateCas; here the pure parts and two writers on one row at the same moment.
 import { seenAdd, seenDrop, badSigNoteDue, BAD_SIG_NOTE_MS, aboutLine, hazardRef } from './_build/wa-hook.mjs';
+import { typingPayload, waTyping } from './_build/_wa.mjs';
 import { stateCas } from './_build/_cas.mjs';
 import fs from 'fs';
 
@@ -53,6 +54,32 @@ check('retro 19/10/2026 (c): a bad-signature note at most once per 10 minutes', 
 const src = fs.readFileSync(new URL('../../functions/api/wa-hook.js', import.meta.url), 'utf8');
 const ft = src.slice(src.indexOf('async function firstTime'), src.indexOf('async function aboutAlert'));
 check('firstTime and forget write through stateCas, never a whole-list POST', (ft.match(/stateCas\(/g) || []).length === 2 && !/merge-duplicates/.test(ft));
+
+
+// 13/11/2026 (ideas-lab 36): blue ticks and "typing..." on Michael's own message while the assistant works.
+{
+  const ok = 'wamid.HBgMOTcyNTAxMjM0NTY3FQIAEhgUM0E0NUY2RjcyMkE1QzlCQTk5QjEA';
+  const p = typingPayload(ok);
+  check('typing: the payload marks that message read and asks for the text indicator', !!p && p.status === 'read' && p.message_id === ok && p.typing_indicator.type === 'text' && p.messaging_product === 'whatsapp');
+  const bad = [undefined, null, '', 'abc', 'wamid.', 'wamid.short', 'wamid.' + 'x'.repeat(300), 'wamid.ok;rm -rf /', 'http://x/wamid.aaaaaaaaaaaa', { toString: () => ok }];
+  check('typing: anything that is not a real message id sends nothing', bad.every((b) => typingPayload(b) === null), bad.filter((b) => typingPayload(b) !== null));
+  const three = ['wamid.AAAAAAAAAAAAAA', 'wamid.BBBBBBBBBBBBBB', 'wamid.CCCCCCCCCCCCCC==' ];
+  check('typing: three real ids all pass', three.every((x) => typingPayload(x) !== null));
+  const f0 = globalThis.fetch; let calls = [];
+  globalThis.fetch = async (u, i) => { calls.push({ u: String(u), body: JSON.parse(i.body), auth: i.headers.Authorization }); return new Response('{}', { status: 200 }); };
+  const env = { META_PHONE_NUMBER_ID: '123', META_ACCESS_TOKEN: 'tok' };
+  check('typing: sent to the messages endpoint of the number, with the token', await waTyping(env, ok) === true && calls.length === 1 && calls[0].u.includes('/123/messages') && calls[0].auth === 'Bearer tok' && calls[0].body.status === 'read');
+  calls = [];
+  check('typing: no number or token, and a bad id, send nothing', await waTyping({}, ok) === false && await waTyping(env, 'nope') === false && calls.length === 0);
+  globalThis.fetch = async () => { throw new Error('network'); };
+  check('typing: a failure is false and never throws', await waTyping(env, ok) === false);
+  globalThis.fetch = async () => new Response('{"error":{"code":131047}}', { status: 400 });
+  check('typing: an error from Meta is false, and the message goes on as before', await waTyping(env, ok) === false);
+  globalThis.fetch = f0;
+  const src = fs.readFileSync(new URL('../../functions/api/wa-hook.js', import.meta.url), 'utf8');
+  check('typing: sent after the "got it", because a message to him removes the indicator', /seen\.ack_ms = Date\.now\(\) - t0; \}\s*\n[^\n]*\n\s*if \(wa && m\.id\) seen\.typing = await waTyping\(env, m\.id\);/.test(src));
+  check('typing: does not go through metaPost, so it cannot move the delivery check or the last question', !/waTyping[\s\S]{0,400}metaPost/.test(fs.readFileSync(new URL('../../functions/_wa.js', import.meta.url), 'utf8').split('export async function waTyping')[1].slice(0, 500)));
+}
 
 console.log('\nwa-seen-test: ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

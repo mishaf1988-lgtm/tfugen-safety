@@ -183,7 +183,7 @@ import { worksTryMail, worksApproveMail, worksPermit, WK_ID_RE as WORKS_ID_RE, w
 import { readZip, entryText } from '../_xlsxpatch.js';
 import { DOMAIN_FORMS, WA_RULES_HASH } from '../_domains.js';
 export { WA_RULES_HASH };
-import { OD_OCR_DIR, OCR_MODELS, aiOcr, ocrLines, ocrOne } from '../_ocr.js';
+import { OD_OCR_DIR, OCR_MODELS, aiOcr, ocrLines, ocrOne, TTS_MODELS, aiTts } from '../_ocr.js';
 import { stateCas } from '../_cas.js';
 import { CLAUDE_LOG_Q, logLine, queueAdd, ocrPartialRow } from '../_claudelog.js';
 import { SIGN_KEY, SIGN_CHOICES, signAdd, signMark, signAskText, signPlace } from '../_sign.js';
@@ -191,7 +191,7 @@ import { findSignSpot } from '../_pdftext.js';
 import { rowContradictions } from './wa-morning.js';
 import { respUnknown } from './hazard-report.js';
 import { PDFDocument } from '../_pdflib.js';
-import { DOC_MAX, ownerWa, sendToOwner, sendDocToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, learnedLine, learnedLabel, LEARNED_MAX, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, assistantFireNow, fireUrlOf, sameSession, recentLine, ilTimes , pickFire, ACCOUNT_KEY } from '../_wa.js';
+import { DOC_MAX, ownerWa, sendToOwner, sendDocToOwner, sendVoiceToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, learnedLine, learnedLabel, LEARNED_MAX, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, assistantFireNow, fireUrlOf, sameSession, recentLine, ilTimes , pickFire, ACCOUNT_KEY } from '../_wa.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads',
@@ -2794,6 +2794,32 @@ async function routineDbHandle(context) {
       try { raw = new TextDecoder(cs.toLowerCase()).decode(buf); } catch (e) { raw = new TextDecoder('utf-8').decode(buf); }
       const text = htmlText(raw);
       return jsonResp({ ok: true, url: u, chars: text.length, cut: text.length > SOURCE_MAX, text: text.slice(0, SOURCE_MAX) }, 200, {});
+    }
+    // tts_probe (13/11/2026, Michael in the questionnaire: "do it: a voice-reply trial", ideas-lab 37): reads one Hebrew
+    // line aloud with each candidate model and sends it to Michael as a voice message, so he can judge the Hebrew. A probe
+    // only: no ordinary answer goes through it, and the text is the caller's own, never a row from the database.
+    if (body.op === 'tts_probe') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'text', 'model', 'send'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      if (!env.AI || typeof env.AI.run !== 'function') return jsonResp({ ok: false, error: 'Workers AI binding missing' }, 200, {});
+      const text = String(body.text || '').trim();
+      if (text.length < 4 || text.length > 300) return jsonResp({ ok: false, error: 'text: 4-300 characters' }, 400, {});
+      const models = TTS_MODELS.filter((m) => !body.model || m.id === body.model);
+      if (!models.length) return jsonResp({ ok: false, error: 'model: ' + TTS_MODELS.map((m) => m.id).join(' | ') }, 400, {});
+      const res = [];
+      for (const m of models) {
+        const t0 = Date.now();
+        try {
+          const bytes = await aiTts(env, m, text);
+          const r = { model: m.id, ms: Date.now() - t0, bytes: bytes.length };
+          if (body.send !== false && bytes.length) {
+            const to = await ownerWa(env, url);
+            const s = to ? await sendVoiceToOwner(env, to, bytes, m.mime, await ownerWindowOpen(env, url)) : { ok: false, error: 'no owner' };
+            r.sent = s.ok ? 'sent' : s.error;
+          }
+          res.push(r);
+        } catch (e) { res.push({ model: m.id, ms: Date.now() - t0, error: String((e && e.message) || e).slice(0, 200) }); }
+      }
+      return jsonResp({ ok: true, chars: text.length, models: res }, 200, {});
     }
     if (body.op === 'ocr_probe') {
       // a sample image the caller made (never a file from the drive), to compare the models' Hebrew before choosing one
