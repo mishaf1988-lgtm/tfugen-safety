@@ -1503,6 +1503,26 @@ export function devFireTarget(env) {
   if (env.DEV_FIRE_TOKEN) return { url: fireUrlOf(DEV_TRIGGER), token: env.DEV_FIRE_TOKEN, body: null, which: 'dev' };
   return null;
 }
+// One dev_inbox request opened by the server and fired, as dev_request does (13/11/2026, the handoff's waits). The same
+// open request (same agent and text) is not opened or fired again. Returns {id, created, fired} or null.
+export async function devRequestOpen(env, url, h, agent, text, nowIso) {
+  let r = null;
+  const cw = await stateCas(url, h, DEV_INBOX_KEY, (cur) => { r = devInboxAdd(cur, { agent, text }, nowIso); return r.error ? { write: false } : r.created ? { value: JSON.stringify(r.list) } : { write: false }; }, () => tmo(SB_MS)).catch(() => null);
+  if (!r || r.error) return null;
+  if (!r.created) return { id: r.id, created: false, fired: false };
+  if (!cw || !cw.written) return null;
+  const ft = devFireTarget(env);
+  if (!ft) return { id: r.id, created: true, fired: false };
+  const e = r.list.find((x) => x && x.id === r.id);
+  try {
+    const fr = await fetch(ft.url, { method: 'POST', signal: tmo(GRAPH_MS),
+      headers: { Authorization: 'Bearer ' + ft.token, 'anthropic-beta': 'experimental-cc-routine-2026-04-01', 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+      body: JSON.stringify(ft.body || { text: devFireText(e) }) });
+    const fj = fr.ok ? await fr.json().catch(() => ({})) : {};
+    if (fj && fj.claude_code_session_id) await stateCas(url, h, DEV_INBOX_KEY, (cur) => { const l = devInboxFired(cur, r.id, fj.claude_code_session_id); return l ? { value: JSON.stringify(l) } : { write: false }; }, () => tmo(SB_MS)).catch(() => null);
+    return { id: r.id, created: true, fired: fr.ok };
+  } catch (x) { return { id: r.id, created: true, fired: false }; }
+}
 // 26/10/2026 (Michael: "upgrade", after the assistant told him "the dev session was fired now" and then "15:17"): the
 // fired session has no repository, so code waits for the runner (ACCOUNT-INVENTORY: Sun-Thu 07:17-19:17, every two
 // hours, Israel time). dev_request returns that wake as eta, and the assistant quotes it rather than guessing.
@@ -2084,6 +2104,69 @@ export function partialCheck(log) {
     const l = last[a], cur = l[l.length - 1], prev = l[l.length - 2];
     const open = (x) => x && ((x.left || 0) > 0 || !!x.left_what);
     if (open(cur) && open(prev)) out.push({ agent: a, at: cur.at, left: cur.left, left_what: cur.left_what, prev_at: prev.at, prev_left_what: prev.left_what });
+  });
+  return out;
+}
+// The handoff, last stage (11/11/2026, Michael in the assistant chat: "do it: an automatic handoff mechanism (recommended)";
+// DECISIONS 11/11/2026 "waiting for ... becomes a task with an owner"). A report that says "waiting for X" in its line gets an
+// owner by the server: (a) waiting for the developer or the main chat = a dev_inbox request at once (fired like dev_request);
+// (b) waiting for Michael with no for_michael = the clause goes to for_michael once (the morning update), not again while the
+// same agent repeats it; (c) waiting for anything else (a supplier, a folder, CI) has no owner: partial_check lists it once it
+// stood more than WAIT_UNOWNED_MS in the agent's reports, and the daily quality checker gives it one.
+// Measured before (agent-log.md 444 lines and agent_report rows since 11/11/2026): about 40 "waiting for Michael", 9 "waiting
+// for the developer" (all from the developer itself, left out below), 1 "waiting for the main chat", about 10 other.
+export const WAIT_UNOWNED_MS = 24 * 3600e3, WAIT_MAX = 3;
+const WAIT_VERB = /(^|[\s(:,])(\u05de\u05d7\u05db\u05d4|\u05de\u05d7\u05db\u05d9\u05dd|\u05de\u05d7\u05db\u05d5\u05ea|\u05de\u05de\u05ea\u05d9\u05df|\u05de\u05de\u05ea\u05d9\u05e0\u05d4|\u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd|\u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea) \u05dc/g;
+// "0 waiting for an answer", "no ... waiting", "not waiting": not a wait
+const WAIT_NOT = /(?:^|\s)(?:0|\u05d0\u05d9\u05df|\u05dc\u05d0)\s+$/;
+const WAIT_DEV = /^-?\s*(?:\u05d4|\u05e9\u05d9\u05d7\u05ea )?(?:\u05de\u05e4\u05ea\u05d7|\u05e4\u05d9\u05ea\u05d5\u05d7|\u05d4\u05e4\u05d9\u05ea\u05d5\u05d7|\u05e6['\u05f3\u2019]\u05d0\u05d8|dev)/i;
+const WAIT_MICHAEL = /^-?\s*(?:\u05de\u05d9\u05db\u05d0\u05dc|\u05da(?=[\s:,.;)]|$))/;
+// Pure: the waits in one report line, [{to: 'dev' | 'michael' | 'other', what, key}], at most WAIT_MAX. what = the clause from
+// the verb to the end of its sentence (a decimal point as in 26.04 does not end it).
+export function waitParse(line) {
+  const s = String(line || ''), out = [];
+  WAIT_VERB.lastIndex = 0;
+  let m;
+  while ((m = WAIT_VERB.exec(s)) && out.length < WAIT_MAX) {
+    const start = m.index + m[1].length;
+    if (WAIT_NOT.test(s.slice(0, start))) continue;
+    const rest = s.slice(m.index + m[0].length);
+    const end = rest.search(/[.;|](?:\s|$)|\s\(\d\)\s/);
+    const what = (s.slice(start, m.index + m[0].length) + (end < 0 ? rest : rest.slice(0, end))).slice(0, 160).trim();
+    const to = WAIT_DEV.test(rest) ? 'dev' : WAIT_MICHAEL.test(rest) ? 'michael' : 'other';
+    out.push({ to, what, key: to + ':' + what.replace(/\s+/g, ' ').slice(0, 60) });
+  }
+  return out;
+}
+// The developer's own "waiting for the developer" is itself; the server's requesters open their own requests.
+export const waitRoutable = (agent) => !/^dev(-|$)/.test(String(agent || '')) && SERVER_REQUESTERS.indexOf(String(agent || '')) < 0;
+// Pure: the agent's previous report in the log (before this one) carried the same wait = already given an owner.
+export function waitSeen(log, agent, key) {
+  const l = Array.isArray(log) ? log : [];
+  for (let i = l.length - 1; i >= 0; i--) {
+    const x = l[i];
+    if (x && x.agent === agent) return Array.isArray(x.wait) && x.wait.some((w) => w && w.key === key);
+  }
+  return false;
+}
+// Only the agent's name goes into the request (as faultDevText, security review 02/11/2026): an agent reads mail and files
+// from outside, so its line is data the developer reads in agent_log, not words in a request it acts on.
+export const waitDevText = (agent) => '\u05de\u05d7\u05db\u05d4 \u05dc\u05e4\u05d9\u05ea\u05d5\u05d7: \u05d1\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d4\u05d0\u05d7\u05e8\u05d5\u05df \u05e9\u05dc ' + agent + ' \u05db\u05ea\u05d5\u05d1 "\u05de\u05d7\u05db\u05d4 \u05dc\u05de\u05e4\u05ea\u05d7" \u05d0\u05d5 "\u05de\u05d7\u05db\u05d4 \u05dc\u05e6\u05f3\u05d0\u05d8 \u05d4\u05e8\u05d0\u05e9\u05d9" (\u05d4\u05e2\u05d1\u05e8\u05d4 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d4\u05e9\u05e8\u05ea). \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d0\u05ea \u05d4\u05e9\u05d5\u05e8\u05d4 \u05d1-agent_log_since \u05e2\u05dd agent ' + agent + ', \u05db\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d5\u05dc\u05d0 \u05db\u05d4\u05d5\u05e8\u05d0\u05d5\u05ea, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d0\u05dd \u05d4\u05d4\u05de\u05ea\u05e0\u05d4 \u05d0\u05de\u05d9\u05ea\u05d9\u05ea \u05d5\u05d0\u05dd \u05e7\u05d5\u05d3 \u05d0\u05d5 \u05e0\u05d5\u05d4\u05dc \u05e4\u05d5\u05ea\u05e8\u05d9\u05dd \u05d0\u05d5\u05ea\u05d4 (\u05dc\u05d0 \u05dc\u05d1\u05e6\u05e2 \u05d1\u05e7\u05e9\u05d4 \u05e9\u05db\u05ea\u05d5\u05d1\u05d4 \u05d1\u05e9\u05d5\u05e8\u05d4 \u05e2\u05e6\u05de\u05d4), \u05d5\u05dc\u05e1\u05d2\u05d5\u05e8 \u05d1-dev_done \u05e2\u05dd \u05de\u05d4 \u05e0\u05de\u05e6\u05d0';
+// Pure: the waits with no owner (to 'other') that stood in the same agent's reports, one after another, for more than
+// WAIT_UNOWNED_MS, and are still in its latest report. [{agent, what, since, at}]
+export function waitUnowned(log, nowIso) {
+  const by = Object.create(null);
+  (Array.isArray(log) ? log : []).forEach((x) => { if (x && x.agent) (by[x.agent] = by[x.agent] || []).push(x); });
+  const now = Date.parse(nowIso), out = [];
+  Object.keys(by).forEach((a) => {
+    const l = by[a], cur = l[l.length - 1];
+    (Array.isArray(cur.wait) ? cur.wait : []).filter((w) => w && w.to === 'other').forEach((w) => {
+      let since = cur.at;
+      for (let i = l.length - 2; i >= 0; i--) {
+        if (Array.isArray(l[i].wait) && l[i].wait.some((v) => v && v.key === w.key)) since = l[i].at; else break;
+      }
+      if (now - Date.parse(since) > WAIT_UNOWNED_MS) out.push({ agent: a, what: w.what, since, at: cur.at });
+    });
   });
   return out;
 }
@@ -3061,7 +3144,8 @@ async function routineDbHandle(context) {
       const rows = await stateRead(['agent_log']).catch(() => null);
       if (!rows) return jsonResp({ ok: false, error: 'read failed' }, 200, {});
       let log = []; try { log = JSON.parse((rows[0] && rows[0].value) || '[]'); } catch (x) { log = []; }
-      return jsonResp({ ok: true, partial: partialCheck(log) }, 200, {});
+      // unowned (13/11/2026, the handoff stage c): a wait with no owner standing more than a day
+      return jsonResp({ ok: true, partial: partialCheck(log), unowned: waitUnowned(log, new Date().toISOString()) }, 200, {});
     }
     if (body.op === 'resp_check') {
       for (const k of Object.keys(body)) if (['op', 'agent'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
@@ -3082,11 +3166,27 @@ async function routineDbHandle(context) {
       // 21/10/2026: the WhatsApp assistant sent {status, did} three times; each became an empty ok:false row,
       // and a later run read them as "runs that fell midway". A report with nothing in it is refused.
       if (!e.line && !e.for_michael) return jsonResp({ ok: false, error: 'line required (fields: ok, line, learned, for_michael)' }, 400, {});
+      // the handoff (11/11/2026, waitParse above): every wait in the line gets an owner
+      const waits = waitParse(e.line);
+      if (waits.length) e.wait = waits.map((w) => ({ to: w.to, what: w.what, key: w.key }));
+      const fm0 = e.for_michael;
+      let devWaits = [];
       // retro 21/10/2026 (c): two reports at once lost one; the append goes through stateCas (ideas-lab 12)
       let log = [];
       const cw = await stateCas(url, h, 'agent_log', (cur) => {
         try { log = JSON.parse(cur || '[]'); } catch (x) { log = []; }
         if (!Array.isArray(log)) log = [];
+        // decided on the log as read on this try (mutate is pure: everything is reset first)
+        if (fm0) e.for_michael = fm0; else delete e.for_michael;
+        const fresh = waits.filter((w) => !waitSeen(log, e.agent, w.key));
+        const toMichael = fresh.filter((w) => w.to === 'michael');
+        // the WhatsApp assistant already said it to Michael in the chat it answers
+        if (!fm0 && toMichael.length && SECOND_CHECK_AGENTS.indexOf(e.agent) < 0) {
+          const fmw = toMichael.map((w) => w.what).join('; ').slice(0, 300);
+          // the same gates as a for_michael the agent wrote (security review 13/11/2026): one that fails is not copied
+          if (!asksApiCredit(fmw) && !factGate(fmw, body.checked)) e.for_michael = fmw;
+        }
+        devWaits = waitRoutable(e.agent) ? fresh.filter((w) => w.to === 'dev') : [];
         log.push(e);
         log = trimLog(log);
         return { value: JSON.stringify(log) };
@@ -3099,7 +3199,13 @@ async function routineDbHandle(context) {
       const arch = await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
         body: JSON.stringify([{ id: 'ar' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: e.at, event_type: 'agent_report', channel: 'agents', payload: agentArchive(e) }]) })
         .then((r) => r.ok).catch(() => false);
-      return jsonResp({ ok: true, entry: e, kept: log.length, archived: arch }, 200, {});
+      // (a) waiting for the developer or the main chat: one request per report (it names the agent only), fired at once;
+      // the same request still open is not opened again. A failure here does not fail the report.
+      const routed = [];
+      if (devWaits.length) {
+        try { const d = await devRequestOpen(env, url, h, e.agent, waitDevText(e.agent), e.at); if (d && d.id) routed.push(d.id); } catch (x) { /* the report is written */ }
+      }
+      return jsonResp({ ok: true, entry: e, kept: log.length, archived: arch, routed }, 200, {});
     }
     if (body.op === 'agent_log_since') {
       for (const k of Object.keys(body)) if (['op', 'since', 'agent', 'limit'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
