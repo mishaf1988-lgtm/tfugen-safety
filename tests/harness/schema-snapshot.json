@@ -299,6 +299,24 @@
       "scope_table",
       "ts"
     ],
+    "invoices": [
+      "amount",
+      "approved_at",
+      "chk",
+      "forwarded_at",
+      "has_report",
+      "id",
+      "inv_date",
+      "note",
+      "num",
+      "received_at",
+      "report_ref",
+      "src",
+      "supplier",
+      "supplier_key",
+      "ts",
+      "updated_at"
+    ],
     "issue_types": [
       "category",
       "id",
@@ -620,17 +638,6 @@
       "text_hash",
       "ts"
     ],
-    "train_plan": [
-      "aud",
-      "done",
-      "id",
-      "n",
-      "q",
-      "t",
-      "ts",
-      "who",
-      "yr"
-    ],
     "toolbox_talks": [
       "body",
       "body_am",
@@ -689,6 +696,17 @@
       "sig",
       "tr_name",
       "w"
+    ],
+    "train_plan": [
+      "aud",
+      "done",
+      "id",
+      "n",
+      "q",
+      "t",
+      "ts",
+      "who",
+      "yr"
     ],
     "trustee_reports": [
       "action",

@@ -444,7 +444,8 @@ const callIn = async (body) => {
     const dels = [...src.matchAll(/method:\s*'DELETE'/g)].map((m) => (owner(m.index) || {}).op);
     check('one DELETE, in od_dedupe only, of a OneDrive item (to the recycle bin); never a table row', dels.join() === 'od_dedupe' && /graph\.microsoft\.com\/v1\.0\/me\/drive\/items\/' \+ encodeURIComponent\(item\.id\), \{ method: 'DELETE'/.test(src), dels);
     // 27/10/2026: od_archive and od_expire share one handler (the PATCH reads as od_expire, the second name on its line).
-    check('no other DELETE; one PATCH each in expiry_set, hazard_choice, od_archive/od_expire, od_move, od_pull, od_swap (31/10/2026, the old file moves to a versions folder) and od_trash (24/10/2026, moves, not deletes) and talk_field', dels.length === 1 && patches.length === 8 && own === 'expiry_set,hazard_choice,od_expire,od_move,od_pull,od_swap,od_trash,talk_field' && /body\.op === 'od_archive' \|\| body\.op === 'od_expire'/.test(src), own);
+    // 13/11/2026: invoice_set, an update of the given fields of one ledger row (Michael: "do it: an invoice ledger"); invoice-ledger-test.mjs
+    check('no other DELETE; one PATCH each in expiry_set, hazard_choice, od_archive/od_expire, od_move, od_pull, od_swap (31/10/2026, the old file moves to a versions folder) and od_trash (24/10/2026, moves, not deletes) and talk_field', dels.length === 1 && patches.length === 9 && own === 'expiry_set,hazard_choice,invoice_set,od_expire,od_move,od_pull,od_swap,od_trash,talk_field' && /body\.op === 'od_archive' \|\| body\.op === 'od_expire'/.test(src), own);
   }
 
   console.log('\n4b. agent_report: append-only run log');
