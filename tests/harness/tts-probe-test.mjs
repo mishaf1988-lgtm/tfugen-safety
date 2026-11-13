@@ -92,5 +92,21 @@ for (const bad of [null, undefined, {}, { ms: 5 }, 42]) {
   const op = src.split("if (body.op === 'tts_probe') {")[1].split("if (body.op === 'ocr_probe')")[0];
   check('tts_probe gemini: goes as a document (WhatsApp takes no raw PCM as voice), only to Michael, and does not need Workers AI', /model === TTS_GEMINI/.test(op) && /sendDocToOwner\(env, to, w\.bytes/.test(op) && /voice \? await sendVoiceToOwner\(env, to, w\.bytes, w\.mime/.test(op) && /w\.mime === 'audio\/mp3'/.test(op) && op.indexOf('TTS_GEMINI') < op.indexOf('Workers AI binding missing'));
 }
+// 13/11/2026 (Michael: "do it: understood, go on"): a voice answer to his voice message
+{
+  const { voiceReplyText, voiceAsked, VOICE_REPLY_MAX, VOICE_NEAR_MS } = await import('./_build/routine-db.mjs');
+  const t = voiceReplyText('\u2705 התסקיר של המלגזה פג ב-20/11.\n- לתאם בדיקה: https://example.com/x\n- טופס 08.02.01 מצורף');
+  check('voiceReplyText: no link, no emoji, no list marks, no form number; the sentence is kept', !/https|example|\u2705|^-|08\.02\.01/.test(t) && /התסקיר של המלגזה פג/.test(t), t);
+  const long = voiceReplyText(('משפט ארוך אחד עם מילים. ').repeat(60));
+  check('voiceReplyText: a long answer is cut at a sentence end, not over the limit', long.length <= VOICE_REPLY_MAX && /\.$/.test(long), long.length);
+  const at = '2026-11-13T10:31:00Z', near = (ms) => new Date(Date.parse(at) + ms).toISOString();
+  check('voiceAsked: his voice message at the time answered = yes; a text message, one far away, or no time = no',
+    voiceAsked([{ ts: near(2000), voice: 'true' }], at) === near(2000) && voiceAsked([{ ts: near(2000), voice: 'true' }], near(1)) === near(2000) && !voiceAsked([{ ts: near(2000), voice: null }], at) && !voiceAsked([{ ts: near(VOICE_NEAR_MS + 5000), voice: 'true' }], at) && !voiceAsked([{ ts: at, voice: 'true' }], ''));
+  const src = fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
+  const wa = src.split("if (body.op === 'wa_me') {")[1].split("if (body.op === 'wa_review')")[0];
+  check('wa_me: the voice copy only on "voice": true, after the text went out on WhatsApp (not held, not chat only)', /if \(body\.voice === true && r\.ok && !r\.held && r\.via !== 'chat'\)/.test(wa) && wa.indexOf('voiceReply(') > wa.indexOf('sendToOwner('));
+  const vr = src.split('async function voiceReply(')[1].split('\n}\n')[0];
+  check('voiceReply: checks the answered message was voice, once per message (stateCas), mp3 only, to Michael only', /voiceAsked\(rows, body\.answers\)/.test(vr) && /stateCas\(url, h, VOICE_REPLIED_KEY/.test(vr) && /!== msgTs/.test(vr) && /voiceReplyText\(scrubPii\(/.test(vr) && /w\.mime !== 'audio\/mp3'/.test(vr) && /sendVoiceToOwner\(env, to,/.test(vr));
+}
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

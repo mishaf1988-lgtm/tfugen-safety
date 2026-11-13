@@ -190,8 +190,28 @@ import { SIGN_KEY, SIGN_CHOICES, signAdd, signMark, signAskText, signPlace } fro
 import { findSignSpot } from '../_pdftext.js';
 import { rowContradictions } from './wa-morning.js';
 import { respUnknown } from './hazard-report.js';
-import { ttsWav } from './talk.js';
+import { ttsWav, speechText } from './talk.js';
 export const TTS_GEMINI = 'gemini', TTS_GEMINI_FILE = 'hakraa-ivrit.wav', TTS_FMTS = ['audio/mpeg', 'audio/ogg', 'audio/mp3'];
+// A voice answer to a voice message (13/11/2026, Michael in the questionnaire after the Gemini sample: "do it: understood,
+// go on (recommended)"; ideas-lab 37). The assistant marks its main answer to a voice message with "voice": true; the server
+// checks that the message it answers (answers) really was a voice message, says it once per message (VOICE_REPLIED_KEY), and
+// sends the same answer read aloud as an mp3 voice message after the text. Nothing else changes: the text always goes first.
+export const VOICE_REPLY_MAX = 700, VOICE_REPLIED_KEY = 'voice_replied', VOICE_NEAR_MS = 90e3;
+// Pure: the words to read aloud. Links, emoji and list marks go; cut at a sentence end before VOICE_REPLY_MAX.
+export function voiceReplyText(text) {
+  let t = speechText('', String(text || '').replace(/[a-z][a-z0-9+.-]*:\/\/\S+|www\.\S+/gi, ' ').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\uFE0F]/gu, ' ')).replace(/\n+/g, ' ').trim();
+  if (t.length > VOICE_REPLY_MAX) { const k = t.lastIndexOf('. ', VOICE_REPLY_MAX); t = t.slice(0, k > VOICE_REPLY_MAX / 2 ? k + 1 : VOICE_REPLY_MAX).trim(); }
+  return t;
+}
+// Pure: the message answered (answers = its time) is one of his voice messages in rows [{ts, voice}].
+// Returns the ts of that voice message (the once-per-message key, security review 13/11/2026: not answers, which a caller
+// could vary by a millisecond), or null.
+export function voiceAsked(rows, answers) {
+  const a = Date.parse(answers || '');
+  if (isNaN(a)) return null;
+  const hit = (Array.isArray(rows) ? rows : []).find((x) => x && (x.voice === true || x.voice === 'true') && Math.abs(Date.parse(x.ts) - a) <= VOICE_NEAR_MS);
+  return hit ? String(hit.ts) : null;
+}
 import { PDFDocument } from '../_pdflib.js';
 import { DOC_MAX, ownerWa, sendToOwner, sendDocToOwner, sendVoiceToOwner, ownerWindowOpen, ASSISTANT_TEMPLATE, hmacHex, HAZARD_OPTIONS, noteLastOut, HAZARD_NOTE_TABLE, hasInternalId, asksRepoSetup, stripInternalIds, LEARN_KEY, LEARN_KINDS, learnedLine, learnedLabel, LEARNED_MAX, PROMISE_KEY, promiseAdd, promiseDone, promiseDoneText, hazardChoiceNote, assistantFire, assistantFireNow, fireUrlOf, sameSession, recentLine, ilTimes , pickFire, ACCOUNT_KEY } from '../_wa.js';
 
@@ -1505,6 +1525,26 @@ export function devFireTarget(env) {
 }
 // One dev_inbox request opened by the server and fired, as dev_request does (13/11/2026, the handoff's waits). The same
 // open request (same agent and text) is not opened or fired again. Returns {id, created, fired} or null.
+// The voice copy of one wa_me answer (VOICE_REPLY_MAX above). Returns what happened, for the caller; never throws on a refusal.
+async function voiceReply(env, url, h, to, body) {
+  const a = Date.parse(String(body.answers || ''));
+  if (isNaN(a)) return 'no answers';
+  const rows = await fetch(url + '/rest/v1/notifications_log?select=ts,voice:payload->>voice&event_type=eq.owner_in&ts=gte.' + encodeURIComponent(new Date(a - VOICE_NEAR_MS).toISOString())
+    + '&ts=lte.' + encodeURIComponent(new Date(a + VOICE_NEAR_MS).toISOString()) + '&limit=20', { headers: h, signal: tmo(SB_MS) }).then((x) => (x.ok ? x.json() : null)).catch(() => null);
+  const msgTs = voiceAsked(rows, body.answers);
+  if (!msgTs) return 'not a voice message';
+  let first = false;
+  const cw = await stateCas(url, h, VOICE_REPLIED_KEY, (cur) => { first = String(cur || '') !== msgTs; return first ? { value: msgTs } : { write: false }; }, () => tmo(SB_MS)).catch(() => null);
+  if (!first) return 'already';
+  if (!cw || !cw.written) return 'state write';
+  // the text goes to Google's voice (as the induction does): phone, id and card numbers are scrubbed first (security review 13/11/2026)
+  const words = voiceReplyText(scrubPii(String(body.text || '')));
+  if (words.length < 4) return 'no words';
+  const w = await ttsWav(env, words, 'he', 'audio/mp3');
+  if (w.error || w.mime !== 'audio/mp3') return 'tts ' + (w.error ? String(w.error).slice(0, 80) : w.mime);
+  const s = await sendVoiceToOwner(env, to, w.bytes, 'audio/mpeg', await ownerWindowOpen(env, url));
+  return s.ok ? 'sent' : String(s.error || 'send');
+}
 export async function devRequestOpen(env, url, h, agent, text, nowIso) {
   let r = null;
   const cw = await stateCas(url, h, DEV_INBOX_KEY, (cur) => { r = devInboxAdd(cur, { agent, text }, nowIso); return r.error ? { write: false } : r.created ? { value: JSON.stringify(r.list) } : { write: false }; }, () => tmo(SB_MS)).catch(() => null);
@@ -4215,6 +4255,9 @@ async function routineDbHandle(context) {
         pendingLost = !pw || !pw.ok; // the question went out but his tap will find nothing: the caller says so (review 06/11/2026)
       }
       if (r.ok && !r.held) await noteLastOut(env, url, body.text, body.ref);
+      if (body.voice === true && r.ok && !r.held && r.via !== 'chat') {
+        try { r.voice = await voiceReply(env, url, h, to, body); } catch (x) { r.voice = 'error'; }
+      }
       if (r.ok && DEV_REF.test(String(body.ref || ''))) {
         await stateCas(url, h, DEV_INBOX_KEY, (cur) => { const told = devInboxTold(cur, body.ref, new Date().toISOString()); return told ? { value: JSON.stringify(told) } : { write: false }; }, () => tmo(SB_MS)).catch(() => null);
       }
