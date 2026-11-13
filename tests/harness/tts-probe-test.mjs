@@ -90,7 +90,7 @@ for (const bad of [null, undefined, {}, { ms: 5 }, 42]) {
   check('ttsWav fmt: the format is asked from the API, and an mp3 answer is returned as it is (not wrapped in WAV)', asked.response_format.mime_type === 'audio/mpeg' && m.mime === 'audio/mpeg' && m.bytes.length === 9 && m.bytes[0] === 0xff, { asked: asked.response_format, m: m.mime });
   const src = fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
   const op = src.split("if (body.op === 'tts_probe') {")[1].split("if (body.op === 'ocr_probe')")[0];
-  check('tts_probe gemini: goes as a document (WhatsApp takes no raw PCM as voice), only to Michael, and does not need Workers AI', /model === TTS_GEMINI/.test(op) && /sendDocToOwner\(env, to, w\.bytes/.test(op) && /voice \? await sendVoiceToOwner\(env, to, w\.bytes, w\.mime/.test(op) && op.indexOf('TTS_GEMINI') < op.indexOf('Workers AI binding missing'));
+  check('tts_probe gemini: goes as a document (WhatsApp takes no raw PCM as voice), only to Michael, and does not need Workers AI', /model === TTS_GEMINI/.test(op) && /sendDocToOwner\(env, to, w\.bytes/.test(op) && /voice \? await sendVoiceToOwner\(env, to, w\.bytes, w\.mime/.test(op) && /w\.mime === 'audio\/mp3'/.test(op) && op.indexOf('TTS_GEMINI') < op.indexOf('Workers AI binding missing'));
 }
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

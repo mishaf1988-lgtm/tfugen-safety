@@ -2899,7 +2899,7 @@ async function routineDbHandle(context) {
         if (w.error) r.error = String(w.error).slice(0, 300); else { r.bytes = w.bytes.length; r.mime = w.mime; }
         if (!w.error && body.send !== false) {
           const to = await ownerWa(env, url);
-          const voice = w.mime === 'audio/mpeg' || w.mime === 'audio/ogg';
+          const voice = w.mime === 'audio/mpeg' || w.mime === 'audio/mp3' || w.mime === 'audio/ogg'; // the API names mp3 "audio/mp3" (13/11/2026)
           const s = !to ? { ok: false, error: 'no owner' } : voice ? await sendVoiceToOwner(env, to, w.bytes, w.mime, await ownerWindowOpen(env, url))
             : await sendDocToOwner(env, to, w.bytes, TTS_GEMINI_FILE, null, await ownerWindowOpen(env, url), { kind: 'reply' });
           r.sent = s.ok ? (s.via || 'sent') : s.error;
