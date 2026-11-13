@@ -1242,6 +1242,11 @@ export function mailGotList(items, since) {
     .map((x) => ({ name: x.name, size: x.size || 0, at: new Date(mailGotAt(x)).toISOString(), first: x.createdDateTime || null }));
 }
 export const OD_CAL_MOVE = OD_AUTO + '/' + OD_AUTO_DIRS[3], CAL_MOVED_KEY = 'cal_moved', CAL_MOVED_MAX = 30;
+// Pure (13/11/2026, stateCas): the cal_moved list as stored (a JSON string, or broken) + one line on top -> the string to save.
+export function calLogAdd(raw, line) {
+  let list = []; try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
+  return JSON.stringify([line].concat(Array.isArray(list) ? list : []).slice(0, CAL_MOVED_MAX));
+}
 const CAL_T = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 // Pure. Israel wall clock "YYYY-MM-DDTHH:MM" for start and end, from today up to a year ahead, at most 14 days long.
 export const OD_DRAFT_TRASH = OD_AUTO + '/' + OD_AUTO_DIRS[4];
@@ -3515,11 +3520,9 @@ async function routineDbHandle(context) {
       const at = await accessToken(env);
       const name = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '') + '-' + Math.random().toString(36).slice(2, 8) + '.txt';
       await putFile(at.token, OD_ROOT + OD_CAL_MOVE, name, c.file, 'text/plain');
-      const rows = await stateRead([CAL_MOVED_KEY]).catch(() => []);
-      let list = []; try { list = JSON.parse((rows[0] && rows[0].value) || '[]'); } catch (e) { list = []; }
       const line = { at: new Date().toISOString(), subject: c.subject, start: c.start, end: c.end, file: name, agent: body.agent, approved: String(body.approved).slice(0, 200) };
-      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
-        body: JSON.stringify([{ key: CAL_MOVED_KEY, value: JSON.stringify([line].concat(Array.isArray(list) ? list : []).slice(0, CAL_MOVED_MAX)), updated_at: line.at }]) }).catch(() => null);
+      // 13/11/2026 (ideas-lab 12, one key per PR): through stateCas, so a move logged between our read and our write is kept
+      await stateCas(url, h, CAL_MOVED_KEY, (raw) => ({ value: calLogAdd(raw, line) }), () => tmo(SB_MS)).catch(() => null);
       return jsonResp({ ok: true, file: OD_CAL_MOVE + '/' + name, start: c.start, end: c.end }, 200, {});
     }
     if (body.op === 'cal_invite') {
