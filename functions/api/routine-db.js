@@ -3052,7 +3052,7 @@ async function routineDbHandle(context) {
         if (capped) return jsonResp({ ok: false, error: 'max ' + INVOICE_DAY_MAX + ' ledger writes a day' }, 200, {});
         if (!cw || !cw.written) return jsonResp({ ok: false, error: 'count not saved, nothing written' }, 200, {}); }
       const where = 'supplier_key=eq.' + encodeURIComponent(c.key) + '&num=eq.' + encodeURIComponent(c.num);
-      const g = await fetch(url + '/rest/v1/invoices?select=id,amount,chk&' + where, { headers: h, signal: tmo(SB_MS) }).catch(() => null);
+      const g = await fetch(url + '/rest/v1/invoices?select=id,amount,chk,note&' + where, { headers: h, signal: tmo(SB_MS) }).catch(() => null);
       const ex = g && g.ok ? await g.json().catch(() => null) : null;
       if (!Array.isArray(ex)) return jsonResp({ ok: false, error: 'read ' + (g ? g.status : 'failed') }, 200, {});
       const now = new Date().toISOString(), set = c.set;
@@ -3068,7 +3068,9 @@ async function routineDbHandle(context) {
       const cur = ex[0];
       let conflict = false;
       if (set.amount != null && cur.amount != null && Number(cur.amount) !== set.amount) { conflict = true; delete set.amount; set.chk = true; }
-      else if (set.amount != null && set.chk == null) set.chk = false;
+      // 13/11/2026: an amount clears "to check" only on a row marked for the missing amount alone; a row with a
+      // note (a 2025 invoice, a credit memo, an unclear number) keeps the mark until a call says check:false
+      else if (set.amount != null && set.chk == null && !String(cur.note || '').trim() && set.note == null) set.chk = false;
       // security review 13/11/2026: "to check" is cleared only by a call that carries the amount (the saved one, or the first one)
       if (set.chk === false && set.amount == null) delete set.chk;
       const w = await fetch(url + '/rest/v1/invoices?id=eq.' + encodeURIComponent(cur.id), { method: 'PATCH', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify(Object.assign({ updated_at: now }, set)), signal: tmo(SB_MS) }).catch(() => null);

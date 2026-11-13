@@ -51,6 +51,13 @@ r = await call(Object.assign({}, base, { amount: 850, check: false }));
 check('the same amount again with check false clears the mark', r.json.ok && rows[0].chk === false);
 check('a bad call writes nothing', (await call(Object.assign({}, base, { amount: '850' }))).status === 400 && (await call(Object.assign({}, base, { num: '1;drop' }))).status === 400 && rows.length === 1);
 await call(Object.assign({}, base, { num: '26333', amount: 100 }));
+// 13/11/2026: the 2026 fill gave amounts to rows marked for another reason (a 2025 invoice, a credit memo), and the mark was lost
+await call(Object.assign({}, base, { num: '26334', check: true, note: 'a 2025 invoice' }));
+await call(Object.assign({}, base, { num: '26334', amount: 200 }));
+{ const nr = rows.find((x) => x.num === '26334');
+  check('an amount does not clear "to check" on a row marked with a note; amount with check false does', nr.amount === 200 && nr.chk === true, nr);
+  await call(Object.assign({}, base, { num: '26334', amount: 200, check: false })); check('  ...and check false with the amount clears it', nr.chk === false, nr);
+  rows.splice(rows.indexOf(nr), 1); }
 r = await call({ op: 'invoice_find', agent: 'routine-wa-assistant', supplier: 'אקולוגיה' });
 check('invoice_find returns the rows, and no internal key or id', r.json.ok && r.json.count === 2 && calls[calls.length - 1].url.includes('select=supplier,num,amount') && !/supplier_key|select=\*|select=id/.test(calls[calls.length - 1].url.split('?')[1].split('&')[0]), r.json);
 check('invoices is not open through the general select op', TABLES.indexOf('invoices') < 0);
