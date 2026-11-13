@@ -372,6 +372,44 @@ async function noteMetaOut(env) {
       body: JSON.stringify([{ key: META_OUT_KEY, value: { at: new Date().toISOString() }, updated_at: new Date().toISOString() }]) });
   } catch (e) { /* a missing note only silences one check */ }
 }
+// 13/11/2026 (Michael in the questionnaire: "do it: typing", ideas-lab 36; Meta typing indicators, 08/04/2025): the blue
+// ticks and "typing..." on Michael's own message while the assistant works. Meta shows it up to 25 seconds, or until the
+// next message to him, so it is sent AFTER the "got it" text (sending a message removes it). Not through metaPost: this is
+// not a message to him, so it must not move META_OUT_KEY (the delivery check) or wa_last_out. Never throws; 3 seconds.
+export const TYPING_MS = 3000;
+export function typingPayload(wamid) {
+  const id = String(wamid || '');
+  return /^wamid\.[A-Za-z0-9+/=_-]{10,200}$/.test(id) ? { messaging_product: 'whatsapp', status: 'read', message_id: id, typing_indicator: { type: 'text' } } : null;
+}
+export async function waTyping(env, wamid) {
+  const p = typingPayload(wamid);
+  if (!p || !env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return false;
+  try {
+    const r = await fetch(`https://graph.facebook.com/${META_API_VERSION}/${env.META_PHONE_NUMBER_ID}/messages`, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + env.META_ACCESS_TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify(p), signal: tmo(TYPING_MS) });
+    return !!r.ok;
+  } catch (e) { return false; }
+}
+// 13/11/2026 (Michael in the questionnaire: "do it: a voice-reply trial", ideas-lab 37): one Hebrew answer read aloud and
+// sent to Michael as a WhatsApp voice message, so he can say whether Hebrew comes out usable. No Workers AI model lists
+// Hebrew (checked 13/11/2026), so this is a probe, not a feature: nothing calls it on an ordinary message.
+export const TTS_MAX = 16 * 1024 * 1024;
+export async function sendVoiceToOwner(env, to, bytes, mime, windowOpen) {
+  if (windowOpen === false) return { ok: false, error: 'window closed' };
+  if (!bytes || !bytes.length || bytes.length > TTS_MAX) return { ok: false, error: 'size' };
+  const type = mime === 'audio/ogg' ? 'audio/ogg' : 'audio/mpeg';
+  const fd = new FormData();
+  fd.append('messaging_product', 'whatsapp');
+  fd.append('type', type);
+  fd.append('file', new Blob([bytes], { type }), type === 'audio/ogg' ? 'reply.ogg' : 'reply.mp3');
+  const up = await fetch(`https://graph.facebook.com/${META_API_VERSION}/${env.META_PHONE_NUMBER_ID}/media`, {
+    method: 'POST', headers: { Authorization: 'Bearer ' + env.META_ACCESS_TOKEN }, body: fd, signal: tmo(30000) }).catch(() => null);
+  const uj = up ? await up.json().catch(() => ({})) : {};
+  if (!up || !up.ok || !uj.id) return { ok: false, error: 'upload ' + (up ? up.status : 'network') };
+  const r = await metaPost(env, { messaging_product: 'whatsapp', to, type: 'audio', audio: { id: uj.id } });
+  return r.ok ? { ok: true, via: 'audio' } : { ok: false, error: 'send ' + r.status };
+}
 export async function metaPost(env, payload) {
   const r = await fetch(`https://graph.facebook.com/${META_API_VERSION}/${env.META_PHONE_NUMBER_ID}/messages`, {
     method: 'POST', headers: { Authorization: 'Bearer ' + env.META_ACCESS_TOKEN, 'Content-Type': 'application/json' },

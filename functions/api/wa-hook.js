@@ -14,7 +14,7 @@
 // notifications_log (payload.wamid), so the assistant knows what Michael is answering.
 // Machine path in _middleware: Meta calls from outside Israel.
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, SB_LIVE, tmo, SITE } from '../_shared.js';
-import { learnedLabel, LEARNED_MAX, fastModel, fastFire } from '../_wa.js';
+import { learnedLabel, LEARNED_MAX, fastModel, fastFire, waTyping } from '../_wa.js';
 import { isVoice, voiceText, VOICE_MARK, VOICE_MODEL } from '../_voice.js';
 import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, hasStatuses, STATUS_KEY, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, assistantFireNow, pickFire, accountOf, ACCOUNT_KEY, forgetAccount, LEARN_KEY, learnedLine, recentLine, waDeliveryHandle } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
@@ -760,6 +760,8 @@ async function handle(env, raw) {
       return js;
     })().catch(() => []);
     if (wa) { const a = await sendToOwner(env, owner, ACK_TEXT, { kind: 'reply', windowOpen: true, noTemplate: true }).catch(() => null); seen.ack = !!(a && a.ok); seen.ack_ms = Date.now() - t0; }
+    // "typing..." and the blue ticks, after the ack (a message to him removes the indicator); a failure changes nothing
+    if (wa && m.id) seen.typing = await waTyping(env, m.id);
     // 20/10/2026 20:30: a message got "got it" and then nothing, no log line and no fire. The work after the
     // response runs in waitUntil, which Cloudflare stops about 30 seconds after the response; the snapshot
     // read and the fire (20 seconds on a bad day) did not fit. The snapshot is a bonus: SNAP_MS at most,

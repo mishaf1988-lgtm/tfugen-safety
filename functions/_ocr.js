@@ -8,6 +8,39 @@ export const OD_OCR_DIR = '_\u05d8\u05e7\u05e1\u05d8 \u05e1\u05e8\u05d9\u05e7\u0
 export const OCR_MODELS = ['@cf/meta/llama-4-scout-17b-16e-instruct', '@cf/mistralai/mistral-small-3.1-24b-instruct', '@cf/google/gemma-3-12b-it', '@cf/meta/llama-3.2-11b-vision-instruct'];
 export const OCR_PAGES = 3, OCR_MAX_PAGES = 60;
 export const OCR_PROMPT = 'Transcribe all the text in this scanned document exactly, line by line, in its original language (mostly Hebrew). Keep numbers and dates as written. Output only the text, no comments.';
+// Reading aloud (13/11/2026, ideas-lab 37): the Workers AI models that can speak. None of them lists Hebrew
+// (checked 13/11/2026 in the Cloudflare catalogue), which is exactly what tts_probe is for. MeloTTS and Aura are
+// included in the Workers AI quota; ElevenLabs is billed per character, so it is last and only when asked by name.
+export const TTS_MODELS = [
+  { id: '@cf/myshell-ai/melotts', mime: 'audio/mpeg', lang: 'he' },
+  { id: '@cf/deepgram/aura-1', mime: 'audio/mpeg' },
+];
+// Pure-ish: one model, one line of text, the audio bytes. Each model answers differently (a stream, a base64 string
+// or {audio}), so every shape is handled here and an unknown one throws with what came back.
+export function ttsBytes(out) {
+  if (!out) throw new Error('empty answer');
+  if (out instanceof ArrayBuffer) return new Uint8Array(out);
+  if (out instanceof Uint8Array) return out;
+  const b64 = typeof out === 'string' ? out : (out.audio || out.result || out.data);
+  if (typeof b64 === 'string') {
+    const clean = b64.indexOf(',') > 0 && b64.slice(0, 5) === 'data:' ? b64.slice(b64.indexOf(',') + 1) : b64;
+    return Uint8Array.from(atob(clean), (ch) => ch.charCodeAt(0));
+  }
+  throw new Error('unknown answer: ' + Object.keys(out || {}).join(',').slice(0, 80));
+}
+export async function aiTts(env, model, text) {
+  const input = { prompt: String(text), text: String(text) };
+  if (model.lang) input.lang = model.lang;
+  const out = await env.AI.run(model.id, input);
+  if (out && typeof out.getReader === 'function') {
+    const parts = []; const rd = out.getReader();
+    for (;;) { const { done, value } = await rd.read(); if (done) break; parts.push(value); }
+    const n = parts.reduce((a, p) => a + p.length, 0), all = new Uint8Array(n);
+    let o = 0; for (const p of parts) { all.set(p, o); o += p.length; }
+    return all;
+  }
+  return ttsBytes(out);
+}
 export function pdfJpegs(buf, max) {
   const out = [];
   for (let i = 0; i + 1 < buf.length && out.length < max; i++) {
