@@ -1089,6 +1089,7 @@
     "select",
     "state_get",
     "state_set",
+    "task_add",
     "wa_me"
    ],
    "m365": true,
