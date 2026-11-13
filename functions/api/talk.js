@@ -378,6 +378,50 @@ export async function ttsUpstream(env, text, lang) {
   if (r.ok && r.body) return { r };
   return { status: 502, err: 'interactions ' + e1 + ' | generate ' + r.status + ' ' + String(await r.text().catch(() => '')).substring(0, 160) };
 }
+// A whole audio file on the server (13/11/2026, ideas-lab 37: a voice reply to Michael on WhatsApp in Hebrew; the Workers AI
+// models were tried first: MeloTTS refuses Hebrew, Aura-1 reads it as English, "not understood"). Pure: the SSE text of
+// ttsUpstream -> {pcm, rate}, every base64 audio part wherever the API puts it (as PLAYER does), 16-bit little-endian.
+export function ssePcm(sse) {
+  const parts = [];
+  const walk = (o) => {
+    if (!o || typeof o !== 'object') return;
+    if (Array.isArray(o)) { o.forEach(walk); return; }
+    const m = String(o.mime_type || o.mimeType || '');
+    if (typeof o.data === 'string' && o.data.length > 8 && (/audio/i.test(m) || o.type === 'audio')) {
+      const r = +(o.sample_rate || o.sampleRate || 0) || +((/rate=(\d+)/.exec(m) || [])[1] || 0);
+      parts.push({ d: o.data, r });
+      return;
+    }
+    for (const k in o) if (k !== 'data') walk(o[k]);
+  };
+  String(sse || '').split('\n').forEach((l) => {
+    const t = l.replace(/^data:\s*/, '').trim();
+    if (!t || t[0] !== '{' && t[0] !== '[') return;
+    try { walk(JSON.parse(t)); } catch (e) { /* not a JSON event */ }
+  });
+  const bufs = parts.map((p) => Uint8Array.from(atob(p.d), (c) => c.charCodeAt(0)));
+  const n = bufs.reduce((a, b) => a + b.length, 0), pcm = new Uint8Array(n);
+  let o = 0; bufs.forEach((b) => { pcm.set(b, o); o += b.length; });
+  return { pcm, rate: (parts.find((p) => p.r) || {}).r || 24000 };
+}
+// Pure: 16-bit mono PCM -> a WAV file (a 44-byte header).
+export function wavOf(pcm, rate) {
+  const out = new Uint8Array(44 + pcm.length), v = new DataView(out.buffer);
+  const s = (o, t) => { for (let i = 0; i < t.length; i++) out[o + i] = t.charCodeAt(i); };
+  s(0, 'RIFF'); v.setUint32(4, 36 + pcm.length, true); s(8, 'WAVE'); s(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, rate, true);
+  v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); s(36, 'data'); v.setUint32(40, pcm.length, true);
+  out.set(pcm, 44);
+  return out;
+}
+// The whole reading as a WAV file, or {error}.
+export async function ttsWav(env, text, lang) {
+  const up = await ttsUpstream(env, text, lang || 'he');
+  if (!up.r) return { error: up.err || ('status ' + up.status) };
+  const { pcm, rate } = ssePcm(await up.r.text());
+  if (!pcm.length) return { error: 'no audio in the answer' };
+  return { bytes: wavOf(pcm, rate), rate };
+}
 const SAY_H = { 'Content-Type': 'text/event-stream; charset=utf-8', 'X-Content-Type-Options': 'nosniff', 'X-Robots-Tag': 'noindex' };
 // The same text in the same voice is the same audio: kept in the edge cache for a week, so a
 // department of 40 costs one generation. Best effort: no cache, no harm.

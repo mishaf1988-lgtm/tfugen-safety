@@ -50,13 +50,35 @@ for (const bad of [null, undefined, {}, { ms: 5 }, 42]) {
 // the op's own guards, in the source
 {
   const src = fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
-  const op = src.split("if (body.op === 'tts_probe') {")[1].slice(0, 2000);
+  const op = src.split("if (body.op === 'tts_probe') {")[1].split("if (body.op === 'ocr_probe')")[0];
   check('tts_probe: only its own fields are accepted', /\['op', 'agent', 'text', 'model', 'send'\]/.test(op));
   check('tts_probe: the text is the caller\'s own, 4 to 300 characters, never a row from the database', /text: 4-300 characters/.test(op) && !/select|sbJson|from\(/.test(op));
   check('tts_probe: without the Workers AI binding it answers instead of throwing', /Workers AI binding missing/.test(op));
   check('tts_probe: an unknown model name is refused with the list', /model: ' \+ TTS_MODELS\.map/.test(op));
   check('tts_probe: a model that fails is reported, and the next one still runs', /catch \(e\) \{ res\.push\(\{ model: m\.id/.test(op));
   check('nothing but the probe reads anything aloud (no other caller of aiTts)', (src.match(/aiTts\(/g) || []).length === 1 && !/aiTts/.test(fs.readFileSync(new URL('../../functions/api/wa-hook.js', import.meta.url), 'utf8')));
+}
+// 13/11/2026: the Hebrew voice that already reads the induction (Gemini, talk.js), as a WAV file for WhatsApp
+{
+  const { ssePcm, wavOf, ttsWav } = await import('./_build/talk.mjs');
+  const b64 = (a) => Buffer.from(Uint8Array.from(a)).toString('base64');
+  const sse = 'data: ' + JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'audio/L16;codec=pcm;rate=24000', data: b64([1, 0, 2, 0, 1, 0, 2, 0, 1, 0]) } }] } }] }) + '\n\n' +
+    'data: ' + JSON.stringify({ type: 'content.delta', delta: { type: 'audio', data: b64([3, 0, 3, 0, 3, 0, 3, 0, 3, 0]), mime_type: 'audio/l16', sample_rate: 24000 } }) + '\n\ndata: [DONE]\n';
+  const p = ssePcm(sse);
+  check('ssePcm: audio parts from both API shapes are joined in order; the rate is read; a non-JSON event is skipped', p.pcm.length === 20 && p.pcm[0] === 1 && p.pcm[10] === 3 && p.rate === 24000, p);
+  check('ssePcm: an answer with no audio gives no bytes', ssePcm('data: {"x":1}\n').pcm.length === 0);
+  const w = wavOf(new Uint8Array([1, 0, 2, 0]), 24000), v = new DataView(w.buffer);
+  check('wavOf: a 44-byte RIFF/WAVE header, mono 16-bit at the rate, then the samples', w.length === 48 && String.fromCharCode(...w.slice(0, 4)) === 'RIFF' && String.fromCharCode(...w.slice(8, 12)) === 'WAVE' && v.getUint16(22, true) === 1 && v.getUint32(24, true) === 24000 && v.getUint16(34, true) === 16 && v.getUint32(40, true) === 4 && w[44] === 1);
+  const f0 = globalThis.fetch;
+  globalThis.fetch = async () => new Response(sse, { status: 200 });
+  const ok = await ttsWav({ GEMINI_API_KEY: 'k' }, 'שלום מיכאל', 'he');
+  globalThis.fetch = async () => new Response('{"error":"x"}', { status: 400 });
+  const bad = await ttsWav({ GEMINI_API_KEY: 'k' }, 'שלום', 'he');
+  globalThis.fetch = f0;
+  check('ttsWav: the stream becomes one WAV file; a refused call and no key are errors, not a throw', ok.bytes && ok.bytes.length === 64 && bad.error && (await ttsWav({}, 'שלום', 'he')).error === 'no key', { ok: !!ok.bytes, bad });
+  const src = fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
+  const op = src.split("if (body.op === 'tts_probe') {")[1].slice(0, 4000);
+  check('tts_probe gemini: goes as a document (WhatsApp takes no raw PCM as voice), only to Michael, and does not need Workers AI', /model === TTS_GEMINI/.test(op) && /sendDocToOwner\(env, to, w\.bytes/.test(op) && op.indexOf('TTS_GEMINI') < op.indexOf('Workers AI binding missing'));
 }
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
