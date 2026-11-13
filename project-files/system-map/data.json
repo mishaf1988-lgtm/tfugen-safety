@@ -706,7 +706,7 @@
    "reports": true
   },
   {
-   "id": "trig_01APzQCoZHsqJTQTFqvKbRcT",
+   "id": "trig_01SMYGqBcxN8PNLdrsYWDNDj",
    "zone": "routines",
    "name": "מעקב הצעות מחיר",
    "what": "",
@@ -804,7 +804,7 @@
    "reports": true
   },
   {
-   "id": "trig_01PxjFyeVEJcsbUaYVSxN5FZ",
+   "id": "trig_016xMAkGro8VyFG1LTzC6vHa",
    "zone": "routines",
    "name": "הרדאר מלמד את העוזר",
    "what": "",
@@ -884,7 +884,7 @@
    "reports": false
   },
   {
-   "id": "trig_015oCa3o5whdXon9dTettfkB",
+   "id": "trig_013PgQvE7ZEov2RTk55GZ3y7",
    "zone": "routines",
    "name": "משרד הסוכנים",
    "what": "משרד הסוכנים: עדכון בוקר",
@@ -900,7 +900,7 @@
    "reports": false
   },
   {
-   "id": "trig_01UcmWkSPWDHkp49BftrPt86",
+   "id": "trig_01SrJir5j17Cwnp6CE3eNQ3X",
    "zone": "routines",
    "name": "תפוגות שנתקעו אצל ספק",
    "what": "",
@@ -936,7 +936,7 @@
    "reports": true
   },
   {
-   "id": "trig_01XJ5dBUN5dcbDqirQ7uZ6a5",
+   "id": "trig_01W2tz2yTW23AjNvu5evCTdL",
    "zone": "routines",
    "name": "בודק לתור המשימות למחשב",
    "what": "",
@@ -952,7 +952,7 @@
    "reports": true
   },
   {
-   "id": "trig_01CkizD1F41kU5BAzEA9DX4q",
+   "id": "trig_016EjZcprEybkjXjQbM6zeaj",
    "zone": "routines",
    "name": "בדיקת הניסוי השבועית",
    "what": "",
