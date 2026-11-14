@@ -303,6 +303,7 @@
       "amount",
       "approved_at",
       "chk",
+      "currency",
       "forwarded_at",
       "has_report",
       "id",

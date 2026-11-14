@@ -126,7 +126,7 @@
 //              report id; the same one-flat-file check as the mails, truPhotoObj) is shown to a Workers AI vision model
 //              with a fixed prompt -> {ok, model, ms, guess:{type, sev}} (closed lists only, no sentence). Read-only: nothing is written to the
 //              report, nothing is sent, the picture is kept nowhere. HAZ_PROBE_MAX a day. The guess is data from a photo.
-//   invoice_set (13/11/2026) {agent, why, supplier, num, amount?, inv_date?, received?, forwarded?, approved?, has_report?,
+//   invoice_set (13/11/2026) {agent, why, supplier, num, amount?, currency? (ILS default, EUR/USD/GBP, 14/11/2026), inv_date?, received?, forwarded?, approved?, has_report?,
 //              report_ref?, check?, note?, src?} one row of the invoice ledger (table invoices, closed to the app: the
 //              service key only). One row per supplier and invoice number: a second call updates only the fields it
 //              gives. An amount is never guessed: no amount = the row is marked chk ("to check"); a different amount
@@ -1256,9 +1256,10 @@ export const OD_CAL_MOVE = OD_AUTO + '/' + OD_AUTO_DIRS[3], CAL_MOVED_KEY = 'cal
 // The invoice ledger (13/11/2026, Michael in the questionnaire: "do it: an invoice ledger", then "do it: build by the plan").
 // Pure: the fields of one invoice_set call -> {key, num, set} (set = only what the call gave), or {error}.
 export const INVOICE_FIND_MAX = 100, INVOICE_AMOUNT_MAX = 100000000;
+export const INVOICE_CURRENCIES = ['ILS', 'EUR', 'USD', 'GBP'];
 // writes a day (the one-time fill of 2026 needs a few hundred; a runaway agent is stopped)
 export const INVOICE_DAY_KEY = 'invoice_set_day', INVOICE_DAY_MAX = 600;
-const INV_FIELDS = ['op', 'agent', 'why', 'supplier', 'num', 'amount', 'inv_date', 'received', 'forwarded', 'approved', 'has_report', 'report_ref', 'check', 'note', 'src'];
+const INV_FIELDS = ['op', 'agent', 'why', 'supplier', 'num', 'amount', 'currency', 'inv_date', 'received', 'forwarded', 'approved', 'has_report', 'report_ref', 'check', 'note', 'src'];
 const invText = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
 // the supplier as a key: letters and digits only, lower case, without the company suffix, so two spellings are one supplier
 export function invoiceKey(supplier) { return invText(supplier, 80).replace(/\u05d1\u05e2["\u05f4']?\u05de|\bltd\b\.?|\binc\b\.?/gi, '').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase(); }
@@ -1275,6 +1276,8 @@ export function invoiceRow(b) {
     if (typeof b.amount !== 'number' || !isFinite(b.amount) || b.amount < 0 || b.amount > INVOICE_AMOUNT_MAX || Math.abs(Math.round(b.amount * 100) - b.amount * 100) > 1e-6) return { error: 'amount: a number as written on the invoice, up to 2 decimals; not sure = leave it out and the row is marked to check' };
     set.amount = Math.round(b.amount * 100) / 100;
   }
+  // 14/11/2026 (Michael: "do it: a currency column"): the amount as written on the invoice, in its own currency, never converted
+  if (b.currency != null) { if (INVOICE_CURRENCIES.indexOf(b.currency) < 0) return { error: 'currency: ' + INVOICE_CURRENCIES.join(' / ') + ' (as written on the invoice)' }; set.currency = b.currency; }
   if (b.inv_date != null) { if (!invDay(b.inv_date)) return { error: 'inv_date: YYYY-MM-DD' }; set.inv_date = b.inv_date; }
   for (const [f, col] of [['received', 'received_at'], ['forwarded', 'forwarded_at'], ['approved', 'approved_at']]) {
     if (b[f] == null) continue;
@@ -1291,7 +1294,7 @@ export function invoiceRow(b) {
 // Pure: the ledger query of invoice_find, or {error}.
 export function invoiceQuery(b) {
   for (const k of Object.keys(b || {})) if (['op', 'agent', 'supplier', 'num', 'from', 'to', 'open', 'check'].indexOf(k) < 0) return { error: 'field not allowed: ' + k };
-  const q = ['select=supplier,num,amount,inv_date,received_at,forwarded_at,approved_at,has_report,report_ref,chk,note', 'order=received_at.desc.nullslast,ts.desc', 'limit=' + INVOICE_FIND_MAX];
+  const q = ['select=supplier,num,amount,currency,inv_date,received_at,forwarded_at,approved_at,has_report,report_ref,chk,note', 'order=received_at.desc.nullslast,ts.desc', 'limit=' + INVOICE_FIND_MAX];
   if (b.supplier != null) { const k = invoiceKey(b.supplier); if (k.length < 2) return { error: 'supplier: 2 characters or more' }; q.push('supplier_key=like.*' + encodeURIComponent(k) + '*'); }
   if (b.num != null) { const n = invText(b.num, 30); if (!/^[A-Za-z0-9][A-Za-z0-9\/-]{0,29}$/.test(n)) return { error: 'num' }; q.push('num=eq.' + encodeURIComponent(n)); }
   if (b.from != null) { if (!invDay(b.from)) return { error: 'from: YYYY-MM-DD' }; q.push('received_at=gte.' + b.from + 'T00:00:00Z'); }
@@ -3052,7 +3055,7 @@ async function routineDbHandle(context) {
         if (capped) return jsonResp({ ok: false, error: 'max ' + INVOICE_DAY_MAX + ' ledger writes a day' }, 200, {});
         if (!cw || !cw.written) return jsonResp({ ok: false, error: 'count not saved, nothing written' }, 200, {}); }
       const where = 'supplier_key=eq.' + encodeURIComponent(c.key) + '&num=eq.' + encodeURIComponent(c.num);
-      const g = await fetch(url + '/rest/v1/invoices?select=id,amount,chk,note&' + where, { headers: h, signal: tmo(SB_MS) }).catch(() => null);
+      const g = await fetch(url + '/rest/v1/invoices?select=id,amount,currency,chk,note&' + where, { headers: h, signal: tmo(SB_MS) }).catch(() => null);
       const ex = g && g.ok ? await g.json().catch(() => null) : null;
       if (!Array.isArray(ex)) return jsonResp({ ok: false, error: 'read ' + (g ? g.status : 'failed') }, 200, {});
       const now = new Date().toISOString(), set = c.set;
@@ -3067,7 +3070,9 @@ async function routineDbHandle(context) {
       }
       const cur = ex[0];
       let conflict = false;
-      if (set.amount != null && cur.amount != null && Number(cur.amount) !== set.amount) { conflict = true; delete set.amount; set.chk = true; }
+      // security review 14/11/2026: a saved amount keeps its currency; another currency is a conflict like another amount (850 ILS never becomes 850 EUR quietly)
+      if (set.currency != null && cur.amount != null && set.currency !== (cur.currency || 'ILS')) { conflict = true; delete set.currency; delete set.amount; set.chk = true; }
+      else if (set.amount != null && cur.amount != null && Number(cur.amount) !== set.amount) { conflict = true; delete set.amount; set.chk = true; }
       // 13/11/2026: an amount clears "to check" only on a row marked for the missing amount alone; a row with a
       // note (a 2025 invoice, a credit memo, an unclear number) keeps the mark until a call says check:false
       else if (set.amount != null && set.chk == null && !String(cur.note || '').trim() && set.note == null) set.chk = false;
