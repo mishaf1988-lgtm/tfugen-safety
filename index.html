@@ -23873,8 +23873,10 @@ function _pibPlatform(){
   var ua=navigator.userAgent||'';
   var ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
   if(ios){
-    // Chrome, Firefox, Edge and in-app viewers (WhatsApp, Facebook) on iPhone
-    // cannot add to the home screen the way Safari does.
+    // Chrome on iPhone adds to the home screen from its own share button in the address bar (iOS 16.4+;
+    // Michael 14/11/2026: "also Chrome on the iPhone"). Firefox, Edge and in-app viewers (WhatsApp,
+    // Facebook): open in Safari.
+    if(/CriOS/.test(ua))return 'ios-chrome';
     var other=/CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|FBAN|FBAV|Instagram|WhatsApp|Line\//.test(ua)||!/Safari\//.test(ua);
     return other?'ios-other':'ios-safari';
   }
@@ -23898,6 +23900,7 @@ function _pibShareSvg(){
 }
 function _pibText(plat){
   if(plat==='ios-safari')return '\u05dc\u05d4\u05ea\u05e7\u05e0\u05d4: \u05dc\u05d7\u05e6\u05d5 \u05e2\u05dc \u05db\u05e4\u05ea\u05d5\u05e8 \u05d4\u05e9\u05d9\u05ea\u05d5\u05e3'+_pibShareSvg()+'\u05d5\u05d0\u05d6 \'\u05d4\u05d5\u05e1\u05e3 \u05dc\u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea\'';
+  if(plat==='ios-chrome')return '\u05dc\u05d4\u05ea\u05e7\u05e0\u05d4: \u05dc\u05d7\u05e6\u05d5 \u05e2\u05dc \u05db\u05e4\u05ea\u05d5\u05e8 \u05d4\u05e9\u05d9\u05ea\u05d5\u05e3'+_pibShareSvg()+'\u05d1\u05e9\u05d5\u05e8\u05ea \u05d4\u05db\u05ea\u05d5\u05d1\u05ea \u05d5\u05d0\u05d6 \'\u05d4\u05d5\u05e1\u05e3 \u05dc\u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea\'';
   if(plat==='ios-other')return '\u05e4\u05ea\u05d7\u05d5 \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9 \u05db\u05d3\u05d9 \u05dc\u05d4\u05ea\u05e7\u05d9\u05df';
   if(_pwaPrompt)return '\u05d4\u05ea\u05e7\u05d9\u05e0\u05d5 \u05d0\u05ea \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d1\u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea <button type="button" id="pwa-bar-go" onclick="_pwaInstall()">\u05d4\u05ea\u05e7\u05e0\u05d4</button>';
   return '\u05dc\u05d4\u05ea\u05e7\u05e0\u05d4: \u05dc\u05d7\u05e6\u05d5 \u05e2\u05dc \u05e9\u05dc\u05d5\u05e9 \u05d4\u05e0\u05e7\u05d5\u05d3\u05d5\u05ea \u05dc\u05de\u05e2\u05dc\u05d4 \u05d5\u05d0\u05d6 \'\u05d4\u05ea\u05e7\u05e0\u05ea \u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4\'';
