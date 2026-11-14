@@ -1,4 +1,4 @@
--- dumped 2026-11-13 from the live project by tools/platform/schema-dump.sql (the invoices statements added from the same queries, invoices.currency 2026-11-14; full dump 2026-11-08)
+-- dumped 2026-11-14 from the live project by tools/platform/schema-dump.sql (the invoices statements added from the same queries, invoices.currency 2026-11-14; full dump 2026-11-08)
 create schema if not exists private;
 
 create extension if not exists "uuid-ossp" with schema extensions;
