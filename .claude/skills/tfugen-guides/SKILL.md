@@ -12,6 +12,7 @@ description: How the user guides of the tfugen-safety app are built and kept tru
 | נאמני בטיחות | `project-files/guide-trustees/` | `tools/guide-shots.js` (האפליקציה, `index.html`) | `build-pdf.js` שם |
 | משאבי אנוש + מנהלים | `project-files/guide-training/` | `tools/guide-talk-shots.mjs` (דף העובד, `functions/api/talk.js`) | `build-pdf.js` שם |
 | פיילוט הדרכה שנתית (למיכאל) | `project-files/guide-annual/` | `tools/guide-annual-shots.mjs` (האפליקציה ודף העובד) | `build-pdf.js` שם |
+| כרטיס התקנה בטלפון (QR, וואטסאפ) | `project-files/guide-install/` | הפס הכחול מצולם מ-`index.html` בתוך הבנייה; הסרגל של ספארי = ציור מסומן | `build-card.mjs` שם (`QRLIB`, אותה ספרייה ואותו sha384 כמו באפליקציה) |
 
 ```bash
 NODE_PATH=$(npm root -g) node tools/guide-talk-shots.mjs            # או guide-shots.js
