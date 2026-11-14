@@ -209,6 +209,11 @@ body.hc #my-tasks-badge,body.hc #bn-tasks-badge{animation:none;box-shadow:0 0 0 
 /* ---- BOTTOM NAV ---- */
 .bnav{position:fixed;bottom:0;left:0;right:0;height:auto;min-height:66px;padding-bottom:env(safe-area-inset-bottom);background:var(--c-white);border-top:2px solid var(--red);z-index:50;display:flex;box-shadow:0 -2px 8px rgba(0,0,0,.08)}
 .bnav::-webkit-scrollbar{display:none}
+/* install bar on phones (14/11/2026), above the bottom nav and the login screen */
+#pwa-bar{position:fixed;left:0;right:0;bottom:0;z-index:9990;display:flex;align-items:center;gap:8px;direction:rtl;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:var(--c-blue-500);color:var(--c-white);font-size:14px;font-weight:600;line-height:1.5;box-shadow:0 -2px 10px rgba(0,0,0,.2)}
+#pwa-bar .pwa-bar-t{flex:1}
+#pwa-bar-go{margin-inline-start:6px;padding:6px 14px;border:0;border-radius:16px;background:var(--c-white);color:var(--c-blue-500);font:inherit;cursor:pointer}
+#pwa-bar-x{flex:0 0 auto;width:36px;height:36px;border:0;border-radius:50%;background:transparent;color:var(--c-white);font-size:24px;line-height:1;cursor:pointer}
 .bn{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:10px 4px;font-size:12px;font-weight:700;color:var(--t3);background:none;border:none;border-top:3px solid transparent;min-height:66px;position:relative;transition:color .18s ease,background .18s ease}
 .bn.on{color:var(--red);border-top-color:var(--red)}
 .bn.on::after{content:"";position:absolute;bottom:6px;left:50%;transform:translateX(-50%);width:18px;height:3px;border-radius:2px;background:var(--red);opacity:.7}
@@ -23852,8 +23857,72 @@ window.addEventListener('appinstalled',function(){
 window._pwaInstall=function(){
   if(!_pwaPrompt){toast('\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05db\u05d1\u05e8 \u05de\u05d5\u05ea\u05e7\u05e0\u05ea \u05d0\u05d5 \u05dc\u05d0 \u05e0\u05ea\u05de\u05db\u05ea \u05d1\u05d3\u05e4\u05d3\u05e4\u05df \u05d6\u05d4');return;}
   _pwaPrompt.prompt();
-  _pwaPrompt.userChoice.then(function(){_pwaPrompt=null;var btn=document.getElementById('pwa-install-btn');if(btn)btn.style.display='none';});
+  _pwaPrompt.userChoice.then(function(){_pwaPrompt=null;var btn=document.getElementById('pwa-install-btn');if(btn)btn.style.display='none';_pibShow();});
 };
+/* ---- Install bar on phones (14/11/2026, Michael asked about the App Store and
+   Google Play and chose "easy install, free"). The button above only appears on
+   beforeinstallprompt, which iPhone never fires, so an iPhone worker was never
+   offered to install. This bar tells each phone what to do: Safari = share then
+   "add to home screen"; another iPhone browser = open in Safari; Android = the
+   real install prompt, or the Chrome menu. Hidden when already opened as an
+   installed app, and on desktop. Closing it is remembered for 30 days;
+   ?install=1 (the link on the QR card) shows it again. */
+var _PIB_KEY='tfgn_pwa_bar_closed', _PIB_DAYS=30;
+// '' = not a phone. iPadOS reports a Mac, so a Mac with touch counts too.
+function _pibPlatform(){
+  var ua=navigator.userAgent||'';
+  var ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
+  if(ios){
+    // Chrome, Firefox, Edge and in-app viewers (WhatsApp, Facebook) on iPhone
+    // cannot add to the home screen the way Safari does.
+    var other=/CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|FBAN|FBAV|Instagram|WhatsApp|Line\//.test(ua)||!/Safari\//.test(ua);
+    return other?'ios-other':'ios-safari';
+  }
+  return /Android/.test(ua)?'android':'';
+}
+function _pibStandalone(){
+  if(navigator.standalone===true)return true;
+  try{return window.matchMedia('(display-mode: standalone)').matches;}catch(e){return false;}
+}
+function _pibClosedRecently(){
+  try{
+    var t=+localStorage.getItem(_PIB_KEY)||0;
+    return t>0&&Date.now()-t<_PIB_DAYS*864e5;
+  }catch(e){return false;}
+}
+function _pibForced(){return /[?&]install=1(&|$)/.test(location.search||'');}
+// The share icon Safari draws: a square open at the top with an arrow up.
+function _pibShareSvg(){
+  return '<svg width="20" height="22" viewBox="0 0 20 22" aria-label="\u05db\u05e4\u05ea\u05d5\u05e8 \u05d4\u05e9\u05d9\u05ea\u05d5\u05e3" role="img" style="vertical-align:-5px;margin:0 3px">'
+    +'<path d="M6 8H3v12h14V8h-3M10 1v13M6 5l4-4 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+function _pibText(plat){
+  if(plat==='ios-safari')return '\u05dc\u05d4\u05ea\u05e7\u05e0\u05d4: \u05dc\u05d7\u05e6\u05d5 \u05e2\u05dc \u05db\u05e4\u05ea\u05d5\u05e8 \u05d4\u05e9\u05d9\u05ea\u05d5\u05e3'+_pibShareSvg()+'\u05d5\u05d0\u05d6 \'\u05d4\u05d5\u05e1\u05e3 \u05dc\u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea\'';
+  if(plat==='ios-other')return '\u05e4\u05ea\u05d7\u05d5 \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9 \u05db\u05d3\u05d9 \u05dc\u05d4\u05ea\u05e7\u05d9\u05df';
+  if(_pwaPrompt)return '\u05d4\u05ea\u05e7\u05d9\u05e0\u05d5 \u05d0\u05ea \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d1\u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea <button type="button" id="pwa-bar-go" onclick="_pwaInstall()">\u05d4\u05ea\u05e7\u05e0\u05d4</button>';
+  return '\u05dc\u05d4\u05ea\u05e7\u05e0\u05d4: \u05dc\u05d7\u05e6\u05d5 \u05e2\u05dc \u05e9\u05dc\u05d5\u05e9 \u05d4\u05e0\u05e7\u05d5\u05d3\u05d5\u05ea \u05dc\u05de\u05e2\u05dc\u05d4 \u05d5\u05d0\u05d6 \'\u05d4\u05ea\u05e7\u05e0\u05ea \u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4\'';
+}
+// One element on <body>, so it stays from the login screen into the app
+// (the bottom nav is retired, 18/09/2026, so the bottom edge is free).
+function _pibShow(){
+  var old=document.getElementById('pwa-bar');
+  if(_pibStandalone())return;
+  var plat=_pibPlatform();
+  if(!plat||(!_pibForced()&&_pibClosedRecently())){if(old)old.remove();return;}
+  var bar=old||document.createElement('div');
+  bar.id='pwa-bar';bar.setAttribute('data-plat',plat);bar.setAttribute('role','status');
+  bar.innerHTML='<span class="pwa-bar-t">'+_pibText(plat)+'</span>'
+    +'<button type="button" id="pwa-bar-x" aria-label="\u05e1\u05d2\u05d9\u05e8\u05d4" onclick="_pibClose()">&times;</button>';
+  if(!old)document.body.appendChild(bar);
+}
+window._pibClose=function(){
+  try{localStorage.setItem(_PIB_KEY,String(Date.now()));}catch(e){}
+  var bar=document.getElementById('pwa-bar');if(bar)bar.remove();
+};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_pibShow);else _pibShow();
+// Android: the real prompt can arrive after the bar is up; swap in the button.
+window.addEventListener('beforeinstallprompt',function(){setTimeout(_pibShow,0);});
+window.addEventListener('appinstalled',function(){var b=document.getElementById('pwa-bar');if(b)b.remove();});
 /* ---- WhatsApp test ---- */
 function _waLastTo(){return localStorage.getItem('tfgn_wa_last')||'';}
 // ---- 2.9 + 2.10 ----
