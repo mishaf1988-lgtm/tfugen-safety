@@ -1,4 +1,4 @@
--- dumped 2026-11-13 from the live project by tools/platform/schema-dump.sql (the invoices statements added from the same queries; full dump 2026-11-08)
+-- dumped 2026-11-13 from the live project by tools/platform/schema-dump.sql (the invoices statements added from the same queries, invoices.currency 2026-11-14; full dump 2026-11-08)
 create schema if not exists private;
 
 create extension if not exists "uuid-ossp" with schema extensions;
@@ -61,7 +61,7 @@ create table if not exists public.ins (id text not null, d text, a text, i text,
 
 create table if not exists public.inspection_types (id text not null, name text not null, scope_table text, recur_count integer default 1 not null, recur_unit text default 'year'::text not null, next_due date, responsible text, notes text, active boolean default true not null, ts timestamp with time zone default now() not null);
 
-create table if not exists public.invoices (id text not null, supplier text not null, supplier_key text not null, num text not null, amount numeric(12,2), inv_date date, received_at timestamp with time zone, forwarded_at timestamp with time zone, approved_at timestamp with time zone, has_report boolean, report_ref text, chk boolean default false not null, note text, src text, ts timestamp with time zone default now() not null, updated_at timestamp with time zone default now() not null);
+create table if not exists public.invoices (id text not null, supplier text not null, supplier_key text not null, num text not null, amount numeric(12,2), inv_date date, received_at timestamp with time zone, forwarded_at timestamp with time zone, approved_at timestamp with time zone, has_report boolean, report_ref text, chk boolean default false not null, note text, src text, ts timestamp with time zone default now() not null, updated_at timestamp with time zone default now() not null, currency text default 'ILS'::text not null);
 
 create table if not exists public.issue_types (id text not null, name text not null, parent_id text, level smallint not null, category text, notes text, ts timestamp with time zone default now() not null);
 
@@ -179,6 +179,7 @@ alter table public.ins add constraint ins_pkey PRIMARY KEY (id);
 
 alter table public.inspection_types add constraint inspection_types_pkey PRIMARY KEY (id);
 
+alter table public.invoices add constraint invoices_currency_chk CHECK ((currency = ANY (ARRAY['ILS'::text, 'EUR'::text, 'USD'::text, 'GBP'::text])));
 alter table public.invoices add constraint invoices_amount_check CHECK (((amount IS NULL) OR ((amount >= (0)::numeric) AND (amount <= (100000000)::numeric))));
 
 alter table public.invoices add constraint invoices_pkey PRIMARY KEY (id);

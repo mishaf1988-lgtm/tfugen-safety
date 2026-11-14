@@ -1,7 +1,7 @@
 // 13/11/2026 (Michael: "do it: an invoice ledger", after a three-question interview): invoice_set and invoice_find in
 // routine-db. One row per supplier and invoice number, an amount is never guessed or silently replaced, and the table is
 // closed to the app (the migration: RLS on, no policy, no grants to anon or authenticated).
-import { onRequest, invoiceRow, invoiceKey, invoiceQuery, INVOICE_FIND_MAX, INVOICE_DAY_KEY, INVOICE_DAY_MAX, TABLES, STATE_WRITE } from './_build/routine-db.mjs';
+import { onRequest, invoiceRow, invoiceKey, INVOICE_CURRENCIES, invoiceQuery, INVOICE_FIND_MAX, INVOICE_DAY_KEY, INVOICE_DAY_MAX, TABLES, STATE_WRITE } from './_build/routine-db.mjs';
 import fs from 'node:fs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 300) : '')); } };
@@ -13,6 +13,7 @@ check('pairs: the supplier key joins spellings (with and without the company suf
 const ok = invoiceRow(Object.assign({}, base, { amount: 1234.5, inv_date: '2026-11-10', received: '2026-11-12', has_report: true }));
 check('a full call: the key, the number, and only the given fields', ok.key && ok.num === '26332' && ok.set.amount === 1234.5 && ok.set.inv_date === '2026-11-10' && ok.set.received_at === '2026-11-12T12:00:00.000Z' && ok.set.has_report === true && !('forwarded_at' in ok.set) && !('chk' in ok.set), ok);
 const bad = (o) => !!invoiceRow(Object.assign({}, base, o)).error;
+check('currency: EUR/GBP pass as given, ILS is the default (not sent), anything else is refused', invoiceRow(Object.assign({}, base, { amount: 17128.09, currency: 'EUR' })).set.currency === 'EUR' && !('currency' in invoiceRow(Object.assign({}, base, { amount: 5 })).set) && !!invoiceRow(Object.assign({}, base, { currency: 'eur' })).error && !!invoiceRow(Object.assign({}, base, { currency: 'NIS' })).error && INVOICE_CURRENCIES.join() === 'ILS,EUR,USD,GBP');
 check('pairs: an amount as text, with 3 decimals, negative or huge is refused; 0, 12.5 and 1234.56 pass', bad({ amount: '1234' }) && bad({ amount: 1.234 }) && bad({ amount: -1 }) && bad({ amount: 1e9 }) && bad({ amount: NaN }) && !bad({ amount: 0 }) && !bad({ amount: 12.5 }) && !bad({ amount: 1234.56 }) && [19.99, 0.07, 1.15, 0.29, 4.35, 0.57, 1.13, 99999.99].every((x) => !bad({ amount: x }) && invoiceRow(Object.assign({}, base, { amount: x })).set.amount === x) && bad({ amount: 19.999 }));
 check('refused: no supplier, a number with spaces or a quote, a bad date, an extra field, no why', bad({ supplier: '' }) && bad({ num: '12 34' }) && bad({ num: "1'--" }) && bad({ inv_date: '10/11/2026' }) && bad({ received: 'yesterday' }) && bad({ id: 'inv-x' }) && bad({ why: '' }) && bad({ has_report: 'yes' }));
 check('control characters and direction marks do not stay in the text fields', invoiceRow(Object.assign({}, base, { note: 'a‮b\u0007c' })).set.note === 'a b c');
