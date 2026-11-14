@@ -23,6 +23,7 @@ globalThis.fetch = async (url, opt = {}) => {
     if (m === 'PATCH') { state[k] = JSON.parse(opt.body).value; return new Response('[{}]', { status: 200 }); } // stateCas
     return new Response(JSON.stringify(k in state ? [{ value: state[k], updated_at: '2026-01-01T00:00:00.000Z' }] : []), { status: 200 });
   }
+  if (url.startsWith(SB + '/rest/v1/invoices')) { invUrls.push(url); if (invFail) return new Response('x', { status: 500 }); return new Response(JSON.stringify(invRows), { status: 200 }); }
   if (url.startsWith(SB + '/rest/v1/docs')) return new Response(JSON.stringify(docs), { status: 200 });
   if (url.startsWith(SB + '/rest/v1/equip_inspections')) { equipUrls.push(url); return new Response(JSON.stringify(equip), { status: 200 }); }
   if (url.startsWith(SB + '/rest/v1/notifications_log')) { logs.push(...JSON.parse(opt.body)); return new Response('', { status: 201 }); }
@@ -30,7 +31,8 @@ globalThis.fetch = async (url, opt = {}) => {
   if (url.startsWith('https://graph.facebook.com/')) { metas.push(JSON.parse(opt.body)); return new Response(JSON.stringify({ messages: [{ id: 'wamid.M' }] }), { status: 200 }); }
   return new Response('[]', { status: 200 });
 };
-const equipUrls = [], stagingCalls = [];
+const equipUrls = [], stagingCalls = [], invUrls = [];
+let invRows = [], invFail = false;
 const call = async (body, secret) => (await onRequest({ request: new Request('https://x/api/wa-morning', { method: 'POST', headers: secret === null ? {} : { 'x-notify-secret': secret || 'sec' }, body: JSON.stringify(body || {}) }), env: ENV })).json();
 
 (async () => {
@@ -445,6 +447,48 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     const b = buildBrief([{ n: 'זוג מאריך קלשונים באורך 1650 מ"מ, כנ"ל', e: '2026-10-29' }], [], '2026-11-02', false, [dev, asst], null, null, null);
     check('morning brief: the expiry name loses its trailing "כנ"ל", and the closed note is not in it', !/כנ"ל/.test(b) && /מאריך קלשונים באורך 1650/.test(b) && !/הפיתוח יתקן/.test(b) && /תוקן: העוזר/.test(b), b);
     check('itemName: only a trailing "כנ"ל" (also ״ and ”), nothing else', itemName('X, כנ״ל') === 'X' && itemName('X כנ”ל') === 'X' && itemName('כנ"ל בתחילה') === 'כנ"ל בתחילה');
+  }
+  { // 14/11/2026 (Michael: "do it: monthly invoice summary"): first workday of the month, 08:00-12:00 Israel, once
+    const { invMonthDue, invMonthText, invMonthStep, INV_MONTH_KEY } = await import('./_build/wa-morning.mjs');
+    // winter: Israel = UTC+2. 01/11/2026 is a Sunday; 01/12/2026 a Tuesday; 01/01/2027 a Friday
+    check('invMonthDue: Sunday 01/11 08:10 = October; 07:59 and 12:00 = not yet / too late; already sent = no',
+      invMonthDue(new Date('2026-11-01T06:10:00Z'), null) === '2026-10' && invMonthDue(new Date('2026-11-01T05:59:00Z'), null) === null
+      && invMonthDue(new Date('2026-11-01T10:00:00Z'), null) === null && invMonthDue(new Date('2026-11-01T06:10:00Z'), '2026-10') === null);
+    check('invMonthDue: January gives December of last year, Friday 01/01 waits for Sunday 03/01, day 8 is too late',
+      invMonthDue(new Date('2027-01-01T06:10:00Z'), null) === null && invMonthDue(new Date('2027-01-03T06:10:00Z'), '2026-11') === '2026-12'
+      && invMonthDue(new Date('2026-12-08T06:10:00Z'), '2026-10') === null && invMonthDue(new Date('2026-12-01T06:10:00Z'), '2026-10') === '2026-11');
+    const rows = [
+      { supplier: 'אלפא', num: '1', amount: 1000, currency: 'ILS', received_at: '2026-10-05T08:00:00Z', forwarded_at: '2026-10-05T09:00:00Z', approved_at: '2026-10-06T09:00:00Z', has_report: true, chk: false },
+      { supplier: 'אלפא', num: '2', amount: 2500.4, currency: 'ILS', received_at: '2026-10-20T08:00:00Z', forwarded_at: null, approved_at: null, has_report: false, chk: false },
+      { supplier: 'בטא', num: '3', amount: 800, currency: 'EUR', received_at: '2026-10-21T08:00:00Z', forwarded_at: '2026-10-21T09:00:00Z', approved_at: null, has_report: null, chk: true },
+      { supplier: 'גמא', num: '4', amount: null, currency: 'ILS', received_at: null, inv_date: '2026-10-11', forwarded_at: null, approved_at: null, has_report: null, chk: true },
+      { supplier: 'דלתא', num: '5', amount: 99, currency: 'ILS', received_at: '2026-10-31T23:30:00Z', forwarded_at: null, has_report: null, chk: false }, // 01/11 in Israel
+      { supplier: 'דלתא', num: '6', amount: 77, currency: 'ILS', received_at: '2026-09-30T20:00:00Z', forwarded_at: null, has_report: null, chk: false },
+    ];
+    const t = invMonthText(rows, '2026-10');
+    check('invMonthText: October = 4 rows (Israel day, inv_date when no received_at), totals per currency, no conversion',
+      /אוקטובר 2026/.test(t) && /- 4 חשבוניות, סך הכול 3,500 ש"ח, 800 אירו \(1 בלי סכום\)/.test(t) && !/דלתא/.test(t), t);
+    check('invMonthText: forwarded, approved, not forwarded by supplier, to check, no report, top supplier, the file',
+      /הועברו להנהלת חשבונות: 2, אושרו: 1/.test(t) && /עוד לא הועברו: 2 \(אלפא, גמא\)/.test(t) && /לבדוק: 2/.test(t) && /בלי תסקיר: 1/.test(t)
+      && /הספקים הגדולים: אלפא 3,500/.test(t) && /ספר חשבוניות\.xlsx/.test(t), t);
+    check('invMonthText: keyboard characters only, at most MAX_CHARS', !/[–—־“”״…]/.test(t) && t.length <= MAX_CHARS);
+    const many = Array.from({ length: 80 }, (_, i) => ({ supplier: 'ספק ארוך מאוד מספר ' + i, num: String(i), amount: 10 + i, currency: 'ILS', received_at: '2026-10-10T08:00:00Z', forwarded_at: null, chk: true, has_report: false }));
+    const tm = invMonthText(many, '2026-10');
+    check('invMonthText: 80 suppliers stay under MAX_CHARS, the first three named and "ועוד"', tm.length <= MAX_CHARS && /- 80 חשבוניות/.test(tm) && /ועוד\)/.test(tm), tm.length);
+    check('invMonthText: an empty month says so', /לא נרשמו חשבוניות/.test(invMonthText(rows, '2026-08')));
+    // the step: sends once, kind agent, marks the month; a failed read sends nothing and marks nothing
+    state = {}; metas = []; logs = []; invRows = rows; invFail = true;
+    const f = await invMonthStep(ENV, new Date('2026-11-01T06:10:00Z')).catch((e) => ({ thrown: String(e.message) }));
+    check('invMonthStep: a failed read = no message and the month is not marked (next tick tries again)', metas.length === 0 && !(INV_MONTH_KEY in state), f);
+    invFail = false;
+    const s1 = await invMonthStep(ENV, new Date('2026-11-01T06:10:00Z'));
+    const sent = metas.map((x) => JSON.stringify(x)).join(' ');
+    check('invMonthStep: Sunday 08:10 sends October to Michael and marks the month', s1 && s1.sent && s1.month === '2026-10' && metas.length >= 1 && /\\u05e1\\u05d9\\u05db\\u05d5\\u05dd|סיכום/.test(sent) && JSON.parse(state[INV_MONTH_KEY]).month === '2026-10', [s1, state[INV_MONTH_KEY]]);
+    const n = metas.length;
+    const s2 = await invMonthStep(ENV, new Date('2026-11-01T06:15:00Z'));
+    check('invMonthStep: the next tick sends nothing', s2 === null && metas.length === n, s2);
+    check('invMonthStep: a line in notifications_log with kind inv_month', logs.some((l) => l.event_type === 'inv_month' && l.payload.month === '2026-10'));
+    check('watch() runs the monthly step', /const im = await invMonthStep\(env, now\)/.test(fs.readFileSync('../../functions/api/wa-morning.js', 'utf8')));
   }
   console.log('\nwa-morning-test: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
