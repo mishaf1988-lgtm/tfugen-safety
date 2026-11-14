@@ -59,6 +59,11 @@ await call(Object.assign({}, base, { num: '26334', amount: 200 }));
   check('an amount does not clear "to check" on a row marked with a note; amount with check false does', nr.amount === 200 && nr.chk === true, nr);
   await call(Object.assign({}, base, { num: '26334', amount: 200, check: false })); check('  ...and check false with the amount clears it', nr.chk === false, nr);
   rows.splice(rows.indexOf(nr), 1); }
+// security review 14/11/2026: another currency for a saved amount is a conflict, not a quiet change
+await call(Object.assign({}, base, { num: '26335', amount: 850 }));
+{ const cr = rows.find((x) => x.num === '26335'); const r1 = await call(Object.assign({}, base, { num: '26335', amount: 850, currency: 'EUR' }));
+  check('security review: 850 ILS does not become 850 EUR: refused, currency kept, marked to check', r1.json.ok === false && cr.currency !== 'EUR' && cr.amount === 850 && cr.chk === true, { j: r1.json, cr });
+  rows.splice(rows.indexOf(cr), 1); }
 r = await call({ op: 'invoice_find', agent: 'routine-wa-assistant', supplier: 'אקולוגיה' });
 check('invoice_find returns the rows, and no internal key or id', r.json.ok && r.json.count === 2 && calls[calls.length - 1].url.includes('select=supplier,num,amount') && !/supplier_key|select=\*|select=id/.test(calls[calls.length - 1].url.split('?')[1].split('&')[0]), r.json);
 check('invoices is not open through the general select op', TABLES.indexOf('invoices') < 0);
