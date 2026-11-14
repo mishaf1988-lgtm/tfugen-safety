@@ -483,11 +483,12 @@ export async function watch(env, now) {
   const pr = await promiseRemind(env, now).catch(() => null);
   const dv = await devRemind(env, now).catch(() => null);
   const dk = await deckWatch(env, now).catch((e) => ({ error: String(e.message || e).slice(0, 120) }));
+  const im = await invMonthStep(env, now).catch((e) => ({ ok: false, error: String(e.message || e).slice(0, 120) }));
   // 05/11/2026: the weekly works link (works.js): Wednesday 18:00 the mail (only when works_mail_on), Thursday 12:00 the reminder
   const wk = await worksTick(env, now, { accessToken, sendMailTo }).catch((e) => ({ error: String(e.message || e).slice(0, 120) }));
   const st = stagingDue(now) ? await stagingPing().catch((e) => ({ error: String(e.message || e).slice(0, 120) })) : null;
   const r = await watchReply(env, now);
-  return Object.assign({}, r, pr ? { promises: pr } : {}, dv ? { dev: dv } : {}, pc ? { check: pc } : {}, oc ? { ocr: oc } : {}, st ? { staging: st } : {}, dk ? { deck: dk } : {}, wk ? { works: wk } : {});
+  return Object.assign({}, r, pr ? { promises: pr } : {}, dv ? { dev: dv } : {}, pc ? { check: pc } : {}, oc ? { ocr: oc } : {}, st ? { staging: st } : {}, dk ? { deck: dk } : {}, im ? { invMonth: im } : {}, wk ? { works: wk } : {});
 }
 async function watchReply(env, now) {
   const rows = await sb(env, 'notifications_log?select=ts,payload&event_type=eq.owner_in&order=ts.desc&limit=1').catch(() => []);
@@ -547,6 +548,77 @@ export async function deckWatch(env, now) {
       event_type: 'deck_check', channel: !sent ? 'none' : sent.ok ? 'whatsapp' : 'whatsapp_error',
       payload: { title: out.ok ? 'deck matches the database' : clip(out.gaps.join('; '), 120), kind: 'deck_check', day: meeting, ok: out.ok, fixed: out.fixed, detail: (sent && sent.error) || null } }]) }).catch(() => {});
   return out;
+}
+
+// 14/11/2026 (Michael in the questionnaire 13/11/2026: "do it: monthly invoice summary (recommended)"; DECISIONS
+// 13/11/2026 "50 agents"): on the first workday of the month (Sunday-Thursday, day 1-7), from 08:00 Israel, once,
+// the invoices received last month (received_at, else inv_date): how many, the total per currency, forwarded to
+// accounting, approved, not forwarded yet (by supplier), "to check", no report, and the top suppliers. Kind 'agent'.
+// The month is marked only after the message went out; a failed read or send is tried again on the next tick until 12:00.
+export const INV_MONTH_KEY = 'inv_month';
+export const INV_MONTH_READ = 'invoices?select=supplier,num,amount,currency,inv_date,received_at,forwarded_at,approved_at,has_report,chk&limit=2000';
+const HE_MONTHS = ['\u05d9\u05e0\u05d5\u05d0\u05e8', '\u05e4\u05d1\u05e8\u05d5\u05d0\u05e8', '\u05de\u05e8\u05e5', '\u05d0\u05e4\u05e8\u05d9\u05dc', '\u05de\u05d0\u05d9', '\u05d9\u05d5\u05e0\u05d9', '\u05d9\u05d5\u05dc\u05d9', '\u05d0\u05d5\u05d2\u05d5\u05e1\u05d8', '\u05e1\u05e4\u05d8\u05de\u05d1\u05e8', '\u05d0\u05d5\u05e7\u05d8\u05d5\u05d1\u05e8', '\u05e0\u05d5\u05d1\u05de\u05d1\u05e8', '\u05d3\u05e6\u05de\u05d1\u05e8'];
+const CUR_NAME = { ILS: '\u05e9"\u05d7', EUR: '\u05d0\u05d9\u05e8\u05d5', USD: '\u05d3\u05d5\u05dc\u05e8', GBP: '\u05dc\u05d9\u05e9"\u05d8' };
+// Pure: the month to summarise ('YYYY-MM'), or null when it is not time (or it was sent already).
+export function invMonthDue(now, last) {
+  const day = ilDay(now), w = ilDow(now), h = ilHour(now);
+  if (w < 0 || w > 4 || h < 8 || h >= 12 || Number(day.slice(8, 10)) > 7) return null;
+  const y = Number(day.slice(0, 4)), m = Number(day.slice(5, 7));
+  const prev = m === 1 ? (y - 1) + '-12' : y + '-' + String(m - 1).padStart(2, '0');
+  return String(last || '') === prev ? null : prev;
+}
+const invMonthOf = (r) => r.received_at ? ilDay(new Date(r.received_at)).slice(0, 7) : (r.inv_date ? String(r.inv_date).slice(0, 7) : '');
+const money = (n) => Math.round(Number(n) || 0).toLocaleString('en-US');
+// Pure: the message for month ym from all the rows. Keyboard characters only, at most MAX_CHARS.
+export function invMonthText(rows, ym) {
+  const list = (Array.isArray(rows) ? rows : []).filter((r) => r && invMonthOf(r) === ym);
+  const name = HE_MONTHS[Number(ym.slice(5, 7)) - 1] + ' ' + ym.slice(0, 4);
+  const head = '\u05e1\u05d9\u05db\u05d5\u05dd \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea ' + name;
+  if (!list.length) return head + ': \u05dc\u05d0 \u05e0\u05e8\u05e9\u05de\u05d5 \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea \u05e9\u05d4\u05ea\u05e7\u05d1\u05dc\u05d5 \u05d4\u05d7\u05d5\u05d3\u05e9.';
+  const sum = {}, bySup = {};
+  list.forEach((r) => {
+    if (r.amount == null) return;
+    const c = CUR_NAME[r.currency] ? r.currency : 'ILS';
+    sum[c] = (sum[c] || 0) + Number(r.amount);
+    if (c === 'ILS') bySup[r.supplier] = (bySup[r.supplier] || 0) + Number(r.amount);
+  });
+  const noAmt = list.filter((r) => r.amount == null).length;
+  const tot = ['ILS', 'EUR', 'USD', 'GBP'].filter((c) => sum[c]).map((c) => money(sum[c]) + ' ' + CUR_NAME[c]).join(', ');
+  const notFwd = list.filter((r) => !r.forwarded_at);
+  const sups = Array.from(new Set(notFwd.map((r) => r.supplier))).slice(0, 3);
+  const lines = [
+    '- ' + list.length + ' \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea' + (tot ? ', \u05e1\u05da \u05d4\u05db\u05d5\u05dc ' + tot : '') + (noAmt ? ' (' + noAmt + ' \u05d1\u05dc\u05d9 \u05e1\u05db\u05d5\u05dd)' : ''),
+    '- \u05d4\u05d5\u05e2\u05d1\u05e8\u05d5 \u05dc\u05d4\u05e0\u05d4\u05dc\u05ea \u05d7\u05e9\u05d1\u05d5\u05e0\u05d5\u05ea: ' + (list.length - notFwd.length) + ', \u05d0\u05d5\u05e9\u05e8\u05d5: ' + list.filter((r) => r.approved_at).length,
+  ];
+  if (notFwd.length) lines.push('- \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d4\u05d5\u05e2\u05d1\u05e8\u05d5: ' + notFwd.length + ' (' + sups.join(', ') + (notFwd.length > sups.length && new Set(notFwd.map((r) => r.supplier)).size > sups.length ? ' \u05d5\u05e2\u05d5\u05d3' : '') + ')');
+  const chk = list.filter((r) => r.chk).length, noRep = list.filter((r) => r.has_report === false).length;
+  if (chk) lines.push('- \u05dc\u05d1\u05d3\u05d5\u05e7: ' + chk);
+  if (noRep) lines.push('- \u05d1\u05dc\u05d9 \u05ea\u05e1\u05e7\u05d9\u05e8: ' + noRep);
+  const top = Object.keys(bySup).sort((a, b) => bySup[b] - bySup[a]).slice(0, 3);
+  if (top.length) lines.push('- \u05d4\u05e1\u05e4\u05e7\u05d9\u05dd \u05d4\u05d2\u05d3\u05d5\u05dc\u05d9\u05dd: ' + top.map((s) => s + ' ' + money(bySup[s])).join(', '));
+  const end = '\u05d4\u05e8\u05e9\u05d9\u05de\u05d4 \u05d4\u05de\u05dc\u05d0\u05d4: 00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1/\u05e1\u05e4\u05e8 \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea.xlsx';
+  let text = keyboard([head + ':'].concat(lines, end).join('\n'));
+  while (text.length > MAX_CHARS && lines.length > 2) { lines.pop(); text = keyboard([head + ':'].concat(lines, end).join('\n')); }
+  return text.slice(0, MAX_CHARS);
+}
+export async function invMonthStep(env, now) {
+  let last = null; try { last = (JSON.parse((await stateGet(env, INV_MONTH_KEY)) || 'null') || {}).month; } catch (e) { last = null; }
+  const ym = invMonthDue(now, last);
+  if (!ym) return null;
+  if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { month: ym, ok: false, error: 'whatsapp not configured' };
+  const rows = await sb(env, INV_MONTH_READ);
+  const text = invMonthText(rows, ym);
+  const to = await ownerWa(env, sbFrom(env));
+  if (!to) return { month: ym, ok: false, error: 'no owner number in notification_prefs' };
+  const open = await ownerWindowOpen(env, sbFrom(env), now.getTime());
+  const r = await sendToOwner(env, to, text, { kind: 'agent', windowOpen: open });
+  if (r.ok && !r.held) await noteLastOut(env, sbFrom(env), text, 'inv_month').catch(() => {});
+  if (r.ok) await stateSet(env, INV_MONTH_KEY, JSON.stringify({ month: ym, at: now.toISOString(), rows: Array.isArray(rows) ? rows.length : 0 }));
+  await sb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify([{ id: 'wi' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
+      event_type: 'inv_month', channel: r.ok ? (r.held ? 'held' : 'whatsapp') : 'whatsapp_error',
+      payload: { title: clip(text, 120), kind: 'inv_month', month: ym, detail: r.error || null } }]) }).catch(() => {});
+  return { month: ym, ok: !!r.ok, sent: !!r.ok, error: r.error || null };
 }
 
 // 03/11/2026 (Supabase mail to Michael: the test project tfugen-staging is to be paused after 7 days with no activity;
