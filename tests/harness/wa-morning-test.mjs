@@ -23,6 +23,8 @@ globalThis.fetch = async (url, opt = {}) => {
     if (m === 'PATCH') { state[k] = JSON.parse(opt.body).value; return new Response('[{}]', { status: 200 }); } // stateCas
     return new Response(JSON.stringify(k in state ? [{ value: state[k], updated_at: '2026-01-01T00:00:00.000Z' }] : []), { status: 200 });
   }
+  if (url.startsWith(SB + '/rest/v1/audit_log')) { useUrls.push(url); return new Response(JSON.stringify(useApp), { status: 200 }); }
+  if (url.startsWith(SB + '/rest/v1/notifications_log') && m === 'GET' && /event_type=eq\.owner_in&ts=gte/.test(url)) { useUrls.push(url); return new Response(JSON.stringify(useMsgs), { status: 200 }); }
   if (url.startsWith(SB + '/rest/v1/invoices')) { invUrls.push(url); if (invFail) return new Response('x', { status: 500 }); return new Response(JSON.stringify(invRows), { status: 200 }); }
   if (url.startsWith(SB + '/rest/v1/docs')) return new Response(JSON.stringify(docs), { status: 200 });
   if (url.startsWith(SB + '/rest/v1/equip_inspections')) { equipUrls.push(url); return new Response(JSON.stringify(equip), { status: 200 }); }
@@ -32,7 +34,8 @@ globalThis.fetch = async (url, opt = {}) => {
   return new Response('[]', { status: 200 });
 };
 const equipUrls = [], stagingCalls = [], invUrls = [];
-let invRows = [], invFail = false;
+let invRows = [], invFail = false, useApp = [], useMsgs = [];
+const useUrls = [];
 const call = async (body, secret) => (await onRequest({ request: new Request('https://x/api/wa-morning', { method: 'POST', headers: secret === null ? {} : { 'x-notify-secret': secret || 'sec' }, body: JSON.stringify(body || {}) }), env: ENV })).json();
 
 (async () => {
@@ -489,6 +492,39 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     check('invMonthStep: the next tick sends nothing', s2 === null && metas.length === n, s2);
     check('invMonthStep: a line in notifications_log with kind inv_month', logs.some((l) => l.event_type === 'inv_month' && l.payload.month === '2026-10'));
     check('watch() runs the monthly step', /const im = await invMonthStep\(env, now\)/.test(fs.readFileSync('../../functions/api/wa-morning.js', 'utf8')));
+  }
+  { // 14/11/2026 (Michael: "בצע" on idea 42): what is really used, once a month, and the ranked checks only he can do
+    const { usageDue, usageCount, usageText, usageStep, USAGE_KEY, CHECKS_KEY, USAGE_MAX, USAGE_APP } = await import('./_build/wa-morning.mjs');
+    check('usageDue: same first workday as the invoices but from 09:00; 08:30 = not yet; sent = no',
+      usageDue(new Date('2026-11-01T07:05:00Z'), null) === '2026-10' && usageDue(new Date('2026-11-01T06:30:00Z'), null) === null && usageDue(new Date('2026-11-01T07:05:00Z'), '2026-10') === null);
+    const msgs = [{ text: 'סכם את המייל' }, { text: 'סכם: הישיבה' }, { text: 'השווה שתי הצעות' }, { text: '1. מה דחוף', choice: 1 }, { text: 'מה המצב', voice: true },
+      { text: '📎 תסקיר.pdf', media_id: 'm' }, { text: '[ניסוי] סכם' }, { text: '[אימון] נוהל' }, { text: 'סכמתי' }, null];
+    const app = [{ table_name: 'tour_hazards' }, { table_name: 'tour_hazards' }, { table_name: 'tasks' }, { table_name: 'web_vitals' }, { table_name: 'inc' }];
+    const c = usageCount(msgs, app);
+    check('usageCount: drills and tests ("[...") do not count; voice, taps, files; "סכמתי" is not the command',
+      c.msgs === 7 && c.voice === 1 && c.taps === 1 && c.files === 1 && c.cmds['סכם'] === 2 && c.cmds['השווה'] === 1 && !c.cmds['נוהל'], c);
+    check('usageCount: app writes only for the listed modules; inc (rare on purpose) and web_vitals are not listed',
+      c.app.tour_hazards === 2 && c.app.tasks === 1 && !('inc' in c.app) && !('web_vitals' in c.app) && c.appOff.indexOf('ncr') >= 0 && !Object.keys(USAGE_APP).includes('inc'), c.app);
+    const prev = { cmdsOff: ['נוהל', 'סכם'], appOff: ['ncr'] };
+    const checks = [{ t: 'פתח את הקישור להתקנה בכרום באייפון' }, { t: 'שלח "השווה" עם שתי הצעות' }, 'שלישי', 'רביעי', 'חמישי', 'שישי שלא מופיע'];
+    const t = usageText(c, prev, checks, '2026-10');
+    check('usageText: counts, commands used, app writes, unused this month, two months unused marked apart',
+      /אוקטובר 2026/.test(t) && /הודעות שלך לעוזר: 7 \(קוליות 1, כפתורים 1, קבצים 1\)/.test(t) && /סכם 2, השווה 1/.test(t) && /ליקויי סיור 2, משימות 1/.test(t)
+      && /חודשיים בלי שימוש[^\n]*נוהל[^\n]*אי-התאמות/.test(t) && !/לא בשימוש החודש:[^\n]*נוהל/.test(t) && /לא בשימוש החודש:[^\n]*תחקיר/.test(t), t);
+    check('usageText: at most 5 checks, numbered in order; keyboard characters only; under USAGE_MAX',
+      /\n1\. פתח את הקישור/.test(t) && /\n5\. חמישי/.test(t) && !/שישי שלא מופיע/.test(t) && !/[–—־“”…]/.test(t) && t.length <= USAGE_MAX, t.length);
+    const long = usageText(c, null, Array.from({ length: 5 }, () => ({ t: 'א'.repeat(300) })), '2026-10');
+    check('usageText: long checks are cut and the text stays under USAGE_MAX', long.length <= USAGE_MAX, long.length);
+    check('usageText: no checks list = no checks title', !/בדיקות שרק אתה/.test(usageText(c, null, [], '2026-10')));
+    // the step
+    state = { [CHECKS_KEY]: JSON.stringify(checks) }; metas = []; logs = []; useMsgs = msgs.filter(Boolean).map((p) => ({ payload: p })); useApp = app; useUrls.length = 0;
+    const u1 = await usageStep(ENV, new Date('2026-11-01T07:05:00Z'));
+    check('usageStep: sends once on the first workday from 09:00, reads 30 days, keeps this month for the next one',
+      u1 && u1.sent && metas.length >= 1 && useUrls.some((u) => /audit_log\?select=table_name&source=eq\.app&ts=gte\./.test(u)) && JSON.parse(state[USAGE_KEY]).month === '2026-10' && JSON.parse(state[USAGE_KEY]).cmdsOff.indexOf('נוהל') >= 0, [u1, state[USAGE_KEY]]);
+    const n = metas.length;
+    check('usageStep: the next tick sends nothing', (await usageStep(ENV, new Date('2026-11-01T07:10:00Z'))) === null && metas.length === n);
+    check('usageStep: a notifications_log line usage_month', logs.some((l) => l.event_type === 'usage_month' && l.payload.month === '2026-10'));
+    check('watch() runs the usage step', /const um = await usageStep\(env, now\)/.test(fs.readFileSync('../../functions/api/wa-morning.js', 'utf8')));
   }
   console.log('\nwa-morning-test: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

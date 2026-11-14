@@ -484,11 +484,12 @@ export async function watch(env, now) {
   const dv = await devRemind(env, now).catch(() => null);
   const dk = await deckWatch(env, now).catch((e) => ({ error: String(e.message || e).slice(0, 120) }));
   const im = await invMonthStep(env, now).catch((e) => ({ ok: false, error: String(e.message || e).slice(0, 120) }));
+  const um = await usageStep(env, now).catch((e) => ({ ok: false, error: String(e.message || e).slice(0, 120) }));
   // 05/11/2026: the weekly works link (works.js): Wednesday 18:00 the mail (only when works_mail_on), Thursday 12:00 the reminder
   const wk = await worksTick(env, now, { accessToken, sendMailTo }).catch((e) => ({ error: String(e.message || e).slice(0, 120) }));
   const st = stagingDue(now) ? await stagingPing().catch((e) => ({ error: String(e.message || e).slice(0, 120) })) : null;
   const r = await watchReply(env, now);
-  return Object.assign({}, r, pr ? { promises: pr } : {}, dv ? { dev: dv } : {}, pc ? { check: pc } : {}, oc ? { ocr: oc } : {}, st ? { staging: st } : {}, dk ? { deck: dk } : {}, im ? { invMonth: im } : {}, wk ? { works: wk } : {});
+  return Object.assign({}, r, pr ? { promises: pr } : {}, dv ? { dev: dv } : {}, pc ? { check: pc } : {}, oc ? { ocr: oc } : {}, st ? { staging: st } : {}, dk ? { deck: dk } : {}, im ? { invMonth: im } : {}, um ? { usage: um } : {}, wk ? { works: wk } : {});
 }
 async function watchReply(env, now) {
   const rows = await sb(env, 'notifications_log?select=ts,payload&event_type=eq.owner_in&order=ts.desc&limit=1').catch(() => []);
@@ -618,6 +619,80 @@ export async function invMonthStep(env, now) {
     body: JSON.stringify([{ id: 'wi' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
       event_type: 'inv_month', channel: r.ok ? (r.held ? 'held' : 'whatsapp') : 'whatsapp_error',
       payload: { title: clip(text, 120), kind: 'inv_month', month: ym, detail: r.error || null } }]) }).catch(() => {});
+  return { month: ym, ok: !!r.ok, sent: !!r.ok, error: r.error || null };
+}
+
+// 14/11/2026 (Michael: "\u05d1\u05e6\u05e2" on idea 42, from the chart "How to Set Up an Internal FDE Team": measure adoption, not what was
+// built, and a ranked list instead of a pile of "to check"). Once a month, the first workday (day 1-7), 09:00-12:00 Israel:
+// what was used in the last 30 days, what was not (a second month in a row is marked), and the first USAGE_CHECKS checks that
+// only Michael can do, from server_state michael_checks (kept by the development chat at every handoff, ranked). Kind 'agent'.
+// Sources: notifications_log owner_in (his messages; lines that start with "[" are drills and tests and do not count) and
+// audit_log source=app (writes from the app). Marked only after it went out, like the invoice summary.
+export const USAGE_KEY = 'usage_month', CHECKS_KEY = 'michael_checks', USAGE_CHECKS = 5;
+export const USAGE_CMDS = ['\u05e1\u05db\u05dd', '\u05ea\u05d7\u05e7\u05d9\u05e8', '\u05e9\u05d9\u05d7\u05d4', '\u05de\u05d4 \u05d9\u05e9\u05d1\u05e8', '\u05e0\u05d2\u05d3', '\u05d4\u05d7\u05dc\u05d8', '\u05e9\u05d0\u05dc\u05d5\u05ea', '\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea', '\u05e0\u05d5\u05d4\u05dc', '\u05d4\u05d3\u05e8\u05db\u05d4', '\u05d4\u05e9\u05d5\u05d5\u05d4'];
+// app modules that should see writes in a normal month; inc and near_miss are rare on purpose and never listed as unused
+export const USAGE_APP = { tour_hazards: '\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9 \u05e1\u05d9\u05d5\u05e8', tasks: '\u05de\u05e9\u05d9\u05de\u05d5\u05ea', ncr: '\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05ea', tr: '\u05d4\u05d3\u05e8\u05db\u05d5\u05ea', docs: '\u05de\u05e1\u05de\u05db\u05d9\u05dd', equip_inspections: '\u05e6\u05d9\u05d5\u05d3 \u05d5\u05ea\u05e1\u05e7\u05d9\u05e8\u05d9\u05dd', ctr: '\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd', ppe: '\u05e6\u05d9\u05d5\u05d3 \u05de\u05d2\u05df', med: '\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e8\u05e4\u05d5\u05d0\u05d9\u05d5\u05ea', toolbox_talks: '\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea', trustee_reports: '\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd' };
+export function usageDue(now, last) {
+  const h = ilHour(now);
+  return h >= 9 ? invMonthDue(now, last) : null;
+}
+// Pure: the counts from the rows. msgs = owner_in payloads, app = audit_log table names.
+export function usageCount(msgs, app) {
+  const real = (Array.isArray(msgs) ? msgs : []).filter((p) => p && !/^\s*\[/.test(String(p.text || p.title || '')));
+  const txt = (p) => String(p.text || p.title || '').trim();
+  const c = { msgs: real.length, voice: real.filter((p) => p.voice).length, files: real.filter((p) => p.media_id || /^📎/.test(txt(p))).length,
+    taps: real.filter((p) => p.choice || /^\d{1,2}\.\s/.test(txt(p))).length, cmds: {}, app: {} };
+  real.forEach((p) => { const t = txt(p); const k = USAGE_CMDS.find((w) => t === w || t.startsWith(w + ' ') || t.startsWith(w + ':') || t.startsWith(w + '\n')); if (k) c.cmds[k] = (c.cmds[k] || 0) + 1; });
+  (Array.isArray(app) ? app : []).forEach((r) => { const t = r && r.table_name; if (USAGE_APP[t]) c.app[t] = (c.app[t] || 0) + 1; });
+  c.cmdsOff = USAGE_CMDS.filter((w) => !c.cmds[w]);
+  c.appOff = Object.keys(USAGE_APP).filter((t) => !c.app[t]);
+  return c;
+}
+// Pure: the message. prev = last month's stored counts (or null), checks = the ranked list.
+export function usageText(c, prev, checks, ym) {
+  const name = HE_MONTHS[Number(ym.slice(5, 7)) - 1] + ' ' + ym.slice(0, 4);
+  const twice = (now, before) => now.filter((x) => (before || []).indexOf(x) >= 0);
+  const pOff = prev || {};
+  const used = Object.keys(c.cmds).sort((a, b) => c.cmds[b] - c.cmds[a]).map((w) => w + ' ' + c.cmds[w]);
+  const appUsed = Object.keys(c.app).sort((a, b) => c.app[b] - c.app[a]).map((t) => USAGE_APP[t] + ' ' + c.app[t]);
+  const cmd2 = twice(c.cmdsOff, pOff.cmdsOff), app2 = twice(c.appOff, pOff.appOff);
+  const L = ['\u05de\u05d4 \u05d1\u05d0\u05de\u05ea \u05d1\u05e9\u05d9\u05de\u05d5\u05e9, ' + name + ' (30 \u05d9\u05d5\u05dd):',
+    '- \u05d4\u05d5\u05d3\u05e2\u05d5\u05ea \u05e9\u05dc\u05da \u05dc\u05e2\u05d5\u05d6\u05e8: ' + c.msgs + ' (\u05e7\u05d5\u05dc\u05d9\u05d5\u05ea ' + c.voice + ', \u05db\u05e4\u05ea\u05d5\u05e8\u05d9\u05dd ' + c.taps + ', \u05e7\u05d1\u05e6\u05d9\u05dd ' + c.files + ')',
+    '- \u05e4\u05e7\u05d5\u05d3\u05d5\u05ea \u05d1\u05de\u05d9\u05dc\u05d4 \u05d0\u05d7\u05ea: ' + (used.length ? used.join(', ') : '\u05d0\u05e3 \u05d0\u05d7\u05ea'),
+    '- \u05db\u05ea\u05d9\u05d1\u05d5\u05ea \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: ' + (appUsed.length ? appUsed.join(', ') : '\u05d0\u05e3 \u05d0\u05d7\u05ea')];
+  const off = c.cmdsOff.filter((x) => cmd2.indexOf(x) < 0).concat(c.appOff.filter((x) => app2.indexOf(x) < 0).map((t) => USAGE_APP[t]));
+  if (off.length) L.push('- \u05dc\u05d0 \u05d1\u05e9\u05d9\u05de\u05d5\u05e9 \u05d4\u05d7\u05d5\u05d3\u05e9: ' + off.join(', '));
+  const off2 = cmd2.concat(app2.map((t) => USAGE_APP[t]));
+  if (off2.length) L.push('- \u05d7\u05d5\u05d3\u05e9\u05d9\u05d9\u05dd \u05d1\u05dc\u05d9 \u05e9\u05d9\u05de\u05d5\u05e9 (\u05d0\u05e4\u05e9\u05e8 \u05dc\u05e4\u05e9\u05d8 \u05d0\u05d5 \u05dc\u05db\u05d1\u05d5\u05ea): ' + off2.join(', '));
+  const ck = (Array.isArray(checks) ? checks : []).filter((x) => x && (x.t || typeof x === 'string')).slice(0, USAGE_CHECKS);
+  if (ck.length) { L.push('', '\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e9\u05e8\u05e7 \u05d0\u05ea\u05d4 \u05d9\u05db\u05d5\u05dc, \u05dc\u05e4\u05d9 \u05d7\u05e9\u05d9\u05d1\u05d5\u05ea:'); ck.forEach((x, i) => L.push((i + 1) + '. ' + clip(String(x.t || x), 140))); }
+  let text = keyboard(L.join('\n'));
+  while (text.length > USAGE_MAX && L.length > 4) { L.pop(); text = keyboard(L.join('\n')); }
+  return text.slice(0, USAGE_MAX);
+}
+export const USAGE_MAX = 1000;
+export async function usageStep(env, now) {
+  let st = null; try { st = JSON.parse((await stateGet(env, USAGE_KEY)) || 'null'); } catch (e) { st = null; }
+  const ym = usageDue(now, st && st.month);
+  if (!ym) return null;
+  if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { month: ym, ok: false, error: 'whatsapp not configured' };
+  const since = encodeURIComponent(new Date(now.getTime() - 30 * 86400000).toISOString());
+  const [msgs, app] = await Promise.all([
+    sb(env, 'notifications_log?select=payload&event_type=eq.owner_in&ts=gte.' + since + '&limit=3000'),
+    sb(env, 'audit_log?select=table_name&source=eq.app&ts=gte.' + since + '&limit=3000')]);
+  let checks = []; try { checks = JSON.parse((await stateGet(env, CHECKS_KEY)) || '[]'); } catch (e) { checks = []; }
+  const c = usageCount((msgs || []).map((r) => r && r.payload), app);
+  const text = usageText(c, st, checks, ym);
+  const to = await ownerWa(env, sbFrom(env));
+  if (!to) return { month: ym, ok: false, error: 'no owner number in notification_prefs' };
+  const open = await ownerWindowOpen(env, sbFrom(env), now.getTime());
+  const r = await sendToOwner(env, to, text, { kind: 'agent', windowOpen: open });
+  if (r.ok && !r.held) await noteLastOut(env, sbFrom(env), text, 'usage_month').catch(() => {});
+  if (r.ok) await stateSet(env, USAGE_KEY, JSON.stringify({ month: ym, at: now.toISOString(), msgs: c.msgs, cmds: c.cmds, app: c.app, cmdsOff: c.cmdsOff, appOff: c.appOff }));
+  await sb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify([{ id: 'wu' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
+      event_type: 'usage_month', channel: r.ok ? (r.held ? 'held' : 'whatsapp') : 'whatsapp_error',
+      payload: { title: clip(text, 120), kind: 'usage_month', month: ym, detail: r.error || null } }]) }).catch(() => {});
   return { month: ym, ok: !!r.ok, sent: !!r.ok, error: r.error || null };
 }
 
