@@ -22,7 +22,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
 // ---------- 1. inventory ----------
 console.log('\n1. every send to Michael names its kind');
 // file -> number of call sites. A new site = a failure until it is added here with a kind.
-const KNOWN_SITES = { 'api/works.js': 1, 'api/wa-hook.js': 5, 'api/trustee-notify.js': 1, 'api/wa-morning.js': 5, 'api/routine-db.js': 9, '_faults.js': 2, 'api/talk.js': 1 };
+const KNOWN_SITES = { 'api/works.js': 1, 'api/wa-hook.js': 5, 'api/trustee-notify.js': 1, 'api/wa-morning.js': 6, 'api/routine-db.js': 9, '_faults.js': 2, 'api/talk.js': 1 };
 // kinds that are computed at the call: the expression must be exactly one of these
 const DYNAMIC = { 'kind: waMeKind(body)': 'routine-db wa_me (agent, or body.urgent)', "kind: owner.some((x) => /^agentq?:wa-assistant$/.test(x.key)) ? 'watchdog' : 'fault'": 'faults: the assistant itself failing = watchdog (12/11/2026: owner = what goes at once)' };
 const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(dir, e.name)) : e.name.endsWith('.js') ? [path.join(dir, e.name)] : []));
