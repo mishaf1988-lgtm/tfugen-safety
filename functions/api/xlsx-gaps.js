@@ -12,6 +12,13 @@
 // name; otherwise the new one replaces it (OneDrive keeps its version history). Nothing is deleted.
 // pg_cron calls it every night with the Vault secret (private.xlsx_gaps_tick, 03:05 UTC); the path and the state
 // key kept their old names so the cron and the weekly mail line did not have to move.
+//
+// The invoice ledger (14/11/2026, stage 3 of DECISIONS 13/11/2026 "\u05e1\u05e4\u05e8 \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea", Michael: "\u05d1\u05e6\u05e2: \u05d2\u05dd \u05e7\u05d5\u05d1\u05e5 Excel
+// \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4"): after the board, the same run reads the invoices table (one read with the service key; the table
+// is closed to anon) and writes 00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1/\u05e1\u05e4\u05e8 \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea.xlsx, one sheet, replaced every night (OneDrive keeps the
+// version history). It is also the backup of the table (backup-cron.js has no request budget left for it). A failed
+// read or write never fails the board: it is kept in server_state.xlsx_gaps.invoices as { rows, ok, err }.
+// Requests per run, worst case: 14 of Cloudflare's 50 (tests/harness/xlsx-gaps-test.mjs counts them).
 
 import { jsonResp, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo } from '../_shared.js';
 import { odConfigured, accessToken, stateGet, stateSet, putFile } from '../_onedrive.js';
@@ -87,6 +94,45 @@ export function boardSheets(docs, eq, tasks, today, stamp) {
   };
 }
 
+// The invoice ledger (stage 3, 14/11/2026). One file beside the archive folder, replaced every night.
+export const INV_DIR = ROOT + '00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1';
+export const INV_NAME = '\u05e1\u05e4\u05e8 \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea.xlsx';
+export const INV_READ = 'invoices?select=supplier,num,amount,currency,inv_date,received_at,forwarded_at,approved_at,has_report,report_ref,chk,note&order=received_at.asc.nullslast';
+export const CUR = { ILS: '\u05e9"\u05d7', EUR: '\u05d0\u05d9\u05e8\u05d5', GBP: '\u05dc\u05d9\u05e9"\u05d8', USD: '\u05d3\u05d5\u05dc\u05e8' };
+// A timestamp is shown as its day in Israel (03:00 UTC is already the next day there); a plain date as is.
+export const fday = (v) => {
+  const s = String(v || '');
+  if (!/T|\d \d/.test(s)) return fdd(s);
+  const d = new Date(s);
+  return isNaN(d) ? '' : fdd(d.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }));
+};
+// rows: invoices as read; stamp: the build time as shown. Returns the one sheet. Pure.
+export function invoiceSheets(rows, stamp) {
+  const yes = '\u05db\u05df';
+  const aoa = [['\u05e1\u05e4\u05e8 \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea - \u05e2\u05d5\u05d3\u05db\u05df \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: ' + stamp],
+    ['\u05e1\u05e4\u05e7', '\u05de\u05e1\u05e4\u05e8 \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05ea', '\u05e1\u05db\u05d5\u05dd', '\u05de\u05d8\u05d1\u05e2', '\u05ea\u05d0\u05e8\u05d9\u05da \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05ea', '\u05d4\u05ea\u05e7\u05d1\u05dc\u05d4', '\u05d4\u05d5\u05e2\u05d1\u05e8\u05d4 \u05dc\u05d0\u05d9\u05dc\u05e0\u05d4', '\u05d0\u05d5\u05e9\u05e8\u05d4', '\u05d9\u05e9 \u05ea\u05e1\u05e7\u05d9\u05e8/\u05d3\u05d5\u05d7', '\u05dc\u05d1\u05d3\u05d5\u05e7', '\u05d4\u05e2\u05e8\u05d4']];
+  (rows || []).filter(Boolean).forEach((r) => {
+    const amt = r.amount === null || r.amount === undefined || r.amount === '' ? '' : Number(r.amount);
+    const rep = r.has_report === true ? yes + (r.report_ref ? ' - ' + cut(r.report_ref, 80) : '') : r.has_report === false ? '\u05dc\u05d0' : cut(r.report_ref, 80);
+    aoa.push([cut(r.supplier, 80), cut(r.num, 40), isNaN(amt) ? '' : amt, CUR[r.currency] || cut(r.currency, 10) || CUR.ILS,
+      fdd(r.inv_date), fday(r.received_at), fday(r.forwarded_at), fday(r.approved_at), rep, r.chk === true ? yes : '', cut(r.note, 300)]);
+  });
+  return [{ name: '\u05e1\u05e4\u05e8 \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea', aoa, widths: [30, 16, 12, 8, 13, 13, 15, 13, 22, 8, 50] }];
+}
+// Reads and writes the ledger. Never throws: returns { rows, ok, err } for the state.
+export async function writeInvoices(env, token, stamp) {
+  let rows = null;
+  try {
+    if (!token) throw new Error('no OneDrive token');
+    const list = await readAll(env, INV_READ);
+    rows = list.length;
+    await putFile(token, INV_DIR, INV_NAME, buildXlsxBook(invoiceSheets(list, stamp)), XLSX_TYPE);
+    return { rows, ok: true, err: '' };
+  } catch (e) {
+    return { rows, ok: false, err: String((e && e.message) || e).substring(0, 200) };
+  }
+}
+
 export async function hashOf(data) {
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(data)));
   return Array.from(new Uint8Array(b)).map((x) => ('0' + x.toString(16)).slice(-2)).join('').substring(0, 32);
@@ -144,6 +190,10 @@ export async function onRequest(context) {
   const now = new Date(), at = now.toISOString();
   const today = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
   const save = (o) => stateSet(env, { [STATE_KEY]: JSON.stringify(Object.assign({ at, gaps: [] }, o)) }).catch(() => {});
+  const stamp = fdd(today) + ' ' + stampName(now).split(' ')[1].replace('.', ':');
+  let token = null;
+  // The invoice ledger runs after the board, whatever the board did; its failure is only written in the state.
+  const done = async (o) => { o.invoices = await writeInvoices(env, token, stamp); await save(o); return o; };
   try {
     const [docs, eq, tasks, st] = await Promise.all([
       readAll(env, 'docs?select=n,c,e,s,o,file_url'),
@@ -151,22 +201,22 @@ export async function onRequest(context) {
       readAll(env, 'tasks?select=id,ext_id,title,due,status,assignee,notes,closed_date'),
       stateGet(env, [STATE_KEY]).catch(() => ({})),
     ]);
-    const b = boardSheets(docs, eq, tasks, today, fdd(today) + ' ' + stampName(now).split(' ')[1].replace('.', ':'));
+    const b = boardSheets(docs, eq, tasks, today, stamp);
     const hash = await hashOf(b.data);
     let prev = null; try { prev = JSON.parse((st && st[STATE_KEY] && st[STATE_KEY].value) || 'null'); } catch (e) { prev = null; }
     const same = !!(prev && prev.board && prev.board.hash === hash);
-    const { token } = await accessToken(env);
+    token = (await accessToken(env)).token;
     const arc = same ? null : await archiveBoard(token, now);
     const archived = arc ? arc.name : null;
     const parts = BOARD.split('/'); parts.pop();
     try { await putFile(token, parts.join('/'), BOARD_NAME, buildXlsxBook(b.sheets), XLSX_TYPE); }
     catch (e) { const back = await unarchiveBoard(token, arc); e.message = String(e.message || e) + (arc ? (back ? '; the old board is back in place' : '; the old board stays in the archive') : ''); throw e; }
     const board = Object.assign({ hash, written: at, changed: !same, archived: archived || '' }, b.counts);
-    await save({ ok: true, error: '', board });
-    return jsonResp({ ok: true, changed: !same, archived: !!archived }, 200, {});
+    const o = await done({ ok: true, error: '', board });
+    return jsonResp({ ok: true, changed: !same, archived: !!archived, invoices: o.invoices.ok }, 200, {});
   } catch (e) {
     const why = String((e && e.message) || e).substring(0, 200);
-    await save({ ok: false, error: why });
-    return jsonResp({ ok: false, error: why }, 200, {});
+    const o = await done({ ok: false, error: why });
+    return jsonResp({ ok: false, error: why, invoices: o.invoices.ok }, 200, {});
   }
 }

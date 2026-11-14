@@ -2,7 +2,7 @@
 // control board is rebuilt from docs, equip_inspections and tasks every night, the board in place moves to
 // 00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1/_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea first, and nothing is written when the data did not change. The weekly mail line.
 // The rows below are made up; the real board is never copied into the public repo.
-import { onRequest, boardSheets, band, eqDomain, fdd, STATE_KEY, BOARD, ARCHIVE } from './_build/xlsx-gaps.mjs';
+import { onRequest, boardSheets, band, eqDomain, fdd, fday, invoiceSheets, STATE_KEY, BOARD, ARCHIVE, INV_DIR, INV_NAME } from './_build/xlsx-gaps.mjs';
 import { xlsxGapsLine } from './_build/weekly-digest.mjs';
 
 let pass = 0, fail = 0;
@@ -23,6 +23,12 @@ const TK = [
   { id: 't1', ext_id: 'xl1008-t3', title: '\u05dc\u05d9\u05e7\u05d5\u05d9 \u05ea\u05e8\u05de\u05d5\u05d2\u05e8\u05e4\u05d9', due: '2026-09-30', status: '\u05e4\u05ea\u05d5\u05d7', assignee: '\u05d0\u05d7\u05d6\u05e7\u05d4' },
   { id: 't2', ext_id: 'xl1008-t2', title: '\u05db\u05d9\u05d5\u05dc \u05e9\u05e4\u05db\u05d9\u05dd', due: null, status: '\u05d4\u05d5\u05e9\u05dc\u05dd', closed_date: '2026-09-09' },
   { id: 't3', title: '\u05ea\u05db\u05e0\u05d9\u05ea \u05d0\u05e9', due: '2026-12-31', status: '\u05d1\u05d4\u05ea\u05e7\u05d3\u05de\u05d5\u05ea' },
+];
+// The invoice ledger (stage 3, 14/11/2026): made-up rows.
+const INV = [
+  { supplier: '\u05e1\u05e4\u05e7 \u05d0', num: '1001', amount: 1234.5, currency: 'ILS', inv_date: '2026-11-02', received_at: '2026-11-03T22:30:00+00:00', forwarded_at: '2026-11-05T08:00:00+00:00', approved_at: null, has_report: true, report_ref: 'R-7', chk: false, note: null },
+  { supplier: '\u05e1\u05e4\u05e7 \u05d1', num: 'EU-9', amount: 800, currency: 'EUR', inv_date: null, received_at: '2026-11-10T09:00:00+00:00', forwarded_at: null, approved_at: null, has_report: false, report_ref: null, chk: true, note: '\u05e1\u05db\u05d5\u05dd \u05dc\u05d0 \u05ea\u05d5\u05d0\u05dd' },
+  { supplier: '\u05e1\u05e4\u05e7 \u05d2', num: '7', amount: null, currency: 'GBP', inv_date: '2026-11-11', received_at: null, forwarded_at: null, approved_at: null, has_report: null, report_ref: null, chk: false, note: null },
 ];
 
 (async () => {
@@ -53,9 +59,10 @@ const TK = [
   console.log('\n2. the endpoint');
   const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', ONEDRIVE_CLIENT_ID: 'cid', ONEDRIVE_CLIENT_SECRET: 'cs', TRUSTEE_NOTIFY_SECRET: 'nsec' };
   function world(o) {
-    const w = { state: Object.assign({}, o.state || {}), calls: [] };
+    const w = { state: Object.assign({}, o.state || {}), calls: [], n: 0, puts: {}, reads: [] };
     globalThis.fetch = async (url, init) => {
       const u = String(url), mth = (init && init.method) || 'GET', d = decodeURIComponent(u);
+      w.n++;
       const json = (x, st = 200) => new Response(JSON.stringify(x), { status: st, headers: { 'Content-Type': 'application/json' } });
       if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return json([{ user_email: 'a@b', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'offline_access User.Read Files.ReadWrite Mail.Send' }]);
       if (u.startsWith(SB + '/rest/v1/server_state')) {
@@ -65,6 +72,7 @@ const TK = [
       if (u.startsWith(SB + '/rest/v1/docs')) return json(DOCS);
       if (u.startsWith(SB + '/rest/v1/equip_inspections')) return json(EQ);
       if (u.startsWith(SB + '/rest/v1/tasks')) return json(TK);
+      if (u.startsWith(SB + '/rest/v1/invoices')) { w.reads.push({ d, key: init && init.headers && init.headers.apikey }); return o.invReadFail ? json({ message: 'x' }, 500) : json(INV); }
       if (u.startsWith('https://graph.microsoft.com/')) {
         w.calls.push(mth + ' ' + d);
         if (mth === 'GET' && d.includes(BOARD + '?')) return o.noBoard ? json({}, 404) : json({ id: 'B1', file: {}, parentReference: { id: 'H1' } });
@@ -72,6 +80,8 @@ const TK = [
         if (mth === 'GET') return json({ id: 'P1' });
         if (mth === 'POST') return json({ id: 'A2', folder: {} }, 201);
         if (mth === 'PATCH') return o.moveFail ? json({ error: 'locked' }, 423) : json({ id: 'B1' });
+        if (mth === 'PUT') w.puts[d.split('?')[0]] = new TextDecoder().decode(init.body);
+        if (mth === 'PUT' && d.includes(INV_NAME)) return o.invPutFail ? json({ error: { code: 'locked' } }, 423) : json({ webUrl: 'https://w', size: 9 }, 201);
         if (mth === 'PUT') return o.putFail ? json({ error: { code: 'x' } }, 500) : json({ webUrl: 'https://w', size: 9 }, 201);
       }
       return json({ error: 'unexpected ' + u }, 599);
@@ -101,7 +111,7 @@ const TK = [
   w = world({ moveFail: true });
   await onRequest({ request: req(S), env: ENV });
   s = JSON.parse(w.state[STATE_KEY] || '{}');
-  check('the move fails: no new board over the old one, ok false with the reason', !w.calls.some((c) => c.startsWith('PUT')) && s.ok === false && /archive move 423/.test(s.error), s);
+  check('the move fails: no new board over the old one, ok false with the reason', !w.calls.some((c) => c.startsWith('PUT') && c.includes(BOARD)) && s.ok === false && /archive move 423/.test(s.error), s);
   // retro 29/10/2026 (e): the new board fails to write after the old one was archived: the old one goes back
   w = world({ putFail: true });
   await onRequest({ request: req(S), env: ENV });
@@ -113,7 +123,47 @@ const TK = [
   await onRequest({ request: req(S), env: ENV });
   check('no archive folder: made once, then the move', w.calls.some((c) => c.startsWith('POST')) && w.calls.some((c) => c.startsWith('PATCH')), w.calls);
 
-  console.log('\n3. the weekly mail');
+  console.log('\n3. the invoice ledger (stage 3, 14/11/2026)');
+  const inv = invoiceSheets(INV, '14/11/2026 05:05')[0].aoa;
+  check('first row: the title with "\u05e2\u05d5\u05d3\u05db\u05df" and the date', /\u05e2\u05d5\u05d3\u05db\u05df/.test(inv[0][0]) && /14\/11\/2026 05:05/.test(inv[0][0]), inv[0]);
+  check('the headers in order', inv[1].join('|') === '\u05e1\u05e4\u05e7|\u05de\u05e1\u05e4\u05e8 \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05ea|\u05e1\u05db\u05d5\u05dd|\u05de\u05d8\u05d1\u05e2|\u05ea\u05d0\u05e8\u05d9\u05da \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05ea|\u05d4\u05ea\u05e7\u05d1\u05dc\u05d4|\u05d4\u05d5\u05e2\u05d1\u05e8\u05d4 \u05dc\u05d0\u05d9\u05dc\u05e0\u05d4|\u05d0\u05d5\u05e9\u05e8\u05d4|\u05d9\u05e9 \u05ea\u05e1\u05e7\u05d9\u05e8/\u05d3\u05d5\u05d7|\u05dc\u05d1\u05d3\u05d5\u05e7|\u05d4\u05e2\u05e8\u05d4', inv[1]);
+  check('a row per invoice, the amount a number', inv.length === 5 && inv[2][0] === '\u05e1\u05e4\u05e7 \u05d0' && inv[2][2] === 1234.5 && inv[4][2] === '', inv);
+  check('pairs: timestamps take the Israel day (2026-11-04T22:30:00Z, 2026-11-04 23:15:00+00, 2026-11-04T10:00:00.000Z); plain dates and junk stay as written (2026-11-04, 2026-02-29 not shifted, empty/null)',
+    fday('2026-11-04T22:30:00Z') === '05/11/2026' && fday('2026-11-04 23:15:00+00') === '05/11/2026' && fday('2026-11-04T10:00:00.000Z') === '04/11/2026'
+    && fday('2026-11-04') === '04/11/2026' && fday('2026-03-31') === '31/03/2026' && fday('') === '' && fday(undefined) === '' && fday('garbage') === '');
+  check('dates DD/MM/YYYY; a timestamp as its day in Israel (22:30 UTC = the next day)', inv[2][4] === '02/11/2026' && inv[2][5] === '04/11/2026' && inv[2][6] === '05/11/2026' && inv[2][7] === '' && fday('2026-11-11') === '11/11/2026' && fday(null) === '', inv[2]);
+  check('currency in Hebrew: ILS, EUR, GBP', inv[2][3] === '\u05e9"\u05d7' && inv[3][3] === '\u05d0\u05d9\u05e8\u05d5' && inv[4][3] === '\u05dc\u05d9\u05e9"\u05d8' && invoiceSheets([{ currency: 'USD' }], 'x')[0].aoa[2][3] === '\u05d3\u05d5\u05dc\u05e8', inv.map((r) => r[3]));
+  check('to check: "\u05db\u05df" or empty; the report yes with its ref, no, or empty', inv[3][9] === '\u05db\u05df' && inv[2][9] === '' && inv[2][8] === '\u05db\u05df - R-7' && inv[3][8] === '\u05dc\u05d0' && inv[4][8] === '' && inv[3][10] === '\u05e1\u05db\u05d5\u05dd \u05dc\u05d0 \u05ea\u05d5\u05d0\u05dd', inv);
+  const KB = /[\u2013\u2014\u05be\u00ab\u00bb\u201c\u201d\u2018\u2019\u2190-\u21ff\u00b7\u2026]/;
+  check('keyboard characters only (people-text)', !inv.some((r) => r.some((c) => KB.test(String(c)))));
+  w = world({});
+  await onRequest({ request: req(S), env: ENV });
+  s = JSON.parse(w.state[STATE_KEY] || '{}');
+  const invPut = Object.keys(w.puts).find((k) => k.includes(INV_NAME));
+  check('the ledger is written after the board, in 00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1, replaced (no conflict fail)', !!invPut && invPut.includes(INV_DIR + '/' + INV_NAME + ':/content')
+    && !w.calls.find((c) => c.includes(INV_NAME)).includes('conflictBehavior') && w.calls.findIndex((c) => c.includes(INV_NAME)) > w.calls.findIndex((c) => c.startsWith('PUT') && c.includes(BOARD)), w.calls);
+  check('one read of invoices, with the service key, ordered by received', w.reads.length === 1 && w.reads[0].key === 'srv' && /order=received_at\.asc\.nullslast/.test(w.reads[0].d), w.reads);
+  check('the file holds the headers, a date, a currency and the marked row', invPut && ['\u05d4\u05d5\u05e2\u05d1\u05e8\u05d4 \u05dc\u05d0\u05d9\u05dc\u05e0\u05d4', '04/11/2026', '\u05d0\u05d9\u05e8\u05d5', 'EU-9'].every((x) => w.puts[invPut].includes(x)) && /rightToLeft="1"/.test(w.puts[invPut]));
+  check('state: invoices { rows, ok, err }, the board ok', s.ok === true && s.invoices && s.invoices.rows === 3 && s.invoices.ok === true && s.invoices.err === '', s);
+  check('requests in budget: well under Cloudflare\'s 50', w.n > 0 && w.n <= 20, w.n);
+  w = world({ noArchive: true });
+  await onRequest({ request: req(S), env: ENV });
+  check('worst path (archive folder made): still under 20 requests', w.n <= 20, w.n);
+  w = world({ invReadFail: true });
+  await onRequest({ request: req(S), env: ENV });
+  s = JSON.parse(w.state[STATE_KEY] || '{}');
+  check('invoices read fails: the board still written and ok, the ledger not written, ok false with the reason', s.ok === true && s.board && s.board.items === 5 && Object.keys(w.puts).some((k) => k.includes(BOARD)) && !Object.keys(w.puts).some((k) => k.includes(INV_NAME))
+    && s.invoices.ok === false && /read invoices failed \(500\)/.test(s.invoices.err) && s.invoices.rows === null, s);
+  w = world({ invPutFail: true });
+  await onRequest({ request: req(S), env: ENV });
+  s = JSON.parse(w.state[STATE_KEY] || '{}');
+  check('ledger write fails: the board ok, invoices ok false with the reason, nothing deleted', s.ok === true && s.invoices.ok === false && s.invoices.rows === 3 && /onedrive 423/.test(s.invoices.err) && !w.calls.some((c) => c.startsWith('DELETE')), s);
+  w = world({ putFail: true });
+  await onRequest({ request: req(S), env: ENV });
+  s = JSON.parse(w.state[STATE_KEY] || '{}');
+  check('the board fails: the ledger is still written (it is the backup)', s.ok === false && s.invoices && s.invoices.ok === true, s);
+
+  console.log('\n4. the weekly mail');
   const now = Date.parse('2026-10-29T04:00:00Z'), at = '2026-10-29T03:05:00Z';
   const j = (x) => JSON.stringify(x);
   check('never ran: grey', !xlsxGapsLine(null, now).red && /\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05d1\u05e0\u05d4/.test(xlsxGapsLine(null, now).text));
