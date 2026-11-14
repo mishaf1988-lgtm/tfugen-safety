@@ -7,7 +7,7 @@ let pw; try { pw = require('playwright'); } catch (e) { pw = require('playwright
 const HTML = 'file://' + path.resolve(__dirname, '../../index.html');
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
-const HIDE = ['round', 'ptw', 'ppe', 'ctr', 'wst', 'prj', 'rsk', 'ncr'];
+const HIDE = ['round', 'ptw', 'ppe', 'ctr', 'wst', 'prj', 'rsk', 'ncr', 'drl', 'env', 'mr']; // drl, env, mr: 14/11/2026 (0 rows since built)
 
 (async () => {
   const browser = await pw.chromium.launch();
@@ -53,8 +53,8 @@ const HIDE = ['round', 'ptw', 'ppe', 'ctr', 'wst', 'prj', 'rsk', 'ncr'];
     out.todayRound2 = (document.getElementById('today-items') || {}).textContent || '';
     return out;
   }, HIDE);
-  check('all 8 modules found on the sheet', r.sheetHas.length === 8, r.sheetHas);
-  check('all 8 hidden on the sheet by default', r.sheetHidden.length === 8, r.sheetHidden);
+  check('all 11 modules found on the sheet', r.sheetHas.length === 11, r.sheetHas);
+  check('all 11 hidden on the sheet by default', r.sheetHidden.length === 11, r.sheetHidden);
   check('other modules stay (docs)', r.docsVisible);
   check('home quick action "סבב בוקר" hidden', r.roundQa.length && r.roundQa.every((v) => !v), r.roundQa);
   check('home quick action "NCR חדש" hidden', r.ncrQa.length && r.ncrQa.every((v) => !v), r.ncrQa);

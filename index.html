@@ -5309,7 +5309,9 @@ window._appPrefsSet=function(p){
 };
 // Modules hidden for everyone until shown again (Michael, 10/10/2026, questionnaire:
 // empty modules out of sight; data stays, "hidden modules" brings each back).
-window._MOD_DEFAULT_HIDDEN={round:1,ptw:1,ppe:1,ctr:1,wst:1,prj:1,rsk:1,ncr:1};
+// 14/11/2026 (Michael in the questionnaire after the usage check: "do it: hide from the menu"): drl, env and mr too,
+// 0 rows since they were built (counted in the database 14/11/2026).
+window._MOD_DEFAULT_HIDDEN={round:1,ptw:1,ppe:1,ctr:1,wst:1,prj:1,rsk:1,ncr:1,drl:1,env:1,mr:1};
 window._modHiddenSet=function(){
   var p=_appPrefs(),h={},sh=p.modulesShown||{},uh=p.modulesHidden||{},k;
   for(k in _MOD_DEFAULT_HIDDEN)if(!sh[k])h[k]=true;
