@@ -86,8 +86,12 @@ const STANDALONE_MQ = () => { const mm = window.matchMedia.bind(window); window.
     await ctx.close();
   }
 
-  console.log('\n4. iPhone, another browser: open in Safari');
-  for (const k of ['crios', 'wa']) {
+  console.log('\n4a. iPhone, Chrome: its own share button (14/11/2026)');
+  { const { ctx, page } = await open(UA.crios); const b = await bar(page);
+    check('crios: share button in the address bar, then \'הוסף למסך הבית\', with the icon', b && b.plat === 'ios-chrome' && /כפתור השיתוף/.test(b.txt) && /בשורת הכתובת/.test(b.txt) && /'הוסף למסך הבית'/.test(b.txt) && b.svg, b);
+    await ctx.close(); }
+  console.log('\n4. iPhone, an in-app viewer: open in Safari');
+  for (const k of ['wa']) {
     const { ctx, page } = await open(UA[k]);
     const b = await bar(page);
     check(k + ': "פתחו את הקישור בספארי כדי להתקין"', b && b.plat === 'ios-other' && /פתחו את הקישור בספארי כדי להתקין/.test(b.txt) && !b.svg, b);
