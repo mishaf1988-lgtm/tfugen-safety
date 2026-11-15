@@ -15,7 +15,7 @@
 //
 // The invoice ledger (14/11/2026, stage 3 of DECISIONS 13/11/2026 "\u05e1\u05e4\u05e8 \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea", Michael: "\u05d1\u05e6\u05e2: \u05d2\u05dd \u05e7\u05d5\u05d1\u05e5 Excel
 // \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4"): after the board, the same run reads the invoices table (one read with the service key; the table
-// is closed to anon) and writes 00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1/\u05e1\u05e4\u05e8 \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea.xlsx, one sheet, replaced every night (OneDrive keeps the
+// is closed to anon) and writes 00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea/\u05e1\u05e4\u05e8 \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea.xlsx (from 15/11/2026), one sheet, replaced every night (OneDrive keeps the
 // version history). It is also the backup of the table (backup-cron.js has no request budget left for it). A failed
 // read or write never fails the board: it is kept in server_state.xlsx_gaps.invoices as { rows, ok, err }.
 // Requests per run, worst case: 14 of Cloudflare's 50 (tests/harness/xlsx-gaps-test.mjs counts them).
@@ -94,9 +94,13 @@ export function boardSheets(docs, eq, tasks, today, stamp) {
   };
 }
 
-// The invoice ledger (stage 3, 14/11/2026). One file beside the archive folder, replaced every night.
-export const INV_DIR = ROOT + '00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1';
+// The invoice ledger (stage 3, 14/11/2026), replaced every night. From 15/11/2026 in its own folder,
+// 00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea, beside the invoice PDFs by month (Michael in the questionnaire: "\u05d1\u05e6\u05e2: 00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea (\u05de\u05d5\u05de\u05dc\u05e5)";
+// DECISIONS 15/11/2026). The copy left in 00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1 moves once to ARCHIVE with the date, never deleted.
+export const INV_TOP = '00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea';
+export const INV_DIR = ROOT + INV_TOP;
 export const INV_NAME = '\u05e1\u05e4\u05e8 \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea.xlsx';
+export const INV_OLD = ROOT + '00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1/' + INV_NAME;
 export const INV_READ = 'invoices?select=supplier,num,amount,currency,inv_date,received_at,forwarded_at,approved_at,has_report,report_ref,chk,note&order=received_at.asc.nullslast';
 export const CUR = { ILS: '\u05e9"\u05d7', EUR: '\u05d0\u05d9\u05e8\u05d5', GBP: '\u05dc\u05d9\u05e9"\u05d8', USD: '\u05d3\u05d5\u05dc\u05e8' };
 // A timestamp is shown as its day in Israel (03:00 UTC is already the next day there); a plain date as is.
@@ -120,14 +124,14 @@ export function invoiceSheets(rows, stamp) {
   return [{ name: '\u05e1\u05e4\u05e8 \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea', aoa, widths: [30, 16, 12, 8, 13, 13, 15, 13, 22, 8, 50] }];
 }
 // Reads and writes the ledger. Never throws: returns { rows, ok, err } for the state.
-export async function writeInvoices(env, token, stamp) {
+export async function writeInvoices(env, token, stamp, now) {
   let rows = null;
   try {
     if (!token) throw new Error('no OneDrive token');
     const list = await readAll(env, INV_READ);
     rows = list.length;
     await putFile(token, INV_DIR, INV_NAME, buildXlsxBook(invoiceSheets(list, stamp)), XLSX_TYPE);
-    return { rows, ok: true, err: '' };
+    return { rows, ok: true, err: '', old: await retireOldLedger(token, now) };
   } catch (e) {
     return { rows, ok: false, err: String((e && e.message) || e).substring(0, 200) };
   }
@@ -171,6 +175,24 @@ async function archiveBoard(token, now) {
   if (!mv.ok) throw new Error('archive move ' + mv.status);
   return { name, id: cj.id, home: cj.parentReference && cj.parentReference.id };
 }
+// The ledger left in 00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1 before 15/11/2026 moves to ARCHIVE with the date (fail, never over a file),
+// only after the new one was written. One GET (404) on the nights after. Never throws: '' none, 'moved', or the error.
+async function retireOldLedger(token, now) {
+  try {
+    const h = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
+    const cur = await fetch(G + enc(INV_OLD) + '?select=id,file', { headers: h, signal: tmo(GRAPH_MS) });
+    if (cur.status === 404) return '';
+    if (!cur.ok) return 'old ' + cur.status;
+    const cj = await cur.json();
+    if (!cj.file) return 'old is not a file';
+    const dir = await fetch(G + enc(ARCHIVE) + '?select=id,folder', { headers: h, signal: tmo(GRAPH_MS) });
+    if (!dir.ok) return 'archive ' + dir.status;
+    const name = INV_NAME.replace(/\.xlsx$/, '') + ' - ' + stampName(now || new Date()) + '.xlsx';
+    const mv = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(cj.id) + '?@microsoft.graph.conflictBehavior=fail', {
+      method: 'PATCH', headers: h, body: JSON.stringify({ parentReference: { id: (await dir.json()).id }, name }), signal: tmo(GRAPH_MS) });
+    return mv.ok ? 'moved' : 'old move ' + mv.status;
+  } catch (e) { return String((e && e.message) || e).substring(0, 100); }
+}
 // retro 29/10/2026 (e): the board moved to the archive before the new one was written, so a write that failed left a
 // day with no board in place. The archived copy goes back to its place and name (fail, never over a file).
 async function unarchiveBoard(token, a) {
@@ -193,7 +215,7 @@ export async function onRequest(context) {
   const stamp = fdd(today) + ' ' + stampName(now).split(' ')[1].replace('.', ':');
   let token = null;
   // The invoice ledger runs after the board, whatever the board did; its failure is only written in the state.
-  const done = async (o) => { o.invoices = await writeInvoices(env, token, stamp); await save(o); return o; };
+  const done = async (o) => { o.invoices = await writeInvoices(env, token, stamp, now); await save(o); return o; };
   try {
     const [docs, eq, tasks, st] = await Promise.all([
       readAll(env, 'docs?select=n,c,e,s,o,file_url'),

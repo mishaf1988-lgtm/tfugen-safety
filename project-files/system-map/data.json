@@ -339,7 +339,7 @@
   {
    "zone": "m365",
    "name": "OneDrive",
-   "what": "ניהול בטיחות: תסקירים, נהלים, טפסים"
+   "what": "ניהול בטיחות: תסקירים, נהלים, טפסים, ו-00_חשבוניות (ספר החשבוניות וקובץ לכל חשבונית לפי חודש)"
   },
   {
    "zone": "m365",
@@ -519,6 +519,7 @@
    "ops": [
     "agent_report",
     "expiry_set",
+    "invoice_set",
     "mail_request",
     "ocr_txt",
     "od_expire",
@@ -545,6 +546,7 @@
    "ops": [
     "agent_report",
     "expiry_set",
+    "invoice_set",
     "mail_request",
     "ocr_txt",
     "od_expire",
