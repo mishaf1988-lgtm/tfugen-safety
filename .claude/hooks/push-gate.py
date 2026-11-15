@@ -42,6 +42,9 @@ RULES = [
     # 12/11/2026 (Michael in the questionnaire: "\u05d1\u05e6\u05e2: \u05ea\u05d5\u05e8 \u05dc\u05e7\u05d5\u05d1\u05e5 \u05d4\u05de\u05e2\u05e7\u05d1"): PRs that each add a line to STATUS.md conflicted on GitHub
     # (3 times on 11/11/2026). The queue: main's STATUS.md merged in first, and one branch at a time (tools/status-queue.py).
     (lambda f: f in QUEUED, "tools/status-queue.py", "12/11/2026: \u05ea\u05d5\u05e8 \u05dc\u05e7\u05d1\u05e6\u05d9 \u05d4\u05de\u05e2\u05e7\u05d1"),
+    # 15/11/2026 (Michael: "\u05de\u05d0\u05e9\u05e8" on the upgrade ideas): an example in server code named a factory
+    # department and went red in CI on export-platform-test.py (#2804) after minutes of waiting. About 6 seconds here.
+    (lambda f: f.startswith("functions/") or f.startswith("tools/platform/") or f == "tools/export-platform.mjs", "tests/harness/export-platform-test.py", "15/11/2026: \u05e9\u05dd \u05e9\u05dc \u05d4\u05de\u05e4\u05e2\u05dc \u05d1\u05e7\u05d5\u05d3 (\u05d4\u05d9\u05d9\u05e6\u05d5\u05d0)"),
     (lambda f: f in ("DECISIONS.md", "project-files/domains/decisions-map.tsv"), "tests/harness/domains-test.py", "07/11/2026: \u05d4\u05d7\u05dc\u05d8\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05d1\u05dc\u05d9 \u05e9\u05d5\u05e8\u05d4 \u05d1\u05de\u05e4\u05ea \u05d4\u05d4\u05d7\u05dc\u05d8\u05d5\u05ea"),
 ]
 
