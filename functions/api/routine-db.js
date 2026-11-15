@@ -1575,8 +1575,16 @@ export function odMoveCheck(b) {
   // never into a flow folder (security review 31/10/2026, flow 10): a mailed file there would run as a flow request
   if (!dir.length || bad(dir) || OD_NO_DIR.test(dir.join('/')) || (dir[0] === OD_INBOX && !skip) || (dir[0] !== OD_INBOX && OD_TRIGGER_DIRS.indexOf(dir[0]) >= 0)) return { error: 'bad to_dir' };
   if (!name || name.indexOf('/') >= 0 || OD_BAD.test(name) || name.length > 180 || !(skipTo ? skipNameOk(from[0], name) : OD_EXT.test(name))) return { error: 'bad name' };
-  return { from: OD_ROOT + OD_INBOX + '/' + from[0], toDir: OD_ROOT + dir.join('/'), name, skip: skipTo };
+  // An invoice goes to 00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea/YYYY-MM; the handler makes that month folder if missing (15/11/2026, DECISIONS).
+  // a year near today only (security review 15/11/2026: no 1,200 empty month folders)
+  const yr = new Date().getUTCFullYear(), invYr = dir.length === 2 ? Number(dir[1].substring(0, 4)) : 0;
+  const invMonth = dir.length === 2 && dir[0] === OD_INV_TOP && OD_INV_MONTH.test(dir[1]) && invYr >= yr - 1 && invYr <= yr + 1 ? dir[1] : '';
+  return { from: OD_ROOT + OD_INBOX + '/' + from[0], toDir: OD_ROOT + dir.join('/'), name, skip: skipTo, invMonth };
 }
+// 15/11/2026 (Michael in the questionnaire: "\u05d1\u05e6\u05e2: Excel + \u05e7\u05d5\u05d1\u05e6\u05d9 \u05d4\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea (\u05de\u05d5\u05de\u05dc\u05e5)"; DECISIONS): the invoice folder, same name as
+// INV_TOP in xlsx-gaps.js (the ledger lives there), and a month folder per invoice.
+export const OD_INV_TOP = '00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea';
+export const OD_INV_MONTH = /^20\d{2}-(0[1-9]|1[0-2])$/;
 // od_mkdir: { parent, name } as Graph paths under the drive root, or { error }.
 // The parent must be a path of 1 to 5 clean folder names that already exists (checked by the handler);
 // the new name is one clean folder name.
@@ -4229,7 +4237,21 @@ async function routineDbHandle(context) {
       if (!src.ok) return jsonResp({ ok: false, error: 'source ' + src.status }, 200, {});
       const sj = await src.json();
       if (!sj.file) return jsonResp({ ok: false, error: 'source is not a file' }, 200, {});
-      const dst = await fetch(G + enc(c.toDir) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
+      let dst = await fetch(G + enc(c.toDir) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
+      if (dst.status === 404 && c.invMonth) {
+        // only 00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea and its month folder are made here; conflict fail, so a folder made a moment ago is read again
+        const mk = async (parentPath, leaf) => {
+          const par = await fetch(G + enc(parentPath) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
+          if (!par.ok) return par;
+          const r = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent((await par.json()).id) + '/children', {
+            method: 'POST', headers: gh, body: JSON.stringify({ name: leaf, folder: {}, '@microsoft.graph.conflictBehavior': 'fail' }), signal: tmo(GRAPH_MS) });
+          return r.status === 409 ? fetch(G + enc(parentPath + '/' + leaf) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) }) : r;
+        };
+        const top = await fetch(G + enc(OD_ROOT + OD_INV_TOP) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
+        const topOk = top.ok ? top : top.status === 404 ? await mk(OD_ROOT, OD_INV_TOP) : top;
+        if (!topOk.ok) return jsonResp({ ok: false, error: 'invoice folder ' + topOk.status }, 200, {});
+        dst = await mk(OD_ROOT + OD_INV_TOP, c.invMonth);
+      }
       if (!dst.ok) return jsonResp({ ok: false, error: 'folder ' + dst.status }, 200, {});
       const dj = await dst.json();
       if (!dj.folder) return jsonResp({ ok: false, error: 'to_dir is not a folder' }, 200, {});
