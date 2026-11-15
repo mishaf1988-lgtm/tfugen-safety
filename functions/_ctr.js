@@ -94,7 +94,7 @@ export const CTR_DIR = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\
 // direction characters, no dots at the ends (".." is no way up), at most 60 characters. Nothing left = a fixed name.
 export function safeName(v, max) {
   const s = String(v == null ? '' : v)
-    .replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069﻿]/g, ' ')
+    .replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g, ' ')
     .replace(/[\\/:*?"<>|#%~&{}]/g, ' ')
     .replace(/\s+/g, ' ').trim().slice(0, max || 60)
     .replace(/^[.\s]+|[.\s]+$/g, '');

@@ -227,7 +227,10 @@ const post = async (fields, files) => {
   fd.append('k', new URL(link).searchParams.get('k'));
   for (const [k, v] of Object.entries(fields)) for (const x of [].concat(v)) fd.append(k, x);
   for (const [k, list] of Object.entries(files || {})) for (const [name, u8] of list) fd.append('f_' + k, new Blob([u8]), name);
-  const r = await onRequest({ request: new Request(ORIGIN + '/api/ctr-link', { method: 'POST', body: fd, headers: { 'cf-connecting-ip': '1.2.3.4' } }), env: ENV });
+  // as a browser sends it: the multipart body with its size stated
+  const pre = new Request(ORIGIN + '/api/ctr-link', { method: 'POST', body: fd });
+  const buf = new Uint8Array(await pre.arrayBuffer());
+  const r = await onRequest({ request: new Request(ORIGIN + '/api/ctr-link', { method: 'POST', body: buf, headers: { 'cf-connecting-ip': '1.2.3.4', 'content-type': pre.headers.get('content-type'), 'content-length': String(buf.length) } }), env: ENV });
   return { status: r.status, html: await r.text() };
 };
 const good = { company: 'בונים בע"מ', cnum: '512345678', contact: 'דני', mobile: '0501234567', email: 'd@b.co.il', workers: 'ישראל ישראלי 012345678', signer: 'דני כהן', commit: '1', sig: SIG, works: ['hgt', 'frk'] };
@@ -263,6 +266,9 @@ const good = { company: 'בונים בע"מ', cnum: '512345678', contact: 'דנ�
   check('posts are counted per address (rate limit)', db.guess >= 4);
   db.guess = 1000;
   check('past the limit: 429', (await post(good, {})).status === 429);
+  const fdx = new FormData(); fdx.append('k', new URL(link).searchParams.get('k'));
+  const nolen = await onRequest({ request: new Request(ORIGIN + '/api/ctr-link', { method: 'POST', body: fdx }), env: ENV });
+  check('a form without its size stated: refused before reading it (411)', nolen.status === 411);
   db.guess = 0;
 }
 
