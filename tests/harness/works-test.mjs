@@ -172,10 +172,10 @@ check('insurance: no date = flagged, an expired one = flagged with the date, a v
   && /\u05d4\u05d1\u05d9\u05d8\u05d5\u05d7 \u05e4\u05d2 \u05d1-01\/09\/2026/.test(ctrIssue('ט.ס פרויקטים', [{ ...CTR[0], ins: '2026-09-01' }], FRI))
   && ctrIssue('ט.ס פרויקטים', CTR, FRI) === '');
 {
-  const W = (cats, dep, area, ds, de) => ({ cats, dep, area, ds, de: de || ds, flags: [] });
+  const W = (cats, dep, area, ds, de) => ({ cats, dep, area, ds, de: de || ds, flags: [], desc: cats.join('+') + ' work' });
   let r = clashFlags([W(['hot'], 'אחזקה', '', '2026-11-20'), W(['cnf'], 'אחזקה', '', '2026-11-20')]);
-  check('clash: hot work and a confined space in the same department on the same day: a flag on both, naming the other work',
-    r[0].flags.length === 1 && r[1].flags.length === 1 && /\u05e2\u05d1\u05d5\u05d3\u05d4 2$/.test(r[0].flags[0]) && /\u05e2\u05d1\u05d5\u05d3\u05d4 1$/.test(r[1].flags[0]), r.map((x) => x.flags));
+  check('clash: hot work and a confined space in the same department on the same day: a flag on both, naming the other work by its description (security review: the list number can change)',
+    r[0].flags.length === 1 && r[1].flags.length === 1 && /"cnf work"$/.test(r[0].flags[0]) && /"hot work"$/.test(r[1].flags[0]), r.map((x) => x.flags));
   r = clashFlags([W(['hot'], 'אחזקה', '', '2026-11-18', '2026-11-20'), W(['cnf'], 'אחזקה', '', '2026-11-20', '2026-11-21')]);
   check('clash: overlapping days count', r[0].flags.length === 1);
   r = clashFlags([W(['hot'], 'אחזקה', '', '2026-11-18'), W(['cnf'], 'אחזקה', '', '2026-11-20')]);

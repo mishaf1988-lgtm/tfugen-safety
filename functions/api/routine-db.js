@@ -1055,6 +1055,8 @@ export function expiryPatch(b, row, today) {
   } else if (b.e === null) {
     return { error: 'bad e' };
   }
+  // security review 15/11/2026: on ctr an agent writes only the insurance date (ins), never the agreement date or the link
+  if (b.table === 'ctr' && (b.e !== undefined || b.file_url !== undefined)) return { error: 'field not allowed: ' + (b.e !== undefined ? 'e' : 'file_url') };
   if (b.e !== undefined && !outOfTracking) {
     if (!isDay(b.e) || b.e < '2000-01-01' || b.e > String(Number(today.slice(0, 4)) + 6) + today.slice(4)) return { error: 'bad e' };
     const old = row.e ? String(row.e).slice(0, 10) : '';

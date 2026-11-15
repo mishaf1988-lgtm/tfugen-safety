@@ -301,7 +301,7 @@ export function clashFlags(rows) {
   for (const a of hot) for (const b of cnf) {
     if (a === b || !where(a) || where(a) !== where(b) || a.de < b.ds || b.de < a.ds) continue;
     const place = a.dep || a.area;
-    const add = (w, other) => { const f = '\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d7\u05de\u05d4 \u05d5\u05d7\u05dc\u05dc \u05de\u05d5\u05e7\u05e3 \u05d1\u05d0\u05d5\u05ea\u05d5 \u05d0\u05d6\u05d5\u05e8 (' + place + ') \u05d1\u05d0\u05d5\u05ea\u05d4 \u05ea\u05e7\u05d5\u05e4\u05d4, \u05e2\u05dd \u05e2\u05d1\u05d5\u05d3\u05d4 ' + (rows.indexOf(other) + 1);
+    const add = (w, other) => { const f = '\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d7\u05de\u05d4 \u05d5\u05d7\u05dc\u05dc \u05de\u05d5\u05e7\u05e3 \u05d1\u05d0\u05d5\u05ea\u05d5 \u05d0\u05d6\u05d5\u05e8 (' + place + ') \u05d1\u05d0\u05d5\u05ea\u05d4 \u05ea\u05e7\u05d5\u05e4\u05d4, \u05e2\u05dd \u05e2\u05d1\u05d5\u05d3\u05d4 "' + String(other.desc || '').slice(0, 40) + '"';
       if (w.flags.indexOf(f) < 0) w.flags.push(f); };
     add(a, b); add(b, a);
   }
