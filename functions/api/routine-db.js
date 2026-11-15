@@ -2428,6 +2428,27 @@ export function formsVerdict(res) {
   const unchecked = list.filter((x) => x.status !== 404 && x.status !== 200).map((x) => ({ domain: x.domain, path: x.path, status: x.status }));
   return { ok: unchecked.length === 0, total: list.length, found: list.filter((x) => x.status === 200).length, missing, unchecked };
 }
+// 15/11/2026 (the assistant chat: "25/08", "01/11", "13/11" in the tomorrow list after a notebook rule; CLAUDE.md rule 7): a
+// DD/MM with no year in a message to Michael gets the year of the nearest such date (half a year back to half a year
+// ahead). Two digits each, a real day and month; a time (09:00), a form number (146.03), a range (1-2), a full date and
+// a score ("10/10", "זהב 09/10", "08/10 נכונות") are left as written. Pure.
+const DATE_SCORE = /(\u05d6\u05d4\u05d1|\u05e6\u05d9\u05d5\u05df|\u05de\u05ea\u05d5\u05da|\u05e2\u05d1\u05e8\u05d5|\u05e0\u05db\u05d5\u05e0|\u05e2\u05d1\u05e8\u05d9\u05ea)\S*\s*:?\s*$/;
+export function addYear(text, now) {
+  const t = new Date(now), y0 = t.getUTCFullYear(), HALF = 183 * 86400000;
+  return String(text == null ? '' : text).replace(/(^|[\u05d0-\u05ea]-|[^\d/.:\-])(\d{2})\/(\d{2})(?![\d/])/g, (m, pre, dd, mm, off, all) => {
+    const d = Number(dd), mo = Number(mm);
+    if (d < 1 || d > 31 || mo < 1 || mo > 12 || (dd === '10' && mm === '10')) return m;
+    const before = all.slice(Math.max(0, off - 14), off + pre.length), after = all.slice(off + m.length, off + m.length + 10);
+    if (DATE_SCORE.test(before) || /^\s*(\u05e0\u05db\u05d5\u05e0|\u05e2\u05d1\u05e8|\u05ea\u05e9\u05d5\u05d1)/.test(after)) return m;
+    let best = null;
+    for (const y of [y0 - 1, y0, y0 + 1]) {
+      const at = Date.UTC(y, mo - 1, d);
+      if (new Date(at).getUTCDate() !== d) continue;
+      if (Math.abs(at - now) <= HALF && (best === null || Math.abs(at - now) < Math.abs(best.at - now))) best = { y, at };
+    }
+    return best ? pre + dd + '/' + mm + '/' + best.y : m;
+  });
+}
 export function claimGate(text, checked) {
   const t = String(text || '');
   if (SENT_RE.test(t)) return 'the text says you sent a mail: you only make drafts. Write "\u05d4\u05db\u05e0\u05ea\u05d9 \u05d8\u05d9\u05d5\u05d8\u05d4" or "\u05e0\u05e9\u05dc\u05d7 \u05de\u05de\u05da \u05d1-<\u05e9\u05e2\u05d4>" (after Sent Items)';
@@ -4352,6 +4373,7 @@ async function routineDbHandle(context) {
       body = { op: 'wa_me', agent: body.agent, answers: body.answers, askInternal: true, text: tourCloseAskText(row, note), choices: ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'], ref: 'tourclose:' + id };
     }
     if (body.op === 'wa_me') {
+      body.text = addYear(body.text, Date.now());
       if (hasPersonalNo(body.text)) return jsonResp({ ok: false, error: 'passport or Israeli ID number in text: write "4 workers from the list", no ids (20/10/2026; Israeli ID 02/11/2026)' }, 400, {});
       if (asksApiCredit(body.text)) return jsonResp({ ok: false, error: 'mentions API credit: Michael decided no credit (22/10, 26/10/2026). Read the PDF with ocr_txt (paths) and its txt, and go on with the task; do not tell him about credit (01/11/2026)' }, 400, {});
       if (asksRepoSetup(body.text)) return jsonResp({ ok: false, error: 'asks Michael to add a repository or edit a Routine: no such choice (C32); say the dev runner builds it at its next wake (07:17-19:17 every 2 hours) (21/10/2026)' }, 400, {});
