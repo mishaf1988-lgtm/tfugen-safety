@@ -45,7 +45,9 @@ export async function readCloseToken(env, tok, nowMs) {
 export async function makeLinkToken(env, prefix, id, ttlDays, nowMs) {
   const secret = env && env.TRUSTEE_NOTIFY_SECRET;
   if (!secret || !ID_RE.test(String(id || ''))) return null;
-  const exp = Math.floor((nowMs || Date.now()) / 1000) + ttlDays * 24 * 3600;
+  // floored as a whole (15/11/2026): a fractional ttlDays (a contractor link that ends with the job) made a fractional
+  // base36 expiry with a dot inside it, and the token no longer split into its three parts.
+  const exp = Math.floor((nowMs || Date.now()) / 1000 + ttlDays * 24 * 3600);
   const body = id + '.' + exp.toString(36);
   return body + '.' + (await sign(secret, body, prefix));
 }

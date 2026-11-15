@@ -30,9 +30,10 @@ APPROVED_SEND = {
     'functions/api/trustee-notify.js': 1,  # trustee finding notification (22/09/2026)
     'functions/api/weekly-digest.js': 1,   # the weekly mail (28/09/2026)
     'functions/api/hazard-report.js': 2,   # the department report (28/09/2026); the status mail to the same people (questionnaire 14/10/2026)
-    'functions/api/talk.js': 4,   # signed new-worker induction form to Michael and hr-tap@ (questionnaire 10/10/2026); a guessing lock, to Michael (11/10/2026); form 08.01 of the annual / quality training to Michael and the address on it (questionnaire 14/10/2026); who did not sign, to the department managers, only on Michael's click after a preview (questionnaire 14/10/2026)
+    'functions/api/talk.js': 5,   # a contractor's worker signed the safety instructions, a short notice to Michael only (15/11/2026, contractor link phase 1); signed new-worker induction form to Michael and hr-tap@ (questionnaire 10/10/2026); a guessing lock, to Michael (11/10/2026); form 08.01 of the annual / quality training to Michael and the address on it (questionnaire 14/10/2026); who did not sign, to the department managers, only on Michael's click after a preview (questionnaire 14/10/2026)
     'functions/api/trustee-gate.js': 1,  # a guessing lock on the trustee password, to Michael (11/10/2026)
     'functions/api/codes.js': 1,  # a password changed: to Michael only, never the password (10/10/2026, "maasher")
+    'functions/api/ctr-link.js': 1,  # the contractor approval form, its files and summary to Michael's own mailbox only (15/11/2026, Michael: "then a copy of the files to my mail for filing and checking")
     'functions/api/works.js': 1,  # the weekly works link to maintenance, Wednesday 18:00 (Michael in the questionnaire 05/11/2026: "the server mails it by itself"); off until he approves the text (server_state works_mail_on), company domain only
 }
 APPROVED_DELETE = {

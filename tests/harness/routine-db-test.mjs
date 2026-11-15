@@ -412,7 +412,7 @@ const callIn = async (body) => {
       && !!odTrashCheck({ agent: 'dev', why: 'a test', path: '18_x/a.txt' }).error && !!odTrashCheck({ agent: 'dev', why: 'a test', path: OD_OCR_DIR + '/sub/a.txt' }).error
       && !!odTrashCheck({ agent: 'dev', why: 'a test', path: OD_OCR_DIR + '/a.js' }).error;
   })());
-  check('the write list is exactly the eleven keys (agents_registry 31/10/2026; mail_filing, validity_run 11/10/2026; iso_tasks 24/10/2026; mail_triage 25/10/2026; quality_run 27/10/2026; live_note 31/10/2026)', STATE_WRITE.join() === 'quote_track,nevo_versions,od_raw_token,od_raw_exp,mail_filing,validity_run,iso_tasks,mail_triage,quality_run,live_note,agents_registry');
+  check('the write list is exactly the twelve keys (agents_registry 31/10/2026; mail_filing, validity_run 11/10/2026; iso_tasks 24/10/2026; mail_triage 25/10/2026; quality_run 27/10/2026; live_note 31/10/2026; ctr_instructions 15/11/2026)', STATE_WRITE.join() === 'quote_track,nevo_versions,od_raw_token,od_raw_exp,mail_filing,validity_run,iso_tasks,mail_triage,quality_run,live_note,agents_registry,ctr_instructions');
   check('agents_registry: the server stamps its time and it is readable by state_get', STAMP_AT.includes('agents_registry') && STATE_READ.includes('agents_registry'));
   check('live_note: the server stamps its time, it is readable, and its size is capped at 4000', STAMP_AT.includes('live_note') && STATE_READ.includes('live_note') && LIVE_NOTE_MAX === 4000);
   check('inv_month and usage_month: the monthly summaries are readable by state_get (retro 15/11/2026)', STATE_READ.includes('inv_month') && STATE_READ.includes('usage_month'));
@@ -447,8 +447,9 @@ const callIn = async (body) => {
     const dels = [...src.matchAll(/method:\s*'DELETE'/g)].map((m) => (owner(m.index) || {}).op);
     check('one DELETE, in od_dedupe only, of a OneDrive item (to the recycle bin); never a table row', dels.join() === 'od_dedupe' && /graph\.microsoft\.com\/v1\.0\/me\/drive\/items\/' \+ encodeURIComponent\(item\.id\), \{ method: 'DELETE'/.test(src), dels);
     // 27/10/2026: od_archive and od_expire share one handler (the PATCH reads as od_expire, the second name on its line).
+    // 15/11/2026: ctr_revoke, link_v + 1 on one contractor talk (security review: close a leaked new-worker link); ctr-link-test.mjs
     // 13/11/2026: invoice_set, an update of the given fields of one ledger row (Michael: "do it: an invoice ledger"); invoice-ledger-test.mjs
-    check('no other DELETE; one PATCH each in expiry_set, hazard_choice, od_archive/od_expire, od_move, od_pull, od_swap (31/10/2026, the old file moves to a versions folder) and od_trash (24/10/2026, moves, not deletes) and talk_field', dels.length === 1 && patches.length === 9 && own === 'expiry_set,hazard_choice,invoice_set,od_expire,od_move,od_pull,od_swap,od_trash,talk_field' && /body\.op === 'od_archive' \|\| body\.op === 'od_expire'/.test(src), own);
+    check('no other DELETE; one PATCH each in expiry_set, hazard_choice, od_archive/od_expire, od_move, od_pull, od_swap (31/10/2026, the old file moves to a versions folder) and od_trash (24/10/2026, moves, not deletes) and talk_field', dels.length === 1 && patches.length === 10 && own === 'ctr_revoke,expiry_set,hazard_choice,invoice_set,od_expire,od_move,od_pull,od_swap,od_trash,talk_field' && /body\.op === 'od_archive' \|\| body\.op === 'od_expire'/.test(src), own);
   }
 
   console.log('\n4b. agent_report: append-only run log');

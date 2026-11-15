@@ -33,6 +33,7 @@ import { ownerWa, sendToOwner, ownerWindowOpen, keyboardText, waOneLine } from '
 import { stateCas } from '../_cas.js';
 import { readRecipients } from './hazard-report.js';
 import { REPORT_DEPTS } from './hazard-file.js';
+import { KIND_CTR, CTR_OK, CTR_INSTR, instrText, isInstrMissing, ctrFolder, safeName } from '../_ctr.js';
 
 let SB = SB_LIVE; // set from env in onRequest (sbFrom)
 // Every call from this file has a time limit (15/10/2026, review of the outside pages): a slow
@@ -455,7 +456,7 @@ async function sayTalk(env, tok, want, g, ctx, cookie, part) {
   const t = await readTok(env, tok, g);
   if (t.error) return new Response('{"error":"link"}', { status: 403, headers: { 'Content-Type': 'application/json' } });
   const talk = await getTalk(env, t.id);
-  if (!talk || talk.s !== S_PUB || !permOk(t, talk) || isClosed(talk)) return new Response('{"error":"talk"}', { status: 404, headers: { 'Content-Type': 'application/json' } });
+  if (!talk || talk.s !== S_PUB || !permOk(t, talk) || isClosed(talk) || talk.kind === KIND_CTR) return new Response('{"error":"talk"}', { status: 404, headers: { 'Content-Type': 'application/json' } });
   if (!(await codeGate(env, talk, cookie)).ok) return new Response('{"error":"code"}', { status: 403, headers: { 'Content-Type': 'application/json' } });
   const lang = textOf(talk, langOf(want)).lang;
   return sayPart(env, spokenOf(talk, lang), lang, ctx, part);
@@ -606,7 +607,9 @@ export const KIND_IND = 'induction';
 // and picks a department. Permanent link like the induction, until the manager closes it (revoke).
 export const KIND_ANN = 'annual', KIND_QA = 'quality';
 export const TYPED_KINDS = [KIND_ANN, KIND_QA];
-export const PERM_KINDS = [KIND_IND, KIND_ANN, KIND_QA];
+// The contractor's instructions talk (15/11/2026, functions/_ctr.js): permanent like the induction, never a factory training.
+export const PERM_KINDS = [KIND_IND, KIND_ANN, KIND_QA, KIND_CTR];
+export { KIND_CTR };
 // Closed for signatures (14/10/2026, Michael: "\u05e1\u05d2\u05d9\u05e8\u05d4 \u05d0\u05de\u05d9\u05ea\u05d9\u05ea"): an annual / quality training whose closed_at is set.
 // The worker's page, the signature and the reading aloud all stop; the manager can reopen it.
 export const isClosed = (talk) => !!talk && TYPED_KINDS.indexOf(talk.kind) >= 0 && !!talk.closed_at;
@@ -647,7 +650,8 @@ export function sectionsOf(body) {
 }
 export const WDEP_L = '\u05d4\u05de\u05d7\u05dc\u05e7\u05d4 \u05e9\u05dc\u05da', WDEP_PICK = '\u05d1\u05d7\u05e8 \u05de\u05d7\u05dc\u05e7\u05d4';
 export const tDeptOf = (empDep) => { const r = TBT_DEPTS.find((x) => deptMatch(x[0], empDep)); return r ? r[0] : ''; };
-export function makePermToken(env, id, v, nowMs) { return makeLinkToken(env, PERM_PREFIX, id + '-v' + (v || 0), PERM_TTL_DAYS, nowMs); }
+// ttlDays (15/11/2026): a contractor's new-worker link runs out with the approval (a year, or the day after the job).
+export function makePermToken(env, id, v, nowMs, ttlDays) { return makeLinkToken(env, PERM_PREFIX, id + '-v' + (v || 0), ttlDays || PERM_TTL_DAYS, nowMs); }
 export async function readPermToken(env, tok, nowMs) {
   const r = await readLinkToken(env, PERM_PREFIX, tok, nowMs);
   if (r.error) return r;
@@ -980,7 +984,7 @@ export function inductionHtml(talk, row, sigB64, lang, when, answers, docs) {
 // Graph's PDF conversion and its reading get their own, longer limit (15/10/2026, B3): 20 seconds cut a
 // form with photos. The induction runs inside waitUntil (30 seconds after the answer); 08.01 on a request.
 export const PDF_MS_IND = 25000, PDF_MS_0801 = 60000;
-async function graphPdf(token, seg, ms) {
+export async function graphPdf(token, seg, ms) {
   const ac = new AbortController(), tm = setTimeout(() => ac.abort(), ms);
   try {
     const r = await fetch(GRAPH_ROOT + seg + ':/content?format=pdf', { headers: { Authorization: 'Bearer ' + token }, signal: ac.signal });
@@ -1084,6 +1088,81 @@ export async function fileInduction(env, talk, row, sig, lang, nowMs, answers, d
   await mark(Object.assign(out.url ? { doc_url: out.url } : {}, { mailed_at: out.mailed ? new Date().toISOString() : null, doc_err: err }));
   // The alert text only: the callers send it after dropping the photos (review 09/11/2026), within waitUntil's time.
   out.alertText = equipAlertText(row, out, sig ? sig.length : 0);
+  return out;
+}
+
+// ---- a contractor's worker (15/11/2026, functions/_ctr.js) ----
+// The name of a contractor's worker as typed, in any letters (Hebrew, Arabic, Latin, Cyrillic...): 2-60 characters.
+export function ctrName(raw) {
+  const s = plainQuotes(String(raw || '').replace(/\s+/g, ' ').trim());
+  return /^[\p{L}][\p{L}\p{M}'". -]{1,59}$/u.test(s) ? s : null;
+}
+const ctrNotReady = () => page('\u05d4\u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05de\u05d5\u05db\u05e0\u05d5\u05ea', '<p>\u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05dc\u05e7\u05d1\u05dc\u05e0\u05d9 \u05d7\u05d5\u05e5 \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d4\u05d5\u05d6\u05e0\u05d5 \u05d1\u05de\u05e2\u05e8\u05db\u05ea, \u05d5\u05dc\u05db\u05df \u05d0\u05d9 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d7\u05ea\u05d5\u05dd \u05db\u05e8\u05d2\u05e2. \u05e4\u05e0\u05d5 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc \u05d4\u05de\u05e4\u05e2\u05dc.</p>', 'err', 503);
+// The instructions text Michael set (server_state ctr_instructions) into a talk that was made before it was there.
+// Only on a contractor talk; true when the talk now has the text.
+async function ctrBodyFix(env, talk) {
+  try {
+    const r = await fetch(SB + '/rest/v1/server_state?key=eq.' + encodeURIComponent(CTR_INSTR) + '&select=value', { headers: sbH(env) });
+    const rows = r.ok ? await r.json() : [];
+    const text = instrText(rows && rows[0] && rows[0].value);
+    if (!text) return false;
+    const p = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(talk.id) + '&kind=eq.' + KIND_CTR, { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ body: text }) });
+    if (!p.ok) return false;
+    talk.body = text;
+    return true;
+  } catch (e) { return false; }
+}
+// The signed confirmation: the company, the worker, the instructions he read, the declaration and the signature.
+export function ctrSignHtml(talk, row, sigB64, when) {
+  const cell = (k, v) => '<tr><td style="padding:4px 10px;font-weight:bold;white-space:nowrap">' + k + '</td><td style="padding:4px 10px">' + v + '</td></tr>';
+  return '<!doctype html><html lang="he" dir="rtl"><head><meta charset="UTF-8"><title>' + esc(talk.title || '') + '</title></head>'
+    + '<body style="font-family:Arial,sans-serif;font-size:13px;direction:rtl;text-align:right;margin:24px">'
+    + '<h2 style="margin:0 0 4px">' + esc(talk.title || '') + '</h2><div style="color:#555;margin-bottom:12px">' + esc(SITE.company) + '</div>'
+    + '<table style="border-collapse:collapse;margin-bottom:12px">' + cell('\u05d4\u05d7\u05d1\u05e8\u05d4', esc(talk.dept || '-')) + cell('\u05e9\u05dd \u05d4\u05e2\u05d5\u05d1\u05d3', esc(row.emp_name || '')) + cell('\u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d6\u05d4\u05d5\u05ea \u05d0\u05d5 \u05d3\u05e8\u05db\u05d5\u05df', esc(row.id_no || ''))
+    + cell('\u05ea\u05d0\u05e8\u05d9\u05da \u05d5\u05e9\u05e2\u05d4', esc(fdate(when.day) + ' ' + when.hm)) + '</table>'
+    + '<div style="white-space:pre-wrap;border:1px solid #ccc;border-radius:6px;padding:10px;margin-bottom:12px">' + esc(talk.body || '') + '</div>'
+    + '<p style="font-weight:bold">' + esc(CTR_OK) + '</p>'
+    + '<div>\u05d7\u05ea\u05d9\u05de\u05d4:</div><img alt="" style="max-width:320px;max-height:120px;border-bottom:1px solid #333" src="data:image/png;base64,' + sigB64 + '">'
+    + '</body></html>';
+}
+export const ctrSignDeps = { accessToken, putFile, sendMailTo, graphPdf };
+// Filed in the contractor's folder (the PDF, or the HTML when the PDF did not come), then a short mail to Michael.
+// The ID number stays inside the document: the file name and the mail carry its last 4 digits only.
+export async function fileCtrSign(env, talk, row, sig, nowMs, deps) {
+  const d = deps || ctrSignDeps;
+  const out = { url: null, mailed: false, err: null, name: null, folder: null };
+  const mark = async (b) => {
+    try { await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(row.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify(b) }); } catch (e) { /* the signature is saved */ }
+  };
+  try {
+    const od = await d.accessToken(env);
+    const now = new Date(nowMs || Date.now());
+    const day = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+    const hm = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem', hour12: false });
+    const idTail = String(row.id_no || '').replace(/[^0-9A-Za-z]/g, '').slice(-4);
+    const base = day.split('-').reverse().join('-') + ' - ' + safeName(row.emp_name, 40) + (idTail ? ' - ' + idTail : '');
+    const folder = ctrFolder(talk.dept, day.slice(0, 4));
+    out.folder = folder;
+    const hb = new TextEncoder().encode(ctrSignHtml(talk, row, b64(sig), { day, hm }));
+    let bytes = hb, name = base + '.html', type = 'text/html';
+    try {
+      const src = folder + '/\u05de\u05e7\u05d5\u05e8';
+      await d.putFile(od.token, src, base + '.html', hb, 'text/html; charset=utf-8', 'rename');
+      const pdf = await d.graphPdf(od.token, (src + '/' + base + '.html').split('/').map(encodeURIComponent).join('/'), PDF_MS_IND);
+      if (pdf) { bytes = pdf; name = base + '.pdf'; type = 'application/pdf'; }
+    } catch (e) { /* the HTML is filed instead */ }
+    const filed = await d.putFile(od.token, folder, name, bytes, type, 'rename');
+    out.url = filed.webUrl || null; out.name = name;
+    if (out.url) await mark({ doc_url: out.url, doc_err: null });
+    const html = '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">'
+      + '<p>\u05e2\u05d5\u05d1\u05d3 \u05e9\u05dc \u05d4\u05e7\u05d1\u05dc\u05df ' + esc(talk.dept || '') + ' \u05e7\u05e8\u05d0 \u05d5\u05d7\u05ea\u05dd \u05e2\u05dc \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05dc\u05e7\u05d1\u05dc\u05e0\u05d9 \u05d7\u05d5\u05e5.</p>'
+      + '<p>\u05e9\u05dd: ' + esc(row.emp_name || '') + (idTail ? '<br>\u05ea\u05e2\u05d5\u05d3\u05ea \u05d6\u05d4\u05d5\u05ea \u05d0\u05d5 \u05d3\u05e8\u05db\u05d5\u05df: \u05de\u05e1\u05ea\u05d9\u05d9\u05dd \u05d1-' + esc(idTail) : '') + '<br>\u05ea\u05d0\u05e8\u05d9\u05da: ' + esc(fdate(day) + ' ' + hm) + '</p>'
+      + (out.url ? '<p>\u05ea\u05d5\u05d9\u05e7 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05e7\u05d1\u05dc\u05df: <a href="' + esc(out.url) + '">' + esc(name) + '</a></p>' : '')
+      + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc ' + esc(SITE.company) + '.</p></div>';
+    await d.sendMailTo(od.token, [od.email], [], '\u05e7\u05d1\u05dc\u05df ' + String(talk.dept || '').slice(0, 60) + ': \u05e2\u05d5\u05d1\u05d3 \u05d7\u05ea\u05dd \u05e2\u05dc \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea', html, []);
+    out.mailed = true;
+  } catch (e) { out.err = String((e && e.message) || e).substring(0, 200); }
+  await mark(Object.assign(out.url ? { doc_url: out.url } : {}, { mailed_at: out.mailed ? new Date().toISOString() : null, doc_err: out.err }));
   return out;
 }
 
@@ -1321,7 +1400,7 @@ async function signedFiles(env, fileUrl) {
 
 // The finger pad, one copy for the worker and the trainer (15/10/2026, B10: pointer events only, so a phone
 // without them could not sign; there, touch events, and the mouse).
-const PAD_JS = `var c=document.getElementById('pad'),x=c.getContext('2d'),drawn=false,down=false,padUp=function(){};
+export const PAD_JS = `var c=document.getElementById('pad'),x=c.getContext('2d'),drawn=false,down=false,padUp=function(){};
 function fit(){var r=c.getBoundingClientRect();c.width=r.width;c.height=180;x.lineWidth=2.5;x.lineCap='round';x.strokeStyle='#111';drawn=false;}
 fit();
 function pt(e){var r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height};}
@@ -1470,6 +1549,10 @@ async function showTalk(env, tok, want, g, tr, cookie) {
   if (!talk || talk.s !== S_PUB) return errL('unpub', want, 404);
   if (!permOk(t, talk)) return errL('badLink', want, 403);
   if (isClosed(talk)) return errL('closed', want, 410);
+  const ctr = talk.kind === KIND_CTR;
+  // A contractor's talk whose instructions text was not in yet: take it now if Michael set it; else no signing
+  // on a placeholder (it would record a training that did not happen).
+  if (ctr && isInstrMissing(talk.body) && !(await ctrBodyFix(env, talk))) return ctrNotReady();
   const x = textOf(talk, langOf(want));
   const lang = x.lang, L = LANGS[lang];
   const ind = talk.kind === KIND_IND, IL = IND_L[lang] || IND_L.he, typed = TYPED_KINDS.indexOf(talk.kind) >= 0;
@@ -1480,18 +1563,18 @@ async function showTalk(env, tok, want, g, tr, cookie) {
   // Group mode only: who already signed, so the phone moves on to the next worker.
   const [gate, emps, files, vid, signed] = await Promise.all([
     codeGate(env, talk, cookie),
-    ind || typed || trP ? [] : getEmps(env),
+    ind || typed || trP || ctr ? [] : getEmps(env),
     trP ? [] : signedFiles(env, talk.file_url),
     trP ? '' : videoHtml(env, talk, L),
     g && !trP ? signedIds(env, talk.id) : new Set(),
   ]);
   if (!gate.ok) return codePage(tok, want, false, !!gate.closed);
   if (trP) return trainerPage(tok, talk);
-  const quiz = ind ? [] : quizOf(talk, lang);
+  const quiz = ind || ctr ? [] : quizOf(talk, lang);
   // The shared weekly talk's sections are matched by their place, not their heading (15/10/2026, A4): a
   // translation that translated "## <department>" offered Arabic department names, the row kept them, and
   // the list hid every worker. The value is always the Hebrew heading; the label is the translated one.
-  const heSecs = ind || typed ? { intro: '', list: [] } : sectionsOf(talk.body);
+  const heSecs = ind || typed || ctr ? { intro: '', list: [] } : sectionsOf(talk.body);
   let secs = heSecs, secLabels = heSecs.list.map((c) => c.dept);
   if (lang !== 'he' && heSecs.list.length) {
     const trS = sectionsOf(x.body);
@@ -1515,12 +1598,13 @@ async function showTalk(env, tok, want, g, tr, cookie) {
     + (ind ? '<div style="background:#eff6ff;border-radius:8px;padding:10px 12px;margin-bottom:10px"><div style="font-size:18px;font-weight:700;color:#1e3a8a">' + esc(IL.welcome) + '</div><div style="font-size:14px;color:#374151;margin-top:2px">' + esc(IL.vital) + '</div></div>' : '')
     + '<div style="font-size:13px;color:#6b7280">' + esc(fdate(talk.d)) + '</div>'
     + '<h2 id="th" style="margin:4px 0 12px;font-size:20px">' + esc(x.title) + '</h2>'
+    + (ctr && talk.dept ? '<div style="font-size:15px;font-weight:700;color:#1e3a8a;margin-bottom:10px">\u05d4\u05d7\u05d1\u05e8\u05d4: ' + esc(talk.dept) + '</div>' : '')
     + (g ? '<div style="font-size:14px;font-weight:700;color:#1e3a8a;background:#eff6ff;border-radius:6px;padding:6px 10px;margin-bottom:8px">\ud83d\udc65 ' + esc(L.group) + '</div>' : '')
     + (talk.trainer ? '<div style="font-size:14px;color:#374151;margin-bottom:10px">' + (talk.kind === KIND_IND ? esc(BY_L[lang] || BY_L.he) + ': ' + esc(talk.trainer) + (talk.trainer_qual ? ', ' + esc(talk.trainer_qual) : '') : esc(L.trainerL) + ': ' + esc(talk.trainer)) + '</div>' : '')
     + (L.auto ? '<div style="font-size:12px;color:#92400e;background:#fef3c7;border-radius:6px;padding:6px 10px;margin-bottom:10px">' + esc(L.auto) + '</div>' : '')
     + (typed ? '<div id="tp" style="background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px"><div style="font-weight:700;margin-bottom:4px">' + esc(L.topics) + '</div>'
         + topicsOf(talk.subjects).map((l) => '<div dir="rtl" lang="he">' + esc(l) + '</div>').join('') + '<div style="font-size:13px;color:#6b7280;margin-top:6px">' + esc(L.f2f) + '</div></div>' : '')
-    + (x.body && !ind && !sectioned && !typed ? '<button type="button" id="say" style="display:none;margin:0 0 8px;padding:8px 16px;border:1px solid #1e3a8a;border-radius:8px;background:#eff6ff;color:#1e3a8a;font-size:16px;font-weight:700">\ud83d\udd0a ' + esc((SPEAK[lang] || SPEAK.he).listen) + '</button>'
+    + (x.body && !ind && !sectioned && !typed && !ctr ? '<button type="button" id="say" style="display:none;margin:0 0 8px;padding:8px 16px;border:1px solid #1e3a8a;border-radius:8px;background:#eff6ff;color:#1e3a8a;font-size:16px;font-weight:700">\ud83d\udd0a ' + esc((SPEAK[lang] || SPEAK.he).listen) + '</button>'
       : '') + (sectioned ? (secs.intro ? '<div style="white-space:pre-wrap;background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px">' + esc(secs.intro) + '</div>' : '')
         + '<label for="wdep" style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.wdep) + '</label><select name="wdep" id="wdep" form="f" required dir="' + L.dir + '" style="width:100%;font-size:16px;padding:10px;border:2px solid #1e3a8a;border-radius:8px;margin-bottom:12px"><option value="">' + esc(L.wpick) + '</option>' + secs.list.map((c, i) => '<option value="' + esc(c.dept) + '">' + esc(secLabels[i]) + '</option>').join('') + '</select>'
         + secs.list.map((c) => '<div class="wsec" data-dep="' + esc(c.dept) + '" style="display:none;white-space:pre-wrap;background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px">' + esc(c.text) + '</div>').join('')
@@ -1532,11 +1616,11 @@ async function showTalk(env, tok, want, g, tr, cookie) {
     + '<input type="hidden" name="k" value="' + esc(tok) + '">' + (g ? '<input type="hidden" name="g" value="1">' : '') + '<input type="hidden" name="l" value="' + lang + '"><input type="hidden" name="sig" id="sig"><input type="hidden" name="qa" id="qa">'
     // 13/10/2026 (Michael: "I don't want the list of existing workers, only the new worker being taken in"):
     // the induction asks for the new worker's name and ID only; "emp" is always "not on the list".
-    + (ind || typed ? '<input type="hidden" name="emp" id="emp" value="' + OTHER + '"><label for="oname" style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.oname) + '</label>'
+    + (ind || typed || ctr ? '<input type="hidden" name="emp" id="emp" value="' + OTHER + '"><label for="oname" style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.oname) + '</label>'
       : '<label for="emp" style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.you) + '</label>'
     + '<select name="emp" id="emp" required dir="rtl" style="width:100%;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px"><option value="">' + esc(L.pick) + '</option><option value="' + OTHER + '">' + esc(L.other) + '</option>' + opts + '</select>')
     // Not on the list: the name first, then the ID like everyone (review 03/10/2026: the ID came between the list and the name).
-    + '<div id="obox" style="display:none;margin:-4px 0 12px"><input name="oname" id="oname" maxlength="60" autocomplete="off"' + (ind || typed ? ' required' : '') + (typed ? HE_ONLY_ATTR(L) : '') + ' placeholder="' + esc(L.oname) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:8px">' + (typed ? '<div id="heonly" style="font-size:13px;color:#6b7280;margin:-4px 0 8px">' + esc(L.heOnly) + '</div>' : '') + (ind || typed ? '' : '<input name="ocomp" maxlength="60" autocomplete="off" placeholder="' + esc(L.ocomp) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px">') + '</div>'
+    + '<div id="obox" style="display:none;margin:-4px 0 12px"><input name="oname" id="oname" maxlength="60" autocomplete="off"' + (ind || typed || ctr ? ' required' : '') + (typed ? HE_ONLY_ATTR(L) : '') + ' placeholder="' + esc(L.oname) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:8px">' + (typed ? '<div id="heonly" style="font-size:13px;color:#6b7280;margin:-4px 0 8px">' + esc(L.heOnly) + '</div>' : '') + (ind || typed || ctr ? '' : '<input name="ocomp" maxlength="60" autocomplete="off" placeholder="' + esc(L.ocomp) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px">') + '</div>'
     + '<label for="oid" style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.oid) + '</label><input name="oid" id="oid" maxlength="20" autocomplete="off" dir="ltr" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px;text-align:' + tal + '">'
     + (typed ? (() => { const st = 'width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px';
       return '<label for="idep" style="display:block;font-weight:700;margin-bottom:4px">' + esc(IL.dep) + '</label><select name="idep" id="idep" required dir="rtl" style="' + st + '"><option value="">' + esc(IL.depPick) + '</option>' + TBT_DEPTS.map((d) => '<option value="' + esc(d[0]) + '">' + esc(d[0]) + '</option>').join('') + '<option value="' + esc(IND_OTHER_DEP) + '">' + esc(IL.depOther) + '</option></select>'
@@ -1555,7 +1639,7 @@ async function showTalk(env, tok, want, g, tr, cookie) {
       + '<label id="dgal" style="display:block;width:100%;box-sizing:border-box;text-align:center;padding:12px;margin-bottom:6px;border:1px solid #1e3a8a;border-radius:8px;background:#eff6ff;color:#1e3a8a;font-size:15px;font-weight:700;cursor:pointer"><input type="file" id="dfile2" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden">\u05d0\u05d5 \u05d1\u05d7\u05e8 \u05ea\u05de\u05d5\u05e0\u05d4 \u05de\u05d4\u05d8\u05dc\u05e4\u05d5\u05df</label>'
       + '<div id="dcnt" style="font-size:13px;color:#374151;margin-bottom:12px"></div>' : '')
     + (ind ? equipBox(lang, L) : '')
-    + '<label style="display:flex;gap:8px;align-items:center;margin-bottom:12px"><input type="checkbox" name="ok" value="1" required style="width:22px;height:22px;flex:none">' + esc(typed && lang === 'he' ? annOk(talk.subjects) : L.ok) + '</label>'
+    + '<label style="display:flex;gap:8px;align-items:center;margin-bottom:12px"><input type="checkbox" name="ok" value="1" required style="width:22px;height:22px;flex:none">' + esc(ctr ? CTR_OK : typed && lang === 'he' ? annOk(talk.subjects) : L.ok) + '</label>'
     + '<div style="font-weight:700;margin-bottom:4px">' + esc(L.sig) + '</div>'
     + '<canvas id="pad" style="width:100%;height:180px;border:2px dashed #9ca3af;border-radius:8px;touch-action:none;background:#fff"></canvas>'
     + '<button type="button" id="clr" style="margin:6px 0 14px;padding:6px 14px;border:1px solid #d1d5db;border-radius:8px;background:#fff;font-size:14px">' + esc(L.clear) + '</button>'
@@ -1573,8 +1657,8 @@ async function showTalk(env, tok, want, g, tr, cookie) {
     + (ind ? '<script nonce="' + nonce + '">' + EQ_SCRIPT + '</script>' : '')
     + (ind ? '<script nonce="' + nonce + '">(function(){var n=document.getElementById("iagn"),o=document.getElementById("ino"),f=function(){o.required=!n.value.trim();};n.addEventListener("input",f);n.addEventListener("change",f);f();})();</script>' : '')
     + (sectioned ? '<script nonce="' + nonce + '">(function(){var s=document.getElementById("wdep"),e=document.getElementById("emp");if(!s)return;var f=function(){var v=s.value;Array.prototype.forEach.call(document.querySelectorAll(".wsec"),function(d){d.style.display=d.getAttribute("data-dep")===v?"block":"none";});if(e)Array.prototype.forEach.call(e.querySelectorAll("option[data-t]"),function(o){o.hidden=!!v&&o.getAttribute("data-t")!==v;});};s.addEventListener("change",f);f();})();</script>' : '')
-    + (x.body && !ind && !sectioned ? '<script nonce="' + nonce + '">' + PLAYER + '</script><script nonce="' + nonce + '">' + speakScript(lang, speechText(x.title, x.body)) + '</script>' : '');
-  return page(talk.kind === KIND_IND ? L.indT : typed ? x.title : L.title, inner, '', 200, nonce, lang);
+    + (x.body && !ind && !sectioned && !ctr ? '<script nonce="' + nonce + '">' + PLAYER + '</script><script nonce="' + nonce + '">' + speakScript(lang, speechText(x.title, x.body)) + '</script>' : '');
+  return page(talk.kind === KIND_IND ? L.indT : typed || ctr ? x.title : L.title, inner, '', 200, nonce, lang);
 }
 
 // The PNG from canvas.toDataURL, checked: the right header, not empty, not huge.
@@ -1652,8 +1736,10 @@ async function signCore(env, request, ctx, form, c) {
   const gate = await codeGate(env, talk, request.headers.get('cookie'));
   if (!gate.ok) return codePage(tok, lang, false, !!gate.closed);
   // The induction is for a new worker only (13/10/2026): never a worker from the list.
-  const typed = TYPED_KINDS.indexOf(talk.kind) >= 0, ind = talk.kind === KIND_IND, weekly = !typed && !ind;
-  const empId = ind || typed ? OTHER : String(form.get('emp') || '');
+  // A contractor's worker (15/11/2026): types name and ID like the induction; the company is the talk's (dept).
+  const typed = TYPED_KINDS.indexOf(talk.kind) >= 0, ind = talk.kind === KIND_IND, ctr = talk.kind === KIND_CTR, weekly = !typed && !ind && !ctr;
+  if (ctr && isInstrMissing(talk.body)) return ctrNotReady();
+  const empId = ind || typed || ctr ? OTHER : String(form.get('emp') || '');
   const sig = sigBytes(form.get('sig'));
   // Michael, 03/10/2026: "an ID is always needed", for a worker on the list too.
   const oid = idOf(form.get('oid'));
@@ -1674,9 +1760,10 @@ async function signCore(env, request, ctx, form, c) {
       if (typed && !heName(raw)) return bad('errNameT', 'heOnly', 422);
       // The name and the company together (C8). A company that cannot be put in Hebrew is left out, not a
       // reason to refuse the signature (B7: the box is optional).
-      const [n, dep] = await Promise.all([typed ? heName(raw) : nameHe(env, request, raw), comp && weekly ? textHe(env, request, comp) : null]);
-      if (!n) return bad('errNameT', 'errHe', 422);
-      emp = { id: 'x:' + oid + ':' + raw.toLowerCase(), key: 'x:' + oid + ':', n, dep: dep || null, out: true };
+      // A contractor's worker: the name as typed, in any letters (no AI call from an outside link).
+      const [n, dep] = await Promise.all([ctr ? heName(raw) || ctrName(raw) : typed ? heName(raw) : nameHe(env, request, raw), comp && weekly ? textHe(env, request, comp) : null]);
+      if (!n) return bad('errNameT', ctr ? 'oNeed' : 'errHe', 422);
+      emp = { id: 'x:' + oid + ':' + raw.toLowerCase(), key: 'x:' + oid + ':', n, dep: ctr ? (talk.dept || null) : dep || null, out: true };
     }
     // Annual / quality: the department picked from the list, or typed under "other" (14/10/2026).
     if (typed) {
@@ -1729,6 +1816,8 @@ async function signCore(env, request, ctx, form, c) {
   if (emp.out) {
     const outs = await fetch(SB + '/rest/v1/toolbox_reads?talk_id=eq.' + encodeURIComponent(talk.id) + '&emp_id=like.' + encodeURIComponent('x:*') + '&select=id', { headers: sbH(env) });
     if (!outs.ok) return bad('errSaveT', 'errSave', 502);
+    // security review 15/11/2026: a contractor's link is held by outsiders for a year; each signature files 2 files and
+    // mails Michael, so its cap is the weekly 100 (MAX_OUT), not the annual training's 600
     const n = await outs.json();
     if (Array.isArray(n) && n.length >= (typed ? MAX_OUT_TYPED : MAX_OUT)) return bad('errSaveT', 'full', 429);
   }
@@ -1772,6 +1861,12 @@ async function signCore(env, request, ctx, form, c) {
     const kept = docs.length ? await keepDocs(env, row.id, docs) : [];
     const job = fileInduction(env, talk, row, sig, lang, undefined, [], docs, sent.length - docs.length, kept.length)
       .then(async (out) => { if (out.url && out.mailed && kept.length) await dropDocs(env, kept); if (out.alertText) await equipAlert(env, out.alertText, 'induction ' + row.id); }).catch(() => null);
+    if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(job); else await job;
+  }
+  // A contractor's worker: the signed confirmation into the contractor's folder and a short mail to Michael, after
+  // the worker already sees "saved" (as the induction).
+  if (ctr) {
+    const job = fileCtrSign(env, talk, row, sig).catch(() => null);
     if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(job); else await job;
   }
   // The typed number onto the card, only while the card is still empty (never over a number
