@@ -192,6 +192,15 @@
         ]
       },
       {
+        "matcher": "Bash|Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/code-raw-hebrew.py"
+          }
+        ]
+      },
+      {
         "matcher": "Bash|mcp__github__create_pull_request",
         "hooks": [
           {
