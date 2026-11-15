@@ -4626,7 +4626,7 @@ async function routineDbHandle(context) {
       if (r.held) r.note = 'Friday/Saturday: not sent, kept for the Sunday 07:00 morning list (Michael is off). Urgent (a hazard, a safety event or accident, the assistant down) = send again with "urgent": "hazard" | "incident" | "watchdog"';
       let pendingLost = false;
       if (askPending && r.ok && !r.held && Array.isArray(body.choices) && body.choices.length) {
-        const pw = await fetch(url + '/rest/v1/server_state?on_conflict=key', { /* cas-ok: a key of its own per question, whole, nothing read first */ method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+        const pw = await fetch(url + '/rest/v1/server_state?on_conflict=key', { /* cas-ok: one pending question per kind, the newest replaces it (the tap checks k), nothing read first */ method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
           body: JSON.stringify([{ key: askPending.key, value: askPending.value, updated_at: new Date().toISOString() }]) }).catch(() => null);
         pendingLost = !pw || !pw.ok; // the question went out but his tap will find nothing: the caller says so (review 06/11/2026)
       }
