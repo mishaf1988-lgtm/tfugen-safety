@@ -10,7 +10,7 @@
 // (423) = written by the next 15-minute run.
 // Callers: the hazard-file chain (x-notify-secret) and the app: {op:'status'},
 // {op:'setDate', date}, {force:true} (admin/manager session).
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, secretOk } from '../_shared.js';
 import { odConfigured, accessToken, stateGet, stateSet, runLeased } from '../_onedrive.js';
 import { G, seg, graphPut, stampName, buildRegister, readAll, TASKS_Q, ilYear, folderFor, yearItem, FILE_MS } from './hazard-file.js';
 import { meetingHazards, meetingAccidents, meetingMinor } from '../_meeting.js';
@@ -180,7 +180,7 @@ export async function onRequest(context) {
   if (!env.SUPABASE_SERVICE_ROLE_KEY) return jsonResp({ error: 'server misconfigured' }, 500, cors);
   let body = {}; try { body = await request.json(); } catch (e) {}
   const secret = env.TRUSTEE_NOTIFY_SECRET;
-  if (!(secret && (request.headers.get('x-notify-secret') || '') === secret)) {
+  if (!(secret && (await secretOk(request.headers.get('x-notify-secret'), secret)))) {
     const who = await requireRole(request, env, ['admin', 'manager']);
     if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });

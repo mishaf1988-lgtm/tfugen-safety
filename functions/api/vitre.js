@@ -29,7 +29,7 @@
 //   VITRE_API_KEY_SECRET  "מפתח סודי"        -> header X-api-key-secret
 // Never in code, never in the browser. Same posture as META_ACCESS_TOKEN / RESEND_KEY.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireUser, CF_PROD, CF_PREVIEW_RE, SB_TIMEOUT_MS as SB_MS, FILE_TIMEOUT_MS as FILE_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireUser, CF_PROD, CF_PREVIEW_RE, SB_TIMEOUT_MS as SB_MS, FILE_TIMEOUT_MS as FILE_MS, tmo, SITE, SB_LIVE, secretOk } from '../_shared.js';
 import { stateGet, stateSet, stateLock, stateUnlock } from '../_onedrive.js';
 
 const VITRE_BASE = 'https://publicapi.hbinov.com';
@@ -491,7 +491,7 @@ export async function onRequest({ request, env }) {
   const url0 = new URL(request.url);
   if (request.method === 'POST' && (url0.searchParams.get('op') || '').toLowerCase() === 'sync' && !/^Bearer\s+\S/i.test(request.headers.get('authorization') || '')) {
     const want = env.TRUSTEE_NOTIFY_SECRET;
-    if (!want || (request.headers.get('x-notify-secret') || '') !== want) return jsonResp({ error: 'forbidden' }, 403, cors);
+    if (!want || !(await secretOk(request.headers.get('x-notify-secret'), want))) return jsonResp({ error: 'forbidden' }, 403, cors);
     return jsonResp(await runSyncLeased(env), 200, cors);
   }
   if (!isAllowedCaller(request, allowed)) return jsonResp({ error: 'origin not allowed' }, 403, cors);

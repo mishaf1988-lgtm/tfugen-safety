@@ -35,7 +35,7 @@
 // the photos take what is left, PHOTO_MAX per run at most, and the rest wait
 // for tomorrow (photos_left says how many).
 import { odConfigured, accessToken, stateGet, stateSet } from '../_onedrive.js';
-import { corsHeaders, defaultAllowedOrigins, jsonResp, requireRole, FILE_TIMEOUT_MS as FILE_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
+import { corsHeaders, defaultAllowedOrigins, jsonResp, requireRole, FILE_TIMEOUT_MS as FILE_MS, tmo, SITE, SB_LIVE, secretOk } from '../_shared.js';
 
 export const STATE_KEY = 'backup_od';
 export const BASE = SITE.odRoot + '/_Backups';
@@ -302,7 +302,7 @@ export async function onRequest(context) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, cors);
   const secret = env.TRUSTEE_NOTIFY_SECRET;
-  const bySecret = !!secret && (request.headers.get('x-notify-secret') || '') === secret;
+  const bySecret = !!secret && (await secretOk(request.headers.get('x-notify-secret'), secret));
   if (!bySecret) {
     const who = await requireRole(request, env, ['admin']);
     if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);

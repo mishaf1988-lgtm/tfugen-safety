@@ -7,7 +7,7 @@
 //   GET  ?m=1      the manifest of the home-screen icon (no login: a manifest holds no data).
 //   GET  ?f=<id>&e=<exp>&s=<sig>  a file the server sent him (25/10/2026): the link comes signed in GET's rows (24
 //                  hours), so the phone opens it in its own viewer without a login header; only files in the safety folder.
-import { jsonResp, requireRole, ADMIN_EMAIL, defaultAllowedOrigins, originPasses, corsHeaders, SB_LIVE, SB_TIMEOUT_MS, tmo } from '../_shared.js';
+import { jsonResp, requireRole, ADMIN_EMAIL, defaultAllowedOrigins, originPasses, corsHeaders, SB_LIVE, SB_TIMEOUT_MS, tmo, secretOk } from '../_shared.js';
 import { assistantFire, assistantFireNow, recentLine, lastOut, hmacHex, ownerWa, LEARN_KEY, learnedLine, learnedLabel, LEARNED_MAX } from '../_wa.js';
 import { fastRoute, runFast, rateOf, rateNote, RATE_CHOICES, mediaName } from './wa-hook.js';
 import { accessToken, putFile } from '../_onedrive.js';
@@ -77,7 +77,7 @@ export async function serveFile(env, u) {
   const id = String(u.searchParams.get('f') || ''), exp = Number(u.searchParams.get('e') || 0), sig = String(u.searchParams.get('s') || '');
   const no = (st, t) => new Response(t, { status: st, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } });
   if (!/^[a-z0-9]{6,40}$/.test(id) || !exp || exp < Date.now() || !env.SUPABASE_SERVICE_ROLE_KEY) return no(403, 'expired');
-  if (sig !== await fileSig(env, id, exp)) return no(403, 'bad link');
+  if (!(await secretOk(sig, await fileSig(env, id, exp)))) return no(403, 'bad link');
   const k = env.SUPABASE_SERVICE_ROLE_KEY, url = env.SUPABASE_URL || SB_LIVE;
   const rr = await fetch(url + '/rest/v1/notifications_log?id=eq.' + id + '&event_type=in.(wa_out,owner_in)&select=file:payload->>file,name:payload->>name',
     { headers: { apikey: k, Authorization: 'Bearer ' + k }, signal: tmo(SB_TIMEOUT_MS) }).catch(() => null);

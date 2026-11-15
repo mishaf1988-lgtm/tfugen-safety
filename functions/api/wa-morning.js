@@ -18,7 +18,7 @@
 //   body {calendar: true} only the calendar requests, now; no WhatsApp (a check after the flow is built)
 //   body {watch: true}  the watchdog for a stuck run, every 5 minutes (watchVerdict)
 // The same run writes calendar requests for upcoming expiries (calendarStep, below).
-import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo, SITE } from '../_shared.js';
+import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo, SITE, secretOk } from '../_shared.js';
 import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, WEEKEND_KEY, WEEKEND_LAST_KEY, weekendList, PROMISE_KEY, promiseDue, promiseRemindText, promiseToCheck, eveningAdd, isoWeekAdd, promiseCheckDue, promiseCheckFireText, assistantFire, assistantFireNow } from '../_wa.js';
 import { odConfigured, accessToken, putFile, sendMailTo } from '../_onedrive.js';
 import { worksTick } from './works.js';
@@ -266,7 +266,7 @@ export async function onRequest(context) {
   const { request, env } = context;
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, {});
   const want = env.TRUSTEE_NOTIFY_SECRET;
-  if (!want || (request.headers.get('x-notify-secret') || '') !== want) return jsonResp({ error: 'forbidden' }, 403, {});
+  if (!want || !(await secretOk(request.headers.get('x-notify-secret'), want))) return jsonResp({ error: 'forbidden' }, 403, {});
   if (!env.SUPABASE_SERVICE_ROLE_KEY) return jsonResp({ error: 'server misconfigured' }, 500, {});
   let body = {}; try { body = await request.json(); } catch (e) { body = {}; }
   return jsonResp(await run(env, new Date(), body), 200, {});

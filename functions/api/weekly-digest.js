@@ -37,7 +37,7 @@
 // so the two UTC slots of the cron and a manual send never double the mail.
 // The result lands in server_state (key weekly_digest). No Mail.Send, no
 // OneDrive connection = the mail cannot go; the result says so.
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, FILE_TIMEOUT_MS as FILE_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, FILE_TIMEOUT_MS as FILE_MS, tmo, SITE, SB_LIVE, secretOk } from '../_shared.js';
 import { odConfigured, accessToken, tokenRow, hasMail, sendMail, stateGet, stateSet } from '../_onedrive.js';
 import { buildRegister, readAll, TASKS_Q, isFinding } from './hazard-file.js';
 import { meetingDate } from './hazard-deck.js';
@@ -961,7 +961,7 @@ export async function onRequest(context) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, cors);
   const secret = env.TRUSTEE_NOTIFY_SECRET;
-  const bySecret = !!secret && (request.headers.get('x-notify-secret') || '') === secret;
+  const bySecret = !!secret && (await secretOk(request.headers.get('x-notify-secret'), secret));
   if (!bySecret) {
     const who = await requireRole(request, env, ['admin', 'manager']);
     if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);

@@ -13,7 +13,7 @@
 // list (04/10/2026, Michael: "scan the whole folder"): {list: '<folder>'} or
 // {list: ''} for the safety folder itself = its files and sub-folders. raw may
 // also fetch .pdf / .docx / .doc / .txt / .csv, so the documents can be read.
-import { jsonResp, FILE_TIMEOUT_MS as FILE_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo } from '../_shared.js';
+import { jsonResp, FILE_TIMEOUT_MS as FILE_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, secretOk } from '../_shared.js';
 import { odConfigured, accessToken, stateGet } from '../_onedrive.js';
 import { readSheetRows, sheetNames, readZip, entryText } from '../_xlsxpatch.js';
 import { pptxOutline } from '../_pptx.js';
@@ -84,7 +84,7 @@ export async function onRequest(context) {
     // Security scan 10/10/2026: a token "for a few minutes" is refused if it claims more than an
     // hour, so a Routine (routine-db can write od_raw_exp) or a mistake cannot open the folder for good.
     const ms = x ? Date.parse(x) : NaN;
-    rawOk = !!t && t === rawTok && ms > Date.now() && ms <= Date.now() + RAW_MAX_MS;
+    rawOk = !!t && (await secretOk(rawTok, t)) && ms > Date.now() && ms <= Date.now() + RAW_MAX_MS;
   }
   if (body.mailAtt && typeof body.mailAtt === 'object') {
     if (!rawOk) return jsonResp({ error: 'forbidden' }, 403, {});
@@ -104,7 +104,7 @@ export async function onRequest(context) {
       return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 200, {});
     }
   }
-  if (!rawOk && (!want || (request.headers.get('x-notify-secret') || '') !== want)) return jsonResp({ error: 'forbidden' }, 403, {});
+  if (!rawOk && (!want || !(await secretOk(request.headers.get('x-notify-secret'), want)))) return jsonResp({ error: 'forbidden' }, 403, {});
   if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, {});
   if (typeof body.list === 'string') {
     const dir = safeDir(body.list);

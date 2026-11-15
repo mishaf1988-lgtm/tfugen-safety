@@ -38,7 +38,7 @@
 // force:true; admin/manager session). One file per request (CPU budget): the
 // xlsm, then the request calls itself for the xlsx.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_LIVE, SITE } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_LIVE, SITE, secretOk } from '../_shared.js';
 import { odConfigured, accessToken, stateGet, stateSet, tokenRow, runLeased } from '../_onedrive.js';
 import { patchSheetRows, sheetsDigest, readSheetRows, picInfo, PIC_ROW_PT } from '../_xlsxpatch.js';
 import { runWatch, WATCH_KEY } from '../_watchdog.js';
@@ -899,7 +899,7 @@ export async function onRequest(context) {
     force = body.force === true;
   } else {
     const want = env.TRUSTEE_NOTIFY_SECRET;
-    if (!want || (request.headers.get('x-notify-secret') || '') !== want) return jsonResp({ error: 'forbidden' }, 403, cors);
+    if (!want || !(await secretOk(request.headers.get('x-notify-secret'), want))) return jsonResp({ error: 'forbidden' }, 403, cors);
     force = body.force === true;
   }
   if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, cors);

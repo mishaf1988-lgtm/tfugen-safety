@@ -23,7 +23,7 @@
 // link, and ok/error. The weekly mail lists the files of the last 7 days and
 // names a failed or stale scan; once a month a Routine reads the regulatory
 // ones (project-files/routine-od-scan.md).
-import { jsonResp, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo } from '../_shared.js';
+import { jsonResp, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, secretOk } from '../_shared.js';
 import { odConfigured, accessToken, stateGet, stateSet } from '../_onedrive.js';
 import { ROOT } from './od-read.js';
 
@@ -105,7 +105,7 @@ export async function onRequest(context) {
   const { request, env } = context;
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, {});
   const want = env.TRUSTEE_NOTIFY_SECRET;
-  if (!want || (request.headers.get('x-notify-secret') || '') !== want) return jsonResp({ error: 'forbidden' }, 403, {});
+  if (!want || !(await secretOk(request.headers.get('x-notify-secret'), want))) return jsonResp({ error: 'forbidden' }, 403, {});
   if (!odConfigured(env) || !env.SUPABASE_SERVICE_ROLE_KEY) return jsonResp({ ok: false, error: 'server not configured' }, 200, {});
   const st = await stateGet(env, [STATE_KEY]).catch(() => ({}));
   let s = {}; try { s = JSON.parse((st[STATE_KEY] && st[STATE_KEY].value) || '{}') || {}; } catch (e) { s = {}; }

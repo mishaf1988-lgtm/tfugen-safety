@@ -13,7 +13,7 @@
 // /api/routine-db op wa_me. A reply to a trustee alert carries what that alert was, from
 // notifications_log (payload.wamid), so the assistant knows what Michael is answering.
 // Machine path in _middleware: Meta calls from outside Israel.
-import { jsonResp, sbFrom, SB_TIMEOUT_MS, SB_LIVE, tmo, SITE } from '../_shared.js';
+import { jsonResp, sbFrom, SB_TIMEOUT_MS, SB_LIVE, tmo, SITE, secretOk } from '../_shared.js';
 import { learnedLabel, LEARNED_MAX, fastModel, fastFire, waTyping, ownerMatch, waUid, ownerUidOf, OWNER_UID_KEY } from '../_wa.js';
 import { isVoice, voiceText, VOICE_MARK, VOICE_MODEL } from '../_voice.js';
 import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, hasStatuses, STATUS_KEY, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, assistantFireNow, pickFire, accountOf, ACCOUNT_KEY, forgetAccount, LEARN_KEY, learnedLine, recentLine, waDeliveryHandle } from '../_wa.js';
@@ -965,7 +965,7 @@ export async function onRequest(context) {
   const { request, env } = context;
   if (request.method === 'GET') {
     const u = new URL(request.url);
-    const ok = env.WA_VERIFY_TOKEN && u.searchParams.get('hub.mode') === 'subscribe' && u.searchParams.get('hub.verify_token') === env.WA_VERIFY_TOKEN;
+    const ok = env.WA_VERIFY_TOKEN && u.searchParams.get('hub.mode') === 'subscribe' && (await secretOk(u.searchParams.get('hub.verify_token'), env.WA_VERIFY_TOKEN));
     return ok ? new Response(u.searchParams.get('hub.challenge') || '', { status: 200, headers: { 'Content-Type': 'text/plain' } })
       : new Response('forbidden', { status: 403 });
   }

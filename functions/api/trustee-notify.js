@@ -30,7 +30,7 @@
 // Env: SUPABASE_SERVICE_ROLE_KEY (required), META_PHONE_NUMBER_ID +
 // META_ACCESS_TOKEN (WhatsApp), RESEND_KEY (+ optional RESEND_FROM) for email.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, sbFrom, SITE, SB_LIVE } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, sbFrom, SITE, SB_LIVE, secretOk } from '../_shared.js';
 import { odConfigured, tokenRow, hasMail, accessToken, sendMail, stateGet, stateSet, runLeased } from '../_onedrive.js';
 import { makeCloseToken, closeUrl } from '../_closelink.js';
 import { sendToOwner, ownerWindowOpen, hazardAsk, noteLastOut, HAZARD_OPTIONS } from '../_wa.js';
@@ -193,7 +193,7 @@ export async function onRequest(context) {
   // Fail closed (02/10/2026): no secret on the deployment = nobody gets in.
   // Until then a missing secret left this path open to anyone. The secret has
   // been set since 25/09 (?probe=1), so the live behaviour does not change.
-  if (!env.TRUSTEE_NOTIFY_SECRET || request.headers.get('x-notify-secret') !== env.TRUSTEE_NOTIFY_SECRET) {
+  if (!env.TRUSTEE_NOTIFY_SECRET || !(await secretOk(request.headers.get('x-notify-secret'), env.TRUSTEE_NOTIFY_SECRET))) {
     return jsonResp({ error: 'forbidden' }, 403, cors);
   }
   if (body.op === 'retry') {

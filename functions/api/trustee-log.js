@@ -20,7 +20,7 @@
 // (signature in public.server_state). A failed upload leaves the signature
 // alone, so the next call tries again, and records the error for the tile.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_TIMEOUT_MS as SB_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_TIMEOUT_MS as SB_MS, tmo, SITE, SB_LIVE, secretOk } from '../_shared.js';
 import { buildXlsx, XLSX_TYPE, imageInfo } from '../_xlsx.js';
 import { odConfigured, accessToken, putFile, itemUrl, stateGet, stateSet, tokenRow, hasMail, hasMailRead, runLeased } from '../_onedrive.js';
 import { readAll } from './hazard-file.js';
@@ -346,7 +346,7 @@ export async function onRequest(context) {
   } else {
     // Fail closed (02/10/2026), like vitre.js and mail-inbox.js: no secret = forbidden.
     const want = env.TRUSTEE_NOTIFY_SECRET;
-    if (!want || (request.headers.get('x-notify-secret') || '') !== want) return jsonResp({ error: 'forbidden' }, 403, cors);
+    if (!want || !(await secretOk(request.headers.get('x-notify-secret'), want))) return jsonResp({ error: 'forbidden' }, 403, cors);
   }
   if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, cors);
   try {

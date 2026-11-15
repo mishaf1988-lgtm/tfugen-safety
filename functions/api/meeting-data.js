@@ -2,7 +2,7 @@
 // functions/_meeting.js for the definitions. POST {ref?: 'YYYY-MM-DD'} (the
 // meeting date, default today in Israel). Admin/manager session, or the server
 // secret (x-notify-secret) so the numbers can be checked from the database.
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, secretOk } from '../_shared.js';
 import { buildRegister, readAll, TASKS_Q } from './hazard-file.js';
 import { meetingHazards, meetingAccidents, meetingTrustees } from '../_meeting.js';
 
@@ -12,7 +12,7 @@ export async function onRequest(context) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, cors);
   const secret = env.TRUSTEE_NOTIFY_SECRET;
-  const bySecret = !!secret && (request.headers.get('x-notify-secret') || '') === secret;
+  const bySecret = !!secret && (await secretOk(request.headers.get('x-notify-secret'), secret));
   if (!bySecret) {
     const who = await requireRole(request, env, ['admin', 'manager']);
     if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
