@@ -3684,13 +3684,11 @@ async function routineDbHandle(context) {
       if (!Array.isArray(ex)) return jsonResp({ ok: false, error: 'read ' + q.status }, 200, {});
       const open = taskOpenDup(ex, r);
       if (open) return jsonResp({ ok: true, added: false, exists: open.id }, 200, {});
-      let cur = null;
-      try { cur = (await stateRead([TASK_ADD_KEY]))[0]; } catch (e) { return jsonResp({ ok: false, error: 'state read failed' }, 200, {}); }
-      const mm = cur && /^(\d{4}-\d{2}-\d{2}):(\d+)$/.exec(String(cur.value || ''));
-      const n = mm && mm[1] === today ? +mm[2] : 0;
-      if (n >= TASK_ADD_MAX) return jsonResp({ ok: false, error: 'max ' + TASK_ADD_MAX + ' tasks a day' }, 200, {});
-      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify([{ key: TASK_ADD_KEY, value: today + ':' + (n + 1), updated_at: new Date().toISOString() }]), signal: tmo(SB_MS) });
+      // 15/11/2026 (ideas-lab 12): the day count through stateCas, so two tasks at once each count (before: both read n, wrote n+1)
+      let capped = false;
+      const tw = await stateCas(url, h, TASK_ADD_KEY, (cur) => { const n = hazProbeCount(cur, today); if (n >= TASK_ADD_MAX) { capped = true; return { write: false }; } return { value: today + ':' + (n + 1) }; }, () => tmo(SB_MS)).catch(() => null);
+      if (capped) return jsonResp({ ok: false, error: 'max ' + TASK_ADD_MAX + ' tasks a day' }, 200, {});
+      if (!tw || !tw.written) return jsonResp({ ok: false, error: 'state read failed' }, 200, {});
       const id = 'tsk-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       const w = await fetch(url + '/rest/v1/tasks', { method: 'POST', headers: { ...h, Prefer: 'return=representation' },
         body: JSON.stringify([Object.assign({ id, ts: new Date().toISOString() }, r)]), signal: tmo(SB_MS) });
@@ -4758,13 +4756,10 @@ async function routineDbHandle(context) {
       let probeOk = true;
       if (wantFire || wantProbe2) {
         const day = new Date().toISOString().slice(0, 10), need = (wantFire ? 1 : 0) + (wantProbe2 ? 1 : 0);
-        let cur = null, readOk = true;
-        try { cur = (await stateRead([FIRE_PROBE_KEY]))[0]; } catch (e) { readOk = false; }
-        const mm = cur && /^(\d{4}-\d{2}-\d{2}):(\d+)$/.exec(String(cur.value || ''));
-        const n = mm && mm[1] === day ? +mm[2] : 0;
-        if (!readOk || n + need > FIRE_PROBE_MAX) { probeOk = false; out.probe_capped = !readOk ? 'state read failed' : 'max ' + FIRE_PROBE_MAX + ' probes a day, used ' + n; }
-        else await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-          body: JSON.stringify([{ key: FIRE_PROBE_KEY, value: day + ':' + (n + need), updated_at: new Date().toISOString() }]), signal: tmo(SB_MS) });
+        // 15/11/2026 (ideas-lab 12): through stateCas; a count that was not saved fires no probe, as a failed read never did
+        let used = null;
+        const pw = await stateCas(url, h, FIRE_PROBE_KEY, (cur) => { used = hazProbeCount(cur, day); return used + need > FIRE_PROBE_MAX ? { write: false } : { value: day + ':' + (used + need) }; }, () => tmo(SB_MS)).catch(() => null);
+        if (!pw || !pw.written) { probeOk = false; out.probe_capped = used === null || used + need <= FIRE_PROBE_MAX ? 'state read failed' : 'max ' + FIRE_PROBE_MAX + ' probes a day, used ' + used; }
       }
       if (body.fire_probe && out.fire_set && probeOk) {
         const af = await assistantFireNow(env);

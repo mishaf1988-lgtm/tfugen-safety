@@ -920,6 +920,15 @@ const callIn = async (body) => {
     state.task_add_day = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }) + ':10';
     x = await call({ ...tb, source_id: 'q10' });
     check('task_add: the eleventh of the day: refused', !x.json.ok && /max 10/.test(x.json.error) && rows.tasks.length === 1, x.json);
+    // 15/11/2026 (ideas-lab 12): a task counted by another run between our read and our write is kept in the count
+    { const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+      state.task_add_day = today + ':3'; stateVer.task_add_day = 'v-ta0';
+      let hit = 0; const racer = (k) => { if (k !== 'task_add_day') { raceOnce = racer; return; } hit++; state[k] = today + ':4'; stateVer[k] = 'v-ta-other'; };
+      raceOnce = racer;
+      x = await call({ ...tb, source_id: 'q10' });
+      raceOnce = null;
+      check('cas: task_add counts on top of a task counted in between (5, not 4)', x.json.ok && x.json.added && hit === 1 && state.task_add_day === today + ':5', { j: x.json, st: state.task_add_day, hit });
+      delete stateVer.task_add_day; }
     delete state.task_add_day;
   }
 
