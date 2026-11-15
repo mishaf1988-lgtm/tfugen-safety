@@ -413,6 +413,7 @@ const callIn = async (body) => {
   check('the write list is exactly the eleven keys (agents_registry 31/10/2026; mail_filing, validity_run 11/10/2026; iso_tasks 24/10/2026; mail_triage 25/10/2026; quality_run 27/10/2026; live_note 31/10/2026)', STATE_WRITE.join() === 'quote_track,nevo_versions,od_raw_token,od_raw_exp,mail_filing,validity_run,iso_tasks,mail_triage,quality_run,live_note,agents_registry');
   check('agents_registry: the server stamps its time and it is readable by state_get', STAMP_AT.includes('agents_registry') && STATE_READ.includes('agents_registry'));
   check('live_note: the server stamps its time, it is readable, and its size is capped at 4000', STAMP_AT.includes('live_note') && STATE_READ.includes('live_note') && LIVE_NOTE_MAX === 4000);
+  check('inv_month and usage_month: the monthly summaries are readable by state_get (retro 15/11/2026)', STATE_READ.includes('inv_month') && STATE_READ.includes('usage_month'));
   const t0 = Date.now();
   r = await call({ op: 'state_set', key: 'mail_filing', value: [{ at: '2020-01-01T00:00:00Z', got: 1 }, { at: '2026-10-11T15:05:00Z', got: 0 }] });
   const mf = JSON.parse(state.mail_filing);
