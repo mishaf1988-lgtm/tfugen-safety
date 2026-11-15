@@ -2404,7 +2404,18 @@ const callIn = async (body) => {
     const r = forwardRequest({ message_id: ID, subject: 'RE: x', to: 'sharon.a@tapugan.co.il', comment: 'שרון, מצורף.\nמיכאל <x>' });
     const j = r.file && JSON.parse(r.file);
     check('forwardRequest: the file holds the mail id, the recipients for createForward and the comment as rtl html (escaped)',
-      j && j.id === ID && j.forward_body.toRecipients[0].emailAddress.address === 'sharon.a@tapugan.co.il' && /^<div dir="rtl">/.test(j.forward_body.comment) && /<br>/.test(j.forward_body.comment) && /&lt;x&gt;/.test(j.forward_body.comment), j);
+      j && j.id === ID && j.forward_body.toRecipients[0].emailAddress.address === 'sharon.a@tapugan.co.il' && /^<div dir="rtl"/.test(j.forward_body.comment) && /<br>/.test(j.forward_body.comment) && /&lt;x&gt;/.test(j.forward_body.comment), j);
+    { // 15/11/2026 (Michael: "\u05d0\u05d9\u05df \u05d7\u05ea\u05d9\u05de\u05d4 \u05e0\u05d5\u05e8\u05de\u05dc\u05d9\u05ea \u05d1\u05de\u05d4 \u05e9\u05e9\u05dc\u05d7\u05ea\u05d9 \u05db\u05d1\u05e8"): the forward carries his signature, in Arial 14px, the typed name dropped
+      const { SITE: S2 } = await import('./_build/_site.mjs').catch(() => ({ SITE: null }));
+      const first = S2 ? S2.owner.split(' ')[0] : '\u05de\u05d9\u05db\u05d0\u05dc';
+      const c = (txt) => JSON.parse(forwardRequest({ message_id: ID, subject: 'RE: x', to: 'a@b.co', comment: txt }).file).forward_body.comment;
+      const a = c('\u05e9\u05dc\u05d5\u05de\u05d9, \u05dc\u05e2\u05d9\u05d5\u05e0\u05da. ' + first), b2 = c('\u05e9\u05dc\u05d5\u05de\u05d9, \u05dc\u05e2\u05d9\u05d5\u05e0\u05da.\n\u05ea\u05d5\u05d3\u05d4,\n' + first), e = c('');
+      const sig = S2 ? S2.signature : '';
+      check('pairs: mail_forward ends with the signature in Arial 14px; "<text> ' + first + '", "\u05ea\u05d5\u05d3\u05d4,/' + first + '" and an empty comment all get it, the typed name gone; "' + first + ' <x>" kept as written',
+        [a, b2, e].every((h) => h.includes('font-family:Arial') && h.includes('font-size:14px') && (!sig || h.endsWith(sig + '</div>')))
+        && a.startsWith('<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">\u05e9\u05dc\u05d5\u05de\u05d9, \u05dc\u05e2\u05d9\u05d5\u05e0\u05da.' + (sig ? sig.slice(0, 5) : ''))
+        && !/\u05ea\u05d5\u05d3\u05d4/.test(b2.split(sig || '\u0000')[0]) && /&lt;x&gt;/.test(j.forward_body.comment), [a.slice(0, 160), b2.slice(0, 160)]);
+    }
     check('forwardRequest: a bad id, an id with "/", no subject, no recipient, more than 5, or a 2001-character comment = refused',
       !!forwardRequest({ message_id: 'short', subject: 'x y', to: 'a@b.co' }).error && !!forwardRequest({ message_id: ID, subject: 'x y', to: '' }).error && !!forwardRequest({ message_id: ID + '/x', subject: 'x y', to: 'a@b.co' }).error && !!forwardRequest({ message_id: ID, to: 'a@b.co' }).error
       && !!forwardRequest({ message_id: ID, subject: 'x y', to: 'a@b.co;c@d.co;e@f.co;g@h.co;i@j.co;k@l.co' }).error && !!forwardRequest({ message_id: ID, subject: 'x y', to: 'a@b.co', comment: 'x'.repeat(2001) }).error);

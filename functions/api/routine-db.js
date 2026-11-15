@@ -141,7 +141,7 @@
 //              private michael-skills repo, read with GH_SKILLS_TOKEN. exam.md never (it is the exam). skillPath.
 //   promise / promise_done  (21/10/2026) {agent, text, who?, ref?} "I will get back to you" kept in server_state.promises;
 //              {id | ref, note?} closes it and tells Michael on WhatsApp now. dev_request writes one, dev_done closes it.
-//              check_in_min (10-2880) + check?: the server wakes the assistant then to check (wa-morning promiseCheck);
+//              check_in_min (30-2880, PROMISE_CHECK_MIN) + check?: the server wakes the assistant then to check (wa-morning promiseCheck);
 //              promise with the same ref (or text) and a new check_in_min sets the next check.
 //   learn / learn_done  (21/10/2026) {agent, kind: correction|preference|fact|source, text, source?, replaces?} a line in the
 //              assistant's notebook (server_state.assistant_learned); {id, where} marks it folded into the rules
@@ -1143,27 +1143,7 @@ export function draftRequest(b) {
   // through Graph gets no Outlook signature, so the server adds his (SITE.signature, the one under the
   // hazard reports). A typed sign-off at the end (his name and what follows, and a "regards" line
   // before it, which the signature opens with) is dropped so it does not appear twice.
-  const lines = text.split('\n');
-  let cut = -1;
-  // 21/10/2026 (Michael: "Michael twice"): the assistant signed "\u05ea\u05d5\u05d3\u05d4, <first name>." at the end of the last
-  // sentence, and the check knew only the full name opening a line. The first name alone counts too, and an
-  // inline sign-off at the end of the last line is cut from that line.
-  const first = SITE.owner.split(' ')[0];
-  const nameLine = (x) => { x = x.trim().replace(/[.!]$/, ''); return x.indexOf(SITE.owner) === 0 || x === first; };
-  for (let i = Math.max(0, lines.length - 4); i < lines.length; i++) if (nameLine(lines[i])) { cut = i; break; }
-  if (cut < 0 && lines.length) {
-    const tail = new RegExp('\\s*(?:(?:\u05ea\u05d5\u05d3\u05d4|\u05d1\u05d1\u05e8\u05db\u05d4)[,.!]?\\s*)?' + first + '(?: ' + SITE.owner.split(' ').slice(1).join(' ') + ')?[.!]?$');
-    const li = lines.length - 1, before = lines[li];
-    lines[li] = before.replace(tail, '');
-    if (lines[li] !== before && !lines[li].trim()) lines.pop();
-  }
-  if (cut >= 0) { if (cut > 0 && /^\u05d1\u05d1\u05e8\u05db\u05d4,?$/.test(lines[cut - 1].trim())) cut--; lines.length = cut; }
-  // 20/10/2026 (Michael: "approve removing the thanks"): a closing "thanks," or "regards," as the last line
-  // goes too, since the signature opens with "regards,".
-  while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
-  while (lines.length && /^(\u05ea\u05d5\u05d3\u05d4|\u05d1\u05d1\u05e8\u05db\u05d4)[,.!]?$/.test(lines[lines.length - 1].trim())) lines.pop();
-  while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
-  const kept = lines.join('\n').replace(/\s+$/, '');
+  const kept = dropSignoff(text);
   const html = kept.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').split('\n').join('<br>');
   const at = draftAttach(b.attach);
   if (at.error) return { error: at.error };
@@ -1213,6 +1193,31 @@ export const MAIL_REQ_ID = /^[A-Za-z0-9_=+\/-]{40,400}$/;
 // mail with every attachment as it came (zip too), as a draft in Michael's Drafts. Flow 11 "forward drafts" reads the file
 // and calls Graph createForward, which makes a draft and never sends. Pure: the request file, or an error.
 export const OD_FORWARD = OD_AUTO + '/' + OD_AUTO_DIRS[7];
+// The typed sign-off at the end (his name, "thanks"/"regards" before it) goes, since SITE.signature follows (20-21/10/2026,
+// mail_draft; 15/11/2026 mail_forward too, the assistant chat: "no proper signature in what I already sent"). Pure.
+export function dropSignoff(text) {
+  const lines = text.split('\n');
+  let cut = -1;
+  // 21/10/2026 (Michael: "Michael twice"): the assistant signed "\u05ea\u05d5\u05d3\u05d4, <first name>." at the end of the last
+  // sentence, and the check knew only the full name opening a line. The first name alone counts too, and an
+  // inline sign-off at the end of the last line is cut from that line.
+  const first = SITE.owner.split(' ')[0];
+  const nameLine = (x) => { x = x.trim().replace(/[.!]$/, ''); return x.indexOf(SITE.owner) === 0 || x === first; };
+  for (let i = Math.max(0, lines.length - 4); i < lines.length; i++) if (nameLine(lines[i])) { cut = i; break; }
+  if (cut < 0 && lines.length) {
+    const tail = new RegExp('\\s*(?:(?:\u05ea\u05d5\u05d3\u05d4|\u05d1\u05d1\u05e8\u05db\u05d4)[,.!]?\\s*)?' + first + '(?: ' + SITE.owner.split(' ').slice(1).join(' ') + ')?[.!]?$');
+    const li = lines.length - 1, before = lines[li];
+    lines[li] = before.replace(tail, '');
+    if (lines[li] !== before && !lines[li].trim()) lines.pop();
+  }
+  if (cut >= 0) { if (cut > 0 && /^\u05d1\u05d1\u05e8\u05db\u05d4,?$/.test(lines[cut - 1].trim())) cut--; lines.length = cut; }
+  // 20/10/2026 (Michael: "approve removing the thanks"): a closing "thanks," or "regards," as the last line
+  // goes too, since the signature opens with "regards,".
+  while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+  while (lines.length && /^(\u05ea\u05d5\u05d3\u05d4|\u05d1\u05d1\u05e8\u05db\u05d4)[,.!]?$/.test(lines[lines.length - 1].trim())) lines.pop();
+  while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+  return lines.join('\n').replace(/\s+$/, '');
+}
 export function forwardRequest(b) {
   const id = String(b.message_id || '');
   // no "/" (security review 02/11/2026): the flow puts the id in the Graph URL as it is
@@ -1222,7 +1227,10 @@ export function forwardRequest(b) {
   if (!list.length || list.length > 5 || !draftListOk(list)) return { error: 'to: 1-5 addresses, "a@x; b@y"' };
   const comment = String(b.comment == null ? '' : b.comment).replace(/\r\n/g, '\n').trim();
   if (comment.length > 2000) return { error: 'comment: up to 2000 characters' };
-  const html = '<div dir="rtl">' + comment.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>') + '</div>';
+  // 15/11/2026 (Michael: "\u05d0\u05d9\u05df \u05d7\u05ea\u05d9\u05de\u05d4 \u05e0\u05d5\u05e8\u05de\u05dc\u05d9\u05ea \u05d1\u05de\u05d4 \u05e9\u05e9\u05dc\u05d7\u05ea\u05d9 \u05db\u05d1\u05e8"): createForward adds no Outlook signature either, so the
+  // comment gets his signature and the Arial 14px of mail_draft; a typed "<name>" at the end goes
+  const kept = dropSignoff(comment);
+  const html = '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">' + kept.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>') + SITE.signature + '</div>';
   // subject in the file (02/11/2026): the server has no Mail.Read (DECISIONS 27/09/2026), so flow 11 compares it with the
   // mail it reads and stops when they differ (C73)
   const file = JSON.stringify({ id, subject: String(b.subject).trim(), to: list.join(';'), forward_body: { toRecipients: list.map((a) => ({ emailAddress: { address: a } })), comment: html } });
