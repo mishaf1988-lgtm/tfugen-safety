@@ -172,8 +172,8 @@ export function ctrIssue(name, ctrRows, day) {
   if (c.tr && c.tr !== '\u05d4\u05d5\u05db\u05e9\u05e8') w.push('\u05d4\u05d3\u05e8\u05db\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: ' + c.tr);
   // 15/11/2026 (Michael in the interview: "do it: contractor insurance", "a red flag, you decide"): the insurance end date
   const ins = String(c.ins || '').slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(ins)) w.push('\u05d0\u05d9\u05df \u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05d5\u05e7\u05e3 \u05dc\u05d1\u05d9\u05d8\u05d5\u05d7');
-  else if (ins < day) w.push('\u05d4\u05d1\u05d9\u05d8\u05d5\u05d7 \u05e4\u05d2 \u05d1-' + dmy(ins));
+  // Michael 15/11/2026: insurance only where the contractor needs it, so no date is not a flag; an expired one is
+  if (/^\d{4}-\d{2}-\d{2}$/.test(ins) && ins < day) w.push('\u05d4\u05d1\u05d9\u05d8\u05d5\u05d7 \u05e4\u05d2 \u05d1-' + dmy(ins));
   return w.length ? '\u05d4\u05e7\u05d1\u05dc\u05df ' + c.n + ': ' + w.join(', ') : '';
 }
 

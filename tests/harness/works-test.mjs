@@ -167,8 +167,8 @@ check('a valid contractor: no flag', ctrIssue('ט.ס פרויקטים', CTR, FRI
 check('an expired agreement: flagged with the date', /פג ב-01\/10\/2026/.test(ctrIssue('נגב אקולוגיה', CTR, FRI)));
 check('not in the register: flagged', /לא במרשם הקבלנים/.test(ctrIssue('קבלן חדש', CTR, FRI)));
 // 15/11/2026 (Michael in the interview: "contractor insurance", "a red flag, you decide"; "a clash in the same area")
-check('insurance: no date = flagged, an expired one = flagged with the date, a valid one = nothing',
-  /\u05d0\u05d9\u05df \u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05d5\u05e7\u05e3 \u05dc\u05d1\u05d9\u05d8\u05d5\u05d7/.test(ctrIssue('נגב אקולוגיה', CTR, FRI))
+check('insurance: no date = no insurance flag (Michael: only where needed), an expired one = flagged with the date, a valid one = nothing',
+  !/\u05d1\u05d9\u05d8\u05d5\u05d7/.test(ctrIssue('נגב אקולוגיה', CTR, FRI))
   && /\u05d4\u05d1\u05d9\u05d8\u05d5\u05d7 \u05e4\u05d2 \u05d1-01\/09\/2026/.test(ctrIssue('ט.ס פרויקטים', [{ ...CTR[0], ins: '2026-09-01' }], FRI))
   && ctrIssue('ט.ס פרויקטים', CTR, FRI) === '');
 {
