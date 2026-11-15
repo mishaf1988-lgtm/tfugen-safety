@@ -1246,8 +1246,9 @@ export function draftRequest(b) {
 export { hasInternalId };
 // 26/10/2026: a quote number "PQ26001545" (Negev Ecology) was read as a passport and the assistant lost a round
 // rewriting its message. PQ is a quote prefix, never a passport.
-// 15/11/2026: not after a dash, so the equipment code FL-FN637238 (a real forklift) is not taken for a passport number
-export function hasPassport(t) { return /(^|[^A-Za-z0-9-])(?!PQ)[A-Z]{1,2}[0-9]{6,8}(?![A-Za-z0-9])/.test(String(t || '')); }
+// 15/11/2026: not after a Latin letter or digit and a dash, so the equipment code FL-FN637238 (a real forklift) is not taken for a passport number;
+// a dash after a Hebrew word ("darkon-AB1234567") still counts (security review 15/11/2026)
+export function hasPassport(t) { return /(?<![A-Za-z0-9])(?<![A-Za-z0-9]-)(?!PQ)[A-Z]{1,2}[0-9]{6,8}(?![A-Za-z0-9])/.test(String(t || '')); }
 // 02/11/2026 (Michael in the questionnaire: "do it: block ID numbers in messages", from Microsoft Presidio's Israeli
 // ID recognizer): an Israeli ID (9 digits, the last a check digit) in a message to Michael's phone. One valid number alone
 // passes unless the text names an ID (teudat zehut, its short form, or ID), so an order or landline number that happens to check out is not
