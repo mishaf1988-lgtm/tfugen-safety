@@ -12605,7 +12605,7 @@ function _tbtStaleHtml(rows,today){var st=_tbtStale(rows,today);if(!st.length)re
 function rTbt(){
   var tb=g('tb-tbt');if(!tb)return;
   var stEl=g('tbt-stale');if(stEl)stEl.innerHTML=_tbtStaleHtml(DB.toolbox_talks);
-  var rows=(DB.toolbox_talks||[]).slice().sort(function(a,b){return _tbtKey(b).localeCompare(_tbtKey(a));});
+  var rows=(DB.toolbox_talks||[]).filter(function(t){return !_tbtCtr(t);}).sort(function(a,b){return _tbtKey(b).localeCompare(_tbtKey(a));});
   if(!rows.length){tb.innerHTML='<tr><td colspan="5" class="et" data-label="">\u05d0\u05d9\u05df \u05e2\u05d3\u05d9\u05d9\u05df \u05d4\u05d3\u05e8\u05db\u05d4<br><button class="et-cta" onclick="openModal(\'m-tbt\')">+ \u05d4\u05d3\u05e8\u05db\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
   tb.innerHTML=rows.map(function(r){
     var n=_tbtReads(r.id),pub=r.s===_TBT_PUB;
@@ -12625,7 +12625,7 @@ function rTbt(){
 var _TBT_TRAINER_MSG='\u05dc\u05e4\u05e0\u05d9 \u05e4\u05e8\u05e1\u05d5\u05dd: \u05e9\u05dd \u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05d5\u05d4\u05db\u05e9\u05d9\u05e8\u05d5\u05ea \u05e9\u05dc\u05d5 (\u05e0\u05d3\u05e8\u05e9 \u05d1\u05e4\u05e0\u05e7\u05e1 \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05de-16/10/2026)';
 function _tbtTrainerFill(){
   var a=g('tbt-trainer'),q=g('tbt-trainer-q');if(!a||!q||a.value||q.value)return;
-  var last=(DB.toolbox_talks||[]).filter(function(x){return x&&x.trainer;}).sort(function(x,y){return String(y.ts||'').localeCompare(String(x.ts||''));})[0];
+  var last=(DB.toolbox_talks||[]).filter(function(x){return x&&x.trainer&&!_tbtCtr(x);}).sort(function(x,y){return String(y.ts||'').localeCompare(String(x.ts||''));})[0];
   if(last){a.value=last.trainer||'';q.value=last.trainer_qual||'';}
 }
 // send (05/10/2026): "save and send" = save as published, then the link dialog (tbtLink),
@@ -12720,6 +12720,8 @@ var _TBT_IND_L='\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d7\u
 // annual and quality. Annual and quality: the worker types his details, the QR stays until "close".
 var _TBT_KINDS={'':'\u05e7\u05e8\u05d9\u05d0\u05d4 \u05d5\u05d7\u05ea\u05d9\u05de\u05d4',induction:'\u05e7\u05dc\u05d9\u05d8\u05d4',annual:'\u05e9\u05e0\u05ea\u05d9\u05ea',quality:'\u05d0\u05d9\u05db\u05d5\u05ea'};
 function _tbtTyped(k){return k==='annual'||k==='quality';}
+// 15/11/2026 (contractor approval link, functions/_ctr.js): a contractor's instructions talk is not a factory training; no list of trainings shows it.
+function _tbtCtr(t){return !!t&&t.kind==='contractor';}
 // The topics the trainer ticks and the worker signs on, one list per kind (15/10/2026, from the folders: the annual
 // safety trainings 2020-2026 and the 08.01 plan of 2026; Michael left the choice to the recommendation). "Other" stays.
 var _TBT_SUBJ={annual:['\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05db\u05dc\u05dc\u05d9\u05ea','\u05e6\u05d9\u05d5\u05d3 \u05de\u05d2\u05df \u05d0\u05d9\u05e9\u05d9','\u05d7\u05d9\u05e8\u05d5\u05dd \u05d5\u05e4\u05d9\u05e0\u05d5\u05d9','\u05db\u05d9\u05d1\u05d5\u05d9 \u05d0\u05e9','\u05d7\u05e9\u05de\u05dc','\u05de\u05d9\u05d2\u05d5\u05df \u05de\u05db\u05d5\u05e0\u05d5\u05ea','\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4','\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd','\u05e8\u05e2\u05e9 \u05de\u05d6\u05d9\u05e7','\u05d0\u05e8\u05d2\u05d5\u05e0\u05d5\u05de\u05d9\u05d4','\u05e1\u05d3\u05e8 \u05d5\u05e0\u05d9\u05e7\u05d9\u05d5\u05df','\u05d3\u05d9\u05d5\u05d5\u05d7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd','\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4','\u05e2\u05d6\u05e8\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4','\u05de\u05dc\u05d2\u05d6\u05d5\u05ea','\u05d0\u05de\u05d5\u05e0\u05d9\u05d4'],quality:['GMP \u05d5\u05d4\u05d9\u05d2\u05d9\u05d9\u05e0\u05d4 \u05d0\u05d9\u05e9\u05d9\u05ea','\u05d0\u05dc\u05e8\u05d2\u05e0\u05d9\u05dd','CCP','HACCP','\u05d4\u05d3\u05e8\u05db\u05ea \u05d1\u05d9\u05d8\u05d7\u05d5\u05df','\u05d4\u05d7\u05d6\u05e8\u05d4 \u05d9\u05d6\u05d5\u05de\u05d4','\u05d4\u05d2\u05e0\u05ea \u05de\u05d6\u05d5\u05df','\u05e9\u05d1\u05e8 \u05d6\u05db\u05d5\u05db\u05d9\u05ea \u05d5\u05e4\u05dc\u05e1\u05d8\u05d9\u05e7']};
@@ -13249,7 +13251,7 @@ function _empTalksSection(e){
   (DB.toolbox_reads||[]).forEach(function(x){if(!x||!x.talk_id)return;var ex=String(x.emp_id==null?'':x.emp_id);if(ex===id||(ex.indexOf('x:')===0&&eid&&_tbtIdKey(x.id_no)===eid)){if(!mine[x.talk_id]||String(x.read_at||'')<String(mine[x.talk_id].read_at||''))mine[x.talk_id]=x;}});
   var from=/^\d{4}-\d{2}-\d{2}/.test(String(e.s||''))?String(e.s).substring(0,10):'';
   var to=_empLeft(e)?String(e.left_d).substring(0,10):'';
-  var rows=(DB.toolbox_talks||[]).filter(function(t){return t&&(mine[t.id]||(t.s===_TBT_PUB&&(!from||_tbtKey(t)>=from)&&(!to||_tbtKey(t)<=to)));}).sort(function(a,b){return _tbtKey(b).localeCompare(_tbtKey(a));});
+  var rows=(DB.toolbox_talks||[]).filter(function(t){return t&&!_tbtCtr(t)&&(mine[t.id]||(t.s===_TBT_PUB&&(!from||_tbtKey(t)>=from)&&(!to||_tbtKey(t)<=to)));}).sort(function(a,b){return _tbtKey(b).localeCompare(_tbtKey(a));});
   var head='<div style="font-weight:700;font-size:13px;margin-bottom:8px">\ud83d\udcdd \u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e9\u05d1\u05d5\u05e2\u05d9\u05d5\u05ea';
   if(!rows.length)return '<div id="emp-talks" style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px">'+head+'</div><div style="font-size:12px;color:var(--t3)">\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e4\u05d5\u05e8\u05e1\u05de\u05d4 \u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea</div></div>';
   var signed=rows.filter(function(t){return mine[t.id];}).length;

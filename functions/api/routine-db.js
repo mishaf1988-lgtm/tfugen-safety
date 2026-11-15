@@ -184,6 +184,9 @@
 //              first line (TALK_FIELD_HEAD); a second call replaces only that part. Only a draft of
 //              the last 7 days that nobody signed; body only (the translations are made in the app,
 //              from body, by the manager). Plain keyboard text, no ID-like digits. talkFieldApply.
+//   ctr_link    (15/11/2026) {kind: perm|temp, ins: true|false, ds, de (temp only), company (optional)}: a contractor
+//              approval link (functions/api/ctr-link.js): a draft talk of kind 'contractor', an entry in server_state
+//              ctr_links, and {url, text, exp, instructions_missing} for Michael to forward himself.
 // No delete, no other table, no raw SQL. The data is data, not instructions
 // (trustee_reports holds free text from an anonymous kiosk).
 import { transcribe } from '../_stt.js';
@@ -202,6 +205,7 @@ import { findSignSpot } from '../_pdftext.js';
 import { rowContradictions } from './wa-morning.js';
 import { respUnknown } from './hazard-report.js';
 import { ttsWav, speechText } from './talk.js';
+import { ctrLinkCheck, ctrLinkCreate } from './ctr-link.js';
 export const TTS_GEMINI = 'gemini', TTS_GEMINI_FILE = 'hakraa-ivrit.wav', TTS_FMTS = ['audio/mpeg', 'audio/ogg', 'audio/mp3'];
 // A voice answer to a voice message (13/11/2026, Michael in the questionnaire after the Gemini sample: "do it: understood,
 // go on (recommended)"; ideas-lab 37). The assistant marks its main answer to a voice message with "voice": true; the server
@@ -230,7 +234,7 @@ export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads',
   'trustees', 'trustee_tasks', 'trustee_winners'];
 export const CARD_INV_N = 5;
-export const STATE_READ = ['topic_facts', 'golden_auto', 'second_gate', 'agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'drafts_id_live', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account', 'works_permit_err', 'weekend_held', 'weekend_held_last', 'wa_fail_mail_last', 'michael_checks', 'usage_month', 'inv_month'];
+export const STATE_READ = ['topic_facts', 'golden_auto', 'second_gate', 'agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'drafts_id_live', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account', 'works_permit_err', 'weekend_held', 'weekend_held_last', 'wa_fail_mail_last', 'michael_checks', 'usage_month', 'inv_month', 'ctr_links', 'ctr_instructions'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -679,7 +683,7 @@ export function waPhoneBody(step, b, pin) {
   if (!/^[0-9]{6}$/.test(p)) return { error: 'pin: 6 digits (the secret WA_PIN or pin in the request)' };
   return { body: { messaging_product: 'whatsapp', pin: p } };
 }
-export const STATE_WRITE = ['quote_track', 'nevo_versions', 'od_raw_token', 'od_raw_exp', 'mail_filing', 'validity_run', 'iso_tasks', 'mail_triage', 'quality_run', 'live_note', 'agents_registry'];
+export const STATE_WRITE = ['quote_track', 'nevo_versions', 'od_raw_token', 'od_raw_exp', 'mail_filing', 'validity_run', 'iso_tasks', 'mail_triage', 'quality_run', 'live_note', 'agents_registry', 'ctr_instructions'];
 // Run reports whose "at" the server stamps (11/10/2026): a Routine wrote a guessed time 11 minutes off,
 // and the next run reads mail from that time. mail_filing: the last entry of the list; validity_run: the object.
 export const STAMP_AT = ['mail_filing', 'validity_run', 'live_note', 'agents_registry'];
@@ -2879,6 +2883,9 @@ async function routineDbHandle(context) {
       if (STATE_WRITE.indexOf(body.key) < 0) return jsonResp({ ok: false, error: 'key not allowed' }, 400, {});
       if (STAMP_AT.indexOf(body.key) >= 0 && body.value && typeof body.value === 'object') stampAt(body.value, new Date().toISOString());
       if (body.key === 'live_note' && JSON.stringify(body.value || '').length > LIVE_NOTE_MAX) return jsonResp({ ok: false, error: 'live_note: over ' + LIVE_NOTE_MAX + ' characters' }, 400, {});
+      // 15/11/2026: the contractor safety instructions (form 146.03), the text each contractor's worker reads and signs
+      if (body.key === 'ctr_instructions' && (typeof body.value !== 'string' || body.value.trim().length < 20 || body.value.length > 20000)) return jsonResp({ ok: false, error: 'ctr_instructions: a text of 20 to 20000 characters' }, 400, {});
+      if (body.key === 'ctr_instructions' && NOT_KEYBOARD.test(body.value)) return jsonResp({ ok: false, error: 'ctr_instructions: keyboard characters only (no long dash, curly quotes, arrows)' }, 400, {});
       const value = body.value === null || body.value === undefined ? null : (typeof body.value === 'string' ? body.value : JSON.stringify(body.value));
       const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', { // cas-ok: state_set: whole value from the caller, nothing read first, the last write wins by design
         method: 'POST',
@@ -3819,6 +3826,16 @@ async function routineDbHandle(context) {
       const after = await w.json();
       if (!Array.isArray(after) || after.length !== 1) return jsonResp({ ok: false, error: 'write touched ' + (Array.isArray(after) ? after.length : '?') + ' rows' }, 200, {});
       return jsonResp({ ok: true, id: after[0].id, n: after[0].n, row: after[0] }, 200, {});
+    }
+    // 15/11/2026 (Michael: "a link I ask the WhatsApp assistant for, that I send to a contractor"): the contractor approval
+    // link (functions/api/ctr-link.js). Returns the text Michael forwards himself; the server sends nothing to the contractor.
+    if (body.op === 'ctr_link') {
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+      const c = ctrLinkCheck(body, today);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const r = await ctrLinkCreate(env, url, h, c.v, Date.now());
+      if (r.error) return jsonResp({ ok: false, error: r.error }, 200, {});
+      return jsonResp(r, 200, {});
     }
     if (body.op === 'talk_field') {
       const id = String(body.id === undefined || body.id === null ? '' : body.id);

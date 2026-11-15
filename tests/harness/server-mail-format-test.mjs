@@ -19,6 +19,7 @@ import { buildReport, buildStatus, SIGNATURE } from './_build/hazard-report.mjs'
 import { missMailHtml } from './_build/talk.mjs';
 import { failMailHtml } from './_build/_wa.mjs';
 import { approvalHtml, decisionHtml, permitHtml, mailHtml as worksMailHtml, askHtml } from './_build/works.mjs';
+import { mailHtml as ctrMailHtml } from './_build/ctr-link.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FN = path.join(HERE, '..', '..', 'functions');
@@ -45,7 +46,7 @@ console.log('\n1. every mail call site is known');
 // file -> number of call sites of sendMailTo( / sendMail( (definitions excluded). A new site anywhere = a failure.
 const KNOWN_SITES = {
   'api/hazard-report.js': 2, 'api/weekly-digest.js': 1, 'api/works.js': 1, 'api/mail-inbox.js': 1, 'api/codes.js': 1,
-  'api/trustee-gate.js': 1, 'api/talk.js': 4, 'api/trustee-notify.js': 1, 'api/close-hazard.js': 1, '_watchdog.js': 1,
+  'api/trustee-gate.js': 1, 'api/talk.js': 5, 'api/ctr-link.js': 1, 'api/trustee-notify.js': 1, 'api/close-hazard.js': 1, '_watchdog.js': 1,
   '_wa.js': 1, // 07/11/2026: a WhatsApp message to Michael that Meta reported failed, to his own mailbox (failMailHtml, rendered below)
 };
 const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(dir, e.name)) : e.name.endsWith('.js') ? [path.join(dir, e.name)] : []));
@@ -88,6 +89,8 @@ const RENDER = [
   ['works.permitHtml', 'contractor/dept', permitHtml(work, FRI, false, 'a.pdf', 'https://x/y', true), true],
   ['works.mailHtml', 'contractor list', worksMailHtml(FRI, 'https://x/y'), true],
   ['_wa.failMailHtml', 'Michael only', failMailHtml([{ at: IL, code: 131047, text: 'x' }]), false],
+  // 15/11/2026: the contractor approval form, to Michael's own mailbox
+  ['ctr-link.mailHtml', 'Michael only', ctrMailHtml({ kind: 'temp', ins: false, ds: '2026-11-20', de: '2026-11-22' }, { company: 'co', cnum: '123456789', contact: 'c', mobile: '0501234567', email: 'a@b.co', place: 'p', works: ['hgt'], workers: [], optMissing: ['ins'], signer: 's' }, [{ doc: 'plat', name: 'a.pdf', url: 'https://x/y' }], { name: 's.pdf', url: 'https://x/s' }, ['s.pdf'], 'https://x/w', true), false],
 ];
 for (const [name, who, html, sig] of RENDER) {
   check(name + ' (' + who + '): produced html', typeof html === 'string' && html.length > 50);
@@ -105,6 +108,7 @@ const INLINE = [
   ['api/talk.js', "const html = (test ? '<div dir=\"rtl\"", 'await sendMailTo(od.token, test ? [od.email]', false, 'test banner, body = missMailHtml (rendered above)'],
   ['api/talk.js', "const mail = '<div dir=\"rtl\"", "await sendMailTo(od.token, to, [], '\\u05d8\\u05d5\\u05e4\\u05e1 \\u05e7\\u05dc\\u05d9\\u05d8\\u05ea", true, 'induction form: Michael + HR'],
   ['api/talk.js', "const mail = '<div dir=\"rtl\"", "await sendMailTo(od.token, to, [], '\\u05d8\\u05d5\\u05e4\\u05e1 08.01", true, 'form 08.01: Michael + quality cc'],
+  ['api/talk.js', "const html = '<div dir=\"rtl\"", "await d.sendMailTo(od.token, [od.email], [], '\\u05e7\\u05d1\\u05dc\\u05df '", false, 'a contractor worker signed: Michael only (15/11/2026)'],
   ['api/trustee-notify.js', "const html = '<div dir=\"rtl\"", 'await within(sendMail(token, to, subject, html)', false, 'trustee alert to Michael'],
   ['api/close-hazard.js', "const html = '<div dir=\"rtl\"", 'await sendMail(token, to,', false, 'closed notice to Michael'],
   ['api/mail-inbox.js', "const html = '<div dir=\"rtl\"", 'await sendMail(token, c.from,', true, 'closed notice to the person who replied'],
