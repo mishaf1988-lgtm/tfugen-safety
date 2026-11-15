@@ -1120,6 +1120,16 @@ const callIn = async (body) => {
     check('into not filed: the move is recorded in server_state.skip_moved by item id', x.json.ok && x.json.recorded === true && !isNaN(Date.parse(sm.f9)) && Date.now() - Date.parse(sm.f9) < 60e3, [x.json, state.skip_moved]);
     const before = state.skip_moved; reset(); x = await call(base);
     check('to any other folder: nothing recorded', x.json.ok && x.json.recorded === null && state.skip_moved === before, x.json);
+    // 15/11/2026 (ideas-lab 12): a move recorded by another run between our read and our write is kept
+    { const keep = state.skip_moved; reset(); drive[IN + 'w.mp4'] = { id: 'f10', size: 5, file: {} }; drive[OD_ROOT + OD_INBOX + '/' + OD_SKIP] = { id: 'dskip', folder: {} };
+      state.skip_moved = '{}'; stateVer.skip_moved = 'v-sm0';
+      let hit = 0; const racer = (k) => { if (k !== 'skip_moved') { raceOnce = racer; return; } hit++; state[k] = JSON.stringify({ other: new Date().toISOString() }); stateVer[k] = 'v-sm-other'; };
+      raceOnce = racer;
+      x = await call({ ...base, from: 'w.mp4', to_dir: OD_INBOX + '/' + OD_SKIP, name: 'w.mp4' });
+      raceOnce = null;
+      let s2 = {}; try { s2 = JSON.parse(state.skip_moved || '{}'); } catch (e) {}
+      check('cas: skip_moved keeps a move recorded in between (both ids)', x.json.ok && x.json.recorded === true && hit === 1 && !!s2.other && !!s2.f10, { j: x.json, st: state.skip_moved, hit });
+      state.skip_moved = keep; delete stateVer.skip_moved; }
     const now = Date.parse('2026-10-12T10:00:00Z'), D = 864e5;
     const old = JSON.stringify({ a: new Date(now - (SKIP_MOVED_DAYS + 1) * D).toISOString(), b: new Date(now - D).toISOString() });
     const kept = JSON.parse(skipMovedAdd(old, 'c', new Date(now).toISOString(), now));
@@ -2230,6 +2240,14 @@ const callIn = async (body) => {
     check('fired once at the postman trigger, its own token, no text (so it lands in its own session), landed true', x.json.fired && fires.length === 1 && fires[0].url.indexOf('/routines/' + POSTMAN_TRIGGER + '/fire') > 0 && fires[0].auth === 'Bearer pt-1' && !('text' in fires[0].body) && x.json.landed === true, { x: x.json, f: fires[0] });
     x = await call({ op: 'relay_fire', agent: 'routine-wa-assistant' }, 'k-123', 'POST', E2);
     check('again within ' + RELAY_FIRE_GAP_S + 's: not fired (a loop cannot wake it over and over)', x.json.ok && !x.json.fired && fires.length === 1, x.json);
+    // 15/11/2026 (ideas-lab 12): another call fired between our read and our write: we see its time and do not fire too
+    { state.relay_fire_at = new Date(Date.now() - (RELAY_FIRE_GAP_S + 5) * 1000).toISOString(); stateVer.relay_fire_at = 'v-rf0';
+      let hit = 0; const racer = (k) => { if (k !== 'relay_fire_at') { raceOnce = racer; return; } hit++; state[k] = new Date().toISOString(); stateVer[k] = 'v-rf-other'; };
+      raceOnce = racer;
+      x = await call({ op: 'relay_fire', agent: 'routine-wa-assistant' }, 'k-123', 'POST', E2);
+      raceOnce = null;
+      check('cas: relay_fire raced by another call that fired: not fired twice', x.json.ok && !x.json.fired && hit === 1 && fires.length === 1, { j: x.json, hit, n: fires.length });
+      delete stateVer.relay_fire_at; }
     state.relay_fire_at = new Date(Date.now() - (RELAY_FIRE_GAP_S + 5) * 1000).toISOString(); fireSession = 'cse_01FRESH';
     x = await call({ op: 'relay_fire', agent: 'routine-wa-assistant', expect_session: 'session_01POSTMAN' }, 'k-123', 'POST', E2);
     check('after the gap: fired again; a fire that went to another session says landed false', x.json.fired && fires.length === 2 && x.json.landed === false, x.json);
