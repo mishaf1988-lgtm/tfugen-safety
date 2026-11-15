@@ -229,6 +229,7 @@ import { DOC_MAX, ownerWa, sendToOwner, sendDocToOwner, sendVoiceToOwner, ownerW
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads',
   'trustees', 'trustee_tasks', 'trustee_winners'];
+export const CARD_INV_N = 5;
 export const STATE_READ = ['golden_auto', 'second_gate', 'agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'drafts_id_live', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account', 'works_permit_err', 'weekend_held', 'weekend_held_last', 'wa_fail_mail_last', 'michael_checks', 'usage_month', 'inv_month'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
@@ -2664,22 +2665,25 @@ async function routineDbHandle(context) {
       const like = encodeURIComponent('*' + q + '*');
       const bad = []; // a failed read is not "none found" (28/10/2026 retro)
       const get = (path) => fetch(url + '/rest/v1/' + path, { headers: h, signal: tmo(SB_MS) }).then((r) => (r.ok ? r.json() : (bad.push(path.split('?')[0]), []))).catch(() => (bad.push(path.split('?')[0]), []));
-      const [equip, docs, st] = await Promise.all([
+      // 15/11/2026 (from anthropics/knowledge-work-plugins legal/vendor-check, "one view of a vendor"): the last
+      // CARD_INV_N invoices of the supplier from the ledger (invoices, read by the server key only, like invoice_find)
+      const [equip, docs, st, invoices] = await Promise.all([
         get('equip_inspections?select=id,code,n,loc,vendor,d,e,s,deficiencies,resp_area,notes,file_url&or=(n.ilike.' + like + ',code.ilike.' + like + ',loc.ilike.' + like + ',vendor.ilike.' + like + ')&order=e.asc&limit=5'),
         get('docs?select=id,n,e,s,nt,file_url&n=ilike.' + like + '&order=e.asc&limit=5'),
-        stateRead(['assistant_learned', 'agent_log', 'vendor_contacts', DRAFTS_TEXT_KEY, DRAFTS_MADE_KEY, 'quote_track', PROMISE_KEY]).catch(() => (bad.push('server_state'), []))]);
+        stateRead(['assistant_learned', 'agent_log', 'vendor_contacts', DRAFTS_TEXT_KEY, DRAFTS_MADE_KEY, 'quote_track', PROMISE_KEY]).catch(() => (bad.push('server_state'), [])),
+        get('invoices?select=supplier,num,amount,currency,inv_date,received_at,forwarded_at,approved_at,has_report,chk&supplier=ilike.' + like + '&order=received_at.desc.nullslast&limit=' + CARD_INV_N)]);
       const val = (k) => { const r = (st || []).find((x) => x && x.key === k); try { return JSON.parse((r && r.value) || '[]'); } catch (e) { return []; } };
       const vendors = (Array.isArray(val('vendor_contacts')) ? val('vendor_contacts') : []).filter((v) => Array.isArray(v) && String(v[0] || '').indexOf(q) >= 0).slice(0, 5);
       const learned = cardLines(val('assistant_learned'), q, 6, (x) => String(x.text || '') + ' ' + String(x.source || '')).map((x) => ({ at: x.at, kind: x.kind, status: x.status, text: x.text }));
       const log = cardLines(val('agent_log'), q, 5, (x) => String(x.line || '') + ' ' + String(x.for_michael || '')).map((x) => ({ at: x.at, agent: x.agent, line: String(x.line || '').slice(0, 300), for_michael: x.for_michael ? String(x.for_michael).slice(0, 300) : undefined }));
       const contradictions = rowContradictions(equip);
       // ideas-lab 21 (06/11/2026): suppliers only. A card is about a supplier when q is a known supplier or an equipment row's vendor
-      const isVendor = vendors.length > 0 || (equip || []).some((x) => x && String(x.vendor || '').indexOf(q) >= 0);
+      const isVendor = vendors.length > 0 || (Array.isArray(invoices) ? invoices : []).some((x) => x && String(x.supplier || '').indexOf(q) >= 0) || (equip || []).some((x) => x && String(x.vendor || '').indexOf(q) >= 0);
       const items = {}; (equip || []).concat(docs || []).forEach((x) => { if (x && x.id != null) items[String(x.id)] = x.n || x.code || ''; });
       const before = isVendor ? cardBefore({ draftsText: val(DRAFTS_TEXT_KEY), draftsMade: val(DRAFTS_MADE_KEY), quotes: val('quote_track'), promises: val(PROMISE_KEY) }, q, vendors.map((v) => v[1]), items, CARD_BEFORE_N) : undefined;
       const ids = [].concat((equip || []).map((x) => x.id), (docs || []).map((x) => x.id)).filter(Boolean);
       const links = ids.length ? await get('item_links?select=item_table,item_id,rel,ref,title,at,agent&item_id=in.(' + ids.map((x) => encodeURIComponent('"' + x + '"')).join(',') + ')&order=at.desc&limit=40') : [];
-      return jsonResp({ ok: true, q, equip, docs, vendors, learned, log, contradictions, links, before, partial: bad.length ? bad : undefined,
+      return jsonResp({ ok: true, q, equip, docs, vendors, invoices, learned, log, contradictions, links, before, partial: bad.length ? bad : undefined,
         next: (bad.length ? 'a read failed (' + bad.join(', ') + '): do not say "none found" for it, say it could not be read. ' : '') + (before && before.length ? 'before: what already happened with this supplier, newest first; open the answer with one line "\u05d1\u05e4\u05e2\u05dd \u05d4\u05e7\u05d5\u05d3\u05de\u05ea:" from the one that matters (who, what, DD/MM), and do not ask Michael what is already there. ' : '') + 'mail: outlook_email_search by the name and by the supplier, the whole thread, newest first; open quotes and reports; compare the same fields in all (agent-common.md, cross-check); no quote validity date' }, 200, {});
     }
     if (body.op === 'state_get') {
