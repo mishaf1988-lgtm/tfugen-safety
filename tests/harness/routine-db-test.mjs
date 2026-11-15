@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { pdfHasFont } from './_build/_ocr.mjs';
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { secondLog, secondSendGate, secondValve, SECOND_UNVERIFIED, SECOND_GATE_MAX, SECOND_GATE_MS, SECOND_GATE_KEY, secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, ilInstant, incFilePrefix, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, cardBefore, CARD_BEFORE_N, CARD_INV_N, linkRow, autoLinkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftTrashHits, draftDoneId, OD_DRAFT_DONE, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, draftsArr, scrubPii, agentEntry, agentArchive, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, refusesWithoutFlow, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, calLogAdd, factsApply, factsFind, FACTS_KEY, nameCheck, nameKnown, hasPassport, incSimilar, incWords, INC_SIM_N, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, OD_INV_TOP, addYear, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, odPdfCheck, OD_PUT_MAX, odArchiveCheck, archiveStampName, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrTxtName, taskAddCheck, TASK_ADD_MAX, taskOpenDup, TASK_SOURCES, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT, isoSwapRequest, isoUpCheck, OD_ISO_SWAP, ISO_SITE_URL, mailGotCheck, mailGotList, MAIL_GOT_MAX } from './_build/routine-db.mjs';
+import { secondLog, secondSendGate, secondValve, SECOND_UNVERIFIED, SECOND_GATE_MAX, SECOND_GATE_MS, SECOND_GATE_KEY, secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, ilInstant, incFilePrefix, dataGaps, GAP_INC_DAYS, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, cardBefore, CARD_BEFORE_N, CARD_INV_N, linkRow, autoLinkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftTrashHits, draftDoneId, OD_DRAFT_DONE, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, draftsArr, scrubPii, agentEntry, agentArchive, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, refusesWithoutFlow, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, calLogAdd, factsApply, factsFind, FACTS_KEY, nameCheck, nameKnown, hasPassport, incSimilar, incWords, INC_SIM_N, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, OD_INV_TOP, addYear, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, odPdfCheck, OD_PUT_MAX, odArchiveCheck, archiveStampName, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrTxtName, taskAddCheck, TASK_ADD_MAX, taskOpenDup, TASK_SOURCES, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT, isoSwapRequest, isoUpCheck, OD_ISO_SWAP, ISO_SITE_URL, mailGotCheck, mailGotList, MAIL_GOT_MAX } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -63,6 +63,7 @@ globalThis.fetch = async (url, opt = {}) => {
     if (sq) return new Response(JSON.stringify(rows[m[1]].filter((r) => r.src_ref === decodeURIComponent(sq[1])).map((r) => ({ id: r.id, n: r.n, s: r.s }))), { status: 200 });
     if (/^select=id,dt,dept,l,d,rc,p,s,w&/.test(m[2] || '')) return new Response(JSON.stringify(rows[m[1]].map((r) => ({ id: r.id, dt: r.dt, dept: r.dept, l: r.l, d: r.d, rc: r.rc, p: r.p, s: r.s, w: r.w }))), { status: 200 });
     if (/^select=code,report_number,previous_report_number/.test(m[2] || '')) return new Response(JSON.stringify(rows[m[1]].map((r) => ({ code: r.code, report_number: r.report_number, previous_report_number: r.previous_report_number }))), { status: 200 });
+    if (/^select=id,code,n,d,e,s,file_url|^select=id,dt,created_at,s,dy/.test(m[2] || '')) return new Response(JSON.stringify(rows[m[1]].map((r) => ({ ...r }))), { status: 200 });
     if (/^select=id,resp/.test(m[2] || '')) return new Response(JSON.stringify(rows[m[1]].map((r) => ({ id: r.id, resp: r.resp, resp2: r.resp2, s: r.s }))), { status: 200 });
     if (/^select=n&order=n\.desc/.test(m[2] || '')) return new Response(JSON.stringify(rows[m[1]].map((r) => ({ n: r.n })).sort((x, y) => y.n - x.n).slice(0, 1)), { status: 200 });
     const id = decodeURIComponent((/id=eq\.([^&]*)/.exec(m[2] || '') || [])[1] || '');
@@ -884,6 +885,34 @@ const callIn = async (body) => {
     globalThis.fetch = f0;
     check('resp_check: a failed read is an error, never "all recognised"', y.json.ok === false && /trustee_reports/.test(y.json.error), y.json);
     check('resp_check: a field outside the list is refused', (await call({ op: 'resp_check', agent: 'routine-quality', table: 'med' })).status === 400);
+    rows = {};
+  }
+  console.log('\n4c9c. data_gaps (15/11/2026, the weekly data-quality check): rows that are there but incomplete');
+  {
+    const g = dataGaps([
+      { id: 'q1', code: 'FL-1', n: 'מלגזה', d: '2026-08-03', e: '2027-02-03', s: 'כשיר לעבודה', file_url: null },
+      { id: 'q2', n: 'עגורן', d: '2026-08-03', e: '2027-02-03', s: 'כשיר לעבודה', file_url: 'https://x/a.pdf' },
+      { id: 'q3', n: 'דרגר', d: null, e: '2026-01-01', s: 'לא רלוונטי', file_url: '' },
+      { id: 'q4', n: 'מדחס', d: null, e: null, s: 'טעון אימות', file_url: null },
+      { id: 'q5', n: 'מיכל', d: null, e: '2026-12-01', s: 'פג תוקף', file_url: '  ' },
+    ], [
+      { id: 'i1', dt: '2026-11-10T08:00:00+00:00', s: 'פתוח', dy: null },
+      { id: 'i2', dt: '2026-11-10T08:00:00+00:00', s: 'פתוח', dy: 0 },
+      { id: 'i3', dt: '2026-11-14T08:00:00+00:00', s: 'פתוח', dy: null },
+      { id: 'i4', dt: '2026-01-10T08:00:00+00:00', s: 'סגור', dy: null },
+      { id: 'i5', dt: null, created_at: '2026-11-01T08:00:00Z', s: 'פתוח', dy: null },
+    ], '2026-11-15');
+    check('data_gaps: equipment with a date and no file, out-of-tracking and dateless rows skipped, nearest expiry first', g.equip.map((x) => x.id).join() === 'q5,q1' && g.equip_n === 2 && g.equip[1].code === 'FL-1', g);
+    check('data_gaps: an open accident ' + GAP_INC_DAYS + ' days on with dy null; dy 0 is an answer, closed and recent are not gaps, no dt falls back to created_at', g.inc.map((x) => x.id).join() === 'i1,i5' && g.inc[1].dt === '2026-11-01', g.inc);
+    rows = { equip_inspections: [{ id: 'q1', n: 'מלגזה', d: '2026-08-03', e: '2027-02-03', s: 'כשיר לעבודה', file_url: null }], inc: [] };
+    const x = await call({ op: 'data_gaps', agent: 'routine-validity' });
+    check('data_gaps op: both tables read, counts and the gap back', x.json.ok && x.json.checked.equip_inspections === 1 && x.json.equip_n === 1 && x.json.inc_n === 0, x.json);
+    const f0 = globalThis.fetch;
+    globalThis.fetch = async (u, o) => (/\/rest\/v1\/inc\?/.test(String(u)) ? new Response('err', { status: 500 }) : f0(u, o));
+    const y = await call({ op: 'data_gaps', agent: 'routine-validity' });
+    globalThis.fetch = f0;
+    check('data_gaps op: a failed read is an error, never "no gaps"', y.json.ok === false && /inc/.test(y.json.error), y.json);
+    check('data_gaps op: a field outside the list is refused', (await call({ op: 'data_gaps', agent: 'routine-validity', table: 'med' })).status === 400);
     rows = {};
   }
   console.log('\n4c9. client_errors (27/10/2026): errors from users\' browsers, grouped, no user name');
