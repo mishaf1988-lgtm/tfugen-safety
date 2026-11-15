@@ -1,7 +1,7 @@
 // The server's fast lane (20/10/2026, Michael in the questionnaire: "do it: a fast lane in the server").
 // A number 1-4 that answers a hazard alert, and "what is urgent" / "expiries", are answered by wa-hook
 // itself by rules; everything else, and anything unclear, still goes to the assistant.
-import { failText, FAIL_TEXT, ownerInPayload, recentLine, RECENT_MAX, accountCmdOf, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX, joinCandidates, joinedLine, hasNewer, JOIN_MS, fireText, fastDel, DEL_NO, DEL_GONE, fastUndo, UNDO_NO, UNDO_GONE } from './_build/wa-hook.mjs';
+import { failText, FAIL_TEXT, ownerInPayload, recentLine, RECENT_MAX, accountCmdOf, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX, joinCandidates, joinedLine, hasNewer, JOIN_MS, fireText, fastDel, DEL_NO, DEL_GONE, fastUndo, UNDO_NO, UNDO_GONE, rateNote } from './_build/wa-hook.mjs';
 import { HAZARD_OPTIONS, hazardAsk, assistantFire, pickFire, accountOf, fireUrlOf, fastModel, fastFire, ASSISTANT_FAST_TRIGGER } from './_build/_wa.mjs';
 import { rateAgain } from './_build/chat.mjs';
 
@@ -223,8 +223,15 @@ await (async () => {
       const json = (x, st = 200) => new Response(JSON.stringify(x), { status: st, headers: { 'Content-Type': 'application/json' } });
       if (u.includes('server_state')) {
         const key = (/key=eq\.([a-z_]+)/.exec(u) || [])[1];
-        if (mth === 'GET') return json(w.state[key] !== undefined ? [{ value: w.state[key] }] : []);
+        w.ver = w.ver || {};
+        if (mth === 'GET') return json(w.state[key] !== undefined ? [{ value: w.state[key], updated_at: w.ver[key] || 'v0' }] : []);
         if (mth === 'DELETE') { delete w.state[key]; return new Response(null, { status: 204 }); }
+        if (mth === 'PATCH') { // stateCas (15/11/2026): w.race(key) runs once before the write, as another run saving in between
+          if (o.undoFail) return json({ e: 1 }, 500);
+          if (w.race) { const r = w.race; w.race = null; r(key); }
+          if ((w.ver[key] || 'v0') !== (/updated_at=eq\.([^&]*)/.exec(u) || [])[1]) return json([]);
+          const b = JSON.parse(init.body); w.state[key] = b.value; w.ver[key] = b.updated_at; return json([{ key }]);
+        }
         if (o.undoFail) return json({ e: 1 }, 500);
         JSON.parse(init.body).forEach((x) => { w.state[x.key] = x.value; });
         return json(JSON.parse(init.body), 201);
@@ -257,6 +264,30 @@ await (async () => {
   check('no request at all: nothing deleted', a === DEL_GONE && !w.calls.some((c) => c.startsWith('DELETE inc')));
   w = db({ undoFail: true }); a = await fastDel(ENV, { id: 'ab12cd34', yes: true }).catch(() => 'threw');
   check('the row cannot be kept: not deleted', !w.calls.some((c) => c.startsWith('DELETE inc')), { a, calls: w.calls });
+  { // 15/11/2026 (ideas-lab 12): a row kept by another delete between our read and our write stays in the log
+    w = db({}); w.state.undo_log = JSON.stringify([{ table: 'inc', row: { id: 'a0' }, at: '2026-11-01T00:00:00Z' }]); w.ver = { undo_log: 'v-u0' };
+    w.race = (k) => { if (k !== 'undo_log') return; const l = JSON.parse(w.state.undo_log); l.push({ table: 'inc', row: { id: 'meanwhile' }, at: new Date().toISOString() }); w.state.undo_log = JSON.stringify(l); w.ver.undo_log = 'v-u-other'; };
+    a = await fastDel(ENV, { id: 'ab12cd34', yes: true });
+    const ul = JSON.parse(w.state.undo_log);
+    check('cas: fastDel keeps a backup saved in between (3 rows: old, meanwhile, ours)', /\u05e0\u05de\u05d7\u05e7/.test(a || '') && ul.length === 3 && ul.map((x) => x.row.id).join() === 'a0,meanwhile,acc26-28', { a, ul });
+  }
+})();
+// 15/11/2026 (ideas-lab 12): a rating saved by another tap between our read and our write is kept (rateNote through stateCas)
+await (async () => {
+  let val = JSON.stringify([{ q: 'old', good: true, at: '2026-11-01T00:00:00Z' }]), ver = 'v-r0', raced = 0;
+  globalThis.fetch = async (url, init) => {
+    const u = decodeURIComponent(String(url)), mth = (init && init.method) || 'GET';
+    if (mth === 'GET') return new Response(JSON.stringify([{ value: val, updated_at: ver }]), { status: 200 });
+    if (mth === 'PATCH') {
+      if (!raced++) { const l = JSON.parse(val); l.push({ q: 'meanwhile', good: false, at: new Date().toISOString() }); val = JSON.stringify(l); ver = 'v-r-other'; }
+      if ((/updated_at=eq\.([^&]*)/.exec(u) || [])[1] !== ver) return new Response('[]', { status: 200 });
+      const b = JSON.parse(init.body); val = b.value; ver = b.updated_at; return new Response('[{}]', { status: 200 });
+    }
+    return new Response('{}', { status: 599 });
+  };
+  await rateNote({ SUPABASE_SERVICE_ROLE_KEY: 'k' }, true, 'ours', null);
+  const l = JSON.parse(val);
+  check('cas: rateNote keeps a rating saved in between (old, meanwhile, ours)', l.map((x) => x.q).join() === 'old,meanwhile,ours', l);
 })();
 console.log('\n10. undo_ask: restore a deleted row (02/11/2026, Michael: "do it: 200 and restore from the assistant")');
 {
@@ -278,8 +309,15 @@ await (async () => {
       const json = (x, st = 200) => new Response(JSON.stringify(x), { status: st, headers: { 'Content-Type': 'application/json' } });
       if (u.includes('server_state')) {
         const key = (/key=eq\.([a-z_]+)/.exec(u) || [])[1];
-        if (mth === 'GET') return json(w.state[key] !== undefined ? [{ value: w.state[key] }] : []);
+        w.ver = w.ver || {};
+        if (mth === 'GET') return json(w.state[key] !== undefined ? [{ value: w.state[key], updated_at: w.ver[key] || 'v0' }] : []);
         if (mth === 'DELETE') { delete w.state[key]; return new Response(null, { status: 204 }); }
+        if (mth === 'PATCH') { // stateCas (15/11/2026): w.race(key) runs once before the write, as another run saving in between
+          if (o.undoFail) return json({ e: 1 }, 500);
+          if (w.race) { const r = w.race; w.race = null; r(key); }
+          if ((w.ver[key] || 'v0') !== (/updated_at=eq\.([^&]*)/.exec(u) || [])[1]) return json([]);
+          const b = JSON.parse(init.body); w.state[key] = b.value; w.ver[key] = b.updated_at; return json([{ key }]);
+        }
         JSON.parse(init.body).forEach((x) => { w.state[x.key] = x.value; });
         return json(JSON.parse(init.body), 201);
       }
@@ -306,6 +344,20 @@ await (async () => {
   check('a stored request for a table off the list (ncr): nothing inserted', a === UNDO_GONE && !w.inserted);
   w = db({ undo: '{not json' }); a = await fastUndo(ENV, { id: 'cd34ef56', yes: true });
   check('an unreadable log: nothing inserted, the log untouched', a === null && !w.inserted && w.state.undo_log === '{not json');
+  { // 15/11/2026 (ideas-lab 12): a delete kept between the second read and the write is not lost when our row leaves the log
+    w = db({}); let n = 0;
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = async (url, init) => {
+      const u = decodeURIComponent(String(url)), mth = (init && init.method) || 'GET';
+      if (u.includes('server_state') && /key=eq\.undo_log/.test(u) && mth === 'GET' && ++n === 2) {
+        const res = await realFetch(url, init); const l = JSON.parse(w.state.undo_log); l.push({ table: 'inc', row: { id: 'meanwhile' }, at: new Date().toISOString() }); w.state.undo_log = JSON.stringify(l); w.ver.undo_log = 'v-u-other'; return res;
+      }
+      return realFetch(url, init);
+    };
+    a = await fastUndo(ENV, { id: 'cd34ef56', yes: true });
+    const ul = JSON.parse(w.state.undo_log);
+    check('cas: fastUndo keeps a backup saved in between (other, meanwhile; ours gone)', /\u05d4\u05d5\u05d7\u05d6\u05e8/.test(a || '') && ul.map((x) => x.row.id).join() === 'other,meanwhile', { a, ul });
+  }
 })();
 // 12/11/2026 (ideas-lab 30, Michael: "do the addition"): a short read-only question to the fast Routine (Sonnet)
 {

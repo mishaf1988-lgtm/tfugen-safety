@@ -128,12 +128,17 @@ r = await signRun(env, 'https://sb', 'tok', req, ms0);
 check('not a PDF = not signed', !r.ok && r.error === 'not a pdf' && !mk.calls.some((x) => x.method === 'PUT'));
 
 console.log('\n7. the answer in wa-hook: "no" and an old request never reach OneDrive');
-function stateFetch(list) {
-  const calls = []; let saved = null;
+// 15/11/2026: fastSign writes through stateCas (GET with updated_at, then PATCH on that version); race(n) runs before the n-th PATCH
+function stateFetch(list, race) {
+  const calls = []; let saved = null, ver = 'v0', patches = 0;
   globalThis.fetch = async (u, init) => {
     const s = String(u), method = (init && init.method) || 'GET'; calls.push({ u: s, method });
-    if (s.indexOf('server_state?key=eq.' + SIGN_KEY) >= 0) return new Response(JSON.stringify([{ value: JSON.stringify(saved || list) }]), { status: 200 });
-    if (s.indexOf('server_state?on_conflict') >= 0) { saved = JSON.parse(JSON.parse(init.body)[0].value); return new Response(null, { status: 204 }); }
+    if (s.indexOf('server_state') >= 0 && s.indexOf('key=eq.' + SIGN_KEY) >= 0 && method === 'GET') return new Response(JSON.stringify([{ value: JSON.stringify(saved || list), updated_at: ver }]), { status: 200 });
+    if (s.indexOf('server_state') >= 0 && method === 'PATCH') {
+      patches++; if (race) { const nv = race(patches, saved || list); if (nv) { saved = nv; ver = 'v-other-' + patches; } }
+      if (decodeURIComponent(/updated_at=eq\.([^&]*)/.exec(s)[1]) !== ver) return new Response('[]', { status: 200 });
+      const b = JSON.parse(init.body); saved = JSON.parse(b.value); ver = b.updated_at; return new Response(JSON.stringify([{ key: SIGN_KEY }]), { status: 200 });
+    }
     if (s.indexOf('notifications_log') >= 0) return new Response(null, { status: 201 });
     return new Response('{}', { status: 500 });
   };
@@ -149,7 +154,19 @@ t = await fastSign({ SUPABASE_SERVICE_ROLE_KEY: 'k' }, { id: old.id, yes: true }
 check('"do it" after 24 hours: expired, no Graph call', /פגה/.test(t) && st.saved()[0].status === 'expired' && !st.calls.some((x) => /graph|login\.microsoft|oauth_tokens/.test(x.u)));
 st = stateFetch(fresh.list);
 t = await fastSign({ SUPABASE_SERVICE_ROLE_KEY: 'k' }, { id: 'szzzzzzz', yes: true }, 'w11');
-check('an id that is not waiting = back to the assistant (null), nothing written', t === null && !st.calls.some((x) => x.method === 'POST'));
+check('an id that is not waiting = back to the assistant (null), nothing written', t === null && !st.calls.some((x) => x.method === 'POST' || x.method === 'PATCH'));
+{ // 15/11/2026 (ideas-lab 12): a second tap took the request between our read and our write: we do not sign it again
+  const f2 = signAdd('[]', { agent: 'wa-assistant', path: req.path, name: req.name }, new Date().toISOString(), 'gh78');
+  let hit = 0;
+  st = stateFetch(f2.list, (n, cur) => { if (n !== 1) return null; hit++; const l = JSON.parse(JSON.stringify(cur)); l[0].status = 'approved'; l[0].by = 'w-other'; return l; });
+  t = await fastSign({ SUPABASE_SERVICE_ROLE_KEY: 'k' }, { id: f2.id, yes: true }, 'w12');
+  check('cas: two taps at once: the second finds it taken, no Graph call, the first tap kept', hit === 1 && st.saved()[0].by === 'w-other' && !st.calls.some((x) => /graph|login\.microsoft|oauth_tokens/.test(x.u)), { t, saved: st.saved(), hit });
+  // and a request added by another run in between stays in the list after "no"
+  const f3 = signAdd('[]', { agent: 'wa-assistant', path: req.path, name: req.name }, new Date().toISOString(), 'ij90');
+  st = stateFetch(f3.list, (n, cur) => n === 1 ? cur.concat([{ id: 'sother000', status: 'pending', at: new Date().toISOString(), path: 'x/y.pdf', name: 'y.pdf' }]) : null);
+  t = await fastSign({ SUPABASE_SERVICE_ROLE_KEY: 'k' }, { id: f3.id, yes: false }, 'w13');
+  check('cas: a request added meanwhile is kept when "no" is saved', st.saved().length === 2 && st.saved()[0].status === 'cancelled' && st.saved()[1].id === 'sother000', st.saved());
+}
 
 console.log('\n7. a question that did not go out is not left pending (22/10/2026 retro)');
 {
