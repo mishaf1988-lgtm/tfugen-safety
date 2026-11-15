@@ -912,7 +912,15 @@ export function xlsxGapsLine(raw, nowMs) {
   if (!r.ok) return { text: H.xg + H.xgFail + ilTime(r.at) + ' (' + String(r.error || '').substring(0, 120) + ')', red: true };
   const b = r.board || {};
   if (!b.written) return { text: H.xg + H.xgNever, red: false, unknown: true };
-  return { text: H.xg + '\u05e0\u05d1\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d1-' + fd(String(b.written).substring(0, 10)) + ', ' + (b.items || 0) + ' \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd, ' + (b.expired || 0) + ' \u05e4\u05d2\u05d9 \u05ea\u05d5\u05e7\u05e3, ' + (b.open || 0) + ' \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea.', red: false };
+  const iv = invLine(r.invoices);
+  return { text: H.xg + '\u05e0\u05d1\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d1-' + fd(String(b.written).substring(0, 10)) + ', ' + (b.items || 0) + ' \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd, ' + (b.expired || 0) + ' \u05e4\u05d2\u05d9 \u05ea\u05d5\u05e7\u05e3, ' + (b.open || 0) + ' \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea.' + iv.text, red: iv.red };
+}
+// 15/11/2026 (handoff 15/11 "next in line" 3): the invoice ledger is written in the same run (xlsx-gaps.js, 00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea)
+// and is also the table's backup, so a failed write turns the line red. No state yet (before 14/11/2026) = nothing said. Pure.
+export function invLine(inv) {
+  if (!inv || typeof inv !== 'object') return { text: '', red: false };
+  if (inv.ok) return { text: ' \u05e1\u05e4\u05e8 \u05d4\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea: ' + (Number(inv.rows) || 0) + ' \u05e9\u05d5\u05e8\u05d5\u05ea.', red: false };
+  return { text: ' \u05e1\u05e4\u05e8 \u05d4\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea \u05dc\u05d0 \u05e0\u05db\u05ea\u05d1 (' + String(inv.err || '').substring(0, 100) + ').', red: true };
 }
 
 async function build(env) {
