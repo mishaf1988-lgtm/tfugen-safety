@@ -2870,7 +2870,7 @@ async function routineDbHandle(context) {
       if (STAMP_AT.indexOf(body.key) >= 0 && body.value && typeof body.value === 'object') stampAt(body.value, new Date().toISOString());
       if (body.key === 'live_note' && JSON.stringify(body.value || '').length > LIVE_NOTE_MAX) return jsonResp({ ok: false, error: 'live_note: over ' + LIVE_NOTE_MAX + ' characters' }, 400, {});
       const value = body.value === null || body.value === undefined ? null : (typeof body.value === 'string' ? body.value : JSON.stringify(body.value));
-      const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', {
+      const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', { // cas-ok: state_set: whole value from the caller, nothing read first, the last write wins by design
         method: 'POST',
         headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
         body: JSON.stringify([{ key: body.key, value, updated_at: new Date().toISOString() }]), signal: tmo(SB_MS),
@@ -2907,7 +2907,7 @@ async function routineDbHandle(context) {
       const q = quotaMode(body.util, body.resets_at, Date.now());
       if (q.error) return jsonResp({ ok: false, error: q.error }, 400, {});
       q.agent = String(body.agent || '').slice(0, 40);
-      const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+      const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', { /* cas-ok: whole value from the caller, nothing read first, the last write wins by design */ method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
         body: JSON.stringify([{ key: QUOTA_KEY, value: JSON.stringify(q), updated_at: q.at }]) });
       if (!r.ok) return jsonResp({ ok: false, error: 'write ' + r.status }, 200, {});
       return jsonResp(Object.assign({ ok: true }, q), 200, {});
@@ -2918,7 +2918,7 @@ async function routineDbHandle(context) {
       const to = pickFire(env, body.account);
       if (!to || (body.account === 'gmail' && to.which !== 'new')) return jsonResp({ ok: false, error: 'the Gmail pair (ASSISTANT2_FIRE_URL and ASSISTANT2_FIRE_TOKEN) is not set in Cloudflare' }, 400, {});
       const v = { account: body.account, at: new Date().toISOString(), agent: String(body.agent || '').slice(0, 40) };
-      const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+      const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', { /* cas-ok: whole value from the caller, nothing read first, the last write wins by design */ method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
         body: JSON.stringify([{ key: ACCOUNT_KEY, value: JSON.stringify(v), updated_at: v.at }]) });
       if (!r.ok) return jsonResp({ ok: false, error: 'write ' + r.status }, 200, {});
       return jsonResp(Object.assign({ ok: true, fires: to.which }, v), 200, {});
@@ -2929,7 +2929,7 @@ async function routineDbHandle(context) {
       const q = body.op === 'agents_pause' ? agentsPause(body.until, now) : { paused: false, at: new Date(now).toISOString() };
       if (q.error) return jsonResp({ ok: false, error: q.error }, 400, {});
       q.agent = String(body.agent || '').slice(0, 40);
-      const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+      const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', { /* cas-ok: whole value from the caller, nothing read first, the last write wins by design */ method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
         body: JSON.stringify([{ key: PAUSE_KEY, value: JSON.stringify(q), updated_at: q.at }]) });
       if (!r.ok) return jsonResp({ ok: false, error: 'write ' + r.status }, 200, {});
       return jsonResp(Object.assign({ ok: true }, q), 200, {});
@@ -4083,7 +4083,7 @@ async function routineDbHandle(context) {
       if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
       const now = new Date().toISOString();
       const rel = checked.map((x) => x.path.slice(OD_ROOT.length));
-      const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+      const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', { /* cas-ok: sign_pick is the newest pick, whole, nothing read first */ method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
         body: JSON.stringify([{ key: 'sign_pick', value: JSON.stringify(Object.assign({ at: now, paths: rel }, hasSpot ? { spot: { page: checked[0].page, x: checked[0].x, y: checked[0].y, w: checked[0].w } } : {})), updated_at: now }]), signal: tmo(SB_MS) });
       if (!w.ok) return jsonResp({ ok: false, error: 'save ' + w.status }, 200, {});
       const head = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 300);
@@ -4441,11 +4441,10 @@ async function routineDbHandle(context) {
       if (c.skip) {
         recorded = false;
         try {
+          // 15/11/2026 (ideas-lab 12): through stateCas, so a move recorded by another run in between is kept
           const now = new Date().toISOString();
-          const rows = await stateRead([SKIP_MOVED_KEY]);
-          const value = skipMovedAdd(rows && rows[0] && rows[0].value, sj.id, now, Date.parse(now));
-          const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify([{ key: SKIP_MOVED_KEY, value, updated_at: now }]), signal: tmo(SB_MS) });
-          recorded = w.ok;
+          const w = await stateCas(url, h, SKIP_MOVED_KEY, (raw) => ({ value: skipMovedAdd(raw, sj.id, now, Date.parse(now)) }), () => tmo(SB_MS));
+          recorded = !!w.written;
         } catch (e) { recorded = false; }
       }
       return jsonResp({ ok: true, path: c.toDir + '/' + c.name, size: mj.size || sj.size || null, webUrl: mj.webUrl || null, recorded }, 200, {});
@@ -4627,7 +4626,7 @@ async function routineDbHandle(context) {
       if (r.held) r.note = 'Friday/Saturday: not sent, kept for the Sunday 07:00 morning list (Michael is off). Urgent (a hazard, a safety event or accident, the assistant down) = send again with "urgent": "hazard" | "incident" | "watchdog"';
       let pendingLost = false;
       if (askPending && r.ok && !r.held && Array.isArray(body.choices) && body.choices.length) {
-        const pw = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
+        const pw = await fetch(url + '/rest/v1/server_state?on_conflict=key', { /* cas-ok: one pending question per kind, the newest replaces it (the tap checks k), nothing read first */ method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
           body: JSON.stringify([{ key: askPending.key, value: askPending.value, updated_at: new Date().toISOString() }]) }).catch(() => null);
         pendingLost = !pw || !pw.ok; // the question went out but his tap will find nothing: the caller says so (review 06/11/2026)
       }
@@ -4795,11 +4794,12 @@ async function routineDbHandle(context) {
     if (body.op === 'relay_fire') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'expect_session'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (!env.POSTMAN_FIRE_TOKEN) return jsonResp({ ok: false, error: 'no postman token', fired: false }, 200, {});
-      const last = (await stateRead([RELAY_FIRE_KEY]).catch(() => []))[0];
-      const ago = last && last.value ? (Date.now() - Date.parse(last.value)) / 1000 : Infinity;
+      // 15/11/2026 (ideas-lab 12): the gap is taken through stateCas, so two calls at once fire once (before: both read
+      // the old time and both fired). A failed read or write fires nothing, as the gap could not be kept.
+      let ago = Infinity;
+      const rw = await stateCas(url, h, RELAY_FIRE_KEY, (raw) => { ago = raw ? (Date.now() - Date.parse(raw)) / 1000 : Infinity; return ago < RELAY_FIRE_GAP_S ? { write: false } : { value: new Date().toISOString() }; }, () => tmo(SB_MS)).catch(() => null);
       if (ago < RELAY_FIRE_GAP_S) return jsonResp({ ok: true, fired: false, why: 'fired ' + Math.round(ago) + 's ago' }, 200, {});
-      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify([{ key: RELAY_FIRE_KEY, value: new Date().toISOString(), updated_at: new Date().toISOString() }]), signal: tmo(SB_MS) });
+      if (!rw || !rw.written) return jsonResp({ ok: false, fired: false, error: 'state write failed' }, 200, {});
       let fr = { status: 'network', j: {} };
       try {
         const r = await fetch(fireUrlOf(POSTMAN_TRIGGER), { method: 'POST', signal: tmo(GRAPH_MS),
