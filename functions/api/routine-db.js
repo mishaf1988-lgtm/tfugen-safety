@@ -794,6 +794,25 @@ export const EXPIRY_TABLES = {
 // meeting row to check, and one meeting opens several tasks, so the duplicate is an open task with the same title (as inc).
 export const TASK_SOURCES = { docs: 1, equip_inspections: 1, inc: 1, committee: 1 };
 export const TASK_BY_TITLE = { inc: 1, committee: 1 };
+// data_gaps (15/11/2026, Michael in the questionnaire in the assistant-work chat: "do it: a weekly check (recommended)"):
+// rows that are there but incomplete, for the weekly validity Routine (routine-validity.md 8). Pure and read only.
+// (1) equipment with a date (d or e) and no file_url, out of tracking excluded; (2) an open accident GAP_INC_DAYS
+// days after it happened with dy null. dy 0 is an answer (no days off; Michael on 20/10: "not relevant" was saved as 0),
+// so only null is a gap. Procedures are not in the DB: the Routine reads their header dates in the folder.
+export const GAP_INC_DAYS = 3, GAP_MAX = 200;
+export function dataGaps(eq, inc, today) {
+  const day = (x) => (x ? String(x).slice(0, 10) : null);
+  const lim = new Date(Date.parse(today + 'T00:00:00Z') - GAP_INC_DAYS * 86400000).toISOString().slice(0, 10);
+  const equip = (Array.isArray(eq) ? eq : []).filter((r) => r && r.id != null && (r.d || r.e) && !String(r.file_url || '').trim() && r.s !== EQUIP_OUT)
+    .map((r) => ({ id: r.id, code: r.code || null, n: short(r.n, 80), d: day(r.d), e: day(r.e), report_number: r.report_number || null }))
+    .sort((a, b) => String(a.e || '9').localeCompare(String(b.e || '9')));
+  const incs = (Array.isArray(inc) ? inc : []).filter((r) => {
+    if (!r || r.id == null || r.s === TOUR_CLOSED || (r.dy !== null && r.dy !== undefined)) return false;
+    const when = day(r.dt) || day(r.created_at);
+    return !!when && when <= lim;
+  }).map((r) => ({ id: r.id, dt: day(r.dt) || day(r.created_at) }));
+  return { equip: equip.slice(0, GAP_MAX), equip_n: equip.length, inc: incs.slice(0, GAP_MAX), inc_n: incs.length };
+}
 export function taskOpenDup(existing, row) {
   return (existing || []).find((x) => x && ['\u05d4\u05d5\u05e9\u05dc\u05dd', '\u05d1\u05d5\u05d8\u05dc'].indexOf(x.status) < 0 && (!TASK_BY_TITLE[row.source_table] || String(x.title || '').trim() === row.title)) || null;
 }
@@ -3566,6 +3585,15 @@ async function routineDbHandle(context) {
       if (!Array.isArray(th) || !Array.isArray(tr)) return jsonResp({ ok: false, error: 'read failed: ' + [!Array.isArray(th) ? 'tour_hazards' : '', !Array.isArray(tr) ? 'trustee_reports' : ''].filter(Boolean).join(', ') }, 200, {});
       const unknown = respUnknown(th, 'tour_hazards').concat(respUnknown(tr, 'trustee_reports'));
       return jsonResp({ ok: true, checked: th.length + tr.length, unknown }, 200, {});
+    }
+    if (body.op === 'data_gaps') {
+      for (const k of Object.keys(body)) if (['op', 'agent'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const get = (path) => fetch(url + '/rest/v1/' + path, { headers: h, signal: tmo(SB_MS) }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      const [eq, inc] = await Promise.all([get('equip_inspections?select=id,code,n,d,e,s,file_url,report_number&limit=5000'), get('inc?select=id,dt,created_at,s,dy&limit=5000')]);
+      // a failed read is not "no gaps" (as resp_check)
+      if (!Array.isArray(eq) || !Array.isArray(inc)) return jsonResp({ ok: false, error: 'read failed: ' + [!Array.isArray(eq) ? 'equip_inspections' : '', !Array.isArray(inc) ? 'inc' : ''].filter(Boolean).join(', ') }, 200, {});
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+      return jsonResp(Object.assign({ ok: true, checked: { equip_inspections: eq.length, inc: inc.length } }, dataGaps(eq, inc, today)), 200, {});
     }
     if (body.op === 'agent_report') {
       let e = agentEntry(body, new Date().toISOString());
