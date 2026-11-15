@@ -1240,6 +1240,7 @@
    "key": "wa-assistant",
    "family": "תקשורת ומשרד",
    "ops": [
+    "agent_log_since",
     "agent_report",
     "cal_invite",
     "cal_invite_ask",
@@ -1354,6 +1355,7 @@
    "key": "wa-assistant",
    "family": "תקשורת ומשרד",
    "ops": [
+    "agent_log_since",
     "agent_report",
     "cal_invite",
     "cal_invite_ask",
