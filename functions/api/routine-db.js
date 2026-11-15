@@ -230,7 +230,7 @@ export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads',
   'trustees', 'trustee_tasks', 'trustee_winners'];
 export const CARD_INV_N = 5;
-export const STATE_READ = ['golden_auto', 'second_gate', 'agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'drafts_id_live', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account', 'works_permit_err', 'weekend_held', 'weekend_held_last', 'wa_fail_mail_last', 'michael_checks', 'usage_month', 'inv_month'];
+export const STATE_READ = ['topic_facts', 'golden_auto', 'second_gate', 'agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'drafts_id_live', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account', 'works_permit_err', 'weekend_held', 'weekend_held_last', 'wa_fail_mail_last', 'michael_checks', 'usage_month', 'inv_month'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -954,6 +954,49 @@ export function nameKnown(rows) {
     for (const k of ['report_number', 'previous_report_number']) if (r && r[k]) reports.add(String(r[k]).trim());
   }
   return { codes, prefixes, reports };
+}
+// topic facts (15/11/2026, Michael in the questionnaire in the "work on the assistant" chat: "do it: a facts card for an open
+// topic"; DECISIONS 15/11/2026): the facts known about one open topic (an accident, a promise, an item waiting for Michael) are
+// kept once, each with its source, and every answer on the topic reads them from here. Drill 15/11/2026 (ops-05 and ops-19) on the
+// accident of 20/10/2026 wrote "the number of days is not recorded" and "absent over 3 days" while the row says 0. A fact with a
+// key already there and another value is NOT overwritten: the answer is a conflict with both sources, and only "replace" with a
+// "why" changes it (the old value is kept in prev). One server_state row, through stateCas. Pure: factsApply / factsFind.
+export const FACTS_KEY = 'topic_facts', FACTS_TOPICS = 60, FACTS_PER = 30, FACTS_PREV = 3, FACTS_CLOSED_DAYS = 30;
+const factTxt = (x, n) => scrubPii(String(x == null ? '' : x)).replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
+export function factsList(raw) { let v = raw; if (typeof v === 'string') { try { v = JSON.parse(v || '[]'); } catch (e) { return []; } } return Array.isArray(v) ? v.filter((t) => t && typeof t.topic === 'string' && Array.isArray(t.facts)) : []; }
+export function factsApply(raw, b, nowIso) {
+  const topic = factTxt(b.topic, 80), key = factTxt(b.key, 40), value = factTxt(b.value, 300), src = factTxt(b.src, 200);
+  if (topic.length < 3) return { error: 'topic: 3-80 characters, e.g. accident YYYY-MM-DD and the department' };
+  const list = factsList(raw).filter((t) => !(t.closed && Date.parse(nowIso) - Date.parse(t.closed) > FACTS_CLOSED_DAYS * 864e5));
+  let t = list.find((x) => x.topic === topic);
+  if (b.close === true) {
+    if (!t) return { error: 'no such topic: ' + topic };
+    t.closed = nowIso;
+    return { value: JSON.stringify(list), result: { closed: topic } };
+  }
+  if (key.length < 2 || !value || src.length < 5) return { error: 'key (2-40), value (1-300) and src (where it is written: a row, a mail, Michael\'s words; 5-200) required' };
+  if (!t) { if (list.filter((x) => !x.closed).length >= FACTS_TOPICS) return { error: 'over ' + FACTS_TOPICS + ' open topics: close one (close: true)' }; t = { topic, at: nowIso, facts: [] }; list.unshift(t); }
+  delete t.closed;
+  const f = t.facts.find((x) => x.key === key);
+  if (f && f.value === value) { if (f.src.indexOf(src) < 0) f.src = factTxt(f.src + '; ' + src, 200); return { value: JSON.stringify(list), result: { same: true, fact: f } }; }
+  if (f && b.replace !== true) return { conflict: { key, known: f.value, known_src: f.src, known_at: f.at, new: value, new_src: src } };
+  if (f) {
+    const why = factTxt(b.why, 200);
+    if (why.length < 5) return { error: 'replace needs why (5-200): which source wins and why' };
+    f.prev = [{ value: f.value, src: f.src, at: f.at }].concat(Array.isArray(f.prev) ? f.prev : []).slice(0, FACTS_PREV);
+    Object.assign(f, { value, src, at: nowIso, why, agent: factTxt(b.agent, 40) });
+    t.at = nowIso;
+    return { value: JSON.stringify(list), result: { replaced: true, fact: f } };
+  }
+  if (t.facts.length >= FACTS_PER) return { error: 'over ' + FACTS_PER + ' facts on this topic' };
+  const nf = { key, value, src, at: nowIso, agent: factTxt(b.agent, 40) };
+  t.facts.push(nf); t.at = nowIso;
+  return { value: JSON.stringify(list), result: { added: true, fact: nf } };
+}
+// the topics whose name holds q (or all open ones when q is empty), newest first
+export function factsFind(raw, q) {
+  const k = String(q || '').trim();
+  return factsList(raw).filter((t) => !t.closed && (!k || t.topic.indexOf(k) >= 0)).sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 10);
 }
 // thz_add (29/10/2026, Michael: "keep connecting it automatically to the investigation and the assistant"; the rule: anything
 // decided in the committee or an investigation, and every corrective action opened, goes into the hazards of his weekly tours).
@@ -2771,6 +2814,22 @@ async function routineDbHandle(context) {
       const got = await w.json().catch(() => []);
       return jsonResp({ ok: true, added: Array.isArray(got) && got.length === 1 }, 200, {});
     }
+    if (body.op === 'fact_set' || body.op === 'fact_get') {
+      const allow = body.op === 'fact_get' ? ['op', 'agent', 'topic'] : ['op', 'agent', 'topic', 'key', 'value', 'src', 'replace', 'why', 'close'];
+      for (const k of Object.keys(body)) if (allow.indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      if (['topic', 'key', 'value', 'src', 'why'].some((k) => body[k] !== undefined && typeof body[k] !== 'string')) return jsonResp({ ok: false, error: 'fields are text' }, 400, {});
+      if (body.op === 'fact_get') {
+        const r = (await stateRead([FACTS_KEY]).catch(() => null));
+        if (!r) return jsonResp({ ok: false, error: 'state read failed: do not answer from memory, say the facts could not be read' }, 200, {});
+        return jsonResp({ ok: true, topics: factsFind(r[0] && r[0].value, body.topic) }, 200, {});
+      }
+      let out = null;
+      const w = await stateCas(url, h, FACTS_KEY, (raw) => { out = factsApply(raw, body, new Date().toISOString()); return out.value ? { value: out.value } : { write: false }; }, () => tmo(SB_MS)).catch(() => null);
+      if (out && out.error) return jsonResp({ ok: false, error: out.error }, 400, {});
+      if (out && out.conflict) return jsonResp({ ok: false, conflict: out.conflict, error: 'conflict: "' + out.conflict.key + '" is already "' + out.conflict.known + '" (' + out.conflict.known_src + '). Do not pick one: tell Michael both sources, or, if one source is surely right (the row in the app, a signed form), send again with replace:true and why' }, 200, {});
+      if (!w || !w.written) return jsonResp({ ok: false, error: 'not saved (write conflict or state down): try once more' }, 200, {});
+      return jsonResp(Object.assign({ ok: true }, out.result), 200, {});
+    }
     if (body.op === 'item_card') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'q'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const q = cardQuery(body.q);
@@ -2783,7 +2842,7 @@ async function routineDbHandle(context) {
       const [equip, docs, st, invoices] = await Promise.all([
         get('equip_inspections?select=id,code,n,loc,vendor,d,e,s,deficiencies,resp_area,notes,file_url&or=(n.ilike.' + like + ',code.ilike.' + like + ',loc.ilike.' + like + ',vendor.ilike.' + like + ')&order=e.asc&limit=5'),
         get('docs?select=id,n,e,s,nt,file_url&n=ilike.' + like + '&order=e.asc&limit=5'),
-        stateRead(['assistant_learned', 'agent_log', 'vendor_contacts', DRAFTS_TEXT_KEY, DRAFTS_MADE_KEY, 'quote_track', PROMISE_KEY]).catch(() => (bad.push('server_state'), [])),
+        stateRead(['assistant_learned', 'agent_log', 'vendor_contacts', DRAFTS_TEXT_KEY, DRAFTS_MADE_KEY, 'quote_track', PROMISE_KEY, FACTS_KEY]).catch(() => (bad.push('server_state'), [])),
         get('invoices?select=supplier,num,amount,currency,inv_date,received_at,forwarded_at,approved_at,has_report,chk&supplier=ilike.' + like + '&order=received_at.desc.nullslast&limit=' + CARD_INV_N)]);
       const val = (k) => { const r = (st || []).find((x) => x && x.key === k); try { return JSON.parse((r && r.value) || '[]'); } catch (e) { return []; } };
       const vendors = (Array.isArray(val('vendor_contacts')) ? val('vendor_contacts') : []).filter((v) => Array.isArray(v) && String(v[0] || '').indexOf(q) >= 0).slice(0, 5);
@@ -2796,7 +2855,9 @@ async function routineDbHandle(context) {
       const before = isVendor ? cardBefore({ draftsText: val(DRAFTS_TEXT_KEY), draftsMade: val(DRAFTS_MADE_KEY), quotes: val('quote_track'), promises: val(PROMISE_KEY) }, q, vendors.map((v) => v[1]), items, CARD_BEFORE_N) : undefined;
       const ids = [].concat((equip || []).map((x) => x.id), (docs || []).map((x) => x.id)).filter(Boolean);
       const links = ids.length ? await get('item_links?select=item_table,item_id,rel,ref,title,at,agent&item_id=in.(' + ids.map((x) => encodeURIComponent('"' + x + '"')).join(',') + ')&order=at.desc&limit=40') : [];
-      return jsonResp({ ok: true, q, equip, docs, vendors, invoices, learned, log, contradictions, links, before, partial: bad.length ? bad : undefined,
+      const factsRow = (st || []).find((x) => x && x.key === FACTS_KEY);
+      const facts = factsFind(factsRow && factsRow.value, q);
+      return jsonResp({ ok: true, q, equip, docs, vendors, invoices, learned, log, contradictions, links, before, facts, partial: bad.length ? bad : undefined,
         next: (bad.length ? 'a read failed (' + bad.join(', ') + '): do not say "none found" for it, say it could not be read. ' : '') + (before && before.length ? 'before: what already happened with this supplier, newest first; open the answer with one line "\u05d1\u05e4\u05e2\u05dd \u05d4\u05e7\u05d5\u05d3\u05de\u05ea:" from the one that matters (who, what, DD/MM), and do not ask Michael what is already there. ' : '') + 'mail: outlook_email_search by the name and by the supplier, the whole thread, newest first; open quotes and reports; compare the same fields in all (agent-common.md, cross-check); no quote validity date' }, 200, {});
     }
     if (body.op === 'state_get') {
