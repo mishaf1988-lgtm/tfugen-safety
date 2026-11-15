@@ -78,7 +78,7 @@ export function badSigNoteDue(lastMs, nowMs) { return !lastMs || nowMs - lastMs 
 async function note(env, value) {
   if (!env.SUPABASE_SERVICE_ROLE_KEY) return;
   try {
-    await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    await sbJson(env, 'server_state?on_conflict=key', { /* cas-ok: whole value, nothing read first, the newest wins */ method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify([{ key: LAST_KEY, value: Object.assign({ at: new Date().toISOString() }, value), updated_at: new Date().toISOString() }]) });
   } catch (e) { /* a missing note is not a failure */ }
 }
@@ -136,6 +136,12 @@ async function sbJson(env, path, init) {
     { headers: Object.assign({ apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }, (init && init.headers) || {}) }));
   if (!r.ok) throw new Error('sb ' + r.status);
   return r.status === 204 ? null : r.json().catch(() => null);
+}
+// 15/11/2026 (ideas-lab 12): a read-modify-write of one server_state key through stateCas (functions/_cas.js), so what
+// another run saved between our read and our write is kept. mutate(raw) is pure: raw is undefined when there is no row.
+function stateCasEnv(env, key, mutate) {
+  const k = env.SUPABASE_SERVICE_ROLE_KEY;
+  return stateCas(sbFrom(env), { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }, key, mutate, () => tmo(SB_TIMEOUT_MS));
 }
 
 // Meta retries a webhook it thinks failed: the same message id is handled once.
@@ -252,10 +258,8 @@ export function rateAdd(raw, good, q, nowIso, a) {
 }
 export async function rateNote(env, good, q, a) {
   try {
-    const rows = await sbJson(env, 'server_state?key=eq.' + RATE_KEY + '&select=value');
-    const list = rateAdd(rows && rows[0] ? rows[0].value : '[]', good, q, new Date().toISOString(), a);
-    await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify([{ key: RATE_KEY, value: JSON.stringify(list), updated_at: new Date().toISOString() }]) });
+    const nowIso = new Date().toISOString();
+    await stateCasEnv(env, RATE_KEY, (raw) => ({ value: JSON.stringify(rateAdd(raw === undefined ? '[]' : raw, good, q, nowIso, a)) }));
   } catch (e) { /* a lost rating is not a lost message */ }
 }
 // 21/10/2026 (dev request from the assistant: the cloud permission check stopped its sign_request as a "real-world
@@ -525,14 +529,16 @@ export async function fastDel(env, r) {
   const q = st.table + '?id=eq.' + encodeURIComponent(st.id);
   const full = await sbJson(env, q + '&select=*');
   if (!Array.isArray(full) || full.length !== 1) return DEL_GONE;
-  const ur = await sbJson(env, 'server_state?key=eq.' + UNDO_KEY + '&select=value');
   // 29/10/2026 retro: a log that exists and cannot be read is never replaced by one entry (that wiped the earlier backups): nothing is deleted, the assistant answers
-  let undo = []; try { undo = JSON.parse(ur && ur[0] ? ur[0].value : '[]'); } catch (x) { return null; }
-  if (!Array.isArray(undo)) return null;
-  undo.push({ table: st.table, row: full[0], why: st.why, at: new Date().toISOString() });
-  const kept = await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
-    body: JSON.stringify([{ key: UNDO_KEY, value: JSON.stringify(undo.slice(-UNDO_MAX)), updated_at: new Date().toISOString() }]) });
-  if (!Array.isArray(kept) || !kept.length) return null;
+  // 15/11/2026 (ideas-lab 12): through stateCas, so a row kept or restored by another run in between is not dropped from the log
+  const entry = { table: st.table, row: full[0], why: st.why, at: new Date().toISOString() };
+  let bad = false;
+  const kept = await stateCasEnv(env, UNDO_KEY, (raw) => {
+    let undo = []; try { undo = JSON.parse(raw === undefined ? '[]' : raw); } catch (x) { bad = true; return { write: false }; }
+    if (!Array.isArray(undo)) { bad = true; return { write: false }; }
+    return { value: JSON.stringify(undo.concat([entry]).slice(-UNDO_MAX)) };
+  });
+  if (bad || !kept.written) return null;
   const gone = await sbJson(env, q, { method: 'DELETE', headers: { Prefer: 'return=representation' } });
   return Array.isArray(gone) && gone.length === 1 ? '\u05e0\u05de\u05d7\u05e7 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4. \u05d4\u05e9\u05d5\u05e8\u05d4 \u05d4\u05de\u05dc\u05d0\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 \u05d1\u05d2\u05d9\u05d1\u05d5\u05d9, \u05d5\u05d0\u05dd \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05d7\u05d6\u05d9\u05e8 \u05d0\u05d5\u05ea\u05d4, \u05db\u05ea\u05d5\u05d1 \u05dc\u05e2\u05d5\u05d6\u05e8 "\u05dc\u05d4\u05d7\u05d6\u05d9\u05e8" \u05d5\u05ea\u05d0\u05e9\u05e8 \u05d1\u05dc\u05d7\u05d9\u05e6\u05d4.' : null;
 }
@@ -556,14 +562,14 @@ export async function fastUndo(env, r) {
   if (!Array.isArray(back) || back.length !== 1) return null;
   // security review 02/11/2026: read the log again just before writing, so a delete kept meanwhile (fastDel) is not lost;
   // an unreadable log is left as it is (the row is back, its copy simply stays)
-  const ur2 = await sbJson(env, 'server_state?key=eq.' + UNDO_KEY + '&select=value');
-  let now2 = null; try { now2 = JSON.parse(ur2 && ur2[0] ? ur2[0].value : '[]'); } catch (x) { now2 = null; }
-  const ix2 = Array.isArray(now2) ? undoPick(now2, st.table, st.id) : -1;
-  if (ix2 >= 0) {
+  // 15/11/2026 (ideas-lab 12): and through stateCas, so a delete kept between that read and this write is not lost either
+  await stateCasEnv(env, UNDO_KEY, (raw) => {
+    let now2 = null; try { now2 = JSON.parse(raw === undefined ? '[]' : raw); } catch (x) { now2 = null; }
+    const ix2 = Array.isArray(now2) ? undoPick(now2, st.table, st.id) : -1;
+    if (ix2 < 0) return { write: false };
     now2.splice(ix2, 1);
-    await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify([{ key: UNDO_KEY, value: JSON.stringify(now2), updated_at: new Date().toISOString() }]) });
-  }
+    return { value: JSON.stringify(now2) };
+  });
   return '\u05d4\u05d5\u05d7\u05d6\u05e8 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4. \u05d4\u05e9\u05d5\u05e8\u05d4 \u05d7\u05d6\u05e8\u05d4 \u05db\u05de\u05d5 \u05e9\u05d4\u05d9\u05d9\u05ea\u05d4 \u05dc\u05e4\u05e0\u05d9 \u05d4\u05de\u05d7\u05d9\u05e7\u05d4.';
 }
 async function fastTourClose(env, r) {
@@ -627,16 +633,17 @@ async function signLog(env, title, payload) {
         event_type: 'owner_sign', channel: 'server', payload: Object.assign({ title: String(title).slice(0, 120) }, payload) }]) });
   } catch (e) { /* the state in server_state still shows it */ }
 }
-async function signSave(env, list) {
-  await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify([{ key: SIGN_KEY, value: JSON.stringify(list), updated_at: new Date().toISOString() }]) });
-}
 export async function fastSign(env, r, wamid) {
-  const rows = await sbJson(env, 'server_state?key=eq.' + SIGN_KEY + '&select=value');
   const now = new Date();
-  const t = signTake(rows && rows[0] ? rows[0].value : '[]', r.id, r.yes, now.toISOString(), wamid);
+  // approved / cancelled / expired is written before the signing starts: never twice. 15/11/2026 (ideas-lab 12): taken
+  // through stateCas, so two taps at once cannot both find it pending and both sign, and a request added meanwhile stays.
+  let t = null;
+  const tw = await stateCasEnv(env, SIGN_KEY, (raw) => {
+    t = signTake(raw === undefined ? '[]' : raw, r.id, r.yes, now.toISOString(), wamid);
+    return t.error === 'unknown' || t.error === 'done' ? { write: false } : { value: JSON.stringify(t.list) };
+  });
   if (t.error === 'unknown') return null; // not ours: the assistant answers
-  await signSave(env, t.list); // approved / cancelled / expired is written before the signing starts: never twice
+  if (t.error !== 'done' && !tw.written) throw new Error('sign state not saved');
   if (t.error === 'expired') return SIGN_EXPIRED_TEXT;
   if (t.error) return SIGN_DONE_TEXT;
   const base = { id: r.id, path: t.req.path, agent: t.req.agent, wamid };
@@ -644,8 +651,7 @@ export async function fastSign(env, r, wamid) {
   let res;
   try { const at = await accessToken(env); res = await signRun(env, sbFrom(env), at.token, t.req, now.getTime()); }
   catch (e) { res = { ok: false, error: String(e && e.message || e).slice(0, 120) }; }
-  const after = await sbJson(env, 'server_state?key=eq.' + SIGN_KEY + '&select=value').catch(() => null);
-  await signSave(env, signMark(after && after[0] ? after[0].value : t.list, r.id, res.ok ? 'signed' : 'failed', res.ok ? { signed: res.name } : { error: res.error })).catch(() => {});
+  await stateCasEnv(env, SIGN_KEY, (raw) => ({ value: JSON.stringify(signMark(raw === undefined ? t.list : raw, r.id, res.ok ? 'signed' : 'failed', res.ok ? { signed: res.name } : { error: res.error })) })).catch(() => {});
   await signLog(env, (res.ok ? 'signed: ' + res.name : 'sign failed: ' + t.req.name), Object.assign({ result: res.ok ? 'signed' : 'failed', signed: res.name || null, webUrl: res.webUrl || null, error: res.error || null }, base));
   // 21/10/2026: the signed copy itself, as a document, ready to forward (the text answer follows it).
   if (res.ok && res.bytes) {
@@ -655,7 +661,7 @@ export async function fastSign(env, r, wamid) {
     const dir = t.req.path.split('/').slice(0, -1).join('/');
     const rel = dir.slice(OD_ROOT.length) + '/' + res.name;
     try {
-      await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      await sbJson(env, 'server_state?on_conflict=key', { /* cas-ok: whole value, nothing read first, the newest wins */ method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
         body: JSON.stringify([{ key: SIGN_MAIL_KEY, value: JSON.stringify({ at: now.toISOString(), rel, name: res.name }), updated_at: now.toISOString() }]) });
       return { text: signDoneText(res, t.req), mail: rel };
     } catch (e) { /* no button: the answer still goes out */ }
@@ -749,7 +755,7 @@ async function handle(env, raw) {
   if (!msgs.length) {
     if (hasStatuses(body) && env.SUPABASE_SERVICE_ROLE_KEY) {
       try {
-        await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+        await sbJson(env, 'server_state?on_conflict=key', { /* cas-ok: a time stamp, whole, nothing read first */ method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
           body: JSON.stringify([{ key: STATUS_KEY, value: { at: new Date().toISOString() }, updated_at: new Date().toISOString() }]) });
       } catch (e) { /* the watchdog then says only what it knows */ }
       // 07/11/2026 (ideas-lab 13): delivered / failed of messages to Michael; a failed one is mailed to his own mailbox
@@ -889,7 +895,7 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
       const sa = await fastSignAsk(env, fr0.q);
       if (sa.sent) { seen.fast = 'sign_ask'; return true; }
       if (sa.pick) {
-        await sbJson(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+        await sbJson(env, 'server_state?on_conflict=key', { /* cas-ok: the newest pick, whole, nothing read first */ method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
           body: JSON.stringify([{ key: SIGN_PICK_KEY, value: JSON.stringify({ at: new Date().toISOString(), paths: sa.pick.map((x) => x.path) }), updated_at: new Date().toISOString() }]) });
         const pt = signPickText(sa.pick, sa.none);
         const ps = await sendToOwner(env, owner, pt, { kind: 'reply', windowOpen: true, noTemplate: true, choices: signPickChoices(sa.pick) }).catch(() => null);
