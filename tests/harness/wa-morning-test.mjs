@@ -504,13 +504,13 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     check('usageCount: drills and tests ("[...") do not count; voice, taps, files; "סכמתי" is not the command',
       c.msgs === 7 && c.voice === 1 && c.taps === 1 && c.files === 1 && c.cmds['סכם'] === 2 && c.cmds['השווה'] === 1 && !c.cmds['נוהל'], c);
     check('usageCount: app writes only for the listed modules; inc (rare on purpose) and web_vitals are not listed',
-      c.app.tour_hazards === 2 && c.app.tasks === 1 && !('inc' in c.app) && !('web_vitals' in c.app) && c.appOff.indexOf('ncr') >= 0 && !Object.keys(USAGE_APP).includes('inc'), c.app);
-    const prev = { cmdsOff: ['נוהל', 'סכם'], appOff: ['ncr'] };
+      c.app.tour_hazards === 2 && c.app.tasks === 1 && !('inc' in c.app) && !('web_vitals' in c.app) && c.appOff.indexOf('med') >= 0 && !Object.keys(USAGE_APP).includes('inc') && !['ncr', 'ppe', 'ctr'].some((k) => k in USAGE_APP), c.app);
+    const prev = { cmdsOff: ['נוהל', 'סכם'], appOff: ['med'] };
     const checks = [{ t: 'פתח את הקישור להתקנה בכרום באייפון' }, { t: 'שלח "השווה" עם שתי הצעות' }, 'שלישי', 'רביעי', 'חמישי', 'שישי שלא מופיע'];
     const t = usageText(c, prev, checks, '2026-10');
     check('usageText: counts, commands used, app writes, unused this month, two months unused marked apart',
       /אוקטובר 2026/.test(t) && /הודעות שלך לעוזר: 7 \(קוליות 1, כפתורים 1, קבצים 1\)/.test(t) && /סכם 2, השווה 1/.test(t) && /ליקויי סיור 2, משימות 1/.test(t)
-      && /חודשיים בלי שימוש[^\n]*נוהל[^\n]*אי-התאמות/.test(t) && !/לא בשימוש החודש:[^\n]*נוהל/.test(t) && /לא בשימוש החודש:[^\n]*תחקיר/.test(t), t);
+      && /חודשיים בלי שימוש[^\n]*נוהל[^\n]*בדיקות רפואיות/.test(t) && !/לא בשימוש החודש:[^\n]*נוהל/.test(t) && /לא בשימוש החודש:[^\n]*תחקיר/.test(t), t);
     check('usageText: at most 5 checks, numbered in order; keyboard characters only; under USAGE_MAX',
       /\n1\. פתח את הקישור/.test(t) && /\n5\. חמישי/.test(t) && !/שישי שלא מופיע/.test(t) && !/[–—־“”…]/.test(t) && t.length <= USAGE_MAX, t.length);
     const long = usageText(c, null, Array.from({ length: 5 }, () => ({ t: 'א'.repeat(300) })), '2026-10');

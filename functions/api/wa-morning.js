@@ -631,7 +631,7 @@ export async function invMonthStep(env, now) {
 export const USAGE_KEY = 'usage_month', CHECKS_KEY = 'michael_checks', USAGE_CHECKS = 5;
 export const USAGE_CMDS = ['\u05e1\u05db\u05dd', '\u05ea\u05d7\u05e7\u05d9\u05e8', '\u05e9\u05d9\u05d7\u05d4', '\u05de\u05d4 \u05d9\u05e9\u05d1\u05e8', '\u05e0\u05d2\u05d3', '\u05d4\u05d7\u05dc\u05d8', '\u05e9\u05d0\u05dc\u05d5\u05ea', '\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea', '\u05e0\u05d5\u05d4\u05dc', '\u05d4\u05d3\u05e8\u05db\u05d4', '\u05d4\u05e9\u05d5\u05d5\u05d4'];
 // app modules that should see writes in a normal month; inc and near_miss are rare on purpose and never listed as unused
-export const USAGE_APP = { tour_hazards: '\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9 \u05e1\u05d9\u05d5\u05e8', tasks: '\u05de\u05e9\u05d9\u05de\u05d5\u05ea', ncr: '\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05ea', tr: '\u05d4\u05d3\u05e8\u05db\u05d5\u05ea', docs: '\u05de\u05e1\u05de\u05db\u05d9\u05dd', equip_inspections: '\u05e6\u05d9\u05d5\u05d3 \u05d5\u05ea\u05e1\u05e7\u05d9\u05e8\u05d9\u05dd', ctr: '\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd', ppe: '\u05e6\u05d9\u05d5\u05d3 \u05de\u05d2\u05df', med: '\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e8\u05e4\u05d5\u05d0\u05d9\u05d5\u05ea', toolbox_talks: '\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea', trustee_reports: '\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd' };
+export const USAGE_APP = { tour_hazards: '\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9 \u05e1\u05d9\u05d5\u05e8', tasks: '\u05de\u05e9\u05d9\u05de\u05d5\u05ea', tr: '\u05d4\u05d3\u05e8\u05db\u05d5\u05ea', docs: '\u05de\u05e1\u05de\u05db\u05d9\u05dd', equip_inspections: '\u05e6\u05d9\u05d5\u05d3 \u05d5\u05ea\u05e1\u05e7\u05d9\u05e8\u05d9\u05dd', med: '\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e8\u05e4\u05d5\u05d0\u05d9\u05d5\u05ea', toolbox_talks: '\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea', trustee_reports: '\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd' };
 export function usageDue(now, last) {
   const h = ilHour(now);
   return h >= 9 ? invMonthDue(now, last) : null;
@@ -682,6 +682,8 @@ export async function usageStep(env, now) {
     sb(env, 'audit_log?select=table_name&source=eq.app&ts=gte.' + since + '&limit=3000')]);
   let checks = []; try { checks = JSON.parse((await stateGet(env, CHECKS_KEY)) || '[]'); } catch (e) { checks = []; }
   const c = usageCount((msgs || []).map((r) => r && r.payload), app);
+  // retro 15/11/2026: PostgREST caps a response at 1000 rows without an error; a full page means a partial count, so no 'unused' suggestion from it.
+  if ((msgs || []).length >= 1000 || (app || []).length >= 1000) { c.cmdsOff = []; c.appOff = []; }
   const text = usageText(c, st, checks, ym);
   const to = await ownerWa(env, sbFrom(env));
   if (!to) return { month: ym, ok: false, error: 'no owner number in notification_prefs' };
