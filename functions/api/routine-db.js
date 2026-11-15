@@ -2840,7 +2840,9 @@ async function routineDbHandle(context) {
       const closedReq = body.op === 'dev_done' ? r.list.find((x) => x && x.id === String(body.id || '')) : null;
       // the evening safety net's resend of a fault-alert request (routine-dev-safety.md 3b) is quiet too: by then the watchdog
       // already said it once at 3 hours (faultEscalate), and a second message on the same fault is what Michael asked to stop
-      const quietFixed = !!(closedReq && closedReq.agent === 'fault-alert' && (body.fixed === true || String(body.note || '').trim() === DEV_RESENT_NOTE));
+      // 15/11/2026 (the assistant chat: the golden 10/10 went out at 07:08 and again in the update): a golden-auto request
+      // closed as fixed is quiet too; its note reaches Michael in the morning update only
+      const quietFixed = !!(closedReq && SERVER_REQUESTERS.indexOf(closedReq.agent) >= 0 && (body.fixed === true || String(body.note || '').trim() === DEV_RESENT_NOTE));
       const waText = body.op !== 'dev_done' || quietFixed ? '' : String(body.note || '').trim() ? devDoneLead(body.fixed) + stripInternalIds(body.note) : promiseDoneText(closed, '', body.fixed);
       if (waText && env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN) {
         try {
