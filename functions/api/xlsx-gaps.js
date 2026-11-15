@@ -20,7 +20,7 @@
 // read or write never fails the board: it is kept in server_state.xlsx_gaps.invoices as { rows, ok, err }.
 // Requests per run, worst case: 14 of Cloudflare's 50 (tests/harness/xlsx-gaps-test.mjs counts them).
 
-import { jsonResp, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo } from '../_shared.js';
+import { jsonResp, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, secretOk } from '../_shared.js';
 import { odConfigured, accessToken, stateGet, stateSet, putFile } from '../_onedrive.js';
 import { buildXlsxBook, XLSX_TYPE } from '../_xlsx.js';
 import { readAll } from './hazard-file.js';
@@ -207,7 +207,7 @@ export async function onRequest(context) {
   const { request, env } = context;
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, {});
   const want = env.TRUSTEE_NOTIFY_SECRET;
-  if (!want || (request.headers.get('x-notify-secret') || '') !== want) return jsonResp({ error: 'forbidden' }, 403, {});
+  if (!want || !(await secretOk(request.headers.get('x-notify-secret'), want))) return jsonResp({ error: 'forbidden' }, 403, {});
   if (!odConfigured(env) || !env.SUPABASE_SERVICE_ROLE_KEY) return jsonResp({ ok: false, error: 'server not configured' }, 200, {});
   const now = new Date(), at = now.toISOString();
   const today = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });

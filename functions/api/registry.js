@@ -16,7 +16,7 @@
 //                                           {at, ok, error}. The weekly mail reports a failure or a stale probe, so a
 //                                           changed or fallen site never turns into a silent "nothing found".
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireUser } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireUser, secretOk } from '../_shared.js';
 import { stateSet } from '../_onedrive.js';
 
 export const CKAN = 'https://data.gov.il/api/3/action/datastore_search';
@@ -120,7 +120,7 @@ export async function onRequest({ request, env }) {
 
   if (request.method === 'POST') {
     const want = env.TRUSTEE_NOTIFY_SECRET;
-    if (!want || (request.headers.get('x-notify-secret') || '') !== want) return jsonResp({ error: 'forbidden' }, 403, cors);
+    if (!want || !(await secretOk(request.headers.get('x-notify-secret'), want))) return jsonResp({ error: 'forbidden' }, 403, cors);
     if (op !== 'check') return jsonResp({ error: 'unknown op (check)' }, 400, cors);
     if (!env.SUPABASE_SERVICE_ROLE_KEY) return jsonResp({ ok: false, error: 'server not configured' }, 200, cors);
     return jsonResp(await runProbe(env), 200, cors);

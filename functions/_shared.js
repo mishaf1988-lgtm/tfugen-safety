@@ -193,3 +193,14 @@ export function ipBucket(raw) {
   const nat64 = g[0] === '64' && g[1] === 'ff9b' && g.slice(2, 6).every((x) => x === '0');
   return mapped || nat64 || g.slice(0, 7).every((x) => x === '0') ? g.join(':') : g.slice(0, 4).join(':');
 }
+
+// 15/11/2026 (security round, Michael: "do it: one round"): a shared secret or token from a request header, compared
+// as SHA-256 digests in constant time, so the time does not tell how much of it matched. Same as keyOk in routine-db.
+export async function secretOk(given, want) {
+  if (!want || !given) return false;
+  const h = async (x) => new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(x))));
+  const a = await h(given), b = await h(want);
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a[i] ^ b[i];
+  return d === 0;
+}

@@ -19,7 +19,7 @@
 // server_state has RLS with no policies, so the app never reads it directly; this GET is the
 // read path, with the service key, the same way /api/vitre?op=sync_status serves vitre_sync.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireUser } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireUser, secretOk } from '../_shared.js';
 import { stateGet, stateSet } from '../_onedrive.js';
 
 export const STATE_KEY = 'weather_tomorrow';
@@ -117,7 +117,7 @@ export async function onRequest({ request, env }) {
   if (request.method === 'POST') {
     // pg_cron: no Origin, no user, the shared secret from the Vault.
     const want = env.TRUSTEE_NOTIFY_SECRET;
-    if (!want || (request.headers.get('x-notify-secret') || '') !== want) return jsonResp({ error: 'forbidden' }, 403, cors);
+    if (!want || !(await secretOk(request.headers.get('x-notify-secret'), want))) return jsonResp({ error: 'forbidden' }, 403, cors);
     if (op !== 'check') return jsonResp({ error: 'unknown op (check)' }, 400, cors);
     if (!env.SUPABASE_SERVICE_ROLE_KEY) return jsonResp({ ok: false, error: 'server not configured' }, 200, cors);
     return jsonResp(await runCheck(env), 200, cors);

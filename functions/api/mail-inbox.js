@@ -18,7 +18,7 @@
 // so the finding is marked closed here, with the service key.
 // The Excel log follows on its own: the insert fires trustee_reports_log.
 // Nothing is ever deleted. Each message is handled once (ids in server_state).
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, sbFrom, FILE_TIMEOUT_MS as FILE_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, SB_TIMEOUT_MS as SB_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, sbFrom, FILE_TIMEOUT_MS as FILE_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, SB_TIMEOUT_MS as SB_MS, tmo, SITE, SB_LIVE, secretOk } from '../_shared.js';
 import { odConfigured, accessToken, tokenRow, hasMailRead, stateGet, stateSet, sendMail } from '../_onedrive.js';
 import { imageInfo } from '../_xlsx.js';
 
@@ -199,7 +199,7 @@ export async function onRequest(context) {
     if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
   } else {
     const want = env.TRUSTEE_NOTIFY_SECRET;
-    if (!want || (request.headers.get('x-notify-secret') || '') !== want) return jsonResp({ error: 'forbidden' }, 403, cors);
+    if (!want || !(await secretOk(request.headers.get('x-notify-secret'), want))) return jsonResp({ error: 'forbidden' }, 403, cors);
   }
   if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, cors);
   try {
