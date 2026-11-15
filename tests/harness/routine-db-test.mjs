@@ -1184,6 +1184,16 @@ const callIn = async (body) => {
       const log = JSON.parse(state.od_deleted || '[]');
       check('od_dedupe: the copy this server made, same hash and size: one DELETE of that item (recycle bin), and a line in od_deleted', x.json.ok && x.json.bin && deleted.join() === 'i1'
         && log.length === 1 && log[0].path === '02_x/a (1).pdf' && log[0].kept === '02_x/a.pdf' && log[0].agent === 'routine-wa-assistant', { j: x.json, deleted, log });
+      // 15/11/2026 (ideas-lab 12): od_deleted through stateCas. A deletion logged between our read and our write is kept.
+      { mk(); state.od_deleted = '[]'; stateVer.od_deleted = 'v-od0';
+        let hit = 0; const racer = (k) => { if (k !== 'od_deleted') { raceOnce = racer; return; } hit++; state[k] = JSON.stringify([{ at: new Date().toISOString(), path: '02_y/meanwhile.pdf' }]); stateVer[k] = 'v-od-other'; };
+        raceOnce = racer;
+        const rx = await call(D, 'k-123', 'POST', E);
+        raceOnce = null;
+        const dl = JSON.parse(state.od_deleted || '[]').map((y) => y.path);
+        check('cas: od_dedupe keeps a deletion logged in between (before: the old list was written over it)', rx.json.ok && hit === 1 && dl.includes('02_y/meanwhile.pdf') && dl.includes('02_x/a (1).pdf') && dl.length === 2, { j: rx.json, dl, hit });
+        check('pure: calLogAdd with a max keeps that many', JSON.parse(calLogAdd(JSON.stringify(Array.from({ length: 250 }, (_, i) => ({ i }))), { a: 0 }, 200)).length === 200);
+        delete stateVer.od_deleted; }
       mk(); items['a (1).pdf'].createdBy = { user: { displayName: 'M' } };
       x = await call(D, 'k-123', 'POST', E);
       check('od_dedupe: a file Michael made: refused, nothing deleted', !x.json.ok && x.json.error === 'not created by the server' && deleted.length === 0, x.json);
@@ -1377,6 +1387,15 @@ const callIn = async (body) => {
       const ev = puts[0] && JSON.parse(puts[0].body).event;
       check('cal_invite: one PUT into the invite folder with a Graph event (Israel time, required and optional attendees, location, escaped RTL body)', y.json.ok && puts.length === 1 && puts[0].url.indexOf('/root:/' + OD_ROOT + OD_CAL_INVITE + '/') > 0 && ev.start.dateTime === D + 'T11:00:00' && ev.start.timeZone === 'Israel Standard Time' && ev.attendees.length === 3 && ev.attendees[0].type === 'required' && ev.attendees[2].type === 'optional' && ev.location.displayName === 'Tapugan' && /dir="rtl"/.test(ev.body.content) && /line 1<br>&lt;b&gt;/.test(ev.body.content), { y: y.json, ev });
       check('cal_invite logged in cal_invited, readable by state_get', String(state[CAL_INVITED_KEY] || '').indexOf(D + 'T11:00') >= 0 && STATE_READ.indexOf(CAL_INVITED_KEY) >= 0);
+      // 15/11/2026 (ideas-lab 12): cal_invited through stateCas. An invite logged between our read and our write is kept.
+      { state[CAL_INVITED_KEY] = '[]'; stateVer[CAL_INVITED_KEY] = 'v-ci0';
+        let hit = 0; const racer = (k) => { if (k !== CAL_INVITED_KEY) { raceOnce = racer; return; } hit++; state[k] = JSON.stringify([{ at: new Date().toISOString(), subject: 'an invite logged meanwhile', file: 'other.txt' }]); stateVer[k] = 'v-ci-other'; };
+        raceOnce = racer;
+        const ci = await callIn(Object.assign({}, inv, { subject: 'race invite' }));
+        raceOnce = null;
+        const il = JSON.parse(state[CAL_INVITED_KEY]).map((x) => x.subject);
+        check('cas: cal_invite keeps an invite logged in between (before: the old list was written over it)', ci.json.ok === true && hit === 1 && il.includes('an invite logged meanwhile') && il.includes('race invite') && il.length === 2, { j: ci.json, il, hit });
+        delete state[CAL_INVITED_KEY]; delete stateVer[CAL_INVITED_KEY]; }
       puts = [];
       const badI = async (o) => (await callIn(Object.assign({}, inv, o))).status === 400;
       check('cal_invite refused, nothing written: no "\u05d1\u05e6\u05e2", no attendees, six with one outside, 31 of ours, no body, a past day, an extra field (id)', await badI({ approved: 'ok' }) && await badI({ to: '' }) && await badI({ to: 'a@tapugan.co.il;b@tapugan.co.il;c@tapugan.co.il;d@tapugan.co.il;e@tapugan.co.il;x@gmail.com' }) && await badI({ to: Array.from({ length: 31 }, (_, i) => 'm' + i + '@tapugan.co.il').join(';') }) && await badI({ body: '' }) && await badI({ start: '2020-01-01T08:00', end: '2020-01-01T09:00' }) && await badI({ id: 'x' }) && !puts.length);

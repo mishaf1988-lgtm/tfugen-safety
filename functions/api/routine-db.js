@@ -1340,9 +1340,10 @@ export function truPhotoObj(photoUrl, base) {
   return /^[A-Za-z0-9][A-Za-z0-9._-]{0,250}$/.test(path) && /^tru-/.test(path) ? 'incidents-photos/' + encodeURIComponent(path) : '';
 }
 // Pure (13/11/2026, stateCas): the cal_moved list as stored (a JSON string, or broken) + one line on top -> the string to save.
-export function calLogAdd(raw, line) {
+// 15/11/2026: also cal_invited and od_deleted (max = how many lines the key keeps).
+export function calLogAdd(raw, line, max = CAL_MOVED_MAX) {
   let list = []; try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
-  return JSON.stringify([line].concat(Array.isArray(list) ? list : []).slice(0, CAL_MOVED_MAX));
+  return JSON.stringify([line].concat(Array.isArray(list) ? list : []).slice(0, max));
 }
 const CAL_T = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 // Pure. Israel wall clock "YYYY-MM-DDTHH:MM" for start and end, from today up to a year ahead, at most 14 days long.
@@ -3740,11 +3741,9 @@ async function routineDbHandle(context) {
       const at = await accessToken(env);
       const name = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '') + '-' + Math.random().toString(36).slice(2, 8) + '.txt';
       await putFile(at.token, OD_ROOT + OD_CAL_INVITE, name, c.file, 'text/plain');
-      const rows = await stateRead([CAL_INVITED_KEY]).catch(() => []);
-      let list = []; try { list = JSON.parse((rows[0] && rows[0].value) || '[]'); } catch (e) { list = []; }
+      // 15/11/2026 (ideas-lab 12): through stateCas, an invite logged between the read and the write is kept
       const line = { at: new Date().toISOString(), subject: c.subject, start: c.start, end: c.end, count: c.count, file: name, agent: body.agent, approved: String(body.approved).slice(0, 200) };
-      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
-        body: JSON.stringify([{ key: CAL_INVITED_KEY, value: JSON.stringify([line].concat(Array.isArray(list) ? list : []).slice(0, CAL_MOVED_MAX)), updated_at: line.at }]) }).catch(() => null);
+      await stateCas(url, h, CAL_INVITED_KEY, (raw) => ({ value: calLogAdd(raw, line) }), () => tmo(SB_MS)).catch(() => null);
       return jsonResp({ ok: true, file: OD_CAL_INVITE + '/' + name, start: c.start, end: c.end, attendees: c.count, draft: c.draft }, 200, {});
     }
     if (body.op === 'draft_trash') {
@@ -4218,11 +4217,9 @@ async function routineDbHandle(context) {
       if (keptNow.status || keptNow.id !== kept.id) return jsonResp({ ok: false, error: 'keep changed or gone, nothing deleted' }, 200, {});
       const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(item.id), { method: 'DELETE', headers: gh, signal: tmo(GRAPH_MS) });
       if (d.status !== 204) return jsonResp({ ok: false, error: 'delete ' + d.status }, 200, {});
-      const rows = await stateRead([OD_DELETED_KEY]).catch(() => []);
-      let list = []; try { list = JSON.parse((rows[0] && rows[0].value) || '[]'); } catch (e) { list = []; }
+      // 15/11/2026 (ideas-lab 12): through stateCas, a deletion logged between the read and the write is kept
       const line = { at: new Date().toISOString(), path: c.del.slice(OD_ROOT.length), kept: c.keep.slice(OD_ROOT.length), size: item.size, agent: body.agent, why: String(body.why).slice(0, 200) };
-      await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, signal: tmo(SB_MS),
-        body: JSON.stringify([{ key: OD_DELETED_KEY, value: JSON.stringify([line].concat(Array.isArray(list) ? list : []).slice(0, OD_DELETED_MAX)), updated_at: line.at }]) }).catch(() => null);
+      await stateCas(url, h, OD_DELETED_KEY, (raw) => ({ value: calLogAdd(raw, line, OD_DELETED_MAX) }), () => tmo(SB_MS)).catch(() => null);
       return jsonResp({ ok: true, deleted: line.path, kept: line.kept, bin: true }, 200, {});
     }
     if (body.op === 'od_trash') {
