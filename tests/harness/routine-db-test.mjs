@@ -1058,7 +1058,7 @@ const callIn = async (body) => {
     x = await call({ ...base, to_dir: '01_fire/2027/pumps' });
     check('folder that does not exist: refused, nothing created', !x.json.ok && /folder 404/.test(x.json.error) && Object.keys(drive).length === 3, x.json);
     // 15/11/2026 (DECISIONS): an invoice goes to 00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea/YYYY-MM, the month folder (and the top one) made when missing
-    { const SAFE = OD_ROOT.replace(/\/$/, ''), INV = OD_INV_TOP + '/2026-11';
+    { const SAFE = OD_ROOT.replace(/\/$/, ''), INV = OD_INV_TOP + '/' + new Date().getUTCFullYear() + '-11';
       reset(); drive[SAFE] = { id: 'r0', folder: {} }; calls = [];
       x = await call({ ...base, to_dir: INV, name: 'inv 1001.pdf' });
       check('invoice: 00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea and 2026-11 made (conflict fail), the file moved in, no PUT or DELETE', x.json.ok && drive[SAFE + '/' + OD_INV_TOP] && drive[SAFE + '/' + INV + '/inv 1001.pdf'] && !drive[IN + 'a.pdf']
@@ -1070,7 +1070,7 @@ const callIn = async (body) => {
       x = await call({ ...base, from: 'c.pdf', to_dir: INV, name: 'inv 1001.pdf' });
       check('invoice: name taken in the month, refused', !x.json.ok && x.json.error === 'name taken' && drive[IN + 'c.pdf'], x.json);
       check('only YYYY-MM directly under 00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea makes a folder; a deeper path, a bad month or another folder does not',
-        ['2026-01', '2026-11', '2027-12'].every((m) => odMoveCheck({ ...base, to_dir: OD_INV_TOP + '/' + m }).invMonth === m) && ['00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea/2026-13', '00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea/2026-11/x', '01_fire/2026-11', '00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea'].every((d) => !odMoveCheck({ ...base, to_dir: d }).invMonth));
+        (() => { const y = new Date().getUTCFullYear(); return [(y - 1) + '-01', y + '-11', (y + 1) + '-12'].every((m) => odMoveCheck({ ...base, to_dir: OD_INV_TOP + '/' + m }).invMonth === m) && ['2000-01', (y - 2) + '-05', (y + 2) + '-05'].every((m) => !odMoveCheck({ ...base, to_dir: OD_INV_TOP + '/' + m }).invMonth); })() && ['00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea/2026-13', '00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea/2026-11/x', '01_fire/2026-11', '00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea'].every((d) => !odMoveCheck({ ...base, to_dir: d }).invMonth));
       drive[IN + 'd.pdf'] = { id: 'f6', size: 3, file: {} };
       x = await call({ ...base, from: 'd.pdf', to_dir: OD_INV_TOP + '/2026-13', name: 'd.pdf' });
       check('invoice: a bad month folder is not made', !x.json.ok && /folder 404/.test(x.json.error) && !drive[SAFE + '/' + OD_INV_TOP + '/2026-13'], x.json); }

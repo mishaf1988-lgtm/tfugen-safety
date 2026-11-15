@@ -1576,7 +1576,9 @@ export function odMoveCheck(b) {
   if (!dir.length || bad(dir) || OD_NO_DIR.test(dir.join('/')) || (dir[0] === OD_INBOX && !skip) || (dir[0] !== OD_INBOX && OD_TRIGGER_DIRS.indexOf(dir[0]) >= 0)) return { error: 'bad to_dir' };
   if (!name || name.indexOf('/') >= 0 || OD_BAD.test(name) || name.length > 180 || !(skipTo ? skipNameOk(from[0], name) : OD_EXT.test(name))) return { error: 'bad name' };
   // An invoice goes to 00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea/YYYY-MM; the handler makes that month folder if missing (15/11/2026, DECISIONS).
-  const invMonth = dir.length === 2 && dir[0] === OD_INV_TOP && OD_INV_MONTH.test(dir[1]) ? dir[1] : '';
+  // a year near today only (security review 15/11/2026: no 1,200 empty month folders)
+  const yr = new Date().getUTCFullYear(), invYr = dir.length === 2 ? Number(dir[1].substring(0, 4)) : 0;
+  const invMonth = dir.length === 2 && dir[0] === OD_INV_TOP && OD_INV_MONTH.test(dir[1]) && invYr >= yr - 1 && invYr <= yr + 1 ? dir[1] : '';
   return { from: OD_ROOT + OD_INBOX + '/' + from[0], toDir: OD_ROOT + dir.join('/'), name, skip: skipTo, invMonth };
 }
 // 15/11/2026 (Michael in the questionnaire: "\u05d1\u05e6\u05e2: Excel + \u05e7\u05d5\u05d1\u05e6\u05d9 \u05d4\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea (\u05de\u05d5\u05de\u05dc\u05e5)"; DECISIONS): the invoice folder, same name as
