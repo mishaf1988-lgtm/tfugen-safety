@@ -137,6 +137,10 @@ finally:
     gate.file_diff = _fd
 # 06/11/2026 (Michael: "a sync rule has to go in"): a new decision or a server change teaches the assistant, or says why not
 R_noSync = 'רטרו: אין\nskill: אין\nמה לא נבדק: אין\n'
+# 15/11/2026: these checks name functions/api/works.js; its real diff on a branch that changes a regex there
+# made the pairs rule fire and the sync checks fail. The diff is stubbed here, as in the pairs block above.
+_fd2 = gate.file_diff
+gate.file_diff = lambda f: "+  const n = 1;"
 check('sync: a new decision and nothing for the assistant: blocked', not raw('Decision', R_noSync, ['DECISIONS.md', 'STATUS.md']))
 check('sync: ...the decisions map alone does not count', not raw('Decision', R_noSync, ['DECISIONS.md', 'project-files/domains/decisions-map.tsv']))
 check('sync: a server change and nothing for the assistant: blocked', not raw('Weekly mail', R_noSync, ['functions/api/works.js']))
@@ -146,6 +150,7 @@ check('sync: ...with a branch file changed: ok', raw('Decision', R_noSync, ['DEC
 check('sync: ...with "עוזר: <why not>": ok', raw('Weekly mail', R_noSync + 'עוזר: שינוי פנימי בשרת, אין מה לדעת\n', ['functions/api/works.js']))
 check('sync: an empty "עוזר:" line: blocked', not raw('Weekly mail', R_noSync + 'עוזר: \n', ['functions/api/works.js']))
 check('sync: a PR with neither a decision nor server code: no line needed', raw('Status', R_noSync, ['STATUS.md', 'project-files/ideas-lab.md']))
+gate.file_diff = _fd2
 check('every SENSITIVE path exists in the repo', all(os.path.exists(os.path.join(gate.ROOT, f)) for f in gate.SENSITIVE), [f for f in gate.SENSITIVE if not os.path.exists(os.path.join(gate.ROOT, f))])
 check('an empty review line: blocked', not raw('Codes screen', R + 'סקירה: ', ['functions/api/create-user.js']))
 mig = 'migrations/zz-gate-test-%d.sql' % os.getpid()
