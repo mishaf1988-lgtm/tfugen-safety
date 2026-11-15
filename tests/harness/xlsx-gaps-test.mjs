@@ -2,7 +2,7 @@
 // control board is rebuilt from docs, equip_inspections and tasks every night, the board in place moves to
 // 00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1/_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea first, and nothing is written when the data did not change. The weekly mail line.
 // The rows below are made up; the real board is never copied into the public repo.
-import { onRequest, boardSheets, band, eqDomain, fdd, fday, invoiceSheets, STATE_KEY, BOARD, ARCHIVE, INV_DIR, INV_NAME } from './_build/xlsx-gaps.mjs';
+import { onRequest, boardSheets, band, eqDomain, fdd, fday, invoiceSheets, STATE_KEY, BOARD, ARCHIVE, INV_DIR, INV_NAME, INV_OLD, INV_TOP } from './_build/xlsx-gaps.mjs';
 import { xlsxGapsLine } from './_build/weekly-digest.mjs';
 
 let pass = 0, fail = 0;
@@ -76,9 +76,11 @@ const INV = [
       if (u.startsWith('https://graph.microsoft.com/')) {
         w.calls.push(mth + ' ' + d);
         if (mth === 'GET' && d.includes(BOARD + '?')) return o.noBoard ? json({}, 404) : json({ id: 'B1', file: {}, parentReference: { id: 'H1' } });
+        if (mth === 'GET' && d.includes(INV_OLD + '?')) return o.oldInv ? json({ id: 'L1', file: {} }) : json({}, 404);
         if (mth === 'GET' && d.includes(ARCHIVE + '?')) return o.noArchive ? json({}, 404) : json({ id: 'A1', folder: {} });
         if (mth === 'GET') return json({ id: 'P1' });
         if (mth === 'POST') return json({ id: 'A2', folder: {} }, 201);
+        if (mth === 'PATCH' && o.oldMoveFail && d.includes('/items/L1')) return json({ error: 'locked' }, 423);
         if (mth === 'PATCH') return o.moveFail ? json({ error: 'locked' }, 423) : json({ id: 'B1' });
         if (mth === 'PUT') w.puts[d.split('?')[0]] = new TextDecoder().decode(init.body);
         if (mth === 'PUT' && d.includes(INV_NAME)) return o.invPutFail ? json({ error: { code: 'locked' } }, 423) : json({ webUrl: 'https://w', size: 9 }, 201);
@@ -140,8 +142,23 @@ const INV = [
   await onRequest({ request: req(S), env: ENV });
   s = JSON.parse(w.state[STATE_KEY] || '{}');
   const invPut = Object.keys(w.puts).find((k) => k.includes(INV_NAME));
-  check('the ledger is written after the board, in 00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1, replaced (no conflict fail)', !!invPut && invPut.includes(INV_DIR + '/' + INV_NAME + ':/content')
+  check('the ledger is written after the board, in 00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea, replaced (no conflict fail)', !!invPut && invPut.includes(INV_DIR + '/' + INV_NAME + ':/content')
     && !w.calls.find((c) => c.includes(INV_NAME)).includes('conflictBehavior') && w.calls.findIndex((c) => c.includes(INV_NAME)) > w.calls.findIndex((c) => c.startsWith('PUT') && c.includes(BOARD)), w.calls);
+  check('its own folder 00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea under the safety folder (DECISIONS 15/11/2026)', INV_TOP === '00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea' && INV_DIR.endsWith('\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/' + INV_TOP) && INV_OLD.includes('00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1/'));
+  check('no old copy: one GET, nothing moved, old ""', s.invoices.old === '' && w.calls.filter((c) => c.includes(INV_OLD)).length === 1 && !w.calls.some((c) => c.startsWith('PATCH') && c.includes('/items/L1')), s.invoices);
+  { const w2 = world({ oldInv: true });
+    await onRequest({ request: req(S), env: ENV });
+    const s2 = JSON.parse(w2.state[STATE_KEY] || '{}');
+    const iPut = w2.calls.findIndex((c) => c.startsWith('PUT') && c.includes(INV_NAME)), iMv = w2.calls.findIndex((c) => c.startsWith('PATCH') && c.includes('/items/L1'));
+    check('the old copy in 00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1 moves to the archive after the new one is written, never over a file, nothing deleted',
+      iPut >= 0 && iMv > iPut && /conflictBehavior=fail/.test(w2.calls[iMv]) && s2.invoices.ok === true && s2.invoices.old === 'moved' && !w2.calls.some((c) => c.startsWith('DELETE')), { calls: w2.calls, inv: s2.invoices }); }
+  { const w3 = world({ oldInv: true, oldMoveFail: true });
+    await onRequest({ request: req(S), env: ENV });
+    const s3 = JSON.parse(w3.state[STATE_KEY] || '{}');
+    check('the old move fails: the ledger still ok, the reason in old', s3.invoices.ok === true && /old move 423/.test(s3.invoices.old), s3.invoices); }
+  { const w4 = world({ oldInv: true, invPutFail: true });
+    await onRequest({ request: req(S), env: ENV });
+    check('the new ledger fails: the old copy is not moved', !w4.calls.some((c) => c.startsWith('PATCH') && c.includes('/items/L1')), w4.calls); }
   check('one read of invoices, with the service key, ordered by received', w.reads.length === 1 && w.reads[0].key === 'srv' && /order=received_at\.asc\.nullslast/.test(w.reads[0].d), w.reads);
   check('the file holds the headers, a date, a currency and the marked row', invPut && ['\u05d4\u05d5\u05e2\u05d1\u05e8\u05d4 \u05dc\u05d0\u05d9\u05dc\u05e0\u05d4', '04/11/2026', '\u05d0\u05d9\u05e8\u05d5', 'EU-9'].every((x) => w.puts[invPut].includes(x)) && /rightToLeft="1"/.test(w.puts[invPut]));
   check('state: invoices { rows, ok, err }, the board ok', s.ok === true && s.invoices && s.invoices.rows === 3 && s.invoices.ok === true && s.invoices.err === '', s);

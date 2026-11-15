@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { pdfHasFont } from './_build/_ocr.mjs';
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
-import { secondLog, secondSendGate, secondValve, SECOND_UNVERIFIED, SECOND_GATE_MAX, SECOND_GATE_MS, SECOND_GATE_KEY, secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, ilInstant, incFilePrefix, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, cardBefore, CARD_BEFORE_N, CARD_INV_N, linkRow, autoLinkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftTrashHits, draftDoneId, OD_DRAFT_DONE, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, draftsArr, scrubPii, agentEntry, agentArchive, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, refusesWithoutFlow, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, calLogAdd, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, odPdfCheck, OD_PUT_MAX, odArchiveCheck, archiveStampName, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrTxtName, taskAddCheck, TASK_ADD_MAX, taskOpenDup, TASK_SOURCES, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT, isoSwapRequest, isoUpCheck, OD_ISO_SWAP, ISO_SITE_URL, mailGotCheck, mailGotList, MAIL_GOT_MAX } from './_build/routine-db.mjs';
+import { secondLog, secondSendGate, secondValve, SECOND_UNVERIFIED, SECOND_GATE_MAX, SECOND_GATE_MS, SECOND_GATE_KEY, secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, ilInstant, incFilePrefix, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, cardBefore, CARD_BEFORE_N, CARD_INV_N, linkRow, autoLinkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftTrashHits, draftDoneId, OD_DRAFT_DONE, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, draftsArr, scrubPii, agentEntry, agentArchive, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, refusesWithoutFlow, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, calLogAdd, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, OD_INV_TOP, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, odPdfCheck, OD_PUT_MAX, odArchiveCheck, archiveStampName, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrTxtName, taskAddCheck, TASK_ADD_MAX, taskOpenDup, TASK_SOURCES, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_TRASH_DIR, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT, isoSwapRequest, isoUpCheck, OD_ISO_SWAP, ISO_SITE_URL, mailGotCheck, mailGotList, MAIL_GOT_MAX } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -1036,6 +1036,14 @@ const callIn = async (body) => {
         const it = drive[key]; delete drive[key]; drive[dir + '/' + b.name] = it;
         return new Response(JSON.stringify({ ...it, webUrl: 'https://x/' + b.name }), { status: 200 });
       }
+      const ch = /\/items\/([^/?]+)\/children$/.exec(url);
+      if (ch && opt.method === 'POST') {
+        const b = JSON.parse(opt.body), par = Object.keys(drive).find((k) => drive[k].id === decodeURIComponent(ch[1]));
+        if (!par || !b.folder || b['@microsoft.graph.conflictBehavior'] !== 'fail') return new Response('{}', { status: 400 });
+        if (drive[par + '/' + b.name]) return new Response('{}', { status: 409 });
+        const it = { id: 'n' + Object.keys(drive).length, folder: {} }; drive[par + '/' + b.name] = it;
+        return new Response(JSON.stringify(it), { status: 201 });
+      }
       return new Response('{}', { status: 400 });
     };
     const base = { op: 'od_move', agent: 'routine-mail-filing', from: 'a.pdf', to_dir: DIR, name: 'report 09.02.2026.pdf', why: 'monthly pump report' };
@@ -1049,6 +1057,23 @@ const callIn = async (body) => {
     reset();
     x = await call({ ...base, to_dir: '01_fire/2027/pumps' });
     check('folder that does not exist: refused, nothing created', !x.json.ok && /folder 404/.test(x.json.error) && Object.keys(drive).length === 3, x.json);
+    // 15/11/2026 (DECISIONS): an invoice goes to 00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea/YYYY-MM, the month folder (and the top one) made when missing
+    { const SAFE = OD_ROOT.replace(/\/$/, ''), INV = OD_INV_TOP + '/2026-11';
+      reset(); drive[SAFE] = { id: 'r0', folder: {} }; calls = [];
+      x = await call({ ...base, to_dir: INV, name: 'inv 1001.pdf' });
+      check('invoice: 00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea and 2026-11 made (conflict fail), the file moved in, no PUT or DELETE', x.json.ok && drive[SAFE + '/' + OD_INV_TOP] && drive[SAFE + '/' + INV + '/inv 1001.pdf'] && !drive[IN + 'a.pdf']
+        && calls.filter((c) => c.method === 'POST').length === 2 && !calls.some((c) => c.method === 'PUT' || c.method === 'DELETE'), x.json);
+      drive[IN + 'b.pdf'] = { id: 'f7', size: 3, file: {} }; calls = [];
+      x = await call({ ...base, from: 'b.pdf', to_dir: INV, name: 'inv 1002.pdf' });
+      check('invoice: the month folder already there, nothing made', x.json.ok && drive[SAFE + '/' + INV + '/inv 1002.pdf'] && !calls.some((c) => c.method === 'POST'), x.json);
+      drive[IN + 'c.pdf'] = { id: 'f8', size: 3, file: {} };
+      x = await call({ ...base, from: 'c.pdf', to_dir: INV, name: 'inv 1001.pdf' });
+      check('invoice: name taken in the month, refused', !x.json.ok && x.json.error === 'name taken' && drive[IN + 'c.pdf'], x.json);
+      check('only YYYY-MM directly under 00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea makes a folder; a deeper path, a bad month or another folder does not',
+        odMoveCheck({ ...base, to_dir: INV }).invMonth === '2026-11' && ['00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea/2026-13', '00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea/2026-11/x', '01_fire/2026-11', '00_\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea'].every((d) => !odMoveCheck({ ...base, to_dir: d }).invMonth));
+      drive[IN + 'd.pdf'] = { id: 'f6', size: 3, file: {} };
+      x = await call({ ...base, from: 'd.pdf', to_dir: OD_INV_TOP + '/2026-13', name: 'd.pdf' });
+      check('invoice: a bad month folder is not made', !x.json.ok && /folder 404/.test(x.json.error) && !drive[SAFE + '/' + OD_INV_TOP + '/2026-13'], x.json); }
     x = await call({ ...base, from: 'nope.pdf' });
     check('source missing: refused', !x.json.ok && /source 404/.test(x.json.error), x.json);
     check('from outside the inbox (a path): refused', (await call({ ...base, from: '../x.pdf' })).status === 400 && (await call({ ...base, from: 'sub/a.pdf' })).status === 400);
