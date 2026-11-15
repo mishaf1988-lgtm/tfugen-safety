@@ -53,7 +53,7 @@ globalThis.fetch = async (url, init) => {
     if (m === 'POST') { if (db.talkPostFail) return json({}, 500); for (const r of JSON.parse(init.body)) db.talks[r.id] = { ...r }; return json([], 201); }
     const id = (q(u, 'id') || '').slice(3), kind = q(u, 'kind');
     const t = db.talks[id];
-    if (m === 'PATCH') { db.patches.push({ id, body: JSON.parse(init.body) }); if (t && (!kind || t.kind === kind.slice(3))) Object.assign(t, JSON.parse(init.body)); return new Response(null, { status: 204 }); }
+    if (m === 'PATCH') { db.patches.push({ id, body: JSON.parse(init.body) }); const lv = q(u, 'link_v'); const hit = t && (!kind || t.kind === kind.slice(3)) && (!lv || String(Number(t.link_v) || 0) === lv.slice(3)); if (hit) Object.assign(t, JSON.parse(init.body)); if (/return=representation/.test(String((init.headers || {}).Prefer || ''))) return json(hit ? [{ ...t }] : []); return new Response(null, { status: 204 }); }
     return json(t ? [{ ...t }] : []);
   }
   if (u.startsWith(SB + '/rest/v1/toolbox_reads')) {
@@ -208,6 +208,15 @@ let link, rid;
   const capped = await ctrLinkCreate(ENV, SB, { apikey: 'srv' }, { kind: 'perm', ins: false, company: '' }, Date.now());
   check('at most 20 links a day', /max 20/.test(capped.error || ''), capped);
   db.state[CTR_STATE] = keepSt;
+  // security review 15/11/2026: ctr_revoke raises link_v, so the year-long "new worker" link stops working
+  { const call = async (b) => (await rdbRequest({ request: new Request('https://x/api/routine-db', { method: 'POST', headers: { 'x-routine-key': 'k-123', 'content-type': 'application/json' }, body: JSON.stringify(b) }), env: ENV })).json();
+    const v0 = Number(db.talks['ctr-' + rid].link_v) || 0;
+    const rv = await call({ op: 'ctr_revoke', agent: 'wa', id: rid });
+    check('ctr_revoke: link_v raised by one', rv.ok === true && rv.link_v === v0 + 1 && Number(db.talks['ctr-' + rid].link_v) === v0 + 1, { rv, t: db.talks['ctr-' + rid] });
+    const nx = await call({ op: 'ctr_revoke', id: 'nosuch1' });
+    const bf = await call({ op: 'ctr_revoke', id: rid, x: 1 });
+    check('ctr_revoke: an unknown id and an extra field are refused', nx.ok === false && bf.ok === false && /field not allowed: x/.test(bf.error || ''), { nx, bf });
+    db.talks['ctr-' + rid].link_v = v0; }
   const rdb = fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
   check('ctr_instructions: Michael\'s text can be set and read; ctr_links can be read', /'ctr_links', 'ctr_instructions'\];/.test(rdb) && /'agents_registry', 'ctr_instructions'\];/.test(rdb));
 

@@ -1816,8 +1816,10 @@ async function signCore(env, request, ctx, form, c) {
   if (emp.out) {
     const outs = await fetch(SB + '/rest/v1/toolbox_reads?talk_id=eq.' + encodeURIComponent(talk.id) + '&emp_id=like.' + encodeURIComponent('x:*') + '&select=id', { headers: sbH(env) });
     if (!outs.ok) return bad('errSaveT', 'errSave', 502);
+    // security review 15/11/2026: a contractor's link is held by outsiders for a year; each signature files 2 files and
+    // mails Michael, so its cap is the weekly 100 (MAX_OUT), not the annual training's 600
     const n = await outs.json();
-    if (Array.isArray(n) && n.length >= (typed || ctr ? MAX_OUT_TYPED : MAX_OUT)) return bad('errSaveT', 'full', 429);
+    if (Array.isArray(n) && n.length >= (typed ? MAX_OUT_TYPED : MAX_OUT)) return bad('errSaveT', 'full', 429);
   }
 
   // One file name per worker and talk, uploaded without upsert: of two sends at

@@ -3837,6 +3837,23 @@ async function routineDbHandle(context) {
       if (r.error) return jsonResp({ ok: false, error: r.error }, 200, {});
       return jsonResp(r, 200, {});
     }
+    // security review 15/11/2026: a leaked "new worker" link of a contractor is closed from WhatsApp. Raising link_v
+    // makes every permanent token of that contractor talk stop working (talk.js readPermToken / permOk).
+    if (body.op === 'ctr_revoke') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'id'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const rid = String(body.id || '');
+      if (!/^[a-z0-9]{4,40}$/.test(rid)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
+      const tid = 'ctr-' + rid;
+      const g = await fetch(url + '/rest/v1/toolbox_talks?select=id,kind,link_v&id=eq.' + encodeURIComponent(tid), { headers: h, signal: tmo(SB_MS) });
+      const rows = g.ok ? await g.json() : null;
+      if (!Array.isArray(rows)) return jsonResp({ ok: false, error: 'read ' + g.status }, 200, {});
+      if (rows.length !== 1 || rows[0].kind !== 'contractor') return jsonResp({ ok: false, error: 'no such contractor link' }, 200, {});
+      const v = (Number(rows[0].link_v) || 0) + 1;
+      const w = await fetch(url + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(tid) + '&link_v=eq.' + (Number(rows[0].link_v) || 0), { method: 'PATCH', headers: { ...h, Prefer: 'return=representation' }, body: JSON.stringify({ link_v: v }), signal: tmo(SB_MS) });
+      const got = w.ok ? await w.json() : null;
+      if (!Array.isArray(got) || got.length !== 1) return jsonResp({ ok: false, error: 'write ' + w.status }, 200, {});
+      return jsonResp({ ok: true, id: rid, link_v: v, text: '\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e9\u05dc \u05d4\u05e7\u05d1\u05dc\u05df \u05d1\u05d5\u05d8\u05dc. \u05e7\u05d9\u05e9\u05d5\u05e8 \u05e9\u05e0\u05e9\u05dc\u05d7 \u05dc\u05e4\u05e0\u05d9 \u05db\u05df \u05db\u05d1\u05e8 \u05dc\u05d0 \u05e2\u05d5\u05d1\u05d3.' }, 200, {});
+    }
     if (body.op === 'talk_field') {
       const id = String(body.id === undefined || body.id === null ? '' : body.id);
       if (!/^w\d{8}$/.test(id)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
