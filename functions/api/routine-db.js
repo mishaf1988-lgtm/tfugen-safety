@@ -927,6 +927,34 @@ export function incSimilar(q, rows, n = INC_SIM_N) {
   out.sort((a, b) => b.score - a.score || (a.at < b.at ? 1 : -1));
   return out.slice(0, n).map((x) => x.item);
 }
+// nameCheck (15/11/2026, Michael in the questionnaire in the "work on the assistant" chat: "do it: names against the database
+// (recommended)"; DECISIONS 15/11/2026; a "membership check" from the agent-reliability papers): an equipment code or an
+// inspection report number in a WhatsApp answer that is not in equip_inspections goes back to the assistant once, to check
+// again. Only what can be told for sure: a code is a Latin token with a dash whose first part is a prefix the register already
+// uses (FL-..., SB-..., NH3-...), and a report number is digits/digits (one side 4+ digits) within a few words after
+// "תסקיר" (an inspection report). A Hebrew supplier or contractor name is not checked: in free text
+// it cannot be told apart without false stops. known = { codes: Set (upper case), prefixes: Set, reports: Set }. Pure.
+export function nameCheck(text, known) {
+  const t = String(text || ''), out = [];
+  if (!known || !known.codes || !known.codes.size) return out;
+  for (const m of t.matchAll(/(?<![A-Za-z0-9-])([A-Za-z][A-Za-z0-9]{0,9}(?:-[A-Za-z0-9]{1,16}){1,4})(?![A-Za-z0-9-])/g)) {
+    const c = m[1].toUpperCase();
+    if (known.prefixes.has(c.split('-')[0]) && !known.codes.has(c) && out.indexOf(m[1]) < 0) out.push(m[1]);
+  }
+  for (const m of t.matchAll(/\u05ea\u05e1\u05e7\u05d9\u05e8[^\n.]{0,30}?(?<![\d/])(\d{3,8}\/\d{3,8})(?![\d/])/g)) {
+    const [a, b] = m[1].split('/');
+    if ((a.length >= 4 || b.length >= 4) && known.reports && !known.reports.has(m[1]) && out.indexOf(m[1]) < 0) out.push(m[1]);
+  }
+  return out;
+}
+export function nameKnown(rows) {
+  const codes = new Set(), prefixes = new Set(), reports = new Set();
+  for (const r of Array.isArray(rows) ? rows : []) {
+    if (r && r.code) { const c = String(r.code).toUpperCase().trim(); codes.add(c); if (c.indexOf('-') > 0) prefixes.add(c.split('-')[0]); }
+    for (const k of ['report_number', 'previous_report_number']) if (r && r[k]) reports.add(String(r[k]).trim());
+  }
+  return { codes, prefixes, reports };
+}
 // thz_add (29/10/2026, Michael: "keep connecting it automatically to the investigation and the assistant"; the rule: anything
 // decided in the committee or an investigation, and every corrective action opened, goes into the hazards of his weekly tours).
 // ONE new `tour_hazards` row for an action, marked src ('committee' | 'investigation') and src_ref "<ref>|<action>"; the same
@@ -1218,7 +1246,8 @@ export function draftRequest(b) {
 export { hasInternalId };
 // 26/10/2026: a quote number "PQ26001545" (Negev Ecology) was read as a passport and the assistant lost a round
 // rewriting its message. PQ is a quote prefix, never a passport.
-export function hasPassport(t) { return /(^|[^A-Za-z0-9])(?!PQ)[A-Z]{1,2}[0-9]{6,8}(?![A-Za-z0-9])/.test(String(t || '')); }
+// 15/11/2026: not after a dash, so the equipment code FL-FN637238 (a real forklift) is not taken for a passport number
+export function hasPassport(t) { return /(^|[^A-Za-z0-9-])(?!PQ)[A-Z]{1,2}[0-9]{6,8}(?![A-Za-z0-9])/.test(String(t || '')); }
 // 02/11/2026 (Michael in the questionnaire: "do it: block ID numbers in messages", from Microsoft Presidio's Israeli
 // ID recognizer): an Israeli ID (9 digits, the last a check digit) in a message to Michael's phone. One valid number alone
 // passes unless the text names an ID (teudat zehut, its short form, or ID), so an order or landline number that happens to check out is not
@@ -4450,6 +4479,12 @@ async function routineDbHandle(context) {
       if (body.askInternal !== true && /ref\s*(calmove|calinvite|tourclose|del|undo):/i.test(String(body.text || ''))) return jsonResp({ ok: false, error: 'the text carries a reserved ref (del:, undo:, calmove:, calinvite:, tourclose:): drop it' }, 400, {});
       if (body.askInternal !== true && /^(calmove|calinvite|tourclose|del|undo):/i.test(String(body.ref || ''))) return jsonResp({ ok: false, error: 'ref calmove:/calinvite:/tourclose:/del:/undo: reserved for the *_ask ops; use another ref' }, 400, {});
       if (mentionsQuoteValidity(body.text)) return jsonResp({ ok: false, error: 'the text gives a quote validity date: drop it (Michael 26/10 and 27/10/2026: "a quote I send is always valid"); write the supplier, the price, what is included and the difference' }, 400, {});
+      // 15/11/2026 (DECISIONS "three assistant additions"): an equipment code or report number not in the register = check again
+      if (body.askInternal !== true && body.names_ok !== true) {
+        const er = await fetch(url + '/rest/v1/equip_inspections?select=code,report_number,previous_report_number&limit=2000', { headers: h, signal: tmo(SB_MS) }).catch(() => null);
+        const miss = er && er.ok ? nameCheck(body.text, nameKnown(await er.json().catch(() => []))) : [];
+        if (miss.length) return jsonResp({ ok: false, error: 'not in the equipment register (equip_inspections): ' + miss.join(', ') + '. Check it again (select on equip_inspections by code or report_number, or item_card) and fix the text. It is really not there = send again with "names_ok": true and say in the text that it is not in the register' }, 400, {});
+      }
       // 11/11/2026: a sensitive answer with a safety figure needs the second checker's quote (secondSendGate)
       const sg = env.SECOND_SEND_GATE === 'off' ? null : secondSendGate(body);
       if (sg) {
