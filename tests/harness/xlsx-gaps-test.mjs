@@ -3,7 +3,7 @@
 // 00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1/_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea first, and nothing is written when the data did not change. The weekly mail line.
 // The rows below are made up; the real board is never copied into the public repo.
 import { onRequest, boardSheets, band, eqDomain, fdd, fday, invoiceSheets, STATE_KEY, BOARD, ARCHIVE, INV_DIR, INV_NAME, INV_OLD, INV_TOP } from './_build/xlsx-gaps.mjs';
-import { xlsxGapsLine } from './_build/weekly-digest.mjs';
+import { xlsxGapsLine, invLine } from './_build/weekly-digest.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  \u2713 ' + l); } else { fail++; console.log('  \u2717 ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -187,6 +187,11 @@ const INV = [
   const l = xlsxGapsLine(j({ at, ok: true, board: { written: '2026-10-28T03:05:00Z', items: 5, expired: 1, open: 2 } }), now);
   check('built: grey with the date and the counts', !l.red && /\u05e0\u05d1\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d1-28\/10\/2026, 5 \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd, 1 \u05e4\u05d2\u05d9 \u05ea\u05d5\u05e7\u05e3, 2 \u05de\u05e9\u05d9\u05de\u05d5\u05ea/.test(l.text), l);
   check('failed: red with the reason', xlsxGapsLine(j({ at, ok: false, error: 'archive move 423' }), now).red);
+  { const base = { at, ok: true, board: { written: '2026-11-15T03:05:00Z', items: 5, expired: 1, open: 2 } };
+    const ok = xlsxGapsLine(j({ ...base, invoices: { rows: 132, ok: true, err: '' } }), now), bad = xlsxGapsLine(j({ ...base, invoices: { rows: 132, ok: false, err: 'onedrive 423' } }), now), none = xlsxGapsLine(j(base), now);
+    check('pairs: the ledger in the weekly line: ok = "\u05e1\u05e4\u05e8 \u05d4\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea: 132 \u05e9\u05d5\u05e8\u05d5\u05ea." grey; failed = red with the reason; no state = nothing said',
+      /\u05e1\u05e4\u05e8 \u05d4\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea: 132 \u05e9\u05d5\u05e8\u05d5\u05ea\.$/.test(ok.text) && !ok.red && bad.red && /\u05dc\u05d0 \u05e0\u05db\u05ea\u05d1 \(onedrive 423\)/.test(bad.text) && !none.red && !/\u05e1\u05e4\u05e8/.test(none.text)
+      && invLine(null).text === '' && invLine('x').text === '', [ok, bad, none]); }
   check('older than 3 days: red (the cron stopped)', xlsxGapsLine(j({ at: new Date(now - 4 * DAY).toISOString(), ok: true, board: { written: at } }), now).red);
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
