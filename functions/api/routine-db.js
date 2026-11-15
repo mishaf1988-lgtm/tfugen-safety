@@ -966,7 +966,7 @@ const factTxt = (x, n) => scrubPii(String(x == null ? '' : x)).replace(/[\u0000-
 export function factsList(raw) { let v = raw; if (typeof v === 'string') { try { v = JSON.parse(v || '[]'); } catch (e) { return []; } } return Array.isArray(v) ? v.filter((t) => t && typeof t.topic === 'string' && Array.isArray(t.facts)) : []; }
 export function factsApply(raw, b, nowIso) {
   const topic = factTxt(b.topic, 80), key = factTxt(b.key, 40), value = factTxt(b.value, 300), src = factTxt(b.src, 200);
-  if (topic.length < 3) return { error: 'topic: 3-80 characters, e.g. "\u05ea\u05d0\u05d5\u05e0\u05d4 2026-10-20 \u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd"' };
+  if (topic.length < 3) return { error: 'topic: 3-80 characters, e.g. accident YYYY-MM-DD and the department' };
   const list = factsList(raw).filter((t) => !(t.closed && Date.parse(nowIso) - Date.parse(t.closed) > FACTS_CLOSED_DAYS * 864e5));
   let t = list.find((x) => x.topic === topic);
   if (b.close === true) {
