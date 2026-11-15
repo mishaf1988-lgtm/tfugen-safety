@@ -20,7 +20,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
 const TODAY = ['a-d', 'd-u', 'drl-d', 'env-d', 'eqi-d', 'eqi-pdf-date', 'ins-d', 'leg-u', 'mf-due', 'mtg-ref', 'ncr-sd', 'nm-d', 'ppe-d', 'prj-start', 'ptw-de', 'ptw-ds', 'round-d', 't-d', 'tb-d', 'tbt-d', 'thz-d', 'tp-dd', 'tru-d', 'wst-d'];
 // Empty means none / not yet / unknown.
 const NONE = {
-  expiry: ['ctr-e', 'd-e', 'eqi-e', 'eqi-pdf-expiry', 'eqi-pdf-next', 'ppe-e', 't-e'],
+  expiry: ['ctr-e', 'ctr-ins', 'd-e', 'eqi-e', 'eqi-pdf-expiry', 'eqi-pdf-next', 'ppe-e', 't-e'],
   target: ['ea-review', 'itp-next-due', 'ncr-u', 'prj-end', 'thz-due', 'tru-route-due', 'tsk-due', 'drl-fu', 'mrs-u'],
   closed: ['ncr-cd', 'thz-closed'],
   approval: ['ptw-sg1d', 'ptw-sg2d', 'ptw-sg3d', 'ptw-sg4d'],

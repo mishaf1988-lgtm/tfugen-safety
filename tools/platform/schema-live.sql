@@ -1,4 +1,4 @@
--- dumped 2026-11-14 from the live project by tools/platform/schema-dump.sql (the invoices statements added from the same queries, invoices.currency 2026-11-14; full dump 2026-11-08)
+-- dumped 2026-11-15 from the live project by tools/platform/schema-dump.sql (ctr.ins and ctr.ins_src added from the same catalog, 2026-11-15; invoices.currency 2026-11-14; full dump 2026-11-08)
 create schema if not exists private;
 
 create extension if not exists "uuid-ossp" with schema extensions;
@@ -29,7 +29,7 @@ create table if not exists public.audit_log (id bigint default nextval('audit_lo
 
 create table if not exists public.auds (id text not null, n text not null, a text, r text, d date, f integer default 0, sc integer, s text default 'planned'::text, f2 date, sm text, created_at timestamp with time zone default now());
 
-create table if not exists public.ctr (id text not null, n text, ty text, c text, ph text, e text, tr text, s text, created_at timestamp with time zone default now(), file_url text, cid text);
+create table if not exists public.ctr (id text not null, n text, ty text, c text, ph text, e text, tr text, s text, created_at timestamp with time zone default now(), file_url text, cid text, ins date, ins_src text);
 
 create table if not exists public.custom_props (id text not null, entity_table text not null, entity_id text not null, k text not null, v text, ts timestamp with time zone default now() not null);
 

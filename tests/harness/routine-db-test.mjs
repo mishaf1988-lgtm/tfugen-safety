@@ -995,6 +995,14 @@ const callIn = async (body) => {
       });
       check('equip_add fields were found in the source (' + addFields.length + ')', addFields.length >= 10, addFields);
       check('every report field equip_add writes, expiry_set updates (or IDENTITY says why not)', !gaps.length, gaps);
+      // 15/11/2026 (Michael in the interview: the filing agent fills the contractor insurance date, always with its file)
+      { const cb = { op: 'expiry_set', table: 'ctr', id: 'ctr26-1', agent: 'mail-filing', why: 'insurance certificate', doc: '03_x/ins.pdf' };
+        const p1 = expiryPatch({ ...cb, ins: '2027-03-31' }, { id: 'ctr26-1', ins: null, ins_src: null }, '2026-11-15');
+        check('ctr: ins with a document: set, and the line with the file goes to ins_src', p1.patch && p1.patch.ins === '2027-03-31' && /31\/03\/2027/.test(p1.patch.ins_src) && /03_x\/ins\.pdf/.test(p1.patch.ins_src), p1);
+        check('ctr: ins without a document, or not a date, or 7 years ahead: refused', !!expiryPatch({ ...cb, doc: undefined, ins: '2027-03-31' }, {}, '2026-11-15').error && !!expiryPatch({ ...cb, ins: '31/03/2027' }, {}, '2026-11-15').error && !!expiryPatch({ ...cb, ins: '2033-01-01' }, {}, '2026-11-15').error);
+        check('ctr: the same date again: no change; an old line in ins_src is kept', expiryPatch({ ...cb, ins: '2027-03-31' }, { ins: '2027-03-31' }, '2026-11-15').patch === null && /^old \| /.test(expiryPatch({ ...cb, ins: '2027-04-30' }, { ins: '2027-03-31', ins_src: 'old' }, '2026-11-15').patch.ins_src));
+        check('ctr: the agreement date (e) and the link (file_url) refused (security review 15/11/2026)', /field not allowed: e/.test(expiryPatch({ ...cb, e: '2027-01-01' }, {}, '2026-11-15').error || '') && /field not allowed: file_url/.test(expiryPatch({ ...cb, ins: '2027-01-01', file_url: 'x' }, {}, '2026-11-15').error || ''));
+        check('ctr: another field (s, report_number) refused', !!expiryPatch({ ...cb, s: 'x' }, {}, '2026-11-15').error && !!expiryPatch({ ...cb, report_number: '1/2' }, {}, '2026-11-15').error); }
       check('inspector with a hidden direction mark: refused', !!expiryPatch({ op: 'expiry_set', table: 'equip_inspections', id: 'q1', agent: 'a-b', why: 'xxxxx', doc: 'r', inspector: 'a\u202eb' }, {}, '2026-10-27').error);
       check('inspector: without a document, or on docs, refused', !!expiryPatch({ op: 'expiry_set', table: 'equip_inspections', id: 'q1', agent: 'a-b', why: 'xxxxx', inspector: 'x' }, {}, '2026-10-27').error && !!expiryPatch({ ...base, doc: 'r', inspector: 'x' }, {}, '2026-10-27').error && !!expiryPatch({ op: 'expiry_set', table: 'equip_inspections', id: 'q1', agent: 'a-b', why: 'xxxxx', doc: 'r', inspector: ['x'] }, {}, '2026-10-27').error);
     }
@@ -1025,7 +1033,7 @@ const callIn = async (body) => {
     check('docs: s given in the call wins', sp({ e: '2026-09-01', s: EXP, nt: '' }, { e: '2026-11-01', s: CHK }).s === CHK);
     check('docs: "needs checking" is not overwritten', sp({ e: '2026-09-01', s: CHK, nt: '' }, { e: '2026-11-01' }).s === undefined);
     check('docs: the note says the state moved', /\u05d1\u05ea\u05d5\u05e7\u05e3/.test(sp({ e: '2026-09-01', s: EXP, nt: '' }, { e: '2026-11-01' }).nt));
-    check('only docs and equip_inspections', Object.keys(EXPIRY_TABLES).join() === 'docs,equip_inspections');
+    check('only docs, equip_inspections and ctr (the insurance date, 15/11/2026)', Object.keys(EXPIRY_TABLES).join() === 'docs,equip_inspections,ctr');
     check('without the key: 403, nothing written', (await call({ ...base, e: '2026-01-01' }, 'nope')).status === 403 && rows.docs[0].e === '2027-01-01');
     rows = {};
   }

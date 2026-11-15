@@ -35,7 +35,7 @@ Stored as `DB.{name}[]` in localStorage key `tfgn2`. `var DB=` is at line 3318 o
 | `med` | Medical | `n`,`emp`,`d`,`e`,`type`,`s` |
 | `ins` | Insurance | `n`,`d`,`e`,`co`,`s` |
 | `drl` | Drills | `d`,`type`,`s`,`notes` |
-| `ctr` | Contractors | `n`,`co`,`d`,`e`,`s`,`cert` |
+| `ctr` | Contractors | `n`,`ty`,`c`,`ph`,`e` agreement,`ins` insurance end (date, 15/11/2026),`ins_src` where it came from,`tr`,`s`,`cid`,`file_url` |
 | `wst` | Waste | `d`,`ty`,`q`,`c` (קוד),`h` (מוביל),`site` (אתר קליטה),`cert` (מספר תעודה),`t` (טיפול),`file_url` (13/10/2026, נמדד במסד) |
 | `hzm` | Hazmat (32 from permit 70011, 04/10/2026) | `n`,`un`,`hs` risk select (empty on import),`q` stock qty (null on import: the permit gives a max, kept in `em`),`loc`,`location_id`,`ms` SDS revision date (show with `fd`, not `eb`),`em` control measures,`file_url` SDS (04/10/2026), `h` H statements from the supplier SDS, "H314, H290" (08/11/2026; `_hzmRisk` suggests `hs`, saved only by Michael) |
 | `env` | Environmental | `d`,`type`,`val`,`lim`,`s` |

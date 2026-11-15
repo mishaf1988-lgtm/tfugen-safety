@@ -170,6 +170,10 @@ export function ctrIssue(name, ctrRows, day) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(e)) w.push('\u05d0\u05d9\u05df \u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05d5\u05e7\u05e3 \u05dc\u05d4\u05e1\u05db\u05dd');
   else if (e < day) w.push('\u05d4\u05d4\u05e1\u05db\u05dd \u05e4\u05d2 \u05d1-' + dmy(e));
   if (c.tr && c.tr !== '\u05d4\u05d5\u05db\u05e9\u05e8') w.push('\u05d4\u05d3\u05e8\u05db\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: ' + c.tr);
+  // 15/11/2026 (Michael in the interview: "do it: contractor insurance", "a red flag, you decide"): the insurance end date
+  const ins = String(c.ins || '').slice(0, 10);
+  // Michael 15/11/2026: insurance only where the contractor needs it, so no date is not a flag; an expired one is
+  if (/^\d{4}-\d{2}-\d{2}$/.test(ins) && ins < day) w.push('\u05d4\u05d1\u05d9\u05d8\u05d5\u05d7 \u05e4\u05d2 \u05d1-' + dmy(ins));
   return w.length ? '\u05d4\u05e7\u05d1\u05dc\u05df ' + c.n + ': ' + w.join(', ') : '';
 }
 
@@ -287,6 +291,22 @@ function readBlock(form, c, i, L) {
   }
   return { x };
 }
+// 15/11/2026 (Michael in the interview: "do it: a clash in the same area"): hot work and a confined space in the same
+// department (the list's own select, so it cannot be spelled two ways) on overlapping days are a red flag on both rows.
+// Two rows with no department are compared by the place typed, cleaned. Pure: adds to w.flags and w.st.flags.
+export const placeKey = (v) => String(v || '').toLowerCase().replace(/["'\u05f3\u05f4.,()\-_/]/g, ' ').replace(/\s+/g, ' ').trim();
+export function clashFlags(rows) {
+  const where = (w) => (w.dep ? 'd:' + w.dep : w.area ? 'a:' + placeKey(w.area) : '');
+  const hot = rows.filter((w) => w.cats.indexOf('hot') >= 0), cnf = rows.filter((w) => w.cats.indexOf('cnf') >= 0);
+  for (const a of hot) for (const b of cnf) {
+    if (a === b || !where(a) || where(a) !== where(b) || a.de < b.ds || b.de < a.ds) continue;
+    const place = a.dep || a.area;
+    const add = (w, other) => { const f = '\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d7\u05de\u05d4 \u05d5\u05d7\u05dc\u05dc \u05de\u05d5\u05e7\u05e3 \u05d1\u05d0\u05d5\u05ea\u05d5 \u05d0\u05d6\u05d5\u05e8 (' + place + ') \u05d1\u05d0\u05d5\u05ea\u05d4 \u05ea\u05e7\u05d5\u05e4\u05d4, \u05e2\u05dd \u05e2\u05d1\u05d5\u05d3\u05d4 "' + String(other.desc || '').slice(0, 40) + '"';
+      if (w.flags.indexOf(f) < 0) w.flags.push(f); };
+    add(a, b); add(b, a);
+  }
+  return rows;
+}
 export function readWorks(form, friday, ctrRows) {
   const get = (k) => (form.get(k) == null ? '' : String(form.get(k)));
   const rows = [];
@@ -334,6 +354,7 @@ export function readWorks(form, friday, ctrRows) {
     const rid = get('rid_' + i);
     rows.push({ ...f, who, ds, de, ts, te, cats: ordered, st, flags, rid: /^\d{1,2}$/.test(rid) ? Number(rid) : 0 });
   }
+  clashFlags(rows);
   const none = get('none') === '1';
   if (rows.length && !(week.x.rep && week.x.rph)) return { error: '\u05d7\u05e1\u05e8\u05d9\u05dd \u05e4\u05e8\u05d8\u05d9 \u05d9\u05d5\u05dd \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4: \u05e0\u05e6\u05d9\u05d2 \u05d4\u05de\u05e4\u05e2\u05dc \u05d1\u05d0\u05ea\u05e8 \u05d5\u05d4\u05e0\u05d9\u05d9\u05d3 \u05e9\u05dc\u05d5.' };
   return { rows, none, week: week.x };
@@ -558,7 +579,7 @@ async function sbGet(env, path) {
 }
 const WEEK_COLS = 'id,num,con,sup,ph,wkr,area,dep,ds,de,ts,te,types,safety,desc,s';
 const weekRows = (env, friday) => sbGet(env, 'ptw?id=like.' + encodeURIComponent('wk-' + friday + '-*') + '&select=' + WEEK_COLS + '&order=id.asc&limit=100');
-const ctrRowsOf = (env) => sbGet(env, 'ctr?select=n,e,s,tr&limit=500');
+const ctrRowsOf = (env) => sbGet(env, 'ctr?select=n,e,s,tr,ins&limit=500');
 // Can the list itself still be changed: until the Friday (Israel); attachments and closing until the token runs out.
 const listOpen = (friday, nowMs) => ilDay(new Date(nowMs)) <= friday;
 

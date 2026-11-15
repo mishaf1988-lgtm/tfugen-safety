@@ -778,6 +778,9 @@ export function taskAddCheck(b, today) {
 export const EXPIRY_TABLES = {
   docs: { note: 'nt', extra: 's' },
   equip_inspections: { note: 'notes', extra: 'd' },
+  // 15/11/2026 (Michael in the interview: "do it: the agent, from the mail and the contractor files"): a contractor's
+  // insurance end date (ins), always with the file it was read from; the line goes to ins_src (where it came from)
+  ctr: { note: 'ins_src', extra: 'ins' },
 };
 // 03/11/2026 (Michael in the questionnaire: "do it: a task for the manager, not a hazard"): a procedure from an investigation that
 // the department manager writes and trains the workers on is a task on the accident (inc), not a tour_hazards row. One accident
@@ -1052,6 +1055,8 @@ export function expiryPatch(b, row, today) {
   } else if (b.e === null) {
     return { error: 'bad e' };
   }
+  // security review 15/11/2026: on ctr an agent writes only the insurance date (ins), never the agreement date or the link
+  if (b.table === 'ctr' && (b.e !== undefined || b.file_url !== undefined)) return { error: 'field not allowed: ' + (b.e !== undefined ? 'e' : 'file_url') };
   if (b.e !== undefined && !outOfTracking) {
     if (!isDay(b.e) || b.e < '2000-01-01' || b.e > String(Number(today.slice(0, 4)) + 6) + today.slice(4)) return { error: 'bad e' };
     const old = row.e ? String(row.e).slice(0, 10) : '';
@@ -1087,7 +1092,12 @@ export function expiryPatch(b, row, today) {
     const v = b[t.extra];
     if (t.extra === 's' && DOC_STATES.indexOf(v) < 0) return { error: 'bad s' };
     if (t.extra === 'd' && (!isDay(v) || v > today)) return { error: 'bad d' };
-    if (v !== row[t.extra]) { patch[t.extra] = v; said.push(t.extra + ' ' + (t.extra === 'd' ? ddmm(v) : v)); }
+    if (t.extra === 'ins') {
+      if (!isDay(v) || v < '2000-01-01' || v > String(Number(today.slice(0, 4)) + 6) + today.slice(4)) return { error: 'bad ins' };
+      if (!doc) return { error: 'doc required for ins' };
+    }
+    const was = t.extra === 'ins' && row.ins ? String(row.ins).slice(0, 10) : row[t.extra];
+    if (v !== was) { patch[t.extra] = v; said.push(t.extra === 'ins' ? '\u05d1\u05d9\u05d8\u05d5\u05d7 ' + ddmm(was || '') + ' -> ' + ddmm(v) : t.extra + ' ' + (t.extra === 'd' ? ddmm(v) : v)); }
   }
   // 21/10/2026 (the assistant's dev request: form 16 got a new e of 01/11/2026 and stayed "expired"): a new e on a
   // document moves its state between valid and expired by itself, unless the call set s. "needs checking" stays.

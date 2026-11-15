@@ -6,7 +6,7 @@
 // permits not closed. Mocked network, nothing leaves.
 import { onRequest, makeWorksToken, readWorksToken, fridayOf, CATS, S_PEND, S_CANCEL, S_REJ, S_CLOSED, EMP_LABEL, CHECK_MARK, GATE_MARK, NOTE_LINE, REJ_MARK, kindsIn, ctrKey, ctrIssue,
   parseSafety, buildSafety, OKD_MARK, assess, GAS_LIMITS, worksTick, worksTryMail, worksApproveMail, worksMailNow, permitRun, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck, mailDeps, makeOkToken, readOkToken, OK_PREFIX, S_OK, APPROVE_SUBJECT, OKN_MARK, DECIDE_SUBJECT,
-  PERMIT_MARK, PERMIT_ERR, PERMIT_TO, PERMIT_SUBJECT, permitHtml, worksPermit, makeSendToken, readSendToken, SEND_PREFIX, askText, ASK_SUBJECT, subNoteSend, subDue } from './_build/works.mjs';
+  PERMIT_MARK, PERMIT_ERR, PERMIT_TO, PERMIT_SUBJECT, permitHtml, worksPermit, makeSendToken, readSendToken, SEND_PREFIX, askText, ASK_SUBJECT, subNoteSend, subDue, clashFlags, placeKey } from './_build/works.mjs';
 import { readFileSync } from 'fs';
 import { readZip, entryText } from './_build/_xlsxpatch.mjs';
 import { PDFDocument, PDFName, StandardFonts } from './_build/_pdflib.mjs';
@@ -32,7 +32,7 @@ mailDeps.accessToken = async () => ({ token: 'gt', email: 'owner@tapugan.co.il' 
 mailDeps.sendMailTo = async (t, to, cc, subj, html, att, opts) => { db.mails.push({ to, cc, subj, html, save: !!(opts && opts.save) }); return true; };
 resetDb();
 const CTR = [
-  { n: 'ט"ס פרויקטים בע"מ', e: '2027-03-01', s: 'פעיל', tr: 'הוכשר' },
+  { n: 'ט"ס פרויקטים בע"מ', e: '2027-03-01', s: 'פעיל', tr: 'הוכשר', ins: '2027-01-31' },
   { n: 'נגב אקולוגיה', e: '2026-10-01', s: 'פעיל', tr: 'הוכשר' },
 ];
 const sFilter = (u) => {
@@ -166,6 +166,29 @@ check('the name matches without quotes, dots or Ltd', ctrKey('ט.ס פרויקט
 check('a valid contractor: no flag', ctrIssue('ט.ס פרויקטים', CTR, FRI) === '');
 check('an expired agreement: flagged with the date', /פג ב-01\/10\/2026/.test(ctrIssue('נגב אקולוגיה', CTR, FRI)));
 check('not in the register: flagged', /לא במרשם הקבלנים/.test(ctrIssue('קבלן חדש', CTR, FRI)));
+// 15/11/2026 (Michael in the interview: "contractor insurance", "a red flag, you decide"; "a clash in the same area")
+check('insurance: no date = no insurance flag (Michael: only where needed), an expired one = flagged with the date, a valid one = nothing',
+  !/\u05d1\u05d9\u05d8\u05d5\u05d7/.test(ctrIssue('נגב אקולוגיה', CTR, FRI))
+  && /\u05d4\u05d1\u05d9\u05d8\u05d5\u05d7 \u05e4\u05d2 \u05d1-01\/09\/2026/.test(ctrIssue('ט.ס פרויקטים', [{ ...CTR[0], ins: '2026-09-01' }], FRI))
+  && ctrIssue('ט.ס פרויקטים', CTR, FRI) === '');
+{
+  const W = (cats, dep, area, ds, de) => ({ cats, dep, area, ds, de: de || ds, flags: [], desc: cats.join('+') + ' work' });
+  let r = clashFlags([W(['hot'], 'אחזקה', '', '2026-11-20'), W(['cnf'], 'אחזקה', '', '2026-11-20')]);
+  check('clash: hot work and a confined space in the same department on the same day: a flag on both, naming the other work by its description (security review: the list number can change)',
+    r[0].flags.length === 1 && r[1].flags.length === 1 && /"cnf work"$/.test(r[0].flags[0]) && /"hot work"$/.test(r[1].flags[0]), r.map((x) => x.flags));
+  r = clashFlags([W(['hot'], 'אחזקה', '', '2026-11-18', '2026-11-20'), W(['cnf'], 'אחזקה', '', '2026-11-20', '2026-11-21')]);
+  check('clash: overlapping days count', r[0].flags.length === 1);
+  r = clashFlags([W(['hot'], 'אחזקה', '', '2026-11-18'), W(['cnf'], 'אחזקה', '', '2026-11-20')]);
+  check('no clash: other days', !r[0].flags.length && !r[1].flags.length);
+  r = clashFlags([W(['hot'], 'אחזקה', '', '2026-11-20'), W(['cnf'], 'ייצור', '', '2026-11-20')]);
+  check('no clash: another department', !r[0].flags.length);
+  r = clashFlags([W(['hot', 'cnf'], 'אחזקה', '', '2026-11-20')]);
+  check('one work that is both: not a clash with itself', !r[0].flags.length);
+  r = clashFlags([W(['hot'], '', 'מיכל 3, קומה ב', '2026-11-20'), W(['cnf'], '', 'מיכל 3 קומה ב', '2026-11-20'), W(['cnf'], '', '', '2026-11-20')]);
+  check('no department: the place typed, cleaned, is compared; an empty place never clashes', r[0].flags.length === 1 && r[1].flags.length === 1 && !r[2].flags.length && placeKey('A-b, (c)') === 'a b c');
+  r = clashFlags([W(['hot'], 'אחזקה', '', '2026-11-20'), W(['hgt'], 'אחזקה', '', '2026-11-20')]);
+  check('no clash: hot work and work at height', !r[0].flags.length);
+}
 
 console.log('\n5. submit');
 resetDb();
