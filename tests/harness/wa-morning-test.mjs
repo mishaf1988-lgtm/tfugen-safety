@@ -1,6 +1,6 @@
 // The morning update on WhatsApp from the server (20/10/2026): pg_cron calls /api/wa-morning twice,
 // only the call on 07:xx in Israel on Sunday-Thursday sends, once a day, to Michael's number only.
-import { deckCheckDue, DECK_CHECK_KEY, stagingDue, watch, clip, areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT, splitUrgent, WAIT_DAYS, rowContradictions, expOff, devRemind, DEV_WARN_KEY } from './_build/wa-morning.mjs';
+import { listEnd, unDot, weekendText, deckCheckDue, DECK_CHECK_KEY, stagingDue, watch, clip, areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT, splitUrgent, WAIT_DAYS, rowContradictions, expOff, devRemind, DEV_WARN_KEY } from './_build/wa-morning.mjs';
 import { OD_ROOT } from './_build/routine-db.mjs';
 import fs from 'fs';
 
@@ -106,8 +106,15 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
 
   // 20/10/2026, Michael's screenshot: the template showed " | " between lines, "update" twice and routine-wa-assistant.
   const c = buildBrief(four, ['routine-wa-assistant'], '2026-10-20', true);
-  check('compact (template): one line, "; " between items, no heading and no " | "', !/\n/.test(c) && !/\|/.test(c) && /A \(\u05e4\u05d2 01\/10\/2026\); B/.test(c) && !/\u05d1\u05d5\u05e7\u05e8 \u05d8\u05d5\u05d1\. \u05e2\u05d3\u05db\u05d5\u05df/.test(c), c);
+  check('compact (template): one line, "; " between items, " | " only between parts (15/11/2026), no heading', !/\n/.test(c) && c.split(' | ').length === 2 && /^\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea/.test(c.split(' | ')[1]) === false && /A \(\u05e4\u05d2 01\/10\/2026\); B/.test(c) && !/\u05d1\u05d5\u05e7\u05e8 \u05d8\u05d5\u05d1\. \u05e2\u05d3\u05db\u05d5\u05df/.test(c), c);
   check('the failed agent by its office name', /\u05d4\u05e2\u05d5\u05d6\u05e8 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4/.test(c) && !/routine-/.test(c) && agentName('routine-new-thing') === 'new-thing', c);
+  { // 15/11/2026 (the assistant chat): coach in Hebrew, no ".;" or "..", "..." kept
+    const k = buildBrief([], [], '2026-11-15', true, [{ agent: 'routine-coach', text: '\u05d6\u05d4\u05d1 10/10.' }, { agent: 'routine-quality', text: '\u05ea\u05e7\u05d9\u05df.' }]);
+    check('pairs: coach note named "\u05d4\u05de\u05d0\u05de\u05df \u05e9\u05dc \u05d4\u05e2\u05d5\u05d6\u05e8", no "coach", no ".;" and no ".."', /\u05d4\u05de\u05d0\u05de\u05df \u05e9\u05dc \u05d4\u05e2\u05d5\u05d6\u05e8: \u05d6\u05d4\u05d1 10\/10; /.test(k) && !/coach/.test(k) && !/\.;/.test(k) && !/[^.]\.\.$|[^.]\.\.[^.]/.test(k), k);
+    check('pairs: listEnd "a." "b;" "c" -> "a; b; c."; "x..." stays; "y.." -> "y."', listEnd(['a.', 'b;', 'c']) === 'a; b; c.' && listEnd(['z', 'x...']) === 'z; x...' && listEnd(['y..']) === 'y.' && unDot('q...') === 'q...', [listEnd(['a.', 'b;', 'c']), listEnd(['z', 'x...']), listEnd(['y..'])]);
+    const wkc = weekendText({ lines: ['\u05e9\u05d5\u05e8\u05d4 \u05d0.', '\u05e9\u05d5\u05e8\u05d4 \u05d1.'], more: 0, total: 2 }, true);
+    check('pairs: weekend list in the compact update: " | " before it, no ".;" and no ".." at the end', wkc.startsWith(' | ') && !/\.;/.test(wkc) && !/[^.]\.\.$/.test(wkc), wkc);
+  }
   check('compact with nothing: one short sentence', buildBrief([], [], '2026-10-20', true) === '\u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.');
 
   // 20/10/2026: what workers left for Michael (agent_report for_michael)

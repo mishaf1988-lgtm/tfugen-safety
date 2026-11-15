@@ -53,8 +53,14 @@ export const clip = (s, n) => {
   return c.replace(/[\s,;:.\-]+$/, '') + '...';
 };
 
+// 15/11/2026 (the assistant chat: ".;" and ".." in the compact update): a list item loses its own end mark before "; ",
+// and the list gets one "." unless it already ends with "...". Pure.
+export const unDot = (s) => (/\.\.\.$/.test(s) ? s : String(s).replace(/[.;\s]+$/, ''));
+export const listEnd = (arr) => { const j = arr.map(unDot).join('; '); return /\.\.\.$/.test(j) ? j : j + '.'; };
+// The parts of the compact update are set apart by " | " (one line in the template, 20/10/2026).
+export const SEP = ' | ';
 // Agent names in agent_log are technical (routine-*); the update shows the office name.
-export const AGENT_NAMES = { 'routine-coa': '\u05e1\u05d9\u05d3\u05d5\u05e8 \u05ea\u05e2\u05d5\u05d3\u05d5\u05ea COA', 'routine-compliance': '\u05d3\u05d5\u05d7 \u05d4\u05e6\u05d9\u05d5\u05ea', 'routine-factory-trends': '\u05de\u05d2\u05de\u05d5\u05ea \u05d4\u05de\u05e4\u05e2\u05dc',
+export const AGENT_NAMES = { 'routine-coach': '\u05d4\u05de\u05d0\u05de\u05df \u05e9\u05dc \u05d4\u05e2\u05d5\u05d6\u05e8', 'routine-coa': '\u05e1\u05d9\u05d3\u05d5\u05e8 \u05ea\u05e2\u05d5\u05d3\u05d5\u05ea COA', 'routine-compliance': '\u05d3\u05d5\u05d7 \u05d4\u05e6\u05d9\u05d5\u05ea', 'routine-factory-trends': '\u05de\u05d2\u05de\u05d5\u05ea \u05d4\u05de\u05e4\u05e2\u05dc',
   'routine-inspector': '\u05d4\u05de\u05e4\u05e7\u05d7 \u05d4\u05de\u05d3\u05d5\u05de\u05d4', 'routine-inventor': '\u05d7\u05d5\u05e7\u05e8 \u05d4\u05d4\u05de\u05e6\u05d0\u05d5\u05ea', 'routine-mail-filing': '\u05ea\u05d9\u05d5\u05e7 \u05de\u05d4\u05de\u05d9\u05d9\u05dc', 'routine-nevo-versions': '\u05de\u05e2\u05e7\u05d1 \u05e0\u05d1\u05d5',
   'routine-od-scan': '\u05e1\u05e8\u05d9\u05e7\u05ea \u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea', 'routine-preferences': '\u05de\u05d5\u05d3\u05dc \u05d4\u05d4\u05e2\u05d3\u05e4\u05d5\u05ea', 'routine-quality': '\u05d1\u05d5\u05d3\u05e7 \u05d4\u05d0\u05d9\u05db\u05d5\u05ea', 'routine-quotes': '\u05de\u05e2\u05e7\u05d1 \u05d4\u05e6\u05e2\u05d5\u05ea \u05de\u05d7\u05d9\u05e8', 'routine-radar-learn': '\u05d4\u05e8\u05d3\u05d0\u05e8',
   'routine-researcher': '\u05d7\u05d5\u05e7\u05e8 \u05d4\u05e2\u05d5\u05d6\u05e8', 'routine-talk-field': '\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9\u05ea', 'routine-validity': '\u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3', 'routine-wa-assistant': '\u05d4\u05e2\u05d5\u05d6\u05e8 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4', 'dev': '\u05e4\u05d9\u05ea\u05d5\u05d7' };
@@ -165,7 +171,7 @@ export function buildBrief(items, failed, today, compact, notes, weather, devDon
   if (compact) {
     const parts = [];
     if (wx) parts.push(wx);
-    if (notes.length) parts.push('\u05de\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd: ' + notes.map((x) => agentName(x.agent) + ': ' + clip(x.text, 160)).join('; ') + '.');
+    if (notes.length) parts.push('\u05de\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd: ' + listEnd(notes.map((x) => agentName(x.agent) + ': ' + clip(x.text, 160))));
     if (items.length) parts.push('\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea: ' + items.slice(0, 3).map((x) => clip(itemName(x.n), 50) + due(x, today)).join('; ')
       + (items.length > 3 ? '; \u05d5\u05e2\u05d5\u05d3 ' + (items.length - 3) : '') + '.');
     if (waitLine) parts.push(waitLine);
@@ -173,8 +179,8 @@ export function buildBrief(items, failed, today, compact, notes, weather, devDon
     if (contraLine) parts.push(contraLine);
     if (failed.length) parts.push('\u05e1\u05d5\u05db\u05df \u05e9\u05e0\u05db\u05e9\u05dc: ' + failed.slice(0, 5).join(', ') + '.');
     if (wx && parts.length === 1) parts.push('\u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.');
-    const body = parts.length ? parts.join(' ') : '\u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.';
-    return dev ? body.slice(0, MAX_CHARS - dev.length - 1) + ' ' + dev : body.slice(0, MAX_CHARS);
+    const body = parts.length ? parts.join(SEP) : '\u05d0\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da \u05d4\u05d9\u05d5\u05dd.';
+    return dev ? body.slice(0, MAX_CHARS - dev.length - SEP.length) + SEP + dev : body.slice(0, MAX_CHARS);
   }
   const lines = [];
   if (wx) lines.push(wx);
@@ -737,9 +743,9 @@ export function weekendText(wk, compact, room) {
       if (t.length <= room || n === 0) return n ? t : weekendText({ lines: [], more: wk.total, total: wk.total, head: true }, compact);
     }
   }
-  if (wk.head) return compact ? ' ' + head + ': \u05dc\u05db\u05ea\u05d5\u05d1 "\u05de\u05d4 \u05e0\u05d3\u05d7\u05d4" \u05d5\u05d0\u05e9\u05dc\u05d7.' : '\n\n' + head + ': \u05dc\u05db\u05ea\u05d5\u05d1 "\u05de\u05d4 \u05e0\u05d3\u05d7\u05d4" \u05d5\u05d0\u05e9\u05dc\u05d7.';
+  if (wk.head) return compact ? SEP + head + ': \u05dc\u05db\u05ea\u05d5\u05d1 "\u05de\u05d4 \u05e0\u05d3\u05d7\u05d4" \u05d5\u05d0\u05e9\u05dc\u05d7.' : '\n\n' + head + ': \u05dc\u05db\u05ea\u05d5\u05d1 "\u05de\u05d4 \u05e0\u05d3\u05d7\u05d4" \u05d5\u05d0\u05e9\u05dc\u05d7.';
   const more = wk.more ? '\u05d5\u05e2\u05d5\u05d3 ' + wk.more + ': \u05dc\u05db\u05ea\u05d5\u05d1 "\u05de\u05d4 \u05e0\u05d3\u05d7\u05d4" \u05d5\u05d0\u05e9\u05dc\u05d7.' : '';
-  if (compact) return ' ' + head + ': ' + wk.lines.map((x) => clip(x, 70)).join('; ') + '.' + (more ? ' ' + more : '');
+  if (compact) return SEP + head + ': ' + listEnd(wk.lines.map((x) => clip(x, 70))) + (more ? ' ' + more : '');
   return '\n\n' + head + ':\n' + wk.lines.map((x) => '- ' + x).join('\n') + (more ? '\n' + more : '');
 }
 
