@@ -882,6 +882,51 @@ export function incAddRow(b, today, rand, known) {
     dept, dept_group: known[dept], reported: b.reported === true, src: short(b.src === undefined ? 'Claude (' + b.agent + '), ' + ddmm(today) : b.src, 200) };
   return { row };
 }
+// inc_similar (15/11/2026, Michael in the questionnaire in the "work on the assistant" chat: "do it: similar cases in a new
+// accident"; DECISIONS 15/11/2026): the past accidents most like a new one, by shared words in the description and the place
+// (Hebrew finals and a plural ending folded, a leading letter ve/ha/be/le/me/she/ke also tried), plus one for the same
+// department. At least INC_SIM_MIN shared words (or one in the same department), the top INC_SIM_N. The worker's name (w) is never returned and is cut out
+// of the text; phones, mails and ids are scrubbed. Pure.
+export const INC_SIM_N = 3, INC_SIM_MIN = 2, INC_SIM_COLS = 'id,dt,dept,l,d,rc,p,s,w';
+const INC_FIN = { '\u05da': '\u05db', '\u05dd': '\u05de', '\u05df': '\u05e0', '\u05e3': '\u05e4', '\u05e5': '\u05e6' };
+const incNorm = (x) => { let t = String(x).replace(/[\u05da\u05dd\u05df\u05e3\u05e5]/g, (c) => INC_FIN[c]); if (t.length >= 5) t = t.replace(/(\u05d9\u05de|\u05d5\u05ea)$/, ''); return t; };
+const INC_STOP = new Set('\u05d4\u05e2\u05d5\u05d1\u05d3 \u05e2\u05d5\u05d1\u05d3 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d1\u05d9\u05d5\u05dd \u05d1\u05e9\u05e2\u05d4 \u05d1\u05de\u05d4\u05dc\u05da \u05d1\u05d6\u05de\u05df \u05e2\u05d1\u05d5\u05d3\u05d4 \u05e2\u05d1\u05d5\u05d3\u05ea \u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05de\u05d7\u05dc\u05e7\u05ea \u05de\u05d7\u05dc\u05e7\u05d4 \u05d1\u05de\u05d7\u05dc\u05e7\u05ea \u05e9\u05dc \u05e2\u05dc \u05d0\u05ea \u05e2\u05dd \u05dc\u05d0 \u05db\u05d9 \u05d2\u05dd \u05d0\u05e9\u05e8 \u05d4\u05d9\u05d4 \u05d4\u05d9\u05d9\u05ea\u05d4 \u05d4\u05d9\u05d5 \u05dc\u05d0\u05d7\u05e8 \u05dc\u05e4\u05e0\u05d9 \u05ea\u05d5\u05da \u05d0\u05d7\u05d3 \u05d0\u05d7\u05ea \u05e9\u05dc\u05d0 \u05dc\u05e6\u05d5\u05e8\u05da \u05dc\u05d8\u05e2\u05e0\u05ea \u05e0\u05e4\u05d2\u05e2 \u05e0\u05e4\u05d2\u05e2\u05d4 \u05e4\u05e6\u05d5\u05e2 \u05d1\u05e2\u05e7\u05d1\u05d5\u05ea \u05d1\u05d5\u05e6\u05e2 \u05d1\u05d5\u05e6\u05e2\u05d4 \u05d1\u05d5\u05e6\u05e2\u05d5 \u05d8\u05e8\u05dd \u05d4\u05ea\u05e7\u05d1\u05dc \u05ea\u05d7\u05e7\u05d9\u05e8 \u05d0\u05d9\u05e8\u05d5\u05e2 \u05dc\u05d0\u05d9\u05e8\u05d5\u05e2 \u05d1\u05de\u05e4\u05e2\u05dc \u05d4\u05de\u05e4\u05e2\u05dc \u05e9\u05d8\u05d7 \u05d9\u05d3\u05d5 \u05d9\u05d3 \u05e2\u05d5\u05d1\u05d3\u05ea \u05d9\u05de\u05d9\u05df \u05e9\u05de\u05d0\u05dc \u05d8\u05d9\u05e4\u05d5\u05dc \u05e8\u05e4\u05d5\u05d0\u05d9 \u05e4\u05d5\u05e0\u05d4 \u05d1\u05d0\u05d5\u05e4\u05df \u05e2\u05e6\u05de\u05d9 \u05dc\u05e7\u05d1\u05dc\u05ea'.split(' ').map(incNorm));
+export function incWords(t) {
+  const out = new Set();
+  for (const raw of String(t || '').split(/[^\u05d0-\u05eaA-Za-z0-9]+/)) {
+    if (raw.length < 3 || /^\d+$/.test(raw)) continue;
+    const a = incNorm(raw);
+    if (INC_STOP.has(a)) continue;
+    const b = a.length >= 4 && /^[\u05d5\u05d4\u05d1\u05dc\u05de\u05e9\u05db]/.test(a) ? a.slice(1) : null;
+    if (b && INC_STOP.has(b)) continue;
+    out.add(b && b.length >= 3 ? b : a);
+  }
+  return out;
+}
+const incCut = (t, w, n) => {
+  let x = String(t || '');
+  for (const part of [String(w || '').trim()].concat(String(w || '').trim().split(/\s+/)).filter((p) => p.length >= 2)) x = x.split(part).join('...');
+  x = scrubPii(x).replace(/\s+/g, ' ').trim();
+  return x.length > n ? x.slice(0, n - 3) + '...' : x;
+};
+export function incSimilar(q, rows, n = INC_SIM_N) {
+  const qw = incWords(String(q.d || '') + ' ' + String(q.l || ''));
+  if (!qw.size) return [];
+  const out = [];
+  for (const r of Array.isArray(rows) ? rows : []) {
+    if (!r || (q.id && r.id === q.id)) continue;
+    const rw = incWords(String(r.d || '') + ' ' + String(r.l || ''));
+    const shared = [...qw].filter((x) => rw.has(x));
+    const same = !!q.dept && r.dept === q.dept;
+    // at least INC_SIM_MIN shared words, or one with the same department
+    if (shared.length < INC_SIM_MIN && !(shared.length && same)) continue;
+    const score = shared.length + (same ? 1 : 0);
+    const day = r.dt ? new Date(r.dt).toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem' }) : '';
+    out.push({ score, at: String(r.dt || ''), item: { id: r.id, day, dept: r.dept || '', place: incCut(r.l, r.w, 80), what: incCut(r.d, r.w, 160), cause: r.rc ? incCut(r.rc, r.w, 200) : '', actions: r.p ? incCut(r.p, r.w, 200) : '', status: r.s || '', shared } });
+  }
+  out.sort((a, b) => b.score - a.score || (a.at < b.at ? 1 : -1));
+  return out.slice(0, n).map((x) => x.item);
+}
 // thz_add (29/10/2026, Michael: "keep connecting it automatically to the investigation and the assistant"; the rule: anything
 // decided in the committee or an investigation, and every corrective action opened, goes into the hazards of his weekly tours).
 // ONE new `tour_hazards` row for an action, marked src ('committee' | 'investigation') and src_ref "<ref>|<action>"; the same
@@ -3640,7 +3685,21 @@ async function routineDbHandle(context) {
       if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status, detail: (await w.text()).slice(0, 300) }, 200, {});
       const after = await w.json();
       if (!Array.isArray(after) || after.length !== 1) return jsonResp({ ok: false, error: 'write touched ' + (Array.isArray(after) ? after.length : '?') + ' rows' }, 200, {});
-      return jsonResp({ ok: true, id: after[0].id, row: after[0] }, 200, {});
+      // 15/11/2026 (DECISIONS "three assistant additions"): the past accidents like this one, for the message to Michael
+      const sr = await fetch(url + '/rest/v1/inc?select=' + INC_SIM_COLS + '&order=dt.desc&limit=1000', { headers: h, signal: tmo(SB_MS) }).catch(() => null);
+      const similar = sr && sr.ok ? incSimilar(after[0], await sr.json().catch(() => [])) : null;
+      return jsonResp({ ok: true, id: after[0].id, row: after[0], similar }, 200, {});
+    }
+    if (body.op === 'inc_similar') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'd', 'l', 'dept', 'id'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      if (['d', 'l', 'dept', 'id'].some((k) => body[k] !== undefined && typeof body[k] !== 'string')) return jsonResp({ ok: false, error: 'fields are text' }, 400, {});
+      const sr = await fetch(url + '/rest/v1/inc?select=' + INC_SIM_COLS + '&order=dt.desc&limit=1000', { headers: h, signal: tmo(SB_MS) });
+      if (!sr.ok) return jsonResp({ ok: false, error: 'read ' + sr.status }, 200, {});
+      const rows = await sr.json();
+      const q = body.id ? rows.find((r) => r.id === body.id) : { d: String(body.d || '').slice(0, 1500), l: String(body.l || '').slice(0, 150), dept: String(body.dept || '').slice(0, 40) };
+      if (!q) return jsonResp({ ok: false, error: 'id: no such accident' }, 200, {});
+      if (String(q.d || '').length < 10) return jsonResp({ ok: false, error: 'd: what happened (10+ characters), or id of an accident' }, 400, {});
+      return jsonResp({ ok: true, similar: incSimilar(q, rows) }, 200, {});
     }
     if (body.op === 'thz_add') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'src', 'ref', 'action', 'descr', 'dept', 'loc', 'sev', 'resp', 'due', 'opened', 'notes'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
