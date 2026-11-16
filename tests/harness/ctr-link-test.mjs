@@ -12,7 +12,7 @@ import { onRequest, ctrDeps, makeCtrToken, readCtrToken, ctrLinkCheck, ctrLinkCr
 import { fillCtrForm, pickTemplate, FORM_ROWS } from './_build/_ctrform.mjs';
 import { readZip, writeZip, entryText } from './_build/_xlsxpatch.mjs';
 import { KIND_CTR, CTR_PREFIX, CTR_STATE, CTR_WORKS, CTR_DOCS, CTR_DOC_L, requiredDocs, optionalDocs, missingDocs, missingMsg, ctrLinkId, parseCtrLinkId, linkTtlDays, workerTtlDays,
-  safeName, ctrFolder, CTR_DIR, stateAdd, statePatch, stateList, CTR_STATE_MAX, INSTR_MISSING, isInstrMissing, CTR_OK, CTR_SIGN_MAX } from './_build/_ctr.mjs';
+  safeName, ctrFolder, CTR_DIR, stateAdd, statePatch, stateList, CTR_STATE_MAX, INSTR_MISSING, isInstrMissing, CTR_OK, CTR_SIGN_MAX, isStuck, canSend, CTR_STUCK_MS } from './_build/_ctr.mjs';
 import { onRequest as talkRequest, PERM_KINDS, TYPED_KINDS, makePermToken, talkUrl, ctrSignDeps, ctrName, fileCtrSign } from './_build/talk.mjs';
 import { onRequest as rdbRequest } from './_build/routine-db.mjs';
 import { latestTalk } from './_build/weekly-digest.mjs';
@@ -307,6 +307,19 @@ const good = { company: 'בונים בע"מ', cnum: '512345678', contact: 'דנ�
   check('the request is marked filled, with the files, folder, mail, form and reads (no worker ID in state)', st.status === 'filled' && st.files === 5 && st.folder === folder && st.mail === 'sent' && st.workers === 2 && st.reads === 2 && /146\.03/.test(decodeURIComponent(st.form || '')) && !st.form_err && JSON.stringify(st).indexOf('012345678') < 0 && JSON.stringify(st).indexOf('023456789') < 0, st);
   const again = await post(good, { ins: [['a.pdf', PDF()]], hgtc: [['b.pdf', PDF()]], plat: [['c.pdf', PDF()]], frkl: [['d.pdf', PDF()]] });
   check('sent once: a second send saves nothing more', again.status === 200 && db.puts.length === 8 + 1 /* summary html source */ && db.mails.length === 1, db.puts.length);
+  // a cut send (security review 16/11/2026): filled, no files, claimed long ago = open again, and a send goes through
+  const keepState = db.state[CTR_STATE];
+  const cut = stateList(keepState.value).map((x) => (x.id === rid ? { ...x, files: undefined, at: new Date(Date.now() - CTR_STUCK_MS - 60000).toISOString() } : x));
+  db.state[CTR_STATE] = { value: JSON.stringify(cut), updated_at: new Date().toISOString() };
+  const reOpenCut = await onRequest({ request: new Request(link), env: ENV });
+  check('a send cut more than 10 minutes ago: the form opens again', reOpenCut.status === 200 && (await reOpenCut.text()).indexOf('id="wl"') > 0);
+  const p0 = db.puts.length, mm0 = db.mails.length;
+  const resend = await post(good, { ins: [['a.pdf', PDF()]], hgtc: [['b.pdf', PDF()]], plat: [['c.pdf', PDF()]], frkl: [['d.pdf', PDF()]] });
+  check('... and the send goes through: files, form, one more mail, files set', resend.status === 200 && db.puts.length > p0 && db.mails.length === mm0 + 1 && stateList(db.state[CTR_STATE].value)[0].files === 4, resend.html.slice(0, 200));
+  const fresh = stateList(keepState.value).map((x) => (x.id === rid ? { ...x, files: undefined, at: new Date().toISOString() } : x));
+  db.state[CTR_STATE] = { value: JSON.stringify(fresh), updated_at: new Date().toISOString() };
+  check('a send claimed a minute ago with no files yet (still running): "already sent", no second send', (await post(good, {})).status === 200 && db.mails.length === mm0 + 1);
+  db.state[CTR_STATE] = keepState;
   const reopen = await onRequest({ request: new Request(link), env: ENV });
   check('opening the link again: "already sent" and the new-worker link', reopen.status === 200 && /\/api\/talk\?k=/.test(await reopen.text()));
   check('attachments past the mail budget go as links', pickAttach([{ bytes: new Uint8Array(MAIL_BUDGET - 10) }, { bytes: new Uint8Array(100) }, { bytes: new Uint8Array(5) }]).length === 2);
@@ -400,6 +413,10 @@ console.log('\n9. text people read: keyboard characters only');
   check('state is written with stateCas only (no merge-duplicates on server_state)', src.indexOf('merge-duplicates') < 0 && /stateCas\(/.test(src));
   const s = stateAdd(Array.from({ length: CTR_STATE_MAX + 5 }, (_, i) => ({ id: 'c' + String(i).padStart(7, '0') })), { id: 'cnewone01' });
   check('ctr_links is capped, newest first', s.length === CTR_STATE_MAX && s[0].id === 'cnewone01');
+  const T = Date.now(), old = new Date(T - CTR_STUCK_MS - 1000).toISOString(), now = new Date(T).toISOString();
+  check('isStuck: filled, no files, claimed over 10 minutes ago; not when files were written, not when recent, not when sent', isStuck({ status: 'filled', at: old }, T) && !isStuck({ status: 'filled', at: old, files: 0 }, T) && !isStuck({ status: 'filled', at: now }, T) && !isStuck({ status: 'sent', at: old }, T));
+  check('canSend: sent, or stuck', canSend({ status: 'sent' }, T) && canSend({ status: 'filled', at: old }, T) && !canSend({ status: 'filled', at: old, files: 3 }, T) && !canSend(null, T));
+  check('statePatch: a function as the condition', !statePatch([{ id: 'cabc12345', status: 'filled', files: 2 }], 'cabc12345', {}, (e) => canSend(e, T)).list && !!statePatch([{ id: 'cabc12345', status: 'filled', at: old }], 'cabc12345', {}, (e) => canSend(e, T)).list);
   check('statePatch: only from the expected status', statePatch([{ id: 'cabc12345', status: 'filled' }], 'cabc12345', { x: 1 }, 'sent').error === 'state' && statePatch([], 'cabc12345', {}).error === 'missing');
 }
 

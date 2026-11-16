@@ -30,7 +30,7 @@ import { CATS, fileType, MAX_FILE, clean, page, dmy } from './works.js';
 import { makePermToken, talkUrl, sigBytes, idOf, graphPdf, PAD_JS, ctrName, textHash, BUCKET } from './talk.js';
 import { KIND_CTR, CTR_PREFIX, CTR_STATE, CTR_INSTR, CTR_KIND_L, CTR_S_SENT, CTR_S_FILLED, CTR_WORKS, FRK_L, CTR_DOCS, CTR_DOC_L, requiredDocs, optionalDocs,
   missingDocs, missingMsg, RID_RE, ctrLinkId, parseCtrLinkId, linkTtlDays, workerTtlDays, addDays, ctrFolder, safeName, stateList, stateAdd, statePatch,
-  instrText, CTR_TITLE, CTR_COMMIT, CTR_OK, CTR_SIGN_MAX, DESC_MAX } from '../_ctr.js';
+  instrText, canSend, CTR_TITLE, CTR_COMMIT, CTR_OK, CTR_SIGN_MAX, DESC_MAX } from '../_ctr.js';
 import { fillCtrForm, pickTemplate, FORM_DIR, FORM_MAX } from '../_ctrform.js';
 
 let SB = SB_LIVE; // set from env in onRequest (sbFrom)
@@ -343,7 +343,7 @@ async function showForm(env, tok, nowMs) {
   if (t.error) return tokErr(t.error);
   const entry = (await readState(env)).find((x) => x.id === t.rid);
   if (!entry) return errPage('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05d5\u05d8\u05dc. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d1\u05e7\u05e9 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9 \u05de\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.', 410);
-  if (entry.status === CTR_S_FILLED) return page('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05db\u05d1\u05e8 \u05e0\u05e9\u05dc\u05d7', doneHtml(await workerLink(env, t, entry, nowMs)), 'ok', 200);
+  if (!canSend(entry, nowMs)) return page('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05db\u05d1\u05e8 \u05e0\u05e9\u05dc\u05d7', doneHtml(await workerLink(env, t, entry, nowMs)), 'ok', 200);
   // the workers sign on these instructions: without them there is nothing to sign (as talk.js ctrNotReady)
   const instr = await readInstr(env);
   if (!instr) return errPage(INSTR_NOT_READY, 503);
@@ -467,7 +467,7 @@ async function submit(env, request, nowMs, deps) {
   if ((await guessCount(env, request)) > CTR_POSTS_HOUR) return errPage('\u05d9\u05d5\u05ea\u05e8 \u05de\u05d3\u05d9 \u05e0\u05d9\u05e1\u05d9\u05d5\u05e0\u05d5\u05ea. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05e9\u05e2\u05d4.', 429);
   const entry0 = (await readState(env)).find((x) => x.id === t.rid);
   if (!entry0) return errPage('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05d5\u05d8\u05dc. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d1\u05e7\u05e9 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9 \u05de\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.', 410);
-  if (entry0.status === CTR_S_FILLED) return page('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05db\u05d1\u05e8 \u05e0\u05e9\u05dc\u05d7', doneHtml(await workerLink(env, t, entry0, nowMs)), 'ok', 200);
+  if (!canSend(entry0, nowMs)) return page('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05db\u05d1\u05e8 \u05e0\u05e9\u05dc\u05d7', doneHtml(await workerLink(env, t, entry0, nowMs)), 'ok', 200);
   // the files, read and typed by their bytes
   const files = [];
   for (const d of CTR_DOCS) {
@@ -497,7 +497,7 @@ async function submit(env, request, nowMs, deps) {
   const claim = { status: CTR_S_FILLED, at: atIso, company: v.company, cnum: v.cnum, contact: v.contact, mobile: v.mobile, email: v.email, works: v.works, place: v.place || null, desc: v.desc, signer: v.signer, workers: v.workers.length };
   let gone = false;
   const cw = await stateCas(SB, sbH(env, { 'Content-Type': 'application/json' }), CTR_STATE, (cur) => {
-    const p = statePatch(cur, t.rid, claim, CTR_S_SENT);
+    const p = statePatch(cur, t.rid, claim, (e) => canSend(e, nowMs));
     if (p.error) { gone = true; return { write: false }; }
     return { value: JSON.stringify(p.list) };
   }, () => AbortSignal.timeout(FETCH_MS));

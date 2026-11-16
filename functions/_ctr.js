@@ -20,6 +20,13 @@ export const CTR_STATE_MAX = 200;
 export const CTR_INSTR = 'ctr_instructions'; // server_state: the text of form 146.03, set by Michael
 export const CTR_KIND_L = { perm: '\u05e7\u05d1\u05dc\u05df \u05e7\u05d1\u05d5\u05e2, \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e9\u05e0\u05ea\u05d9', temp: '\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea' };
 export const CTR_S_SENT = 'sent', CTR_S_FILLED = 'filled';
+// A send that was cut (security review 16/11/2026: the Worker stopped after the claim and before its last write, so the
+// request said "filled" with no files and the contractor could not send again): filled, no "files" (the last write
+// never came) and claimed more than this long ago = it may be sent again from the same link.
+export const CTR_STUCK_MS = 10 * 60 * 1000;
+export const isStuck = (e, nowMs) => !!e && e.status === CTR_S_FILLED && e.files == null && nowMs - (Date.parse(e.at || '') || 0) > CTR_STUCK_MS;
+// May this request be sent now: never sent, or a cut send.
+export const canSend = (e, nowMs) => !!e && (e.status === CTR_S_SENT || isStuck(e, nowMs));
 
 // The works the contractor ticks: the 8 kinds of the weekly works list (works.js CATS) and the forklift, which only a
 // contractor brings.
@@ -117,11 +124,12 @@ export function stateAdd(raw, entry) {
   return [entry].concat(list).slice(0, CTR_STATE_MAX);
 }
 // Patch one entry; when = the status it must have now (else {error:'state'}); {error:'missing'} when it is not there.
+// when may also be a function(entry, i.e. its row) -> true when the patch may go.
 export function statePatch(raw, id, patch, when) {
   const list = stateList(raw);
   const i = list.findIndex((x) => x.id === id);
   if (i < 0) return { error: 'missing' };
-  if (when && list[i].status !== when) return { error: 'state', status: list[i].status };
+  if (when && (typeof when === 'function' ? !when(list[i]) : list[i].status !== when)) return { error: 'state', status: list[i].status };
   list[i] = Object.assign({}, list[i], patch);
   return { list };
 }
