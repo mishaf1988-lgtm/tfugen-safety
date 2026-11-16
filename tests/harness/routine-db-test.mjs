@@ -1074,6 +1074,7 @@ const callIn = async (body) => {
     check('pairs: "25/08", "13/11", "02/01" get 2026, 2026 and 2027 (nearest)', addYear('\u05de-25/08 \u05e2\u05d3 13/11, \u05d5\u05d1-02/01.', N) === '\u05de-25/08/2026 \u05e2\u05d3 13/11/2026, \u05d5\u05d1-02/01/2027.', addYear('\u05de-25/08 \u05e2\u05d3 13/11, \u05d5\u05d1-02/01.', N));
     check('pairs: left as written: "09:00", "146.03", "1-2", "25/08/2026", "10/10", "\u05d6\u05d4\u05d1: 09/10", "08/10 \u05e0\u05db\u05d5\u05e0\u05d5\u05ea", "1/2", "31/02"',
       ['09:00', '146.03', '1-2', '25/08/2026', '10/10', '\u05d6\u05d4\u05d1: 09/10', '08/10 \u05e0\u05db\u05d5\u05e0\u05d5\u05ea', '1/2', '31/02', '2026/08/25', '13/25'].every((x) => addYear(x, N) === x), ['09:00', '146.03', '25/08/2026', '\u05d6\u05d4\u05d1: 09/10'].map((x) => addYear(x, N)));
+    check('a range 20/12-25/12 gets the year on both dates (retro 16/11/2026)', addYear('20/12-25/12', N) === '20/12/2026-25/12/2026', addYear('20/12-25/12', N));
     check('the date in parentheses and at the end of a line too; empty text stays empty', addYear('\u05d4\u05e1\u05e7\u05d9\u05e8\u05d4 (13/10)\n\u05e2\u05d3 01/11', N) === '\u05d4\u05e1\u05e7\u05d9\u05e8\u05d4 (13/10/2026)\n\u05e2\u05d3 01/11/2026' && addYear(undefined, N) === '' && addYear('', N) === '');
     check('wa_me runs it before the gates', /if \(body\.op === 'wa_me'\) \{\n\s*body\.text = addYear\(body\.text, Date\.now\(\)\);/.test(fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8'))); }
 

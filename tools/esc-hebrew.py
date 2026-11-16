@@ -34,6 +34,13 @@ def added(root=ROOT):
             if m:
                 a, n = int(m.group(1)), int(m.group(2) if m.group(2) is not None else 1)
                 out.setdefault(cur, []).extend(range(a, a + n))
+    # a new file not yet added to git is invisible to git diff HEAD: all its lines count as added (16/11/2026, retro)
+    u = subprocess.run(["git", "ls-files", "--others", "--exclude-standard", "--", "functions/"], cwd=root, capture_output=True, text=True, encoding="utf-8", timeout=20)
+    for f in u.stdout.split("\n"):
+        fp = os.path.join(root, f)
+        if f.endswith(".js") and os.path.isfile(fp):
+            n = len(open(fp, encoding="utf-8").read().split("\n"))
+            out.setdefault(f, []).extend(range(1, n + 1))
     return out
 
 

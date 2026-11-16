@@ -2587,7 +2587,7 @@ export function formsVerdict(res) {
 const DATE_SCORE = /(\u05d6\u05d4\u05d1|\u05e6\u05d9\u05d5\u05df|\u05de\u05ea\u05d5\u05da|\u05e2\u05d1\u05e8\u05d5|\u05e0\u05db\u05d5\u05e0|\u05e2\u05d1\u05e8\u05d9\u05ea)\S*\s*:?\s*$/;
 export function addYear(text, now) {
   const t = new Date(now), y0 = t.getUTCFullYear(), HALF = 183 * 86400000;
-  return String(text == null ? '' : text).replace(/(^|[\u05d0-\u05ea]-|[^\d/.:\-])(\d{2})\/(\d{2})(?![\d/])/g, (m, pre, dd, mm, off, all) => {
+  return String(text == null ? '' : text).replace(/(^|[\u05d0-\u05ea]-|(?<=\/\d{2})-|[^\d/.:\-])(\d{2})\/(\d{2})(?![\d/])/g, (m, pre, dd, mm, off, all) => {
     const d = Number(dd), mo = Number(mm);
     if (d < 1 || d > 31 || mo < 1 || mo > 12 || (dd === '10' && mm === '10')) return m;
     const before = all.slice(Math.max(0, off - 14), off + pre.length), after = all.slice(off + m.length, off + m.length + 10);
