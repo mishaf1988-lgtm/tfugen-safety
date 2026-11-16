@@ -206,6 +206,7 @@ import { rowContradictions } from './wa-morning.js';
 import { respUnknown } from './hazard-report.js';
 import { ttsWav, speechText } from './talk.js';
 import { ctrLinkCheck, ctrLinkCreate } from './ctr-link.js';
+import { formProbe } from '../_formprobe.js';
 export const TTS_GEMINI = 'gemini', TTS_GEMINI_FILE = 'hakraa-ivrit.wav', TTS_FMTS = ['audio/mpeg', 'audio/ogg', 'audio/mp3'];
 // A voice answer to a voice message (13/11/2026, Michael in the questionnaire after the Gemini sample: "do it: understood,
 // go on (recommended)"; ideas-lab 37). The assistant marks its main answer to a voice message with "voice": true; the server
@@ -234,7 +235,7 @@ export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads',
   'trustees', 'trustee_tasks', 'trustee_winners'];
 export const CARD_INV_N = 5;
-export const STATE_READ = ['topic_facts', 'golden_auto', 'second_gate', 'agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'drafts_id_live', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account', 'works_permit_err', 'weekend_held', 'weekend_held_last', 'wa_fail_mail_last', 'michael_checks', 'usage_month', 'inv_month', 'ctr_links', 'ctr_instructions'];
+export const STATE_READ = ['topic_facts', 'golden_auto', 'second_gate', 'agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'drafts_id_live', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account', 'works_permit_err', 'weekend_held', 'weekend_held_last', 'wa_fail_mail_last', 'michael_checks', 'usage_month', 'inv_month', 'ctr_links', 'ctr_instructions', 'ctr_renew', 'form_probe'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;
@@ -3585,6 +3586,14 @@ async function routineDbHandle(context) {
       if (!Array.isArray(th) || !Array.isArray(tr)) return jsonResp({ ok: false, error: 'read failed: ' + [!Array.isArray(th) ? 'tour_hazards' : '', !Array.isArray(tr) ? 'trustee_reports' : ''].filter(Boolean).join(', ') }, 200, {});
       const unknown = respUnknown(th, 'tour_hazards').concat(respUnknown(tr, 'trustee_reports'));
       return jsonResp({ ok: true, checked: th.length + tr.length, unknown }, 200, {});
+    }
+    // form_probe (16/11/2026): the weekly check of form 146.03 through Microsoft's PDF (_formprobe.js), now; it replaces
+    // the one probe file in 00_דוחות ומעקב/_בדיקות אוטומטיות and tells Michael only when something is wrong
+    if (body.op === 'form_probe') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const now = new Date(), day = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+      const r = await formProbe(env, { dow: -1, hour: -1, day }, null, true).catch((e) => ({ ran: false, error: String((e && e.message) || e).slice(0, 120) }));
+      return jsonResp(Object.assign({ ok: !!r.ran }, r), 200, {});
     }
     if (body.op === 'data_gaps') {
       for (const k of Object.keys(body)) if (['op', 'agent'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});

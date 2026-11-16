@@ -249,7 +249,7 @@ let link, rid;
     check('ctr_revoke: an unknown id and an extra field are refused', nx.ok === false && bf.ok === false && /field not allowed: x/.test(bf.error || ''), { nx, bf });
     db.talks['ctr-' + rid].link_v = v0; }
   const rdb = fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
-  check('ctr_instructions: Michael\'s text can be set and read; ctr_links can be read', /'ctr_links', 'ctr_instructions'\];/.test(rdb) && /'agents_registry', 'ctr_instructions'\];/.test(rdb));
+  check('ctr_instructions: Michael\'s text can be set and read; ctr_links can be read', /export const STATE_READ = \[[^\]]*'ctr_links', 'ctr_instructions'[^\]]*\];/.test(rdb) && /'agents_registry', 'ctr_instructions'\];/.test(rdb));
 
   const notReady = await onRequest({ request: new Request(link), env: ENV });
   check('instructions not in yet: the page says so (503), no form (the workers would sign on nothing)', notReady.status === 503 && (await notReady.text()).indexOf('name="wn"') < 0);

@@ -80,7 +80,7 @@
 - registry: קבלן מול פנקס הקבלנים הרשומים ומרשם האסבסט (data.gov.il), בכרטיס הקבלן; בדיקה שבועית שהאתר עונה, תקלה במייל השבועי
 - works: רשימת העבודות לשישי: קישור לאחזקה, היתרים לאישור, אישורים מצורפים, סגירה מהטלפון; הרשאה חתומה (PDF) לכל עבודה שאושרה, מתויקת בתיקייה 18 ונשלחת במייל; מייל ברביע
 - ctr-link: קישור לקבלן: פרטים, מסמכים לפי העבודות ותיאור העבודה, הוראות 146.03 בדף ושורה לכל עובד עם חתימה באצבע באותו טלפון; טופס 146.03 ממולא וחתום (Word ו-PDF) לתיקיית 
-- routine-db: 89 פעולות שהסוכנים מותרים בהן: agent_log_since, agent_report, agents_pause, agents_resume, assistant_account, cal_invite, cal_invite_ask, cal_move, cal_move_ask
+- routine-db: 90 פעולות שהסוכנים מותרים בהן: agent_log_since, agent_report, agents_pause, agents_resume, assistant_account, cal_invite, cal_invite_ask, cal_move, cal_move_ask
 
 ## המסד
 - מסמכים ותוקף: טבלה docs
