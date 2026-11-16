@@ -186,11 +186,20 @@ export function sendFailText(env, owner, joins) {
 async function aboutAlert(env, wamid) {
   if (!wamid) return '';
   try {
-    const rows = await sbJson(env, 'notifications_log?select=event_type,payload,ts&payload->>wamid=eq.' + encodeURIComponent(wamid) + '&limit=1');
-    const r = rows && rows[0];
+    const rows = await sbJson(env, 'notifications_log?select=event_type,payload,ts&event_type=neq.wa_delivery&payload->>wamid=eq.' + encodeURIComponent(wamid) + '&limit=10');
+    const r = aboutPick(rows);
     if (!r) return '';
     return aboutLine(r);
   } catch (e) { return ''; }
+}
+// 16/11/2026 (Michael tapped "\u05d1\u05e6\u05e2" on a calendar move and nothing moved): since 07/11/2026 one message to Michael has two log
+// rows with the same wamid, wa_out (for /chat, no ref) and assistant (with the ref of the pending action). The lookup took
+// whichever came first (limit=1, no order), the wa_out row, so the tap lost its calmove:/del:/undo:/... ref and went to
+// the assistant as plain text. The row that carries a real ref wins, then the assistant row, then any. Pure, tested.
+export function aboutPick(rows) {
+  const a = Array.isArray(rows) ? rows.filter((r) => r && typeof r === 'object') : [];
+  const refOf = (r) => { const v = r.payload && r.payload.ref; return v && v !== 'none' ? v : ''; };
+  return a.find((r) => refOf(r)) || a.find((r) => r.event_type === 'assistant') || a[0] || null;
 }
 // 06/11/2026 (retro 27/10/2026 (d)): the title of a trustee report is free text; a "| id x |" inside it could become the
 // id hazardRef reads when the row has no id of its own. The "|" of the free fields is replaced, so only p.id and p.ref
