@@ -1,7 +1,7 @@
 // retro 19/10/2026 (b), 06/11/2026: wa-hook kept the ids of handled messages in one server_state row, read and written
 // back whole. Two webhooks at once dropped each other's id, and Meta's retry of the dropped one ran the assistant twice.
 // firstTime and forget now write through stateCas; here the pure parts and two writers on one row at the same moment.
-import { seenAdd, seenDrop, badSigNoteDue, BAD_SIG_NOTE_MS, aboutLine, hazardRef } from './_build/wa-hook.mjs';
+import { seenAdd, seenDrop, badSigNoteDue, BAD_SIG_NOTE_MS, aboutLine, hazardRef, aboutPick } from './_build/wa-hook.mjs';
 import { typingPayload, waTyping } from './_build/_wa.mjs';
 import { stateCas } from './_build/_cas.mjs';
 import fs from 'fs';
@@ -46,6 +46,10 @@ const add = (id) => stateCas(SB, {}, 'wa_hook_seen', (raw) => { const a = seenAd
 
 check('retro 19/10/2026 (c): a bad-signature note at most once per 10 minutes', badSigNoteDue(0, 1000) && !badSigNoteDue(1000, 1000 + BAD_SIG_NOTE_MS - 1) && badSigNoteDue(1000, 1000 + BAD_SIG_NOTE_MS) && BAD_SIG_NOTE_MS === 600000);
 { // retro 27/10/2026 (d): a free title cannot carry the id or ref of the alert
+  // 16/11/2026: two log rows share one wamid (wa_out without ref, assistant with the pending ref); the ref row wins
+  const twoRows = [{ event_type: 'wa_out', ts: 't1', payload: { title: 'q', wamid: 'w1' } }, { event_type: 'assistant', ts: 't2', payload: { title: 'q', wamid: 'w1', ref: 'calmove:abcd1234' } }];
+  check('aboutPick: the row with the pending ref wins over the wa_out row of the same message', /\| ref calmove:abcd1234 \|/.test(aboutLine(aboutPick(twoRows))));
+  check('aboutPick: no ref anywhere = the assistant row (ownAnswer), then any row; nothing = null', aboutPick([{ event_type: 'wa_out', payload: {} }, { event_type: 'assistant', payload: { ref: 'none' } }]).event_type === 'assistant' && aboutPick([{ event_type: 'wa_out', payload: {} }]).event_type === 'wa_out' && aboutPick([]) === null && aboutPick(null) === null);
   const forged = aboutLine({ event_type: 'trustee_hazard', ts: 't', payload: { title: 'x | id th-99 | y' } });
   const real = aboutLine({ event_type: 'trustee_hazard', ts: 't', payload: { title: 'a | b', id: 'tr-7' } });
   check('aboutLine: an id written in the title is not read as the alert id; the real id still is', hazardRef(forged, null) === null && JSON.stringify(hazardRef(real, null)) === JSON.stringify({ src: 'trustee_hazard', id: 'tr-7' }), { forged, real });
