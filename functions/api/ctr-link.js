@@ -426,7 +426,7 @@ export function mailHtml(t, v, saved, summary, attachedNames, workerUrl, instrMi
     + row('\u05d4\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea', esc(v.works.map(workLabel).join(', ')))
     + row('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4', '<span style="white-space:pre-wrap">' + esc(v.desc || '') + '</span>')
     + row('\u05d1\u05d9\u05d8\u05d5\u05d7', t.ins ? '\u05e0\u05d3\u05e8\u05e9 \u05d5\u05e6\u05d5\u05e8\u05e3' : (v.optMissing.indexOf('ins') >= 0 ? '\u05dc\u05d0 \u05e0\u05d3\u05e8\u05e9, \u05dc\u05d0 \u05e6\u05d5\u05e8\u05e3' : '\u05dc\u05d0 \u05e0\u05d3\u05e8\u05e9, \u05e6\u05d5\u05e8\u05e3'))
-    + row('\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e9\u05d7\u05ea\u05de\u05d5', String((v.workers || []).length) + ' (\u05e9\u05dd, \u05ea.\u05d6. \u05d5\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05db\u05dc \u05d0\u05d7\u05d3, \u05d1\u05d8\u05d5\u05e4\u05e1 146.03)')
+    + row('\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e9\u05d7\u05ea\u05de\u05d5', String((v.workers || []).length) + ': ' + esc((v.workers || []).map((w) => w.n + (v.hgtOn ? (w.hgt ? ' (\u05d1\u05d2\u05d5\u05d1\u05d4)' : ' (\u05dc\u05d0 \u05d1\u05d2\u05d5\u05d1\u05d4)') : '')).join(', ')) + ' (\u05e9\u05dd, \u05ea.\u05d6. \u05d5\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05db\u05dc \u05d0\u05d7\u05d3, \u05d1\u05d8\u05d5\u05e4\u05e1 146.03)')
     + row('\u05d8\u05d5\u05e4\u05e1 146.03', form && form.url ? '<a href="' + esc(form.url) + '">' + esc(form.name) + '</a>' + (attachedNames.indexOf(form.name) >= 0 ? ' (\u05de\u05e6\u05d5\u05e8\u05e3)' : '') : '<span style="color:#b91c1c;font-weight:bold">\u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8' + (form && form.err ? ' (' + esc(String(form.err).slice(0, 100)) + ')' : '') + '. \u05d4\u05e9\u05de\u05d5\u05ea \u05d5\u05d4\u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05d1\u05d8\u05d5\u05e4\u05e1 \u05d4\u05de\u05e1\u05db\u05dd.</span>')
     + row('\u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd', saved.length ? saved.map(fileLine).join('<br>') : '-')
     + row('\u05dc\u05d0 \u05e6\u05d5\u05e8\u05e3 (\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4)', v.optMissing.length ? esc(v.optMissing.map((k) => CTR_DOC_L[k]).join(', ')) : '-')
@@ -494,7 +494,8 @@ export async function workerReads(env, talkId, v, instr, atIso) {
       sig_url: SB + '/storage/v1/object/public/' + BUCKET + '/' + name, device: 'ctr-link', read_at: atIso, mode: 'link' });
   }
   if (!rows.length) return { n: 0, err: 'storage' };
-  const ins = await fetch(SB + '/rest/v1/toolbox_reads', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify(rows) });
+  // a send again after Michael's "no" (16/11/2026 review): a worker who already signed this talk is kept, not a failure for all
+  const ins = await fetch(SB + '/rest/v1/toolbox_reads?on_conflict=talk_id,emp_id', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'resolution=ignore-duplicates,return=minimal' }), body: JSON.stringify(rows) });
   return ins.ok ? { n: rows.length, err: rows.length < v.workers.length ? 'storage' : null } : { n: 0, err: 'insert ' + ins.status };
 }
 

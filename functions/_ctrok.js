@@ -85,6 +85,8 @@ export function ctrUpdate(cur, e) {
   if (digits(e.cnum) && !digits(cur && cur.cid)) p.cid = digits(e.cnum);
   if (one(e.contact, 60)) p.c = one(e.contact, 60);
   if (one(e.mobile, 15)) p.ph = one(e.mobile, 15);
+  // the newest signed form (16/11/2026 review: a contractor already in the register kept no link to it)
+  if (e.form || e.summary) p.file_url = e.form || e.summary;
   if (!(cur && /^\d{4}-\d{2}-\d{2}$/.test(String(cur.e || '')) && String(cur.e) > String(e.until))) { p.e = e.until; p.ty = tyOf(e); }
   return p;
 }

@@ -61,7 +61,14 @@ globalThis.fetch = async (url, init) => {
     return json(t ? [{ ...t }] : []);
   }
   if (u.startsWith(SB + '/rest/v1/toolbox_reads')) {
-    if (m === 'POST') { for (const r of [].concat(JSON.parse(init.body))) db.reads.push(r); return new Response(null, { status: 201 }); }
+    if (m === 'POST') {
+      // as the live unique index (talk_id, emp_id): a second signature is 409 unless the insert ignores duplicates
+      const ign = /ignore-duplicates/.test((init.headers && (init.headers.Prefer || init.headers.prefer)) || '') && /on_conflict=talk_id,emp_id/.test(u);
+      const rs = [].concat(JSON.parse(init.body)), dup = (r) => db.reads.some((x) => x.talk_id === r.talk_id && x.emp_id === r.emp_id);
+      if (!ign && rs.some(dup)) return new Response('dup', { status: 409 });
+      for (const r of rs) if (!dup(r)) db.reads.push(r);
+      return new Response(null, { status: 201 });
+    }
     if (m === 'PATCH') { const id = q(u, 'id').slice(3); const r = db.reads.find((x) => x.id === id); if (r) Object.assign(r, JSON.parse(init.body)); return new Response(null, { status: 204 }); }
     const tid = (q(u, 'talk_id') || '').slice(3), like = q(u, 'emp_id');
     return json(db.reads.filter((r) => r.talk_id === tid && (!like || (like.startsWith('like.') ? r.emp_id.startsWith(like.slice(5).replace(/\*$/, '')) : r.emp_id === like.slice(3)))).map((r) => ({ id: r.id })));
@@ -331,8 +338,9 @@ const good = { company: 'בונים בע"מ', cnum: '512345678', contact: 'דנ�
   check('the mail lists the works, every document and what is optional and not given, the commitment', m.html.indexOf(workLabel('frk')) > 0 && m.html.indexOf(CTR_DOC_L.plat) > 0 && m.html.indexOf(CTR_DOC_L.oth) > 0 && m.html.indexOf('התחייבות') > 0 && m.html.indexOf('דני כהן') > 0);
   check('each worker\'s certificate is named by him in the folder', inFolder.some((p) => p.name.indexOf('אישור עבודה בגובה - ישראל ישראלי - 1.pdf') > 0) && inFolder.some((p) => p.name.indexOf('אישור עבודה בגובה - Ahmad Nasser - 1.pdf') > 0), inFolder.map((p) => p.name));
   check('the mail attaches form 146.03 first, then the summary and the files (small enough)', m.att.length === 8 && m.att[0].name.indexOf('146.03') > 0 && m.att[1].name.indexOf('טופס אישור') > 0 && m.att.every((a) => a.contentBytes && a['@odata.type'] === '#microsoft.graph.fileAttachment'), m.att.map((a) => a.name));
-  check('the mail: the description (escaped), 2 workers signed, the form linked', m.html.indexOf('התקנת מדפים') > 0 && m.html.indexOf('&lt;b&gt;') > 0 && m.html.indexOf('עובדים שחתמו') > 0 && /<td[^>]*>2 \(/.test(m.html) && m.html.indexOf('146.03 חתום') > 0);
+  check('the mail: the description (escaped), 2 workers signed, the form linked', m.html.indexOf('התקנת מדפים') > 0 && m.html.indexOf('&lt;b&gt;') > 0 && m.html.indexOf('עובדים שחתמו') > 0 && /<td[^>]*>2: /.test(m.html) && m.html.indexOf('146.03 חתום') > 0);
   check('the mail holds no full ID number of a worker', m.html.indexOf('012345678') < 0);
+  check('the mail names each worker and whether he works at height', m.html.indexOf('ישראל ישראלי (בגובה)') > 0 && m.html.indexOf('Ahmad Nasser (בגובה)') > 0, m.html.slice(m.html.indexOf('עובדים'), m.html.indexOf('עובדים') + 200));
   check('the mail is keyboard characters only, and RTL', !BAD.test(m.html.replace(/<[^>]+>/g, ' ')) && /^<div dir="rtl" style="direction:rtl;text-align:right/.test(m.html));
   const st = stateList(db.state[CTR_STATE].value)[0];
   check('the request is marked filled, with the files, folder, mail, form and reads (no worker ID in state)', st.status === 'filled' && st.files === 6 && st.folder === folder && st.mail === 'sent' && st.workers === 2 && st.reads === 2 && /146\.03/.test(decodeURIComponent(st.form || '')) && !st.form_err && JSON.stringify(st).indexOf('012345678') < 0 && JSON.stringify(st).indexOf('023456789') < 0, st);
@@ -347,6 +355,7 @@ const good = { company: 'בונים בע"מ', cnum: '512345678', contact: 'דנ�
   const p0 = db.puts.length, mm0 = db.mails.length;
   const resend = await post(good, { ins: [['a.pdf', PDF()]], wf_0: [['b.pdf', PDF()]], wf_1: [['b2.pdf', PDF()]], plat: [['c.pdf', PDF()]], frkl: [['d.pdf', PDF()]] });
   check('... and the send goes through: files, form, one more mail, files set', resend.status === 200 && db.puts.length > p0 && db.mails.length === mm0 + 1 && stateList(db.state[CTR_STATE].value)[0].files === 5, resend.html.slice(0, 200));
+  check('... and the workers who signed before are kept, not a failure (no reads error)', !stateList(db.state[CTR_STATE].value)[0].reads_err, stateList(db.state[CTR_STATE].value)[0].reads_err);
   const fresh = stateList(keepState.value).map((x) => (x.id === rid ? { ...x, files: undefined, at: new Date().toISOString() } : x));
   db.state[CTR_STATE] = { value: JSON.stringify(fresh), updated_at: new Date().toISOString() };
   check('a send claimed a minute ago with no files yet (still running): "already sent", no second send', (await post(good, {})).status === 200 && db.mails.length === mm0 + 1);

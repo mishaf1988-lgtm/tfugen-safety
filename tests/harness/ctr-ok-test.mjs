@@ -79,6 +79,7 @@ const filled = (o) => Object.assign({ id: 'cabc1234', kind: 'perm', ins: true, d
   check('no match = a new row', matchCtr(rows, { cnum: '', company: 'צבע ושיפוצים' }).none === true);
   const nr = ctrNewRow(Object.assign(filled(), { until: '2027-11-16' }));
   check('a new row: trained, active, its end date, the form', nr.tr === CTR_TRAINED && nr.s === 'פעיל' && nr.e === '2027-11-16' && nr.file_url === 'https://x/146.pdf' && /^קבוע: /.test(nr.ty) && nr.cid === '515151515', nr);
+  check('an update links the newest signed form', ctrUpdate({ e: '2027-12-31', file_url: 'old' }, Object.assign(filled(), { form: 'new-form', until: '2027-11-16' })).file_url === 'new-form');
   check('an update never shortens the date', ctrUpdate({ e: '2027-12-31' }, Object.assign(filled({ kind: 'temp' }), { until: '2026-12-01' })).e === undefined);
   check('an update lengthens the date and keeps a known company number', (() => { const p = ctrUpdate({ e: '2026-01-01', cid: '333' }, Object.assign(filled(), { until: '2027-11-16' })); return p.e === '2027-11-16' && p.cid === undefined && p.tr === CTR_TRAINED; })());
   const rr = [{ id: 'a', ty: 'קבוע: עבודות חשמל', e: addD(today, 10), s: 'פעיל' }, { id: 'b', ty: 'זמני: גגות', e: addD(today, 10) }, { id: 'c', ty: 'קבוע', e: addD(today, 40) }, { id: 'd', ty: 'קבוע', e: addD(today, 5) }];
@@ -115,7 +116,7 @@ const filled = (o) => Object.assign({ id: 'cabc1234', kind: 'perm', ins: true, d
   console.log('\n4. approve: an existing contractor, and a similar name');
   reset(); put([filled()]); db.ctr = [{ id: 'ctr26-9', n: 'אלקטרו', cid: '515151515', e: null, tr: null, s: 'פעיל', file_url: 'https://old' }];
   r = await fastCtrOk(ENV, { id: 'cabc1234', yes: true }, NOW);
-  check('the row is updated, not added', db.ctr.length === 1 && db.ctr[0].tr === CTR_TRAINED && db.ctr[0].e === il(NOW + 365 * 864e5) && db.ctr[0].file_url === 'https://old' && /עודכן/.test(r.text), db.ctr);
+  check('the row is updated, not added, with the newest form', db.ctr.length === 1 && db.ctr[0].tr === CTR_TRAINED && db.ctr[0].e === il(NOW + 365 * 864e5) && db.ctr[0].file_url === 'https://x/146.pdf' && /עודכן/.test(r.text), db.ctr);
   check('the answer names the row that was updated', r.text.indexOf('אושר. אלקטרו עודכן') === 0, r.text);
   reset(); put([filled({ cnum: '' })]); db.ctr = [{ id: 'ctr26-4', n: 'אלקטרו חשמל ותאורה', cid: null, e: null }];
   r = await fastCtrOk(ENV, { id: 'cabc1234', yes: true }, NOW);
