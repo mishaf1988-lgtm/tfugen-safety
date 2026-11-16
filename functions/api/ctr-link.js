@@ -170,7 +170,7 @@ export function checkWorkers(rows) {
     if (!n || !id || !r.sig) { errors.push('\u05e2\u05d5\u05d1\u05d3 ' + (i + 1) + ': \u05e6\u05e8\u05d9\u05da \u05e9\u05dd, \u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d6\u05d4\u05d5\u05ea \u05d0\u05d5 \u05d3\u05e8\u05db\u05d5\u05df, \u05d5\u05d7\u05ea\u05d9\u05de\u05d4 \u05d1\u05d0\u05e6\u05d1\u05e2.'); return; }
     const k = /^\d+$/.test(id) ? id.replace(/^0+/, '') : id;
     if (seen.has(k)) { errors.push('\u05e2\u05d5\u05d1\u05d3 ' + (i + 1) + ': \u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d4\u05d6\u05d4\u05d5\u05ea \u05db\u05d1\u05e8 \u05d1\u05e8\u05e9\u05d9\u05de\u05d4.'); return; }
-    seen.add(k); out.push({ n, id, sig: r.sig, i: r.i });
+    seen.add(k); out.push({ n, id, sig: r.sig, i: r.i, hgt: !!r.hgt });
   });
   return errors.length ? { errors } : { list: out };
 }
@@ -213,7 +213,7 @@ export function checkCtrForm(f, files, t) {
     // signed worker, is not taken
     let wk0 = null;
     if (x.doc === CTR_PER_WORKER) {
-      wk0 = x.w == null ? null : (v.workers || []).find((o) => o.i === x.w);
+      wk0 = x.w == null ? null : (v.workers || []).find((o) => o.i === x.w && o.hgt);
       if (!wk0) continue;
     }
     if (!x.type) { errors.push((CTR_DOC_L[x.doc] || '') + ': \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e6\u05e8\u05e3 \u05e8\u05e7 PDF, JPG \u05d0\u05d5 PNG.'); continue; }
@@ -223,11 +223,15 @@ export function checkCtrForm(f, files, t) {
   }
   if (n > CTR_MAX_FILES) errors.push('\u05d0\u05e4\u05e9\u05e8 \u05dc\u05e6\u05e8\u05e3 \u05e2\u05d3 ' + CTR_MAX_FILES + ' \u05e7\u05d1\u05e6\u05d9\u05dd.');
   if (total > CTR_MAX_TOTAL) errors.push('\u05d4\u05e7\u05d1\u05e6\u05d9\u05dd \u05d2\u05d3\u05d5\u05dc\u05d9\u05dd \u05de\u05d3\u05d9 \u05d9\u05d7\u05d3 (\u05e2\u05d3 ' + CTR_MAX_MB + 'MB).');
-  v.missing = missingDocs(req, have);
+  // 16/11/2026, Michael: "not every worker must have a height approval": the contractor marks who works at height (at
+  // least one), and only those need their certificate; the others are named in the summary as not at height
+  const byW = perW && !!v.workers;
+  v.missing = missingDocs(byW ? req.filter((k) => k !== CTR_PER_WORKER) : req, have);
   errors.push(...missingMsg(v.missing));
-  // some workers have their certificate and some do not: each one without it, by name
-  if (perW && have[CTR_PER_WORKER] && v.workers) v.workers.forEach((o, j) => {
-    if (!wHas.has(o.i)) errors.push('\u05e2\u05d5\u05d1\u05d3 ' + (j + 1) + ' (' + o.n + '): \u05d7\u05e1\u05e8 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05e9\u05dc\u05d5.');
+  v.hgtOn = byW;
+  if (byW && !v.workers.some((o) => o.hgt)) errors.push('\u05e1\u05de\u05e0\u05d5 \u05d0\u05d9\u05dc\u05d5 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d1\u05d2\u05d5\u05d1\u05d4 (\u05dc\u05e4\u05d7\u05d5\u05ea \u05d0\u05d7\u05d3), \u05d5\u05e6\u05e8\u05e4\u05d5 \u05dc\u05db\u05dc \u05d0\u05d7\u05d3 \u05de\u05d4\u05dd \u05d0\u05ea \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05e9\u05dc\u05d5.');
+  if (byW) v.workers.forEach((o, j) => {
+    if (o.hgt && !wHas.has(o.i)) errors.push('\u05e2\u05d5\u05d1\u05d3 ' + (j + 1) + ' (' + o.n + '): \u05d7\u05e1\u05e8 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05e9\u05dc\u05d5.');
   });
   v.required = req;
   v.optMissing = opt.filter((k) => k !== 'oth' && !have[k]);
@@ -257,7 +261,7 @@ function docField(key, t) {
     + '<label for="f_' + key + '">' + esc(CTR_DOC_L[key]) + esc(note) + '</label><input type="file" id="f_' + key + '" name="f_' + key + '" accept="application/pdf,image/jpeg,image/png" multiple></div>';
 }
 // Before 16/11/2026 every document field showed whatever was ticked (no rule hid .doc); now only those of the works.
-const PAGE_CSS = '<style>.doc{display:none;margin:6px 0}.doc.on{display:block}.whf{display:none;margin:6px 0}#wl.hg .whf{display:block}.wr{border:1px solid #d1d5db;border-radius:10px;padding:8px 10px;margin:8px 0;background:#fafafa}'
+const PAGE_CSS = '<style>.doc{display:none;margin:6px 0}.doc.on{display:block}.whf{display:none;margin:6px 0}#wl.hg .whf{display:block}.wfd.off{display:none}.wr{border:1px solid #d1d5db;border-radius:10px;padding:8px 10px;margin:8px 0;background:#fafafa}'
   + '.wh{font-weight:700;margin-bottom:4px}.wr canvas{width:100%;height:110px;border:2px dashed #9ca3af;border-radius:8px;touch-action:none;background:#fff;display:block}'
   + '.wb{display:flex;gap:8px}.wb button{flex:1;padding:8px;border:0;border-radius:8px;background:#e5e7eb;font-size:15px;margin-top:6px}'
   + '.ins{white-space:pre-wrap;max-height:340px;overflow:auto;border:1px solid #d1d5db;border-radius:8px;padding:10px;background:#fff;font-size:15px;line-height:1.55}</style>';
@@ -265,7 +269,7 @@ const PAGE_CSS = '<style>.doc{display:none;margin:6px 0}.doc.on{display:block}.w
 export const ROW_HTML = '<div class="wh"></div>'
   + '<label>\u05e9\u05dd \u05de\u05dc\u05d0</label><input type="text" name="wn" maxlength="60" autocomplete="off">'
   + '<label>\u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d6\u05d4\u05d5\u05ea \u05d0\u05d5 \u05d3\u05e8\u05db\u05d5\u05df</label><input type="text" name="wi" maxlength="15" dir="ltr" autocomplete="off">'
-  + '<div class="whf"><label>\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05e9\u05dc \u05d4\u05e2\u05d5\u05d1\u05d3 (\u05e7\u05d5\u05d1\u05e5 \u05d0\u05d5 \u05ea\u05de\u05d5\u05e0\u05d4)</label><input type="file" class="wf" accept="application/pdf,image/jpeg,image/png" multiple></div>'
+  + '<input type="hidden" name="wg"><div class="whf"><label class="ck"><input type="checkbox" class="wgo" checked>\u05d4\u05e2\u05d5\u05d1\u05d3 \u05e2\u05d5\u05d1\u05d3 \u05d1\u05d2\u05d5\u05d1\u05d4</label><div class="wfd"><label>\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05e9\u05dc \u05d4\u05e2\u05d5\u05d1\u05d3 (\u05e7\u05d5\u05d1\u05e5 \u05d0\u05d5 \u05ea\u05de\u05d5\u05e0\u05d4)</label><input type="file" class="wf" accept="application/pdf,image/jpeg,image/png" multiple></div></div>'
   + '<input type="hidden" name="ws"><div style="font-weight:700;margin:6px 0 4px">\u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05e2\u05d5\u05d1\u05d3 \u05d1\u05d0\u05e6\u05d1\u05e2</div><canvas></canvas>'
   + '<div class="wb"><button type="button" class="wc">\u05e0\u05e7\u05d4 \u05d7\u05ea\u05d9\u05de\u05d4</button><button type="button" class="wx">\u05d4\u05e1\u05e8 \u05e2\u05d5\u05d1\u05d3</button></div>';
 const J = (s) => JSON.stringify(s);
@@ -289,6 +293,7 @@ function num(){rows.forEach(function(r,i){r.el.querySelector('.wh').textContent=
 function addRow(){if(rows.length>=MAX){alert(${J('\u05d0\u05e4\u05e9\u05e8 \u05e2\u05d3 ' + CTR_SIGN_MAX + ' \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d0\u05d7\u05ea. \u05d4\u05e9\u05d0\u05e8 \u05d9\u05d7\u05ea\u05de\u05d5 \u05d0\u05d7\u05e8 \u05db\u05da \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9.')});return;}
 var d=document.createElement('div');d.className='wr';d.innerHTML=${J(ROW_HTML)};wl.appendChild(d);var r={el:d,pad:mkPad(d.querySelector('canvas'))};rows.push(r);num();
 d.querySelector('.wc').addEventListener('click',function(){r.pad.clear();});
+var wgo=d.querySelector('.wgo');wgo.addEventListener('change',function(){d.querySelector('.wfd').className='wfd'+(wgo.checked?'':' off');});
 d.querySelector('.wx').addEventListener('click',function(){if(rows.length<2){d.querySelector('[name=wn]').value='';d.querySelector('[name=wi]').value='';r.pad.clear();return;}wl.removeChild(d);rows.splice(rows.indexOf(r),1);num();});
 d.querySelector('[name=wn]').focus();}
 document.getElementById('add').addEventListener('click',addRow);addRow();
@@ -296,7 +301,8 @@ f.addEventListener('submit',function(e){var miss=[];Array.prototype.forEach.call
 if(!document.querySelectorAll('.wk:checked').length){e.preventDefault();alert(${J('\u05e6\u05e8\u05d9\u05da \u05dc\u05e1\u05de\u05df \u05dc\u05e4\u05d7\u05d5\u05ea \u05e1\u05d5\u05d2 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d0\u05d7\u05d3.')});return;}
 if(miss.length){e.preventDefault();alert(${J('\u05d7\u05e1\u05e8\u05d9\u05dd \u05de\u05e1\u05de\u05db\u05d9\u05dd:')}+'\\n'+miss.join('\\n'));return;}
 var full=0,bad=[];rows.forEach(function(r,i){var n=r.el.querySelector('[name=wn]').value.trim(),id=r.el.querySelector('[name=wi]').value.trim(),s=r.pad.st.d;if(!n&&!id&&!s)return;if(!n||!id||!s)bad.push(i+1);else full++;});
-var hg=document.getElementById('wl').className==='hg',nocert=[];rows.forEach(function(r,i){var w=r.el.querySelector('.wf');w.name='wf_'+i;if(!hg)return;var n=r.el.querySelector('[name=wn]').value.trim();if(n&&(!w.files||!w.files.length))nocert.push(n);});
+var hg=document.getElementById('wl').className==='hg',nocert=[],atH=0;rows.forEach(function(r,i){var w=r.el.querySelector('.wf'),on=hg&&r.el.querySelector('.wgo').checked;w.name='wf_'+i;r.el.querySelector('[name=wg]').value=on?'1':'';if(!on)return;var n=r.el.querySelector('[name=wn]').value.trim();if(!n)return;atH++;if(!w.files||!w.files.length)nocert.push(n);});
+if(hg&&!atH){e.preventDefault();alert(${J('\u05e1\u05de\u05e0\u05d5 \u05d0\u05d9\u05dc\u05d5 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d1\u05d2\u05d5\u05d1\u05d4 (\u05dc\u05e4\u05d7\u05d5\u05ea \u05d0\u05d7\u05d3), \u05d5\u05e6\u05e8\u05e4\u05d5 \u05dc\u05db\u05dc \u05d0\u05d7\u05d3 \u05d0\u05ea \u05d4\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e9\u05dc\u05d5.')});return;}
 if(bad.length){e.preventDefault();alert(${J('\u05d7\u05e1\u05e8 \u05e9\u05dd, \u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d6\u05d4\u05d5\u05ea \u05d0\u05d5 \u05d7\u05ea\u05d9\u05de\u05d4 \u05d0\u05e6\u05dc \u05e2\u05d5\u05d1\u05d3:')}+' '+bad.join(', '));return;}
 if(nocert.length){e.preventDefault();alert(${J('\u05d7\u05e1\u05e8 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05d0\u05e6\u05dc:')}+'\\n'+nocert.join('\\n'));return;}
 if(!full){e.preventDefault();alert(${J('\u05e6\u05e8\u05d9\u05da \u05dc\u05e4\u05d7\u05d5\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d0\u05d7\u05d3: \u05e9\u05dd, \u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d6\u05d4\u05d5\u05ea \u05d5\u05d7\u05ea\u05d9\u05de\u05d4.')});return;}
@@ -402,7 +408,7 @@ export function summaryHtml(t, v, when, sigB64, saved) {
     + cell('\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05e9\u05e6\u05d5\u05e8\u05e4\u05d5', saved.length ? saved.map((x) => esc(CTR_DOC_L[x.doc] + ': ' + x.name)).join('<br>') : '-')
     + cell('\u05dc\u05d0 \u05e6\u05d5\u05e8\u05e3 (\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4)', v.optMissing.length ? esc(v.optMissing.map((k) => CTR_DOC_L[k]).join(', ')) : '-')
     + cell('\u05e0\u05e9\u05dc\u05d7', esc(dmy(when.day) + ' ' + when.hm)) + '</table>'
-    + (v.workers && v.workers.length ? '<h3 style="margin:8px 0 4px">\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e9\u05e7\u05e8\u05d0\u05d5 \u05d0\u05ea \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d7\u05ea\u05de\u05d5</h3><table style="border-collapse:collapse">' + v.workers.map((w, i) => '<tr><td style="padding:2px 8px">' + (i + 1) + '</td><td style="padding:2px 8px">' + esc(w.n) + '</td><td style="padding:2px 8px;direction:ltr">' + esc(w.id) + '</td><td style="padding:2px 8px">' + (w.sig ? '<img alt="" style="max-width:160px;max-height:50px" src="data:image/png;base64,' + b64(w.sig) + '">' : '') + '</td></tr>').join('') + '</table><p>' + esc(CTR_OK) + '</p>' : '')
+    + (v.workers && v.workers.length ? '<h3 style="margin:8px 0 4px">\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e9\u05e7\u05e8\u05d0\u05d5 \u05d0\u05ea \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d7\u05ea\u05de\u05d5</h3><table style="border-collapse:collapse">' + v.workers.map((w, i) => '<tr><td style="padding:2px 8px">' + (i + 1) + '</td><td style="padding:2px 8px">' + esc(w.n) + '</td><td style="padding:2px 8px;direction:ltr">' + esc(w.id) + '</td>' + (v.hgtOn ? '<td style="padding:2px 8px">' + (w.hgt ? '\u05e2\u05d5\u05d1\u05d3 \u05d1\u05d2\u05d5\u05d1\u05d4' : '\u05dc\u05d0 \u05d1\u05d2\u05d5\u05d1\u05d4') + '</td>' : '') + '<td style="padding:2px 8px">' + (w.sig ? '<img alt="" style="max-width:160px;max-height:50px" src="data:image/png;base64,' + b64(w.sig) + '">' : '') + '</td></tr>').join('') + '</table><p>' + esc(CTR_OK) + '</p>' : '')
     + '<p style="font-weight:bold;margin-top:12px">' + esc(CTR_COMMIT) + '</p>'
     + '<div>\u05e9\u05dd: ' + esc(v.signer) + (v.sid ? ', \u05ea.\u05d6. ' + esc(v.sid) : '') + '</div><div>\u05d7\u05ea\u05d9\u05de\u05d4:</div><img alt="" style="max-width:320px;max-height:120px;border-bottom:1px solid #333" src="data:image/png;base64,' + sigB64 + '">'
     + '</body></html>';
@@ -420,7 +426,7 @@ export function mailHtml(t, v, saved, summary, attachedNames, workerUrl, instrMi
     + row('\u05d4\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea', esc(v.works.map(workLabel).join(', ')))
     + row('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4', '<span style="white-space:pre-wrap">' + esc(v.desc || '') + '</span>')
     + row('\u05d1\u05d9\u05d8\u05d5\u05d7', t.ins ? '\u05e0\u05d3\u05e8\u05e9 \u05d5\u05e6\u05d5\u05e8\u05e3' : (v.optMissing.indexOf('ins') >= 0 ? '\u05dc\u05d0 \u05e0\u05d3\u05e8\u05e9, \u05dc\u05d0 \u05e6\u05d5\u05e8\u05e3' : '\u05dc\u05d0 \u05e0\u05d3\u05e8\u05e9, \u05e6\u05d5\u05e8\u05e3'))
-    + row('\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e9\u05d7\u05ea\u05de\u05d5', String((v.workers || []).length) + ' (\u05e9\u05dd, \u05ea.\u05d6. \u05d5\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05db\u05dc \u05d0\u05d7\u05d3, \u05d1\u05d8\u05d5\u05e4\u05e1 146.03)')
+    + row('\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e9\u05d7\u05ea\u05de\u05d5', String((v.workers || []).length) + ': ' + esc((v.workers || []).map((w) => w.n + (v.hgtOn ? (w.hgt ? ' (\u05d1\u05d2\u05d5\u05d1\u05d4)' : ' (\u05dc\u05d0 \u05d1\u05d2\u05d5\u05d1\u05d4)') : '')).join(', ')) + ' (\u05e9\u05dd, \u05ea.\u05d6. \u05d5\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05db\u05dc \u05d0\u05d7\u05d3, \u05d1\u05d8\u05d5\u05e4\u05e1 146.03)')
     + row('\u05d8\u05d5\u05e4\u05e1 146.03', form && form.url ? '<a href="' + esc(form.url) + '">' + esc(form.name) + '</a>' + (attachedNames.indexOf(form.name) >= 0 ? ' (\u05de\u05e6\u05d5\u05e8\u05e3)' : '') : '<span style="color:#b91c1c;font-weight:bold">\u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8' + (form && form.err ? ' (' + esc(String(form.err).slice(0, 100)) + ')' : '') + '. \u05d4\u05e9\u05de\u05d5\u05ea \u05d5\u05d4\u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05d1\u05d8\u05d5\u05e4\u05e1 \u05d4\u05de\u05e1\u05db\u05dd.</span>')
     + row('\u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd', saved.length ? saved.map(fileLine).join('<br>') : '-')
     + row('\u05dc\u05d0 \u05e6\u05d5\u05e8\u05e3 (\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4)', v.optMissing.length ? esc(v.optMissing.map((k) => CTR_DOC_L[k]).join(', ')) : '-')
@@ -488,7 +494,8 @@ export async function workerReads(env, talkId, v, instr, atIso) {
       sig_url: SB + '/storage/v1/object/public/' + BUCKET + '/' + name, device: 'ctr-link', read_at: atIso, mode: 'link' });
   }
   if (!rows.length) return { n: 0, err: 'storage' };
-  const ins = await fetch(SB + '/rest/v1/toolbox_reads', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify(rows) });
+  // a send again after Michael's "no" (16/11/2026 review): a worker who already signed this talk is kept, not a failure for all
+  const ins = await fetch(SB + '/rest/v1/toolbox_reads?on_conflict=talk_id,emp_id', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'resolution=ignore-duplicates,return=minimal' }), body: JSON.stringify(rows) });
   return ins.ok ? { n: rows.length, err: rows.length < v.workers.length ? 'storage' : null } : { n: 0, err: 'insert ' + ins.status };
 }
 
@@ -533,7 +540,8 @@ async function submit(env, request, nowMs, deps) {
   // the workers' rows, in the page's order (each row sends wn, wi and ws, so the three lists line up); a count far past
   // CTR_SIGN_MAX is cut before any signature is decoded, and checkWorkers refuses it
   const wn = form.getAll('wn').slice(0, CTR_SIGN_MAX + 5), wi = form.getAll('wi'), wsg = form.getAll('ws');
-  f.workers = wn.map((n, i) => ({ n: String(n || ''), id: String(wi[i] || ''), sig: sigBytes(wsg[i]) }));
+  const wg = form.getAll('wg');
+  f.workers = wn.map((n, i) => ({ n: String(n || ''), id: String(wi[i] || ''), sig: sigBytes(wsg[i]), hgt: String(wg[i] || '') === '1' }));
   const c = checkCtrForm(f, files, t);
   const nonce = newNonce();
   if (c.errors) return page('\u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05e9\u05dc\u05d9\u05dd', '<ul>' + c.errors.map((e) => '<li>' + esc(e) + '</li>').join('') + '</ul>' + backBtn(nonce), 'err', 400, nonce);

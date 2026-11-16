@@ -61,7 +61,14 @@ globalThis.fetch = async (url, init) => {
     return json(t ? [{ ...t }] : []);
   }
   if (u.startsWith(SB + '/rest/v1/toolbox_reads')) {
-    if (m === 'POST') { for (const r of [].concat(JSON.parse(init.body))) db.reads.push(r); return new Response(null, { status: 201 }); }
+    if (m === 'POST') {
+      // as the live unique index (talk_id, emp_id): a second signature is 409 unless the insert ignores duplicates
+      const ign = /ignore-duplicates/.test((init.headers && (init.headers.Prefer || init.headers.prefer)) || '') && /on_conflict=talk_id,emp_id/.test(u);
+      const rs = [].concat(JSON.parse(init.body)), dup = (r) => db.reads.some((x) => x.talk_id === r.talk_id && x.emp_id === r.emp_id);
+      if (!ign && rs.some(dup)) return new Response('dup', { status: 409 });
+      for (const r of rs) if (!dup(r)) db.reads.push(r);
+      return new Response(null, { status: 201 });
+    }
     if (m === 'PATCH') { const id = q(u, 'id').slice(3); const r = db.reads.find((x) => x.id === id); if (r) Object.assign(r, JSON.parse(init.body)); return new Response(null, { status: 204 }); }
     const tid = (q(u, 'talk_id') || '').slice(3), like = q(u, 'emp_id');
     return json(db.reads.filter((r) => r.talk_id === tid && (!like || (like.startsWith('like.') ? r.emp_id.startsWith(like.slice(5).replace(/\*$/, '')) : r.emp_id === like.slice(3)))).map((r) => ({ id: r.id })));
@@ -165,14 +172,14 @@ console.log('\n3. the folder name');
 console.log('\n4. the form, checked on the server');
 {
   const tP = { kind: 'perm', ins: true }, tT = { kind: 'temp', ins: false, ds: today, de: addD(today, 3) };
-  const W2 = [{ n: 'ישראל ישראלי', id: '012345678', sig: SIGB() }, { n: 'محمد علي', id: '987654321', sig: SIGB() }];
+  const W2 = [{ n: 'ישראל ישראלי', id: '012345678', sig: SIGB(), hgt: true }, { n: 'محمد علي', id: '987654321', sig: SIGB(), hgt: true }];
   const base = { company: 'אחים בע"מ', cnum: '51-234567-8', contact: 'דני', mobile: '050-1234567', email: 'a@b.co.il', place: 'אולם 2', desc: 'החלפת פאנלים בגג', workers: W2, signer: 'דני כהן', sid: '023456789', commit: '1', sig: true, works: ['hgt'] };
   // 'hgtc' = the height certificate of each of the two workers (in their rows, w = the row; 16/11/2026)
   const files = (docs) => docs.flatMap((doc) => (doc === 'hgtc' ? [0, 1] : [null]).map((w) => ({ doc, w, size: 2000, type: ['pdf', 'application/pdf'] })));
   const ok = checkCtrForm(base, files(['ins', 'hgtc', 'plat']), tP);
   check('a complete form passes', !!ok.v && ok.v.workers.length === 2 && ok.v.cnum === '512345678' && ok.v.mobile === '0501234567' && ok.v.desc === 'החלפת פאנלים בגג' && ok.v.sid === '023456789', ok.errors);
   const miss = checkCtrForm(base, files(['ins']), tP);
-  check('height work without the height certificate: one message, the certificate (the platform report is optional)', miss.errors && miss.errors.filter((e) => /^חסר מסמך/.test(e)).length === 1 && miss.errors[0].indexOf(CTR_DOC_L.hgtc) > 0, miss.errors);
+  check('height work without the height certificate: each worker at height is named (the platform report is optional)', miss.errors && miss.errors.length === 2 && miss.errors.every((e) => e.indexOf('חסר אישור עבודה בגובה') > 0), miss.errors);
   const noPlat = checkCtrForm(base, files(['ins', 'hgtc']), tP);
   check('height work without the platform report: passes, noted as optional and not given', !!noPlat.v && noPlat.v.optMissing.indexOf('plat') >= 0, noPlat.errors);
   check('a platform report attached to height work is taken', checkCtrForm(base, files(['ins', 'hgtc', 'plat']), tP).v.files.some((x) => x.doc === 'plat'));
@@ -210,13 +217,21 @@ console.log('\n4. the form, checked on the server');
   const two = checkCtrForm(base, files(['ins']).concat([pdf1(0), pdf1(0), pdf1(1)]), tP);
   check('two files for one worker (front and back) and one for the other: passes, each named by its worker', !!two.v && two.v.files.filter((x) => x.wn === 'ישראל ישראלי').length === 2 && two.v.files.filter((x) => x.wn === 'محمد علي').length === 1, two.errors);
   const gen = checkCtrForm(base, files(['ins']).concat([{ doc: 'hgtc', size: 2000, type: ['pdf', 'application/pdf'] }]), tP);
-  check('a height certificate not in a worker\'s row (the old general field): not taken, the certificate is missing', !!gen.errors && gen.errors.some((e) => e.indexOf(CTR_DOC_L.hgtc) > 0), gen.errors);
+  check('a height certificate not in a worker\'s row (the old general field): not taken, the certificate is missing', !!gen.errors && gen.errors.some((e) => e.indexOf('חסר אישור עבודה בגובה') > 0), gen.errors);
   const ghost = checkCtrForm({ ...base, workers: W2.concat([{ n: '', id: '', sig: null }]) }, files(['ins']).concat([pdf1(0), pdf1(1), pdf1(2)]), tP);
   check('a certificate in an empty row is not taken (not uploaded)', !!ghost.v && ghost.v.files.filter((x) => x.doc === 'hgtc').length === 2, ghost.errors);
   const gap = checkCtrForm({ ...base, workers: [W2[0], { n: '', id: '', sig: null }, W2[1]] }, files(['ins']).concat([pdf1(0), pdf1(2)]), tP);
   check('an empty row between workers: the certificate stays with its own worker (the row, not the place in the list)', !!gap.v && gap.v.files.some((x) => x.w === 2 && x.wn === 'محمد علي'), gap.errors);
   const hot = checkCtrForm({ ...base, works: ['hot'] }, files(['ins']), tP);
   check('no height work: no certificate asked of the workers', !!hot.v, hot.errors);
+  // 16/11/2026, Michael: "not every worker must have a height approval"
+  const W2n = [W2[0], { ...W2[1], hgt: false }];
+  const notH = checkCtrForm({ ...base, workers: W2n }, files(['ins']).concat([pdf1(0)]), tP);
+  check('a worker not marked at height: no certificate needed, kept as not at height', !!notH.v && notH.v.workers[1].hgt === false && notH.v.hgtOn === true, notH.errors);
+  const notHf = checkCtrForm({ ...base, workers: W2n }, files(['ins']).concat([pdf1(0), pdf1(1)]), tP);
+  check('a certificate in the row of a worker not at height is not taken', !!notHf.v && notHf.v.files.filter((x) => x.doc === 'hgtc').length === 1, notHf.errors);
+  const noneH = checkCtrForm({ ...base, workers: W2.map((w) => ({ ...w, hgt: false })) }, files(['ins']), tP);
+  check('height work with no worker marked at height: refused (at least one)', !!noneH.errors && noneH.errors.some((e) => e.indexOf('לפחות אחד') > 0), noneH.errors);
   check('files: more room than before (15) but within the free plan\'s 50 calls a run (about 27 fixed + one per file)', CTR_MAX_FILES > 15 && CTR_MAX_FILES + 27 <= 45);
   check('bytes: PDF, JPG, PNG known; a renamed EXE is not', fileType(PDF())[0] === 'pdf' && fileType(PNG())[0] === 'png' && fileType(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))[0] === 'jpg' && fileType(new Uint8Array([0x4d, 0x5a, 0x90, 0, 0])) === null);
   check('every refusal is keyboard characters only', [miss, noIns, noWk, noSig].every((r) => r.errors.every((e) => !BAD.test(e))));
@@ -298,7 +313,7 @@ const post = async (fields, files) => {
   return { status: r.status, html: await r.text() };
 };
 const good = { company: 'בונים בע"מ', cnum: '512345678', contact: 'דני', mobile: '0501234567', email: 'd@b.co.il', desc: 'התקנת מדפים במחסן <b>הצפוני</b>', signer: 'דני כהן', sid: '023456789', commit: '1', sig: SIG, works: ['hgt', 'frk'],
-  wn: ['ישראל ישראלי', 'Ahmad Nasser', ''], wi: ['012345678', '223456785', ''], ws: [SIG, SIG, ''] };
+  wn: ['ישראל ישראלי', 'Ahmad Nasser', ''], wi: ['012345678', '223456785', ''], ws: [SIG, SIG, ''], wg: ['1', '1', ''] };
 {
   let r = await post(good, { ins: [['a.pdf', PDF()]], wf_0: [['b.pdf', PDF()]], wf_1: [['b2.pdf', PDF()]] });
   check('refused on the server: the forklift licence missing; the platform report (optional) is not asked for', r.status === 400 && r.html.indexOf(CTR_DOC_L.frkl) > 0 && r.html.indexOf('חסר מסמך: ' + CTR_DOC_L.plat) < 0, r.html.slice(0, 300));
@@ -323,8 +338,9 @@ const good = { company: 'בונים בע"מ', cnum: '512345678', contact: 'דנ�
   check('the mail lists the works, every document and what is optional and not given, the commitment', m.html.indexOf(workLabel('frk')) > 0 && m.html.indexOf(CTR_DOC_L.plat) > 0 && m.html.indexOf(CTR_DOC_L.oth) > 0 && m.html.indexOf('התחייבות') > 0 && m.html.indexOf('דני כהן') > 0);
   check('each worker\'s certificate is named by him in the folder', inFolder.some((p) => p.name.indexOf('אישור עבודה בגובה - ישראל ישראלי - 1.pdf') > 0) && inFolder.some((p) => p.name.indexOf('אישור עבודה בגובה - Ahmad Nasser - 1.pdf') > 0), inFolder.map((p) => p.name));
   check('the mail attaches form 146.03 first, then the summary and the files (small enough)', m.att.length === 8 && m.att[0].name.indexOf('146.03') > 0 && m.att[1].name.indexOf('טופס אישור') > 0 && m.att.every((a) => a.contentBytes && a['@odata.type'] === '#microsoft.graph.fileAttachment'), m.att.map((a) => a.name));
-  check('the mail: the description (escaped), 2 workers signed, the form linked', m.html.indexOf('התקנת מדפים') > 0 && m.html.indexOf('&lt;b&gt;') > 0 && m.html.indexOf('עובדים שחתמו') > 0 && /<td[^>]*>2 \(/.test(m.html) && m.html.indexOf('146.03 חתום') > 0);
+  check('the mail: the description (escaped), 2 workers signed, the form linked', m.html.indexOf('התקנת מדפים') > 0 && m.html.indexOf('&lt;b&gt;') > 0 && m.html.indexOf('עובדים שחתמו') > 0 && /<td[^>]*>2: /.test(m.html) && m.html.indexOf('146.03 חתום') > 0);
   check('the mail holds no full ID number of a worker', m.html.indexOf('012345678') < 0);
+  check('the mail names each worker and whether he works at height', m.html.indexOf('ישראל ישראלי (בגובה)') > 0 && m.html.indexOf('Ahmad Nasser (בגובה)') > 0, m.html.slice(m.html.indexOf('עובדים'), m.html.indexOf('עובדים') + 200));
   check('the mail is keyboard characters only, and RTL', !BAD.test(m.html.replace(/<[^>]+>/g, ' ')) && /^<div dir="rtl" style="direction:rtl;text-align:right/.test(m.html));
   const st = stateList(db.state[CTR_STATE].value)[0];
   check('the request is marked filled, with the files, folder, mail, form and reads (no worker ID in state)', st.status === 'filled' && st.files === 6 && st.folder === folder && st.mail === 'sent' && st.workers === 2 && st.reads === 2 && /146\.03/.test(decodeURIComponent(st.form || '')) && !st.form_err && JSON.stringify(st).indexOf('012345678') < 0 && JSON.stringify(st).indexOf('023456789') < 0, st);
@@ -339,6 +355,7 @@ const good = { company: 'בונים בע"מ', cnum: '512345678', contact: 'דנ�
   const p0 = db.puts.length, mm0 = db.mails.length;
   const resend = await post(good, { ins: [['a.pdf', PDF()]], wf_0: [['b.pdf', PDF()]], wf_1: [['b2.pdf', PDF()]], plat: [['c.pdf', PDF()]], frkl: [['d.pdf', PDF()]] });
   check('... and the send goes through: files, form, one more mail, files set', resend.status === 200 && db.puts.length > p0 && db.mails.length === mm0 + 1 && stateList(db.state[CTR_STATE].value)[0].files === 5, resend.html.slice(0, 200));
+  check('... and the workers who signed before are kept, not a failure (no reads error)', !stateList(db.state[CTR_STATE].value)[0].reads_err, stateList(db.state[CTR_STATE].value)[0].reads_err);
   const fresh = stateList(keepState.value).map((x) => (x.id === rid ? { ...x, files: undefined, at: new Date().toISOString() } : x));
   db.state[CTR_STATE] = { value: JSON.stringify(fresh), updated_at: new Date().toISOString() };
   check('a send claimed a minute ago with no files yet (still running): "already sent", no second send', (await post(good, {})).status === 200 && db.mails.length === mm0 + 1);
