@@ -20,6 +20,21 @@ export const CTR_STATE_MAX = 200;
 export const CTR_INSTR = 'ctr_instructions'; // server_state: the text of form 146.03, set by Michael
 export const CTR_KIND_L = { perm: '\u05e7\u05d1\u05dc\u05df \u05e7\u05d1\u05d5\u05e2, \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e9\u05e0\u05ea\u05d9', temp: '\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea' };
 export const CTR_S_SENT = 'sent', CTR_S_FILLED = 'filled';
+// approved by Michael (his "yes", _ctrok.js): only then the contractor gets the new-worker link (16/11/2026, DECISIONS
+// "five additions from the process review"): not at the send, not after "no".
+export const CTR_S_APPROVED = 'approved';
+// A contractor's worker at height (16/11/2026): toolbox_reads.job says so, and equip = {hgt: true, e: <valid until>, files: [urls]}
+// (the columns of the induction, unused on a contractor's row). The app's contractor screen reads them.
+export const CTR_HGT_JOB = '\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4';
+export const CTR_HGT_FILE = '\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4';
+// A "valid until" day: a real YYYY-MM-DD, not before today, at most about 10 years on (a month 13 never throws).
+export function validUntil(s, today) {
+  const v = String(s || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  const d = new Date(v + 'T00:00:00Z');
+  if (isNaN(d) || d.toISOString().slice(0, 10) !== v) return null;
+  return v >= today && v <= addDays(today, 3660) ? v : null;
+}
 // A send that was cut (security review 16/11/2026: the Worker stopped after the claim and before its last write, so the
 // request said "filled" with no files and the contractor could not send again): filled, no "files" (the last write
 // never came) and claimed more than this long ago = it may be sent again from the same link.

@@ -29,7 +29,7 @@ import { stateCas } from '../_cas.js';
 import { CATS, fileType, MAX_FILE, clean, page, dmy } from './works.js';
 import { makePermToken, talkUrl, sigBytes, idOf, graphPdf, PAD_JS, ctrName, textHash, BUCKET } from './talk.js';
 import { KIND_CTR, CTR_PREFIX, CTR_STATE, CTR_INSTR, CTR_KIND_L, CTR_S_SENT, CTR_S_FILLED, CTR_WORKS, FRK_L, CTR_DOCS, CTR_DOC_L, requiredDocs, optionalDocs, CTR_OPT,
-  missingDocs, missingMsg, RID_RE, ctrLinkId, parseCtrLinkId, linkTtlDays, workerTtlDays, addDays, ctrFolder, safeName, stateList, stateAdd, statePatch,
+  missingDocs, CTR_S_APPROVED, CTR_HGT_JOB, jobEndMs, missingMsg, RID_RE, ctrLinkId, parseCtrLinkId, linkTtlDays, workerTtlDays, addDays, ctrFolder, safeName, stateList, stateAdd, statePatch,
   instrText, canSend, CTR_TITLE, CTR_COMMIT, CTR_OK, CTR_SIGN_MAX, DESC_MAX } from '../_ctr.js';
 import { fillCtrForm, pickTemplate, FORM_DIR, FORM_MAX } from '../_ctrform.js';
 import { ctrAsk } from '../_ctrok.js';
@@ -120,7 +120,7 @@ export function ctrLinkText(v, url, expDay, instrMissing) {
   const who = v.company ? '\u05dc\u05e7\u05d1\u05dc\u05df ' + v.company : '\u05dc\u05e7\u05d1\u05dc\u05df';
   const lines = ['\u05e7\u05d9\u05e9\u05d5\u05e8 ' + who + ' (' + CTR_KIND_L[v.kind] + (v.kind === 'temp' ? ', ' + dmy(v.ds) + ' \u05e2\u05d3 ' + dmy(v.de) : '') + ', ' + (v.ins ? '\u05e2\u05dd \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d1\u05d9\u05d8\u05d5\u05d7' : '\u05d1\u05dc\u05d9 \u05d7\u05d5\u05d1\u05ea \u05d1\u05d9\u05d8\u05d5\u05d7') + '), \u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 ' + dmy(expDay) + ':',
     url,
-    '\u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05dc\u05e7\u05d1\u05dc\u05df \u05d1\u05e2\u05e6\u05de\u05da. \u05d4\u05e7\u05d1\u05dc\u05df \u05de\u05de\u05dc\u05d0 \u05e4\u05e8\u05d8\u05d9\u05dd \u05d5\u05de\u05e1\u05de\u05db\u05d9\u05dd, \u05d5\u05db\u05dc \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e9\u05dc\u05d5 \u05d7\u05d5\u05ea\u05de\u05d9\u05dd \u05e2\u05dc \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05d0\u05d5\u05ea\u05d5 \u05d8\u05dc\u05e4\u05d5\u05df (\u05d8\u05d5\u05e4\u05e1 146.03 \u05de\u05ea\u05de\u05dc\u05d0 \u05dc\u05d1\u05d3). \u05d0\u05d7\u05e8 \u05db\u05da \u05de\u05e7\u05d1\u05dc \u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9. \u05d4\u05e2\u05ea\u05e7 \u05e9\u05dc \u05d4\u05db\u05d5\u05dc \u05d9\u05d2\u05d9\u05e2 \u05d0\u05dc\u05d9\u05da \u05d1\u05de\u05d9\u05d9\u05dc.'];
+    '\u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05dc\u05e7\u05d1\u05dc\u05df \u05d1\u05e2\u05e6\u05de\u05da. \u05d4\u05e7\u05d1\u05dc\u05df \u05de\u05de\u05dc\u05d0 \u05e4\u05e8\u05d8\u05d9\u05dd \u05d5\u05de\u05e1\u05de\u05db\u05d9\u05dd, \u05d5\u05db\u05dc \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e9\u05dc\u05d5 \u05d7\u05d5\u05ea\u05de\u05d9\u05dd \u05e2\u05dc \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05d0\u05d5\u05ea\u05d5 \u05d8\u05dc\u05e4\u05d5\u05df (\u05d8\u05d5\u05e4\u05e1 146.03 \u05de\u05ea\u05de\u05dc\u05d0 \u05dc\u05d1\u05d3). \u05d0\u05d7\u05e8\u05d9 \u05e9\u05ea\u05d0\u05e9\u05e8 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05d4\u05d5\u05d0 \u05de\u05e7\u05d1\u05dc \u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9. \u05d4\u05e2\u05ea\u05e7 \u05e9\u05dc \u05d4\u05db\u05d5\u05dc \u05d9\u05d2\u05d9\u05e2 \u05d0\u05dc\u05d9\u05da \u05d1\u05de\u05d9\u05d9\u05dc.'];
   if (instrMissing) lines.push('\u05e9\u05d9\u05dd \u05dc\u05d1: \u05d8\u05e7\u05e1\u05d8 \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05dc\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd (\u05d8\u05d5\u05e4\u05e1 146.03) \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d4\u05d5\u05d6\u05df, \u05d5\u05e2\u05d5\u05d1\u05d3\u05d9 \u05d4\u05e7\u05d1\u05dc\u05df \u05dc\u05d0 \u05d9\u05d5\u05db\u05dc\u05d5 \u05dc\u05d7\u05ea\u05d5\u05dd \u05e2\u05d3 \u05e9\u05d9\u05d5\u05d6\u05df.');
   return lines.join('\n');
 }
@@ -408,23 +408,33 @@ async function talkRow(env, id) {
   return rows && rows[0] && rows[0].kind === KIND_CTR ? rows[0] : null;
 }
 // The new-worker link of a filled request: the talk's permanent link, valid as long as the approval.
-async function workerLink(env, t, entry, nowMs) {
+// 16/11/2026: given only once Michael approved (CTR_S_APPROVED), and never past the approval's end (until).
+export async function workerLink(env, t, entry, nowMs) {
   const talk = await talkRow(env, entry.talk);
   if (!talk || talk.s !== S_PUB) return null;
   const from = Date.parse(entry.at || '') || nowMs;
-  const tok = await makePermToken(env, talk.id, talk.link_v || 0, from, workerTtlDays(t.kind, t.de, from));
+  let ttl = workerTtlDays(t.kind, t.de, from);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(entry.until || ''))) ttl = Math.min(ttl, Math.max(1 / 24, (jobEndMs(entry.until) - from) / 86400000));
+  const tok = await makePermToken(env, talk.id, talk.link_v || 0, from, ttl);
   return tok ? talkUrl(tok) : null;
 }
-const doneHtml = (link) => '<p>\u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05ea\u05e7\u05d1\u05dc. \u05ea\u05d5\u05d3\u05d4.</p>'
-  + (link ? '<p><b>\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9:</b> \u05db\u05dc \u05e2\u05d5\u05d1\u05d3 \u05e9\u05dc\u05db\u05dd \u05e0\u05db\u05e0\u05e1 \u05dc\u05e7\u05d9\u05e9\u05d5\u05e8, \u05e7\u05d5\u05e8\u05d0 \u05d0\u05ea \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d7\u05d5\u05ea\u05dd, \u05dc\u05e4\u05e0\u05d9 \u05d4\u05db\u05e0\u05d9\u05e1\u05d4 \u05d4\u05e8\u05d0\u05e9\u05d5\u05e0\u05d4 \u05dc\u05de\u05e4\u05e2\u05dc.</p>'
+// waiting = sent and not approved yet (16/11/2026): the new-worker link comes after Michael's approval
+const doneHtml = (link, waiting) => '<p>\u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05ea\u05e7\u05d1\u05dc. \u05ea\u05d5\u05d3\u05d4.</p>'
+  + (waiting ? '<p>\u05d4\u05d8\u05d5\u05e4\u05e1 \u05de\u05d7\u05db\u05d4 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8 \u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea. \u05d0\u05d7\u05e8\u05d9 \u05d4\u05d0\u05d9\u05e9\u05d5\u05e8 \u05ea\u05e7\u05d1\u05dc\u05d5 \u05d1\u05de\u05d9\u05d9\u05dc \u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9, \u05d5\u05d4\u05d5\u05d0 \u05d9\u05d5\u05e4\u05d9\u05e2 \u05d2\u05dd \u05db\u05d0\u05df, \u05d1\u05d0\u05d5\u05ea\u05d5 \u05e7\u05d9\u05e9\u05d5\u05e8.</p>' : '')
+  + (link ? '<p><b>\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9:</b> \u05db\u05dc \u05e2\u05d5\u05d1\u05d3 \u05e9\u05dc\u05db\u05dd \u05e0\u05db\u05e0\u05e1 \u05dc\u05e7\u05d9\u05e9\u05d5\u05e8, \u05e7\u05d5\u05e8\u05d0 \u05d0\u05ea \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d7\u05d5\u05ea\u05dd, \u05dc\u05e4\u05e0\u05d9 \u05d4\u05db\u05e0\u05d9\u05e1\u05d4 \u05d4\u05e8\u05d0\u05e9\u05d5\u05e0\u05d4 \u05dc\u05de\u05e4\u05e2\u05dc. \u05e2\u05d5\u05d1\u05d3 \u05e9\u05e2\u05d5\u05d1\u05d3 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05de\u05e1\u05de\u05df \u05d6\u05d0\u05ea \u05d5\u05de\u05e6\u05dc\u05dd \u05d0\u05ea \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05e9\u05dc\u05d5.</p>'
     + '<p style="word-break:break-all;direction:ltr;text-align:left"><a href="' + esc(link) + '">' + esc(link) + '</a></p>' : '');
 
+// A request already sent: the new-worker link once approved, "waiting" while filled, else just "received".
+async function doneFor(env, t, entry, nowMs) {
+  if (entry.status === CTR_S_APPROVED) return doneHtml(await workerLink(env, t, entry, nowMs), false);
+  return doneHtml(null, entry.status === CTR_S_FILLED);
+}
 async function showForm(env, tok, nowMs) {
   const t = await readCtrToken(env, tok, nowMs);
   if (t.error) return tokErr(t.error);
   const entry = (await readState(env)).find((x) => x.id === t.rid);
   if (!entry) return errPage('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05d5\u05d8\u05dc. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d1\u05e7\u05e9 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9 \u05de\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.', 410);
-  if (!canSend(entry, nowMs)) return page('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05db\u05d1\u05e8 \u05e0\u05e9\u05dc\u05d7', doneHtml(await workerLink(env, t, entry, nowMs)), 'ok', 200);
+  if (!canSend(entry, nowMs)) return page('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05db\u05d1\u05e8 \u05e0\u05e9\u05dc\u05d7', await doneFor(env, t, entry, nowMs), 'ok', 200);
   // the workers sign on these instructions: without them there is nothing to sign (as talk.js ctrNotReady)
   const instr = await readInstr(env);
   if (!instr) return errPage(INSTR_NOT_READY, 503);
@@ -472,7 +482,7 @@ export function mailHtml(t, v, saved, summary, attachedNames, workerUrl, instrMi
     + row('\u05dc\u05d0 \u05e6\u05d5\u05e8\u05e3 (\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4)', v.optMissing.length ? esc(v.optMissing.map((k) => CTR_DOC_L[k]).join(', ')) : '-')
     + row('\u05d4\u05ea\u05d7\u05d9\u05d9\u05d1\u05d5\u05ea', '\u05e1\u05d5\u05de\u05e0\u05d4 \u05d5\u05e0\u05d7\u05ea\u05de\u05d4 \u05d1\u05d9\u05d3\u05d9 ' + esc(v.signer))
     + row('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05de\u05e1\u05db\u05dd', summary && summary.url ? '<a href="' + esc(summary.url) + '">' + esc(summary.name) + '</a>' + (attachedNames.indexOf(summary.name) >= 0 ? ' (\u05de\u05e6\u05d5\u05e8\u05e3)' : '') : '\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8') + '</table>'
-    + (workerUrl ? '<p>\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9 (\u05d4\u05e7\u05d1\u05dc\u05df \u05e7\u05d9\u05d1\u05dc \u05d0\u05d5\u05ea\u05d5): <a href="' + esc(workerUrl) + '">' + esc(workerUrl) + '</a></p>' : '')
+    + (workerUrl ? '<p>\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9 (\u05d4\u05e7\u05d1\u05dc\u05df \u05e7\u05d9\u05d1\u05dc \u05d0\u05d5\u05ea\u05d5): <a href="' + esc(workerUrl) + '">' + esc(workerUrl) + '</a></p>' : '<p>\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9 \u05d9\u05d9\u05e9\u05dc\u05d7 \u05dc\u05e7\u05d1\u05dc\u05df \u05d0\u05d7\u05e8\u05d9 \u05e9\u05ea\u05d0\u05e9\u05e8 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 (\u05d8\u05d9\u05d5\u05d8\u05d4 \u05d1-Outlook).</p>')
     + (instrMissing ? '<p style="color:#b91c1c;font-weight:bold">\u05e9\u05d9\u05dd \u05dc\u05d1: \u05d8\u05e7\u05e1\u05d8 \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05dc\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd (\u05d8\u05d5\u05e4\u05e1 146.03) \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d4\u05d5\u05d6\u05df \u05d1\u05de\u05e2\u05e8\u05db\u05ea, \u05d5\u05e2\u05d5\u05d1\u05d3\u05d9 \u05d4\u05e7\u05d1\u05dc\u05df \u05dc\u05d0 \u05d9\u05d5\u05db\u05dc\u05d5 \u05dc\u05d7\u05ea\u05d5\u05dd \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9 \u05e2\u05d3 \u05e9\u05d9\u05d5\u05d6\u05df.</p>' : '')
     + '<p>\u05dc\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d5\u05dc\u05ea\u05d9\u05d5\u05e7. \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e7\u05d1\u05dc\u05df \u05d1\u05de\u05e8\u05e9\u05dd \u05d4\u05d5\u05d0 \u05e2\u05d3\u05d9\u05d9\u05df \u05d1\u05d9\u05d3\u05d9\u05d9\u05dd \u05e9\u05dc\u05da.</p>'
     + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc ' + esc(SITE.company) + '.</p></div>';
@@ -520,7 +530,8 @@ export async function buildForm(deps, token, folder, t, v, mgrSig, when) {
 }
 // One toolbox_reads row per worker of the send, his signature in Storage, as talk.js writes a contractor worker's
 // signature (emp_id x:<ID>:<name>, so the new-worker link finds him signed). {n: rows written, err}.
-export async function workerReads(env, talkId, v, instr, atIso) {
+// saved = the files of the send ({doc, url, wi}): a worker at height carries his certificates (16/11/2026, CTR_HGT_JOB).
+export async function workerReads(env, talkId, v, instr, atIso, saved) {
   const talk = { title: CTR_TITLE + ': ' + v.company, body: instr, file_url: null };
   const hash = await textHash(talk, 'he');
   const rows = [];
@@ -531,7 +542,9 @@ export async function workerReads(env, talkId, v, instr, atIso) {
     const up = await fetch(SB + '/storage/v1/object/' + BUCKET + '/' + name, { method: 'POST', headers: sbH(env, { 'Content-Type': 'image/png', 'x-upsert': 'true' }), body: w.sig });
     if (!up.ok) continue;
     rows.push({ id: newNonce().slice(0, 16), talk_id: talkId, emp_id: key + w.n.toLowerCase(), emp_name: w.n, id_no: w.id, dept: v.company, lang: 'he', text_hash: hash,
-      sig_url: SB + '/storage/v1/object/public/' + BUCKET + '/' + name, device: 'ctr-link', read_at: atIso, mode: 'link' });
+      sig_url: SB + '/storage/v1/object/public/' + BUCKET + '/' + name, device: 'ctr-link', read_at: atIso, mode: 'link',
+      // every row carries the same keys (PostgREST refuses a bulk insert whose rows differ)
+      job: v.hgtOn && w.hgt ? CTR_HGT_JOB : null, equip: v.hgtOn && w.hgt ? { hgt: true, e: w.e || null, files: (saved || []).filter((x) => x.wi === w.i && x.url).map((x) => x.url).slice(0, 8) } : null });
   }
   if (!rows.length) return { n: 0, err: 'storage' };
   // a send again after Michael's "no" (16/11/2026 review): a worker who already signed this talk is kept, not a failure for all
@@ -553,7 +566,7 @@ async function submit(env, request, nowMs, deps) {
   if ((await guessCount(env, request)) > CTR_POSTS_HOUR) return errPage('\u05d9\u05d5\u05ea\u05e8 \u05de\u05d3\u05d9 \u05e0\u05d9\u05e1\u05d9\u05d5\u05e0\u05d5\u05ea. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05e9\u05e2\u05d4.', 429);
   const entry0 = (await readState(env)).find((x) => x.id === t.rid);
   if (!entry0) return errPage('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05d5\u05d8\u05dc. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d1\u05e7\u05e9 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9 \u05de\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.', 410);
-  if (!canSend(entry0, nowMs)) return page('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05db\u05d1\u05e8 \u05e0\u05e9\u05dc\u05d7', doneHtml(await workerLink(env, t, entry0, nowMs)), 'ok', 200);
+  if (!canSend(entry0, nowMs)) return page('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05db\u05d1\u05e8 \u05e0\u05e9\u05dc\u05d7', await doneFor(env, t, entry0, nowMs), 'ok', 200);
   // the files, read and typed by their bytes
   const files = [];
   for (const d of CTR_DOCS) {
@@ -601,7 +614,7 @@ async function submit(env, request, nowMs, deps) {
     if (p.error) { gone = true; return { write: false }; }
     return { value: JSON.stringify(p.list) };
   }, () => AbortSignal.timeout(FETCH_MS));
-  if (gone) return page('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05db\u05d1\u05e8 \u05e0\u05e9\u05dc\u05d7', doneHtml(null), 'ok', 200);
+  if (gone) return page('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05db\u05d1\u05e8 \u05e0\u05e9\u05dc\u05d7', doneHtml(null, false), 'ok', 200);
   if (!cw.written) return errPage('\u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea \u05d1\u05e9\u05de\u05d9\u05e8\u05d4. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.', 503);
   const giveBack = () => stateCas(SB, sbH(env, { 'Content-Type': 'application/json' }), CTR_STATE, (cur) => {
     const p = statePatch(cur, t.rid, { status: CTR_S_SENT, at: null }, CTR_S_FILLED);
@@ -620,7 +633,7 @@ async function submit(env, request, nowMs, deps) {
       count[ck] = (count[ck] || 0) + 1;
       const name = stamp + ' - ' + (x.wn ? HGT_FILE + ' - ' + safeName(x.wn, 40) : safeName(CTR_DOC_L[x.doc], 40)) + ' - ' + count[ck] + '.' + x.type[0];
       const r = await deps.putFile(od.token, folder, name, x.u8, x.type[1], 'rename');
-      return { doc: x.doc, name, url: r.webUrl || null, bytes: x.u8, type: x.type[1], e: x.e || null };
+      return { doc: x.doc, name, url: r.webUrl || null, bytes: x.u8, type: x.type[1], e: x.e || null, wi: x.wi == null ? null : x.wi };
     }));
     const hb = new TextEncoder().encode(summaryHtml(t, v, { day, hm }, b64(sig), saved));
     const base = stamp + ' - ' + '\u05d8\u05d5\u05e4\u05e1 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e7\u05d1\u05dc\u05df', src = folder + '/\u05de\u05e7\u05d5\u05e8';
@@ -640,28 +653,27 @@ async function submit(env, request, nowMs, deps) {
   // the talk: published with the company and the instructions; its permanent link is the new-worker link
   const pub = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(entry0.talk) + '&kind=eq.' + KIND_CTR, { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }),
     body: JSON.stringify({ s: S_PUB, d: day, dept: v.company, title: CTR_TITLE + ': ' + v.company, body: instr, link_at: atIso }) }).catch(() => null);
-  const entry = Object.assign({}, entry0, claim);
-  const wUrl = pub && pub.ok ? await workerLink(env, t, entry, nowMs).catch(() => null) : null;
+  // 16/11/2026 (DECISIONS "five additions"): no new-worker link at the send; it goes to the contractor after "\u05d1\u05e6\u05e2" (_ctrok.js)
   // each worker as a signature of the talk (the app's training records; the new-worker link then sees him as signed)
-  const reads = pub && pub.ok ? await workerReads(env, entry0.talk, v, instr, atIso).catch(() => ({ n: 0, err: 'reads' })) : { n: 0, err: 'talk' };
+  const reads = pub && pub.ok ? await workerReads(env, entry0.talk, v, instr, atIso, saved).catch(() => ({ n: 0, err: 'reads' })) : { n: 0, err: 'talk' };
   // the mail to Michael
   let mail = 'sent';
   try {
     const att = pickAttach([form146 && form146.bytes ? form146 : null, summary].concat(saved));
-    const html = mailHtml(t, v, saved, summary, att.map((x) => x.name), wUrl, false, form146);
+    const html = mailHtml(t, v, saved, summary, att.map((x) => x.name), null, false, form146);
     await deps.sendMailTo(od.token, [od.email], [], MAIL_SUBJECT(t, v), html,
       att.map((x) => ({ '@odata.type': '#microsoft.graph.fileAttachment', name: x.name, contentType: x.type, contentBytes: b64(x.bytes) })));
   } catch (e) { mail = 'err: ' + String((e && e.message) || e).slice(0, 120); }
   // the last write: only onto this send's own claim (at), tried twice (security review 16/11/2026: a lost write left
   // files null, and after CTR_STUCK_MS the link would open for a second send of a send that went out)
   const last = () => stateCas(SB, sbH(env, { 'Content-Type': 'application/json' }), CTR_STATE, (cur) => {
-    const p = statePatch(cur, t.rid, { files: saved.length, folder, mail, summary: summary.url || null, worker_link: !!wUrl, form: form146 && form146.url || null, form_err: form146 && form146.err || null, reads: reads.n, reads_err: reads.err || null }, (e) => e.at === atIso);
+    const p = statePatch(cur, t.rid, { files: saved.length, folder, mail, summary: summary.url || null, form: form146 && form146.url || null, form_err: form146 && form146.err || null, reads: reads.n, reads_err: reads.err || null }, (e) => e.at === atIso);
     return p.error ? { write: false } : { value: JSON.stringify(p.list) };
   }, () => AbortSignal.timeout(FETCH_MS)).catch(() => null);
   if (!((await last()) || {}).written) await last();
   // stage 2 (16/11/2026): the approval question on WhatsApp; a failure here is asked again at the morning update
   if (deps.ask) await deps.ask(env, t.rid, Date.now()).catch(() => null);
-  return page('\u05ea\u05d5\u05d3\u05d4, \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05ea\u05e7\u05d1\u05dc', doneHtml(wUrl), 'ok', 200);
+  return page('\u05ea\u05d5\u05d3\u05d4, \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05ea\u05e7\u05d1\u05dc', doneHtml(null, true), 'ok', 200);
 }
 
 export async function onRequest(context, deps) {

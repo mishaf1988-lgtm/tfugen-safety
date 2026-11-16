@@ -12,7 +12,7 @@ import { SITE, sbFrom, tmo, SB_TIMEOUT_MS } from './_shared.js';
 import { stateCas } from './_cas.js';
 import { sendToOwner, ownerWa, ownerWindowOpen, noteLastOut } from './_wa.js';
 import { CTR_STATE, CTR_S_FILLED, CTR_S_SENT, stateList, statePatch, linkTtlDays, ctrLinkId } from './_ctr.js';
-import { makeCtrToken, ctrUrl, workLabel, ctrLinkCreate, ilDay } from './api/ctr-link.js';
+import { makeCtrToken, ctrUrl, workLabel, ctrLinkCreate, ilDay, workerLink } from './api/ctr-link.js';
 
 export const CTR_S_OK = 'approved', CTR_S_REJ = 'rejecting';
 export const CTR_YEAR_DAYS = 365, CTR_RENEW_DAYS = 30;
@@ -23,6 +23,8 @@ export const CTR_MORNING_MAX = 5;           // asks / registers / renewals per m
 // 16/11/2026 (DECISIONS "\u05d7\u05de\u05e9 \u05ea\u05d5\u05e1\u05e4\u05d5\u05ea \u05de\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05ea\u05d4\u05dc\u05d9\u05da"): a link not filled is told to Michael this long before it ends, once per link
 export const CTR_NAG_MS = 3 * 864e5;
 export const CTR_S_CLOSED = 'closed';
+// approvals before this (16/11/2026) gave the new-worker link at the send already: the morning never sends theirs
+export const CTR_WLINK_SINCE = '2026-11-16T18:00:00Z';
 export const CTR_CHOICES = ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'];
 export const CTR_MATCH_CHOICES = ['\u05d0\u05d5\u05ea\u05d5 \u05e7\u05d1\u05dc\u05df', '\u05e7\u05d1\u05dc\u05df \u05d7\u05d3\u05e9'];
 export const CTR_TRAINED = '\u05d4\u05d5\u05db\u05e9\u05e8', CTR_ACTIVE = '\u05e4\u05e2\u05d9\u05dc';
@@ -116,6 +118,12 @@ export function ctrDraftBody(e, reason, link, expDay) {
     + '\u05d0\u05e4\u05e9\u05e8 \u05dc\u05ea\u05e7\u05df \u05d5\u05dc\u05e9\u05dc\u05d5\u05d7 \u05e9\u05d5\u05d1 \u05d1\u05d0\u05d5\u05ea\u05d5 \u05d8\u05d5\u05e4\u05e1, \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05d6\u05d4 (\u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 ' + dmy(expDay) + '):\n' + link + '\n\n'
     + '\u05e4\u05e8\u05d8\u05d9 \u05d4\u05d7\u05d1\u05e8\u05d4 \u05d5\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05db\u05d1\u05e8 \u05de\u05d5\u05dc\u05d0\u05d5 \u05d1\u05d8\u05d5\u05e4\u05e1. \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05e6\u05e8\u05d9\u05da \u05dc\u05e6\u05e8\u05e3 \u05e9\u05d5\u05d1, \u05d5\u05db\u05dc \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d7\u05d5\u05ea\u05de\u05d9\u05dd \u05e9\u05d5\u05d1.';
 }
+// The mail to the contractor after "\u05d1\u05e6\u05e2" (16/11/2026): the new-worker link, and what a worker at height does.
+export function ctrWorkerBody(e, link, expDay) {
+  return '\u05d8\u05d5\u05e4\u05e1 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e7\u05d1\u05dc\u05df \u05e9\u05dc ' + one(e.company, 80) + ' \u05d0\u05d5\u05e9\u05e8' + (e.until ? ', \u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 ' + dmy(e.until) : '') + '.\n\n'
+    + '\u05db\u05dc \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9 \u05e9\u05dc\u05db\u05dd \u05e0\u05db\u05e0\u05e1 \u05dc\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05d6\u05d4 \u05dc\u05e4\u05e0\u05d9 \u05d4\u05db\u05e0\u05d9\u05e1\u05d4 \u05d4\u05e8\u05d0\u05e9\u05d5\u05e0\u05d4 \u05dc\u05de\u05e4\u05e2\u05dc, \u05e7\u05d5\u05e8\u05d0 \u05d0\u05ea \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d7\u05d5\u05ea\u05dd:\n' + link + '\n' + '(\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 ' + dmy(expDay) + ')\n\n'
+    + '\u05e2\u05d5\u05d1\u05d3 \u05e9\u05e2\u05d5\u05d1\u05d3 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05de\u05e1\u05de\u05df \u05d6\u05d0\u05ea \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8, \u05de\u05e6\u05dc\u05dd \u05d0\u05ea \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05e9\u05dc\u05d5 \u05d5\u05db\u05d5\u05ea\u05d1 \u05e2\u05d3 \u05de\u05ea\u05d9 \u05d4\u05d5\u05d0 \u05d1\u05ea\u05d5\u05e7\u05e3. \u05d1\u05dc\u05d9 \u05d7\u05ea\u05d9\u05de\u05d4 \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e2\u05d5\u05d1\u05d3 \u05dc\u05d0 \u05e0\u05db\u05e0\u05e1 \u05dc\u05de\u05e4\u05e2\u05dc.';
+}
 const EMAIL_RE = /^[^\s@<>"';,]{1,64}@[A-Za-z0-9.-]{1,120}\.[A-Za-z]{2,}$/;
 
 // A link the contractor did not fill, ending within CTR_NAG_MS: told once per link (nag = the exp it was told for, so a
@@ -185,10 +193,28 @@ export async function ctrAsk(env, rid, nowMs) {
   return s;
 }
 
+// The new-worker link after "\u05d1\u05e6\u05e2" (16/11/2026, DECISIONS "five additions"): a draft to the contractor when there is a mail
+// and deps.draft, else the link in the line for Michael to forward. Marked once (wlink) under the approved status.
+// {line} for Michael's message ('' when no link could be made).
+export async function ctrWorkerSend(env, e, nowMs, deps) {
+  const link = await workerLink(env, { kind: e.kind, de: e.de }, e, nowMs).catch(() => null);
+  if (!link) return { line: '' };
+  const from = Date.parse(e.at || '') || nowMs;
+  const endDay = e.until && e.until < ilDay(from + 365 * 864e5) ? e.until : ilDay(from + 364 * 864e5);
+  let drafted = false;
+  if (EMAIL_RE.test(String(e.email || '')) && deps && deps.draft) {
+    const d = await deps.draft({ op: 'mail_draft', agent: 'ctr-link', why: 'contractor approved (Michael: \u05d1\u05e6\u05e2): the new-worker link',
+      to: e.email, subject: '\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9 - ' + SITE.company, body: ctrWorkerBody(e, link, endDay) }).catch(() => null);
+    drafted = !!(d && d.ok);
+  }
+  await ctrPatch(env, e.id, { wlink: drafted ? 'draft' : 'said', wlink_at: new Date(nowMs).toISOString() }, CTR_S_OK).catch(() => null);
+  return { line: drafted ? '\u05d4\u05db\u05e0\u05ea\u05d9 \u05d8\u05d9\u05d5\u05d8\u05d4 \u05dc\u05e7\u05d1\u05dc\u05df \u05e2\u05dd \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9. \u05d4\u05d9\u05d0 \u05ea\u05d5\u05e4\u05d9\u05e2 \u05d1\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05d1-Outlook, \u05d5\u05d0\u05ea\u05d4 \u05e9\u05d5\u05dc\u05d7.' : '\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9, \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05dc\u05e7\u05d1\u05dc\u05df:\n' + link };
+}
+
 const GONE = '\u05d4\u05d1\u05e7\u05e9\u05d4 \u05d4\u05d6\u05d5 \u05db\u05d1\u05e8 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05ea. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d1\u05e7\u05e9 \u05de\u05d4\u05e2\u05d5\u05d6\u05e8 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9 \u05dc\u05e7\u05d1\u05dc\u05df.';
 const notWaiting = (e) => '\u05d4\u05d1\u05e7\u05e9\u05d4 \u05e9\u05dc ' + one(e.company, 60) + ' \u05db\u05d1\u05e8 \u05dc\u05d0 \u05de\u05d7\u05db\u05d4 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8.';
 // The tap on "בצע" / "לא". {text, ref, choices}.
-export async function fastCtrOk(env, fr, nowMs) {
+export async function fastCtrOk(env, fr, nowMs, deps) {
   const e = (await ctrEntries(env)).find((x) => x.id === fr.id);
   if (!e) return { text: GONE, ref: 'ctr-gone' };
   if (e.status === CTR_S_OK) return { text: '\u05db\u05d1\u05e8 \u05d0\u05d5\u05e9\u05e8: ' + one(e.company, 60) + ', \u05d1\u05de\u05e8\u05e9\u05dd \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05e2\u05d3 ' + dmy(e.until) + '.', ref: 'ctr-done' };
@@ -203,7 +229,10 @@ export async function fastCtrOk(env, fr, nowMs) {
   // the one approval: under compare-and-swap from "filled", so a second tap finds it approved
   const p = await ctrPatch(env, fr.id, { status: CTR_S_OK, ok_at: iso, until }, CTR_S_FILLED);
   if (p.error) return p.status === CTR_S_OK ? { text: '\u05db\u05d1\u05e8 \u05d0\u05d5\u05e9\u05e8: ' + one(e.company, 60) + '.', ref: 'ctr-done' } : { text: notWaiting(e), ref: 'ctr-gone' };
-  return ctrRegister(env, Object.assign({}, e, { status: CTR_S_OK, until, ok_at: iso }), null);
+  const ok = Object.assign({}, e, { status: CTR_S_OK, until, ok_at: iso });
+  const r = await ctrRegister(env, ok, null);
+  const w = await ctrWorkerSend(env, ok, nowMs, deps);
+  return w.line ? Object.assign({}, r, { text: r.text + '\n\n' + w.line }) : r;
 }
 // Writes the approved request into the register. force = a row id Michael chose, 'new', or null (match it here).
 export async function ctrRegister(env, e, force) {
@@ -293,6 +322,11 @@ export async function ctrMorning(env, now) {
   for (const e of list.filter((x) => x.status === CTR_S_OK && !x.reg).slice(0, CTR_MORNING_MAX)) {
     const r = await ctrRegister(env, e, null);
     if (r.ref !== 'ctr-reg-fail') { out.reg++; if (r.choices) await ctrSay(env, r.text, r.ref, r.choices); }
+  }
+  // an approval whose new-worker link did not go out (no link then): the link to Michael, to forward
+  for (const e of list.filter((x) => x.status === CTR_S_OK && !x.wlink && x.files != null && String(x.ok_at || '') >= CTR_WLINK_SINCE).slice(0, CTR_MORNING_MAX)) {
+    const w = await ctrWorkerSend(env, e, nowMs, null);
+    if (w.line) { await ctrSay(env, '\u05e7\u05d1\u05dc\u05df \u05e9\u05d0\u05d9\u05e9\u05e8\u05ea, ' + one(e.company, 60) + ':\n' + w.line, 'ctr-wlink', null); out.wlink = (out.wlink || 0) + 1; }
   }
   const today = ilDay(nowMs);
   const rows = await sb(env, 'ctr?select=id,n,ty,e,s&limit=2000').catch(() => []);
