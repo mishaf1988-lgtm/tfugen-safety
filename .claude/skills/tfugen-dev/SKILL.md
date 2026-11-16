@@ -109,6 +109,13 @@ fetch('/api/claude', {
 })
 ```
 
+### שאלה עם כפתורים למיכאל מזרימה שאינה העוזר (16/11/2026, `functions/_ctrok.js` `ctrSay`)
+- השליחה דרך `sendToOwner` עם `kind` שמופיע ב-`OWNER_KINDS` (`_wa.js`), ושורה ב-`KNOWN_SITES` של `weekend-owner-test.mjs`. בלי זה הבדיקה אדומה.
+- הלחיצה מוצאת את הבקשה רק אם נרשמה שורת `assistant` ב-`notifications_log` עם `payload.ref` ו-`wamid` (`sendToOwner` לבד רושם `wa_out` בלי ref), ובנוסף `noteLastOut` עם אותו ref.
+- ref לכל בקשה (`<kind>:<id>`) ומצב הבקשה בשורה שלה, לא מפתח `askPending` יחיד, כשכמה בקשות יכולות לחכות יחד. תשובה להודעה אחרת לא נופלת להודעה האחרונה (כמו `delRefOf`).
+- חלון סגור = תבנית בלי כפתורים: להוסיף לטקסט "לענות על ההודעה הזו: בצע או לא".
+- טיוטת מייל מהשרת: `mail_draft` דרך `routineDb` פנימי עם `agent` שאינו `routine-wa-assistant` (השערים של העוזר לא חלים), ובלי המילים של `ATTACH_SAID_RE` בגוף.
+
 ### מילוי טופס Word מבוקר עם חתימות (16/11/2026, `functions/_ctrform.js`)
 - חתימה = תמונה בתוך התא (`sigRun`, חלק `word/media/*.png` חדש ב-`writeZip` עם `bytes`), לא חיפוש מיקום ב-PDF: Word מסדר אותה בעצמו. הפסקה שמקבלת תמונה: `lineRule="atLeast"` (`growLine`, לקח 232).
 - תאריך בתוך טופס Word בעברית: עם נקודות (`17.11.2026`, `dotDay`), לא לוכסנים: Word הפך `17/11/2026 עד 19/11/2026` ל-`2026/11/17` ב-PDF החי, ו-LibreOffice לא הראה את זה. טבלה שעלולה לעבור עמוד: `w:tblHeader` על שורת הכותרת (`repeatHead`).

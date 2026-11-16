@@ -631,7 +631,8 @@ export async function sentLately(env, t, nowMs) {
 // list goes at once (an urgent message is never stuck); weekend-owner-test.mjs fails on a send with no known kind.
 // sign is NOW (review 06/11/2026): a held question would stay pending with no buttons and no ref, and block a new request for the file
 export const OWNER_NOW_KINDS = ['reply', 'hazard', 'incident', 'watchdog', 'morning', 'sign'];
-export const OWNER_HELD_KINDS = ['reminder', 'done', 'agent', 'fault', 'works', 'deck', 'file'];
+// ctr (16/11/2026, contractor link stage 2): held; the morning update asks it again with its buttons (_ctrok.js ctrMorning)
+export const OWNER_HELD_KINDS = ['reminder', 'done', 'agent', 'fault', 'works', 'deck', 'file', 'ctr'];
 export const OWNER_KINDS = OWNER_NOW_KINDS.concat(OWNER_HELD_KINDS);
 export const WEEKEND_KEY = 'weekend_held', WEEKEND_LAST_KEY = 'weekend_held_last', WEEKEND_MAX = 60, WEEKEND_REPLY_MS = 3600000, WEEKEND_SHOW = 10;
 const IL_WD = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jerusalem', weekday: 'short' });

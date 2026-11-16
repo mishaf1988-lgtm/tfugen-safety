@@ -87,6 +87,7 @@ async function note(env, value) {
 export { recentLine, RECENT_H, RECENT_N, RECENT_MAX } from '../_wa.js';
 import { domainLine } from '../_domains.js';
 import { stateCas } from '../_cas.js';
+import { ctrRefOf, fastCtrOk, fastCtrMatch, fastCtrReason } from '../_ctrok.js';
 // at = when the server logged the message, to the millisecond (atMs), not Meta's timestamp: 29/10/2026 13:09, three
 // photos and a line sent together carried the same second, two runs passed the same answers, and overlapReply took
 // the second run's reply for the first run's own message, so both answers went out (13:10 and 13:11).
@@ -497,6 +498,14 @@ export function fastRoute(m, about, prev) {
   // 26/10/2026 retro: an answer to "move it?" (routine-db cal_move_ask); same rule
   const mid = calMoveRefOf(about, prev);
   if (mid) { const yes = signAnswer(m); if (yes !== null) return { kind: 'cal_move', id: mid, yes }; }
+  // 16/11/2026 (contractor link stage 2, _ctrok.js): an answer to "approve the contractor?" counts only as a tap on that
+  // very question or a reply to it, like a delete; the reason after "no" is any text right after the reason question.
+  const ca = ctrRefOf('ctra', about, prev);
+  if (ca && (ca.by === 'about' || tapIsPrev(m, prev))) { const yes = signAnswer(m); if (yes !== null) return { kind: 'ctr_ok', id: ca.rid, yes }; }
+  const cm = ctrRefOf('ctrm', about, prev);
+  if (cm && (cm.by === 'about' || tapIsPrev(m, prev)) && (Number(m.choice) === 1 || Number(m.choice) === 2 || raw === '1' || raw === '2')) return { kind: 'ctr_match', id: cm.rid, n: Number(m.choice || raw) };
+  const cr = ctrRefOf('ctrr', about, prev);
+  if (cr && (cr.by === 'about' || !about) && (m.choice === undefined || m.choice === null) && raw.length >= 3 && raw.length <= 600 && (cr.by === 'about' || !/\?\s*$/.test(raw))) return { kind: 'ctr_reason', id: cr.rid, text: raw };
   const ask = signAskOf(raw);
   // 22/10/2026 18:31 (Michael: "the assistant gets tangled again"): the assistant wrote "sending you the Negev permit to
   // sign", Michael answered "sign in my name", and the server, with no file name, sent the newest PDFs in the folder
@@ -726,11 +735,12 @@ async function joinRows(env, fromIso, types) {
   const r = await Promise.race([sbJson(env, 'notifications_log?select=ts,event_type,payload&event_type=in.(' + types + ')&ts=gte.' + encodeURIComponent(fromIso) + '&order=ts.asc&limit=30').catch(() => null), cap]);
   return Array.isArray(r) ? r : [];
 }
-async function logOut(env, text, r) {
+// ref (16/11/2026): only a fast answer that is itself a question (contractor ctrm: / ctrr:), so a tap or reply on it finds it
+async function logOut(env, text, r, ref) {
   try {
     await sbJson(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
       body: JSON.stringify([{ id: 'wf' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
-        event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error', payload: { title: String(text).replace(/\s+/g, ' ').slice(0, 120), text: String(text).slice(0, 1500), via: r.via || null, wamid: r.wamid || null, fast: true } }]) });
+        event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error', payload: { title: String(text).replace(/\s+/g, ' ').slice(0, 120), text: String(text).slice(0, 1500), via: r.via || null, wamid: r.wamid || null, fast: true, ...(ref ? { ref: String(ref).slice(0, 40) } : {}) } }]) });
   } catch (e) { /* the answer went out; a missing log line is not a failure */ }
 }
 // The owner's BSUID (13/11/2026): written only here, from a Meta-signed message that carried his own number. Not in STATE_WRITE
@@ -951,13 +961,18 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
     else if (fr0.kind === 'tour_close') { ans = await fastTourClose(env, fr0); ref = 'tourclose-done'; }
     else if (fr0.kind === 'cal_invite') { ans = await fastCalInvite(env, fr0); ref = 'calinvite-done'; }
     else if (fr0.kind === 'cal_move') { ans = await fastCalMove(env, fr0); ref = 'calmove-done'; }
+    else if (fr0.kind === 'ctr_ok' || fr0.kind === 'ctr_match' || fr0.kind === 'ctr_reason') {
+      const draft = async (b) => { const res = await routineDb({ env, request: new Request('https://internal/api/routine-db', { method: 'POST', headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' }, body: JSON.stringify(b) }) }); return res.json().catch(() => ({})); };
+      const o = fr0.kind === 'ctr_ok' ? await fastCtrOk(env, fr0, Date.now()) : fr0.kind === 'ctr_match' ? await fastCtrMatch(env, fr0) : await fastCtrReason(env, fr0, Date.now(), { draft });
+      ans = o.text; ref = o.ref; choices = o.choices || null;
+    }
     else if (fr0.kind === 'account') { ans = await fastAccount(env, fr0); ref = 'account'; }
     else if (fr0.kind === 'rate') { ans = RATE_THANKS; ref = 'rate'; }
     else if (fr0.kind === 'hazard') { ans = await fastHazard(env, fr0); ref = fr0.src + ' ' + fr0.id; }
     else { const g = await gather(env, new Date()); ans = buildBrief(g.items, g.failed, g.today, false, [], null, null, null, true, g.waiting, g.disq); ref = 'brief'; }
   } catch (e) { ans = null; }
   const sr = ans ? await sendToOwner(env, owner, ans, Object.assign({ kind: 'reply', windowOpen: true, noTemplate: true }, choices ? { choices } : {})).catch(() => null) : null;
-  if (sr && (sr.ok || (chat && ans))) { seen.fast = fr0.kind; await noteLastOut(env, sbFrom(env), ans, ref); await logOut(env, ans, sr); return true; }
+  if (sr && (sr.ok || (chat && ans))) { seen.fast = fr0.kind; await noteLastOut(env, sbFrom(env), ans, ref); await logOut(env, ans, sr, /^ctr[mr]:/.test(String(ref || '')) ? ref : null); return true; }
   seen.fast_fail = fr0.kind;
   return false;
 }
