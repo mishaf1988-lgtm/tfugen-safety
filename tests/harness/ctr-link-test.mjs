@@ -172,8 +172,9 @@ console.log('\n3. the folder name');
 console.log('\n4. the form, checked on the server');
 {
   const tP = { kind: 'perm', ins: true }, tT = { kind: 'temp', ins: false, ds: today, de: addD(today, 3) };
-  const W2 = [{ n: 'ישראל ישראלי', id: '012345678', sig: SIGB(), hgt: true }, { n: 'محمد علي', id: '987654321', sig: SIGB(), hgt: true }];
-  const base = { company: 'אחים בע"מ', cnum: '51-234567-8', contact: 'דני', mobile: '050-1234567', email: 'a@b.co.il', place: 'אולם 2', desc: 'החלפת פאנלים בגג', workers: W2, signer: 'דני כהן', sid: '023456789', commit: '1', sig: true, works: ['hgt'] };
+  const E = addD(today, 200);
+  const W2 = [{ n: 'ישראל ישראלי', id: '012345678', sig: SIGB(), hgt: true, e: E }, { n: 'محمد علي', id: '987654321', sig: SIGB(), hgt: true, e: addD(today, 90) }];
+  const base = { company: 'אחים בע"מ', cnum: '51-234567-8', contact: 'דני', mobile: '050-1234567', email: 'a@b.co.il', place: 'אולם 2', desc: 'החלפת פאנלים בגג', workers: W2, signer: 'דני כהן', sid: '023456789', commit: '1', sig: true, works: ['hgt'], dates: { ins: E, plat: addD(today, 150), elcl: E, sds: E } };
   // 'hgtc' = the height certificate of each of the two workers (in their rows, w = the row; 16/11/2026)
   const files = (docs) => docs.flatMap((doc) => (doc === 'hgtc' ? [0, 1] : [null]).map((w) => ({ doc, w, size: 2000, type: ['pdf', 'application/pdf'] })));
   const ok = checkCtrForm(base, files(['ins', 'hgtc', 'plat']), tP);
@@ -232,6 +233,25 @@ console.log('\n4. the form, checked on the server');
   check('a certificate in the row of a worker not at height is not taken', !!notHf.v && notHf.v.files.filter((x) => x.doc === 'hgtc').length === 1, notHf.errors);
   const noneH = checkCtrForm({ ...base, workers: W2.map((w) => ({ ...w, hgt: false })) }, files(['ins']), tP);
   check('height work with no worker marked at height: refused (at least one)', !!noneH.errors && noneH.errors.some((e) => e.indexOf('לפחות אחד') > 0), noneH.errors);
+  // 16/11/2026 (DECISIONS "חמש תוספות"): "valid until" for every document but "other"; the approval ends at the first
+  check('the first to end: the second worker\'s certificate (90 days)', !!ok.v && ok.v.firstE.e === addD(today, 90) && ok.v.firstE.label.indexOf('محمد علي') > 0, ok.v && ok.v.firstE);
+  check('each file carries its date', !!ok.v && ok.v.files.find((x) => x.doc === 'plat').e === addD(today, 150) && ok.v.files.find((x) => x.wn === 'ישראל ישראלי').e === E);
+  check('the insurance date is kept for the register', !!ok.v && ok.v.docE.ins === E);
+  const noD = checkCtrForm({ ...base, dates: { plat: E } }, files(['ins', 'hgtc', 'plat']), tP);
+  check('a document without "valid until": refused, naming it', !!noD.errors && noD.errors.some((e) => e.indexOf(CTR_DOC_L.ins) === 0 && e.indexOf('בתוקף עד') > 0), noD.errors);
+  const past = checkCtrForm({ ...base, dates: { ...base.dates, ins: addD(today, -1) } }, files(['ins', 'hgtc', 'plat']), tP);
+  check('an expired document: refused, with its date', !!past.errors && past.errors.some((e) => e.indexOf('כבר לא בתוקף') > 0), past.errors);
+  check('a date far away or not a day: refused', !!checkCtrForm({ ...base, dates: { ...base.dates, ins: addD(today, 4000) } }, files(['ins', 'hgtc', 'plat']), tP).errors && !!checkCtrForm({ ...base, dates: { ...base.dates, ins: '2026-02-31' } }, files(['ins', 'hgtc', 'plat']), tP).errors);
+  check('a month 13: refused as a bad date, no crash', !!checkCtrForm({ ...base, dates: { ...base.dates, ins: '2026-13-01' } }, files(['ins', 'hgtc', 'plat']), tP).errors);
+  const twin = checkCtrForm({ ...base, workers: [W2[0], { ...W2[1], n: W2[0].n }] }, files(['ins', 'hgtc', 'plat']), tP);
+  check('two workers with the same name: each certificate keeps its own worker\'s date', !!twin.v && twin.v.files.filter((x) => x.doc === 'hgtc').map((x) => x.e).join() === E + ',' + addD(today, 90), twin.errors || twin.v.files.map((x) => x.e));
+  check('ends today: still valid', !!checkCtrForm({ ...base, dates: { ...base.dates, ins: today } }, files(['ins', 'hgtc', 'plat']), tP, today).v);
+  const wNoD = checkCtrForm({ ...base, workers: [W2[0], { ...W2[1], e: '' }] }, files(['ins', 'hgtc', 'plat']), tP);
+  check('a worker at height without his certificate\'s date: refused, naming him', !!wNoD.errors && wNoD.errors.some((e) => e.indexOf('עובד 2') === 0 && e.indexOf('בתוקף עד') > 0), wNoD.errors);
+  check('a worker not at height needs no date', !!checkCtrForm({ ...base, workers: [W2[0], { ...W2[1], hgt: false, e: '' }] }, files(['ins']).concat([pdf1(0)]), tP).v);
+  check('an optional document not attached needs no date (no plat date, no plat file)', !!checkCtrForm({ ...base, dates: { ins: E } }, files(['ins', 'hgtc']), tP).v);
+  check('"other" never needs a date', !!checkCtrForm(base, files(['ins', 'hgtc', 'oth']), tP).v);
+  check('date refusals are keyboard characters only', [noD, past, wNoD].every((r) => r.errors.every((e) => !BAD.test(e))));
   check('files: more room than before (15) but within the free plan\'s 50 calls a run (about 27 fixed + one per file)', CTR_MAX_FILES > 15 && CTR_MAX_FILES + 27 <= 45);
   check('bytes: PDF, JPG, PNG known; a renamed EXE is not', fileType(PDF())[0] === 'pdf' && fileType(PNG())[0] === 'png' && fileType(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))[0] === 'jpg' && fileType(new Uint8Array([0x4d, 0x5a, 0x90, 0, 0])) === null);
   check('every refusal is keyboard characters only', [miss, noIns, noWk, noSig].every((r) => r.errors.every((e) => !BAD.test(e))));
@@ -313,7 +333,8 @@ const post = async (fields, files) => {
   return { status: r.status, html: await r.text() };
 };
 const good = { company: 'בונים בע"מ', cnum: '512345678', contact: 'דני', mobile: '0501234567', email: 'd@b.co.il', desc: 'התקנת מדפים במחסן <b>הצפוני</b>', signer: 'דני כהן', sid: '023456789', commit: '1', sig: SIG, works: ['hgt', 'frk'],
-  wn: ['ישראל ישראלי', 'Ahmad Nasser', ''], wi: ['012345678', '223456785', ''], ws: [SIG, SIG, ''], wg: ['1', '1', ''] };
+  wn: ['ישראל ישראלי', 'Ahmad Nasser', ''], wi: ['012345678', '223456785', ''], ws: [SIG, SIG, ''], wg: ['1', '1', ''], wd: [addD(today, 300), addD(today, 60), ''],
+  d_ins: addD(today, 200), d_plat: addD(today, 200), d_frkl: addD(today, 200), d_elcl: addD(today, 200) };
 {
   let r = await post(good, { ins: [['a.pdf', PDF()]], wf_0: [['b.pdf', PDF()]], wf_1: [['b2.pdf', PDF()]] });
   check('refused on the server: the forklift licence missing; the platform report (optional) is not asked for', r.status === 400 && r.html.indexOf(CTR_DOC_L.frkl) > 0 && r.html.indexOf('חסר מסמך: ' + CTR_DOC_L.plat) < 0, r.html.slice(0, 300));
@@ -341,9 +362,13 @@ const good = { company: 'בונים בע"מ', cnum: '512345678', contact: 'דנ�
   check('the mail: the description (escaped), 2 workers signed, the form linked', m.html.indexOf('התקנת מדפים') > 0 && m.html.indexOf('&lt;b&gt;') > 0 && m.html.indexOf('עובדים שחתמו') > 0 && /<td[^>]*>2: /.test(m.html) && m.html.indexOf('146.03 חתום') > 0);
   check('the mail holds no full ID number of a worker', m.html.indexOf('012345678') < 0);
   check('the mail names each worker and whether he works at height', m.html.indexOf('ישראל ישראלי (בגובה)') > 0 && m.html.indexOf('Ahmad Nasser (בגובה)') > 0, m.html.slice(m.html.indexOf('עובדים'), m.html.indexOf('עובדים') + 200));
-  check('the mail is keyboard characters only, and RTL', !BAD.test(m.html.replace(/<[^>]+>/g, ' ')) && /^<div dir="rtl" style="direction:rtl;text-align:right/.test(m.html));
   const st = stateList(db.state[CTR_STATE].value)[0];
-  check('the request is marked filled, with the files, folder, mail, form and reads (no worker ID in state)', st.status === 'filled' && st.files === 6 && st.folder === folder && st.mail === 'sent' && st.workers === 2 && st.reads === 2 && /146\.03/.test(decodeURIComponent(st.form || '')) && !st.form_err && JSON.stringify(st).indexOf('012345678') < 0 && JSON.stringify(st).indexOf('023456789') < 0, st);
+  check('the request keeps each document\'s date, the first to end and the insurance date', st.doc_e && st.doc_e.ins === addD(today, 200) && st.first_e === addD(today, 60) && st.first_doc.indexOf('Ahmad Nasser') > 0 && st.ins_e === addD(today, 200), st);
+  check('the mail: "valid until" beside the documents, and the first to end', m.html.indexOf('בתוקף עד ' + addD(today, 200).split('-').reverse().join('/')) > 0 && m.html.indexOf('המסמך שפג ראשון') > 0, m.html.slice(m.html.indexOf('המסמכים'), m.html.indexOf('המסמכים') + 400));
+  check('the page asks "valid until" for each document but "other"', /name="d_ins"/.test(formHtml({ kind: 'perm', ins: true }, { company: '' }, 'k', 'הוראות בטיחות לבדיקה בלבד')) && !/name="d_oth"/.test(formHtml({ kind: 'perm', ins: true }, { company: '' }, 'k', 'הוראות בטיחות לבדיקה בלבד')) && /name="wd"/.test(ROW_HTML));
+  check('the mail is keyboard characters only, and RTL', !BAD.test(m.html.replace(/<[^>]+>/g, ' ')) && /^<div dir="rtl" style="direction:rtl;text-align:right/.test(m.html));
+  const stD = stateList(db.state[CTR_STATE].value)[0];
+  check('the request is marked filled, with the files, folder, mail, form and reads (no worker ID in state)', st.status === 'filled' && st.files === 6 && st.folder === folder && st.mail === 'sent' && st.workers === 2 && st.reads === 2 && /146\.03/.test(decodeURIComponent(st.form || '')) && !st.form_err && JSON.stringify(st).indexOf('012345678') < 0 && JSON.stringify(st).indexOf('023456789') < 0, stD);
   const again = await post(good, { ins: [['a.pdf', PDF()]], wf_0: [['b.pdf', PDF()]], wf_1: [['b2.pdf', PDF()]], plat: [['c.pdf', PDF()]], frkl: [['d.pdf', PDF()]] });
   check('sent once: a second send saves nothing more', again.status === 200 && db.puts.length === 9 + 1 /* summary html source */ && db.mails.length === 1, db.puts.length);
   // a cut send (security review 16/11/2026): filled, no files, claimed long ago = open again, and a send goes through

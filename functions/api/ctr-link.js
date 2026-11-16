@@ -154,6 +154,15 @@ export async function ctrLinkCreate(env, url, h, v, nowMs) {
 }
 
 // ---- reading the form (pure once the files are read) ----
+// a month 13 makes an Invalid Date, whose toISOString throws (security review 16/11/2026): checked first
+const isDay = (s) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false; const d = new Date(s + 'T00:00:00Z'); return !isNaN(d) && d.toISOString().slice(0, 10) === s; };
+// The document that ends first: {e, label} or null (16/11/2026, the approval in the register ends then).
+export function firstEnd(v) {
+  let best = null;
+  for (const k of Object.keys((v && v.docE) || {})) if (!best || v.docE[k] < best.e) best = { e: v.docE[k], label: CTR_DOC_L[k] || k };
+  for (const o of (v && v.workers) || []) if (o.hgt && o.e && (!best || o.e < best.e)) best = { e: o.e, label: '\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05e9\u05dc ' + o.n };
+  return best;
+}
 export const LIM = { company: 80, contact: 60, email: 100, place: 120, signer: 60, desc: DESC_MAX };
 const MOBILE_RE = /^(?:\+?972|0)5\d{8}$/, EMAIL_RE = /^[^\s@<>"']{1,64}@[A-Za-z0-9.-]{1,120}\.[A-Za-z]{2,}$/;
 // The workers' rows of the page (16/11/2026): [{ n, id, sig }] where sig = the PNG bytes of the finger signature or null.
@@ -170,15 +179,18 @@ export function checkWorkers(rows) {
     if (!n || !id || !r.sig) { errors.push('\u05e2\u05d5\u05d1\u05d3 ' + (i + 1) + ': \u05e6\u05e8\u05d9\u05da \u05e9\u05dd, \u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d6\u05d4\u05d5\u05ea \u05d0\u05d5 \u05d3\u05e8\u05db\u05d5\u05df, \u05d5\u05d7\u05ea\u05d9\u05de\u05d4 \u05d1\u05d0\u05e6\u05d1\u05e2.'); return; }
     const k = /^\d+$/.test(id) ? id.replace(/^0+/, '') : id;
     if (seen.has(k)) { errors.push('\u05e2\u05d5\u05d1\u05d3 ' + (i + 1) + ': \u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d4\u05d6\u05d4\u05d5\u05ea \u05db\u05d1\u05e8 \u05d1\u05e8\u05e9\u05d9\u05de\u05d4.'); return; }
-    seen.add(k); out.push({ n, id, sig: r.sig, i: r.i, hgt: !!r.hgt });
+    seen.add(k); out.push({ n, id, sig: r.sig, i: r.i, hgt: !!r.hgt, e: String(r.e || '').trim() });
   });
   return errors.length ? { errors } : { list: out };
 }
 // f = the text fields (a plain object; f.workers = the rows for checkWorkers), files = [{doc, size, type}] where type
 // comes from the bytes (null = not a PDF, JPG or PNG), t = the token. {v} or {errors: [...]} (each a sentence the
 // contractor reads).
-export function checkCtrForm(f, files, t) {
+// today = Israel's day (YYYY-MM-DD). 16/11/2026 (DECISIONS "five additions"): every attached document but "other" carries
+// its "valid until" date (f.dates[doc]; a worker's height certificate: his row's e), not in the past, at most 10 years on.
+export function checkCtrForm(f, files, t, today) {
   const errors = [], v = {};
+  const day0 = today || ilDay(Date.now());
   const txt = (k, max, multi) => { const s = clean(f[k], max, multi); if (s.length > max) { errors.push('\u05d4\u05d8\u05e7\u05e1\u05d8 \u05d1\u05e9\u05d3\u05d4 \u05d0\u05e8\u05d5\u05da \u05de\u05d3\u05d9.'); return ''; } return s; };
   v.company = txt('company', LIM.company);
   if (v.company.length < 2) errors.push('\u05d7\u05e1\u05e8 \u05e9\u05dd \u05d4\u05d7\u05d1\u05e8\u05d4.');
@@ -218,7 +230,7 @@ export function checkCtrForm(f, files, t) {
     }
     if (!x.type) { errors.push((CTR_DOC_L[x.doc] || '') + ': \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e6\u05e8\u05e3 \u05e8\u05e7 PDF, JPG \u05d0\u05d5 PNG.'); continue; }
     if (x.size > MAX_FILE) { errors.push((CTR_DOC_L[x.doc] || '') + ': \u05e7\u05d5\u05d1\u05e5 \u05d2\u05d3\u05d5\u05dc \u05de\u05d3\u05d9 (\u05e2\u05d3 4MB \u05dc\u05e7\u05d5\u05d1\u05e5).'); continue; }
-    if (wk0) { x.wn = wk0.n; wHas.add(wk0.i); }
+    if (wk0) { x.wn = wk0.n; x.wi = wk0.i; wHas.add(wk0.i); }
     n++; total += x.size; have[x.doc] = (have[x.doc] || 0) + 1; v.files.push(x);
   }
   if (n > CTR_MAX_FILES) errors.push('\u05d0\u05e4\u05e9\u05e8 \u05dc\u05e6\u05e8\u05e3 \u05e2\u05d3 ' + CTR_MAX_FILES + ' \u05e7\u05d1\u05e6\u05d9\u05dd.');
@@ -233,6 +245,29 @@ export function checkCtrForm(f, files, t) {
   if (byW) v.workers.forEach((o, j) => {
     if (o.hgt && !wHas.has(o.i)) errors.push('\u05e2\u05d5\u05d1\u05d3 ' + (j + 1) + ' (' + o.n + '): \u05d7\u05e1\u05e8 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05e9\u05dc\u05d5.');
   });
+  // "valid until" (16/11/2026): each attached document but "other"; the approval ends at the first to end
+  const dates = (f && f.dates) || {};
+  v.docE = {};
+  const dateOk = (label, d) => {
+    const s0 = String(d || '').trim();
+    if (!s0) { errors.push(label + ': \u05d7\u05e1\u05e8 \u05ea\u05d0\u05e8\u05d9\u05da "\u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3".'); return null; }
+    if (!isDay(s0) || s0 > addDays(day0, 3660)) { errors.push(label + ': \u05d4\u05ea\u05d0\u05e8\u05d9\u05da "\u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3" \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df.'); return null; }
+    if (s0 < day0) { errors.push(label + ': \u05d4\u05de\u05e1\u05de\u05da \u05db\u05d1\u05e8 \u05dc\u05d0 \u05d1\u05ea\u05d5\u05e7\u05e3 (' + dmy(s0) + ').'); return null; }
+    return s0;
+  };
+  for (const k of CTR_DOCS.map((d) => d[0])) {
+    if (k === 'oth' || k === CTR_PER_WORKER && byW || !have[k]) continue;
+    const d = dateOk(CTR_DOC_L[k], dates[k]);
+    if (d) v.docE[k] = d;
+  }
+  if (byW) v.workers.forEach((o, j) => {
+    if (!o.hgt || !wHas.has(o.i)) return;
+    const d = dateOk('\u05e2\u05d5\u05d1\u05d3 ' + (j + 1) + ' (' + o.n + '), \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4', o.e);
+    if (d) o.e = d;
+  });
+  // by the row (wi), not the name: two workers may share a name (security review 16/11/2026)
+  for (const x of v.files) x.e = x.wn ? ((v.workers || []).find((o) => o.i === x.wi) || {}).e || null : v.docE[x.doc] || null;
+  v.firstE = firstEnd(v);
   v.required = req;
   v.optMissing = opt.filter((k) => k !== 'oth' && !have[k]);
   v.signer = txt('signer', LIM.signer);
@@ -258,10 +293,12 @@ function docField(key, t) {
   const byWork = docWorks(key), optBy = optWorks(key), soft = !always && !opt && !byWork.length && optBy.length > 0;
   const note = (opt && key !== 'oth') || soft ? ' (\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4)' : '';
   return '<div class="doc' + (always || opt ? ' on' : '') + '" data-doc="' + key + '" data-works="' + (soft ? optBy : byWork).join(',') + '" data-req="' + (always ? '1' : opt ? '0' : soft ? 'o' : 'w') + '">'
-    + '<label for="f_' + key + '">' + esc(CTR_DOC_L[key]) + esc(note) + '</label><input type="file" id="f_' + key + '" name="f_' + key + '" accept="application/pdf,image/jpeg,image/png" multiple></div>';
+    + '<label for="f_' + key + '">' + esc(CTR_DOC_L[key]) + esc(note) + '</label><input type="file" id="f_' + key + '" name="f_' + key + '" accept="application/pdf,image/jpeg,image/png" multiple>'
+    // 16/11/2026: the date the document is valid until (every document but "other")
+    + (key === 'oth' ? '' : '<label for="d_' + key + '" class="dl">\u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3</label><input type="date" id="d_' + key + '" name="d_' + key + '" class="dd" dir="ltr">') + '</div>';
 }
 // Before 16/11/2026 every document field showed whatever was ticked (no rule hid .doc); now only those of the works.
-const PAGE_CSS = '<style>.doc{display:none;margin:6px 0}.doc.on{display:block}.whf{display:none;margin:6px 0}#wl.hg .whf{display:block}.wfd.off{display:none}.wr{border:1px solid #d1d5db;border-radius:10px;padding:8px 10px;margin:8px 0;background:#fafafa}'
+const PAGE_CSS = '<style>.doc{display:none;margin:6px 0}.doc.on{display:block}.whf{display:none;margin:6px 0}#wl.hg .whf{display:block}.wfd.off{display:none}.dl{font-weight:400;font-size:14px;color:#374151}.wr{border:1px solid #d1d5db;border-radius:10px;padding:8px 10px;margin:8px 0;background:#fafafa}'
   + '.wh{font-weight:700;margin-bottom:4px}.wr canvas{width:100%;height:110px;border:2px dashed #9ca3af;border-radius:8px;touch-action:none;background:#fff;display:block}'
   + '.wb{display:flex;gap:8px}.wb button{flex:1;padding:8px;border:0;border-radius:8px;background:#e5e7eb;font-size:15px;margin-top:6px}'
   + '.ins{white-space:pre-wrap;max-height:340px;overflow:auto;border:1px solid #d1d5db;border-radius:8px;padding:10px;background:#fff;font-size:15px;line-height:1.55}</style>';
@@ -269,11 +306,11 @@ const PAGE_CSS = '<style>.doc{display:none;margin:6px 0}.doc.on{display:block}.w
 export const ROW_HTML = '<div class="wh"></div>'
   + '<label>\u05e9\u05dd \u05de\u05dc\u05d0</label><input type="text" name="wn" maxlength="60" autocomplete="off">'
   + '<label>\u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d6\u05d4\u05d5\u05ea \u05d0\u05d5 \u05d3\u05e8\u05db\u05d5\u05df</label><input type="text" name="wi" maxlength="15" dir="ltr" autocomplete="off">'
-  + '<input type="hidden" name="wg"><div class="whf"><label class="ck"><input type="checkbox" class="wgo" checked>\u05d4\u05e2\u05d5\u05d1\u05d3 \u05e2\u05d5\u05d1\u05d3 \u05d1\u05d2\u05d5\u05d1\u05d4</label><div class="wfd"><label>\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05e9\u05dc \u05d4\u05e2\u05d5\u05d1\u05d3 (\u05e7\u05d5\u05d1\u05e5 \u05d0\u05d5 \u05ea\u05de\u05d5\u05e0\u05d4)</label><input type="file" class="wf" accept="application/pdf,image/jpeg,image/png" multiple></div></div>'
+  + '<input type="hidden" name="wg"><div class="whf"><label class="ck"><input type="checkbox" class="wgo" checked>\u05d4\u05e2\u05d5\u05d1\u05d3 \u05e2\u05d5\u05d1\u05d3 \u05d1\u05d2\u05d5\u05d1\u05d4</label><div class="wfd"><label>\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05e9\u05dc \u05d4\u05e2\u05d5\u05d1\u05d3 (\u05e7\u05d5\u05d1\u05e5 \u05d0\u05d5 \u05ea\u05de\u05d5\u05e0\u05d4)</label><input type="file" class="wf" accept="application/pdf,image/jpeg,image/png" multiple><label class="dl">\u05d4\u05d0\u05d9\u05e9\u05d5\u05e8 \u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3</label><input type="date" name="wd" dir="ltr"></div></div>'
   + '<input type="hidden" name="ws"><div style="font-weight:700;margin:6px 0 4px">\u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05e2\u05d5\u05d1\u05d3 \u05d1\u05d0\u05e6\u05d1\u05e2</div><canvas></canvas>'
   + '<div class="wb"><button type="button" class="wc">\u05e0\u05e7\u05d4 \u05d7\u05ea\u05d9\u05de\u05d4</button><button type="button" class="wx">\u05d4\u05e1\u05e8 \u05e2\u05d5\u05d1\u05d3</button></div>';
 const J = (s) => JSON.stringify(s);
-const SCRIPT = (nonce) => `(function(){${PAD_JS}
+export const SCRIPT = (nonce) => `(function(){${PAD_JS}
 var f=document.getElementById('f'),sig=document.getElementById('sig'),go=document.getElementById('go');
 document.getElementById('clr').addEventListener('click',function(){x.clearRect(0,0,c.width,c.height);drawn=false;});
 function upd(){var on=[];Array.prototype.forEach.call(document.querySelectorAll('.wk'),function(b){if(b.checked)on.push(b.value);});
@@ -298,13 +335,15 @@ d.querySelector('.wx').addEventListener('click',function(){if(rows.length<2){d.q
 d.querySelector('[name=wn]').focus();}
 document.getElementById('add').addEventListener('click',addRow);addRow();
 f.addEventListener('submit',function(e){var miss=[];Array.prototype.forEach.call(document.querySelectorAll('.doc.on'),function(d){var r=d.getAttribute('data-req'),i=d.querySelector('input');if(r==='0'||r==='o')return;if(!i.files||!i.files.length)miss.push(d.querySelector('label').textContent);});
+var nodt=[];Array.prototype.forEach.call(document.querySelectorAll('.doc.on'),function(d){var i=d.querySelector('input[type=file]'),dt=d.querySelector('.dd');if(dt&&i.files&&i.files.length&&!dt.value)nodt.push(d.querySelector('label').textContent);});
 if(!document.querySelectorAll('.wk:checked').length){e.preventDefault();alert(${J('\u05e6\u05e8\u05d9\u05da \u05dc\u05e1\u05de\u05df \u05dc\u05e4\u05d7\u05d5\u05ea \u05e1\u05d5\u05d2 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d0\u05d7\u05d3.')});return;}
 if(miss.length){e.preventDefault();alert(${J('\u05d7\u05e1\u05e8\u05d9\u05dd \u05de\u05e1\u05de\u05db\u05d9\u05dd:')}+'\\n'+miss.join('\\n'));return;}
 var full=0,bad=[];rows.forEach(function(r,i){var n=r.el.querySelector('[name=wn]').value.trim(),id=r.el.querySelector('[name=wi]').value.trim(),s=r.pad.st.d;if(!n&&!id&&!s)return;if(!n||!id||!s)bad.push(i+1);else full++;});
-var hg=document.getElementById('wl').className==='hg',nocert=[],atH=0;rows.forEach(function(r,i){var w=r.el.querySelector('.wf'),on=hg&&r.el.querySelector('.wgo').checked;w.name='wf_'+i;r.el.querySelector('[name=wg]').value=on?'1':'';if(!on)return;var n=r.el.querySelector('[name=wn]').value.trim();if(!n)return;atH++;if(!w.files||!w.files.length)nocert.push(n);});
+var hg=document.getElementById('wl').className==='hg',nocert=[],atH=0;rows.forEach(function(r,i){var w=r.el.querySelector('.wf'),on=hg&&r.el.querySelector('.wgo').checked;w.name='wf_'+i;r.el.querySelector('[name=wg]').value=on?'1':'';if(!on)return;var n=r.el.querySelector('[name=wn]').value.trim();if(!n)return;atH++;if(!w.files||!w.files.length)nocert.push(n);else if(!r.el.querySelector('[name=wd]').value)nodt.push(n);});
 if(hg&&!atH){e.preventDefault();alert(${J('\u05e1\u05de\u05e0\u05d5 \u05d0\u05d9\u05dc\u05d5 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d1\u05d2\u05d5\u05d1\u05d4 (\u05dc\u05e4\u05d7\u05d5\u05ea \u05d0\u05d7\u05d3), \u05d5\u05e6\u05e8\u05e4\u05d5 \u05dc\u05db\u05dc \u05d0\u05d7\u05d3 \u05d0\u05ea \u05d4\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e9\u05dc\u05d5.')});return;}
 if(bad.length){e.preventDefault();alert(${J('\u05d7\u05e1\u05e8 \u05e9\u05dd, \u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d6\u05d4\u05d5\u05ea \u05d0\u05d5 \u05d7\u05ea\u05d9\u05de\u05d4 \u05d0\u05e6\u05dc \u05e2\u05d5\u05d1\u05d3:')}+' '+bad.join(', '));return;}
 if(nocert.length){e.preventDefault();alert(${J('\u05d7\u05e1\u05e8 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05d0\u05e6\u05dc:')}+'\\n'+nocert.join('\\n'));return;}
+if(nodt.length){e.preventDefault();alert(${J('\u05d7\u05e1\u05e8 \u05ea\u05d0\u05e8\u05d9\u05da "\u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3" \u05d0\u05e6\u05dc:')}+'\\n'+nodt.join('\\n'));return;}
 if(!full){e.preventDefault();alert(${J('\u05e6\u05e8\u05d9\u05da \u05dc\u05e4\u05d7\u05d5\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d0\u05d7\u05d3: \u05e9\u05dd, \u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d6\u05d4\u05d5\u05ea \u05d5\u05d7\u05ea\u05d9\u05de\u05d4.')});return;}
 if(!drawn){e.preventDefault();alert(${J('\u05d7\u05e1\u05e8\u05d4 \u05d7\u05ea\u05d9\u05de\u05ea \u05de\u05e0\u05d4\u05dc \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4. \u05d7\u05ea\u05de\u05d5 \u05d1\u05d0\u05e6\u05d1\u05e2 \u05d1\u05ea\u05d5\u05da \u05d4\u05de\u05e1\u05d2\u05e8\u05ea.')});return;}
 rows.forEach(function(r){r.el.querySelector('[name=ws]').value=r.pad.st.d?r.pad.cv.toDataURL('image/png'):'';});
@@ -405,7 +444,7 @@ export function summaryHtml(t, v, when, sigB64, saved) {
     + (t.kind === 'temp' ? cell('\u05ea\u05d0\u05e8\u05d9\u05db\u05d9 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4', esc(dmy(t.ds) + ' \u05e2\u05d3 ' + dmy(t.de))) + cell('\u05de\u05e7\u05d5\u05dd \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4', esc(v.place)) : '')
     + cell('\u05d4\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea', esc(v.works.map(workLabel).join(', ')))
     + cell('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4', '<span style="white-space:pre-wrap">' + esc(v.desc || '') + '</span>')
-    + cell('\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05e9\u05e6\u05d5\u05e8\u05e4\u05d5', saved.length ? saved.map((x) => esc(CTR_DOC_L[x.doc] + ': ' + x.name)).join('<br>') : '-')
+    + cell('\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05e9\u05e6\u05d5\u05e8\u05e4\u05d5', saved.length ? saved.map((x) => esc(CTR_DOC_L[x.doc] + ': ' + x.name + (x.e ? ' (\u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 ' + dmy(x.e) + ')' : ''))).join('<br>') : '-')
     + cell('\u05dc\u05d0 \u05e6\u05d5\u05e8\u05e3 (\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4)', v.optMissing.length ? esc(v.optMissing.map((k) => CTR_DOC_L[k]).join(', ')) : '-')
     + cell('\u05e0\u05e9\u05dc\u05d7', esc(dmy(when.day) + ' ' + when.hm)) + '</table>'
     + (v.workers && v.workers.length ? '<h3 style="margin:8px 0 4px">\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e9\u05e7\u05e8\u05d0\u05d5 \u05d0\u05ea \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d7\u05ea\u05de\u05d5</h3><table style="border-collapse:collapse">' + v.workers.map((w, i) => '<tr><td style="padding:2px 8px">' + (i + 1) + '</td><td style="padding:2px 8px">' + esc(w.n) + '</td><td style="padding:2px 8px;direction:ltr">' + esc(w.id) + '</td>' + (v.hgtOn ? '<td style="padding:2px 8px">' + (w.hgt ? '\u05e2\u05d5\u05d1\u05d3 \u05d1\u05d2\u05d5\u05d1\u05d4' : '\u05dc\u05d0 \u05d1\u05d2\u05d5\u05d1\u05d4') + '</td>' : '') + '<td style="padding:2px 8px">' + (w.sig ? '<img alt="" style="max-width:160px;max-height:50px" src="data:image/png;base64,' + b64(w.sig) + '">' : '') + '</td></tr>').join('') + '</table><p>' + esc(CTR_OK) + '</p>' : '')
@@ -418,7 +457,7 @@ export const MAIL_SUBJECT = (t, v) => '\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e7\u05
 // form = { name, url } of form 146.03 filed, or { err } when it was not made.
 export function mailHtml(t, v, saved, summary, attachedNames, workerUrl, instrMissing, form) {
   const row = (k, x) => '<tr><td style="padding:3px 10px;font-weight:bold;vertical-align:top">' + esc(k) + '</td><td style="padding:3px 10px">' + x + '</td></tr>';
-  const fileLine = (x) => esc(CTR_DOC_L[x.doc] + ': ') + (x.url ? '<a href="' + esc(x.url) + '">' + esc(x.name) + '</a>' : esc(x.name)) + (attachedNames.indexOf(x.name) >= 0 ? ' (\u05de\u05e6\u05d5\u05e8\u05e3)' : '');
+  const fileLine = (x) => esc(CTR_DOC_L[x.doc] + ': ') + (x.url ? '<a href="' + esc(x.url) + '">' + esc(x.name) + '</a>' : esc(x.name)) + (x.e ? esc(' (\u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 ' + dmy(x.e) + ')') : '') + (attachedNames.indexOf(x.name) >= 0 ? ' (\u05de\u05e6\u05d5\u05e8\u05e3)' : '');
   return '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">'
     + '<p>\u05d4\u05e7\u05d1\u05dc\u05df ' + esc(v.company) + ' \u05de\u05d9\u05dc\u05d0 \u05d0\u05ea \u05d8\u05d5\u05e4\u05e1 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e7\u05d1\u05dc\u05df (' + esc(CTR_KIND_L[t.kind]) + ').</p><table>'
     + row('\u05de\u05e1\u05e4\u05e8 \u05d4\u05d7\u05d1\u05e8\u05d4', esc(v.cnum)) + row('\u05d0\u05d9\u05e9 \u05d4\u05e7\u05e9\u05e8', esc(v.contact) + ', ' + esc(v.mobile) + ', ' + esc(v.email))
@@ -429,6 +468,7 @@ export function mailHtml(t, v, saved, summary, attachedNames, workerUrl, instrMi
     + row('\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e9\u05d7\u05ea\u05de\u05d5', String((v.workers || []).length) + ': ' + esc((v.workers || []).map((w) => w.n + (v.hgtOn ? (w.hgt ? ' (\u05d1\u05d2\u05d5\u05d1\u05d4)' : ' (\u05dc\u05d0 \u05d1\u05d2\u05d5\u05d1\u05d4)') : '')).join(', ')) + ' (\u05e9\u05dd, \u05ea.\u05d6. \u05d5\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05db\u05dc \u05d0\u05d7\u05d3, \u05d1\u05d8\u05d5\u05e4\u05e1 146.03)')
     + row('\u05d8\u05d5\u05e4\u05e1 146.03', form && form.url ? '<a href="' + esc(form.url) + '">' + esc(form.name) + '</a>' + (attachedNames.indexOf(form.name) >= 0 ? ' (\u05de\u05e6\u05d5\u05e8\u05e3)' : '') : '<span style="color:#b91c1c;font-weight:bold">\u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8' + (form && form.err ? ' (' + esc(String(form.err).slice(0, 100)) + ')' : '') + '. \u05d4\u05e9\u05de\u05d5\u05ea \u05d5\u05d4\u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05d1\u05d8\u05d5\u05e4\u05e1 \u05d4\u05de\u05e1\u05db\u05dd.</span>')
     + row('\u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd', saved.length ? saved.map(fileLine).join('<br>') : '-')
+    + (v.firstE ? row('\u05d4\u05de\u05e1\u05de\u05da \u05e9\u05e4\u05d2 \u05e8\u05d0\u05e9\u05d5\u05df', esc(v.firstE.label + ': ' + dmy(v.firstE.e)) + ' (\u05d4\u05d0\u05d9\u05e9\u05d5\u05e8 \u05d1\u05de\u05e8\u05e9\u05dd \u05dc\u05d0 \u05d9\u05e2\u05d1\u05d5\u05e8 \u05ea\u05d0\u05e8\u05d9\u05da \u05d6\u05d4)') : '')
     + row('\u05dc\u05d0 \u05e6\u05d5\u05e8\u05e3 (\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4)', v.optMissing.length ? esc(v.optMissing.map((k) => CTR_DOC_L[k]).join(', ')) : '-')
     + row('\u05d4\u05ea\u05d7\u05d9\u05d9\u05d1\u05d5\u05ea', '\u05e1\u05d5\u05de\u05e0\u05d4 \u05d5\u05e0\u05d7\u05ea\u05de\u05d4 \u05d1\u05d9\u05d3\u05d9 ' + esc(v.signer))
     + row('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05de\u05e1\u05db\u05dd', summary && summary.url ? '<a href="' + esc(summary.url) + '">' + esc(summary.name) + '</a>' + (attachedNames.indexOf(summary.name) >= 0 ? ' (\u05de\u05e6\u05d5\u05e8\u05e3)' : '') : '\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8') + '</table>'
@@ -540,9 +580,11 @@ async function submit(env, request, nowMs, deps) {
   // the workers' rows, in the page's order (each row sends wn, wi and ws, so the three lists line up); a count far past
   // CTR_SIGN_MAX is cut before any signature is decoded, and checkWorkers refuses it
   const wn = form.getAll('wn').slice(0, CTR_SIGN_MAX + 5), wi = form.getAll('wi'), wsg = form.getAll('ws');
-  const wg = form.getAll('wg');
-  f.workers = wn.map((n, i) => ({ n: String(n || ''), id: String(wi[i] || ''), sig: sigBytes(wsg[i]), hgt: String(wg[i] || '') === '1' }));
-  const c = checkCtrForm(f, files, t);
+  const wg = form.getAll('wg'), wd = form.getAll('wd');
+  f.workers = wn.map((n, i) => ({ n: String(n || ''), id: String(wi[i] || ''), sig: sigBytes(wsg[i]), hgt: String(wg[i] || '') === '1', e: String(wd[i] || '') }));
+  f.dates = {};
+  for (const d of CTR_DOCS) if (form.get('d_' + d[0]) != null) f.dates[d[0]] = String(form.get('d_' + d[0])).slice(0, 10);
+  const c = checkCtrForm(f, files, t, ilDay(nowMs));
   const nonce = newNonce();
   if (c.errors) return page('\u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05e9\u05dc\u05d9\u05dd', '<ul>' + c.errors.map((e) => '<li>' + esc(e) + '</li>').join('') + '</ul>' + backBtn(nonce), 'err', 400, nonce);
   const v = c.v;
@@ -551,7 +593,8 @@ async function submit(env, request, nowMs, deps) {
   if (!instr) return errPage(INSTR_NOT_READY, 503);
   // claim: sent -> filled, once (a second send at the same moment finds it filled)
   const atIso = new Date(nowMs).toISOString();
-  const claim = { status: CTR_S_FILLED, at: atIso, company: v.company, cnum: v.cnum, contact: v.contact, mobile: v.mobile, email: v.email, works: v.works, place: v.place || null, desc: v.desc, signer: v.signer, workers: v.workers.length };
+  const claim = { status: CTR_S_FILLED, at: atIso, company: v.company, cnum: v.cnum, contact: v.contact, mobile: v.mobile, email: v.email, works: v.works, place: v.place || null, desc: v.desc, signer: v.signer, workers: v.workers.length,
+    doc_e: v.docE, first_e: v.firstE ? v.firstE.e : null, first_doc: v.firstE ? v.firstE.label : null, ins_e: v.docE.ins || null };
   let gone = false;
   const cw = await stateCas(SB, sbH(env, { 'Content-Type': 'application/json' }), CTR_STATE, (cur) => {
     const p = statePatch(cur, t.rid, claim, (e) => canSend(e, nowMs));
@@ -577,7 +620,7 @@ async function submit(env, request, nowMs, deps) {
       count[ck] = (count[ck] || 0) + 1;
       const name = stamp + ' - ' + (x.wn ? HGT_FILE + ' - ' + safeName(x.wn, 40) : safeName(CTR_DOC_L[x.doc], 40)) + ' - ' + count[ck] + '.' + x.type[0];
       const r = await deps.putFile(od.token, folder, name, x.u8, x.type[1], 'rename');
-      return { doc: x.doc, name, url: r.webUrl || null, bytes: x.u8, type: x.type[1] };
+      return { doc: x.doc, name, url: r.webUrl || null, bytes: x.u8, type: x.type[1], e: x.e || null };
     }));
     const hb = new TextEncoder().encode(summaryHtml(t, v, { day, hm }, b64(sig), saved));
     const base = stamp + ' - ' + '\u05d8\u05d5\u05e4\u05e1 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e7\u05d1\u05dc\u05df', src = folder + '/\u05de\u05e7\u05d5\u05e8';
