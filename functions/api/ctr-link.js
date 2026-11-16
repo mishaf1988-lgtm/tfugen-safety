@@ -154,7 +154,8 @@ export async function ctrLinkCreate(env, url, h, v, nowMs) {
 }
 
 // ---- reading the form (pure once the files are read) ----
-const isDay = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s) && new Date(s + 'T00:00:00Z').toISOString().slice(0, 10) === s;
+// a month 13 makes an Invalid Date, whose toISOString throws (security review 16/11/2026): checked first
+const isDay = (s) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false; const d = new Date(s + 'T00:00:00Z'); return !isNaN(d) && d.toISOString().slice(0, 10) === s; };
 // The document that ends first: {e, label} or null (16/11/2026, the approval in the register ends then).
 export function firstEnd(v) {
   let best = null;
@@ -229,7 +230,7 @@ export function checkCtrForm(f, files, t, today) {
     }
     if (!x.type) { errors.push((CTR_DOC_L[x.doc] || '') + ': \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e6\u05e8\u05e3 \u05e8\u05e7 PDF, JPG \u05d0\u05d5 PNG.'); continue; }
     if (x.size > MAX_FILE) { errors.push((CTR_DOC_L[x.doc] || '') + ': \u05e7\u05d5\u05d1\u05e5 \u05d2\u05d3\u05d5\u05dc \u05de\u05d3\u05d9 (\u05e2\u05d3 4MB \u05dc\u05e7\u05d5\u05d1\u05e5).'); continue; }
-    if (wk0) { x.wn = wk0.n; wHas.add(wk0.i); }
+    if (wk0) { x.wn = wk0.n; x.wi = wk0.i; wHas.add(wk0.i); }
     n++; total += x.size; have[x.doc] = (have[x.doc] || 0) + 1; v.files.push(x);
   }
   if (n > CTR_MAX_FILES) errors.push('\u05d0\u05e4\u05e9\u05e8 \u05dc\u05e6\u05e8\u05e3 \u05e2\u05d3 ' + CTR_MAX_FILES + ' \u05e7\u05d1\u05e6\u05d9\u05dd.');
@@ -264,7 +265,8 @@ export function checkCtrForm(f, files, t, today) {
     const d = dateOk('\u05e2\u05d5\u05d1\u05d3 ' + (j + 1) + ' (' + o.n + '), \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4', o.e);
     if (d) o.e = d;
   });
-  for (const x of v.files) x.e = x.wn ? ((v.workers || []).find((o) => o.n === x.wn) || {}).e || null : v.docE[x.doc] || null;
+  // by the row (wi), not the name: two workers may share a name (security review 16/11/2026)
+  for (const x of v.files) x.e = x.wn ? ((v.workers || []).find((o) => o.i === x.wi) || {}).e || null : v.docE[x.doc] || null;
   v.firstE = firstEnd(v);
   v.required = req;
   v.optMissing = opt.filter((k) => k !== 'oth' && !have[k]);
