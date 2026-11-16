@@ -28,7 +28,7 @@ import { accessToken, putFile, sendMailTo } from '../_onedrive.js';
 import { stateCas } from '../_cas.js';
 import { CATS, fileType, MAX_FILE, clean, page, dmy } from './works.js';
 import { makePermToken, talkUrl, sigBytes, idOf, graphPdf, PAD_JS, ctrName, textHash, BUCKET } from './talk.js';
-import { KIND_CTR, CTR_PREFIX, CTR_STATE, CTR_INSTR, CTR_KIND_L, CTR_S_SENT, CTR_S_FILLED, CTR_WORKS, FRK_L, CTR_DOCS, CTR_DOC_L, requiredDocs, optionalDocs,
+import { KIND_CTR, CTR_PREFIX, CTR_STATE, CTR_INSTR, CTR_KIND_L, CTR_S_SENT, CTR_S_FILLED, CTR_WORKS, FRK_L, CTR_DOCS, CTR_DOC_L, requiredDocs, optionalDocs, CTR_OPT,
   missingDocs, missingMsg, RID_RE, ctrLinkId, parseCtrLinkId, linkTtlDays, workerTtlDays, addDays, ctrFolder, safeName, stateList, stateAdd, statePatch,
   instrText, canSend, CTR_TITLE, CTR_COMMIT, CTR_OK, CTR_SIGN_MAX, DESC_MAX } from '../_ctr.js';
 import { fillCtrForm, pickTemplate, FORM_DIR, FORM_MAX } from '../_ctrform.js';
@@ -193,7 +193,7 @@ export function checkCtrForm(f, files, t) {
   const wk = checkWorkers(f.workers);
   if (wk.errors) errors.push(...wk.errors); else v.workers = wk.list;
   // the files: by their bytes, the limits, and only for documents of this request
-  const req = requiredDocs(v.works, t.ins), opt = optionalDocs(t.ins), allowed = req.concat(opt);
+  const req = requiredDocs(v.works, t.ins), opt = optionalDocs(t.ins, v.works), allowed = req.concat(opt);
   const have = {}; let total = 0, n = 0;
   v.files = [];
   for (const x of files || []) {
@@ -221,10 +221,15 @@ export function checkCtrForm(f, files, t) {
 const workBoxes = () => CTR_WORKS.map((k) => '<label class="ck"><input type="checkbox" name="works" value="' + k + '" class="wk">' + esc(workLabel(k)) + '</label>').join('');
 // Which works need each document (for the page's script; the server checks again).
 const docWorks = (key) => CTR_WORKS.filter((w) => requiredDocs([w], false).indexOf(key) >= 0);
+// Works that ask for a document without requiring it (CTR_OPT).
+const optWorks = (key) => CTR_WORKS.filter((w) => (CTR_OPT[w] || []).indexOf(key) >= 0);
+// data-req: 1 always required, 0 always shown and optional, w required when one of its works is ticked, o shown when one
+// of its works is ticked but optional (the platform report, 16/11/2026).
 function docField(key, t) {
   const always = key === 'ins' && t.ins, opt = key === 'oth' || (key === 'ins' && !t.ins);
-  const note = opt && key !== 'oth' ? ' (\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4)' : '';
-  return '<div class="doc' + (always || opt ? ' on' : '') + '" data-doc="' + key + '" data-works="' + docWorks(key).join(',') + '" data-req="' + (always ? '1' : opt ? '0' : 'w') + '">'
+  const byWork = docWorks(key), optBy = optWorks(key), soft = !always && !opt && !byWork.length && optBy.length > 0;
+  const note = (opt && key !== 'oth') || soft ? ' (\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4)' : '';
+  return '<div class="doc' + (always || opt ? ' on' : '') + '" data-doc="' + key + '" data-works="' + (soft ? optBy : byWork).join(',') + '" data-req="' + (always ? '1' : opt ? '0' : soft ? 'o' : 'w') + '">'
     + '<label for="f_' + key + '">' + esc(CTR_DOC_L[key]) + esc(note) + '</label><input type="file" id="f_' + key + '" name="f_' + key + '" accept="application/pdf,image/jpeg,image/png" multiple></div>';
 }
 // Before 16/11/2026 every document field showed whatever was ticked (no rule hid .doc); now only those of the works.
@@ -243,7 +248,7 @@ const SCRIPT = (nonce) => `(function(){${PAD_JS}
 var f=document.getElementById('f'),sig=document.getElementById('sig'),go=document.getElementById('go');
 document.getElementById('clr').addEventListener('click',function(){x.clearRect(0,0,c.width,c.height);drawn=false;});
 function upd(){var on=[];Array.prototype.forEach.call(document.querySelectorAll('.wk'),function(b){if(b.checked)on.push(b.value);});
-Array.prototype.forEach.call(document.querySelectorAll('.doc'),function(d){var r=d.getAttribute('data-req');if(r!=='w')return;var ws=d.getAttribute('data-works').split(',');var need=ws.some(function(w){return on.indexOf(w)>=0;});d.className='doc'+(need?' on':'');});}
+Array.prototype.forEach.call(document.querySelectorAll('.doc'),function(d){var r=d.getAttribute('data-req');if(r!=='w'&&r!=='o')return;var ws=d.getAttribute('data-works').split(',');var need=ws.some(function(w){return on.indexOf(w)>=0;});d.className='doc'+(need?' on':'');});}
 Array.prototype.forEach.call(document.querySelectorAll('.wk'),function(b){b.addEventListener('change',upd);});upd();
 var wl=document.getElementById('wl'),rows=[],MAX=${CTR_SIGN_MAX};
 function mkPad(cv){var cx=cv.getContext('2d'),st={d:false,dn:false};var r0=cv.getBoundingClientRect();cv.width=r0.width||300;cv.height=110;cx.lineWidth=2.5;cx.lineCap='round';cx.strokeStyle='#111';
@@ -261,7 +266,7 @@ d.querySelector('.wc').addEventListener('click',function(){r.pad.clear();});
 d.querySelector('.wx').addEventListener('click',function(){if(rows.length<2){d.querySelector('[name=wn]').value='';d.querySelector('[name=wi]').value='';r.pad.clear();return;}wl.removeChild(d);rows.splice(rows.indexOf(r),1);num();});
 d.querySelector('[name=wn]').focus();}
 document.getElementById('add').addEventListener('click',addRow);addRow();
-f.addEventListener('submit',function(e){var miss=[];Array.prototype.forEach.call(document.querySelectorAll('.doc.on'),function(d){var r=d.getAttribute('data-req'),i=d.querySelector('input');if(r==='0')return;if(!i.files||!i.files.length)miss.push(d.querySelector('label').textContent);});
+f.addEventListener('submit',function(e){var miss=[];Array.prototype.forEach.call(document.querySelectorAll('.doc.on'),function(d){var r=d.getAttribute('data-req'),i=d.querySelector('input');if(r==='0'||r==='o')return;if(!i.files||!i.files.length)miss.push(d.querySelector('label').textContent);});
 if(!document.querySelectorAll('.wk:checked').length){e.preventDefault();alert(${J('\u05e6\u05e8\u05d9\u05da \u05dc\u05e1\u05de\u05df \u05dc\u05e4\u05d7\u05d5\u05ea \u05e1\u05d5\u05d2 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d0\u05d7\u05d3.')});return;}
 if(miss.length){e.preventDefault();alert(${J('\u05d7\u05e1\u05e8\u05d9\u05dd \u05de\u05e1\u05de\u05db\u05d9\u05dd:')}+'\\n'+miss.join('\\n'));return;}
 var full=0,bad=[];rows.forEach(function(r,i){var n=r.el.querySelector('[name=wn]').value.trim(),id=r.el.querySelector('[name=wi]').value.trim(),s=r.pad.st.d;if(!n&&!id&&!s)return;if(!n||!id||!s)bad.push(i+1);else full++;});

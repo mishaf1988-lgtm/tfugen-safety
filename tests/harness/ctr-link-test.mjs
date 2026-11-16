@@ -129,7 +129,7 @@ console.log('\n1. the link id and its life');
 
 console.log('\n2. the documents each work needs (Michael\'s table)');
 {
-  const want = { hot: [], eng: [], hgt: ['hgtc', 'plat'], rof: ['hgtc', 'plat'], elc: ['elcl'], lft: ['crane', 'oper'], chm: ['sds'], cnf: ['cnft'], frk: ['frkl'] };
+  const want = { hot: [], eng: [], hgt: ['hgtc'], rof: ['hgtc'], elc: ['elcl'], lft: ['crane', 'oper'], chm: ['sds'], cnf: ['cnft'], frk: ['frkl'] };
   for (const w of CTR_WORKS) {
     for (const ins of [false, true]) {
       const got = requiredDocs([w], ins);
@@ -140,6 +140,8 @@ console.log('\n2. the documents each work needs (Michael\'s table)');
   check('nine works: the eight of the works list and the forklift', CTR_WORKS.join() === 'hot,hgt,elc,eng,lft,chm,cnf,rof,frk' && workLabel('frk') && workLabel('hot') !== 'hot');
   check('two works that need the same document ask for it once', requiredDocs(['hgt', 'rof'], false).filter((k) => k === 'hgtc').length === 1);
   check('without insurance it is optional; with it, only "other" is', optionalDocs(false).join() === 'ins,oth' && optionalDocs(true).join() === 'oth');
+  check('height or roof work: the platform report is optional, never required (Michael 16/11/2026)', optionalDocs(true, ['hgt']).join() === 'plat,oth' && optionalDocs(false, ['rof', 'hgt']).join() === 'ins,plat,oth' && requiredDocs(['hgt', 'rof'], false).indexOf('plat') < 0 && optionalDocs(true, ['hot']).join() === 'oth');
+  check('lifting: the crane\'s report and the operator\'s licence stay required', requiredDocs(['lft'], false).join() === 'crane,oper');
   check('missing: each item by itself', missingDocs(['ins', 'plat', 'frkl'], { plat: 1 }).join() === 'ins,frkl');
   check('the workers list is no document any more (16/11/2026: a signed row per worker on the page)', !CTR_DOC_L.wkr && CTR_DOCS.every((d) => d[0] !== 'wkr'));
   const msgs = missingMsg(['ins', 'frkl']);
@@ -169,7 +171,10 @@ console.log('\n4. the form, checked on the server');
   const ok = checkCtrForm(base, files(['ins', 'hgtc', 'plat']), tP);
   check('a complete form passes', !!ok.v && ok.v.workers.length === 2 && ok.v.cnum === '512345678' && ok.v.mobile === '0501234567' && ok.v.desc === 'החלפת פאנלים בגג' && ok.v.sid === '023456789', ok.errors);
   const miss = checkCtrForm(base, files(['ins']), tP);
-  check('height work without the height certificate and the platform report: two messages, one per item', miss.errors && miss.errors.filter((e) => /^חסר מסמך/.test(e)).length === 2, miss.errors);
+  check('height work without the height certificate: one message, the certificate (the platform report is optional)', miss.errors && miss.errors.filter((e) => /^חסר מסמך/.test(e)).length === 1 && miss.errors[0].indexOf(CTR_DOC_L.hgtc) > 0, miss.errors);
+  const noPlat = checkCtrForm(base, files(['ins', 'hgtc']), tP);
+  check('height work without the platform report: passes, noted as optional and not given', !!noPlat.v && noPlat.v.optMissing.indexOf('plat') >= 0, noPlat.errors);
+  check('a platform report attached to height work is taken', checkCtrForm(base, files(['ins', 'hgtc', 'plat']), tP).v.files.some((x) => x.doc === 'plat'));
   const noIns = checkCtrForm(base, files(['hgtc', 'plat']), tP);
   check('insurance required by the link and not attached: refused', noIns.errors && noIns.errors.some((e) => e.indexOf(CTR_DOC_L.ins) > 0));
   const optIns = checkCtrForm({ ...base, place: 'x2' }, files(['hgtc', 'plat']), tT);
@@ -279,7 +284,7 @@ const good = { company: 'בונים בע"מ', cnum: '512345678', contact: 'דנ�
   wn: ['ישראל ישראלי', 'Ahmad Nasser', ''], wi: ['012345678', '223456785', ''], ws: [SIG, SIG, ''] };
 {
   let r = await post(good, { ins: [['a.pdf', PDF()]], hgtc: [['b.pdf', PDF()]] });
-  check('refused on the server: the platform report and the forklift licence missing, one line each', r.status === 400 && r.html.indexOf(CTR_DOC_L.plat) > 0 && r.html.indexOf(CTR_DOC_L.frkl) > 0, r.html.slice(0, 300));
+  check('refused on the server: the forklift licence missing; the platform report (optional) is not asked for', r.status === 400 && r.html.indexOf(CTR_DOC_L.frkl) > 0 && r.html.indexOf('חסר מסמך: ' + CTR_DOC_L.plat) < 0, r.html.slice(0, 300));
   check('a refused form saves nothing and sends nothing', db.puts.length === 0 && db.mails.length === 0 && stateList(db.state[CTR_STATE].value)[0].status === 'sent');
   r = await post(good, { ins: [['a.pdf', PDF()]], hgtc: [['b.pdf', PDF()]], plat: [['c.pdf', PDF()]], frkl: [['d.exe', new Uint8Array([0x4d, 0x5a, 0x90, 0, 0, 0, 0])]] });
   check('a file named .pdf/.exe that is not a PDF/JPG/PNG by its bytes: refused', r.status === 400 && db.puts.length === 0);

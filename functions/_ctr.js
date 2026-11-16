@@ -47,7 +47,12 @@ export const CTR_DOCS = [
   ['oth', '\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05e0\u05d5\u05e1\u05e4\u05d9\u05dd (\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4)'],
 ];
 export const CTR_DOC_L = Object.fromEntries(CTR_DOCS);
-export const CTR_REQ = { hot: [], hgt: ['hgtc', 'plat'], elc: ['elcl'], eng: [], lft: ['crane', 'oper'], chm: ['sds'], cnf: ['cnft'], rof: ['hgtc', 'plat'], frk: ['frkl'] };
+// 16/11/2026 (Michael: "only the height work certificate is required; the platform report is an option; lifting = the
+// crane's documents"; DECISIONS 16/11/2026 "\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e7\u05d1\u05dc\u05df: \u05d1\u05d2\u05d5\u05d1\u05d4 \u05e8\u05e7 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05d7\u05d5\u05d1\u05d4"): plat moved from required to
+// optional for height and roof work (it was required since 15/11/2026).
+export const CTR_REQ = { hot: [], hgt: ['hgtc'], elc: ['elcl'], eng: [], lft: ['crane', 'oper'], chm: ['sds'], cnf: ['cnft'], rof: ['hgtc'], frk: ['frkl'] };
+// Documents a work asks for without requiring them: the field shows when the work is ticked, marked "not required".
+export const CTR_OPT = { hgt: ['plat'], rof: ['plat'] };
 
 // Required documents for the works ticked, in the order of CTR_DOCS. ins = the link says "with insurance".
 export function requiredDocs(works, ins) {
@@ -57,7 +62,13 @@ export function requiredDocs(works, ins) {
   return CTR_DOCS.map((d) => d[0]).filter((k) => want.has(k));
 }
 // What may be attached but is not required: the insurance when the link does not ask for it, and "other".
-export const optionalDocs = (ins) => (ins ? ['oth'] : ['ins', 'oth']);
+// works = the works ticked (their optional documents, CTR_OPT, in the order of CTR_DOCS).
+export function optionalDocs(ins, works) {
+  const want = new Set(ins ? ['oth'] : ['ins', 'oth']);
+  for (const w of works || []) for (const d of (CTR_OPT[w] || [])) want.add(d);
+  const req = requiredDocs(works, ins);
+  return CTR_DOCS.map((d) => d[0]).filter((k) => want.has(k) && req.indexOf(k) < 0);
+}
 // have = {docKey: number of files}. Returns the missing keys.
 export function missingDocs(required, have) {
   return (required || []).filter((k) => !(have && have[k] > 0));
