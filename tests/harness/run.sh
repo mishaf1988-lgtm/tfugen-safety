@@ -20,7 +20,8 @@ if [ -n "${PARALLEL:-}" ] && [ -z "${SHARD:-}" ]; then
   n=$PARALLEL; root=$(git rev-parse --show-toplevel); tmp=$(mktemp -d); rc=0; empty=0
   for ((i=0;i<n;i++)); do
     git -C "$root" worktree add -q "$tmp/w$i" HEAD || { echo "HARNESS ERROR: git worktree failed"; rm -rf "$tmp"; exit 1; }
-    (cd "$root" && git ls-files -m -o --exclude-standard -z | while IFS= read -r -d '' f; do mkdir -p "$tmp/w$i/$(dirname "$f")"; cp "$f" "$tmp/w$i/$f"; done)
+    # 16/11/2026 (lesson 234): staged files too (git diff HEAD), not only unstaged (ls-files -m): a run after "git add" tested HEAD
+    (cd "$root" && { git diff -z --name-only HEAD; git ls-files -z -o --exclude-standard; } | while IFS= read -r -d '' f; do [ -f "$f" ] || continue; mkdir -p "$tmp/w$i/$(dirname "$f")"; cp "$f" "$tmp/w$i/$f"; done)
     (cd "$tmp/w$i/tests/harness" && SHARD=$i/$n bash run.sh "$@" > "$tmp/s$i.log" 2>&1; echo "exit=$?" >> "$tmp/s$i.log") &
   done; wait
   for ((i=0;i<n;i++)); do
