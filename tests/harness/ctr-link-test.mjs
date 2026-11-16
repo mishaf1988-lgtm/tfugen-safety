@@ -8,8 +8,8 @@
 import fs from 'fs';
 import vm from 'vm';
 import { onRequest, ctrDeps, makeCtrToken, readCtrToken, ctrLinkCheck, ctrLinkCreate, ctrLinkText, checkCtrForm, checkWorkers, mailHtml, summaryHtml, formHtml,
-  pickAttach, MAIL_BUDGET, CTR_MAX_FILES, workLabel, MAIL_SUBJECT, ROW_HTML, buildForm } from './_build/ctr-link.mjs';
-import { fillCtrForm, pickTemplate, FORM_ROWS } from './_build/_ctrform.mjs';
+  pickAttach, MAIL_BUDGET, CTR_MAX_FILES, workLabel, MAIL_SUBJECT, ROW_HTML, buildForm, dotDay } from './_build/ctr-link.mjs';
+import { fillCtrForm, pickTemplate, FORM_ROWS, repeatHead } from './_build/_ctrform.mjs';
 import { readZip, writeZip, entryText } from './_build/_xlsxpatch.mjs';
 import { KIND_CTR, CTR_PREFIX, CTR_STATE, CTR_WORKS, CTR_DOCS, CTR_DOC_L, requiredDocs, optionalDocs, missingDocs, missingMsg, ctrLinkId, parseCtrLinkId, linkTtlDays, workerTtlDays,
   safeName, ctrFolder, CTR_DIR, stateAdd, statePatch, stateList, CTR_STATE_MAX, INSTR_MISSING, isInstrMissing, CTR_OK, CTR_SIGN_MAX, isStuck, canSend, CTR_STUCK_MS } from './_build/_ctr.mjs';
@@ -441,6 +441,9 @@ console.log('\n10. form 146.03 filled (functions/_ctrform.js)');
   check('the pictures: a part each, a relationship each, the template\'s own parts kept (the logo byte for byte)', z.filter((e) => /^word\/media\/ctrsig\d+\.png$/.test(e.name)).length === 12 && (rels.match(/rIdCtrSig\d+/g) || []).length === 12 && rels.indexOf('rId9') > 0 && z.some((e) => e.name === 'word/media/logo.png' && e.usize === 7));
   const ct = await entryText(z.find((e) => e.name === '[Content_Types].xml'));
   check('a template without the png type gets it', /Extension="png"/.test(ct));
+  check('the workers table\'s heading row repeats on each page (w:tblHeader), once', (t2.match(/<w:tblHeader\/>/g) || []).length === 1 && t2.indexOf('<w:tblHeader/>') < t2.indexOf('שם העובד'));
+  check('repeatHead: into an existing trPr, or a new one; never twice', repeatHead('<w:tbl><w:tr><w:trPr><w:jc/></w:trPr></w:tr></w:tbl>') === '<w:tbl><w:tr><w:trPr><w:tblHeader/><w:jc/></w:trPr></w:tr></w:tbl>' && repeatHead('<w:tbl><w:tr><w:tc/></w:tr></w:tbl>') === '<w:tbl><w:tr><w:trPr><w:tblHeader/></w:trPr><w:tc/></w:tr></w:tbl>' && repeatHead(repeatHead('<w:tbl><w:tr><w:tc/></w:tr></w:tbl>')) === repeatHead('<w:tbl><w:tr><w:tc/></w:tr></w:tbl>'));
+  check('dates in the form with dots, as the form writes its own (slashes reversed in Word, 16/11/2026)', dotDay('2026-11-17') === '17.11.2026');
   check('the workers\' rows in the order typed', t2.indexOf('עובד 1<') < t2.indexOf('עובד 2<'));
   await check('not a docx: refused', await fillCtrForm(new Uint8Array([1, 2, 3]), {}).then(() => false, () => true));
   check('the template: the newest .docx whose name starts with "טופס 146.03"', pickTemplate([{ name: 'טופס 146.03 - a - 14.07.2024.docx', lastModifiedDateTime: '2024-07-14T00:00:00Z' }, { name: 'טופס 146.03 - b - 16.10.2026.docx', lastModifiedDateTime: '2026-10-16T00:00:00Z' }, { name: 'טופס 146.03 - c.pdf', lastModifiedDateTime: '2027-01-01T00:00:00Z' }, { name: 'x.docx' }]) === 'טופס 146.03 - b - 16.10.2026.docx' && pickTemplate([]) === null);

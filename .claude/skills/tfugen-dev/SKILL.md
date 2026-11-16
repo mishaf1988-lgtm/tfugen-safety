@@ -111,6 +111,7 @@ fetch('/api/claude', {
 
 ### מילוי טופס Word מבוקר עם חתימות (16/11/2026, `functions/_ctrform.js`)
 - חתימה = תמונה בתוך התא (`sigRun`, חלק `word/media/*.png` חדש ב-`writeZip` עם `bytes`), לא חיפוש מיקום ב-PDF: Word מסדר אותה בעצמו. הפסקה שמקבלת תמונה: `lineRule="atLeast"` (`growLine`, לקח 232).
+- תאריך בתוך טופס Word בעברית: עם נקודות (`17.11.2026`, `dotDay`), לא לוכסנים: Word הפך `17/11/2026 עד 19/11/2026` ל-`2026/11/17` ב-PDF החי, ו-LibreOffice לא הראה את זה. טבלה שעלולה לעבור עמוד: `w:tblHeader` על שורת הכותרת (`repeatHead`).
 - לפני העלאה: רינדור מקומי `soffice --headless --convert-to pdf` ו-`pdftoppm`, ולהסתכל. תבנית אמיתית: `bash tools/od-get.sh '<נתיב>' <קובץ>` (קריאה בלבד).
 - `Write` כותב `\uXXXX` כתווים גולמיים: אחרי כל `Write` של קובץ שרת, `python3 tools/esc-hebrew.py`, ותו מיוחד (`￾`) שאינו עברית לבדוק ב-`grep -cP "[^\x00-\x7F]"`.
 - דף לאדם מבחוץ: בדיקת Playwright בגודל טלפון (`devices['iPhone 13']`), עם גלילה אל הקנבס (scroll into view) לפני ציור על קנבס (בלי זה העכבר מצייר מחוץ למסך ונראה כמו באג בדף).

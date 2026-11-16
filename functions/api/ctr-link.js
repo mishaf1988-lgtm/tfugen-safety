@@ -423,11 +423,14 @@ const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.doc
 // Form 146.03 filled (functions/_ctrform.js): the Word file and its PDF (Microsoft renders it, as Word prints it) in the
 // contractor's folder, under one name. { name, url, bytes, type } of the PDF (the Word file when no PDF came), or
 // { err } when the form could not be made. Never throws: the summary already holds the names and signatures.
+// A date in the form as the form writes its own (16.10.2026): with slashes, Word's right-to-left line reversed the
+// digits of "17/11/2026 \u05e2\u05d3 19/11/2026" in the live PDF of 16/11/2026 ("2026/11/17").
+export const dotDay = (ymd) => dmy(ymd).replace(/\//g, '.');
 export async function buildForm(deps, token, folder, t, v, mgrSig, when) {
   try {
     const tp = await deps.formTemplate(token);
-    const fl = await fillCtrForm(tp.bytes, { company: v.company, cnum: v.cnum, signer: v.signer, sid: v.sid, contact: v.mobile, date: dmy(when.day),
-      works: v.works.map(workLabel).join(', '), desc: v.desc, job: t.kind === 'temp' ? dmy(t.ds) + ' \u05e2\u05d3 ' + dmy(t.de) + ', ' + v.place : '', mgrSig, workers: v.workers });
+    const fl = await fillCtrForm(tp.bytes, { company: v.company, cnum: v.cnum, signer: v.signer, sid: v.sid, contact: v.mobile, date: dotDay(when.day),
+      works: v.works.map(workLabel).join(', '), desc: v.desc, job: t.kind === 'temp' ? dotDay(t.ds) + ' \u05e2\u05d3 ' + dotDay(t.de) + ', ' + v.place : '', mgrSig, workers: v.workers });
     // the hour in the name: a second send of the same company on the same day never meets the first (rename would
     // give the file another name, and the PDF would be made from the older one)
     const base = when.stamp + ' ' + when.hm.replace(':', '-') + ' - \u05d8\u05d5\u05e4\u05e1 146.03 \u05d7\u05ea\u05d5\u05dd - ' + safeName(v.company, 40);
