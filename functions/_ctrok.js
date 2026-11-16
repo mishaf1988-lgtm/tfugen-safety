@@ -20,6 +20,9 @@ export const CTR_AGAIN_MS = 20 * 3600e3;    // asked again at the next morning u
 export const CTR_REASON_MS = 24 * 3600e3;   // a reason is taken up to a day after "no"
 export const CTR_RENEW_KEY = 'ctr_renew';   // server_state: {ctr id: the end date a new link was already made for}
 export const CTR_MORNING_MAX = 5;           // asks / registers / renewals per morning, each
+// 16/11/2026 (DECISIONS "\u05d7\u05de\u05e9 \u05ea\u05d5\u05e1\u05e4\u05d5\u05ea \u05de\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05ea\u05d4\u05dc\u05d9\u05da"): a link not filled is told to Michael this long before it ends, once per link
+export const CTR_NAG_MS = 3 * 864e5;
+export const CTR_S_CLOSED = 'closed';
 export const CTR_CHOICES = ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'];
 export const CTR_MATCH_CHOICES = ['\u05d0\u05d5\u05ea\u05d5 \u05e7\u05d1\u05dc\u05df', '\u05e7\u05d1\u05dc\u05df \u05d7\u05d3\u05e9'];
 export const CTR_TRAINED = '\u05d4\u05d5\u05db\u05e9\u05e8', CTR_ACTIVE = '\u05e4\u05e2\u05d9\u05dc';
@@ -103,6 +106,24 @@ export function ctrDraftBody(e, reason, link, expDay) {
     + '\u05e4\u05e8\u05d8\u05d9 \u05d4\u05d7\u05d1\u05e8\u05d4 \u05d5\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05db\u05d1\u05e8 \u05de\u05d5\u05dc\u05d0\u05d5 \u05d1\u05d8\u05d5\u05e4\u05e1. \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05e6\u05e8\u05d9\u05da \u05dc\u05e6\u05e8\u05e3 \u05e9\u05d5\u05d1, \u05d5\u05db\u05dc \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d7\u05d5\u05ea\u05de\u05d9\u05dd \u05e9\u05d5\u05d1.';
 }
 const EMAIL_RE = /^[^\s@<>"';,]{1,64}@[A-Za-z0-9.-]{1,120}\.[A-Za-z]{2,}$/;
+
+// A link the contractor did not fill, ending within CTR_NAG_MS: told once per link (nag = the exp it was told for, so a
+// fresh link after "no" is told again). A link made less than a day ago is not told (a short job's link).
+export function nagDue(list, nowMs) {
+  return (Array.isArray(list) ? list : []).filter((x) => x && x.status === CTR_S_SENT && x.exp && x.nag !== x.exp
+    && Date.parse(x.exp) > nowMs && Date.parse(x.exp) - nowMs <= CTR_NAG_MS && nowMs - (Date.parse(x.created_at || '') || 0) > 864e5);
+}
+export function nagText(e) {
+  return '\u05d4\u05e7\u05d1\u05dc\u05df ' + (one(e.company, 60) || '\u05dc\u05dc\u05d0 \u05e9\u05dd') + ' \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05de\u05d9\u05dc\u05d0 \u05d0\u05ea \u05d8\u05d5\u05e4\u05e1 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e7\u05d1\u05dc\u05df, \u05d5\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e9\u05dc\u05d5 \u05e4\u05d2 \u05d1-' + dmy(ilDay(Date.parse(e.exp))) + '. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05d6\u05db\u05d9\u05e8 \u05dc\u05d5, \u05d5\u05d0\u05d7\u05e8\u05d9 \u05e9\u05d9\u05e4\u05d5\u05d2 \u05dc\u05d1\u05e7\u05e9 \u05de\u05d4\u05e2\u05d5\u05d6\u05e8 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9.';
+}
+// A temporary job's request still waiting for Michael after the job's last day: closed, not asked again (one message).
+export function endedDue(list, today) {
+  return (Array.isArray(list) ? list : []).filter((x) => x && x.status === CTR_S_FILLED && x.files != null && x.kind === 'temp'
+    && /^\d{4}-\d{2}-\d{2}$/.test(String(x.de || '')) && x.de < today);
+}
+export function endedText(e) {
+  return '\u05d4\u05d1\u05e7\u05e9\u05d4 \u05e9\u05dc ' + one(e.company, 60) + ' (\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea ' + dmy(e.ds) + ' \u05e2\u05d3 ' + dmy(e.de) + ') \u05e0\u05e1\u05d2\u05e8\u05d4: \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d4\u05e1\u05ea\u05d9\u05d9\u05de\u05d4 \u05d1\u05dc\u05d9 \u05d0\u05d9\u05e9\u05d5\u05e8, \u05d5\u05d4\u05e7\u05d1\u05dc\u05df \u05dc\u05d0 \u05e0\u05db\u05e0\u05e1 \u05dc\u05de\u05e8\u05e9\u05dd \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd. \u05dc\u05d0 \u05d0\u05e9\u05d0\u05dc \u05e2\u05dc\u05d9\u05d4 \u05e9\u05d5\u05d1.';
+}
 
 // ---- the database and WhatsApp ----
 const hdr = (env) => { const k = env.SUPABASE_SERVICE_ROLE_KEY; return { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }; };
@@ -235,10 +256,26 @@ export async function fastCtrReason(env, fr, nowMs, deps) {
 
 // ---- the morning update (wa-morning run, after it went out) ----
 // (1) a request still waiting: asked again; (2) an approval whose register write failed: written again; (3) a permanent
-// contractor whose year ends within 30 days: a new link, sent to Michael to forward. Each at most CTR_MORNING_MAX.
+// contractor whose year ends within 30 days: a new link, sent to Michael to forward; (4) a temporary job that ended
+// unanswered: closed; (5) a link not filled 3 days before it ends: told. Each at most CTR_MORNING_MAX.
 export async function ctrMorning(env, now) {
-  const nowMs = now.getTime(), out = { asked: 0, reg: 0, renew: 0 };
-  const list = await ctrEntries(env);
+  const nowMs = now.getTime(), out = { asked: 0, reg: 0, renew: 0, nag: 0, ended: 0 };
+  let list = await ctrEntries(env);
+  // (4) a temporary job that ended while its request waited: closed with one message, before the asks below
+  for (const e of endedDue(list, ilDay(nowMs)).slice(0, CTR_MORNING_MAX)) {
+    const p = await ctrPatch(env, e.id, { status: CTR_S_CLOSED, closed: 'ended', closed_at: now.toISOString() }, CTR_S_FILLED);
+    if (p.error) continue;
+    out.ended++;
+    await ctrSay(env, endedText(e), 'ctr-ended', null);
+  }
+  if (out.ended) list = await ctrEntries(env);
+  // (5) a link the contractor did not fill, ending within three days: told once (a held message counts, it comes on Sunday)
+  for (const e of nagDue(list, nowMs).slice(0, CTR_MORNING_MAX)) {
+    const s = await ctrSay(env, nagText(e), 'ctr-nag', null);
+    if (!s.ok) continue;
+    out.nag++;
+    await ctrPatch(env, e.id, { nag: e.exp }, CTR_S_SENT);
+  }
   for (const e of list.filter((x) => x.status === CTR_S_FILLED && x.files != null && nowMs - (Date.parse(x.ask_at || '') || 0) > CTR_AGAIN_MS).slice(0, CTR_MORNING_MAX)) {
     if ((await ctrAsk(env, e.id, nowMs)).ok) out.asked++;
   }

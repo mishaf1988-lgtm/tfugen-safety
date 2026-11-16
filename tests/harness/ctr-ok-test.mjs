@@ -4,7 +4,7 @@
 // No asks for the reason, then makes a draft to the contractor with a fresh link, and the page keeps what was typed.
 // The morning update asks again what is still waiting and makes a new link 30 days before a permanent year ends.
 // Mocked network, nothing leaves.
-import { ctrRefOf, ctrEnd, ctrAskText, normName, matchCtr, ctrNewRow, ctrUpdate, renewDue, ctrDraftBody, fastCtrOk, fastCtrMatch, fastCtrReason, ctrAsk, ctrMorning,
+import { ctrRefOf, ctrEnd, ctrAskText, normName, matchCtr, ctrNewRow, ctrUpdate, renewDue, ctrDraftBody, fastCtrOk, fastCtrMatch, fastCtrReason, ctrAsk, ctrMorning, nagDue, endedDue,
   CTR_S_OK, CTR_S_REJ, CTR_RENEW_KEY, CTR_TRAINED } from './_build/_ctrok.mjs';
 import { fastRoute, aboutLine } from './_build/wa-hook.mjs';
 import { formHtml, readCtrToken, ctrDeps } from './_build/ctr-link.mjs';
@@ -187,6 +187,44 @@ const filled = (o) => Object.assign({ id: 'cabc1234', kind: 'perm', ins: true, d
   check('a renewal whose message failed keeps its link', mo.renew === 0 && db.talks.length === 1 && typeof JSON.parse(db.state[CTR_RENEW_KEY].value)['ctr26-9'] === 'object', mo);
   mo = await ctrMorning(WA, new Date(NOW + 864e5));
   check('the next morning sends that link, not a new one', mo.renew === 1 && db.talks.length === 1 && JSON.parse(db.state[CTR_RENEW_KEY].value)['ctr26-9'] === addD(today, 20), mo);
+
+  console.log('\n7. a link not filled, and a temporary job that ended unanswered (16/11/2026, "חמש תוספות")');
+  const sent = (o) => Object.assign({ id: 'cnag1234', kind: 'perm', ins: false, ds: null, de: null, company: 'גגות בע"מ', created_at: new Date(NOW - 11 * 864e5).toISOString(),
+    exp: new Date(NOW + 2 * 864e5).toISOString(), status: 'sent', talk: 'ctr-cnag1234' }, o || {});
+  check('nagDue: ends in 2 days = due', nagDue([sent()], NOW).length === 1);
+  check('nagDue: ends in 5 days = not yet', nagDue([sent({ exp: new Date(NOW + 5 * 864e5).toISOString() })], NOW).length === 0);
+  check('nagDue: made today (a short job) = not told', nagDue([sent({ created_at: new Date(NOW - 3600e3).toISOString() })], NOW).length === 0);
+  check('nagDue: already ended = not told', nagDue([sent({ exp: new Date(NOW - 3600e3).toISOString() })], NOW).length === 0);
+  check('nagDue: filled = not told', nagDue([sent({ status: 'filled' })], NOW).length === 0);
+  reset(); put([sent()]);
+  mo = await ctrMorning(WA, new Date(NOW));
+  const nagMsg = JSON.stringify(db.meta);
+  check('the morning tells it once, with the company and the end date', mo.nag === 1 && db.meta.length === 1 && nagMsg.indexOf('גגות') >= 0 && nagMsg.indexOf('עוד לא מילא') >= 0 && !BAD.test(nagMsg), mo);
+  check('it is marked for that link', ent('cnag1234').nag === ent('cnag1234').exp);
+  mo = await ctrMorning(WA, new Date(NOW + 864e5));
+  check('the next morning: not again', mo.nag === 0 && db.meta.length === 1, mo);
+  // a fresh link after "no" (a new exp) is told again
+  put([Object.assign(ent('cnag1234'), { exp: new Date(NOW + 2.5 * 864e5).toISOString() })]);
+  mo = await ctrMorning(WA, new Date(NOW + 864e5));
+  check('a fresh link (new end) is told again', mo.nag === 1, mo);
+  reset(); put([sent()]);
+  mo = await ctrMorning(ENV, new Date(NOW));
+  check('a message that failed is not marked (told the next morning)', mo.nag === 0 && !ent('cnag1234').nag, mo);
+
+  const tmp = (o) => filled(Object.assign({ id: 'ctmp1234', kind: 'temp', ds: addD(today, -5), de: addD(today, -1), ask_at: new Date(NOW - 22 * 3600e3).toISOString() }, o || {}));
+  check('endedDue: a temp job whose last day passed', endedDue([tmp()], today).length === 1);
+  check('endedDue: ends today = still open', endedDue([tmp({ de: today })], today).length === 0);
+  check('endedDue: a permanent one = never', endedDue([tmp({ kind: 'perm' })], today).length === 0);
+  check('endedDue: approved = never', endedDue([tmp({ status: CTR_S_OK })], today).length === 0);
+  reset(); put([tmp()]);
+  mo = await ctrMorning(WA, new Date(NOW));
+  const endMsg = JSON.stringify(db.meta);
+  check('closed with one message, and not asked again', mo.ended === 1 && mo.asked === 0 && db.meta.length === 1 && endMsg.indexOf('נסגרה') >= 0 && !BAD.test(endMsg), mo);
+  check('the request is closed', ent('ctmp1234').status === 'closed' && ent('ctmp1234').closed === 'ended');
+  mo = await ctrMorning(WA, new Date(NOW + 864e5));
+  check('the next morning: nothing more', mo.ended === 0 && mo.asked === 0 && db.meta.length === 1, mo);
+  const late = await fastCtrOk(WA, { id: 'ctmp1234', yes: true }, NOW);
+  check('a late "בצע" on it: no longer waiting', late.ref === 'ctr-gone' && db.ctr.length === 0, late);
 
   console.log(`\nctr-ok-test.mjs            ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
