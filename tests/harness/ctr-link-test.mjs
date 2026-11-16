@@ -167,7 +167,8 @@ console.log('\n4. the form, checked on the server');
   const tP = { kind: 'perm', ins: true }, tT = { kind: 'temp', ins: false, ds: today, de: addD(today, 3) };
   const W2 = [{ n: 'ישראל ישראלי', id: '012345678', sig: SIGB() }, { n: 'محمد علي', id: '987654321', sig: SIGB() }];
   const base = { company: 'אחים בע"מ', cnum: '51-234567-8', contact: 'דני', mobile: '050-1234567', email: 'a@b.co.il', place: 'אולם 2', desc: 'החלפת פאנלים בגג', workers: W2, signer: 'דני כהן', sid: '023456789', commit: '1', sig: true, works: ['hgt'] };
-  const files = (docs) => docs.map((doc) => ({ doc, size: 2000, type: ['pdf', 'application/pdf'] }));
+  // 'hgtc' = the height certificate of each of the two workers (in their rows, w = the row; 16/11/2026)
+  const files = (docs) => docs.flatMap((doc) => (doc === 'hgtc' ? [0, 1] : [null]).map((w) => ({ doc, w, size: 2000, type: ['pdf', 'application/pdf'] })));
   const ok = checkCtrForm(base, files(['ins', 'hgtc', 'plat']), tP);
   check('a complete form passes', !!ok.v && ok.v.workers.length === 2 && ok.v.cnum === '512345678' && ok.v.mobile === '0501234567' && ok.v.desc === 'החלפת פאנלים בגג' && ok.v.sid === '023456789', ok.errors);
   const miss = checkCtrForm(base, files(['ins']), tP);
@@ -201,6 +202,22 @@ console.log('\n4. the form, checked on the server');
   check('too many files: refused', !!checkCtrForm(base, files(Array(CTR_MAX_FILES + 1).fill('oth').concat(['ins', 'hgtc', 'plat'])), tP).errors);
   const extra = checkCtrForm({ ...base, works: ['hot'] }, files(['ins', 'hgtc']), tP);
   check('a file for a work that was unticked is not taken (not uploaded)', !!extra.v && extra.v.files.every((x) => x.doc !== 'hgtc'), extra.errors);
+  // 16/11/2026, Michael: "בצע: אישור לכל עובד": each worker his own height certificate
+  const pdf1 = (w) => ({ doc: 'hgtc', w, size: 2000, type: ['pdf', 'application/pdf'] });
+  const one = checkCtrForm(base, files(['ins']).concat([pdf1(0)]), tP);
+  check('height work, one certificate for two workers: refused, naming the worker without one', !!one.errors && one.errors.some((e) => e.indexOf('محمد علي') > 0 && e.indexOf('עובד 2') === 0), one.errors);
+  check('... and only him (worker 1 is not named)', !!one.errors && !one.errors.some((e) => e.indexOf('ישראל ישראלי') >= 0));
+  const two = checkCtrForm(base, files(['ins']).concat([pdf1(0), pdf1(0), pdf1(1)]), tP);
+  check('two files for one worker (front and back) and one for the other: passes, each named by its worker', !!two.v && two.v.files.filter((x) => x.wn === 'ישראל ישראלי').length === 2 && two.v.files.filter((x) => x.wn === 'محمد علي').length === 1, two.errors);
+  const gen = checkCtrForm(base, files(['ins']).concat([{ doc: 'hgtc', size: 2000, type: ['pdf', 'application/pdf'] }]), tP);
+  check('a height certificate not in a worker\'s row (the old general field): not taken, the certificate is missing', !!gen.errors && gen.errors.some((e) => e.indexOf(CTR_DOC_L.hgtc) > 0), gen.errors);
+  const ghost = checkCtrForm({ ...base, workers: W2.concat([{ n: '', id: '', sig: null }]) }, files(['ins']).concat([pdf1(0), pdf1(1), pdf1(2)]), tP);
+  check('a certificate in an empty row is not taken (not uploaded)', !!ghost.v && ghost.v.files.filter((x) => x.doc === 'hgtc').length === 2, ghost.errors);
+  const gap = checkCtrForm({ ...base, workers: [W2[0], { n: '', id: '', sig: null }, W2[1]] }, files(['ins']).concat([pdf1(0), pdf1(2)]), tP);
+  check('an empty row between workers: the certificate stays with its own worker (the row, not the place in the list)', !!gap.v && gap.v.files.some((x) => x.w === 2 && x.wn === 'محمد علي'), gap.errors);
+  const hot = checkCtrForm({ ...base, works: ['hot'] }, files(['ins']), tP);
+  check('no height work: no certificate asked of the workers', !!hot.v, hot.errors);
+  check('files: more room than before (15) but within the free plan\'s 50 calls a run (about 27 fixed + one per file)', CTR_MAX_FILES > 15 && CTR_MAX_FILES + 27 <= 45);
   check('bytes: PDF, JPG, PNG known; a renamed EXE is not', fileType(PDF())[0] === 'pdf' && fileType(PNG())[0] === 'png' && fileType(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))[0] === 'jpg' && fileType(new Uint8Array([0x4d, 0x5a, 0x90, 0, 0])) === null);
   check('every refusal is keyboard characters only', [miss, noIns, noWk, noSig].every((r) => r.errors.every((e) => !BAD.test(e))));
 }
@@ -262,7 +279,7 @@ let link, rid;
   check('document fields show only for the works ticked (a rule hides .doc that is not .on)', html.indexOf('.doc{display:none') > 0 && html.indexOf('.doc.on{display:block}') > 0);
   check('the page opens (200), the company escaped, no raw tag', page.status === 200 && html.indexOf('&lt;b&gt;') > 0 && html.indexOf('<b>טוב') < 0);
   check('the page asks for every field, the nine works and a file field per document', ['name="company"', 'name="cnum"', 'name="contact"', 'name="mobile"', 'name="email"', 'name="desc"', 'name="signer"', 'name="commit"', 'id="pad"'].every((x) => html.indexOf(x) >= 0) && html.indexOf('name="workers"') < 0
-    && CTR_WORKS.every((w) => html.indexOf('value="' + w + '"') >= 0) && CTR_DOCS.every((d) => html.indexOf('name="f_' + d[0] + '"') >= 0));
+    && CTR_WORKS.every((w) => html.indexOf('value="' + w + '"') >= 0) && CTR_DOCS.every((d) => (d[0] === 'hgtc') === (html.indexOf('name="f_' + d[0] + '"') < 0)) && /class=\\?"wf\\?"/.test(html));
   check('the page reads no factory data (no employees list)', db.empReads === 0 && !/111111118/.test(html));
   check('the page: CSP with a nonce, no-store, not indexed, no frame', /script-src 'nonce-/.test(page.headers.get('content-security-policy')) && page.headers.get('cache-control') === 'no-store' && page.headers.get('x-frame-options') === 'DENY');
   check('the page text is keyboard characters only', !BAD.test(html.replace(/<script[\s\S]*?<\/script>/g, '')));
@@ -273,7 +290,7 @@ const post = async (fields, files) => {
   const fd = new FormData();
   fd.append('k', new URL(link).searchParams.get('k'));
   for (const [k, v] of Object.entries(fields)) for (const x of [].concat(v)) fd.append(k, x);
-  for (const [k, list] of Object.entries(files || {})) for (const [name, u8] of list) fd.append('f_' + k, new Blob([u8]), name);
+  for (const [k, list] of Object.entries(files || {})) for (const [name, u8] of list) fd.append(/^wf_\d+$/.test(k) ? k : 'f_' + k, new Blob([u8]), name);
   // as a browser sends it: the multipart body with its size stated
   const pre = new Request(ORIGIN + '/api/ctr-link', { method: 'POST', body: fd });
   const buf = new Uint8Array(await pre.arrayBuffer());
@@ -283,16 +300,16 @@ const post = async (fields, files) => {
 const good = { company: 'בונים בע"מ', cnum: '512345678', contact: 'דני', mobile: '0501234567', email: 'd@b.co.il', desc: 'התקנת מדפים במחסן <b>הצפוני</b>', signer: 'דני כהן', sid: '023456789', commit: '1', sig: SIG, works: ['hgt', 'frk'],
   wn: ['ישראל ישראלי', 'Ahmad Nasser', ''], wi: ['012345678', '223456785', ''], ws: [SIG, SIG, ''] };
 {
-  let r = await post(good, { ins: [['a.pdf', PDF()]], hgtc: [['b.pdf', PDF()]] });
+  let r = await post(good, { ins: [['a.pdf', PDF()]], wf_0: [['b.pdf', PDF()]], wf_1: [['b2.pdf', PDF()]] });
   check('refused on the server: the forklift licence missing; the platform report (optional) is not asked for', r.status === 400 && r.html.indexOf(CTR_DOC_L.frkl) > 0 && r.html.indexOf('חסר מסמך: ' + CTR_DOC_L.plat) < 0, r.html.slice(0, 300));
   check('a refused form saves nothing and sends nothing', db.puts.length === 0 && db.mails.length === 0 && stateList(db.state[CTR_STATE].value)[0].status === 'sent');
-  r = await post(good, { ins: [['a.pdf', PDF()]], hgtc: [['b.pdf', PDF()]], plat: [['c.pdf', PDF()]], frkl: [['d.exe', new Uint8Array([0x4d, 0x5a, 0x90, 0, 0, 0, 0])]] });
+  r = await post(good, { ins: [['a.pdf', PDF()]], wf_0: [['b.pdf', PDF()]], wf_1: [['b2.pdf', PDF()]], plat: [['c.pdf', PDF()]], frkl: [['d.exe', new Uint8Array([0x4d, 0x5a, 0x90, 0, 0, 0, 0])]] });
   check('a file named .pdf/.exe that is not a PDF/JPG/PNG by its bytes: refused', r.status === 400 && db.puts.length === 0);
-  r = await post(good, { ins: [['a.pdf', PDF()]], hgtc: [['b.pdf', PDF()]], plat: [['c.png', PNG()]], frkl: [['d.pdf', PDF()]], oth: [['e.pdf', PDF()]] });
+  r = await post(good, { ins: [['a.pdf', PDF()]], wf_0: [['b.pdf', PDF()]], wf_1: [['b2.pdf', PDF()]], plat: [['c.png', PNG()]], frkl: [['d.pdf', PDF()]], oth: [['e.pdf', PDF()]] });
   check('a complete form: 200, the new-worker link on the page', r.status === 200 && /\/api\/talk\?k=/.test(r.html), r.html.slice(0, 300));
   const folder = ctrFolder('בונים בע"מ', today.slice(0, 4));
   const inFolder = db.puts.filter((p) => p.folder === folder);
-  check('five files, the summary PDF and form 146.03 (Word + PDF) into the contractor folder (company sanitized), never replacing a file', inFolder.length === 8 && db.puts.every((p) => p.conflict === 'rename') && inFolder.some((p) => /\.pdf$/.test(p.name) && p.type === 'application/pdf' && p.name.indexOf('טופס אישור') > 0), db.puts.map((p) => p.folder + '|' + p.name));
+  check('six files (a height certificate per worker), the summary PDF and form 146.03 (Word + PDF) into the contractor folder (company sanitized), never replacing a file', inFolder.length === 9 && db.puts.every((p) => p.conflict === 'rename') && inFolder.some((p) => /\.pdf$/.test(p.name) && p.type === 'application/pdf' && p.name.indexOf('טופס אישור') > 0), db.puts.map((p) => p.folder + '|' + p.name));
   const fW = inFolder.find((p) => /146\.03 חתום - .*\.docx$/.test(p.name)), fP = inFolder.find((p) => /146\.03 חתום - .*\.pdf$/.test(p.name));
   check('form 146.03: Word and PDF under one name, DD-MM-YYYY HH-MM - the form - the company', fW && fP && fW.name.replace(/\.docx$/, '') === fP.name.replace(/\.pdf$/, '') && /^\d{2}-\d{2}-\d{4} \d{2}-\d{2} - /.test(fW.name), inFolder.map((p) => p.name));
   check('file names: DD-MM-YYYY - the document - n.<type by bytes>', inFolder.some((p) => /^\d{2}-\d{2}-\d{4} - .+ - 1\.png$/.test(p.name)));
@@ -304,14 +321,15 @@ const good = { company: 'בונים בע"מ', cnum: '512345678', contact: 'דנ�
   check('one mail, to Michael only (the connected mailbox)', db.mails.length === 1 && m.to.join() === 'owner@example.test' && m.cc.length === 0);
   check('the mail subject names the company, never an ID number', m.subject.indexOf('בונים') > 0 && !/\d{5,}/.test(m.subject), m.subject);
   check('the mail lists the works, every document and what is optional and not given, the commitment', m.html.indexOf(workLabel('frk')) > 0 && m.html.indexOf(CTR_DOC_L.plat) > 0 && m.html.indexOf(CTR_DOC_L.oth) > 0 && m.html.indexOf('התחייבות') > 0 && m.html.indexOf('דני כהן') > 0);
-  check('the mail attaches form 146.03 first, then the summary and the files (small enough)', m.att.length === 7 && m.att[0].name.indexOf('146.03') > 0 && m.att[1].name.indexOf('טופס אישור') > 0 && m.att.every((a) => a.contentBytes && a['@odata.type'] === '#microsoft.graph.fileAttachment'), m.att.map((a) => a.name));
+  check('each worker\'s certificate is named by him in the folder', inFolder.some((p) => p.name.indexOf('אישור עבודה בגובה - ישראל ישראלי - 1.pdf') > 0) && inFolder.some((p) => p.name.indexOf('אישור עבודה בגובה - Ahmad Nasser - 1.pdf') > 0), inFolder.map((p) => p.name));
+  check('the mail attaches form 146.03 first, then the summary and the files (small enough)', m.att.length === 8 && m.att[0].name.indexOf('146.03') > 0 && m.att[1].name.indexOf('טופס אישור') > 0 && m.att.every((a) => a.contentBytes && a['@odata.type'] === '#microsoft.graph.fileAttachment'), m.att.map((a) => a.name));
   check('the mail: the description (escaped), 2 workers signed, the form linked', m.html.indexOf('התקנת מדפים') > 0 && m.html.indexOf('&lt;b&gt;') > 0 && m.html.indexOf('עובדים שחתמו') > 0 && /<td[^>]*>2 \(/.test(m.html) && m.html.indexOf('146.03 חתום') > 0);
   check('the mail holds no full ID number of a worker', m.html.indexOf('012345678') < 0);
   check('the mail is keyboard characters only, and RTL', !BAD.test(m.html.replace(/<[^>]+>/g, ' ')) && /^<div dir="rtl" style="direction:rtl;text-align:right/.test(m.html));
   const st = stateList(db.state[CTR_STATE].value)[0];
-  check('the request is marked filled, with the files, folder, mail, form and reads (no worker ID in state)', st.status === 'filled' && st.files === 5 && st.folder === folder && st.mail === 'sent' && st.workers === 2 && st.reads === 2 && /146\.03/.test(decodeURIComponent(st.form || '')) && !st.form_err && JSON.stringify(st).indexOf('012345678') < 0 && JSON.stringify(st).indexOf('023456789') < 0, st);
-  const again = await post(good, { ins: [['a.pdf', PDF()]], hgtc: [['b.pdf', PDF()]], plat: [['c.pdf', PDF()]], frkl: [['d.pdf', PDF()]] });
-  check('sent once: a second send saves nothing more', again.status === 200 && db.puts.length === 8 + 1 /* summary html source */ && db.mails.length === 1, db.puts.length);
+  check('the request is marked filled, with the files, folder, mail, form and reads (no worker ID in state)', st.status === 'filled' && st.files === 6 && st.folder === folder && st.mail === 'sent' && st.workers === 2 && st.reads === 2 && /146\.03/.test(decodeURIComponent(st.form || '')) && !st.form_err && JSON.stringify(st).indexOf('012345678') < 0 && JSON.stringify(st).indexOf('023456789') < 0, st);
+  const again = await post(good, { ins: [['a.pdf', PDF()]], wf_0: [['b.pdf', PDF()]], wf_1: [['b2.pdf', PDF()]], plat: [['c.pdf', PDF()]], frkl: [['d.pdf', PDF()]] });
+  check('sent once: a second send saves nothing more', again.status === 200 && db.puts.length === 9 + 1 /* summary html source */ && db.mails.length === 1, db.puts.length);
   // a cut send (security review 16/11/2026): filled, no files, claimed long ago = open again, and a send goes through
   const keepState = db.state[CTR_STATE];
   const cut = stateList(keepState.value).map((x) => (x.id === rid ? { ...x, files: undefined, at: new Date(Date.now() - CTR_STUCK_MS - 60000).toISOString() } : x));
@@ -319,8 +337,8 @@ const good = { company: 'בונים בע"מ', cnum: '512345678', contact: 'דנ�
   const reOpenCut = await onRequest({ request: new Request(link), env: ENV });
   check('a send cut more than 10 minutes ago: the form opens again', reOpenCut.status === 200 && (await reOpenCut.text()).indexOf('id="wl"') > 0);
   const p0 = db.puts.length, mm0 = db.mails.length;
-  const resend = await post(good, { ins: [['a.pdf', PDF()]], hgtc: [['b.pdf', PDF()]], plat: [['c.pdf', PDF()]], frkl: [['d.pdf', PDF()]] });
-  check('... and the send goes through: files, form, one more mail, files set', resend.status === 200 && db.puts.length > p0 && db.mails.length === mm0 + 1 && stateList(db.state[CTR_STATE].value)[0].files === 4, resend.html.slice(0, 200));
+  const resend = await post(good, { ins: [['a.pdf', PDF()]], wf_0: [['b.pdf', PDF()]], wf_1: [['b2.pdf', PDF()]], plat: [['c.pdf', PDF()]], frkl: [['d.pdf', PDF()]] });
+  check('... and the send goes through: files, form, one more mail, files set', resend.status === 200 && db.puts.length > p0 && db.mails.length === mm0 + 1 && stateList(db.state[CTR_STATE].value)[0].files === 5, resend.html.slice(0, 200));
   const fresh = stateList(keepState.value).map((x) => (x.id === rid ? { ...x, files: undefined, at: new Date().toISOString() } : x));
   db.state[CTR_STATE] = { value: JSON.stringify(fresh), updated_at: new Date().toISOString() };
   check('a send claimed a minute ago with no files yet (still running): "already sent", no second send', (await post(good, {})).status === 200 && db.mails.length === mm0 + 1);
