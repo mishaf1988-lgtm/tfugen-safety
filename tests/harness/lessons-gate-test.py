@@ -1,5 +1,8 @@
 # .github/scripts/lessons-gate.py: a fix PR must carry its lesson.
 import importlib.util, os, subprocess, sys
+# 16/11/2026: the gate reads the branch's own diff (origin/main...HEAD) when BASE is unset, so a real regex change in
+# index.html on the branch under test turned these synthetic cases red. An empty diff (HEAD..HEAD) unless a case sets it.
+os.environ['BASE'] = 'HEAD'
 P = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '.github', 'scripts', 'lessons-gate.py')
 spec = importlib.util.spec_from_file_location('gate', P); gate = importlib.util.module_from_spec(spec); spec.loader.exec_module(gate)
 passed = failed = 0

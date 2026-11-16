@@ -492,6 +492,24 @@ console.log('\n8. never a factory training');
   check('index.html: _tbtCtr exists', !!fn);
   const ctx = {}; vm.runInNewContext(fn ? fn[0] : '', ctx);
   check('_tbtCtr: true for a contractor talk only', ctx._tbtCtr && ctx._tbtCtr({ kind: 'contractor' }) === true && ctx._tbtCtr({ kind: 'annual' }) === false && ctx._tbtCtr(null) === false);
+  // 16/11/2026 (DECISIONS "חמש תוספות", 5): the contractor's screen lists its workers, who is at height and until when
+  const grab = (name) => { const a = html.indexOf('function ' + name + '('); return html.slice(a, html.indexOf('\n}', a) + 2); };
+  const one1 = (name) => { const a = html.indexOf('function ' + name + '('); return html.slice(a, html.indexOf('\n', a)); };
+  const ctx2 = { DB: { toolbox_talks: [{ id: 'ctr-cq1', kind: 'contractor', dept: 'גגות בע"מ' }, { id: 'ctr-cq2', kind: 'contractor', dept: 'גגות' }, { id: 'w1', kind: 'weekly', dept: 'גגות' }],
+    toolbox_reads: [
+      { id: 'r1', talk_id: 'ctr-cq1', emp_name: 'Rami Levi', id_no: '211111117', read_at: '2026-11-16T10:00:00Z', job: 'עבודה בגובה', equip: { hgt: true, e: '2027-01-01', files: ['https://od.example/a', 'javascript:alert(1)'] }, doc_url: 'https://od.example/f' },
+      { id: 'r2', talk_id: 'ctr-cq2', emp_name: 'Dana <b>Cohen</b>', id_no: '322222226', read_at: '2026-11-17T10:00:00Z' },
+      { id: 'r3', talk_id: 'ctr-cq2', emp_name: 'Rami Levi', id_no: '211111117', read_at: '2026-11-10T10:00:00Z' },
+      { id: 'r4', talk_id: 'w1', emp_name: 'עובד מפעל', id_no: '1', read_at: '2026-11-17T10:00:00Z' },
+      { id: 'r5', talk_id: 'ctr-cq1', emp_name: 'Old Cert', id_no: '9', read_at: '2026-11-15T10:00:00Z', job: 'עבודה בגובה', equip: { hgt: true, e: '2020-01-01', files: [] } }] } };
+  vm.runInNewContext([one1('esc'), one1('escU'), one1('fd'), one1('du'), one1('_tbtCtr'), one1('_ctrNorm'), grab('_ctrWorkers'), grab('_ctrWorkersHtml')].join('\n'), ctx2);
+  const wsl = ctx2._ctrWorkers({ id: 'ctr26-cq1', n: 'גגות' });
+  check('screen: the workers of its talks (by request id and by the same name), not a factory talk; one row per ID, the newest', wsl.length === 3 && wsl.map((r) => r.id).join() === 'r2,r1,r5', wsl.map((r) => r.id));
+  const wh = ctx2._ctrWorkersHtml({ id: 'ctr26-cq1', n: 'גגות' });
+  check('screen: at height with the date and the certificate link; an expired one says so; others "not at height"', wh.indexOf('בגובה, אישור עד 01/01/2027') > 0 && wh.indexOf('href="https://od.example/a"') > 0 && wh.indexOf('(פג)') > 0 && wh.indexOf('לא בגובה') > 0 && wh.indexOf('טופס חתום') > 0, wh);
+  check('screen: names escaped, a javascript: link dropped', wh.indexOf('<b>Cohen') < 0 && wh.indexOf('javascript:') < 0);
+  check('screen: no workers = says so', ctx2._ctrWorkersHtml({ id: 'ctr26-zz', n: 'אחר' }).indexOf('עוד לא חתמו') > 0);
+  check('screen: shown on the contractor view', /if\(tbl==='ctr'\)html\+=_ctrWorkersHtml\(rec\);/.test(html));
   const rTbt = html.slice(html.indexOf('function rTbt()'), html.indexOf('function rTbt()') + 800);
   check('the trainings list (rTbt) leaves contractor talks out', /DB\.toolbox_talks\|\|\[\]\)\.filter\(function\(t\)\{return !_tbtCtr\(t\);\}\)/.test(rTbt));
   check('the worker card\'s trainings leave them out', /filter\(function\(t\)\{return t&&!_tbtCtr\(t\)&&\(mine\[t\.id\]/.test(html));
