@@ -1,14 +1,18 @@
 // The contractor approval link (15/11/2026, phase 1): the assistant's op ctr_link makes a request and a draft
 // contractor talk; the contractor's page asks for the details, the works and the documents those works need (refused on
 // the server, one message per missing item), the commitment and a finger signature; the files go to the contractor's
-// folder and a copy to Michael's mail; every worker of the contractor signs the safety instructions in talk.js (kind
-// 'contractor'), which no list of factory trainings shows. Mocked network, nothing leaves.
+// folder and a copy to Michael's mail. Since 16/11/2026 the page shows the instructions of form 146.03 and every worker
+// signs his own row (name, ID, finger) on the same phone; form 146.03 is filled with the rows and the signatures inside
+// its tables (functions/_ctrform.js) and each worker becomes a signature of the talk. A worker who joins later signs in
+// talk.js (kind 'contractor'), which no list of factory trainings shows. Mocked network, nothing leaves.
 import fs from 'fs';
 import vm from 'vm';
-import { onRequest, ctrDeps, makeCtrToken, readCtrToken, ctrLinkCheck, ctrLinkCreate, ctrLinkText, checkCtrForm, parseWorkers, mailHtml, summaryHtml, formHtml,
-  pickAttach, MAIL_BUDGET, CTR_MAX_FILES, workLabel, MAIL_SUBJECT } from './_build/ctr-link.mjs';
+import { onRequest, ctrDeps, makeCtrToken, readCtrToken, ctrLinkCheck, ctrLinkCreate, ctrLinkText, checkCtrForm, checkWorkers, mailHtml, summaryHtml, formHtml,
+  pickAttach, MAIL_BUDGET, CTR_MAX_FILES, workLabel, MAIL_SUBJECT, ROW_HTML, buildForm } from './_build/ctr-link.mjs';
+import { fillCtrForm, pickTemplate, FORM_ROWS } from './_build/_ctrform.mjs';
+import { readZip, writeZip, entryText } from './_build/_xlsxpatch.mjs';
 import { KIND_CTR, CTR_PREFIX, CTR_STATE, CTR_WORKS, CTR_DOCS, CTR_DOC_L, requiredDocs, optionalDocs, missingDocs, missingMsg, ctrLinkId, parseCtrLinkId, linkTtlDays, workerTtlDays,
-  safeName, ctrFolder, CTR_DIR, stateAdd, statePatch, stateList, CTR_STATE_MAX, INSTR_MISSING, isInstrMissing, CTR_OK } from './_build/_ctr.mjs';
+  safeName, ctrFolder, CTR_DIR, stateAdd, statePatch, stateList, CTR_STATE_MAX, INSTR_MISSING, isInstrMissing, CTR_OK, CTR_SIGN_MAX } from './_build/_ctr.mjs';
 import { onRequest as talkRequest, PERM_KINDS, TYPED_KINDS, makePermToken, talkUrl, ctrSignDeps, ctrName, fileCtrSign } from './_build/talk.mjs';
 import { onRequest as rdbRequest } from './_build/routine-db.mjs';
 import { latestTalk } from './_build/weekly-digest.mjs';
@@ -57,7 +61,7 @@ globalThis.fetch = async (url, init) => {
     return json(t ? [{ ...t }] : []);
   }
   if (u.startsWith(SB + '/rest/v1/toolbox_reads')) {
-    if (m === 'POST') { const r = JSON.parse(init.body); db.reads.push(r); return new Response(null, { status: 201 }); }
+    if (m === 'POST') { for (const r of [].concat(JSON.parse(init.body))) db.reads.push(r); return new Response(null, { status: 201 }); }
     if (m === 'PATCH') { const id = q(u, 'id').slice(3); const r = db.reads.find((x) => x.id === id); if (r) Object.assign(r, JSON.parse(init.body)); return new Response(null, { status: 204 }); }
     const tid = (q(u, 'talk_id') || '').slice(3), like = q(u, 'emp_id');
     return json(db.reads.filter((r) => r.talk_id === tid && (!like || (like.startsWith('like.') ? r.emp_id.startsWith(like.slice(5).replace(/\*$/, '')) : r.emp_id === like.slice(3)))).map((r) => ({ id: r.id })));
@@ -66,12 +70,27 @@ globalThis.fetch = async (url, init) => {
   if (u.startsWith(SB + '/storage/v1/object/')) { db.storage++; return json({ Key: 'x' }); }
   return json([]);
 };
+// A small form 146.03: the declaration sentence, the declaration table and the workers table with 8 empty rows (the live
+// template's structure, 16/11/2026; its text is the factory's, its parts are only these).
+const WNS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"';
+const XP = (t) => '<w:p><w:pPr><w:bidi/></w:pPr><w:r><w:rPr><w:b w:val="false"/><w:bCs w:val="false"/><w:rtl/></w:rPr><w:t xml:space="preserve">' + t + '</w:t></w:r></w:p>';
+const XR = (...c) => '<w:tr>' + c.map((t) => '<w:tc>' + XP(t) + '</w:tc>').join('') + '</w:tr>';
+const TPL_DOC = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ' + WNS + '><w:body>' + XP('הצהרת הקבלן') + XP('קראתי את ההוראות, הבנתי אותן, ואני מתחייב לקיים אותן ולהדריך בהן את עובדיי.')
+  + '<w:tbl>' + XR('שם הקבלן:', 'ת.ז.:', 'ח.פ / עוסק מורשה:') + XR('תאריך:', 'חתימה:', '') + '</w:tbl>' + XP('עובדי הקבלן')
+  + '<w:tbl>' + XR('שם העובד', 'ת.ז.', 'חתימה') + Array(8).fill(XR('', '', '')).join('') + '</w:tbl></w:body></w:document>';
+const TPL = await writeZip([
+  { name: '[Content_Types].xml', text: '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default ContentType="application/xml" Extension="xml"/><Override ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml" PartName="/word/document.xml"/></Types>' },
+  { name: 'word/document.xml', text: TPL_DOC },
+  { name: 'word/_rels/document.xml.rels', text: '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId9" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.png"/></Relationships>' },
+  { name: 'word/media/logo.png', bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3]) }]);
+const docXml = async (bytes) => entryText(readZip(bytes).find((e) => e.name === 'word/document.xml'));
 // Graph: never called; the deps record what would be sent.
 const fakeDeps = {
   accessToken: async () => ({ token: 'gt', email: 'owner@example.test' }),
   putFile: async (token, folder, name, bytes, type, conflict) => { db.puts.push({ folder, name, size: bytes.length, type, conflict }); return { webUrl: 'https://od.example/' + encodeURIComponent(name) }; },
   sendMailTo: async (token, to, cc, subject, html, att) => { db.mails.push({ to, cc, subject, html, att: att || [] }); return true; },
   graphPdf: async () => { const u = new Uint8Array(900); u.set([0x25, 0x50, 0x44, 0x46]); return u; },
+  formTemplate: async () => { db.tplReads = (db.tplReads || 0) + 1; if (db.tplFail) throw new Error('form 146.03 not in the folder'); return { name: 'טופס 146.03 - הוראות בטיחות לקבלני חוץ - 16.10.2026.docx', bytes: TPL }; },
 };
 Object.assign(ctrDeps, fakeDeps);
 Object.assign(ctrSignDeps, fakeDeps);
@@ -79,6 +98,7 @@ Object.assign(ctrSignDeps, fakeDeps);
 const PDF = () => { const u = new Uint8Array(2000); u.set([0x25, 0x50, 0x44, 0x46, 0x2d]); return u; };
 const PNG = () => { const u = new Uint8Array(600); u.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]); return u; };
 const SIG = 'data:image/png;base64,' + Buffer.from(PNG()).toString('base64');
+const SIGB = () => PNG();
 
 console.log('\n1. the link id and its life');
 {
@@ -113,15 +133,15 @@ console.log('\n2. the documents each work needs (Michael\'s table)');
   for (const w of CTR_WORKS) {
     for (const ins of [false, true]) {
       const got = requiredDocs([w], ins);
-      const exp = ['wkr'].concat(ins ? ['ins'] : []).concat(want[w]);
+      const exp = (ins ? ['ins'] : []).concat(want[w]);
       check(w + (ins ? ' with' : ' without') + ' insurance: ' + got.join(','), got.length === exp.length && exp.every((k) => got.indexOf(k) >= 0), got);
     }
   }
   check('nine works: the eight of the works list and the forklift', CTR_WORKS.join() === 'hot,hgt,elc,eng,lft,chm,cnf,rof,frk' && workLabel('frk') && workLabel('hot') !== 'hot');
   check('two works that need the same document ask for it once', requiredDocs(['hgt', 'rof'], false).filter((k) => k === 'hgtc').length === 1);
   check('without insurance it is optional; with it, only "other" is', optionalDocs(false).join() === 'ins,oth' && optionalDocs(true).join() === 'oth');
-  check('missing: each item by itself', missingDocs(['wkr', 'ins', 'plat'], { plat: 1 }, false).join() === 'wkr,ins');
-  check('missing: the workers list typed counts as the document', missingDocs(['wkr', 'ins'], { ins: 1 }, true).length === 0);
+  check('missing: each item by itself', missingDocs(['ins', 'plat', 'frkl'], { plat: 1 }).join() === 'ins,frkl');
+  check('the workers list is no document any more (16/11/2026: a signed row per worker on the page)', !CTR_DOC_L.wkr && CTR_DOCS.every((d) => d[0] !== 'wkr'));
   const msgs = missingMsg(['ins', 'frkl']);
   check('one clear Hebrew message per missing item, naming the document', msgs.length === 2 && msgs[0].indexOf(CTR_DOC_L.ins) > 0 && msgs[1].indexOf(CTR_DOC_L.frkl) > 0 && /^חסר/.test(msgs[0]), msgs);
   check('every document has a label, keyboard characters only', CTR_DOCS.every((d) => d[1] && !BAD.test(d[1])));
@@ -143,20 +163,27 @@ console.log('\n3. the folder name');
 console.log('\n4. the form, checked on the server');
 {
   const tP = { kind: 'perm', ins: true }, tT = { kind: 'temp', ins: false, ds: today, de: addD(today, 3) };
-  const base = { company: 'אחים בע"מ', cnum: '51-234567-8', contact: 'דני', mobile: '050-1234567', email: 'a@b.co.il', place: 'אולם 2', workers: 'ישראל ישראלי 012345678\nמוחמד עלי, 987654321', signer: 'דני כהן', commit: '1', sig: true, works: ['hgt'] };
+  const W2 = [{ n: 'ישראל ישראלי', id: '012345678', sig: SIGB() }, { n: 'محمد علي', id: '987654321', sig: SIGB() }];
+  const base = { company: 'אחים בע"מ', cnum: '51-234567-8', contact: 'דני', mobile: '050-1234567', email: 'a@b.co.il', place: 'אולם 2', desc: 'החלפת פאנלים בגג', workers: W2, signer: 'דני כהן', sid: '023456789', commit: '1', sig: true, works: ['hgt'] };
   const files = (docs) => docs.map((doc) => ({ doc, size: 2000, type: ['pdf', 'application/pdf'] }));
   const ok = checkCtrForm(base, files(['ins', 'hgtc', 'plat']), tP);
-  check('a complete form passes', !!ok.v && ok.v.workers.length === 2 && ok.v.cnum === '512345678' && ok.v.mobile === '0501234567', ok.errors);
+  check('a complete form passes', !!ok.v && ok.v.workers.length === 2 && ok.v.cnum === '512345678' && ok.v.mobile === '0501234567' && ok.v.desc === 'החלפת פאנלים בגג' && ok.v.sid === '023456789', ok.errors);
   const miss = checkCtrForm(base, files(['ins']), tP);
   check('height work without the height certificate and the platform report: two messages, one per item', miss.errors && miss.errors.filter((e) => /^חסר מסמך/.test(e)).length === 2, miss.errors);
   const noIns = checkCtrForm(base, files(['hgtc', 'plat']), tP);
   check('insurance required by the link and not attached: refused', noIns.errors && noIns.errors.some((e) => e.indexOf(CTR_DOC_L.ins) > 0));
   const optIns = checkCtrForm({ ...base, place: 'x2' }, files(['hgtc', 'plat']), tT);
   check('insurance not required: passes, and noted as optional and not given', !!optIns.v && optIns.v.optMissing.indexOf('ins') >= 0, optIns.errors);
-  const noWk = checkCtrForm({ ...base, workers: '' }, files(['ins', 'hgtc', 'plat']), tP);
-  check('no workers list typed and no file: refused', noWk.errors && noWk.errors.some((e) => e.indexOf(CTR_DOC_L.wkr) > 0));
-  check('the workers list as a file instead: passes', !!checkCtrForm({ ...base, workers: '' }, files(['wkr', 'ins', 'hgtc', 'plat']), tP).v);
-  check('a workers line without an ID: refused naming the line', (checkCtrForm({ ...base, workers: 'ישראל ישראלי\n' }, files(['ins', 'hgtc', 'plat']), tP).errors || []).some((e) => /2|1/.test(e) && e.indexOf('שורה') > 0));
+  const noWk = checkCtrForm({ ...base, workers: [] }, files(['ins', 'hgtc', 'plat']), tP);
+  check('no worker signed: refused (at least one row)', noWk.errors && noWk.errors.some((e) => e.indexOf('לפחות עובד') >= 0), noWk.errors);
+  check('a wholly empty row is skipped', checkCtrForm({ ...base, workers: W2.concat([{ n: '', id: '', sig: null }]) }, files(['ins', 'hgtc', 'plat']), tP).v.workers.length === 2);
+  const noSig = checkCtrForm({ ...base, workers: [W2[0], { n: 'דוד לוי', id: '123456782', sig: null }] }, files(['ins', 'hgtc', 'plat']), tP);
+  check('a worker without a signature: refused naming his row', noSig.errors && noSig.errors.some((e) => e.indexOf('עובד 2') === 0), noSig.errors);
+  check('a worker without an ID, or with a name of digits: refused', !!checkCtrForm({ ...base, workers: [{ n: 'דוד לוי', id: '', sig: SIGB() }] }, files(['ins', 'hgtc', 'plat']), tP).errors && !!checkWorkers([{ n: 'A1', id: '123456782', sig: SIGB() }]).errors);
+  check('the same ID twice (leading zeros too): refused', !!checkWorkers([{ n: 'א ב', id: '012345678', sig: SIGB() }, { n: 'ג ד', id: '12345678', sig: SIGB() }]).errors);
+  check('more than ' + CTR_SIGN_MAX + ' workers in one send: refused, pointing to the new-worker link', (checkWorkers(Array.from({ length: CTR_SIGN_MAX + 1 }, (_, i) => ({ n: 'עובד א', id: String(100000 + i), sig: SIGB() }))).errors || [''])[0].indexOf('לעובד חדש') > 0);
+  check('the description is required, at most 600 characters', !!checkCtrForm({ ...base, desc: '' }, files(['ins', 'hgtc', 'plat']), tP).errors && !!checkCtrForm({ ...base, desc: 'x'.repeat(601) }, files(['ins', 'hgtc', 'plat']), tP).errors);
+  check('the signer\'s ID is required', !!checkCtrForm({ ...base, sid: '' }, files(['ins', 'hgtc', 'plat']), tP).errors);
   const each = [
     ['company', { company: 'x' }], ['company number of 8 digits', { cnum: '12345678' }], ['company number with letters', { cnum: '12345678a' }], ['mobile', { mobile: '031234567' }],
     ['email', { email: 'not-mail' }], ['no works', { works: [] }], ['unknown work', { works: ['hgt', 'drop'] }], ['signer', { signer: '' }],
@@ -170,8 +197,7 @@ console.log('\n4. the form, checked on the server');
   const extra = checkCtrForm({ ...base, works: ['hot'] }, files(['ins', 'hgtc']), tP);
   check('a file for a work that was unticked is not taken (not uploaded)', !!extra.v && extra.v.files.every((x) => x.doc !== 'hgtc'), extra.errors);
   check('bytes: PDF, JPG, PNG known; a renamed EXE is not', fileType(PDF())[0] === 'pdf' && fileType(PNG())[0] === 'png' && fileType(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))[0] === 'jpg' && fileType(new Uint8Array([0x4d, 0x5a, 0x90, 0, 0])) === null);
-  check('parseWorkers: name + ID per line', parseWorkers('א ב 123456789\n').list.length === 1 && !!parseWorkers('just a name').error);
-  check('every refusal is keyboard characters only', [miss, noIns, noWk].every((r) => r.errors.every((e) => !BAD.test(e))));
+  check('every refusal is keyboard characters only', [miss, noIns, noWk, noSig].every((r) => r.errors.every((e) => !BAD.test(e))));
 }
 
 console.log('\n5. the op ctr_link (validation)');
@@ -220,10 +246,17 @@ let link, rid;
   const rdb = fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
   check('ctr_instructions: Michael\'s text can be set and read; ctr_links can be read', /'ctr_links', 'ctr_instructions'\];/.test(rdb) && /'agents_registry', 'ctr_instructions'\];/.test(rdb));
 
+  const notReady = await onRequest({ request: new Request(link), env: ENV });
+  check('instructions not in yet: the page says so (503), no form (the workers would sign on nothing)', notReady.status === 503 && (await notReady.text()).indexOf('name="wn"') < 0);
+  db.state.ctr_instructions = { value: 'הוראות הבטיחות לקבלני חוץ: לבוש, היתרי עבודה, פינוי, דיווח על אירוע. <script>x</script>', updated_at: new Date().toISOString() };
   const page = await onRequest({ request: new Request(link), env: ENV });
   const html = await page.text();
+  check('the page shows the instructions whole, escaped, before the workers sign', html.indexOf('לבוש, היתרי עבודה') > 0 && html.indexOf('&lt;script&gt;x') > 0 && html.indexOf('לבוש') < html.indexOf('id="wl"'));
+  check('a row per worker: name, ID, signature; "add a worker"; the row is copied by the script (no link data in it)', ['name="wn"', 'name="wi"', 'name="ws"', '<canvas>'].every((x) => ROW_HTML.indexOf(x) >= 0) && html.indexOf('id="add"') > 0 && html.indexOf('id="wl"') > 0 && html.indexOf(JSON.stringify(ROW_HTML)) > 0);
+  check('the description is a required field, 600 at most; the signer\'s ID is asked', /<textarea id="desc" name="desc" maxlength="600" required>/.test(html) && html.indexOf('name="sid"') > 0);
+  check('document fields show only for the works ticked (a rule hides .doc that is not .on)', html.indexOf('.doc{display:none') > 0 && html.indexOf('.doc.on{display:block}') > 0);
   check('the page opens (200), the company escaped, no raw tag', page.status === 200 && html.indexOf('&lt;b&gt;') > 0 && html.indexOf('<b>טוב') < 0);
-  check('the page asks for every field, the nine works and a file field per document', ['name="company"', 'name="cnum"', 'name="contact"', 'name="mobile"', 'name="email"', 'name="workers"', 'name="signer"', 'name="commit"', 'id="pad"'].every((x) => html.indexOf(x) >= 0)
+  check('the page asks for every field, the nine works and a file field per document', ['name="company"', 'name="cnum"', 'name="contact"', 'name="mobile"', 'name="email"', 'name="desc"', 'name="signer"', 'name="commit"', 'id="pad"'].every((x) => html.indexOf(x) >= 0) && html.indexOf('name="workers"') < 0
     && CTR_WORKS.every((w) => html.indexOf('value="' + w + '"') >= 0) && CTR_DOCS.every((d) => html.indexOf('name="f_' + d[0] + '"') >= 0));
   check('the page reads no factory data (no employees list)', db.empReads === 0 && !/111111118/.test(html));
   check('the page: CSP with a nonce, no-store, not indexed, no frame', /script-src 'nonce-/.test(page.headers.get('content-security-policy')) && page.headers.get('cache-control') === 'no-store' && page.headers.get('x-frame-options') === 'DENY');
@@ -242,33 +275,38 @@ const post = async (fields, files) => {
   const r = await onRequest({ request: new Request(ORIGIN + '/api/ctr-link', { method: 'POST', body: buf, headers: { 'cf-connecting-ip': '1.2.3.4', 'content-type': pre.headers.get('content-type'), 'content-length': String(buf.length) } }), env: ENV });
   return { status: r.status, html: await r.text() };
 };
-const good = { company: 'בונים בע"מ', cnum: '512345678', contact: 'דני', mobile: '0501234567', email: 'd@b.co.il', workers: 'ישראל ישראלי 012345678', signer: 'דני כהן', commit: '1', sig: SIG, works: ['hgt', 'frk'] };
+const good = { company: 'בונים בע"מ', cnum: '512345678', contact: 'דני', mobile: '0501234567', email: 'd@b.co.il', desc: 'התקנת מדפים במחסן <b>הצפוני</b>', signer: 'דני כהן', sid: '023456789', commit: '1', sig: SIG, works: ['hgt', 'frk'],
+  wn: ['ישראל ישראלי', 'Ahmad Nasser', ''], wi: ['012345678', '223456785', ''], ws: [SIG, SIG, ''] };
 {
   let r = await post(good, { ins: [['a.pdf', PDF()]], hgtc: [['b.pdf', PDF()]] });
   check('refused on the server: the platform report and the forklift licence missing, one line each', r.status === 400 && r.html.indexOf(CTR_DOC_L.plat) > 0 && r.html.indexOf(CTR_DOC_L.frkl) > 0, r.html.slice(0, 300));
   check('a refused form saves nothing and sends nothing', db.puts.length === 0 && db.mails.length === 0 && stateList(db.state[CTR_STATE].value)[0].status === 'sent');
   r = await post(good, { ins: [['a.pdf', PDF()]], hgtc: [['b.pdf', PDF()]], plat: [['c.pdf', PDF()]], frkl: [['d.exe', new Uint8Array([0x4d, 0x5a, 0x90, 0, 0, 0, 0])]] });
   check('a file named .pdf/.exe that is not a PDF/JPG/PNG by its bytes: refused', r.status === 400 && db.puts.length === 0);
-  db.state.ctr_instructions = { value: 'הוראות הבטיחות לקבלני חוץ: לבוש, היתרי עבודה, פינוי, דיווח על אירוע.', updated_at: new Date().toISOString() };
   r = await post(good, { ins: [['a.pdf', PDF()]], hgtc: [['b.pdf', PDF()]], plat: [['c.png', PNG()]], frkl: [['d.pdf', PDF()]], oth: [['e.pdf', PDF()]] });
   check('a complete form: 200, the new-worker link on the page', r.status === 200 && /\/api\/talk\?k=/.test(r.html), r.html.slice(0, 300));
   const folder = ctrFolder('בונים בע"מ', today.slice(0, 4));
   const inFolder = db.puts.filter((p) => p.folder === folder);
-  check('five files and the summary PDF into the contractor folder (company sanitized), never replacing a file', inFolder.length === 6 && db.puts.every((p) => p.conflict === 'rename') && inFolder.some((p) => /\.pdf$/.test(p.name) && p.type === 'application/pdf' && p.name.indexOf('טופס') > 0), db.puts.map((p) => p.folder + '|' + p.name));
+  check('five files, the summary PDF and form 146.03 (Word + PDF) into the contractor folder (company sanitized), never replacing a file', inFolder.length === 8 && db.puts.every((p) => p.conflict === 'rename') && inFolder.some((p) => /\.pdf$/.test(p.name) && p.type === 'application/pdf' && p.name.indexOf('טופס אישור') > 0), db.puts.map((p) => p.folder + '|' + p.name));
+  const fW = inFolder.find((p) => /146\.03 חתום - .*\.docx$/.test(p.name)), fP = inFolder.find((p) => /146\.03 חתום - .*\.pdf$/.test(p.name));
+  check('form 146.03: Word and PDF under one name, DD-MM-YYYY HH-MM - the form - the company', fW && fP && fW.name.replace(/\.docx$/, '') === fP.name.replace(/\.pdf$/, '') && /^\d{2}-\d{2}-\d{4} \d{2}-\d{2} - /.test(fW.name), inFolder.map((p) => p.name));
   check('file names: DD-MM-YYYY - the document - n.<type by bytes>', inFolder.some((p) => /^\d{2}-\d{2}-\d{4} - .+ - 1\.png$/.test(p.name)));
   const talk = db.talks['ctr-' + rid];
   check('the talk is published with the company and the instructions text', talk.s === 'פורסמה' && talk.dept === 'בונים בע"מ' && talk.body.indexOf('הוראות') === 0, talk);
+  const rr = db.reads.filter((x) => x.talk_id === talk.id);
+  check('each worker of the send is a signature of the talk: name, ID, the company, his signature in Storage, x:<ID>: key', rr.length === 2 && rr[0].emp_name === 'ישראל ישראלי' && rr[0].id_no === '012345678' && rr[0].emp_id === 'x:012345678:ישראל ישראלי' && rr[1].emp_id === 'x:223456785:ahmad nasser' && rr.every((x) => x.dept === 'בונים בע"מ' && /\/storage\/v1\/object\/public\/incidents-photos\/sig-ctr-/.test(x.sig_url) && x.text_hash && x.device === 'ctr-link'), rr);
   const m = db.mails[0];
   check('one mail, to Michael only (the connected mailbox)', db.mails.length === 1 && m.to.join() === 'owner@example.test' && m.cc.length === 0);
   check('the mail subject names the company, never an ID number', m.subject.indexOf('בונים') > 0 && !/\d{5,}/.test(m.subject), m.subject);
   check('the mail lists the works, every document and what is optional and not given, the commitment', m.html.indexOf(workLabel('frk')) > 0 && m.html.indexOf(CTR_DOC_L.plat) > 0 && m.html.indexOf(CTR_DOC_L.oth) > 0 && m.html.indexOf('התחייבות') > 0 && m.html.indexOf('דני כהן') > 0);
-  check('the mail attaches the summary and the files (small enough)', m.att.length === 6 && m.att[0].name.indexOf('טופס') > 0 && m.att.every((a) => a.contentBytes && a['@odata.type'] === '#microsoft.graph.fileAttachment'));
+  check('the mail attaches form 146.03 first, then the summary and the files (small enough)', m.att.length === 7 && m.att[0].name.indexOf('146.03') > 0 && m.att[1].name.indexOf('טופס אישור') > 0 && m.att.every((a) => a.contentBytes && a['@odata.type'] === '#microsoft.graph.fileAttachment'), m.att.map((a) => a.name));
+  check('the mail: the description (escaped), 2 workers signed, the form linked', m.html.indexOf('התקנת מדפים') > 0 && m.html.indexOf('&lt;b&gt;') > 0 && m.html.indexOf('עובדים שחתמו') > 0 && /<td[^>]*>2 \(/.test(m.html) && m.html.indexOf('146.03 חתום') > 0);
   check('the mail holds no full ID number of a worker', m.html.indexOf('012345678') < 0);
   check('the mail is keyboard characters only, and RTL', !BAD.test(m.html.replace(/<[^>]+>/g, ' ')) && /^<div dir="rtl" style="direction:rtl;text-align:right/.test(m.html));
   const st = stateList(db.state[CTR_STATE].value)[0];
-  check('the request is marked filled, with the files, folder and mail state (no worker ID in state)', st.status === 'filled' && st.files === 5 && st.folder === folder && st.mail === 'sent' && JSON.stringify(st).indexOf('012345678') < 0, st);
+  check('the request is marked filled, with the files, folder, mail, form and reads (no worker ID in state)', st.status === 'filled' && st.files === 5 && st.folder === folder && st.mail === 'sent' && st.workers === 2 && st.reads === 2 && /146\.03/.test(decodeURIComponent(st.form || '')) && !st.form_err && JSON.stringify(st).indexOf('012345678') < 0 && JSON.stringify(st).indexOf('023456789') < 0, st);
   const again = await post(good, { ins: [['a.pdf', PDF()]], hgtc: [['b.pdf', PDF()]], plat: [['c.pdf', PDF()]], frkl: [['d.pdf', PDF()]] });
-  check('sent once: a second send saves nothing more', again.status === 200 && db.puts.length === 6 + 1 /* summary html source */ && db.mails.length === 1, db.puts.length);
+  check('sent once: a second send saves nothing more', again.status === 200 && db.puts.length === 8 + 1 /* summary html source */ && db.mails.length === 1, db.puts.length);
   const reopen = await onRequest({ request: new Request(link), env: ENV });
   check('opening the link again: "already sent" and the new-worker link', reopen.status === 200 && /\/api\/talk\?k=/.test(await reopen.text()));
   check('attachments past the mail budget go as links', pickAttach([{ bytes: new Uint8Array(MAIL_BUDGET - 10) }, { bytes: new Uint8Array(100) }, { bytes: new Uint8Array(5) }]).length === 2);
@@ -308,7 +346,12 @@ console.log('\n7. the worker of the contractor signs (talk.js, kind contractor)'
   const fd2 = new FormData();
   for (const [k, v] of Object.entries({ k: tok, l: 'he', emp: '__other', oname: 'Ahmad Saleh', oid: '123456782', ok: '1', sig: SIG })) fd2.append(k, v);
   await talkRequest({ request: new Request(ORIGIN + '/api/talk', { method: 'POST', body: fd2 }), env: ENV });
-  check('the same ID signs once', db.reads.filter((r) => r.talk_id === talk.id).length === 1);
+  check('the same ID signs once', db.reads.filter((r) => r.talk_id === talk.id && r.id_no === '123456782').length === 1);
+  const fd3 = new FormData();
+  for (const [k, v] of Object.entries({ k: tok, l: 'he', emp: '__other', oname: 'ישראל ישראלי', oid: '012345678', ok: '1', sig: SIG })) fd3.append(k, v);
+  const n0 = db.reads.length, m0 = db.mails.length;
+  await talkRequest({ request: new Request(ORIGIN + '/api/talk', { method: 'POST', body: fd3 }), env: ENV });
+  check('a worker who signed in the contractor\'s send is already signed on the new-worker link (no second row, no mail)', db.reads.length === n0 && db.mails.length === m0);
   check('a name with digits or tags is not a name', ctrName('<b>x</b>') === null && ctrName('A1') === null && ctrName('محمد علي') === 'محمد علي');
   // the link is revocable: link_v raised = the old link stops
   talk.link_v = 1;
@@ -349,15 +392,43 @@ console.log('\n8. never a factory training');
 console.log('\n9. text people read: keyboard characters only');
 {
   const t = { kind: 'temp', ins: false, ds: today, de: addD(today, 2) };
-  const v = { company: 'co', cnum: '123456789', contact: 'c', mobile: '0501234567', email: 'a@b.co', place: 'p', works: CTR_WORKS, workers: [{ n: 'x y', id: '123456782' }], optMissing: ['ins'], signer: 's', files: [] };
-  const all = [formHtml(t, { company: 'co' }, 'tok'), summaryHtml(t, v, { day: today, hm: '10:00' }, 'AAA', [{ doc: 'plat', name: 'a.pdf' }]), mailHtml(t, v, [{ doc: 'plat', name: 'a.pdf', url: 'https://x' }], { name: 's.pdf', url: 'https://x' }, [], 'https://w', true), MAIL_SUBJECT(t, v), CTR_OK];
-  check('form, summary, mail, subject, declaration', all.every((s) => !BAD.test(s.replace(/<[^>]+>/g, ' '))), all.map((s) => (BAD.exec(s) || [])[0]));
-  const src = fs.readFileSync(new URL('../../functions/api/ctr-link.js', import.meta.url), 'utf8') + fs.readFileSync(new URL('../../functions/_ctr.js', import.meta.url), 'utf8');
+  const v = { company: 'co', cnum: '123456789', contact: 'c', mobile: '0501234567', email: 'a@b.co', place: 'p', desc: 'd', works: CTR_WORKS, workers: [{ n: 'x y', id: '123456782', sig: SIGB() }], optMissing: ['ins'], signer: 's', sid: '023456789', files: [] };
+  const all = [formHtml(t, { company: 'co' }, 'tok', 'instr'), summaryHtml(t, v, { day: today, hm: '10:00' }, 'AAA', [{ doc: 'plat', name: 'a.pdf' }]), mailHtml(t, v, [{ doc: 'plat', name: 'a.pdf', url: 'https://x' }], { name: 's.pdf', url: 'https://x' }, [], 'https://w', true, { err: 'x' }), MAIL_SUBJECT(t, v), CTR_OK, ROW_HTML];
+  check('form, summary, mail, subject, declaration, the worker row', all.every((s) => !BAD.test(s.replace(/<[^>]+>/g, ' '))), all.map((s) => (BAD.exec(s) || [])[0]));
+  const src = fs.readFileSync(new URL('../../functions/api/ctr-link.js', import.meta.url), 'utf8') + fs.readFileSync(new URL('../../functions/_ctr.js', import.meta.url), 'utf8') + fs.readFileSync(new URL('../../functions/_ctrform.js', import.meta.url), 'utf8');
   check('no raw Hebrew in the server code (\\uXXXX only)', !/[א-ת]/.test(src));
   check('state is written with stateCas only (no merge-duplicates on server_state)', src.indexOf('merge-duplicates') < 0 && /stateCas\(/.test(src));
   const s = stateAdd(Array.from({ length: CTR_STATE_MAX + 5 }, (_, i) => ({ id: 'c' + String(i).padStart(7, '0') })), { id: 'cnewone01' });
   check('ctr_links is capped, newest first', s.length === CTR_STATE_MAX && s[0].id === 'cnewone01');
   check('statePatch: only from the expected status', statePatch([{ id: 'cabc12345', status: 'filled' }], 'cabc12345', { x: 1 }, 'sent').error === 'state' && statePatch([], 'cabc12345', {}).error === 'missing');
+}
+
+console.log('\n10. form 146.03 filled (functions/_ctrform.js)');
+{
+  const ws = Array.from({ length: 11 }, (_, i) => ({ n: 'עובד ' + (i + 1), id: String(200000000 + i), sig: SIGB() }));
+  const r = await fillCtrForm(TPL, { company: 'בונים <b>&</b>', cnum: '512345678', signer: 'דני כהן', sid: '023456789', contact: '0501234567', date: '16/11/2026', works: 'עבודה בגובה', desc: 'שורה 1\nשורה 2', job: '', mgrSig: SIGB(), workers: ws });
+  const x = await docXml(r.bytes), z = readZip(r.bytes);
+  check('every label found; 11 workers, 12 pictures (the workers and the manager)', r.report.missing.length === 0 && r.report.filled === 11 && r.report.pictures === 12, r.report);
+  check('the declaration table: the company (escaped), the signer\'s ID, the company number, the date', x.indexOf('שם הקבלן: בונים &lt;b&gt;&amp;&lt;/b&gt;') > 0 && x.indexOf('ת.ז.: 023456789') > 0 && x.indexOf('ח.פ / עוסק מורשה: 512345678') > 0 && x.indexOf('תאריך: 16/11/2026') > 0);
+  check('the lines after the declaration: the signer, the works, the description on one line; an empty one (job) left out', x.indexOf('דני כהן (0501234567)') > 0 && x.indexOf('עבודה בגובה') > 0 && x.indexOf('שורה 1 שורה 2') > 0 && x.indexOf('העבודה במפעל:') < 0);
+  const t2 = /<w:tbl>(?:(?!<w:tbl>)[\s\S])*?שם העובד[\s\S]*?<\/w:tbl>/.exec(x)[0];
+  check('the workers table: a row per worker past the template\'s 8, each with name, ID and his picture', (t2.match(/<w:tr>/g) || []).length === 12 && t2.indexOf('עובד 11') > 0 && t2.indexOf('200000010') > 0 && (t2.match(/<wp:inline/g) || []).length === 11);
+  const few = await docXml((await fillCtrForm(TPL, { company: 'c', workers: ws.slice(0, 2) })).bytes);
+  check('two workers: the template\'s 8 rows stay (6 empty)', (/<w:tbl>(?:(?!<w:tbl>)[\s\S])*?שם העובד[\s\S]*?<\/w:tbl>/.exec(few)[0].match(/<w:tr>/g) || []).length === 1 + FORM_ROWS);
+  const rels = await entryText(z.find((e) => e.name === 'word/_rels/document.xml.rels'));
+  check('the pictures: a part each, a relationship each, the template\'s own parts kept (the logo byte for byte)', z.filter((e) => /^word\/media\/ctrsig\d+\.png$/.test(e.name)).length === 12 && (rels.match(/rIdCtrSig\d+/g) || []).length === 12 && rels.indexOf('rId9') > 0 && z.some((e) => e.name === 'word/media/logo.png' && e.usize === 7));
+  const ct = await entryText(z.find((e) => e.name === '[Content_Types].xml'));
+  check('a template without the png type gets it', /Extension="png"/.test(ct));
+  check('the workers\' rows in the order typed', t2.indexOf('עובד 1<') < t2.indexOf('עובד 2<'));
+  await check('not a docx: refused', await fillCtrForm(new Uint8Array([1, 2, 3]), {}).then(() => false, () => true));
+  check('the template: the newest .docx whose name starts with "טופס 146.03"', pickTemplate([{ name: 'טופס 146.03 - a - 14.07.2024.docx', lastModifiedDateTime: '2024-07-14T00:00:00Z' }, { name: 'טופס 146.03 - b - 16.10.2026.docx', lastModifiedDateTime: '2026-10-16T00:00:00Z' }, { name: 'טופס 146.03 - c.pdf', lastModifiedDateTime: '2027-01-01T00:00:00Z' }, { name: 'x.docx' }]) === 'טופס 146.03 - b - 16.10.2026.docx' && pickTemplate([]) === null);
+  // the form failed: the rest goes on, the mail says so
+  db.tplFail = true; db.puts = [];
+  const bf = await buildForm(ctrDeps, 'gt', 'f', { kind: 'perm' }, { company: 'c', works: ['hgt'], workers: [], desc: 'd', cnum: '1', signer: 's', sid: '1', mobile: '0' }, SIGB(), { day: today, hm: '10:00', stamp: '16-11-2026' });
+  check('form 146.03 not in the folder: {err}, nothing filed, no throw', !!bf.err && /146\.03/.test(bf.err) && db.puts.length === 0, bf);
+  const mh = mailHtml({ kind: 'perm', ins: true }, { company: 'c', cnum: '1', contact: 'c', mobile: '0', email: 'e', works: ['hgt'], workers: [], optMissing: [], signer: 's', desc: 'd' }, [], null, [], null, false, bf);
+  check('the mail then says in red the form was not made, and the names are in the summary', mh.indexOf('לא נוצר') > 0 && mh.indexOf('בטופס המסכם') > 0);
+  db.tplFail = false;
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
