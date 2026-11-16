@@ -1165,20 +1165,23 @@ export async function fileCtrSign(env, talk, row, sig, nowMs, deps, hgt) {
     const filed = await d.putFile(od.token, folder, name, bytes, type, 'rename');
     out.url = filed.webUrl || null; out.name = name;
     if (out.url) await mark({ doc_url: out.url, doc_err: null });
-    const certs = [];
+    const certs = []; let certsLost = 0;
     if (hgt && hgt.docs && hgt.docs.length) {
       const cbase = day.split('-').reverse().join('-') + ' - ' + CTR_HGT_FILE + ' - ' + safeName(row.emp_name, 40);
       for (let i = 0; i < hgt.docs.length; i++) {
-        const u8 = Uint8Array.from(atob(hgt.docs[i]), (c) => c.charCodeAt(0));
-        const r = await d.putFile(od.token, folder, cbase + ' - ' + (i + 1) + '.jpg', u8, 'image/jpeg', 'rename');
-        if (r && r.webUrl) certs.push(r.webUrl);
+        // one photo that fails is counted in the mail, never the end of the others or of the mail (security review 16/11/2026)
+        try {
+          const u8 = Uint8Array.from(atob(hgt.docs[i]), (c) => c.charCodeAt(0));
+          const r = await d.putFile(od.token, folder, cbase + ' - ' + (i + 1) + '.jpg', u8, 'image/jpeg', 'rename');
+          if (r && r.webUrl) certs.push(r.webUrl); else certsLost++;
+        } catch (e) { certsLost++; }
       }
       await mark({ equip: { hgt: true, e: hgt.e, files: certs } });
     }
     const html = '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">'
       + '<p>\u05e2\u05d5\u05d1\u05d3 \u05e9\u05dc \u05d4\u05e7\u05d1\u05dc\u05df ' + esc(talk.dept || '') + ' \u05e7\u05e8\u05d0 \u05d5\u05d7\u05ea\u05dd \u05e2\u05dc \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05dc\u05e7\u05d1\u05dc\u05e0\u05d9 \u05d7\u05d5\u05e5.</p>'
       + '<p>\u05e9\u05dd: ' + esc(row.emp_name || '') + (idTail ? '<br>\u05ea\u05e2\u05d5\u05d3\u05ea \u05d6\u05d4\u05d5\u05ea \u05d0\u05d5 \u05d3\u05e8\u05db\u05d5\u05df: \u05de\u05e1\u05ea\u05d9\u05d9\u05dd \u05d1-' + esc(idTail) : '') + '<br>\u05ea\u05d0\u05e8\u05d9\u05da: ' + esc(fdate(day) + ' ' + hm) + '</p>'
-      + (hgt ? '<p>\u05e2\u05d5\u05d1\u05d3 \u05d1\u05d2\u05d5\u05d1\u05d4, \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 ' + esc(fdate(hgt.e)) + (certs.length ? ': ' + certs.map((x, i) => '<a href="' + esc(x) + '">' + (i + 1) + '</a>').join(', ') : '') + '</p>' : '')
+      + (hgt ? '<p>\u05e2\u05d5\u05d1\u05d3 \u05d1\u05d2\u05d5\u05d1\u05d4, \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 ' + esc(fdate(hgt.e)) + (certs.length ? ': ' + certs.map((x, i) => '<a href="' + esc(x) + '">' + (i + 1) + '</a>').join(', ') : '') + (certsLost ? '. <b style="color:#b91c1c">' + certsLost + ' \u05e6\u05d9\u05dc\u05d5\u05de\u05d9\u05dd \u05dc\u05d0 \u05e0\u05e9\u05de\u05e8\u05d5 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4, \u05dc\u05d1\u05e7\u05e9 \u05de\u05d4\u05e7\u05d1\u05dc\u05df \u05e9\u05d5\u05d1</b>' : '') + '</p>' : '')
       + (out.url ? '<p>\u05ea\u05d5\u05d9\u05e7 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05e7\u05d1\u05dc\u05df: <a href="' + esc(out.url) + '">' + esc(name) + '</a></p>' : '')
       + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc ' + esc(SITE.company) + '.</p></div>';
     await d.sendMailTo(od.token, [od.email], [], '\u05e7\u05d1\u05dc\u05df ' + String(talk.dept || '').slice(0, 60) + ': \u05e2\u05d5\u05d1\u05d3 \u05d7\u05ea\u05dd \u05e2\u05dc \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea', html, []);

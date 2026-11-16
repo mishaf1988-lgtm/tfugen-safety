@@ -456,6 +456,12 @@ console.log('\n7. the worker of the contractor signs (talk.js, kind contractor)'
   check('at height: signed, the row says so with the date and the two photos', hk.status === 200 && hrow.emp_name === 'Rami Levi' && hrow.job === 'עבודה בגובה' && hrow.equip && hrow.equip.e === addD(today, 100) && hrow.equip.files.length === 2, hrow);
   check('the photos are filed in the contractor folder by his name', db.puts.slice(pb).filter((x) => /אישור עבודה בגובה - Rami Levi - [12]\.jpg$/.test(x.name)).length === 2, db.puts.slice(pb).map((x) => x.name));
   check('the mail to Michael says at height, until when', db.mails[db.mails.length - 1].html.indexOf('עובד בגובה, אישור בתוקף עד') > 0);
+  // security review 16/11/2026: one photo that fails to save does not stop the others or the mail
+  let jn = 0; const sent = [];
+  const fdeps = { accessToken: async () => ({ token: 't', email: 'owner@example.test' }), graphPdf: async () => null, sendMailTo: async (tk, to, cc, subj, h) => { sent.push(h); },
+    putFile: async (tk, folder, name) => { if (/\.jpg$/.test(name) && ++jn === 1) throw new Error('graph 503'); return { webUrl: 'https://od.example/' + encodeURIComponent(name) }; } };
+  const fo = await fileCtrSign(ENV, talk, { id: 'rowx', emp_name: 'Rami Levi', id_no: '211111117' }, PNG(), NOW, fdeps, { docs: [JPG.split(',')[1], JPG.split(',')[1]], e: addD(today, 100) });
+  check('a photo that fails: the other is filed, the mail goes and says one was not saved', fo.mailed && jn === 2 && sent.length === 1 && sent[0].indexOf('1 צילומים לא נשמרו') > 0, { fo, jn });
   const hz = await hsign({ oname: 'Dana Cohen', oid: '322222226' });
   check('not at height: signed as before, no job and no photos', hz.status === 200 && !db.reads[db.reads.length - 1].job && !db.reads[db.reads.length - 1].equip);
   check('a name with digits or tags is not a name', ctrName('<b>x</b>') === null && ctrName('A1') === null && ctrName('محمد علي') === 'محمد علي');

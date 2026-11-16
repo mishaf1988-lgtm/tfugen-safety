@@ -27,7 +27,9 @@ const db = { state: {}, ctr: [], logs: [], meta: [], talks: [] };
 const reset = () => Object.assign(db, { state: {}, ctr: [], logs: [], meta: [], talks: [] });
 const json = (o, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { 'Content-Type': 'application/json' } });
 const q = (u, k) => { const m = new RegExp('[?&]' + k + '=([^&]*)').exec(u); return m ? decodeURIComponent(m[1]) : null; };
+let NF = 0;
 globalThis.fetch = async (url, init) => {
+  NF++;
   const u = String(url), m = (init && init.method) || 'GET';
   if (u.startsWith(SB + '/rest/v1/server_state')) {
     if (m === 'GET') { const k = (q(u, 'key') || '').slice(3); return json(db.state[k] ? [{ key: k, value: db.state[k].value, updated_at: db.state[k].updated_at }] : []); }
@@ -247,7 +249,9 @@ const filled = (o) => Object.assign({ id: 'cabc1234', kind: 'perm', ins: true, d
   reset(); put([filled()]); db.ctr = []; db.talks.push({ ...PUBT });
   const wDrafts = [];
   const wDraft = async (b) => { wDrafts.push(b); return { ok: true }; };
+  NF = 0;
   const ya = await fastCtrOk(WA, { id: 'cabc1234', yes: true }, NOW, { draft: wDraft });
+  check('the approval with its link stays well inside the 50 calls of a request (' + NF + ' here, the draft itself about 6)', NF <= 20, NF);
   check('"בצע": a draft to the contractor with the new-worker link', wDrafts.length === 1 && wDrafts[0].to === 'dani@example.com' && /\/api\/talk\?k=/.test(wDrafts[0].body) && wDrafts[0].op === 'mail_draft', wDrafts);
   check('... the answer says the draft is in Outlook, and the request is marked', ya.text.indexOf('טיוטה לקבלן עם הקישור לעובד חדש') > 0 && ent('cabc1234').wlink === 'draft', ya);
   check('the draft: the company, at height = photo and date, keyboard characters only', wDrafts[0].body.indexOf('אלקטרו') > 0 && wDrafts[0].body.indexOf('מצלם את אישור העבודה בגובה') > 0 && !BAD.test(wDrafts[0].body + wDrafts[0].subject));
