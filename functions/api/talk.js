@@ -42,7 +42,7 @@ let SB = SB_LIVE; // set from env in onRequest (sbFrom)
 export const FETCH_MS = 20000;
 const fetch = (u, o) => globalThis.fetch(u, o && o.signal ? o : { ...(o || {}), signal: AbortSignal.timeout(FETCH_MS) });
 const APP_URL = SITE.appUrl;
-const BUCKET = 'incidents-photos';
+export const BUCKET = 'incidents-photos';
 const PREFIX = 'talk-link:v1:';
 export const TALK_TTL_DAYS = 14;
 // Group mode (05/10/2026, Michael: "approve"): the trainer opens the talk on their own phone

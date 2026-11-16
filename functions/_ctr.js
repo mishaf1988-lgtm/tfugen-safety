@@ -25,9 +25,9 @@ export const CTR_S_SENT = 'sent', CTR_S_FILLED = 'filled';
 // contractor brings.
 export const CTR_WORKS = ['hot', 'hgt', 'elc', 'eng', 'lft', 'chm', 'cnf', 'rof', 'frk'];
 export const FRK_L = '\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e2\u05dd \u05de\u05dc\u05d2\u05d6\u05d4';
-// The documents (Michael's table, 15/11/2026). wkr can be typed in the form instead of a file.
+// The documents (Michael's table, 15/11/2026). The workers list is no document since 16/11/2026: each worker is a row
+// with name, ID and finger signature on the page (DECISIONS "\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e7\u05d1\u05dc\u05df: \u05db\u05dc \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d7\u05d5\u05ea\u05de\u05d9\u05dd \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d0\u05d7\u05d3").
 export const CTR_DOCS = [
-  ['wkr', '\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd (\u05e9\u05dd \u05d5\u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d6\u05d4\u05d5\u05ea)'],
   ['ins', '\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e7\u05d9\u05d5\u05dd \u05d1\u05d9\u05d8\u05d5\u05d7\u05d9\u05dd \u05d7\u05ea\u05d5\u05dd \u05d1\u05d9\u05d3\u05d9 \u05d7\u05d1\u05e8\u05ea \u05d4\u05d1\u05d9\u05d8\u05d5\u05d7'],
   ['hgtc', '\u05ea\u05e2\u05d5\u05d3\u05ea \u05d4\u05e1\u05de\u05db\u05d4 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05dc\u05db\u05dc \u05e2\u05d5\u05d1\u05d3'],
   ['plat', '\u05ea\u05e1\u05e7\u05d9\u05e8 \u05d1\u05d5\u05d3\u05e7 \u05de\u05d5\u05e1\u05de\u05da \u05dc\u05d1\u05de\u05ea \u05d4\u05d4\u05e8\u05de\u05d4 \u05d0\u05d5 \u05dc\u05de\u05ea\u05e7\u05df \u05d4\u05d4\u05e8\u05de\u05d4'],
@@ -44,17 +44,21 @@ export const CTR_REQ = { hot: [], hgt: ['hgtc', 'plat'], elc: ['elcl'], eng: [],
 
 // Required documents for the works ticked, in the order of CTR_DOCS. ins = the link says "with insurance".
 export function requiredDocs(works, ins) {
-  const want = new Set(['wkr']);
+  const want = new Set();
   if (ins) want.add('ins');
   for (const w of works || []) for (const d of (CTR_REQ[w] || [])) want.add(d);
   return CTR_DOCS.map((d) => d[0]).filter((k) => want.has(k));
 }
 // What may be attached but is not required: the insurance when the link does not ask for it, and "other".
 export const optionalDocs = (ins) => (ins ? ['oth'] : ['ins', 'oth']);
-// have = {docKey: number of files}; typedWorkers = a workers list typed in the form. Returns the missing keys.
-export function missingDocs(required, have, typedWorkers) {
-  return (required || []).filter((k) => !(have && have[k] > 0) && !(k === 'wkr' && typedWorkers));
+// have = {docKey: number of files}. Returns the missing keys.
+export function missingDocs(required, have) {
+  return (required || []).filter((k) => !(have && have[k] > 0));
 }
+// The workers who sign on the contractor's own page, all on one phone (16/11/2026): at most this many in one send
+// (each signature is a picture in form 146.03 and a row of the talk); more come through the new-worker link.
+export const CTR_SIGN_MAX = 30;
+export const DESC_MAX = 600;   // the work's description, as the permit's (works.js desc)
 export const missingMsg = (keys) => (keys || []).map((k) => '\u05d7\u05e1\u05e8 \u05de\u05e1\u05de\u05da: ' + (CTR_DOC_L[k] || k));
 
 // ---- the link id: <request>-<p|t><0|1>[-<YYYYMMDD start>-<YYYYMMDD end>] ----

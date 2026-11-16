@@ -89,12 +89,13 @@ export async function sheetsDigest(bytes) {
   return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-// e.text set = rewritten (deflated); otherwise the original bytes are copied.
+// e.text set = rewritten (deflated); e.bytes set = a new binary part (deflated, _ctrform.js pictures); otherwise the
+// original bytes are copied.
 export async function writeZip(entries) {
   const parts = [], central = [];
   const packed = await Promise.all(entries.map(async (e) => {
-    if (e.text == null) return null;
-    const plain = enc.encode(e.text);
+    if (e.text == null && e.bytes == null) return null;
+    const plain = e.text != null ? enc.encode(e.text) : e.bytes;
     return { plain, z: await deflate(plain) };
   }));
   let offset = 0;
@@ -103,7 +104,7 @@ export async function writeZip(entries) {
   entries.forEach((e, i) => {
     const nameB = enc.encode(e.name);
     let data, method, crc, csize, usize, flags = (e.flags || 0) & 0x0800; // keep only the UTF-8 name flag
-    if (e.text != null) { const pk = packed[i]; data = pk.z; method = 8; crc = crc32(pk.plain); csize = data.length; usize = pk.plain.length; }
+    if (packed[i]) { const pk = packed[i]; data = pk.z; method = 8; crc = crc32(pk.plain); csize = data.length; usize = pk.plain.length; }
     else { data = e.raw; method = e.method; crc = e.crc; csize = e.csize; usize = e.usize; }
     const time = e.time || 0, date = e.date || 0x21;
     const head = new Uint8Array([...u32(0x04034b50), ...u16(20), ...u16(flags), ...u16(method), ...u16(time), ...u16(date),
