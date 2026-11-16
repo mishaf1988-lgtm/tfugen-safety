@@ -23,6 +23,7 @@ import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, W
 import { odConfigured, accessToken, putFile, sendMailTo } from '../_onedrive.js';
 import { worksTick } from './works.js';
 import { stateCas } from '../_cas.js';
+import { ctrMorning } from '../_ctrok.js';
 import { meetingDate, checkAndFixDeck, deckGapText } from './hazard-deck.js';
 import { OCR_ROOT, OCR_INBOX, OCR_AUTO_KEY, OCR_AUTO_GAP_MS, OCR_DONE_MAX, OCR_MAX_PAGES, OCR_MODELS, ocrAutoPick, ocrOne } from '../_ocr.js';
 
@@ -773,6 +774,9 @@ export async function run(env, now, body) {
   if (!to) return { ok: false, error: 'no owner number in notification_prefs' };
   const r = await sendToOwner(env, to, text, { kind: 'morning', windowOpen: open, choices: open ? MORNING_CHOICES : null });
   if (r.ok) { await stateSet(env, LAST_KEY, g.today).catch(() => {}); await noteLastOut(env, sbFrom(env), text, 'morning'); }
+  // 16/11/2026 (contractor link stage 2, _ctrok.js): after the update, once a day: a contractor still waiting for approval is
+  // asked again, a failed register write is written again, and a permanent contractor's year ending in 30 days gets a new link
+  const ctr = r.ok ? await ctrMorning(env, now).catch((e) => ({ error: String(e.message || e).slice(0, 120) })) : null;
   // sent: the kept lines are done; one added while this ran (after wk.at) stays for the next update
   if (r.ok && wk.raw.length) {
     await stateSet(env, WEEKEND_LAST_KEY, JSON.stringify({ at: now.toISOString(), list: wk.raw })).catch(() => {});
@@ -787,5 +791,5 @@ export async function run(env, now, body) {
     body: JSON.stringify([{ id: 'wm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
       event_type: 'assistant', channel: r.ok ? 'whatsapp' : 'whatsapp_error',
       payload: { title: clip(text, 120), kind: 'morning', via: r.via || null, wamid: r.wamid || null, detail: r.error || null } }]) }).catch(() => {});
-  return { ok: r.ok, sent: r.ok, via: r.via || null, error: r.error || null, chars: text.length, cal };
+  return { ok: r.ok, sent: r.ok, via: r.via || null, error: r.error || null, chars: text.length, cal, ctr };
 }

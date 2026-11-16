@@ -32,6 +32,7 @@ import { KIND_CTR, CTR_PREFIX, CTR_STATE, CTR_INSTR, CTR_KIND_L, CTR_S_SENT, CTR
   missingDocs, missingMsg, RID_RE, ctrLinkId, parseCtrLinkId, linkTtlDays, workerTtlDays, addDays, ctrFolder, safeName, stateList, stateAdd, statePatch,
   instrText, canSend, CTR_TITLE, CTR_COMMIT, CTR_OK, CTR_SIGN_MAX, DESC_MAX } from '../_ctr.js';
 import { fillCtrForm, pickTemplate, FORM_DIR, FORM_MAX } from '../_ctrform.js';
+import { ctrAsk } from '../_ctrok.js';
 
 let SB = SB_LIVE; // set from env in onRequest (sbFrom)
 export const FETCH_MS = 15000;
@@ -54,7 +55,8 @@ export async function formTemplate(token) {
   if (b.length > FORM_MAX) throw new Error('form too big');
   return { name, bytes: b };
 }
-export const ctrDeps = { accessToken, putFile, sendMailTo, graphPdf, formTemplate };
+// ask (16/11/2026, stage 2): Michael's WhatsApp approval question once the send is saved (_ctrok.js)
+export const ctrDeps = { accessToken, putFile, sendMailTo, graphPdf, formTemplate, ask: ctrAsk };
 
 export const CTR_MAX_FILES = 15, CTR_MAX_TOTAL = 15 * 1024 * 1024, CTR_MAX_BODY = CTR_MAX_TOTAL + 1024 * 1024;
 export const MAIL_BUDGET = 2500 * 1024;   // the files attached to the mail, in all; the rest go as links
@@ -218,7 +220,8 @@ export function checkCtrForm(f, files, t) {
 }
 
 // ---- the page ----
-const workBoxes = () => CTR_WORKS.map((k) => '<label class="ck"><input type="checkbox" name="works" value="' + k + '" class="wk">' + esc(workLabel(k)) + '</label>').join('');
+// on (16/11/2026, stage 2): the works ticked in a send that Michael returned for a fix
+const workBoxes = (on) => CTR_WORKS.map((k) => '<label class="ck"><input type="checkbox" name="works" value="' + k + '" class="wk"' + (Array.isArray(on) && on.indexOf(k) >= 0 ? ' checked' : '') + '>' + esc(workLabel(k)) + '</label>').join('');
 // Which works need each document (for the page's script; the server checks again).
 const docWorks = (key) => CTR_WORKS.filter((w) => requiredDocs([w], false).indexOf(key) >= 0);
 // Works that ask for a document without requiring it (CTR_OPT).
@@ -279,20 +282,23 @@ sig.value=c.toDataURL('image/png');go.disabled=true;go.textContent=${J('\u05e9\u
 // instr = the text of form 146.03 (server_state ctr_instructions), shown whole before the workers sign.
 export function formHtml(t, entry, tok, instr) {
   const inp = (n, l, type, extra) => '<label for="' + n + '">' + esc(l) + '</label><input type="' + (type || 'text') + '" id="' + n + '" name="' + n + '"' + (extra || '') + ' required>';
+  // 16/11/2026 (stage 2): a send Michael returned for a fix opens with what was typed, and his reason on top
+  const val = (k) => (entry[k] ? ' value="' + esc(entry[k]) + '"' : '');
   return PAGE_CSS + '<p>' + esc(SITE.company) + ' \u05de\u05d1\u05e7\u05e9\u05ea \u05d0\u05ea \u05d4\u05e4\u05e8\u05d8\u05d9\u05dd \u05d5\u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05e9\u05dc \u05e7\u05d1\u05dc\u05df \u05d1\u05de\u05e4\u05e2\u05dc (' + esc(CTR_KIND_L[t.kind]) + ').'
     + (t.kind === 'temp' ? ' \u05ea\u05d0\u05e8\u05d9\u05db\u05d9 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4: ' + esc(dmy(t.ds)) + ' \u05e2\u05d3 ' + esc(dmy(t.de)) + '.' : '')
     + ' \u05db\u05dc \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e9\u05d9\u05d9\u05db\u05e0\u05e1\u05d5 \u05dc\u05de\u05e4\u05e2\u05dc \u05e7\u05d5\u05e8\u05d0\u05d9\u05dd \u05d0\u05ea \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d7\u05d5\u05ea\u05de\u05d9\u05dd \u05db\u05d0\u05df, \u05d1\u05d0\u05d5\u05ea\u05d5 \u05d8\u05dc\u05e4\u05d5\u05df.</p>'
+    + (entry.rej ? '<p class="yel"><b>\u05e6\u05e8\u05d9\u05da \u05dc\u05ea\u05e7\u05df:</b> ' + esc(entry.rej) + '</p>' : '')
     + '<form id="f" method="POST" action="/api/ctr-link" enctype="multipart/form-data">'
     + '<input type="hidden" name="k" value="' + esc(tok) + '"><input type="hidden" name="sig" id="sig">'
     + '<div class="sec"><b>\u05e4\u05e8\u05d8\u05d9 \u05d4\u05d7\u05d1\u05e8\u05d4</b>'
     + inp('company', '\u05e9\u05dd \u05d4\u05d7\u05d1\u05e8\u05d4', 'text', ' maxlength="80" value="' + esc(entry.company || '') + '"')
-    + inp('cnum', '\u05de\u05e1\u05e4\u05e8 \u05d4\u05d7\u05d1\u05e8\u05d4 (\u05d7.\u05e4 \u05d0\u05d5 \u05e2\u05d5\u05e1\u05e7 \u05de\u05d5\u05e8\u05e9\u05d4, 9 \u05e1\u05e4\u05e8\u05d5\u05ea)', 'text', ' inputmode="numeric" maxlength="11" dir="ltr"')
-    + inp('contact', '\u05d0\u05d9\u05e9 \u05d4\u05e7\u05e9\u05e8', 'text', ' maxlength="60"')
-    + inp('mobile', '\u05e0\u05d9\u05d9\u05d3', 'tel', ' maxlength="15" dir="ltr"')
-    + inp('email', '\u05de\u05d9\u05d9\u05dc', 'email', ' maxlength="100" dir="ltr"')
-    + (t.kind === 'temp' ? inp('place', '\u05de\u05e7\u05d5\u05dd \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05de\u05e4\u05e2\u05dc', 'text', ' maxlength="120"') : '') + '</div>'
-    + '<div class="sec"><b>\u05d4\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05e9\u05ea\u05d1\u05e6\u05e2\u05d5</b>' + workBoxes()
-    + '<label for="desc">\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 (\u05de\u05d4 \u05d9\u05e2\u05e9\u05d4, \u05d0\u05d9\u05e4\u05d4 \u05d5\u05d1\u05d0\u05d9\u05d6\u05d4 \u05e6\u05d9\u05d5\u05d3)</label><textarea id="desc" name="desc" maxlength="' + DESC_MAX + '" required></textarea></div>'
+    + inp('cnum', '\u05de\u05e1\u05e4\u05e8 \u05d4\u05d7\u05d1\u05e8\u05d4 (\u05d7.\u05e4 \u05d0\u05d5 \u05e2\u05d5\u05e1\u05e7 \u05de\u05d5\u05e8\u05e9\u05d4, 9 \u05e1\u05e4\u05e8\u05d5\u05ea)', 'text', ' inputmode="numeric" maxlength="11" dir="ltr"' + val('cnum'))
+    + inp('contact', '\u05d0\u05d9\u05e9 \u05d4\u05e7\u05e9\u05e8', 'text', ' maxlength="60"' + val('contact'))
+    + inp('mobile', '\u05e0\u05d9\u05d9\u05d3', 'tel', ' maxlength="15" dir="ltr"' + val('mobile'))
+    + inp('email', '\u05de\u05d9\u05d9\u05dc', 'email', ' maxlength="100" dir="ltr"' + val('email'))
+    + (t.kind === 'temp' ? inp('place', '\u05de\u05e7\u05d5\u05dd \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05de\u05e4\u05e2\u05dc', 'text', ' maxlength="120"' + val('place')) : '') + '</div>'
+    + '<div class="sec"><b>\u05d4\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05e9\u05ea\u05d1\u05e6\u05e2\u05d5</b>' + workBoxes(entry.works)
+    + '<label for="desc">\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 (\u05de\u05d4 \u05d9\u05e2\u05e9\u05d4, \u05d0\u05d9\u05e4\u05d4 \u05d5\u05d1\u05d0\u05d9\u05d6\u05d4 \u05e6\u05d9\u05d5\u05d3)</label><textarea id="desc" name="desc" maxlength="' + DESC_MAX + '" required>' + esc(entry.desc || '') + '</textarea></div>'
     + '<div class="sec"><b>\u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd</b><p class="yel">\u05dc\u05e4\u05d9 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05e9\u05e1\u05d9\u05de\u05e0\u05ea\u05dd. PDF, JPG \u05d0\u05d5 PNG, \u05e2\u05d3 4MB \u05dc\u05e7\u05d5\u05d1\u05e5.</p>'
     + CTR_DOCS.map((d) => docField(d[0], t)).join('') + '</div>'
     + '<div class="sec"><b>' + esc(CTR_TITLE) + ' (\u05d8\u05d5\u05e4\u05e1 146.03)</b><p class="yel">\u05db\u05dc \u05e2\u05d5\u05d1\u05d3 \u05e7\u05d5\u05e8\u05d0 \u05d0\u05ea \u05d4\u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05dc\u05e4\u05e0\u05d9 \u05e9\u05d4\u05d5\u05d0 \u05d7\u05d5\u05ea\u05dd.</p><div class="ins">' + esc(instr) + '</div></div>'
@@ -565,6 +571,8 @@ async function submit(env, request, nowMs, deps) {
     return p.error ? { write: false } : { value: JSON.stringify(p.list) };
   }, () => AbortSignal.timeout(FETCH_MS)).catch(() => null);
   if (!((await last()) || {}).written) await last();
+  // stage 2 (16/11/2026): the approval question on WhatsApp; a failure here is asked again at the morning update
+  if (deps.ask) await deps.ask(env, t.rid, Date.now()).catch(() => null);
   return page('\u05ea\u05d5\u05d3\u05d4, \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05ea\u05e7\u05d1\u05dc', doneHtml(wUrl), 'ok', 200);
 }
 
