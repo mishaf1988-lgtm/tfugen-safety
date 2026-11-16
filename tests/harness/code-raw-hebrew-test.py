@@ -40,6 +40,10 @@ try:
     check("the fix escapes only the added code lines; both comments keep their Hebrew", t[2] == "const y = '\\u05ea\\u05e1\\u05e7\\u05d9\\u05e8';" and t[4] == "const z = /[\\u200b]/;" and H in t[0] and H in t[3], t)
     hp = subprocess.run([sys.executable, hook], input=json.dumps({"tool_name": "Edit"}), cwd=d, capture_output=True, text=True, env=env)
     check("after the fix the hook is silent", hp.stdout.strip() == "{}", hp.stdout)
+    # retro 16/11/2026: a brand new file not yet added to git is checked too
+    open(os.path.join(d, "functions", "api", "b.js"), "w", encoding="utf-8").write("const w = '" + H + "';\n")
+    pn = subprocess.run([sys.executable, tool, "--check"], cwd=d, capture_output=True, text=True, encoding="utf-8")
+    check("a new untracked file with raw Hebrew is found", pn.returncode == 1 and "b.js:1" in pn.stdout, pn.stdout)
 finally:
     shutil.rmtree(d, ignore_errors=True)
 print("\n%d passed, %d failed" % (passed, failed))
