@@ -80,13 +80,16 @@ async function icon(Comp, color, size = 512) {
 
   // ===== 1. פתיחה =====
   let s = pres.addSlide({ masterName: "DARK" });
-  s.addImage({ data: I.potato, x: 7.4, y: 0.7, w: 1.8, h: 1.8, objectName: "ani1_a" });
-  s.addImage({ data: I.fries, x: 5.75, y: 0.7, w: 1.8, h: 1.8, objectName: "ani1_b" });
-  s.addImage({ data: I.snow, x: 4.1, y: 0.8, w: 1.6, h: 1.6, objectName: "ani1_c" });
-  s.addText("מתפוח אדמה למקפיא", { ...R, align: "center", x: 1.0, y: 2.9, w: 11.3, h: 1.2, fontSize: 54, bold: true, color: COL.white });
-  s.addText("הסוד של הצ'יפס הקפוא, ב-10 דקות", { ...R, align: "center", x: 1.0, y: 4.1, w: 11.3, h: 0.7, fontSize: 26, color: COL.gold });
-  s.addText("מיכאל פרייליך | קורס מדריכי בטיחות", { ...R, align: "center", x: 1.0, y: 5.6, w: 11.3, h: 0.5, fontSize: 16, color: COL.soft });
-  s.addNotes("פתיחה (30 שניות). להחזיק תפוח אדמה ביד ולשתוק 3 שניות. אחר כך: 'במפעל שבו אני עובד, תפוח כזה הופך לצ'יפס קפוא בתוך פחות משעה. עד סוף ההדרכה תדעו בדיוק איך.' (לא לנקוב בזמן אם לא בדקת מול המפעל.) קליק: תפוח, צ'יפס ופתית שלג נכנסים. שיטה: פתיחה עם חפץ אמיתי ויצירת סקרנות (Hook).");
+  s.addImage({ data: I.potato, x: 7.4, y: 0.7, w: 1.8, h: 1.8, objectName: "auto1b_a" });
+  s.addImage({ data: I.fries, x: 5.75, y: 0.7, w: 1.8, h: 1.8, objectName: "auto2b_b" });
+  s.addImage({ data: I.snow, x: 4.1, y: 0.8, w: 1.6, h: 1.6, objectName: "auto3b_c" });
+  s.addText("מתפוח אדמה למקפיא", { ...R, align: "center", x: 1.0, y: 2.9, w: 11.3, h: 1.2, fontSize: 54, bold: true, color: COL.white, objectName: "auto4b_t" });
+  s.addText("הסוד של הצ'יפס הקפוא, ב-10 דקות", { ...R, align: "center", x: 1.0, y: 4.0, w: 11.3, h: 0.7, fontSize: 26, color: COL.gold, objectName: "auto5b_s" });
+  ["קולפים.", "חותכים.", "מטגנים.", "מקפיאים."].forEach((w, i) => {
+    s.addText(w, { ...R, align: "center", x: 9.15 - i * 2.75, y: 4.85, w: 2.5, h: 0.75, fontSize: 28, bold: true, color: i === 3 ? COL.soft : COL.white, objectName: "auto" + (6 + i) + "r_k" });
+  });
+  s.addText("מיכאל פרייליך | קורס מדריכי בטיחות", { ...R, align: "center", x: 1.0, y: 6.1, w: 11.3, h: 0.5, fontSize: 16, color: COL.soft, objectName: "auto10b_m" });
+  s.addNotes("פתיחה (30 שניות). להחזיק תפוח אדמה ביד ולשתוק 3 שניות. אחר כך: 'במפעל שבו אני עובד, תפוח כזה הופך לצ'יפס קפוא בתוך פחות משעה. עד סוף ההדרכה תדעו בדיוק איך.' (לא לנקוב בזמן אם לא בדקת מול המפעל.) בלי קליק: הכול נכנס לבד ברצף, כמו סרטון (בערך 5 שניות). לחכות שהמילה האחרונה תנחת ורק אז לדבר. שיטה: פתיחה עם חפץ אמיתי ויצירת סקרנות (Hook).");
 
   // ===== 2. שאלת הפתעה: מהירות =====
   s = pres.addSlide({ masterName: "LIGHT" });
@@ -129,9 +132,9 @@ async function icon(Comp, color, size = 512) {
   method(s, "שלב 3: החזון", true);
   s.addShape(pres.ShapeType.ellipse, { x: 5.9, y: 1.2, w: 1.5, h: 1.5, fill: { color: COL.gold }, line: { color: COL.gold } });
   s.addImage({ data: I.eyeGold, x: 6.27, y: 1.57, w: 0.76, h: 0.76 });
-  s.addText("אחרי ההדרכה הזו, לא תסתכלו יותר על צלחת צ'יפס אותו דבר.", { ...R, align: "center", x: 1.2, y: 3.0, w: 10.9, h: 1.9, fontSize: 40, bold: true, color: COL.white, objectName: "ani1_v" });
-  s.addText("כי תדעו כמה ידיים, מכונות ואנשי בטיחות עומדים מאחורי כל מקל.", { ...R, align: "center", x: 1.2, y: 5.0, w: 10.9, h: 0.8, fontSize: 22, color: COL.gold, objectName: "ani2_v" });
-  s.addNotes("לומר את החזון לאט, ולעצור. קליק למשפט הראשון, קליק להמשך. שיטה: חזון (שלב 03 במבנה ההרצאה). חזון אומר לקהל מה ירגישו וידעו בסוף, לא רק על מה מדברים.");
+  s.addText("אחרי ההדרכה הזו, לא תסתכלו יותר על צלחת צ'יפס אותו דבר.", { ...R, align: "center", x: 1.2, y: 3.0, w: 10.9, h: 1.9, fontSize: 40, bold: true, color: COL.white, objectName: "auto1b_v" });
+  s.addText("כי תדעו כמה ידיים, מכונות ואנשי בטיחות עומדים מאחורי כל מקל.", { ...R, align: "center", x: 1.2, y: 5.0, w: 10.9, h: 0.8, fontSize: 22, color: COL.gold, objectName: "auto2b_v" });
+  s.addNotes("לומר את החזון לאט, ולעצור. שני המשפטים עולים לבד מלמטה, בלי קליק. שיטה: חזון (שלב 03 במבנה ההרצאה). חזון אומר לקהל מה ירגישו וידעו בסוף, לא רק על מה מדברים.");
 
   // ===== 5. המטרות =====
   s = pres.addSlide({ masterName: "LIGHT" });

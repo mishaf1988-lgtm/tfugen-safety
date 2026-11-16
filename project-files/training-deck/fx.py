@@ -37,16 +37,43 @@ def effect(ctn, spid, first, zoom):
             f'<p:to><p:strVal val="visible"/></p:to></p:set>{anim}</p:childTnLst></p:cTn></p:par>')
 
 
-def timing(groups, zoom_ids):
+def fly(ctn, spid, d, delay):
+    a, b, c, e, o = next(ctn), next(ctn), next(ctn), next(ctn), next(ctn)
+    if d == "r":
+        ax, fr, to, sub = "ppt_x", "1+#ppt_w/2", "#ppt_x", 2
+    else:
+        ax, fr, to, sub = "ppt_y", "1+#ppt_h/2", "#ppt_y", 4
+    other = "ppt_y" if ax == "ppt_x" else "ppt_x"
+    def an(i, attr, f, t2):
+        return (f'<p:anim calcmode="lin" valueType="num"><p:cBhvr additive="base"><p:cTn id="{i}" dur="600" decel="100000" fill="hold"/>'
+                f'<p:tgtEl><p:spTgt spid="{spid}"/></p:tgtEl><p:attrNameLst><p:attrName>{attr}</p:attrName></p:attrNameLst></p:cBhvr>'
+                f'<p:tavLst><p:tav tm="0"><p:val><p:strVal val="{f}"/></p:val></p:tav><p:tav tm="100000"><p:val><p:strVal val="{t2}"/></p:val></p:tav></p:tavLst></p:anim>')
+    return (f'<p:par><p:cTn id="{o}" fill="hold"><p:stCondLst><p:cond delay="{delay}"/></p:stCondLst><p:childTnLst>'
+            f'<p:par><p:cTn id="{e}" presetID="2" presetClass="entr" presetSubtype="{sub}" fill="hold" grpId="0" nodeType="afterEffect">'
+            f'<p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst>'
+            f'<p:set><p:cBhvr><p:cTn id="{a}" dur="1" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst></p:cTn>'
+            f'<p:tgtEl><p:spTgt spid="{spid}"/></p:tgtEl><p:attrNameLst><p:attrName>style.visibility</p:attrName></p:attrNameLst></p:cBhvr>'
+            f'<p:to><p:strVal val="visible"/></p:to></p:set>'
+            + an(b, ax, fr, to) + an(c, other, "#" + other, "#" + other) +
+            '</p:childTnLst></p:cTn></p:par></p:childTnLst></p:cTn></p:par>')
+
+
+def timing(groups, zoom_ids, autos=()):
     counter = iter(range(3, 10000))
     clicks = []
+    if autos:
+        outer = next(counter)
+        inner = "".join(fly(counter, sp, d, i * 450) for i, (sp, d) in enumerate(autos))
+        clicks.append(f'<p:par><p:cTn id="{outer}" fill="hold"><p:stCondLst><p:cond delay="indefinite"/>'
+                      f'<p:cond evt="onBegin" delay="0"><p:tn val="2"/></p:cond></p:stCondLst><p:childTnLst>{inner}</p:childTnLst></p:cTn></p:par>')
     for k in sorted(groups):
         outer, inner = next(counter), next(counter)
         effs = "".join(effect(counter, sp, i == 0, sp in zoom_ids) for i, sp in enumerate(groups[k]))
         clicks.append(f'<p:par><p:cTn id="{outer}" fill="hold"><p:stCondLst><p:cond delay="indefinite"/></p:stCondLst><p:childTnLst>'
                       f'<p:par><p:cTn id="{inner}" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst>'
                       f'{effs}</p:childTnLst></p:cTn></p:par></p:childTnLst></p:cTn></p:par>')
-    bld = "".join(f'<p:bldP spid="{sp}" grpId="0" animBg="1"/>' for k in sorted(groups) for sp in groups[k])
+    bld = "".join(f'<p:bldP spid="{sp}" grpId="0" animBg="1"/>' for sp, _ in autos)
+    bld += "".join(f'<p:bldP spid="{sp}" grpId="0" animBg="1"/>' for k in sorted(groups) for sp in groups[k])
     return ('<p:timing><p:tnLst><p:par><p:cTn id="1" dur="indefinite" restart="never" nodeType="tmRoot"><p:childTnLst>'
             '<p:seq concurrent="1" nextAc="seek"><p:cTn id="2" dur="indefinite" nodeType="mainSeq"><p:childTnLst>'
             + "".join(clicks) +
@@ -68,10 +95,12 @@ for item in zin.infolist():
             groups.setdefault(int(k), []).append(spid)
             if rest in ("num", "bad", "ring") or rest.startswith("st"):
                 zoom.add(spid)
-        add = TRANS.get(n, DEFAULT_TRANS) + (timing(groups, zoom) if groups else "")
+        autos = sorted(((int(k), sp, d) for sp, k, d in re.findall(r'<p:cNvPr id="(\d+)" name="auto(\d+)([br])_', x)))
+        autos = [(sp, d) for _, sp, d in autos]
+        add = TRANS.get(n, DEFAULT_TRANS) + (timing(groups, zoom, autos) if (groups or autos) else "")
         x = x.replace("</p:clrMapOvr></p:sld>", "</p:clrMapOvr>" + add + "</p:sld>")
         assert add in x, item.filename
         data = x.encode("utf-8")
-        print(f"slide {n}: {len(groups)} clicks")
+        print(f"slide {n}: {len(groups)} clicks, {len(autos)} auto")
     zout.writestr(item, data)
 zout.close()
