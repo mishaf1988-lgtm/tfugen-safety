@@ -58,7 +58,14 @@ export async function formTemplate(token) {
 // ask (16/11/2026, stage 2): Michael's WhatsApp approval question once the send is saved (_ctrok.js)
 export const ctrDeps = { accessToken, putFile, sendMailTo, graphPdf, formTemplate, ask: ctrAsk };
 
-export const CTR_MAX_FILES = 15, CTR_MAX_TOTAL = 15 * 1024 * 1024, CTR_MAX_BODY = CTR_MAX_TOTAL + 1024 * 1024;
+// 16/11/2026: with a height certificate per worker the files grew from 15 to 18, and no further: each file is one
+// OneDrive call, a send makes about 27 more, and the free plan stops a run at 50 (security review, 16/11/2026).
+// More workers with certificates than that = a second send, or Workers Paid (Michael's decision, BACKLOG 22).
+export const CTR_MAX_FILES = 18, CTR_MAX_MB = 15, CTR_MAX_TOTAL = CTR_MAX_MB * 1024 * 1024, CTR_MAX_BODY = CTR_MAX_TOTAL + 1024 * 1024;
+// The document each worker attaches in his own row (16/11/2026, Michael in the questionnaire: "do it: a certificate per worker"):
+// with height or roof work, each worker who signs needs his own height certificate, not one file for all.
+export const CTR_PER_WORKER = 'hgtc';
+const HGT_FILE = '\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4';
 export const MAIL_BUDGET = 2500 * 1024;   // the files attached to the mail, in all; the rest go as links
 export const CTR_POSTS_HOUR = 20;
 export const MAX_WORKERS = 200;
@@ -153,7 +160,8 @@ const MOBILE_RE = /^(?:\+?972|0)5\d{8}$/, EMAIL_RE = /^[^\s@<>"']{1,64}@[A-Za-z0
 // A row left wholly empty is skipped. Each other row needs a name (any letters, talk.js ctrName), an ID or passport
 // number (idOf) and a signature; an ID twice is refused. {list: [{n, id, sig}]} or {errors}.
 export function checkWorkers(rows) {
-  const list = (rows || []).filter((r) => r && (String(r.n || '').trim() || String(r.id || '').trim() || r.sig));
+  // i = the row's place in the page (its files come as wf_<i>), kept on each worker
+  const list = (rows || []).map((r, i) => (r ? { ...r, i } : r)).filter((r) => r && (String(r.n || '').trim() || String(r.id || '').trim() || r.sig));
   if (!list.length) return { errors: ['\u05e6\u05e8\u05d9\u05da \u05dc\u05e4\u05d7\u05d5\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d0\u05d7\u05d3: \u05e9\u05dd, \u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d6\u05d4\u05d5\u05ea \u05d5\u05d7\u05ea\u05d9\u05de\u05d4.'] };
   if (list.length > CTR_SIGN_MAX) return { errors: ['\u05d0\u05e4\u05e9\u05e8 \u05e2\u05d3 ' + CTR_SIGN_MAX + ' \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d0\u05d7\u05ea. \u05d4\u05e9\u05d0\u05e8 \u05d9\u05d7\u05ea\u05de\u05d5 \u05d0\u05d7\u05e8 \u05db\u05da \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9.'] };
   const out = [], errors = [], seen = new Set();
@@ -162,7 +170,7 @@ export function checkWorkers(rows) {
     if (!n || !id || !r.sig) { errors.push('\u05e2\u05d5\u05d1\u05d3 ' + (i + 1) + ': \u05e6\u05e8\u05d9\u05da \u05e9\u05dd, \u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d6\u05d4\u05d5\u05ea \u05d0\u05d5 \u05d3\u05e8\u05db\u05d5\u05df, \u05d5\u05d7\u05ea\u05d9\u05de\u05d4 \u05d1\u05d0\u05e6\u05d1\u05e2.'); return; }
     const k = /^\d+$/.test(id) ? id.replace(/^0+/, '') : id;
     if (seen.has(k)) { errors.push('\u05e2\u05d5\u05d1\u05d3 ' + (i + 1) + ': \u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d4\u05d6\u05d4\u05d5\u05ea \u05db\u05d1\u05e8 \u05d1\u05e8\u05e9\u05d9\u05de\u05d4.'); return; }
-    seen.add(k); out.push({ n, id, sig: r.sig });
+    seen.add(k); out.push({ n, id, sig: r.sig, i: r.i });
   });
   return errors.length ? { errors } : { list: out };
 }
@@ -198,16 +206,29 @@ export function checkCtrForm(f, files, t) {
   const req = requiredDocs(v.works, t.ins), opt = optionalDocs(t.ins, v.works), allowed = req.concat(opt);
   const have = {}; let total = 0, n = 0;
   v.files = [];
+  const perW = req.indexOf(CTR_PER_WORKER) >= 0, wHas = new Set();
   for (const x of files || []) {
     if (allowed.indexOf(x.doc) < 0) continue;  // a field left from a work that was unticked: not taken
+    // the height certificate belongs to a worker's row (w = the row): one without a row, or of a row that is not a
+    // signed worker, is not taken
+    let wk0 = null;
+    if (x.doc === CTR_PER_WORKER) {
+      wk0 = x.w == null ? null : (v.workers || []).find((o) => o.i === x.w);
+      if (!wk0) continue;
+    }
     if (!x.type) { errors.push((CTR_DOC_L[x.doc] || '') + ': \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e6\u05e8\u05e3 \u05e8\u05e7 PDF, JPG \u05d0\u05d5 PNG.'); continue; }
     if (x.size > MAX_FILE) { errors.push((CTR_DOC_L[x.doc] || '') + ': \u05e7\u05d5\u05d1\u05e5 \u05d2\u05d3\u05d5\u05dc \u05de\u05d3\u05d9 (\u05e2\u05d3 4MB \u05dc\u05e7\u05d5\u05d1\u05e5).'); continue; }
+    if (wk0) { x.wn = wk0.n; wHas.add(wk0.i); }
     n++; total += x.size; have[x.doc] = (have[x.doc] || 0) + 1; v.files.push(x);
   }
   if (n > CTR_MAX_FILES) errors.push('\u05d0\u05e4\u05e9\u05e8 \u05dc\u05e6\u05e8\u05e3 \u05e2\u05d3 ' + CTR_MAX_FILES + ' \u05e7\u05d1\u05e6\u05d9\u05dd.');
-  if (total > CTR_MAX_TOTAL) errors.push('\u05d4\u05e7\u05d1\u05e6\u05d9\u05dd \u05d2\u05d3\u05d5\u05dc\u05d9\u05dd \u05de\u05d3\u05d9 \u05d9\u05d7\u05d3 (\u05e2\u05d3 15MB).');
+  if (total > CTR_MAX_TOTAL) errors.push('\u05d4\u05e7\u05d1\u05e6\u05d9\u05dd \u05d2\u05d3\u05d5\u05dc\u05d9\u05dd \u05de\u05d3\u05d9 \u05d9\u05d7\u05d3 (\u05e2\u05d3 ' + CTR_MAX_MB + 'MB).');
   v.missing = missingDocs(req, have);
   errors.push(...missingMsg(v.missing));
+  // some workers have their certificate and some do not: each one without it, by name
+  if (perW && have[CTR_PER_WORKER] && v.workers) v.workers.forEach((o, j) => {
+    if (!wHas.has(o.i)) errors.push('\u05e2\u05d5\u05d1\u05d3 ' + (j + 1) + ' (' + o.n + '): \u05d7\u05e1\u05e8 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05e9\u05dc\u05d5.');
+  });
   v.required = req;
   v.optMissing = opt.filter((k) => k !== 'oth' && !have[k]);
   v.signer = txt('signer', LIM.signer);
@@ -236,7 +257,7 @@ function docField(key, t) {
     + '<label for="f_' + key + '">' + esc(CTR_DOC_L[key]) + esc(note) + '</label><input type="file" id="f_' + key + '" name="f_' + key + '" accept="application/pdf,image/jpeg,image/png" multiple></div>';
 }
 // Before 16/11/2026 every document field showed whatever was ticked (no rule hid .doc); now only those of the works.
-const PAGE_CSS = '<style>.doc{display:none;margin:6px 0}.doc.on{display:block}.wr{border:1px solid #d1d5db;border-radius:10px;padding:8px 10px;margin:8px 0;background:#fafafa}'
+const PAGE_CSS = '<style>.doc{display:none;margin:6px 0}.doc.on{display:block}.whf{display:none;margin:6px 0}#wl.hg .whf{display:block}.wr{border:1px solid #d1d5db;border-radius:10px;padding:8px 10px;margin:8px 0;background:#fafafa}'
   + '.wh{font-weight:700;margin-bottom:4px}.wr canvas{width:100%;height:110px;border:2px dashed #9ca3af;border-radius:8px;touch-action:none;background:#fff;display:block}'
   + '.wb{display:flex;gap:8px}.wb button{flex:1;padding:8px;border:0;border-radius:8px;background:#e5e7eb;font-size:15px;margin-top:6px}'
   + '.ins{white-space:pre-wrap;max-height:340px;overflow:auto;border:1px solid #d1d5db;border-radius:8px;padding:10px;background:#fff;font-size:15px;line-height:1.55}</style>';
@@ -244,6 +265,7 @@ const PAGE_CSS = '<style>.doc{display:none;margin:6px 0}.doc.on{display:block}.w
 export const ROW_HTML = '<div class="wh"></div>'
   + '<label>\u05e9\u05dd \u05de\u05dc\u05d0</label><input type="text" name="wn" maxlength="60" autocomplete="off">'
   + '<label>\u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d6\u05d4\u05d5\u05ea \u05d0\u05d5 \u05d3\u05e8\u05db\u05d5\u05df</label><input type="text" name="wi" maxlength="15" dir="ltr" autocomplete="off">'
+  + '<div class="whf"><label>\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05e9\u05dc \u05d4\u05e2\u05d5\u05d1\u05d3 (\u05e7\u05d5\u05d1\u05e5 \u05d0\u05d5 \u05ea\u05de\u05d5\u05e0\u05d4)</label><input type="file" class="wf" accept="application/pdf,image/jpeg,image/png" multiple></div>'
   + '<input type="hidden" name="ws"><div style="font-weight:700;margin:6px 0 4px">\u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05e2\u05d5\u05d1\u05d3 \u05d1\u05d0\u05e6\u05d1\u05e2</div><canvas></canvas>'
   + '<div class="wb"><button type="button" class="wc">\u05e0\u05e7\u05d4 \u05d7\u05ea\u05d9\u05de\u05d4</button><button type="button" class="wx">\u05d4\u05e1\u05e8 \u05e2\u05d5\u05d1\u05d3</button></div>';
 const J = (s) => JSON.stringify(s);
@@ -251,7 +273,8 @@ const SCRIPT = (nonce) => `(function(){${PAD_JS}
 var f=document.getElementById('f'),sig=document.getElementById('sig'),go=document.getElementById('go');
 document.getElementById('clr').addEventListener('click',function(){x.clearRect(0,0,c.width,c.height);drawn=false;});
 function upd(){var on=[];Array.prototype.forEach.call(document.querySelectorAll('.wk'),function(b){if(b.checked)on.push(b.value);});
-Array.prototype.forEach.call(document.querySelectorAll('.doc'),function(d){var r=d.getAttribute('data-req');if(r!=='w'&&r!=='o')return;var ws=d.getAttribute('data-works').split(',');var need=ws.some(function(w){return on.indexOf(w)>=0;});d.className='doc'+(need?' on':'');});}
+Array.prototype.forEach.call(document.querySelectorAll('.doc'),function(d){var r=d.getAttribute('data-req');if(r!=='w'&&r!=='o')return;var ws=d.getAttribute('data-works').split(',');var need=ws.some(function(w){return on.indexOf(w)>=0;});d.className='doc'+(need?' on':'');});
+var hw=${J(docWorks(CTR_PER_WORKER))};document.getElementById('wl').className=hw.some(function(w){return on.indexOf(w)>=0;})?'hg':'';}
 Array.prototype.forEach.call(document.querySelectorAll('.wk'),function(b){b.addEventListener('change',upd);});upd();
 var wl=document.getElementById('wl'),rows=[],MAX=${CTR_SIGN_MAX};
 function mkPad(cv){var cx=cv.getContext('2d'),st={d:false,dn:false};var r0=cv.getBoundingClientRect();cv.width=r0.width||300;cv.height=110;cx.lineWidth=2.5;cx.lineCap='round';cx.strokeStyle='#111';
@@ -273,7 +296,9 @@ f.addEventListener('submit',function(e){var miss=[];Array.prototype.forEach.call
 if(!document.querySelectorAll('.wk:checked').length){e.preventDefault();alert(${J('\u05e6\u05e8\u05d9\u05da \u05dc\u05e1\u05de\u05df \u05dc\u05e4\u05d7\u05d5\u05ea \u05e1\u05d5\u05d2 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d0\u05d7\u05d3.')});return;}
 if(miss.length){e.preventDefault();alert(${J('\u05d7\u05e1\u05e8\u05d9\u05dd \u05de\u05e1\u05de\u05db\u05d9\u05dd:')}+'\\n'+miss.join('\\n'));return;}
 var full=0,bad=[];rows.forEach(function(r,i){var n=r.el.querySelector('[name=wn]').value.trim(),id=r.el.querySelector('[name=wi]').value.trim(),s=r.pad.st.d;if(!n&&!id&&!s)return;if(!n||!id||!s)bad.push(i+1);else full++;});
+var hg=document.getElementById('wl').className==='hg',nocert=[];rows.forEach(function(r,i){var w=r.el.querySelector('.wf');w.name='wf_'+i;if(!hg)return;var n=r.el.querySelector('[name=wn]').value.trim();if(n&&(!w.files||!w.files.length))nocert.push(n);});
 if(bad.length){e.preventDefault();alert(${J('\u05d7\u05e1\u05e8 \u05e9\u05dd, \u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d6\u05d4\u05d5\u05ea \u05d0\u05d5 \u05d7\u05ea\u05d9\u05de\u05d4 \u05d0\u05e6\u05dc \u05e2\u05d5\u05d1\u05d3:')}+' '+bad.join(', '));return;}
+if(nocert.length){e.preventDefault();alert(${J('\u05d7\u05e1\u05e8 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 \u05d0\u05e6\u05dc:')}+'\\n'+nocert.join('\\n'));return;}
 if(!full){e.preventDefault();alert(${J('\u05e6\u05e8\u05d9\u05da \u05dc\u05e4\u05d7\u05d5\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d0\u05d7\u05d3: \u05e9\u05dd, \u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d6\u05d4\u05d5\u05ea \u05d5\u05d7\u05ea\u05d9\u05de\u05d4.')});return;}
 if(!drawn){e.preventDefault();alert(${J('\u05d7\u05e1\u05e8\u05d4 \u05d7\u05ea\u05d9\u05de\u05ea \u05de\u05e0\u05d4\u05dc \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4. \u05d7\u05ea\u05de\u05d5 \u05d1\u05d0\u05e6\u05d1\u05e2 \u05d1\u05ea\u05d5\u05da \u05d4\u05de\u05e1\u05d2\u05e8\u05ea.')});return;}
 rows.forEach(function(r){r.el.querySelector('[name=ws]').value=r.pad.st.d?r.pad.cv.toDataURL('image/png'):'';});
@@ -300,7 +325,7 @@ export function formHtml(t, entry, tok, instr) {
     + '<div class="sec"><b>\u05d4\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05e9\u05ea\u05d1\u05e6\u05e2\u05d5</b>' + workBoxes(entry.works)
     + '<label for="desc">\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 (\u05de\u05d4 \u05d9\u05e2\u05e9\u05d4, \u05d0\u05d9\u05e4\u05d4 \u05d5\u05d1\u05d0\u05d9\u05d6\u05d4 \u05e6\u05d9\u05d5\u05d3)</label><textarea id="desc" name="desc" maxlength="' + DESC_MAX + '" required>' + esc(entry.desc || '') + '</textarea></div>'
     + '<div class="sec"><b>\u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd</b><p class="yel">\u05dc\u05e4\u05d9 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05e9\u05e1\u05d9\u05de\u05e0\u05ea\u05dd. PDF, JPG \u05d0\u05d5 PNG, \u05e2\u05d3 4MB \u05dc\u05e7\u05d5\u05d1\u05e5.</p>'
-    + CTR_DOCS.map((d) => docField(d[0], t)).join('') + '</div>'
+    + CTR_DOCS.filter((d) => d[0] !== CTR_PER_WORKER).map((d) => docField(d[0], t)).join('') + '</div>'
     + '<div class="sec"><b>' + esc(CTR_TITLE) + ' (\u05d8\u05d5\u05e4\u05e1 146.03)</b><p class="yel">\u05db\u05dc \u05e2\u05d5\u05d1\u05d3 \u05e7\u05d5\u05e8\u05d0 \u05d0\u05ea \u05d4\u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05dc\u05e4\u05e0\u05d9 \u05e9\u05d4\u05d5\u05d0 \u05d7\u05d5\u05ea\u05dd.</p><div class="ins">' + esc(instr) + '</div></div>'
     + '<div class="sec"><b>\u05e2\u05d5\u05d1\u05d3\u05d9 \u05d4\u05e7\u05d1\u05dc\u05df: \u05e9\u05d5\u05e8\u05d4 \u05dc\u05db\u05dc \u05e2\u05d5\u05d1\u05d3</b><p class="yel">\u05d1\u05d7\u05ea\u05d9\u05de\u05d4 \u05e9\u05dc\u05d5 \u05db\u05dc \u05e2\u05d5\u05d1\u05d3 \u05de\u05d0\u05e9\u05e8: ' + esc(CTR_OK) + ' \u05de\u05e2\u05d1\u05d9\u05e8\u05d9\u05dd \u05d0\u05ea \u05d4\u05d8\u05dc\u05e4\u05d5\u05df \u05de\u05e2\u05d5\u05d1\u05d3 \u05dc\u05e2\u05d5\u05d1\u05d3.</p>'
     + '<div id="wl"></div><button type="button" id="add" class="btn s">+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05e2\u05d5\u05d1\u05d3</button></div>'
@@ -473,7 +498,7 @@ async function submit(env, request, nowMs, deps) {
   const len = Number(request.headers.get('content-length') || 0);
   // A browser always states the size of a form with files; without it the body could be read without end (review 15/11/2026).
   if (!len) return errPage('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7 \u05db\u05e8\u05d0\u05d5\u05d9. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05de\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8.', 411);
-  if (len > CTR_MAX_BODY) return errPage('\u05d4\u05e7\u05d1\u05e6\u05d9\u05dd \u05d2\u05d3\u05d5\u05dc\u05d9\u05dd \u05de\u05d3\u05d9 \u05d9\u05d7\u05d3 (\u05e2\u05d3 15MB).', 413);
+  if (len > CTR_MAX_BODY) return errPage('\u05d4\u05e7\u05d1\u05e6\u05d9\u05dd \u05d2\u05d3\u05d5\u05dc\u05d9\u05dd \u05de\u05d3\u05d9 \u05d9\u05d7\u05d3 (\u05e2\u05d3 ' + CTR_MAX_MB + 'MB).', 413);
   let form; try { form = await request.formData(); } catch (e) { return errPage('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7 \u05db\u05e8\u05d0\u05d5\u05d9. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1.', 400); }
   const tok = String(form.get('k') || '');
   const t = await readCtrToken(env, tok, nowMs);
@@ -490,6 +515,16 @@ async function submit(env, request, nowMs, deps) {
       if (file.size > MAX_FILE) { files.push({ doc: d[0], size: file.size, type: ['big'], u8: null }); continue; }
       const u8 = new Uint8Array(await file.arrayBuffer());
       files.push({ doc: d[0], size: u8.length, type: fileType(u8), u8 });
+    }
+  }
+  // each worker's height certificate, in his row (wf_<row>, the page names them on send; 16/11/2026)
+  const nRows = Math.min(form.getAll('wn').length, CTR_SIGN_MAX + 5);
+  for (let i = 0; i < nRows; i++) {
+    for (const file of form.getAll('wf_' + i)) {
+      if (!file || typeof file.arrayBuffer !== 'function' || !file.size) continue;
+      if (file.size > MAX_FILE) { files.push({ doc: CTR_PER_WORKER, w: i, size: file.size, type: ['big'], u8: null }); continue; }
+      const u8 = new Uint8Array(await file.arrayBuffer());
+      files.push({ doc: CTR_PER_WORKER, w: i, size: u8.length, type: fileType(u8), u8 });
     }
   }
   const sig = sigBytes(form.get('sig'));
@@ -529,8 +564,10 @@ async function submit(env, request, nowMs, deps) {
     od = await deps.accessToken(env);
     const count = {};
     saved = await Promise.all(v.files.map(async (x) => {
-      count[x.doc] = (count[x.doc] || 0) + 1;
-      const name = stamp + ' - ' + safeName(CTR_DOC_L[x.doc], 40) + ' - ' + count[x.doc] + '.' + x.type[0];
+      // a worker's certificate is named by him: "<date> - <HGT_FILE> - <worker> - 1.pdf"
+      const ck = x.doc + (x.wn ? '|' + x.wn : '');
+      count[ck] = (count[ck] || 0) + 1;
+      const name = stamp + ' - ' + (x.wn ? HGT_FILE + ' - ' + safeName(x.wn, 40) : safeName(CTR_DOC_L[x.doc], 40)) + ' - ' + count[ck] + '.' + x.type[0];
       const r = await deps.putFile(od.token, folder, name, x.u8, x.type[1], 'rename');
       return { doc: x.doc, name, url: r.webUrl || null, bytes: x.u8, type: x.type[1] };
     }));
