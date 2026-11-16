@@ -44,15 +44,20 @@ export function ctrRefOf(kind, about, prev) {
   return p ? { rid: p[1], by: 'prev' } : null;
 }
 // The last day in the register: a year from the approval (perm), or the job's last day (temp). YYYY-MM-DD.
+// 16/11/2026 (DECISIONS "five additions"): never past the document that ends first (first_e, from the page's "valid until").
 export function ctrEnd(e, nowMs) {
-  return e && e.kind === 'temp' && /^\d{4}-\d{2}-\d{2}$/.test(String(e.de || '')) ? e.de : ilDay(nowMs + CTR_YEAR_DAYS * 864e5);
+  const base = e && e.kind === 'temp' && /^\d{4}-\d{2}-\d{2}$/.test(String(e.de || '')) ? e.de : ilDay(nowMs + CTR_YEAR_DAYS * 864e5);
+  const f = String((e && e.first_e) || '');
+  return /^\d{4}-\d{2}-\d{2}$/.test(f) && f < base ? f : base;
 }
+// The document that cut the approval short, for the question and the answer ('' when none did).
+const firstNote = (e, nowMs) => (e && e.first_e && ctrEnd(e, nowMs) === e.first_e && e.first_doc ? ' (\u05d4\u05de\u05e1\u05de\u05da \u05e9\u05e4\u05d2 \u05e8\u05d0\u05e9\u05d5\u05df: ' + one(e.first_doc, 60) + ')' : '');
 export function ctrAskText(e, nowMs) {
   const works = Array.isArray(e.works) ? e.works.map(workLabel).join(', ') : '';
   return '\u05e7\u05d1\u05dc\u05df \u05e9\u05dc\u05d7 \u05d0\u05ea \u05d8\u05d5\u05e4\u05e1 \u05d4\u05d0\u05d9\u05e9\u05d5\u05e8: ' + one(e.company, 80) + ' (' + (e.kind === 'temp' ? '\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea' : '\u05e7\u05d1\u05dc\u05df \u05e7\u05d1\u05d5\u05e2') + ').\n'
     + (works ? '\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea: ' + works + '.\n' : '')
     + (Number(e.workers) || 0) + ' \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d7\u05ea\u05de\u05d5 \u05e2\u05dc \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea, ' + (Number(e.files) || 0) + ' \u05e7\u05d1\u05e6\u05d9\u05dd. \u05d4\u05db\u05dc \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05e7\u05d1\u05dc\u05df \u05d5\u05d1\u05de\u05d9\u05d9\u05dc \u05e9\u05dc\u05da.\n'
-    + '\u05dc\u05d0\u05e9\u05e8 \u05d5\u05dc\u05d4\u05db\u05e0\u05d9\u05e1 \u05dc\u05de\u05e8\u05e9\u05dd \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05e2\u05d3 ' + dmy(ctrEnd(e, nowMs)) + '?';
+    + '\u05dc\u05d0\u05e9\u05e8 \u05d5\u05dc\u05d4\u05db\u05e0\u05d9\u05e1 \u05dc\u05de\u05e8\u05e9\u05dd \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05e2\u05d3 ' + dmy(ctrEnd(e, nowMs)) + firstNote(e, nowMs) + '?';
 }
 // A company name for comparing: no quotes, no "בע\"מ", no punctuation, one space, lower case.
 export function normName(s) {
@@ -80,8 +85,12 @@ const tyOf = (e) => (KIND_TY[e.kind] || KIND_TY.perm) + (Array.isArray(e.works) 
 // A new register row (no id): what the contractor typed and the approval.
 export function ctrNewRow(e) {
   return { n: one(e.company, 80), cid: digits(e.cnum) || null, ty: tyOf(e), c: one(e.contact, 60) || null, ph: one(e.mobile, 15) || null,
-    e: e.until, tr: CTR_TRAINED, s: CTR_ACTIVE, file_url: e.form || e.summary || null };
+    e: e.until, tr: CTR_TRAINED, s: CTR_ACTIVE, file_url: e.form || e.summary || null,
+    ins: insDay(e), ins_src: insDay(e) ? insLine(e) : null };
 }
+// The insurance end the contractor gave on the page (16/11/2026, ins_e), and where it came from (as the app's ins_src lines).
+const insDay = (e) => (/^\d{4}-\d{2}-\d{2}$/.test(String((e && e.ins_e) || '')) ? e.ins_e : null);
+const insLine = (e) => dmy(String(e.ok_at || new Date().toISOString()).slice(0, 10)) + ' \u05de\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e7\u05d1\u05dc\u05df, \u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 ' + dmy(e.ins_e) + (e.form || e.summary ? ': ' + (e.form || e.summary) : '');
 // The patch of a row already there: never empties a field, never shortens its date (a job inside a permanent year keeps the year).
 export function ctrUpdate(cur, e) {
   const p = { tr: CTR_TRAINED, s: CTR_ACTIVE };
@@ -90,6 +99,8 @@ export function ctrUpdate(cur, e) {
   if (one(e.mobile, 15)) p.ph = one(e.mobile, 15);
   // the newest signed form (16/11/2026 review: a contractor already in the register kept no link to it)
   if (e.form || e.summary) p.file_url = e.form || e.summary;
+  // the newest insurance certificate wins (it may end sooner than the one before); its line on top of the old ones
+  if (insDay(e)) { p.ins = insDay(e); p.ins_src = (insLine(e) + (cur && cur.ins_src ? '\n' + cur.ins_src : '')).slice(0, 2000); }
   if (!(cur && /^\d{4}-\d{2}-\d{2}$/.test(String(cur.e || '')) && String(cur.e) > String(e.until))) { p.e = e.until; p.ty = tyOf(e); }
   return p;
 }
@@ -192,13 +203,13 @@ export async function fastCtrOk(env, fr, nowMs) {
   // the one approval: under compare-and-swap from "filled", so a second tap finds it approved
   const p = await ctrPatch(env, fr.id, { status: CTR_S_OK, ok_at: iso, until }, CTR_S_FILLED);
   if (p.error) return p.status === CTR_S_OK ? { text: '\u05db\u05d1\u05e8 \u05d0\u05d5\u05e9\u05e8: ' + one(e.company, 60) + '.', ref: 'ctr-done' } : { text: notWaiting(e), ref: 'ctr-gone' };
-  return ctrRegister(env, Object.assign({}, e, { status: CTR_S_OK, until }), null);
+  return ctrRegister(env, Object.assign({}, e, { status: CTR_S_OK, until, ok_at: iso }), null);
 }
 // Writes the approved request into the register. force = a row id Michael chose, 'new', or null (match it here).
 export async function ctrRegister(env, e, force) {
   const name = one(e.company, 60);
   try {
-    const rows = await sb(env, 'ctr?select=id,n,cid,e,ty,s&limit=2000');
+    const rows = await sb(env, 'ctr?select=id,n,cid,e,ty,s,ins_src&limit=2000');
     const m = force === 'new' ? { none: true } : force ? { id: force } : matchCtr(rows, e);
     if (m.similar) {
       await ctrPatch(env, e.id, { reg: 'ask', reg_ask: m.similar.id }, CTR_S_OK);
@@ -215,7 +226,7 @@ export async function ctrRegister(env, e, force) {
       await sb(env, 'ctr?on_conflict=id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify([Object.assign({ id }, ctrNewRow(e))]) });
     }
     await ctrPatch(env, e.id, { reg: id, reg_ask: null }, CTR_S_OK);
-    return { text: '\u05d0\u05d5\u05e9\u05e8. ' + rowName + (m.id ? ' \u05e2\u05d5\u05d3\u05db\u05df' : ' \u05e0\u05d5\u05e1\u05e3') + ' \u05d1\u05de\u05e8\u05e9\u05dd \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd, \u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 ' + dmy(e.until) + ', \u05d5\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e9\u05d7\u05ea\u05de\u05d5 \u05e1\u05d5\u05de\u05e0\u05d5 "\u05d4\u05d5\u05db\u05e9\u05e8".'
+    return { text: '\u05d0\u05d5\u05e9\u05e8. ' + rowName + (m.id ? ' \u05e2\u05d5\u05d3\u05db\u05df' : ' \u05e0\u05d5\u05e1\u05e3') + ' \u05d1\u05de\u05e8\u05e9\u05dd \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd, \u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 ' + dmy(e.until) + firstNote(e, Date.parse(e.ok_at || '') || Date.now()) + (insDay(e) ? ', \u05d4\u05d1\u05d9\u05d8\u05d5\u05d7 \u05e2\u05d3 ' + dmy(insDay(e)) : '') + ', \u05d5\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e9\u05d7\u05ea\u05de\u05d5 \u05e1\u05d5\u05de\u05e0\u05d5 "\u05d4\u05d5\u05db\u05e9\u05e8".'
       + (e.kind === 'temp' ? '' : ' 30 \u05d9\u05d5\u05dd \u05dc\u05e4\u05e0\u05d9 \u05d4\u05e1\u05d5\u05e3 \u05ea\u05e7\u05d1\u05dc \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9 \u05de\u05d5\u05db\u05df \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4.'), ref: 'ctr-done' };
   } catch (x) {
     return { text: '\u05d0\u05d5\u05e9\u05e8, \u05d0\u05d1\u05dc \u05d4\u05db\u05ea\u05d9\u05d1\u05d4 \u05dc\u05de\u05e8\u05e9\u05dd \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05e0\u05db\u05e9\u05dc\u05d4 (' + one(x && x.message, 60) + '). \u05d0\u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05de\u05d7\u05e8 \u05d1\u05e2\u05d3\u05db\u05d5\u05df \u05d4\u05d1\u05d5\u05e7\u05e8.', ref: 'ctr-reg-fail' };
@@ -301,7 +312,7 @@ export async function ctrMorning(env, now) {
       const v = { kind: 'perm', ins: prevE ? !!prevE.ins : false, ds: null, de: null, company: one(r.n, 80) };
       const c = await ctrLinkCreate(env, sbFrom(env), hdr(env), v, nowMs).catch((x) => ({ error: String(x && x.message) }));
       if (!c || !c.ok) { out.renew_err = String((c && c.error) || 'link').slice(0, 80); continue; }
-      text = '\u05d4\u05d0\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e9\u05e0\u05ea\u05d9 \u05e9\u05dc ' + one(r.n, 60) + ' \u05d1\u05de\u05e8\u05e9\u05dd \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05e0\u05d2\u05de\u05e8 \u05d1-' + dmy(r.e) + '. \u05d4\u05db\u05e0\u05ea\u05d9 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e9\u05e0\u05d4 \u05d4\u05d1\u05d0\u05d4:\n\n' + c.text;
+      text = '\u05d4\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e9\u05dc ' + one(r.n, 60) + ' \u05d1\u05de\u05e8\u05e9\u05dd \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05e0\u05d2\u05de\u05e8 \u05d1-' + dmy(r.e) + '. \u05d4\u05db\u05e0\u05ea\u05d9 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e9\u05e0\u05d4 \u05d4\u05d1\u05d0\u05d4:\n\n' + c.text;
       await mark(r.id, { e: r.e, text });
     }
     const s = await ctrSay(env, text, 'ctr-renew', null);

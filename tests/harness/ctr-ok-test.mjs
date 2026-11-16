@@ -226,6 +226,22 @@ const filled = (o) => Object.assign({ id: 'cabc1234', kind: 'perm', ins: true, d
   const late = await fastCtrOk(WA, { id: 'ctmp1234', yes: true }, NOW);
   check('a late "בצע" on it: no longer waiting', late.ref === 'ctr-gone' && db.ctr.length === 0, late);
 
+  console.log('\n8. "valid until": the approval ends at the first document to end, the insurance date to the register');
+  const fe = filled({ first_e: addD(today, 40), first_doc: 'אישור עבודה בגובה של דני', ins_e: addD(today, 100) });
+  check('ctrEnd: a document ending before the year cuts it', ctrEnd(fe, NOW) === addD(today, 40));
+  check('ctrEnd: a document ending after the year does not', ctrEnd(filled({ first_e: addD(today, 900) }), NOW) === ctrEnd(filled(), NOW));
+  check('ctrEnd: a temp job ending before the document keeps the job end', ctrEnd(filled({ kind: 'temp', de: addD(today, 5), first_e: addD(today, 40) }), NOW) === addD(today, 5));
+  check('the question names the document that ends first', ctrAskText(fe, NOW).indexOf('המסמך שפג ראשון: אישור עבודה בגובה של דני') > 0 && !BAD.test(ctrAskText(fe, NOW)));
+  check('no note when no document cut it', ctrAskText(filled({ first_e: addD(today, 900), first_doc: 'x' }), NOW).indexOf('שפג ראשון') < 0);
+  const nrI = ctrNewRow(Object.assign({}, fe, { until: addD(today, 40), ok_at: new Date(NOW).toISOString() }));
+  check('a new register row: the insurance date and where it came from', nrI.ins === addD(today, 100) && /מקישור הקבלן, בתוקף עד/.test(nrI.ins_src) && nrI.e === addD(today, 40), nrI);
+  check('no insurance date given: nothing written', ctrNewRow(filled({ until: addD(today, 300) })).ins === null);
+  const upI = ctrUpdate({ id: 'r', cid: '515151515', e: addD(today, 10), ins_src: '01/01/2026 עודכן ידנית באפליקציה: 01/02/2026' }, Object.assign({}, fe, { until: addD(today, 40) }));
+  check('an existing row: the newest insurance, its line on top of the old', upI.ins === addD(today, 100) && /^\d{2}\/\d{2}\/\d{4} מקישור הקבלן/.test(upI.ins_src) && upI.ins_src.indexOf('עודכן ידנית') > 0, upI);
+  reset(); put([fe]); db.ctr = [];
+  const yesI = await fastCtrOk(WA, { id: 'cabc1234', yes: true }, NOW);
+  check('"בצע": in the register until the first document ends, the answer says so', db.ctr.length === 1 && db.ctr[0].e === addD(today, 40) && db.ctr[0].ins === addD(today, 100) && yesI.text.indexOf('שפג ראשון') > 0 && yesI.text.indexOf('הביטוח עד') > 0, yesI);
+
   console.log(`\nctr-ok-test.mjs            ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.log('CRASH', e && e.stack); process.exit(1); });
