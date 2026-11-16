@@ -24,6 +24,7 @@ import { odConfigured, accessToken, putFile, sendMailTo } from '../_onedrive.js'
 import { worksTick } from './works.js';
 import { stateCas } from '../_cas.js';
 import { ctrMorning } from '../_ctrok.js';
+import { formProbe } from '../_formprobe.js';
 import { meetingDate, checkAndFixDeck, deckGapText } from './hazard-deck.js';
 import { OCR_ROOT, OCR_INBOX, OCR_AUTO_KEY, OCR_AUTO_GAP_MS, OCR_DONE_MAX, OCR_MAX_PAGES, OCR_MODELS, ocrAutoPick, ocrOne } from '../_ocr.js';
 
@@ -494,9 +495,11 @@ export async function watch(env, now) {
   const um = await usageStep(env, now).catch((e) => ({ ok: false, error: String(e.message || e).slice(0, 120) }));
   // 05/11/2026: the weekly works link (works.js): Wednesday 18:00 the mail (only when works_mail_on), Thursday 12:00 the reminder
   const wk = await worksTick(env, now, { accessToken, sendMailTo }).catch((e) => ({ error: String(e.message || e).slice(0, 120) }));
+  // 16/11/2026 (Michael: "בצע: בדיקה שבועית לטופס"): Sunday from 06:00, form 146.03 through Microsoft's PDF (_formprobe.js)
+  const fp = await formProbe(env, { dow: ilDow(now), hour: ilHour(now), day: ilDay(now) }).catch((e) => ({ ran: false, error: String(e.message || e).slice(0, 120) }));
   const st = stagingDue(now) ? await stagingPing().catch((e) => ({ error: String(e.message || e).slice(0, 120) })) : null;
   const r = await watchReply(env, now);
-  return Object.assign({}, r, pr ? { promises: pr } : {}, dv ? { dev: dv } : {}, pc ? { check: pc } : {}, oc ? { ocr: oc } : {}, st ? { staging: st } : {}, dk ? { deck: dk } : {}, im ? { invMonth: im } : {}, um ? { usage: um } : {}, wk ? { works: wk } : {});
+  return Object.assign({}, r, pr ? { promises: pr } : {}, dv ? { dev: dv } : {}, pc ? { check: pc } : {}, oc ? { ocr: oc } : {}, st ? { staging: st } : {}, dk ? { deck: dk } : {}, im ? { invMonth: im } : {}, um ? { usage: um } : {}, wk ? { works: wk } : {}, fp && (fp.ran || fp.error) ? { formProbe: fp } : {});
 }
 async function watchReply(env, now) {
   const rows = await sb(env, 'notifications_log?select=ts,payload&event_type=eq.owner_in&order=ts.desc&limit=1').catch(() => []);
