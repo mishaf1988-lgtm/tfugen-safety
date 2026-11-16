@@ -68,6 +68,15 @@ function runAfterLabel(xml, label, run) {
   if (e < 0) return { xml, ok: false };
   return { xml: growLine(xml.slice(0, e + 6) + run + xml.slice(e + 6), i), ok: true };
 }
+// The table's first row marked as a heading row (w:tblHeader), which Word repeats at the top of each page.
+export function repeatHead(tbl) {
+  const m = /<w:tr\b[^>]*>/.exec(tbl);
+  if (!m) return tbl;
+  const at = m.index + m[0].length, rest = tbl.slice(at);
+  if (/^<w:trPr>[\s\S]*?<w:tblHeader/.test(rest)) return tbl;
+  if (rest.indexOf('<w:trPr>') === 0) return tbl.slice(0, at) + '<w:trPr><w:tblHeader/>' + rest.slice(8);
+  return tbl.slice(0, at) + '<w:trPr><w:tblHeader/></w:trPr>' + rest;
+}
 // The innermost table that holds a text.
 function tableWith(xml, text) {
   for (const m of xml.matchAll(/<w:tbl>[\s\S]*?<\/w:tbl>/g)) if (m[0].indexOf(text) >= 0) return { s: m.index, e: m.index + m[0].length, x: m[0] };
@@ -135,6 +144,9 @@ export async function fillCtrForm(bytes, d) {
   const t2 = tableWith(xml, '>' + WORKER_HEAD + '<');
   let filled = 0;
   if (t2) {
+    // the heading row repeats on every page the table runs onto (the live PDF of 16/11/2026: the second worker's row
+    // stood on page 3 with no "\u05e9\u05dd \u05d4\u05e2\u05d5\u05d1\u05d3 / \u05ea.\u05d6. / \u05d7\u05ea\u05d9\u05de\u05d4" above it)
+    t2.x = repeatHead(t2.x);
     const rows = [...t2.x.matchAll(/<w:tr\b[\s\S]*?<\/w:tr>/g)];
     const empty = rows.filter((m) => !textOf(m[0]).trim());
     if (rows.length && empty.length) {
