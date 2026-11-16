@@ -5,7 +5,8 @@ from _common import run, check, done, repo_root
 R = repo_root()
 PR = "mcp__github__create_pull_request"
 base = {"tool_name": PR, "cwd": R}
-env = {"CLAUDE_PROJECT_DIR": R, "PR_GATE_CHANGED": "index.html"}
+# BASE=HEAD: an empty diff, so a real regex change in index.html on the branch under test is not read (16/11/2026)
+env = {"CLAUDE_PROJECT_DIR": R, "PR_GATE_CHANGED": "index.html", "BASE": "HEAD"}
 deny = lambda o: '"deny"' in o
 out = run("pr-gate.py", dict(base, tool_input={"title": "x", "body": "שינוי"}), env)
 check("no retro line: deny", deny(out) and "retro" in out, out)
