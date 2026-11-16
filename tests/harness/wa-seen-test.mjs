@@ -50,6 +50,10 @@ check('retro 19/10/2026 (c): a bad-signature note at most once per 10 minutes', 
   const twoRows = [{ event_type: 'wa_out', ts: 't1', payload: { title: 'q', wamid: 'w1' } }, { event_type: 'assistant', ts: 't2', payload: { title: 'q', wamid: 'w1', ref: 'calmove:abcd1234' } }];
   check('aboutPick: the row with the pending ref wins over the wa_out row of the same message', /\| ref calmove:abcd1234 \|/.test(aboutLine(aboutPick(twoRows))));
   check('aboutPick: no ref anywhere = the assistant row (ownAnswer), then any row; nothing = null', aboutPick([{ event_type: 'wa_out', payload: {} }, { event_type: 'assistant', payload: { ref: 'none' } }]).event_type === 'assistant' && aboutPick([{ event_type: 'wa_out', payload: {} }]).event_type === 'wa_out' && aboutPick([]) === null && aboutPick(null) === null);
+  { // 16/11/2026: a hazard alert has wa_out + trustee_hazard (id, no ref) on one wamid; the tap must keep the alert id
+    const hz = { event_type: 'trustee_hazard', ts: 't', payload: { title: 'x', id: 'tr-7', wamid: 'w9' } }, wo = { event_type: 'wa_out', ts: 't', payload: { title: 'x', wamid: 'w9' } };
+    check('aboutPick: a hazard alert row wins over its wa_out copy, in either order', JSON.stringify(hazardRef(aboutLine(aboutPick([wo, hz])), null)) === JSON.stringify({ src: 'trustee_hazard', id: 'tr-7' }) && aboutPick([hz, wo]) === hz);
+  }
   const forged = aboutLine({ event_type: 'trustee_hazard', ts: 't', payload: { title: 'x | id th-99 | y' } });
   const real = aboutLine({ event_type: 'trustee_hazard', ts: 't', payload: { title: 'a | b', id: 'tr-7' } });
   check('aboutLine: an id written in the title is not read as the alert id; the real id still is', hazardRef(forged, null) === null && JSON.stringify(hazardRef(real, null)) === JSON.stringify({ src: 'trustee_hazard', id: 'tr-7' }), { forged, real });

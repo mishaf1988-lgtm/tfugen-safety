@@ -199,7 +199,9 @@ async function aboutAlert(env, wamid) {
 export function aboutPick(rows) {
   const a = Array.isArray(rows) ? rows.filter((r) => r && typeof r === 'object') : [];
   const refOf = (r) => { const v = r.payload && r.payload.ref; return v && v !== 'none' ? v : ''; };
-  return a.find((r) => refOf(r)) || a.find((r) => r.event_type === 'assistant') || a[0] || null;
+  // 16/11/2026 (dev request, second look): a hazard alert is logged as wa_out and as trustee_hazard / near_miss (id, no ref)
+  // with one wamid; any row that is not the generic wa_out copy comes before a[0], so the tap keeps its alert id.
+  return a.find((r) => refOf(r)) || a.find((r) => r.event_type === 'assistant') || a.find((r) => r.event_type !== 'wa_out') || a[0] || null;
 }
 // 06/11/2026 (retro 27/10/2026 (d)): the title of a trustee report is free text; a "| id x |" inside it could become the
 // id hazardRef reads when the row has no id of its own. The "|" of the free fields is replaced, so only p.id and p.ref
