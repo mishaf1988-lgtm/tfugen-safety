@@ -550,10 +550,13 @@ async function submit(env, request, nowMs, deps) {
     await deps.sendMailTo(od.token, [od.email], [], MAIL_SUBJECT(t, v), html,
       att.map((x) => ({ '@odata.type': '#microsoft.graph.fileAttachment', name: x.name, contentType: x.type, contentBytes: b64(x.bytes) })));
   } catch (e) { mail = 'err: ' + String((e && e.message) || e).slice(0, 120); }
-  await stateCas(SB, sbH(env, { 'Content-Type': 'application/json' }), CTR_STATE, (cur) => {
-    const p = statePatch(cur, t.rid, { files: saved.length, folder, mail, summary: summary.url || null, worker_link: !!wUrl, form: form146 && form146.url || null, form_err: form146 && form146.err || null, reads: reads.n, reads_err: reads.err || null });
+  // the last write: only onto this send's own claim (at), tried twice (security review 16/11/2026: a lost write left
+  // files null, and after CTR_STUCK_MS the link would open for a second send of a send that went out)
+  const last = () => stateCas(SB, sbH(env, { 'Content-Type': 'application/json' }), CTR_STATE, (cur) => {
+    const p = statePatch(cur, t.rid, { files: saved.length, folder, mail, summary: summary.url || null, worker_link: !!wUrl, form: form146 && form146.url || null, form_err: form146 && form146.err || null, reads: reads.n, reads_err: reads.err || null }, (e) => e.at === atIso);
     return p.error ? { write: false } : { value: JSON.stringify(p.list) };
   }, () => AbortSignal.timeout(FETCH_MS)).catch(() => null);
+  if (!((await last()) || {}).written) await last();
   return page('\u05ea\u05d5\u05d3\u05d4, \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05ea\u05e7\u05d1\u05dc', doneHtml(wUrl), 'ok', 200);
 }
 
