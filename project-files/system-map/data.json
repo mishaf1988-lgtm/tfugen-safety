@@ -817,9 +817,12 @@
    "key": "radar-learn",
    "family": "למידה ומחקר",
    "ops": [
+    "agent_log_since",
     "agent_report",
     "learn",
-    "source_read"
+    "learn_done",
+    "source_read",
+    "state_get"
    ],
    "m365": false,
    "reports": true
