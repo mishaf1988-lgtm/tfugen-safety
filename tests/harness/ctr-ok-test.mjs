@@ -4,7 +4,7 @@
 // No asks for the reason, then makes a draft to the contractor with a fresh link, and the page keeps what was typed.
 // The morning update asks again what is still waiting and makes a new link 30 days before a permanent year ends.
 // Mocked network, nothing leaves.
-import { ctrRefOf, ctrEnd, ctrAskText, normName, matchCtr, ctrNewRow, ctrUpdate, renewDue, ctrDraftBody, fastCtrOk, fastCtrMatch, fastCtrReason, ctrAsk, ctrMorning, nagDue, endedDue,
+import { ctrRefOf, ctrEnd, ctrAskText, normName, matchCtr, ctrNewRow, ctrUpdate, renewDue, ctrDraftBody, fastCtrOk, fastCtrMatch, fastCtrReason, ctrAsk, ctrMorning, nagDue, endedDue, ctrWorkerBody,
   CTR_S_OK, CTR_S_REJ, CTR_RENEW_KEY, CTR_TRAINED } from './_build/_ctrok.mjs';
 import { fastRoute, aboutLine } from './_build/wa-hook.mjs';
 import { formHtml, readCtrToken, ctrDeps } from './_build/ctr-link.mjs';
@@ -27,7 +27,9 @@ const db = { state: {}, ctr: [], logs: [], meta: [], talks: [] };
 const reset = () => Object.assign(db, { state: {}, ctr: [], logs: [], meta: [], talks: [] });
 const json = (o, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { 'Content-Type': 'application/json' } });
 const q = (u, k) => { const m = new RegExp('[?&]' + k + '=([^&]*)').exec(u); return m ? decodeURIComponent(m[1]) : null; };
+let NF = 0;
 globalThis.fetch = async (url, init) => {
+  NF++;
   const u = String(url), m = (init && init.method) || 'GET';
   if (u.startsWith(SB + '/rest/v1/server_state')) {
     if (m === 'GET') { const k = (q(u, 'key') || '').slice(3); return json(db.state[k] ? [{ key: k, value: db.state[k].value, updated_at: db.state[k].updated_at }] : []); }
@@ -47,7 +49,7 @@ globalThis.fetch = async (url, init) => {
     for (const r of JSON.parse(init.body)) { const i = db.ctr.findIndex((x) => x.id === r.id); if (i >= 0) db.ctr[i] = r; else db.ctr.push(r); }
     return new Response(null, { status: 201 });
   }
-  if (u.startsWith(SB + '/rest/v1/toolbox_talks')) { if (m === 'POST') db.talks.push(...JSON.parse(init.body)); return json([], 201); }
+  if (u.startsWith(SB + '/rest/v1/toolbox_talks')) { if (m === 'POST') db.talks.push(...JSON.parse(init.body)); if (m === 'GET') { const id = (q(u, 'id') || '').slice(3); return json(db.talks.filter((t) => t.id === id)); } return json([], 201); }
   if (u.startsWith(SB + '/rest/v1/notification_prefs')) return json([{ prefs: { trustee_hazard: { whatsapp_to: '972500000000' } } }]);
   if (u.startsWith(SB + '/rest/v1/notifications_log')) { if (m === 'POST') db.logs.push(...JSON.parse(init.body)); return json([]); }
   if (u.startsWith('https://graph.facebook.com/')) { db.meta.push(JSON.parse(init.body)); return json({ messages: [{ id: 'wamid.T' + db.meta.length }] }); }
@@ -241,6 +243,34 @@ const filled = (o) => Object.assign({ id: 'cabc1234', kind: 'perm', ins: true, d
   reset(); put([fe]); db.ctr = [];
   const yesI = await fastCtrOk(WA, { id: 'cabc1234', yes: true }, NOW);
   check('"בצע": in the register until the first document ends, the answer says so', db.ctr.length === 1 && db.ctr[0].e === addD(today, 40) && db.ctr[0].ins === addD(today, 100) && yesI.text.indexOf('שפג ראשון') > 0 && yesI.text.indexOf('הביטוח עד') > 0, yesI);
+
+  console.log('\n9. the new-worker link only after "בצע" (16/11/2026, "חמש תוספות")');
+  const PUBT = { id: 'ctr-cabc1234', kind: 'contractor', s: 'פורסמה', link_v: 0 };
+  reset(); put([filled()]); db.ctr = []; db.talks.push({ ...PUBT });
+  const wDrafts = [];
+  const wDraft = async (b) => { wDrafts.push(b); return { ok: true }; };
+  NF = 0;
+  const ya = await fastCtrOk(WA, { id: 'cabc1234', yes: true }, NOW, { draft: wDraft });
+  check('the approval with its link stays well inside the 50 calls of a request (' + NF + ' here, the draft itself about 6)', NF <= 20, NF);
+  check('"בצע": a draft to the contractor with the new-worker link', wDrafts.length === 1 && wDrafts[0].to === 'dani@example.com' && /\/api\/talk\?k=/.test(wDrafts[0].body) && wDrafts[0].op === 'mail_draft', wDrafts);
+  check('... the answer says the draft is in Outlook, and the request is marked', ya.text.indexOf('טיוטה לקבלן עם הקישור לעובד חדש') > 0 && ent('cabc1234').wlink === 'draft', ya);
+  check('the draft: the company, at height = photo and date, keyboard characters only', wDrafts[0].body.indexOf('אלקטרו') > 0 && wDrafts[0].body.indexOf('מצלם את אישור העבודה בגובה') > 0 && !BAD.test(wDrafts[0].body + wDrafts[0].subject));
+  const againW = await fastCtrOk(WA, { id: 'cabc1234', yes: true }, NOW, { draft: wDraft });
+  check('a second tap: no second draft', wDrafts.length === 1 && againW.ref === 'ctr-done', againW);
+  reset(); put([filled({ email: '' })]); db.ctr = []; db.talks.push({ ...PUBT });
+  const yn = await fastCtrOk(WA, { id: 'cabc1234', yes: true }, NOW, { draft: wDraft });
+  check('no mail of the contractor: the link in the answer, to forward', /\/api\/talk\?k=/.test(yn.text) && yn.text.indexOf('להעביר לקבלן') > 0 && ent('cabc1234').wlink === 'said', yn);
+  reset(); put([filled()]); db.ctr = []; db.talks.push({ ...PUBT });
+  const nn = await fastCtrOk(WA, { id: 'cabc1234', yes: false }, NOW, { draft: wDraft });
+  check('"לא": no new-worker link', wDrafts.length === 1 && !/\/api\/talk\?k=/.test(nn.text));
+  reset(); put([filled({ status: CTR_S_OK, until: addD(today, 300), reg: 'ctr26-1', ok_at: '2026-11-17T08:00:00Z' })]); db.ctr = [{ id: 'ctr26-1', n: 'אלקטרו', ty: 'קבוע', e: addD(today, 300), s: 'פעיל' }]; db.talks.push({ ...PUBT });
+  mo = await ctrMorning(WA, new Date(NOW));
+  check('an approval whose link never went out: the morning sends it to Michael once', mo.wlink === 1 && /\/api\/talk\?k=/.test(JSON.stringify(db.meta)) && ent('cabc1234').wlink === 'said', mo);
+  mo = await ctrMorning(WA, new Date(NOW + 864e5));
+  check('... and not again', !mo.wlink, mo);
+  reset(); put([filled({ status: CTR_S_OK, until: addD(today, 300), reg: 'ctr26-1', ok_at: '2026-11-16T10:00:00Z' })]); db.ctr = [{ id: 'ctr26-1', n: 'אלקטרו', ty: 'קבוע', e: addD(today, 300), s: 'פעיל' }]; db.talks.push({ ...PUBT });
+  mo = await ctrMorning(WA, new Date(NOW));
+  check('an approval from before this change (it had its link at the send): nothing sent', !mo.wlink && !/\/api\/talk\?k=/.test(JSON.stringify(db.meta)), mo);
 
   console.log(`\nctr-ok-test.mjs            ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

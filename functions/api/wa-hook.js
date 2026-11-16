@@ -963,7 +963,7 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
     else if (fr0.kind === 'cal_move') { ans = await fastCalMove(env, fr0); ref = 'calmove-done'; }
     else if (fr0.kind === 'ctr_ok' || fr0.kind === 'ctr_match' || fr0.kind === 'ctr_reason') {
       const draft = async (b) => { const res = await routineDb({ env, request: new Request('https://internal/api/routine-db', { method: 'POST', headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' }, body: JSON.stringify(b) }) }); return res.json().catch(() => ({})); };
-      const o = fr0.kind === 'ctr_ok' ? await fastCtrOk(env, fr0, Date.now()) : fr0.kind === 'ctr_match' ? await fastCtrMatch(env, fr0) : await fastCtrReason(env, fr0, Date.now(), { draft });
+      const o = fr0.kind === 'ctr_ok' ? await fastCtrOk(env, fr0, Date.now(), { draft }) : fr0.kind === 'ctr_match' ? await fastCtrMatch(env, fr0) : await fastCtrReason(env, fr0, Date.now(), { draft });
       ans = o.text; ref = o.ref; choices = o.choices || null;
     }
     else if (fr0.kind === 'account') { ans = await fastAccount(env, fr0); ref = 'account'; }

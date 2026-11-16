@@ -13,7 +13,7 @@ import { fillCtrForm, pickTemplate, FORM_ROWS, repeatHead } from './_build/_ctrf
 import { readZip, writeZip, entryText } from './_build/_xlsxpatch.mjs';
 import { KIND_CTR, CTR_PREFIX, CTR_STATE, CTR_WORKS, CTR_DOCS, CTR_DOC_L, requiredDocs, optionalDocs, missingDocs, missingMsg, ctrLinkId, parseCtrLinkId, linkTtlDays, workerTtlDays,
   safeName, ctrFolder, CTR_DIR, stateAdd, statePatch, stateList, CTR_STATE_MAX, INSTR_MISSING, isInstrMissing, CTR_OK, CTR_SIGN_MAX, isStuck, canSend, CTR_STUCK_MS } from './_build/_ctr.mjs';
-import { onRequest as talkRequest, PERM_KINDS, TYPED_KINDS, makePermToken, talkUrl, ctrSignDeps, ctrName, fileCtrSign } from './_build/talk.mjs';
+import { onRequest as talkRequest, PERM_KINDS, TYPED_KINDS, makePermToken, readPermToken, talkUrl, ctrSignDeps, ctrName, fileCtrSign } from './_build/talk.mjs';
 import { onRequest as rdbRequest } from './_build/routine-db.mjs';
 import { latestTalk } from './_build/weekly-digest.mjs';
 import { makeLinkToken } from './_build/_closelink.mjs';
@@ -342,7 +342,8 @@ const good = { company: 'בונים בע"מ', cnum: '512345678', contact: 'דנ�
   r = await post(good, { ins: [['a.pdf', PDF()]], wf_0: [['b.pdf', PDF()]], wf_1: [['b2.pdf', PDF()]], plat: [['c.pdf', PDF()]], frkl: [['d.exe', new Uint8Array([0x4d, 0x5a, 0x90, 0, 0, 0, 0])]] });
   check('a file named .pdf/.exe that is not a PDF/JPG/PNG by its bytes: refused', r.status === 400 && db.puts.length === 0);
   r = await post(good, { ins: [['a.pdf', PDF()]], wf_0: [['b.pdf', PDF()]], wf_1: [['b2.pdf', PDF()]], plat: [['c.png', PNG()]], frkl: [['d.pdf', PDF()]], oth: [['e.pdf', PDF()]] });
-  check('a complete form: 200, the new-worker link on the page', r.status === 200 && /\/api\/talk\?k=/.test(r.html), r.html.slice(0, 300));
+  // 16/11/2026 (DECISIONS "חמש תוספות"): the new-worker link only after Michael's "בצע"
+  check('a complete form: 200, "waiting for approval", no new-worker link yet', r.status === 200 && !/\/api\/talk\?k=/.test(r.html) && r.html.indexOf('מחכה לאישור') > 0, r.html.slice(0, 300));
   const folder = ctrFolder('בונים בע"מ', today.slice(0, 4));
   const inFolder = db.puts.filter((p) => p.folder === folder);
   check('six files (a height certificate per worker), the summary PDF and form 146.03 (Word + PDF) into the contractor folder (company sanitized), never replacing a file', inFolder.length === 9 && db.puts.every((p) => p.conflict === 'rename') && inFolder.some((p) => /\.pdf$/.test(p.name) && p.type === 'application/pdf' && p.name.indexOf('טופס אישור') > 0), db.puts.map((p) => p.folder + '|' + p.name));
@@ -353,6 +354,7 @@ const good = { company: 'בונים בע"מ', cnum: '512345678', contact: 'דנ�
   check('the talk is published with the company and the instructions text', talk.s === 'פורסמה' && talk.dept === 'בונים בע"מ' && talk.body.indexOf('הוראות') === 0, talk);
   const rr = db.reads.filter((x) => x.talk_id === talk.id);
   check('each worker of the send is a signature of the talk: name, ID, the company, his signature in Storage, x:<ID>: key', rr.length === 2 && rr[0].emp_name === 'ישראל ישראלי' && rr[0].id_no === '012345678' && rr[0].emp_id === 'x:012345678:ישראל ישראלי' && rr[1].emp_id === 'x:223456785:ahmad nasser' && rr.every((x) => x.dept === 'בונים בע"מ' && /\/storage\/v1\/object\/public\/incidents-photos\/sig-ctr-/.test(x.sig_url) && x.text_hash && x.device === 'ctr-link'), rr);
+  check('the send\'s workers at height: their row says so, with the date and the certificate', rr.every((x) => x.job === 'עבודה בגובה' && x.equip && x.equip.hgt === true && x.equip.files.length === 1) && rr[0].equip.e === addD(today, 300) && rr[1].equip.e === addD(today, 60), rr.map((x) => [x.job, x.equip]));
   const m = db.mails[0];
   check('one mail, to Michael only (the connected mailbox)', db.mails.length === 1 && m.to.join() === 'owner@example.test' && m.cc.length === 0);
   check('the mail subject names the company, never an ID number', m.subject.indexOf('בונים') > 0 && !/\d{5,}/.test(m.subject), m.subject);
@@ -386,7 +388,16 @@ const good = { company: 'בונים בע"מ', cnum: '512345678', contact: 'דנ�
   check('a send claimed a minute ago with no files yet (still running): "already sent", no second send', (await post(good, {})).status === 200 && db.mails.length === mm0 + 1);
   db.state[CTR_STATE] = keepState;
   const reopen = await onRequest({ request: new Request(link), env: ENV });
-  check('opening the link again: "already sent" and the new-worker link', reopen.status === 200 && /\/api\/talk\?k=/.test(await reopen.text()));
+  const reT = await reopen.text();
+  check('opening the link again before approval: "already sent", waiting, no new-worker link', reopen.status === 200 && !/\/api\/talk\?k=/.test(reT) && reT.indexOf('מחכה לאישור') > 0);
+  db.state[CTR_STATE] = { value: JSON.stringify(stateList(keepState.value).map((x) => (x.id === rid ? { ...x, status: 'approved', until: addD(today, 30) } : x))), updated_at: new Date().toISOString() };
+  const reA = await (await onRequest({ request: new Request(link), env: ENV })).text();
+  check('after approval: the same link shows the new-worker link', /\/api\/talk\?k=/.test(reA), reA.slice(0, 200));
+  const wk = new URL(/href="([^"]+\/api\/talk\?k=[^"]+)"/.exec(reA)[1].replace(/&amp;/g, '&'));
+  const wtk = wk.searchParams.get('k');
+  const in20 = await readPermToken(ENV, wtk, Date.parse(addD(today, 20) + 'T12:00:00Z')), in40 = await readPermToken(ENV, wtk, Date.parse(addD(today, 40) + 'T12:00:00Z'));
+  check('... valid no longer than the approval (works in 20 days, not in 40; the approval ends in 30)', !in20.error && in40.error === 'expired', { in20, in40 });
+  db.state[CTR_STATE] = keepState;
   check('attachments past the mail budget go as links', pickAttach([{ bytes: new Uint8Array(MAIL_BUDGET - 10) }, { bytes: new Uint8Array(100) }, { bytes: new Uint8Array(5) }]).length === 2);
   check('posts are counted per address (rate limit)', db.guess >= 4);
   db.guess = 1000;
@@ -430,6 +441,29 @@ console.log('\n7. the worker of the contractor signs (talk.js, kind contractor)'
   const n0 = db.reads.length, m0 = db.mails.length;
   await talkRequest({ request: new Request(ORIGIN + '/api/talk', { method: 'POST', body: fd3 }), env: ENV });
   check('a worker who signed in the contractor\'s send is already signed on the new-worker link (no second row, no mail)', db.reads.length === n0 && db.mails.length === m0);
+  // 16/11/2026 (DECISIONS "חמש תוספות"): a worker at height on the new-worker link: photos of his certificate and its date
+  check('the page: "I work at height" with the photo box and the date', html.indexOf('name="hgt"') > 0 && html.indexOf('name="he"') > 0 && html.indexOf('id="dbox"') > 0);
+  const JPG = 'data:image/jpeg;base64,' + Buffer.alloc(3000, 7).toString('base64');
+  const hsign = async (o) => { const f = new FormData(); for (const [k, v] of Object.entries(Object.assign({ k: tok, l: 'he', emp: '__other', ok: '1', sig: SIG }, o))) [].concat(v).forEach((x) => f.append(k, x)); return talkRequest({ request: new Request(ORIGIN + '/api/talk', { method: 'POST', body: f }), env: ENV }); };
+  const h0 = db.reads.length;
+  const hn = await hsign({ oname: 'Rami Levi', oid: '211111117', hgt: '1', he: addD(today, 100) });
+  check('at height without a photo: refused, nothing written', hn.status === 400 && (await hn.text()).indexOf('לצלם את אישור העבודה בגובה') > 0 && db.reads.length === h0);
+  const hp = await hsign({ oname: 'Rami Levi', oid: '211111117', hgt: '1', he: addD(today, -1), doc: JPG });
+  check('at height with an expired date: refused, nothing written', hp.status === 400 && db.reads.length === h0);
+  const pb = db.puts.length;
+  const hk = await hsign({ oname: 'Rami Levi', oid: '211111117', hgt: '1', he: addD(today, 100), doc: [JPG, JPG] });
+  const hrow = db.reads[db.reads.length - 1];
+  check('at height: signed, the row says so with the date and the two photos', hk.status === 200 && hrow.emp_name === 'Rami Levi' && hrow.job === 'עבודה בגובה' && hrow.equip && hrow.equip.e === addD(today, 100) && hrow.equip.files.length === 2, hrow);
+  check('the photos are filed in the contractor folder by his name', db.puts.slice(pb).filter((x) => /אישור עבודה בגובה - Rami Levi - [12]\.jpg$/.test(x.name)).length === 2, db.puts.slice(pb).map((x) => x.name));
+  check('the mail to Michael says at height, until when', db.mails[db.mails.length - 1].html.indexOf('עובד בגובה, אישור בתוקף עד') > 0);
+  // security review 16/11/2026: one photo that fails to save does not stop the others or the mail
+  let jn = 0; const sent = [];
+  const fdeps = { accessToken: async () => ({ token: 't', email: 'owner@example.test' }), graphPdf: async () => null, sendMailTo: async (tk, to, cc, subj, h) => { sent.push(h); },
+    putFile: async (tk, folder, name) => { if (/\.jpg$/.test(name) && ++jn === 1) throw new Error('graph 503'); return { webUrl: 'https://od.example/' + encodeURIComponent(name) }; } };
+  const fo = await fileCtrSign(ENV, talk, { id: 'rowx', emp_name: 'Rami Levi', id_no: '211111117' }, PNG(), NOW, fdeps, { docs: [JPG.split(',')[1], JPG.split(',')[1]], e: addD(today, 100) });
+  check('a photo that fails: the other is filed, the mail goes and says one was not saved', fo.mailed && jn === 2 && sent.length === 1 && sent[0].indexOf('1 צילומים לא נשמרו') > 0, { fo, jn });
+  const hz = await hsign({ oname: 'Dana Cohen', oid: '322222226' });
+  check('not at height: signed as before, no job and no photos', hz.status === 200 && !db.reads[db.reads.length - 1].job && !db.reads[db.reads.length - 1].equip);
   check('a name with digits or tags is not a name', ctrName('<b>x</b>') === null && ctrName('A1') === null && ctrName('محمد علي') === 'محمد علي');
   // the link is revocable: link_v raised = the old link stops
   talk.link_v = 1;
