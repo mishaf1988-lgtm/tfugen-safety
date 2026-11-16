@@ -797,8 +797,8 @@ export const TASK_BY_TITLE = { inc: 1, committee: 1 };
 // data_gaps (15/11/2026, Michael in the questionnaire in the assistant-work chat: "do it: a weekly check (recommended)"):
 // rows that are there but incomplete, for the weekly validity Routine (routine-validity.md 8). Pure and read only.
 // (1) equipment with a date (d or e) and no file_url, out of tracking excluded; (2) an open accident GAP_INC_DAYS
-// days after it happened with dy null. dy 0 is an answer (no days off; Michael on 20/10: "not relevant" was saved as 0),
-// so only null is a gap. Procedures are not in the DB: the Routine reads their header dates in the folder.
+// days after it happened with dy null or 0. 16/11/2026 (fix): 0 is what a new row gets on insert (audit_log of the 20/10
+// accident: dy 0 from the insert on 28/10, never changed), not an answer; a closed accident is not checked. Procedures are not in the DB: the Routine reads their header dates in the folder.
 export const GAP_INC_DAYS = 3, GAP_MAX = 200;
 export function dataGaps(eq, inc, today) {
   const day = (x) => (x ? String(x).slice(0, 10) : null);
@@ -807,7 +807,7 @@ export function dataGaps(eq, inc, today) {
     .map((r) => ({ id: r.id, code: r.code || null, n: short(r.n, 80), d: day(r.d), e: day(r.e), report_number: r.report_number || null }))
     .sort((a, b) => String(a.e || '9').localeCompare(String(b.e || '9')));
   const incs = (Array.isArray(inc) ? inc : []).filter((r) => {
-    if (!r || r.id == null || r.s === TOUR_CLOSED || (r.dy !== null && r.dy !== undefined)) return false;
+    if (!r || r.id == null || r.s === TOUR_CLOSED || (r.dy !== null && r.dy !== undefined && +r.dy !== 0)) return false;
     const when = day(r.dt) || day(r.created_at);
     return !!when && when <= lim;
   }).map((r) => ({ id: r.id, dt: day(r.dt) || day(r.created_at) }));

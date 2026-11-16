@@ -26,7 +26,7 @@ Stored as `DB.{name}[]` in localStorage key `tfgn2`. `var DB=` is at line 3318 o
 | `docs` | Documents (0 rows, measured 02/10/2026) | `n`,`c`,`v`,`o`,`u`,`e`,`s`,`i`,`nt`,`file_url` (measured 02/10/2026) |
 | `auds` | Internal audits | `n` subject,`a` auditor,`r` area,`d`,`f` findings,`sc` score,`s`,`f2`,`sm` summary (measured 02/10/2026) |
 | `ncr` | Non-conformance (public 0 rows by design, 375 in `backup_ops_20260918`; measured 02/10/2026) | `num`,`d` description (not a date; the date is `sd`),`a`,`p`,`o`,`u`,`s`,`c`,`rc`,`rc_cat`,`sd`,`cd`,`notes`,`location_id`,`sens`,`verified_by` |
-| `inc` | Incidents | `d`,`dt`,`ty`,`sv`,`l`,`dy`,`s`,`r`,`file_url` (in `inc`, `d` is the DESCRIPTION text and `dt` the timestamp; `dy` integer days off, 0 = an answer, null = missing; 15/11/2026) |
+| `inc` | Incidents | `d`,`dt`,`ty`,`sv`,`l`,`dy`,`s`,`r`,`file_url` (in `inc`, `d` is the DESCRIPTION text and `dt` the timestamp; `dy` integer days off; a new row gets 0 on insert, so 0 on an open accident is NOT an answer (audit_log, 16/11/2026)) |
 | `tr` | Training | `w`,`n`,`c`,`d`,`e`,`sc`,`s`,`file_url` |
 | `rsk` | Risks | `n`,`type`,`p`,`sv`,`ctl`,`s` |
 | `emp` | Employees (51, none has `r`; measured 02/10/2026) | `n`,`r` role,`dep`,`s` (a date, not a status),`eid`,`ph`,`ext_id`,`em` |

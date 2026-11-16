@@ -899,11 +899,12 @@ const callIn = async (body) => {
       { id: 'i1', dt: '2026-11-10T08:00:00+00:00', s: 'פתוח', dy: null },
       { id: 'i2', dt: '2026-11-10T08:00:00+00:00', s: 'פתוח', dy: 0 },
       { id: 'i3', dt: '2026-11-14T08:00:00+00:00', s: 'פתוח', dy: null },
+      { id: 'i6', dt: '2026-11-10T08:00:00+00:00', s: 'פתוח', dy: 4 },
       { id: 'i4', dt: '2026-01-10T08:00:00+00:00', s: 'סגור', dy: null },
       { id: 'i5', dt: null, created_at: '2026-11-01T08:00:00Z', s: 'פתוח', dy: null },
     ], '2026-11-15');
     check('data_gaps: equipment with a date and no file, out-of-tracking and dateless rows skipped, nearest expiry first', g.equip.map((x) => x.id).join() === 'q5,q1' && g.equip_n === 2 && g.equip[1].code === 'FL-1', g);
-    check('data_gaps: an open accident ' + GAP_INC_DAYS + ' days on with dy null; dy 0 is an answer, closed and recent are not gaps, no dt falls back to created_at', g.inc.map((x) => x.id).join() === 'i1,i5' && g.inc[1].dt === '2026-11-01', g.inc);
+    check('data_gaps: an open accident ' + GAP_INC_DAYS + ' days on with dy null; dy 0 is a gap too (the insert default, 16/11/2026), closed and recent are not, no dt falls back to created_at', g.inc.map((x) => x.id).join() === 'i1,i2,i5' && g.inc[2].dt === '2026-11-01', g.inc);
     rows = { equip_inspections: [{ id: 'q1', n: 'מלגזה', d: '2026-08-03', e: '2027-02-03', s: 'כשיר לעבודה', file_url: null }], inc: [] };
     const x = await call({ op: 'data_gaps', agent: 'routine-validity' });
     check('data_gaps op: both tables read, counts and the gap back', x.json.ok && x.json.checked.equip_inspections === 1 && x.json.equip_n === 1 && x.json.inc_n === 0, x.json);
