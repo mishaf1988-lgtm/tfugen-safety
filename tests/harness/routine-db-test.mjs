@@ -416,7 +416,10 @@ const callIn = async (body) => {
   check('od_trash 17/11/2026: a slide show and an html copy go to to-delete, not for od_dedupe; an empty folder only with folder:true and never a top or flow folder', (() => {
     const T = (path, extra, strict) => odTrashCheck(Object.assign({ agent: 'folder-audit', why: 'a test', path }, extra || {}), strict);
     const pp = T('11_x/m/a.ppsx'), ht = T('11_x/k/b/\u05de\u05e7\u05d5\u05e8/a.html'), fo = T('11_x/k/b/\u05de\u05e7\u05d5\u05e8', { folder: true });
-    return !pp.error && !ht.error && !pp.folder && fo.folder === true && fo.name === 'b - \u05de\u05e7\u05d5\u05e8' && OD_TRASH_EXTRA.test('a.PPT')
+    // pairs (17/11/2026): 3 real names left in 11_הדרכות match, 3 near names do not
+    const pairs = ['\u05de\u05e6\u05d2\u05ea \u05dc\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d1\u05d9\u05ea \u05e2\u05dd \u05d9\u05dc\u05d3\u05d9\u05dd.ppsx', '16-11-2026 - \u05d8\u05d5\u05e4\u05e1 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e7\u05d1\u05dc\u05df.html', '\u05e8\u05e2\u05e0\u05d5\u05df \u05de\u05dc\u05d2\u05d6\u05d5\u05ea.ppt'].every((x) => OD_TRASH_EXTRA.test(x))
+      && ['iso 45001.ppsx.lnk', 'a.html.exe', 'build_tracker.py'].every((x) => !OD_TRASH_EXTRA.test(x));
+    return pairs && !pp.error && !ht.error && !pp.folder && fo.folder === true && fo.name === 'b - \u05de\u05e7\u05d5\u05e8' && OD_TRASH_EXTRA.test('a.PPT')
       && !!T('11_x/m/a.ppsx', null, true).error && !!T('11_x/a.html', null, true).error && !!T('11_x/a.exe').error && !!T('11_x/a.js').error
       && !!T('11_x', { folder: true }).error && !!T('11_x/b', { folder: true }, true).error
       && !!T('11_x/' + OD_TRASH_DIR, { folder: true }).error && !!T('11_x/_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea', { folder: true }).error
