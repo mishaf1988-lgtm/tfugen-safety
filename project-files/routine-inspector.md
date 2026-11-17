@@ -21,6 +21,7 @@
    א. 2 דרישות שלא הוכחו בחודש הקודם (אם יש). כך רואים אם תוקנו.
    ב. השאר באקראי: select id,s,src_url from leg where src_url like '%nevo.co.il%'. בחר חוקים באקראי (shuf), ובכל אחד WebFetch על src_url עם prompt: "List up to 5 concrete records or documents an inspector could ask the employer to show under this law (for example a training record, an inspection certificate, a register, a plan), each with its section number and the exact section title. Quote, do not summarize. If none, return NONE." בלי השלמה מהזיכרון. דרישה בלי מספר סעיף לא נבחרת.
    ג. בלי לחזור על דרישה שהוכחה בשלושת החודשים האחרונים.
+   ד. בלי אישורי הדרכה לעבודה בגובה (17/11/2026, מיכאל בשאלון: "בצע: להוציא גם מהדוחות"; DECISIONS "אישורי עבודה בגובה מוצגים ולא נחשבים בציון"): מיכאל מנהל אותם בדרך אחרת ושולח כשצריך. לא בוחרים אותם כדרישה, וגם לא כדרישה חוזרת מהחודש הקודם; שורה כזו שעדיין פתוחה ב-STATUS נסגרת בהפניה להחלטה.
 3. לכל דרישה, כמו מפקח: "תראה לי את <הרשומה> עבור <מחלקה, מכונה או עובד שנבחרו באקראי מהמסד>". עד 3 חיפושים בלבד, וכל חיפוש נספר:
    - במסד, רק הטבלאות ש-routine-db.sh פותח (TABLES ב-functions/api/routine-db.js): tr, docs, equip_inspections, ppe, ctr, hearing_tests ו-med (רק תאריך ו-e, בלי פרטים רפואיים), tasks, leg, ncr, inc, near_miss, tour_hazards. select עם השדות הנדרשים בלבד. טבלה שלא ברשימה: לחפש בתיקייה, ולא להרחיב את ההרשאה.
    - בתיקייה: sharepoint_search, קריאה בלבד.

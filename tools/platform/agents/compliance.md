@@ -7,7 +7,8 @@
 1. משיכה (select, רק העמודות האלה):
    - docs: select=id,n,e,s,nt&e=not.is.null
    - equip_inspections: select=id,n,loc,e,notes&e=not.is.null
-   - tr, ppe, ctr: select=e&e=not.is.null (בכל אחת)
+   - tr: select=e,n&e=not.is.null, ובלי שורות שה-n שלהן כולל "גובה" (אישורי עבודה בגובה לא נספרים, DECISIONS 17/11/2026)
+   - ppe, ctr: select=e&e=not.is.null (בכל אחת)
    - med, hearing_tests: select=e&e=not.is.null
    - tasks: select=id,title,due,status,priority,notes
 2. חישוב ב-python (היום לפי שעון ישראל):
