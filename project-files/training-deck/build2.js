@@ -255,20 +255,7 @@ async function icon(Comp, color, size = 512) {
   });
   s.addNotes("לשאול כל שאלה בקול, לתת לכיתה לענות ביחד, ורק אז קליק לתשובה. שיטה: שליפה מהזיכרון (Retrieval practice). לשלוף מידע מחזק אותו יותר מלשמוע אותו שוב. זו גם בדיקה של רמה 2 במודל קירקפטריק: האם למדו.");
 
-  // ===== 12. החשיפה =====
-  s = pres.addSlide({ masterName: "LIGHT" });
-  title(s, "רגע... מה בעצם עשיתי לכם?", "לא לימדתי צ'יפס. הדגמתי 11 שיטות הדרכה:");
-  s.addImage({ data: I.teacherW, x: 0.6, y: 0.2, w: 0.85, h: 0.85 });
-  ["פתיחה עם חפץ (1)", "שאלה מקדימה (2)", "הצגה עצמית (3)", "חזון (4)", "מטרות (5)", "התמונה הגדולה (6)",
-    "הדגמה והשוואה (7)", "שאלה מנחה (8)", "מנות קטנות ומיתוס (9)", "תרחיש והחלטה (10)", "חזרה ושליפה (11)"].forEach((m, i) => {
-    const col = i % 4, row = Math.floor(i / 4);
-    s.addText(m, { ...R, align: "center", shape: pres.ShapeType.roundRect, rectRadius: 0.15,
-      x: 9.9 - col * 3.1, y: 2.45 + row * 1.4, w: 2.8, h: 1.1, fontSize: 18, bold: true, color: COL.dark,
-      fill: { color: COL.gold }, valign: "middle", objectName: "ani" + (row + 1) + "_m" + i });
-  });
-  s.addNotes("החשיפה: כל קליק מוסיף שורה של שיטות (3 קליקים). לחזור ל-3 המטרות משקף 5: הכרתם את התחנות? הבנתם למה? זיהיתם את הסיכון? אם נשאר זמן: 'איזו שיטה הכי עבדה עליכם?' (רמה 1 בקירקפטריק: תגובה). מקורות לשיטות: OSHA, Resource for Development and Delivery of Training to Workers; המוסד לבטיחות ולגיהות, הערכת יעילות הדרכה; עקרונות למידת מבוגרים של מלקולם נואלס.");
-
-  // ===== 13. סיום: חזרה לתפוח האדמה =====
+  // ===== 12. סיום: חזרה לתפוח האדמה =====
   s = pres.addSlide({ masterName: "DARK" });
   bg(s);
   s.addImage({ data: I.potato, x: 5.77, y: 0.75, w: 1.8, h: 1.8, objectName: "auto1b_p" });
