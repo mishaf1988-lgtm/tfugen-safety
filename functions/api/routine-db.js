@@ -1723,6 +1723,8 @@ export function skipNameOk(from, name) {
   return why.trim().length >= 2 && why.length <= 60 && !/[()]/.test(why);
 }
 const OD_BAD = /[<>:"|?*\\\u0000-\u001f]/;
+// right-to-left / left-to-right marks at the very start of a folder name (Windows "New folder" in Hebrew)
+export const OD_LEAD_MARKS = /^[\u200e\u200f]{1,4}/;
 // { from, toDir, name } as Graph paths under the drive root, or { error }.
 export function odMoveCheck(b) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
@@ -1747,7 +1749,10 @@ export function odMoveCheck(b) {
     const fd = clean(b.from_dir);
     // a segment with spaces or a dot at its end, or hidden format characters, could pass for another folder (review 17/11/2026)
     const odd = (parts) => parts.some((x) => x !== x.trim() || /\.$/.test(x) || /\p{Cf}/u.test(x));
-    if (odd(fd) || odd(dir) || odd([name]) || odd(from)) return { error: 'bad path characters' };
+    // 17/11/2026 (folder audit 12, Michael: "\u05e2\u05e9\u05d4 \u05d0\u05ea\u05d4"): a folder Windows named with right-to-left marks in front ("\u200f\u200f\u05ea\u05d9\u05e7\u05d9\u05d4 \u05d7\u05d3\u05e9\u05d4")
+    // can be a SOURCE: marks only at the start of a from_dir segment, the rest clean; never in to_dir, the name or the file.
+    const fdClean = fd.map((x) => x.replace(OD_LEAD_MARKS, ''));
+    if (fdClean.some((x) => !x.length) || odd(fdClean) || odd(dir) || odd([name]) || odd(from)) return { error: 'bad path characters' };
     if (!fd.length || fd.length > 8 || bad(fd) || OD_NO_DIR.test(fd.join('/')) || OD_TRIGGER_DIRS.indexOf(fd[0]) >= 0) return { error: 'bad from_dir' };
     if (from.length !== 1 || bad(from) || !OD_EXT.test(from[0])) return { error: 'from: one file name inside from_dir' };
     if (!dir.length || dir.length > 8 || bad(dir) || OD_NO_DIR.test(dir.join('/')) || OD_TRIGGER_DIRS.indexOf(dir[0]) >= 0) return { error: 'bad to_dir' };
