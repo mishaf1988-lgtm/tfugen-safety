@@ -94,6 +94,37 @@ def main():
             cleanup()
 
 
+def shot_problem(cwd, src, body):
+    """17/11/2026 (Michael: four test rules, rule 1): the screenshot named in the PR's shot line is a real phone
+    screenshot of this PR's index.html. tools/pr-shot.js writes <file>.png and <file>.png.json with the sha256 of the
+    index.html it opened; a shot taken before the last edit of index.html is refused. None = fine."""
+    import hashlib, re
+    m = re.search(r"^\s*(?:shot|\u05e6\u05d9\u05dc\u05d5\u05dd)\s*:\s*(\S.*)$", body or "", re.I | re.M)
+    f = re.search(r"(\S+\.png)\b", m.group(1)) if m else None
+    if not f:
+        return "\u05d1\u05e9\u05d5\u05e8\u05ea '\u05e6\u05d9\u05dc\u05d5\u05dd:' \u05d0\u05d9\u05df \u05e9\u05dd \u05e7\u05d5\u05d1\u05e5 png"
+    path = f.group(1).strip("`'\"(),")
+    path = path if os.path.isabs(path) else os.path.join(cwd, path)
+    try:
+        head = open(path, "rb").read(24)
+        side = json.load(open(path + ".json", encoding="utf-8"))
+    except Exception:
+        return "\u05d4\u05e6\u05d9\u05dc\u05d5\u05dd \u05d0\u05d5 \u05d4\u05e7\u05d5\u05d1\u05e5 \u05e9\u05dc\u05e6\u05d9\u05d3\u05d5 (.json) \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d5: " + path
+    if head[:8] != b"\x89PNG\r\n\x1a\n":
+        return "\u05d4\u05e7\u05d5\u05d1\u05e5 \u05d0\u05d9\u05e0\u05d5 PNG: " + path
+    if int.from_bytes(head[16:20], "big") > 1300:
+        return "\u05d4\u05e6\u05d9\u05dc\u05d5\u05dd \u05d0\u05d9\u05e0\u05d5 \u05d1\u05e8\u05d5\u05d7\u05d1 \u05d8\u05dc\u05e4\u05d5\u05df (%d \u05e4\u05d9\u05e7\u05e1\u05dc\u05d9\u05dd)" % int.from_bytes(head[16:20], "big")
+    want = os.environ.get("PR_GATE_INDEX_SHA")
+    if want is None:
+        try:
+            want = hashlib.sha256(open(os.path.join(src, "index.html"), "rb").read()).hexdigest()
+        except Exception:
+            return None        # index.html cannot be read here: CI still checks the line
+    if side.get("index_sha") != want:
+        return "\u05d4\u05e6\u05d9\u05dc\u05d5\u05dd \u05e6\u05d5\u05dc\u05dd \u05dc\u05e4\u05e0\u05d9 \u05d4\u05e9\u05d9\u05e0\u05d5\u05d9 \u05d4\u05d0\u05d7\u05e8\u05d5\u05df \u05d1-index.html"
+    return None
+
+
 def check(cwd, src, inp):
     try:
         spec = importlib.util.spec_from_file_location("lessons_gate", os.path.join(src, GATE))
@@ -102,6 +133,14 @@ def check(cwd, src, inp):
         ok, why = gate.check(inp.get("title", ""), inp.get("body", ""), files)
     except Exception:
         print("{}"); return        # the gate is missing or broken: CI still checks
+    if ok and "index.html" in files:
+        bad = shot_problem(cwd, src, inp.get("body", ""))
+        if bad:
+            print(json.dumps({"hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "permissionDecision": "deny",
+                "permissionDecisionReason": "pr-gate (\u05e6\u05d9\u05dc\u05d5\u05dd \u05de\u05e1\u05da, 17/11/2026): " + bad + ". \u05dc\u05e6\u05dc\u05dd \u05e9\u05d5\u05d1: NODE_PATH=$(npm root -g) node tools/pr-shot.js <\u05e9\u05dd> --page <\u05de\u05e1\u05da>, \u05d5\u05dc\u05db\u05ea\u05d5\u05d1 \u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d1\u05e9\u05d5\u05e8\u05ea '\u05e6\u05d9\u05dc\u05d5\u05dd:'."}}, ensure_ascii=False))
+            return
     if ok:
         # 31/10/2026 (retro, PR 2334): a mobile number in a .md file passed the merge and failed pii-md-test only in CI.
         # A PR that changes a .md file runs the same test here, before it is opened. PR_GATE_PII_CMD replaces the command in tests.
