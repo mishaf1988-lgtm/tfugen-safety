@@ -350,6 +350,18 @@ const callIn = async (body) => {
     const t = (d) => odMoveCheck({ agent: 'routine-mail-filing', why: 'filing a mail', from: 'x.csv', to_dir: d, name: 'x.csv' });
     return OD_AUTO_DIRS.every((d) => !!t(OD_AUTO + '/' + d).error) && !!t(OD_AUTO).error && !!t(OD_OCR_DIR).error && !t('22_x/09_y').error;
   })());
+  check('od_move from_dir (17/11/2026): a file misfiled inside the safety folder moves to its folder, never from or into the inbox, a flow, old versions or ARCHIVE, and keeps its type', (() => {
+    const S = '07_\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4/', from_dir = S + '\u05d3\u05d9\u05d2\u05d5\u05de\u05d9\u05dd/\u05d3\u05d9\u05d2\u05d5\u05dd \u05d0\u05e8\u05d5\u05d1\u05d5\u05ea/2026', to_dir = S + '\u05e9\u05e4\u05db\u05d9\u05dd/\u05d0\u05e0\u05dc\u05d9\u05d6\u05d5\u05ea \u05e0\u05d5\u05e1\u05e4\u05d5\u05ea';
+    const B = { agent: 'main-chat', why: 'wastewater certificate in the stack folder', from_dir, from: 'COASO1.pdf', to_dir, name: '2026-07 \u05e0\u05d5\u05e1\u05e4\u05ea COASO1.pdf' };
+    const ok = odMoveCheck(B);
+    const bad = (o) => !!odMoveCheck({ ...B, ...o }).error;
+    return ok.from === OD_ROOT + from_dir + '/COASO1.pdf' && ok.toDir === OD_ROOT + to_dir && ok.skip === false && !ok.invMonth
+      && bad({ from_dir: OD_INBOX }) && bad({ to_dir: OD_INBOX }) && bad({ from_dir: OD_AUTO }) && bad({ to_dir: OD_AUTO + '/' + OD_AUTO_DIRS[0] })
+      && bad({ from_dir: S + '_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea' }) && bad({ to_dir: 'ARCHIVE' }) && bad({ from_dir: S + '../x' }) && bad({ from_dir: '' })
+      && bad({ name: '2026-07 x.exe' }) && bad({ name: '2026-07 x.docx' }) && bad({ from: 'a/b.pdf' }) && bad({ from: 'x.exe', name: 'x.exe' })
+      && bad({ to_dir: 'ARCHIVE ' }) && bad({ from_dir: OD_AUTO + ' ' }) && bad({ to_dir: S + 'x.' }) && bad({ to_dir: S + 'x\u200e' }) && bad({ name: ' 2026-07 x.pdf' })
+      && !odMoveCheck({ ...B, from: 'PATS.xlsx', name: '2026-07 \u05e0\u05d5\u05e1\u05e4\u05ea PATS.xlsx' }).error;
+  })());
   check('iso_up: one pdf / docx from <folder>/old-versions/ back up to <folder>, only under the iso safety folder; anything else refused (31/10/2026)', (() => {
     const P = { agent: 'main-chat', why: 'new file was put into the archive', file: ISO_SWAP_ROOT + OD_ARCHIVE_DIR + '/\u200e\u2068n\u2069.pdf' };
     const ok = isoUpCheck(P), o = new URL(ISO_SITE_URL).origin + '/sites/iso/Shared Documents/';
