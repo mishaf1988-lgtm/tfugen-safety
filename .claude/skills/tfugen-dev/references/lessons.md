@@ -565,3 +565,9 @@
   הכלל: ההרצה המקבילה מעתיקה גם קבצים שסומנו (`git diff --name-only HEAD`). "ירוק" מקומי נחשב רק אם ההרצה הייתה על השינויים עצמם.
   נאכף: `tests/harness/run.sh` (בהרצה המקבילה, `git diff -z --name-only HEAD` לפני `ls-files -o`).
   חזר: 0.
+
+**224. קובץ PowerPoint "פגום" שעבר את כל הבדיקות שלי (17/11/2026, #2869).**
+מה קרה: וידאו מ-pptxgenjs קיבל מספר זיהוי של צורה אחרת בשקף; XML תקין, python-pptx ו-LibreOffice פתחו, PowerPoint ביקש "לתקן".
+הכלל: קובץ Office שנבנה בקוד נבדק גם לכפילויות `cNvPr id` בכל שקף, לא רק לתקינות XML ופתיחה ב-LibreOffice.
+נאכף: `project-files/training-deck/fx.py` ממספר כפילויות מחדש ונופל ב-assert אם נשארה.
+חזר: 0.
