@@ -177,7 +177,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
         { id: 'e4', n: 'יוסי', dep: '' },
       ];
       DB.tr = [
-        { id: 't1', w: 'מוסא עלי', n: 'עבודה בגובה', e: future },
+        { id: 't1', w: 'מוסא עלי', n: 'ריתוך', e: future },
         { id: 't2', w: 'מוסא עלי', n: 'חשמל', e: past },
         { id: 't3', w: 'דנה לוי', n: 'מלגזה', e: past },
         { id: 't4', w: 'רון כהן', n: 'כיבוי אש', e: future },
