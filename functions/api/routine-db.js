@@ -1708,7 +1708,9 @@ const OD_NO_DIR = /(^|\/)(_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05
 // 18/10/2026 (Michael: "גם וגם"): csv too, the data file next to a lab certificate pdf.
 // pptx (28/10/2026): the safety committee deck is moved to the trash folder or to old versions before the new one is saved.
 // xls (04/11/2026, Michael in the questionnaire: "\u05d1\u05e6\u05e2: \u05dc\u05ea\u05d9\u05d9\u05e7 \u05d1\u05d0\u05d9\u05db\u05d5\u05ea \u05d4\u05e1\u05d1\u05d9\u05d1\u05d4"): an old Excel file in the inbox could not be filed.
-const OD_EXT = /\.(pdf|docx?|xlsx?|pptx|csv|jpe?g|png)$/i;
+// 17/11/2026 (Michael in the questionnaire, folder audit 15-16: "\u05d1\u05e6\u05e2: \u05dc\u05d4\u05e8\u05d7\u05d9\u05d1"): old slide shows .ppt and .odp too, so
+// an old organisation chart or committee deck can move to the old-versions folder like any other file.
+const OD_EXT = /\.(pdf|docx?|xlsx?|pptx?|odp|csv|jpe?g|png)$/i;
 // Into "not filed" any file the flow saved may go (11/10/2026: a 4 MB .mp4 ad stayed in the inbox;
 // 12/10/2026: an attachment named "RAW", saved with no extension, was refused and stuck there),
 // under the same name; into a document folder only OD_EXT.
@@ -1752,11 +1754,14 @@ export function odMoveCheck(b) {
     // 17/11/2026 (folder audit 12, Michael: "\u05e2\u05e9\u05d4 \u05d0\u05ea\u05d4"): a folder Windows named with right-to-left marks in front ("\u200f\u200f\u05ea\u05d9\u05e7\u05d9\u05d4 \u05d7\u05d3\u05e9\u05d4")
     // can be a SOURCE: marks only at the start of a from_dir segment, the rest clean; never in to_dir, the name or the file.
     const fdClean = fd.map((x) => x.replace(OD_LEAD_MARKS, ''));
-    if (fdClean.some((x) => !x.length) || odd(fdClean) || odd(dir) || odd([name]) || odd(from)) return { error: 'bad path characters' };
+    // 17/11/2026 (folder audit 16): a FILE Windows named with the same marks in front ("\u200f\u200f\u05e1\u05d9\u05db\u05d5\u05dd ... 27.pptx") can be the
+    // source too: marks only at its start, the rest clean; the new name stays clean.
+    const fromClean = from.map((x) => x.replace(OD_LEAD_MARKS, ''));
+    if (fdClean.some((x) => !x.length) || fromClean.some((x) => !x.length) || odd(fdClean) || odd(dir) || odd([name]) || odd(fromClean)) return { error: 'bad path characters' };
     if (!fd.length || fd.length > 8 || bad(fd) || OD_NO_DIR.test(fd.join('/')) || OD_TRIGGER_DIRS.indexOf(fd[0]) >= 0
       // security review 17/11/2026: the same checks on the names without the marks (a mark before "\u05dc\u05de\u05d7\u05d9\u05e7\u05d4" or a flow folder)
       || OD_NO_DIR.test(fdClean.join('/')) || OD_TRIGGER_DIRS.indexOf(fdClean[0]) >= 0 || fdClean[0] === OD_INBOX) return { error: 'bad from_dir' };
-    if (from.length !== 1 || bad(from) || !OD_EXT.test(from[0])) return { error: 'from: one file name inside from_dir' };
+    if (from.length !== 1 || bad(from) || bad(fromClean) || fromClean.some((x) => x.startsWith('.')) || !OD_EXT.test(from[0])) return { error: 'from: one file name inside from_dir' };
     if (!dir.length || dir.length > 8 || bad(dir) || OD_NO_DIR.test(dir.join('/')) || OD_TRIGGER_DIRS.indexOf(dir[0]) >= 0) return { error: 'bad to_dir' };
     if (!name || name.indexOf('/') >= 0 || OD_BAD.test(name) || name.length > 180 || !OD_EXT.test(name)) return { error: 'bad name' };
     // the same kind of file: a move never turns a PDF into a document of another type
