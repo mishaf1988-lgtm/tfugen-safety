@@ -12739,11 +12739,11 @@ function _ctrWorkersHtml(rec){
   if(!ws.length)return h+'<div style="font-size:12px;color:var(--c-gray-450,#888)">\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05de\u05d5 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e7\u05d1\u05dc\u05df.</div></div>';
   ws.forEach(function(r){
     var q=r.equip&&typeof r.equip==='object'?r.equip:null,hgt=!!(q&&q.hgt)||r.job==='\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4';
-    var e=q&&q.e?q.e:'',left=e?du(e):9999,col=!e?'#b45309':left<0?'#b91c1c':left<=30?'#b45309':'#15803d';
     var files=q&&Array.isArray(q.files)?q.files:[];
+    var e=q&&q.e?q.e:'',left=e?du(e):9999,col=!e?(files.length?'#b45309':'#b91c1c'):left<0?'#b91c1c':left<=30?'#b45309':'#15803d';
     h+='<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--c-gray-50,#f5f5f5);align-items:center;flex-wrap:wrap"><strong style="min-width:110px">'+esc(r.emp_name||'')+'</strong>'
       +'<span style="font-size:11px;color:var(--c-gray-450,#888)">'+esc(fd(String(r.read_at||'').slice(0,10)))+'</span>'
-      +(hgt?'<span style="font-size:11px;font-weight:700;color:'+col+'">\u05d1\u05d2\u05d5\u05d1\u05d4'+(e?', \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d3 '+esc(fd(e))+(left<0?' (\u05e4\u05d2)':''):', \u05d1\u05dc\u05d9 \u05ea\u05d0\u05e8\u05d9\u05da')+'</span>':'<span style="font-size:11px;color:var(--c-gray-450,#888)">\u05dc\u05d0 \u05d1\u05d2\u05d5\u05d1\u05d4</span>')
+      +(hgt?'<span style="font-size:11px;font-weight:700;color:'+col+'">\u05d1\u05d2\u05d5\u05d1\u05d4'+(e?', \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d3 '+esc(fd(e))+(left<0?' (\u05e4\u05d2)':''):files.length?', \u05d1\u05dc\u05d9 \u05ea\u05d0\u05e8\u05d9\u05da':', \u05dc\u05d0 \u05e6\u05d5\u05e8\u05e3 \u05d0\u05d9\u05e9\u05d5\u05e8')+'</span>':'<span style="font-size:11px;color:var(--c-gray-450,#888)">\u05dc\u05d0 \u05d1\u05d2\u05d5\u05d1\u05d4</span>')
       +files.map(function(x,i){var su=escU(x);return su?'<a href="'+su+'" target="_blank" rel="noopener" style="font-size:11px">\u05d0\u05d9\u05e9\u05d5\u05e8 '+(i+1)+'</a>':'';}).join(' ')
       +(escU(r.doc_url)?'<a href="'+escU(r.doc_url)+'" target="_blank" rel="noopener" style="font-size:11px">\u05d8\u05d5\u05e4\u05e1 \u05d7\u05ea\u05d5\u05dd</a>':'')
       +'</div>';
