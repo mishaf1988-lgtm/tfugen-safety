@@ -180,7 +180,10 @@ console.log('\n4. the form, checked on the server');
   const ok = checkCtrForm(base, files(['ins', 'hgtc', 'plat']), tP);
   check('a complete form passes', !!ok.v && ok.v.workers.length === 2 && ok.v.cnum === '512345678' && ok.v.mobile === '0501234567' && ok.v.desc === 'החלפת פאנלים בגג' && ok.v.sid === '023456789', ok.errors);
   const miss = checkCtrForm(base, files(['ins']), tP);
-  check('height work without the height certificate: each worker at height is named (the platform report is optional)', miss.errors && miss.errors.length === 2 && miss.errors.every((e) => e.indexOf('חסר אישור עבודה בגובה') > 0), miss.errors);
+  // 17/11/2026, Michael: "the height certificate must not stop the form": passes, both kept as at height without one
+  check('height work without the height certificates: passes, both named as with no certificate', !!miss.v && miss.v.noCert.join() === 'ישראל ישראלי,محمد علي', miss.errors);
+  const mm = mailHtml(tP, { ...miss.v, optMissing: [] }, [], null, [], null, false, null), sm = summaryHtml(tP, miss.v, { day: today, hm: '10:00' }, 'AAA', []);
+  check('the mail and the summary say in red "no certificate attached" beside each one', [mm, sm].every((h) => (h.match(/color:#b91c1c;font-weight:bold">לא צורף אישור/g) || []).length === 2), [mm.length, sm.length]);
   const noPlat = checkCtrForm(base, files(['ins', 'hgtc']), tP);
   check('height work without the platform report: passes, noted as optional and not given', !!noPlat.v && noPlat.v.optMissing.indexOf('plat') >= 0, noPlat.errors);
   check('a platform report attached to height work is taken', checkCtrForm(base, files(['ins', 'hgtc', 'plat']), tP).v.files.some((x) => x.doc === 'plat'));
@@ -213,12 +216,11 @@ console.log('\n4. the form, checked on the server');
   // 16/11/2026, Michael: "בצע: אישור לכל עובד": each worker his own height certificate
   const pdf1 = (w) => ({ doc: 'hgtc', w, size: 2000, type: ['pdf', 'application/pdf'] });
   const one = checkCtrForm(base, files(['ins']).concat([pdf1(0)]), tP);
-  check('height work, one certificate for two workers: refused, naming the worker without one', !!one.errors && one.errors.some((e) => e.indexOf('محمد علي') > 0 && e.indexOf('עובד 2') === 0), one.errors);
-  check('... and only him (worker 1 is not named)', !!one.errors && !one.errors.some((e) => e.indexOf('ישראל ישראלי') >= 0));
+  check('height work, one certificate for two workers: passes, only the worker without one is named', !!one.v && one.v.noCert.join() === 'محمد علي', one.errors);
   const two = checkCtrForm(base, files(['ins']).concat([pdf1(0), pdf1(0), pdf1(1)]), tP);
   check('two files for one worker (front and back) and one for the other: passes, each named by its worker', !!two.v && two.v.files.filter((x) => x.wn === 'ישראל ישראלי').length === 2 && two.v.files.filter((x) => x.wn === 'محمد علي').length === 1, two.errors);
   const gen = checkCtrForm(base, files(['ins']).concat([{ doc: 'hgtc', size: 2000, type: ['pdf', 'application/pdf'] }]), tP);
-  check('a height certificate not in a worker\'s row (the old general field): not taken, the certificate is missing', !!gen.errors && gen.errors.some((e) => e.indexOf('חסר אישור עבודה בגובה') > 0), gen.errors);
+  check('a height certificate not in a worker\'s row (the old general field): not taken, the workers stay with no certificate', !!gen.v && gen.v.files.every((x) => x.doc !== 'hgtc') && gen.v.noCert.length === 2, gen.errors);
   const ghost = checkCtrForm({ ...base, workers: W2.concat([{ n: '', id: '', sig: null }]) }, files(['ins']).concat([pdf1(0), pdf1(1), pdf1(2)]), tP);
   check('a certificate in an empty row is not taken (not uploaded)', !!ghost.v && ghost.v.files.filter((x) => x.doc === 'hgtc').length === 2, ghost.errors);
   const gap = checkCtrForm({ ...base, workers: [W2[0], { n: '', id: '', sig: null }, W2[1]] }, files(['ins']).concat([pdf1(0), pdf1(2)]), tP);
@@ -231,8 +233,11 @@ console.log('\n4. the form, checked on the server');
   check('a worker not marked at height: no certificate needed, kept as not at height', !!notH.v && notH.v.workers[1].hgt === false && notH.v.hgtOn === true, notH.errors);
   const notHf = checkCtrForm({ ...base, workers: W2n }, files(['ins']).concat([pdf1(0), pdf1(1)]), tP);
   check('a certificate in the row of a worker not at height is not taken', !!notHf.v && notHf.v.files.filter((x) => x.doc === 'hgtc').length === 1, notHf.errors);
+  // security review 17/11/2026: a date typed with no certificate is dropped, and the red mark follows the row, not the name
+  const dNo = checkCtrForm({ ...base, workers: [W2[0], { ...W2[1], n: W2[0].n }] }, files(['ins']).concat([pdf1(0)]), tP);
+  check('no certificate: its typed date is dropped (not the first to end), the red mark only on that row', !!dNo.v && dNo.v.workers[1].e === '' && dNo.v.workers[1].nc === true && !dNo.v.workers[0].nc && (!dNo.v.firstE || dNo.v.firstE.label.indexOf('עבודה בגובה') < 0 || dNo.v.firstE.e === dNo.v.workers[0].e), dNo.errors || dNo.v.workers);
   const noneH = checkCtrForm({ ...base, workers: W2.map((w) => ({ ...w, hgt: false })) }, files(['ins']), tP);
-  check('height work with no worker marked at height: refused (at least one)', !!noneH.errors && noneH.errors.some((e) => e.indexOf('לפחות אחד') > 0), noneH.errors);
+  check('height work with no worker marked at height: passes (17/11/2026, no "at least one")', !!noneH.v && noneH.v.noCert.length === 0, noneH.errors);
   // 16/11/2026 (DECISIONS "חמש תוספות"): "valid until" for every document but "other"; the approval ends at the first
   check('the first to end: the second worker\'s certificate (90 days)', !!ok.v && ok.v.firstE.e === addD(today, 90) && ok.v.firstE.label.indexOf('محمد علي') > 0, ok.v && ok.v.firstE);
   check('each file carries its date', !!ok.v && ok.v.files.find((x) => x.doc === 'plat').e === addD(today, 150) && ok.v.files.find((x) => x.wn === 'ישראל ישראלי').e === E);
@@ -254,7 +259,7 @@ console.log('\n4. the form, checked on the server');
   check('date refusals are keyboard characters only', [noD, past, wNoD].every((r) => r.errors.every((e) => !BAD.test(e))));
   check('files: more room than before (15) but within the free plan\'s 50 calls a run (about 27 fixed + one per file)', CTR_MAX_FILES > 15 && CTR_MAX_FILES + 27 <= 45);
   check('bytes: PDF, JPG, PNG known; a renamed EXE is not', fileType(PDF())[0] === 'pdf' && fileType(PNG())[0] === 'png' && fileType(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))[0] === 'jpg' && fileType(new Uint8Array([0x4d, 0x5a, 0x90, 0, 0])) === null);
-  check('every refusal is keyboard characters only', [miss, noIns, noWk, noSig].every((r) => r.errors.every((e) => !BAD.test(e))));
+  check('every refusal is keyboard characters only', [noIns, noWk, noSig].every((r) => r.errors.every((e) => !BAD.test(e))));
 }
 
 console.log('\n5. the op ctr_link (validation)');
@@ -446,10 +451,12 @@ console.log('\n7. the worker of the contractor signs (talk.js, kind contractor)'
   const JPG = 'data:image/jpeg;base64,' + Buffer.alloc(3000, 7).toString('base64');
   const hsign = async (o) => { const f = new FormData(); for (const [k, v] of Object.entries(Object.assign({ k: tok, l: 'he', emp: '__other', ok: '1', sig: SIG }, o))) [].concat(v).forEach((x) => f.append(k, x)); return talkRequest({ request: new Request(ORIGIN + '/api/talk', { method: 'POST', body: f }), env: ENV }); };
   const h0 = db.reads.length;
-  const hn = await hsign({ oname: 'Rami Levi', oid: '211111117', hgt: '1', he: addD(today, 100) });
-  check('at height without a photo: refused, nothing written', hn.status === 400 && (await hn.text()).indexOf('לצלם את אישור העבודה בגובה') > 0 && db.reads.length === h0);
+  // 17/11/2026, Michael: "must not stop the send": at height without a photo is saved, no date, red in the mail
+  const hn = await hsign({ oname: 'Avi Hagobah', oid: '039337423', hgt: '1', he: addD(today, 100) });
+  const hnrow = db.reads[db.reads.length - 1];
+  check('at height without a photo: saved at height, no date, the mail says in red "no certificate attached"', hn.status === 200 && db.reads.length === h0 + 1 && hnrow.emp_name === 'Avi Hagobah' && hnrow.job === 'עבודה בגובה' && hnrow.equip && hnrow.equip.e === null && db.mails[db.mails.length - 1].html.indexOf('color:#b91c1c">לא צורף אישור') > 0, [hn.status, hnrow]);
   const hp = await hsign({ oname: 'Rami Levi', oid: '211111117', hgt: '1', he: addD(today, -1), doc: JPG });
-  check('at height with an expired date: refused, nothing written', hp.status === 400 && db.reads.length === h0);
+  check('at height with an expired date: refused, nothing written', hp.status === 400 && db.reads.length === h0 + 1);
   const pb = db.puts.length;
   const hk = await hsign({ oname: 'Rami Levi', oid: '211111117', hgt: '1', he: addD(today, 100), doc: [JPG, JPG] });
   const hrow = db.reads[db.reads.length - 1];
@@ -508,6 +515,14 @@ console.log('\n8. never a factory training');
   const wh = ctx2._ctrWorkersHtml({ id: 'ctr26-cq1', n: 'גגות' });
   check('screen: at height with the date and the certificate link; an expired one says so; others "not at height"', wh.indexOf('בגובה, אישור עד 01/01/2027') > 0 && wh.indexOf('href="https://od.example/a"') > 0 && wh.indexOf('(פג)') > 0 && wh.indexOf('לא בגובה') > 0 && wh.indexOf('טופס חתום') > 0, wh);
   check('screen: names escaped, a javascript: link dropped', wh.indexOf('<b>Cohen') < 0 && wh.indexOf('javascript:') < 0);
+  // 17/11/2026, Michael: the certificate is not required: at height without one = "no certificate attached" in red
+  ctx2.DB.toolbox_reads.push({ id: 'r6', talk_id: 'ctr-cq1', emp_name: 'No Cert', id_no: '8', read_at: '2026-11-17T09:00:00Z', job: 'עבודה בגובה', equip: { hgt: true, e: null, files: [] } });
+  const whN = ctx2._ctrWorkersHtml({ id: 'ctr26-cq1', n: 'גגות' });
+  check('screen: at height with no certificate says so in red', whN.indexOf('color:#b91c1c">בגובה, לא צורף אישור') > 0, whN.slice(0, 200));
+  ctx2.DB.toolbox_reads.pop();
+  const tk = fs.readFileSync(new URL('../../functions/api/talk.js', import.meta.url), 'utf8');
+  check('new worker link: at height without a photo is saved (no refusal), the date only with a photo, the mail says in red', tk.indexOf('return hErr(CTR_HGT_ERR.docs)') < 0 && tk.indexOf('if (hd.length && !he) return hErr(CTR_HGT_ERR.date)') > 0 && tk.indexOf('e: hd.length ? he : null') > 0 && tk.indexOf('hgt && !hgt.e ?') > 0);
+  check('new worker link page: no stop for a missing photo', tk.indexOf('if(document.querySelectorAll(\"#dbox input[name=doc]\").length&&!document') > 0);
   check('screen: no workers = says so', ctx2._ctrWorkersHtml({ id: 'ctr26-zz', n: 'אחר' }).indexOf('עוד לא חתמו') > 0);
   check('screen: shown on the contractor view', /if\(tbl==='ctr'\)html\+=_ctrWorkersHtml\(rec\);/.test(html));
   const rTbt = html.slice(html.indexOf('function rTbt()'), html.indexOf('function rTbt()') + 800);
