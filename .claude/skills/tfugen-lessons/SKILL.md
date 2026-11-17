@@ -63,12 +63,6 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 ## בדיקות שבודקות את הדבר הנכון
 
-**218. קובץ PowerPoint "פגום" שעבר את כל הבדיקות שלי (17/11/2026, #2869).**
-מה קרה: וידאו מ-pptxgenjs קיבל מספר זיהוי של צורה אחרת בשקף; XML תקין, python-pptx ו-LibreOffice פתחו, PowerPoint ביקש "לתקן".
-הכלל: קובץ Office שנבנה בקוד נבדק גם לכפילויות `cNvPr id` בכל שקף, לא רק לתקינות XML ופתיחה ב-LibreOffice.
-נאכף: `project-files/training-deck/fx.py` ממספר כפילויות מחדש ונופל ב-assert אם נשארה.
-חזר: 0.
-
 **217. push אחרי בדיקה שנכשלה (13/11/2026, #2772).**
 מה קרה: גרש במחרוזת שבר את `_wa.js`; הבדיקה קרסה ו-`;` המשיך ל-push.
 הכלל: בדיקה, commit ו-push ב-`&&`. אחרי עריכת מחרוזת JS: `node --check`.
