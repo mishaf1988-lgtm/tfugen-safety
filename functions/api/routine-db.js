@@ -1731,6 +1731,22 @@ export function odMoveCheck(b) {
     if (!skipTo || bad(from) || name === from[1] || name.indexOf('/') >= 0 || OD_BAD.test(name) || name.length > 180 || !skipNameOk(orig, name)) return { error: 'bad rename in not filed' };
     return { from: OD_ROOT + OD_INBOX + '/' + OD_SKIP + '/' + from[1], toDir: OD_ROOT + dir.join('/'), name, skip: false };
   }
+  // from_dir (17/11/2026, Michael in the questionnaire: "\u05d1\u05e6\u05e2: \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d5\u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05db\u05dc\u05dc"): a file filed in the wrong folder (wastewater certificates in the
+  // stack-sampling folder) moves to its folder: from one folder inside the safety folder to another, by name, never
+  // overwriting (name taken = refused), never from or into the inbox, a flow folder, old versions, "to delete" or ARCHIVE.
+  if (b.from_dir !== undefined && b.from_dir !== null) {
+    const fd = clean(b.from_dir);
+    // a segment with spaces or a dot at its end, or hidden format characters, could pass for another folder (review 17/11/2026)
+    const odd = (parts) => parts.some((x) => x !== x.trim() || /\.$/.test(x) || /\p{Cf}/u.test(x));
+    if (odd(fd) || odd(dir) || odd([name]) || odd(from)) return { error: 'bad path characters' };
+    if (!fd.length || fd.length > 8 || bad(fd) || OD_NO_DIR.test(fd.join('/')) || OD_TRIGGER_DIRS.indexOf(fd[0]) >= 0) return { error: 'bad from_dir' };
+    if (from.length !== 1 || bad(from) || !OD_EXT.test(from[0])) return { error: 'from: one file name inside from_dir' };
+    if (!dir.length || dir.length > 8 || bad(dir) || OD_NO_DIR.test(dir.join('/')) || OD_TRIGGER_DIRS.indexOf(dir[0]) >= 0) return { error: 'bad to_dir' };
+    if (!name || name.indexOf('/') >= 0 || OD_BAD.test(name) || name.length > 180 || !OD_EXT.test(name)) return { error: 'bad name' };
+    // the same kind of file: a move never turns a PDF into a document of another type
+    if ((/\.[^.]+$/.exec(from[0]) || [''])[0].toLowerCase() !== (/\.[^.]+$/.exec(name) || [''])[0].toLowerCase()) return { error: 'name must keep the extension' };
+    return { from: OD_ROOT + fd.join('/') + '/' + from[0], toDir: OD_ROOT + dir.join('/'), name, skip: false, invMonth: '' };
+  }
   if (from.length !== 1 || bad(from) || !(skipTo || OD_EXT.test(from[0]))) return { error: 'from: one file inside the inbox folder' };
   const skip = dir.length === 2 && dir[0] === OD_INBOX && dir[1] === OD_SKIP;
   // never into a flow folder (security review 31/10/2026, flow 10): a mailed file there would run as a flow request
