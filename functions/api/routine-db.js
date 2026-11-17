@@ -2086,7 +2086,10 @@ export function odExpireCheck(b, now = Date.now()) {
 // Michael sees where it came from. Nothing is deleted: Michael empties the folder himself (05/10/2026: deletion
 // never, "instead: a to-delete folder"). Not from inside that folder or an old-versions folder. Pure.
 export const OD_TRASH_DIR = '\u05dc\u05de\u05d7\u05d9\u05e7\u05d4';
-export function odTrashCheck(b) {
+// the reports folder (00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1) and the name of an old control-board backup at the top of the safety folder
+export const OD_REPORTS_DIR = '00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1';
+export const OD_ROOT_BACKUP = /^\u05dc\u05d5\u05d7 \u05d1\u05e7\u05e8\u05d4 - \u05d2\u05d9\u05d1\u05d5\u05d9 \d{2}\.\d{2}\.\d{4}[^\/]{0,80}\.xlsx$/;
+export function odTrashCheck(b, strict) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
   if (String(b.why || '').trim().length < 5) return { error: 'why required' };
   const parts = String(b.path || '').split('/').filter(Boolean);
@@ -2094,7 +2097,14 @@ export function odTrashCheck(b) {
   // 03/11/2026 (Michael in the questionnaire: "do it: to the recycle bin (recommended)"): a txt of _טקסט סריקות too, the
   // partial OCR of a PDF made on a computer (the logo only, OCR experiment 03/11/2026). Only directly in that folder.
   const ocrTxt = parts.length === 2 && parts[0] === OD_OCR_DIR && /\.txt$/i.test(parts[1]);
-  if (parts.length < 2 || parts.length > OD_MKDIR_DEPTH + 1 || parts.some(bad) || !(OD_EXT.test(parts[parts.length - 1]) || ocrTxt)) return { error: 'bad path' };
+  // 17/11/2026 (Michael in the questionnaire, folder audit: "\u05d1\u05e6\u05e2: \u05dc\u05e0\u05e7\u05d5\u05ea \u05d5\u05dc\u05d4\u05e9\u05d0\u05d9\u05e8 \u05e8\u05e7 \u05de\u05d4 \u05e9\u05e6\u05e8\u05d9\u05da"): Claude's own
+  // leftovers of 09-10/2026 in the reports folder are .md/.txt/.zip notes, so those types too, only inside that folder;
+  // and the old control-board backups left at the top of the safety folder (one exact name pattern, .xlsx only).
+  // strict (od_dedupe, a real delete): neither of the two folder-audit additions (security review 17/11/2026)
+  const leftover = !strict && parts.length >= 2 && parts[0] === OD_REPORTS_DIR && /\.(md|txt|zip)$/i.test(parts[parts.length - 1]);
+  const rootBackup = !strict && parts.length === 1 && OD_ROOT_BACKUP.test(parts[0]);
+  if (rootBackup && !parts.some(bad)) return { from: OD_ROOT + parts[0], to: OD_ROOT + OD_TRASH_DIR, name: ('\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea - ' + parts[0]).slice(-200) };
+  if (parts.length < 2 || parts.length > OD_MKDIR_DEPTH + 1 || parts.some(bad) || !(OD_EXT.test(parts[parts.length - 1]) || ocrTxt || leftover)) return { error: 'bad path' };
   if (OD_NO_DIR.test(parts.slice(0, -1).join('/'))) return { error: 'bad path' };
   const name = (parts[parts.length - 2] + ' - ' + parts[parts.length - 1]).slice(-200);
   return { from: OD_ROOT + parts.join('/'), to: OD_ROOT + OD_TRASH_DIR, name };
@@ -2107,9 +2117,9 @@ export function odTrashCheck(b) {
 // days), and every delete is a line in server_state od_deleted. Pure: the two paths, or { error }.
 export const OD_DELETED_KEY = 'od_deleted', OD_DELETED_MAX = 200;
 export function odDedupeCheck(b) {
-  const a = odTrashCheck({ agent: b.agent, why: b.why, path: b.path });
+  const a = odTrashCheck({ agent: b.agent, why: b.why, path: b.path }, true);
   if (a.error) return a;
-  const k = odTrashCheck({ agent: b.agent, why: b.why, path: b.keep });
+  const k = odTrashCheck({ agent: b.agent, why: b.why, path: b.keep }, true);
   if (k.error) return { error: 'bad keep path' };
   if (a.from === k.from) return { error: 'path and keep are the same file' };
   return { del: a.from, keep: k.from };
