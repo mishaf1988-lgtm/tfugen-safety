@@ -5,10 +5,10 @@ const sharp = require("sharp");
 const gi = require("react-icons/gi");
 const fa = require("react-icons/fa6");
 
-// קפוא (כחול לילה וקרח) + צ'יפס (זהב) + סכנה (אדום)
+// תבנית תפוגן (כמו מצגת ועדת הבטיחות), בלי הסמל: פס כותרת מדורג 0B2635 עד 14485F, רקע לבן
 const COL = {
-  dark: "0E2A47", deep: "1C4268", gold: "F4B400", red: "D7263D", ink: "10243A", green: "2E8B57",
-  white: "FFFFFF", tint: "FDF1C7", ice: "E3F1FB", mute: "5B6F84", soft: "9FC3E3",
+  dark: "0B2635", deep: "14485F", gold: "E09A2F", red: "C0453B", ink: "1A1A1A", green: "53842B",
+  white: "FFFFFF", tint: "EFF2F5", ice: "DCE8F2", mute: "7F8C99", soft: "A9C4D8", accent: "1F608C",
 };
 const FONT = "Arial";
 const R = { rtlMode: true, align: "right", fontFace: FONT, isTextBox: true };
@@ -28,6 +28,8 @@ async function icon(Comp, color, size = 512) {
     slideNumber: { x: 0.4, y: 6.95, w: 0.6, h: 0.35, color: COL.soft, fontFace: FONT, fontSize: 11 } });
   pres.defineSlideMaster({ title: "LIGHT", background: { color: COL.white },
     slideNumber: { x: 0.4, y: 6.95, w: 0.6, h: 0.35, color: COL.mute, fontFace: FONT, fontSize: 11 } });
+  // רקע מדורג (fx.py הופך כל צורה ששמה hdr_ למילוי מדורג)
+  const bg = (s) => s.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: 13.333, h: 7.5, fill: { color: COL.dark }, line: { color: COL.dark }, objectName: "hdr_bg" });
 
   const I = {
     potato: await icon(gi.GiPotato, COL.gold),
@@ -47,6 +49,7 @@ async function icon(Comp, color, size = 512) {
     mask: await icon(gi.GiGasMask, COL.red),
     q: await icon(fa.FaQuestion, COL.dark),
     teacher: await icon(gi.GiTeacher, COL.gold),
+    teacherW: await icon(gi.GiTeacher, COL.white),
     user: await icon(fa.FaUserShield, COL.white),
     flag: await icon(fa.FaFlag, COL.white),
     eyeGold: await icon(fa.FaEye, COL.dark),
@@ -54,25 +57,25 @@ async function icon(Comp, color, size = 512) {
   };
 
   function title(s, t, sub) {
-    s.addText(t, { ...R, x: 0.6, y: 0.4, w: 12.1, h: 0.9, fontSize: 36, bold: true, color: COL.ink, margin: 0 });
-    if (sub) s.addText(sub, { ...R, x: 0.6, y: 1.25, w: 12.1, h: 0.5, fontSize: 18, color: COL.mute, margin: 0 });
+    s.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: 13.333, h: 1.25, fill: { color: COL.dark }, line: { color: COL.dark }, objectName: "hdr_band" });
+    s.addText(t, { ...R, x: 3.4, y: 0.15, w: 9.4, h: 0.95, fontSize: 32, bold: true, color: COL.white, margin: 0, valign: "middle", fit: "shrink" });
+    if (s._m) method(s, s._m, true);
+    if (sub) s.addText(sub, { ...R, x: 3.4, y: 1.38, w: 9.4, h: 0.7, fontSize: 17, color: COL.accent, margin: 0, valign: "top" });
   }
-  function titleDark(s, t, sub) {
-    s.addText(t, { ...R, x: 0.6, y: 0.4, w: 12.1, h: 0.9, fontSize: 34, bold: true, color: COL.white, margin: 0 });
-    if (sub) s.addText(sub, { ...R, x: 0.6, y: 1.25, w: 12.1, h: 0.5, fontSize: 18, color: COL.soft, margin: 0 });
-  }
-  function method(s, t, dark) {
+  const titleDark = title;
+  // התגית יושבת על פס הכותרת, ולכן מצוירת אחריו: method שומר, title מצייר (בשקף בלי פס: now)
+  function method(s, t, now) {
+    if (!now) { s._m = t; return; }
     s.addText(t, { ...R, align: "center", shape: pres.ShapeType.roundRect, rectRadius: 0.15,
-      x: 0.5, y: 0.45, w: 2.6, h: 0.45, fontSize: 12, bold: true,
-      color: dark ? COL.dark : COL.white, fill: { color: dark ? COL.gold : COL.dark } });
+      x: 0.5, y: 0.4, w: 2.6, h: 0.45, fontSize: 12, bold: true, color: COL.dark, fill: { color: COL.white } });
   }
   function src(s, t, dark) {
     s.addText("מקור: " + t, { ...R, x: 1.2, y: 6.95, w: 11.5, h: 0.35, fontSize: 10, color: dark ? COL.soft : COL.mute, margin: 0 });
   }
   function plant(s, t) {
-    s.addShape(pres.ShapeType.roundRect, { x: 0.5, y: 1.0, w: 2.6, h: 0.45, rectRadius: 0.15, fill: { color: COL.green }, line: { color: COL.green } });
-    s.addImage({ data: I.check, x: 2.7, y: 1.07, w: 0.3, h: 0.3 });
-    s.addText(t, { ...R, align: "center", x: 0.55, y: 1.0, w: 2.1, h: 0.45, fontSize: 13, bold: true, color: COL.white, margin: 0, valign: "middle" });
+    s.addShape(pres.ShapeType.roundRect, { x: 0.5, y: 1.4, w: 2.6, h: 0.45, rectRadius: 0.15, fill: { color: COL.green }, line: { color: COL.green } });
+    s.addImage({ data: I.check, x: 2.7, y: 1.47, w: 0.3, h: 0.3 });
+    s.addText(t, { ...R, align: "center", x: 0.55, y: 1.4, w: 2.1, h: 0.45, fontSize: 13, bold: true, color: COL.white, margin: 0, valign: "middle" });
   }
   function box(s, runs, o) {
     s.addText(runs, { ...R, shape: pres.ShapeType.roundRect, rectRadius: 0.2, margin: 18, valign: "middle", ...o });
@@ -80,6 +83,7 @@ async function icon(Comp, color, size = 512) {
 
   // ===== 1. פתיחה =====
   let s = pres.addSlide({ masterName: "DARK" });
+  bg(s);
   s.addImage({ data: I.potato, x: 7.4, y: 0.7, w: 1.8, h: 1.8, objectName: "auto1b_a" });
   s.addImage({ data: I.fries, x: 5.75, y: 0.7, w: 1.8, h: 1.8, objectName: "auto2b_b" });
   s.addImage({ data: I.snow, x: 4.1, y: 0.8, w: 1.6, h: 1.6, objectName: "auto3b_c" });
@@ -129,6 +133,7 @@ async function icon(Comp, color, size = 512) {
 
   // ===== 4. החזון =====
   s = pres.addSlide({ masterName: "DARK" });
+  bg(s);
   method(s, "שלב 3: החזון", true);
   s.addShape(pres.ShapeType.ellipse, { x: 5.9, y: 1.2, w: 1.5, h: 1.5, fill: { color: COL.gold }, line: { color: COL.gold } });
   s.addImage({ data: I.eyeGold, x: 6.27, y: 1.57, w: 0.76, h: 0.76 });
@@ -159,7 +164,7 @@ async function icon(Comp, color, size = 512) {
   steps.forEach(([img, label], i) => {
     const row = Math.floor(i / 4), col = i % 4;
     const x = 10.0 - col * 3.05, y = 2.1 + row * 2.4, n = "ani" + (i + 1) + "_s";
-    const fill = i === 6 ? "2F80C1" : i === 5 ? COL.red : COL.dark;
+    const fill = i === 6 ? COL.accent : i === 5 ? COL.red : COL.dark;
     s.addShape(pres.ShapeType.roundRect, { x, y, w: 2.7, h: 2.0, rectRadius: 0.2, fill: { color: fill }, line: { color: fill }, objectName: n + "_bg" });
     s.addImage({ data: img, x: x + 1.0, y: y + 0.25, w: 0.7, h: 0.7, objectName: n + "_ic" });
     s.addText((i + 1) + ". " + label, { ...R, align: "center", x: x + 0.1, y: y + 1.1, w: 2.5, h: 0.6, fontSize: 17, bold: true, color: COL.white, objectName: n + "_tx" });
@@ -168,8 +173,8 @@ async function icon(Comp, color, size = 512) {
   s.addNotes("כל קליק מוסיף תחנה (40 שניות לכל השקף). רק לתת שם, לא להסביר. שיטה: מארגן מקדים (Advance Organizer). מבוגר רוצה לדעת לאן ההדרכה הולכת לפני הפרטים. בהדרכת בטיחות: קודם שלבי העבודה, אחר כך הסיכון בכל שלב. אפשר להוסיף: 'כל תחנה כזו קיימת אצלנו במפעל'. מסר שתול: התגית הירוקה. לא להסביר אותה, רק לומר חצי משפט כמו: וגם פה, בודקים.");
 
   // ===== 5. הדגמה: קילוף =====
-  s = pres.addSlide({ masterName: "DARK" });
-  method(s, "הדגמה והשוואה", true);
+  s = pres.addSlide({ masterName: "LIGHT" });
+  method(s, "הדגמה והשוואה");
   titleDark(s, "בבית מקלפים ככה. במפעל?", "אני מראה, אתם מסתכלים");
   s.addImage({ data: I.potato, x: 9.3, y: 2.1, w: 3.0, h: 3.0 });
   box(s, [
@@ -181,11 +186,11 @@ async function icon(Comp, color, size = 512) {
     { text: "סיר לחץ ענק עם קיטור. משחררים את הלחץ בבת אחת, הקליפה מתנפחת ומתקלפת, ומברשות מורידות אותה.", options: { fontSize: 18, color: COL.white } },
   ], { x: 0.6, y: 2.1, w: 4.0, h: 3.0, fill: { color: COL.deep }, objectName: "ani2_fac" });
   s.addImage({ data: I.steamGold, x: 2.1, y: 5.3, w: 1.0, h: 1.0, objectName: "ani2_st" });
-  s.addText("קיטור בלחץ של 6 עד 12 בר, לשניות ספורות", { ...R, x: 3.3, y: 5.5, w: 6.0, h: 0.6, fontSize: 18, bold: true, color: COL.gold, objectName: "ani3_tx" });
+  s.addText("קיטור בלחץ של 6 עד 12 בר, לשניות ספורות", { ...R, x: 3.3, y: 5.5, w: 6.0, h: 0.6, fontSize: 18, bold: true, color: COL.accent, objectName: "ani3_tx" });
   plant(s, "נמדד בשניות");
   s.addNotes("להוציא את תפוח האדמה וסכין הקילוף ולקלף רצועה אחת מול הכיתה (20 שניות). קליק: 'בבית'. קליק: 'במפעל'. קליק: השורה התחתונה. שיטה: הדגמה חיה והשוואה (לפני ואחרי). ההשוואה בין מה שהם מכירים לבין המפעל היא מה שנחרט. נתון להוסיף בעל פה: כל שנייה נוספת בקיטור מורידה עוד חצי אחוז מתפוח האדמה לפסולת, ולכן מכוונים את הזמן בדיוק. השוואה: צמיג של רכב מנופח בערך ל-2 בר, כלומר הלחץ בקולף פי 3 עד 6. אם יש לך את הנתון של הקולף אצלנו, להחליף בו. מסר שתול: התגית הירוקה. לא להסביר אותה, רק לומר חצי משפט כמו: וגם פה, בודקים.");
 
-  src(s, "FreshPlaza, Evolution of potato peeling; PotatoPro", true);
+  src(s, "FreshPlaza, Evolution of potato peeling; PotatoPro");
 
   // ===== 6. שאלה מנחה: למה חולטים =====
   s = pres.addSlide({ masterName: "LIGHT" });
@@ -208,7 +213,7 @@ async function icon(Comp, color, size = 512) {
   title(s, "טיגון והקפאה: 3 מספרים בלבד", "לא 20 נתונים. שלושה.");
   [["175°", "מעלות בשמן, בטיגון המקדים"], ["\u202A30-60\u202C", "שניות בלבד. לא עד הסוף"], ["\u202A-18°\u202C", "מעלות לפחות, באחסון ובהובלה"]].forEach(([n, l], i) => {
     s.addText([
-      { text: n, options: { fontSize: 64, bold: true, color: i === 2 ? "2F80C1" : COL.red, breakLine: true } },
+      { text: n, options: { fontSize: 64, bold: true, color: i === 2 ? COL.accent : COL.red, breakLine: true } },
       { text: l, options: { fontSize: 18, color: COL.ink } },
     ], { ...R, align: "center", shape: pres.ShapeType.roundRect, rectRadius: 0.2, x: 8.9 - i * 4.1, y: 2.2, w: 3.8, h: 3.0,
       fill: { color: i === 2 ? COL.ice : COL.tint }, valign: "middle", objectName: "ani" + (i + 1) + "_st" });
@@ -223,37 +228,36 @@ async function icon(Comp, color, size = 512) {
   src(s, "PotatoPro, Turnkey frozen french fry line; יצרני מקפיאי IQF");
 
   // ===== 8. תרחיש: אמוניה =====
-  s = pres.addSlide({ masterName: "DARK" });
-  method(s, "תרחיש: מה תעשו?", true);
+  s = pres.addSlide({ masterName: "LIGHT" });
+  method(s, "תרחיש: מה תעשו?");
   titleDark(s, "ריח חריף ליד מנהרת ההקפאה. מה עושים?");
-  s.addImage({ data: I.mask, x: 0.9, y: 1.85, w: 2.4, h: 2.4 });
+  s.addImage({ data: I.mask, x: 0.9, y: 2.0, w: 2.4, h: 2.4 });
   [["א", "נכנסים לבדוק מאיפה הריח"], ["ב", "מתרחקים נגד כיוון הרוח, מודיעים ומפעילים את נוהל החירום"], ["ג", "פותחים חלון וממשיכים לעבוד"]].forEach(([l, t], i) => {
-    s.addText(l + ". " + t, { ...R, shape: pres.ShapeType.roundRect, rectRadius: 0.15, x: 3.9, y: 1.75 + i * 0.95, w: 8.8, h: 0.8,
+    s.addText(l + ". " + t, { ...R, shape: pres.ShapeType.roundRect, rectRadius: 0.15, x: 3.9, y: 1.5 + i * 1.05, w: 8.8, h: 0.85,
       fontSize: 21, color: COL.ink, fill: { color: COL.tint }, margin: 14, valign: "middle" });
   });
   box(s, [
-    { text: "ב. ", options: { bold: true, color: COL.gold } },
+    { text: "ב. ", options: { bold: true, color: COL.white } },
     { text: "במפעלי הקפאה מקררים לרוב באמוניה. היא רעילה ופוגעת בנשימה ובעיניים. לא נכנסים לבדוק לבד: מתרחקים, מודיעים, ונכנס רק צוות מוסמך עם מיגון מתאים, לפי נוהל המפעל.", options: { color: COL.white } },
   ], { x: 0.6, y: 4.85, w: 12.1, h: 1.8, fill: { color: COL.red }, fontSize: 19, objectName: "ani1_ans" });
   plant(s, "עוצרים ובודקים");
   s.addNotes("כאן נכנס הצד של מדריך הבטיחות. הצבעה: א, ב או ג (20 שניות). קליק לתשובה. שיטה: תרחיש וקבלת החלטה (Scenario-based learning). העובד מתרגל החלטה ולא רק שומע כלל, וזה הכי קרוב לשטח בלי לצאת מהכיתה. אם רוצים לחזק: 'מי יודע איפה נקודת הכינוס אצלנו?' מסר שתול: התגית הירוקה. לא להסביר אותה, רק לומר חצי משפט כמו: וגם פה, בודקים.");
 
   // ===== 11. חזרה =====
-  s = pres.addSlide({ masterName: "DARK" });
-  method(s, "שליפה מהזיכרון", true);
+  s = pres.addSlide({ masterName: "LIGHT" });
+  method(s, "שליפה מהזיכרון");
   titleDark(s, "3 שאלות, 3 שניות לכל אחת");
   [["באיזו מהירות תפוח האדמה פוגש את הסכין?", "כ-60 קמ\"ש"], ["למה חולטים לפני הטיגון?", "שלא ישחים"], ["כמה פעמים טוגן הצ'יפס שאכלתם?", "פעמיים"]].forEach(([q, a], i) => {
-    const y = 1.7 + i * 1.65;
+    const y = 1.75 + i * 1.65;
     s.addText(q, { ...R, shape: pres.ShapeType.roundRect, rectRadius: 0.15, x: 4.3, y, w: 8.4, h: 1.3, fontSize: 22, color: COL.ink, fill: { color: COL.tint }, margin: 16, valign: "middle" });
     s.addText(a, { ...R, align: "center", shape: pres.ShapeType.roundRect, rectRadius: 0.15, x: 0.6, y, w: 3.4, h: 1.3, fontSize: 26, bold: true, color: COL.dark, fill: { color: COL.gold }, valign: "middle", objectName: "ani" + (i + 1) + "_a" });
   });
   s.addNotes("לשאול כל שאלה בקול, לתת לכיתה לענות ביחד, ורק אז קליק לתשובה. שיטה: שליפה מהזיכרון (Retrieval practice). לשלוף מידע מחזק אותו יותר מלשמוע אותו שוב. זו גם בדיקה של רמה 2 במודל קירקפטריק: האם למדו.");
 
   // ===== 12. החשיפה =====
-  s = pres.addSlide({ masterName: "DARK" });
-  s.addImage({ data: I.teacher, x: 0.8, y: 0.5, w: 1.6, h: 1.6 });
-  s.addText("רגע... מה בעצם עשיתי לכם?", { ...R, x: 2.8, y: 0.55, w: 9.9, h: 0.9, fontSize: 36, bold: true, color: COL.gold, margin: 0 });
-  s.addText("לא לימדתי צ'יפס. הדגמתי 11 שיטות הדרכה:", { ...R, x: 2.8, y: 1.4, w: 9.9, h: 0.5, fontSize: 18, color: COL.white, margin: 0 });
+  s = pres.addSlide({ masterName: "LIGHT" });
+  title(s, "רגע... מה בעצם עשיתי לכם?", "לא לימדתי צ'יפס. הדגמתי 11 שיטות הדרכה:");
+  s.addImage({ data: I.teacherW, x: 0.6, y: 0.2, w: 0.85, h: 0.85 });
   ["פתיחה עם חפץ (1)", "שאלה מקדימה (2)", "הצגה עצמית (3)", "חזון (4)", "מטרות (5)", "התמונה הגדולה (6)",
     "הדגמה והשוואה (7)", "שאלה מנחה (8)", "מנות קטנות ומיתוס (9)", "תרחיש והחלטה (10)", "חזרה ושליפה (11)"].forEach((m, i) => {
     const col = i % 4, row = Math.floor(i / 4);
@@ -261,10 +265,10 @@ async function icon(Comp, color, size = 512) {
       x: 9.9 - col * 3.1, y: 2.25 + row * 1.08, w: 2.8, h: 0.85, fontSize: 16, bold: true, color: COL.dark,
       fill: { color: COL.gold }, valign: "middle", objectName: "ani" + (row + 1) + "_m" + i });
   });
-  s.addText("ההדרכה הטובה ביותר היא זו שהקהל לא מרגיש שהוא בהדרכה.", { ...R, align: "center", x: 0.6, y: 6.25, w: 12.1, h: 0.55, fontSize: 18, italic: true, color: COL.soft, objectName: "ani5_q" });
+  s.addText("ההדרכה הטובה ביותר היא זו שהקהל לא מרגיש שהוא בהדרכה.", { ...R, align: "center", x: 0.6, y: 6.25, w: 12.1, h: 0.55, fontSize: 18, italic: true, color: COL.accent, objectName: "ani5_q" });
   s.addText([
     { text: "והמסר ששתלתי: ", options: { bold: true, color: COL.white } },
-    { text: "כמו שכל צ'יפס נבדק בכל תחנה, גם כל עבודה אצלנו נבדקת בכל שלב.", options: { bold: true, color: COL.dark } },
+    { text: "כמו שכל צ'יפס נבדק בכל תחנה, גם כל עבודה אצלנו נבדקת בכל שלב.", options: { bold: true, color: COL.white } },
   ], { ...R, align: "center", shape: pres.ShapeType.roundRect, rectRadius: 0.15, x: 0.6, y: 5.45, w: 12.1, h: 0.7, fontSize: 19, fill: { color: COL.green }, valign: "middle", objectName: "ani4_msg" });
   s.addNotes("קליק 4: המסר השתול. לשאול לפני: מי שם לב לתגית הירוקה שחזרה בשקפים? רק אז קליק. שיטה: שתילת מסר, מסר שחוזר בלי להכריז עליו ונחשף בסוף. החשיפה: כל קליק מוסיף שורה. לחזור ל-3 המטרות משקף 5: הכרתם את התחנות? הבנתם למה? זיהיתם את הסיכון? לעצור אחרי השורה האחרונה ולתת לכיתה רגע. משפט סיום. אם נשאר זמן: 'איזו שיטה הכי עבדה עליכם?' (רמה 1 בקירקפטריק: תגובה). מקורות לשיטות: OSHA, Resource for Development and Delivery of Training to Workers; המוסד לבטיחות ולגיהות, הערכת יעילות הדרכה; עקרונות למידת מבוגרים של מלקולם נואלס.");
 
