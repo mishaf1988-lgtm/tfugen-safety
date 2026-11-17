@@ -1736,6 +1736,9 @@ export function odMoveCheck(b) {
   // overwriting (name taken = refused), never from or into the inbox, a flow folder, old versions, "to delete" or ARCHIVE.
   if (b.from_dir !== undefined && b.from_dir !== null) {
     const fd = clean(b.from_dir);
+    // a segment with spaces or a dot at its end, or hidden format characters, could pass for another folder (review 17/11/2026)
+    const odd = (parts) => parts.some((x) => x !== x.trim() || /\.$/.test(x) || /\p{Cf}/u.test(x));
+    if (odd(fd) || odd(dir) || odd([name]) || odd(from)) return { error: 'bad path characters' };
     if (!fd.length || fd.length > 8 || bad(fd) || OD_NO_DIR.test(fd.join('/')) || OD_TRIGGER_DIRS.indexOf(fd[0]) >= 0) return { error: 'bad from_dir' };
     if (from.length !== 1 || bad(from) || !OD_EXT.test(from[0])) return { error: 'from: one file name inside from_dir' };
     if (!dir.length || dir.length > 8 || bad(dir) || OD_NO_DIR.test(dir.join('/')) || OD_TRIGGER_DIRS.indexOf(dir[0]) >= 0) return { error: 'bad to_dir' };

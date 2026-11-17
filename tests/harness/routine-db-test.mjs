@@ -359,6 +359,7 @@ const callIn = async (body) => {
       && bad({ from_dir: OD_INBOX }) && bad({ to_dir: OD_INBOX }) && bad({ from_dir: OD_AUTO }) && bad({ to_dir: OD_AUTO + '/' + OD_AUTO_DIRS[0] })
       && bad({ from_dir: S + '_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea' }) && bad({ to_dir: 'ARCHIVE' }) && bad({ from_dir: S + '../x' }) && bad({ from_dir: '' })
       && bad({ name: '2026-07 x.exe' }) && bad({ name: '2026-07 x.docx' }) && bad({ from: 'a/b.pdf' }) && bad({ from: 'x.exe', name: 'x.exe' })
+      && bad({ to_dir: 'ARCHIVE ' }) && bad({ from_dir: OD_AUTO + ' ' }) && bad({ to_dir: S + 'x.' }) && bad({ to_dir: S + 'x\u200e' }) && bad({ name: ' 2026-07 x.pdf' })
       && !odMoveCheck({ ...B, from: 'PATS.xlsx', name: '2026-07 \u05e0\u05d5\u05e1\u05e4\u05ea PATS.xlsx' }).error;
   })());
   check('iso_up: one pdf / docx from <folder>/old-versions/ back up to <folder>, only under the iso safety folder; anything else refused (31/10/2026)', (() => {
