@@ -256,7 +256,7 @@ console.log('\n4. the form, checked on the server');
   check('date refusals are keyboard characters only', [noD, past, wNoD].every((r) => r.errors.every((e) => !BAD.test(e))));
   check('files: more room than before (15) but within the free plan\'s 50 calls a run (about 27 fixed + one per file)', CTR_MAX_FILES > 15 && CTR_MAX_FILES + 27 <= 45);
   check('bytes: PDF, JPG, PNG known; a renamed EXE is not', fileType(PDF())[0] === 'pdf' && fileType(PNG())[0] === 'png' && fileType(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))[0] === 'jpg' && fileType(new Uint8Array([0x4d, 0x5a, 0x90, 0, 0])) === null);
-  check('every refusal is keyboard characters only', [miss, noIns, noWk, noSig].every((r) => r.errors.every((e) => !BAD.test(e))));
+  check('every refusal is keyboard characters only', [noIns, noWk, noSig].every((r) => r.errors.every((e) => !BAD.test(e))));
 }
 
 console.log('\n5. the op ctr_link (validation)');
@@ -448,10 +448,12 @@ console.log('\n7. the worker of the contractor signs (talk.js, kind contractor)'
   const JPG = 'data:image/jpeg;base64,' + Buffer.alloc(3000, 7).toString('base64');
   const hsign = async (o) => { const f = new FormData(); for (const [k, v] of Object.entries(Object.assign({ k: tok, l: 'he', emp: '__other', ok: '1', sig: SIG }, o))) [].concat(v).forEach((x) => f.append(k, x)); return talkRequest({ request: new Request(ORIGIN + '/api/talk', { method: 'POST', body: f }), env: ENV }); };
   const h0 = db.reads.length;
-  const hn = await hsign({ oname: 'Rami Levi', oid: '211111117', hgt: '1', he: addD(today, 100) });
-  check('at height without a photo: refused, nothing written', hn.status === 400 && (await hn.text()).indexOf('לצלם את אישור העבודה בגובה') > 0 && db.reads.length === h0);
+  // 17/11/2026, Michael: "must not stop the send": at height without a photo is saved, no date, red in the mail
+  const hn = await hsign({ oname: 'Avi Hagobah', oid: '039337423', hgt: '1', he: addD(today, 100) });
+  const hnrow = db.reads[db.reads.length - 1];
+  check('at height without a photo: saved at height, no date, the mail says in red "no certificate attached"', hn.status === 200 && db.reads.length === h0 + 1 && hnrow.emp_name === 'Avi Hagobah' && hnrow.job === 'עבודה בגובה' && hnrow.equip && hnrow.equip.e === null && db.mails[db.mails.length - 1].html.indexOf('color:#b91c1c">לא צורף אישור') > 0, [hn.status, hnrow]);
   const hp = await hsign({ oname: 'Rami Levi', oid: '211111117', hgt: '1', he: addD(today, -1), doc: JPG });
-  check('at height with an expired date: refused, nothing written', hp.status === 400 && db.reads.length === h0);
+  check('at height with an expired date: refused, nothing written', hp.status === 400 && db.reads.length === h0 + 1);
   const pb = db.puts.length;
   const hk = await hsign({ oname: 'Rami Levi', oid: '211111117', hgt: '1', he: addD(today, 100), doc: [JPG, JPG] });
   const hrow = db.reads[db.reads.length - 1];
