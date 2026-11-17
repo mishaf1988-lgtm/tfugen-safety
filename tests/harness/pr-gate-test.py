@@ -6,7 +6,7 @@ R = repo_root()
 PR = "mcp__github__create_pull_request"
 base = {"tool_name": PR, "cwd": R}
 # BASE=HEAD: an empty diff, so a real regex change in index.html on the branch under test is not read (16/11/2026)
-env = {"CLAUDE_PROJECT_DIR": R, "PR_GATE_CHANGED": "index.html", "BASE": "HEAD"}
+env = {"CLAUDE_PROJECT_DIR": R, "PR_GATE_CHANGED": "chat/x.html", "BASE": "HEAD"}
 deny = lambda o: '"deny"' in o
 out = run("pr-gate.py", dict(base, tool_input={"title": "x", "body": "שינוי"}), env)
 check("no retro line: deny", deny(out) and "retro" in out, out)
@@ -17,7 +17,7 @@ check("both lines: pass", out == "{}", out)
 out = run("pr-gate.py", dict(base, tool_input={"title": "x", "body": "רטרו: אין\nskill: למדתי משהו"}), env)
 check("skill says learned, no skill file changed: deny", deny(out), out)
 out = run("pr-gate.py", dict(base, tool_input={"title": "x", "body": "רטרו: אין\nskill: למדתי משהו"}),
-          dict(env, PR_GATE_CHANGED="index.html,.claude/skills/tfugen-ref/SKILL.md"))
+          dict(env, PR_GATE_CHANGED="chat/x.html,.claude/skills/tfugen-ref/SKILL.md"))
 check("skill says learned and a skill file changed: pass", out == "{}", out)
 out = run("pr-gate.py", dict(base, tool_input={"title": "Fix: באג", "body": "רטרו: אין\nskill: אין"}), env)
 check("fix PR without a lesson: deny", deny(out) and "lesson" in out, out)
@@ -59,4 +59,26 @@ with tempfile.TemporaryDirectory() as t:
     check("a PR from another branch with a number in its .md is denied here, though this directory has no such file (before: passed, failed in CI)", deny(out) and "pii-md-test" in out, out)
     out = run("pr-gate.py", dict(base, cwd=t, tool_input={"title": "x", "body": "x", "head": "routine/here"}), {"CLAUDE_PROJECT_DIR": t, "PR_GATE_PII_CMD": pii})
     check("the same check on the clean branch passes", out == "{}", out)
+
+# 17/11/2026, four test rules (1): the screenshot named in the shot line is a phone PNG of this PR's index.html
+import json, os, struct, tempfile
+d = tempfile.mkdtemp()
+def png(name, width=780, sha="abc", side=True, magic=b"\x89PNG\r\n\x1a\n"):
+    p = os.path.join(d, name)
+    open(p, "wb").write(magic + b"\x00\x00\x00\rIHDR" + struct.pack(">II", width, 1688) + b"\x08\x06\x00\x00\x00")
+    if side:
+        json.dump({"index_sha": sha}, open(p + ".json", "w"))
+    return p
+ix = dict(env, PR_GATE_CHANGED="index.html", PR_GATE_INDEX_SHA="abc")
+B = "\u05e8\u05d8\u05e8\u05d5: \u05d0\u05d9\u05df\nskill: \u05d0\u05d9\u05df\n\u05e6\u05d9\u05dc\u05d5\u05dd: \u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea, %s"
+shot = lambda path, e=ix: run("pr-gate.py", dict(base, tool_input={"title": "x", "body": B % path}), e)
+check("index.html, a phone screenshot of this index.html: pass", shot(png("ok.png")) == "{}", shot(png("ok.png")))
+check("...no shot line: deny (lessons-gate)", deny(run("pr-gate.py", dict(base, tool_input={"title": "x", "body": "\u05e8\u05d8\u05e8\u05d5: \u05d0\u05d9\u05df\nskill: \u05d0\u05d9\u05df"}), ix)))
+check("...the line names no png: deny", deny(shot("\u05d1\u05d3\u05e7\u05ea\u05d9 \u05d1\u05e2\u05d9\u05df")))
+check("...the file is missing: deny", deny(shot(os.path.join(d, "none.png"))))
+check("...no .json beside it (not made by pr-shot.js): deny", deny(shot(png("noside.png", side=False))))
+check("...taken before the last edit of index.html: deny", deny(shot(png("old.png", sha="older"))) and "index.html" in shot(png("old.png", sha="older")))
+check("...a desktop-wide picture: deny", deny(shot(png("wide.png", width=2880))))
+check("...not a PNG: deny", deny(shot(png("fake.png", magic=b"GIF89a\x00\x00"))))
+check("a PR without index.html: the shot is not asked for", run("pr-gate.py", dict(base, tool_input={"title": "x", "body": "\u05e8\u05d8\u05e8\u05d5: \u05d0\u05d9\u05df\nskill: \u05d0\u05d9\u05df"}), env) == "{}")
 done()

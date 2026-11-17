@@ -9,14 +9,19 @@ open(gh, "w").write('''#!/usr/bin/env bash
 path="$2"; expr="$4"
 case "$path" in
   */check-runs*) jq -r "$expr" "%s" ;;
-  *) echo abc1234def ;;
+  *) echo ${FAKE_SHA:-abc1234def} ;;
 esac
 ''' % runs)
 os.chmod(gh, 0o755)
+fails = os.path.join(d, "fails"); sha = ["abc1234def"]
+def clear():
+    import shutil; shutil.rmtree(fails, ignore_errors=True)
+keep = [False]
 def wait(rs, repo=None):
     json.dump({"check_runs": rs}, open(runs, "w"))
+    if not keep[0]: clear()
     p = subprocess.run(["bash", hook("ci-wait.sh"), "b"] + ([repo] if repo else []), capture_output=True, text=True, timeout=60,
-                       env=dict(os.environ, PATH=d + os.pathsep + os.environ["PATH"], CI_WAIT_SLEEP="0"))
+                       env=dict(os.environ, PATH=d + os.pathsep + os.environ["PATH"], CI_WAIT_SLEEP="0", CI_FAILS_DIR=fails, FAKE_SHA=sha[0]))
     return p.returncode, p.stdout
 r = lambda i, s, c=None: {"id": i, "status": s, "conclusion": c}
 rc, o = wait([r(1, "completed", "failure"), r(2, "completed", "success")])
@@ -46,4 +51,27 @@ rc, o = wait([n(1, "checks", "failure"), n(2, "tests", "success")], "mishaf1988-
 check("michael-skills: a red `checks` is red", rc == 1, (rc, o))
 rc, o = wait([n(1, "checks", "failure"), n(2, "tests", "success")], "someone/other-repo")
 check("unknown repo: `tests` decides", rc == 0 and "tests = completed:success" in o, (rc, o))
+# 17/11/2026, four test rules (4) and (3): red heads are counted per branch, the third in a row exits 3,
+# green clears, and a sha that was red and is green with no change is called a flaky test.
+keep[0] = True; clear()
+RED, GREEN = [r(1, "completed", "failure")], [r(1, "completed", "success")]
+cnt = lambda: subprocess.run(["bash", hook("ci-wait.sh"), "--count", "b"], capture_output=True, text=True, env=dict(os.environ, CI_FAILS_DIR=fails)).stdout.strip()
+sha[0] = "s1"; rc1, o1 = wait(RED)
+check("first red: exit 1, counted 1 of 3", rc1 == 1 and cnt() == "1" and "1 " in o1, (rc1, o1, cnt()))
+rc, o = wait(RED)
+check("the same sha read again is not counted twice", rc == 1 and cnt() == "1", (rc, cnt()))
+sha[0] = "s2"; rc2, _ = wait(RED)
+sha[0] = "s3"; rc3, o3 = wait(RED)
+check("second red: exit 1; third red in a row: exit 3 and says to stop and ask Michael", rc2 == 1 and rc3 == 3 and "--continue" in o3 and "\u05e9\u05d0\u05dc\u05d5\u05df" in o3, (rc2, rc3, o3))
+c = subprocess.run(["bash", hook("ci-wait.sh"), "--continue", "b"], capture_output=True, text=True, env=dict(os.environ, CI_FAILS_DIR=fails))
+check("--continue without Michael's answer: refused, the count stays", c.returncode == 2 and cnt() == "3", (c.returncode, cnt()))
+c = subprocess.run(["bash", hook("ci-wait.sh"), "--continue", "b", "\u05d1\u05e6\u05e2: \u05dc\u05d4\u05de\u05e9\u05d9\u05da"], capture_output=True, text=True, env=dict(os.environ, CI_FAILS_DIR=fails))
+check("--continue with his answer: cleared and logged", c.returncode == 0 and cnt() == "0" and os.path.exists(os.path.join(fails, "continued.log")), (c.returncode, cnt()))
+sha[0] = "s4"; wait(RED); sha[0] = "s5"; wait(RED); sha[0] = "s6"; rc, o = wait(GREEN)
+check("green after two reds: exit 0 and the count is cleared (in a row, not in total)", rc == 0 and cnt() == "0" and "flaky" not in o, (rc, o, cnt()))
+sha[0] = "s7"; wait(RED); rc, o = wait(GREEN)
+check("red then green on the same sha: exit 0 with the flaky-test notice", rc == 0 and "flaky.md" in o, (rc, o))
+sha[0] = "s8"; wait(RED)
+other = subprocess.run(["bash", hook("ci-wait.sh"), "--count", "other"], capture_output=True, text=True, env=dict(os.environ, CI_FAILS_DIR=fails)).stdout.strip()
+check("the count is per branch", cnt() == "1" and other == "0", (cnt(), other))
 done()

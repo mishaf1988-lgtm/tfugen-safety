@@ -14,12 +14,12 @@ def check(label, cond, detail=None):
 L = gate.LESSONS
 R = 'רטרו: אין\nskill: אין\nמה לא נבדק: אין\nעוזר: לא נוגע, בדיקה\nאחים: grep של הדפוס, אין אחר\nשבירה: הסרתי את התיקון, בדיקה 4b נכשלה (2)\n'
 ok = lambda t, b, f: gate.check(t, R + (b or ''), f)[0]
-check('not a fix PR: ok', ok('Tour screen: due date in one tap', '', ['index.html']))
+check('not a fix PR: ok', ok('Tour screen: due date in one tap', '', ['chat/x.html']))
 Rm = lambda r: 'רטרו: ' + r + '\nskill: אין\nמה לא נבדק: אין\nאחים: grep של הדפוס, אין אחר\nשבירה: הסרתי את התיקון, בדיקה 4b נכשלה (2)\n'
-check('01/11/2026: a retro that names a mistake, without a lesson: blocked even without a Fix title', not gate.check('Tour screen', Rm('כתובת מייל נכתבה בקובץ md'), ['index.html'])[0])
-check('...with a lesson: ok', gate.check('Tour screen', Rm('כתובת מייל נכתבה בקובץ md'), ['index.html', L])[0])
-check('...with no-lesson and a reason: ok', gate.check('Tour screen', Rm('כתובת מייל נכתבה') + 'בלי לקח: כבר לקח 170, חזר נרשם שם', ['index.html'])[0])
-check('"רטרו: אין טעות." is no mistake: ok', gate.check('Tour screen', Rm('אין טעות.'), ['index.html'])[0])
+check('01/11/2026: a retro that names a mistake, without a lesson: blocked even without a Fix title', not gate.check('Tour screen', Rm('כתובת מייל נכתבה בקובץ md'), ['chat/x.html'])[0])
+check('...with a lesson: ok', gate.check('Tour screen', Rm('כתובת מייל נכתבה בקובץ md'), ['chat/x.html', L])[0])
+check('...with no-lesson and a reason: ok', gate.check('Tour screen', Rm('כתובת מייל נכתבה') + 'בלי לקח: כבר לקח 170, חזר נרשם שם', ['chat/x.html'])[0])
+check('"רטרו: אין טעות." is no mistake: ok', gate.check('Tour screen', Rm('אין טעות.'), ['chat/x.html'])[0])
 check('Fix: without lesson: blocked', not ok('Fix: the xlsm opened as damaged', '', ['functions/hazard-file.js']))
 check('fix lower case: blocked', not ok('fix rootHasR', '', ['x.js']))
 check('Hebrew title: blocked', not ok('תיקון: הקובץ נפתח פגום', '', ['x.js']))
@@ -35,16 +35,34 @@ check('None title: ok', ok(None, None, []))
 
 # retro line, on every PR
 raw = lambda t, b, f: gate.check(t, b, f)[0]
-check('no retro line: blocked', not raw('Tour screen', 'some text', ['index.html']))
+check('no retro line: blocked', not raw('Tour screen', 'some text', ['chat/x.html']))
 check('None body: blocked (no retro)', not raw(None, None, []))
-check('retro none (Hebrew): ok', raw('Tour screen', 'text\nרטרו: אין\nskill: אין', ['index.html']))
-check('retro none (English): ok', raw('Tour screen', 'retro: none\nskill: אין', ['index.html']))
-check('retro with a finding (Michael corrected): needs a lesson since 01/11/2026', not raw('Tour screen', 'רטרו: מיכאל אמר שהכפתור לא במקום\nskill: אין', ['index.html']) and raw('Tour screen', 'רטרו: מיכאל אמר שהכפתור לא במקום\nskill: אין', ['index.html', L]))
-check('empty retro: blocked', not raw('Tour screen', 'רטרו:   ', ['index.html']))
+check('retro none (Hebrew): ok', raw('Tour screen', 'text\nרטרו: אין\nskill: אין', ['chat/x.html']))
+check('retro none (English): ok', raw('Tour screen', 'retro: none\nskill: אין', ['chat/x.html']))
+check('retro with a finding (Michael corrected): needs a lesson since 01/11/2026', not raw('Tour screen', 'רטרו: מיכאל אמר שהכפתור לא במקום\nskill: אין', ['chat/x.html']) and raw('Tour screen', 'רטרו: מיכאל אמר שהכפתור לא במקום\nskill: אין', ['chat/x.html', L]))
+check('empty retro: blocked', not raw('Tour screen', 'רטרו:   ', ['chat/x.html']))
 check('retro inside a sentence does not count', not raw('Tour screen', 'we skipped the retro: later', ['x']))
 check('retro does not replace the lesson on a fix PR', not raw('Fix: x', 'רטרו: אין', ['x.js']))
 check('RETRO_NONE: "אין." is none', gate.RETRO_NONE.match('אין.') is not None)
 check('RETRO_NONE: a finding is not none', gate.RETRO_NONE.match('אין בדיקה לזה') is None)
+
+# 17/11/2026, four test rules (2): code and a test that already existed change together only with a line that names the test
+T = 'tests/harness/lessons-gate-test.py'      # exists at HEAD (BASE=HEAD here)
+N = 'tests/harness/brand-new-test.py'         # does not
+check('code + an existing test, no line: blocked', not ok('Tour screen', '', ['functions/api/x.js', T]))
+check('...with the line naming the test: ok', ok('Tour screen', '\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e9\u05d5\u05e0\u05ea\u05d4: lessons-gate-test, \u05de\u05e7\u05e8\u05d4 \u05d7\u05d3\u05e9 \u05dc\u05db\u05dc\u05dc \u05d7\u05d3\u05e9', ['functions/api/x.js', T]))
+check('...a line that names another test: blocked', not ok('Tour screen', '\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e9\u05d5\u05e0\u05ea\u05d4: pr-gate-test, \u05de\u05e7\u05e8\u05d4 \u05d7\u05d3\u05e9', ['functions/api/x.js', T]))
+check('...two tests, one named: blocked, and the reason names the other', 'ci-wait-test' in gate.check('Tour screen', R + '\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e9\u05d5\u05e0\u05ea\u05d4: lessons-gate-test, \u05de\u05e7\u05e8\u05d4 \u05d7\u05d3\u05e9', ['tools/x.py', T, 'tests/harness/ci-wait-test.py'])[1])
+check('code + a new test file: no line needed', ok('Tour screen', '', ['functions/api/x.js', N]))
+check('a test alone, no code: no line needed', ok('Tour screen', '', [T]))
+check('a test + a .md file: no line needed', ok('Tour screen', '', [T, 'STATUS.md']))
+check('a line inside a sentence does not count', not ok('Tour screen', 'said \u05d1\u05d3\u05d9\u05e7\u05d4 \u05e9\u05d5\u05e0\u05ea\u05d4: lessons-gate-test later on', ['functions/api/x.js', T]))
+# (1): index.html changes with a screenshot line
+SH = '\u05e6\u05d9\u05dc\u05d5\u05dd: \u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea, .shots/home.png\n'
+check('index.html without a shot line: blocked', not ok('Tour screen', '', ['index.html']) and 'pr-shot' in gate.check('Tour screen', R, ['index.html'])[1])
+check('...with it: ok', ok('Tour screen', SH, ['index.html']))
+check('...an empty shot line: blocked', not ok('Tour screen', '\u05e6\u05d9\u05dc\u05d5\u05dd:  ', ['index.html']))
+check('chat/index.html is not the app: no shot line needed', ok('Tour screen', '', ['chat/index.html']))
 
 # as the workflow calls it: env + stdin, exit code
 def run(title, body, files):
@@ -56,22 +74,22 @@ check('CLI: shell characters in title are just text', run('Fix: $(touch /tmp/pwn
 
 # skill line, on every PR (02/10/2026)
 S = '.claude/skills/tfugen-db/SKILL.md'
-check('no skill line: blocked', not raw('Tour screen', 'רטרו: אין', ['index.html']))
-check('skill none: ok', raw('Tour screen', 'רטרו: אין\nskill: אין', ['index.html']))
-check('Hebrew label: ok', raw('Tour screen', 'רטרו: אין\nסקייל: אין', ['index.html']))
-check('skill named but no skill file changed: blocked', not raw('Tour screen', 'רטרו: אין\nskill: tfugen-db, איך מריצים migration', ['index.html']))
-check('skill named with a skill file: ok', raw('Tour screen', 'רטרו: אין\nskill: tfugen-db, איך מריצים migration', ['index.html', S]))
-check('a named skill that did not change: blocked (17/10/2026, #1619)', not raw('Tour screen', 'רטרו: אין\nskill: tfugen-ref, הלוגו', ['index.html', S]))
-check('a named skill that changed: ok', raw('Tour screen', 'רטרו: אין\nskill: tfugen-db, migration', ['index.html', S]))
-check('a word that is not a skill folder is not required', raw('Tour screen', 'רטרו: אין\nskill: tfugen-db, ראה tfugen-safety', ['index.html', S]))
+check('no skill line: blocked', not raw('Tour screen', 'רטרו: אין', ['chat/x.html']))
+check('skill none: ok', raw('Tour screen', 'רטרו: אין\nskill: אין', ['chat/x.html']))
+check('Hebrew label: ok', raw('Tour screen', 'רטרו: אין\nסקייל: אין', ['chat/x.html']))
+check('skill named but no skill file changed: blocked', not raw('Tour screen', 'רטרו: אין\nskill: tfugen-db, איך מריצים migration', ['chat/x.html']))
+check('skill named with a skill file: ok', raw('Tour screen', 'רטרו: אין\nskill: tfugen-db, איך מריצים migration', ['chat/x.html', S]))
+check('a named skill that did not change: blocked (17/10/2026, #1619)', not raw('Tour screen', 'רטרו: אין\nskill: tfugen-ref, הלוגו', ['chat/x.html', S]))
+check('a named skill that changed: ok', raw('Tour screen', 'רטרו: אין\nskill: tfugen-db, migration', ['chat/x.html', S]))
+check('a word that is not a skill folder is not required', raw('Tour screen', 'רטרו: אין\nskill: tfugen-db, ראה tfugen-safety', ['chat/x.html', S]))
 check('the account skill counts too', raw('Tour screen', 'רטרו: אין\nskill: כלל כללי', ['project-files/claude-ai-skill/michael-work-lessons/SKILL.md']))
-check('a skill learned in michael-skills counts with its PR (07/10/2026)', raw('Tour screen', 'רטרו: אין\nskill: העוזר, כלל 44, michael-skills#3', ['index.html']))
-check('...naming michael-skills without a PR number does not', not raw('Tour screen', 'רטרו: אין\nskill: העוזר ב-michael-skills', ['index.html']))
-check('...or with the commit pushed straight to main (08/10/2026)', raw('Tour screen', 'רטרו: אין\nskill: העוזר, כלל 46, michael-skills@6cee732', ['index.html']))
-check('...a short or non-hex sha does not', not raw('Tour screen', 'רטרו: אין\nskill: העוזר, michael-skills@main', ['index.html']))
+check('a skill learned in michael-skills counts with its PR (07/10/2026)', raw('Tour screen', 'רטרו: אין\nskill: העוזר, כלל 44, michael-skills#3', ['chat/x.html']))
+check('...naming michael-skills without a PR number does not', not raw('Tour screen', 'רטרו: אין\nskill: העוזר ב-michael-skills', ['chat/x.html']))
+check('...or with the commit pushed straight to main (08/10/2026)', raw('Tour screen', 'רטרו: אין\nskill: העוזר, כלל 46, michael-skills@6cee732', ['chat/x.html']))
+check('...a short or non-hex sha does not', not raw('Tour screen', 'רטרו: אין\nskill: העוזר, michael-skills@main', ['chat/x.html']))
 check('a file merely named skills elsewhere does not count', not raw('Tour screen', 'רטרו: אין\nskill: משהו', ['docs/.claude/skills/x.md']))
-check('empty skill line: blocked', not raw('Tour screen', 'רטרו: אין\nskill:   ', ['index.html']))
-check('skill inside a sentence does not count', not raw('Tour screen', 'רטרו: אין\nthe new skill: later', ['index.html']))
+check('empty skill line: blocked', not raw('Tour screen', 'רטרו: אין\nskill:   ', ['chat/x.html']))
+check('skill inside a sentence does not count', not raw('Tour screen', 'רטרו: אין\nthe new skill: later', ['chat/x.html']))
 
 # a lesson in a field skill counts (11/10/2026); run from the repo root
 _cwd = os.getcwd(); os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
@@ -91,7 +109,7 @@ R0 = 'רטרו: אין\nskill: אין\n'
 check('server code without an unchecked line: blocked (31/10/2026)', not raw('Morning brief', R0, ['functions/api/wa-morning.js']))
 check('...with a real unchecked line: ok', raw('Morning brief', R0 + 'מה לא נבדק: לא נבדק בטלפון אמיתי\nעוזר: לא נוגע', ['functions/api/wa-morning.js']))
 check('...an empty unchecked line: blocked', not raw('Morning brief', R0 + 'מה לא נבדק: ', ['functions/api/wa-morning.js']))
-check('...not required outside functions/', raw('Tour screen', R0, ['index.html', 'STATUS.md']))
+check('...not required outside functions/', raw('Tour screen', R0, ['chat/x.html', 'STATUS.md']))
 check('a file that takes outside input (trustee photos, a parser): blocked without review', not raw('Log', R, ['functions/api/trustee-log.js']) and not raw('PDF', R, ['functions/_pdftext.js']))
 # 02/11/2026 (Michael: "do it: only when the checks change"): routine-db.js needs a review only when a check changes
 cc = gate.changes_checks
@@ -122,7 +140,7 @@ check('...with "שבירה: <what was taken out and what failed>": ok', gate.che
 check('...a too short break line: blocked', not gate.check('Fix: x', R_noBrk + 'שבירה: כן', ['functions/api/x.js', L])[0])
 check('a Fix PR on documents only: no break line needed', gate.check('Fix: x', R_noBrk, ['project-files/x.md', L])[0])
 check('not a fix PR on server code: no break line needed', gate.check('Morning brief', R_noBrk, ['functions/api/wa-morning.js'])[0])
-check('not a fix PR: no siblings line needed', gate.check('Tour screen', R_noSib, ['index.html'])[0])
+check('not a fix PR: no siblings line needed', gate.check('Tour screen', R_noSib, ['chat/x.html'])[0])
 # 02/11/2026 (Michael: "do it: yes"): a changed regex or text filter carries a "זוגות:" line
 cr = gate.changes_regex
 check('changes_regex: a regex literal or new RegExp in a code line; not a comment, not a division, not a URL',

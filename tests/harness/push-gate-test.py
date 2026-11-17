@@ -77,5 +77,13 @@ check('a repo skill: passes', hook('git push origin x', '.claude/skills/tfugen-d
 check('a drafts folder: denied', hook('git push origin x', 'project-files/drafts/a.md').get('permissionDecision') == 'deny')
 check('DRAFTS_TEXT in a file name is not a folder: passes', hook('git push origin x', 'functions/api/drafts-text.js', 0) == {})
 
+# 17/11/2026, four test rules (4): three red CI rounds in a row on the branch = no push until Michael answered
+o = hook('git push -u origin x', 'index.html', PUSH_GATE_CI_FAILS='3')
+check('three reds in a row: the push is denied and names --continue', o.get('permissionDecision') == 'deny' and '--continue' in o.get('permissionDecisionReason', ''), o)
+check('two reds: the push passes', hook('git push -u origin x', 'index.html', PUSH_GATE_CI_FAILS='2') == {})
+check('three reds, not a push: passes', hook('git status', 'index.html', PUSH_GATE_CI_FAILS='3') == {})
+fd = tempfile.mkdtemp(); open(os.path.join(fd, 'mishaf1988-lgtm_tfugen-safety_routine_y'), 'w').write('a\nb\nc\n')
+check('the real count file of the pushed branch is read (ci-wait.sh --count)', hook('git push -u origin routine/y', 'index.html', CI_FAILS_DIR=fd).get('permissionDecision') == 'deny')
+check('...another branch is not blocked by it', hook('git push -u origin routine/z', 'index.html', CI_FAILS_DIR=fd) == {})
 print('\n%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)

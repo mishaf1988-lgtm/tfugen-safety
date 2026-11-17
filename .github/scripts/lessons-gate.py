@@ -138,6 +138,33 @@ ASSISTANT_FILES = ("project-files/domains/rules/", "project-files/domains/index.
                    "project-files/routine-wa-", "project-files/assistant/", "project-files/agent-common.md")
 
 
+# 17/11/2026 (Michael in the questionnaire: four "do it", DECISIONS "four test rules"; #2860 changed trends-batch-test.js
+# in the PR of the code it judges): a PR that changes code and a test that already existed says which test and why,
+# so a test bent to fit the code is seen. A new test file does not count.
+TEST_CHANGED = re.compile(r"^\s*(test-changed|\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e9\u05d5\u05e0\u05ea\u05d4)\s*:\s*(\S.{9,})$", re.I | re.M)
+TEST_DIR = "tests/harness/"
+# Same decision, rule 1: a PR that changes index.html names the phone screenshot of the changed screen
+# ('\u05e6\u05d9\u05dc\u05d5\u05dd: <screen>, .shots/<name>.png', made by tools/pr-shot.js). The file itself is checked by pr-gate.py
+# before the PR is opened (it stays out of the repo); here only the line.
+SHOT = re.compile(r"^\s*(shot|\u05e6\u05d9\u05dc\u05d5\u05dd)\s*:\s*(\S.{4,})$", re.I | re.M)
+
+
+def existed(f):
+    """True when the file was already in the PR base (CI: $BASE) or in origin/main. Cannot tell = it existed."""
+    base = os.environ.get("BASE") or "origin/main"
+    try:
+        return subprocess.run(["git", "cat-file", "-e", "%s:%s" % (base, f)], cwd=ROOT, capture_output=True, timeout=20).returncode == 0
+    except Exception:
+        return True
+
+
+def changed_tests(files):
+    """The tests that already existed and were changed in a PR that also changes code."""
+    if not any(f.startswith(BREAK_DIRS) for f in files):
+        return []
+    return [f for f in files if f.startswith(TEST_DIR) and existed(f)]
+
+
 def assistant_synced(files):
     """True when the PR changed a file the assistant reads (the decisions map alone does not count)."""
     return any(f.startswith(ASSISTANT_FILES) for f in files) or any(
@@ -210,6 +237,18 @@ def check(title, body, files):
         return False, ("this PR adds a decision or changes the server, and the assistant did not learn it (Michael 06/11/2026: "
                        "a sync rule). Update what it reads (project-files/domains/rules/<branch>.md, wa-topics/, routine-wa-core.md), "
                        "or add 'עוזר: <why the assistant is not touched>'.")
+    ct = changed_tests(files)
+    if ct:
+        m = TEST_CHANGED.search(body or "")
+        unnamed = [f for f in ct if not m or os.path.splitext(os.path.basename(f))[0] not in m.group(2)]
+        if unnamed:
+            return False, ("this PR changes code and a test that already existed (%s). A change does not touch the test that "
+                           "judges it without saying so: add one line '\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e9\u05d5\u05e0\u05ea\u05d4: <each test by name, and why>' "
+                           "(Michael 17/11/2026, four test rules)." % ", ".join(unnamed))
+    if "index.html" in files and not SHOT.search(body or ""):
+        return False, ("this PR changes index.html. Take a phone screenshot of the changed screen "
+                       "(NODE_PATH=$(npm root -g) node tools/pr-shot.js <name> --page <id>) and add "
+                       "'\u05e6\u05d9\u05dc\u05d5\u05dd: <screen>, .shots/<name>.png' (Michael 17/11/2026, four test rules).")
     retro_mistake = not RETRO_CLEAN.match(RETRO.search(body or "").group(2).strip())
     if FIX.search(title or "") and not SIBLINGS.search(body or ""):
         return False, ("a fix PR names the siblings of what it fixed: 'אחים: <the grep of the pattern, each place found: "
