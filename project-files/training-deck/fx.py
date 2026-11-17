@@ -66,7 +66,16 @@ def fly(ctn, spid, d, delay):
             '</p:childTnLst></p:cTn></p:par></p:childTnLst></p:cTn></p:par>')
 
 
-def timing(groups, zoom_ids, autos=()):
+def play(ctn, spid):
+    """וידאו (ani*_vid): מתחיל לרוץ מההתחלה יחד עם הכניסה שלו, בלי קליק נוסף על כפתור הנגינה."""
+    a, b = next(ctn), next(ctn)
+    return (f'<p:par><p:cTn id="{a}" presetID="1" presetClass="mediacall" presetSubtype="0" fill="hold" nodeType="withEffect">'
+            f'<p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst><p:cmd type="call" cmd="playFrom(0.0)">'
+            f'<p:cBhvr><p:cTn id="{b}" dur="18500" fill="hold"/><p:tgtEl><p:spTgt spid="{spid}"/></p:tgtEl></p:cBhvr>'
+            f'</p:cmd></p:childTnLst></p:cTn></p:par>')
+
+
+def timing(groups, zoom_ids, autos=(), vids=()):
     counter = iter(range(3, 10000))
     clicks = []
     if autos:
@@ -77,17 +86,21 @@ def timing(groups, zoom_ids, autos=()):
     for k in sorted(groups):
         outer, inner = next(counter), next(counter)
         effs = "".join(effect(counter, sp, i == 0, sp in zoom_ids) for i, sp in enumerate(groups[k]))
+        effs += "".join(play(counter, sp) for sp in groups[k] if sp in vids)
         clicks.append(f'<p:par><p:cTn id="{outer}" fill="hold"><p:stCondLst><p:cond delay="indefinite"/></p:stCondLst><p:childTnLst>'
                       f'<p:par><p:cTn id="{inner}" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst>'
                       f'{effs}</p:childTnLst></p:cTn></p:par></p:childTnLst></p:cTn></p:par>')
     bld = "".join(f'<p:bldP spid="{sp}" grpId="0" animBg="1"/>' for sp, _ in autos)
     bld += "".join(f'<p:bldP spid="{sp}" grpId="0" animBg="1"/>' for k in sorted(groups) for sp in groups[k])
+    media = "".join(f'<p:video><p:cMediaNode vol="80000"><p:cTn id="{next(counter)}" fill="hold" display="0">'
+                    f'<p:stCondLst><p:cond delay="indefinite"/></p:stCondLst></p:cTn><p:tgtEl><p:spTgt spid="{sp}"/></p:tgtEl>'
+                    f'</p:cMediaNode></p:video>' for sp in vids)
     return ('<p:timing><p:tnLst><p:par><p:cTn id="1" dur="indefinite" restart="never" nodeType="tmRoot"><p:childTnLst>'
             '<p:seq concurrent="1" nextAc="seek"><p:cTn id="2" dur="indefinite" nodeType="mainSeq"><p:childTnLst>'
             + "".join(clicks) +
             '</p:childTnLst></p:cTn><p:prevCondLst><p:cond evt="onPrev" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:prevCondLst>'
             '<p:nextCondLst><p:cond evt="onNext" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:nextCondLst></p:seq>'
-            f'</p:childTnLst></p:cTn></p:par></p:tnLst><p:bldLst>{bld}</p:bldLst></p:timing>')
+            f'{media}</p:childTnLst></p:cTn></p:par></p:tnLst><p:bldLst>{bld}</p:bldLst></p:timing>')
 
 
 zin = zipfile.ZipFile(src)
@@ -98,14 +111,16 @@ for item in zin.infolist():
     if m:
         n = int(m.group(1))
         x = data.decode("utf-8")
-        groups, zoom = {}, set()
+        groups, zoom, vids = {}, set(), set()
         for spid, k, rest in re.findall(r'<p:cNvPr id="(\d+)" name="ani(\d+)_([^"]*)"', x):
             groups.setdefault(int(k), []).append(spid)
             if rest in ("num", "bad", "ring") or rest.startswith("st"):
                 zoom.add(spid)
+            if rest == "vid":
+                vids.add(spid)
         autos = sorted(((int(k), sp, d) for sp, k, d in re.findall(r'<p:cNvPr id="(\d+)" name="auto(\d+)([br])_', x)))
         autos = [(sp, d) for _, sp, d in autos]
-        add = TRANS.get(n, DEFAULT_TRANS) + (timing(groups, zoom, autos) if (groups or autos) else "")
+        add = TRANS.get(n, DEFAULT_TRANS) + (timing(groups, zoom, autos, vids) if (groups or autos) else "")
         # פס כותרת ורקע מדורגים (GRADS)
         for nm, g in GRADS.items():
             x = re.sub(r'(name="%s".*?)<a:solidFill><a:srgbClr val="[0-9A-F]{6}"/></a:solidFill>' % nm,

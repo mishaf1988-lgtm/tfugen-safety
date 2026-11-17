@@ -170,7 +170,11 @@ async function icon(Comp, color, size = 512) {
     s.addText((i + 1) + ". " + label, { ...R, align: "center", x: x + 0.1, y: y + 1.1, w: 2.5, h: 0.6, fontSize: 17, bold: true, color: COL.white, objectName: n + "_tx" });
   });
   plant(s, "בכל תחנה: בדיקה");
-  s.addNotes("כל קליק מוסיף תחנה (40 שניות לכל השקף). רק לתת שם, לא להסביר. שיטה: מארגן מקדים (Advance Organizer). מבוגר רוצה לדעת לאן ההדרכה הולכת לפני הפרטים. בהדרכת בטיחות: קודם שלבי העבודה, אחר כך הסיכון בכל שלב. אפשר להוסיף: 'כל תחנה כזו קיימת אצלנו במפעל'. מסר שתול: התגית הירוקה. לא להסביר אותה, רק לומר חצי משפט כמו: וגם פה, בודקים.");
+  // קטע וידאו מהקו של תפוגן (מיכאל 17/11/2026, צילום מסך הסרטון במפעל): נכנס בקליק 9 אחרי 8 התחנות ומתנגן לבד (fx.py, ani*_vid)
+  s.addShape(pres.ShapeType.roundRect, { x: 2.47, y: 1.95, w: 8.4, h: 4.85, rectRadius: 0.15, fill: { color: COL.dark }, line: { color: COL.dark }, objectName: "ani9_vbg" });
+  s.addMedia({ type: "video", path: __dirname + "/clip-plant.mp4", cover: "image/png;base64," + require("fs").readFileSync(__dirname + "/clip-plant-poster.png").toString("base64"),
+    x: 2.67, y: 2.1, w: 8.0, h: 4.5, objectName: "ani9_vid" });
+  s.addNotes("קליק תשיעי: קטע של 18 שניות מהקו אצלנו בתפוגן, בלי קול. לתת לו לרוץ ולומר רק: ככה זה נראה אצלנו. כל קליק מוסיף תחנה (40 שניות לכל השקף). רק לתת שם, לא להסביר. שיטה: מארגן מקדים (Advance Organizer). מבוגר רוצה לדעת לאן ההדרכה הולכת לפני הפרטים. בהדרכת בטיחות: קודם שלבי העבודה, אחר כך הסיכון בכל שלב. אפשר להוסיף: 'כל תחנה כזו קיימת אצלנו במפעל'. מסר שתול: התגית הירוקה. לא להסביר אותה, רק לומר חצי משפט כמו: וגם פה, בודקים.");
 
   // ===== 5. הדגמה: קילוף =====
   s = pres.addSlide({ masterName: "LIGHT" });
