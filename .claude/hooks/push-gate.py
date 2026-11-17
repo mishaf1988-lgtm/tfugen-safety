@@ -73,6 +73,23 @@ def changed(cwd):
         return []
 
 
+def ci_fails(cwd, cmd):
+    """How many CI rounds in a row went red on the branch being pushed (the file ci-wait.sh keeps). 0 when unknown."""
+    env = os.environ.get("PUSH_GATE_CI_FAILS")
+    if env is not None:
+        return int(env or 0)
+    try:
+        args = re.findall(r"push\b([^;&|\n]*)", cmd)[-1].split()
+        names = [a for a in args[args.index("origin") + 1:] if not a.startswith("-") and not re.match(r"\d?>", a)] if "origin" in args else []
+        br = re.sub(r"^\+?HEAD:", "", names[0]) if names else subprocess.run(["git", "branch", "--show-current"], cwd=cwd, capture_output=True, text=True, timeout=10).stdout.strip()
+        if not br or br == "main":
+            return 0
+        p = subprocess.run(["bash", os.path.join(os.path.dirname(os.path.abspath(__file__)), "ci-wait.sh"), "--count", br], capture_output=True, text=True, timeout=10)
+        return int(p.stdout.strip() or 0)
+    except Exception:
+        return 0
+
+
 def no_heredoc(cmd):
     """The command without heredoc bodies (05/10/2026: a test file written in a
     heredoc contained "git push" and the hook fired on a command that pushed nothing)."""
@@ -135,6 +152,13 @@ def main():
             cwd = top
     except Exception:
         pass
+    # 17/11/2026 (Michael in the questionnaire, four test rules, rule 4): after three red CI rounds in a row on a branch
+    # (counted by ci-wait.sh) nothing more is pushed to it until Michael answered the questionnaire.
+    n = ci_fails(cwd, cmd)
+    if n >= 3:
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+            "permissionDecisionReason": "push-gate (17/11/2026): %d \u05db\u05e9\u05dc\u05d5\u05e0\u05d5\u05ea CI \u05d1\u05e8\u05e6\u05e3 \u05e2\u05dc \u05d4\u05e2\u05e0\u05e3. \u05e2\u05d5\u05e6\u05e8\u05d9\u05dd: \u05e9\u05d0\u05dc\u05d5\u05df \u05dc\u05de\u05d9\u05db\u05d0\u05dc, \u05d5\u05d0\u05d7\u05e8\u05d9 \u05d4\u05ea\u05e9\u05d5\u05d1\u05d4: bash .claude/hooks/ci-wait.sh --continue <branch> \"<\u05de\u05d4 \u05e2\u05e0\u05d4>\"" % n}}, ensure_ascii=False))
+        return
     files = changed(cwd)
     dr = draft_files(files)
     if dr:

@@ -72,3 +72,4 @@ bash tests/harness/run.sh trustee   # רק הנאמנים
 | sbsync-test.js | `sbSync`/`_sbMergePull` האמיתי: שרת = מקור אמת, outbox שורד |
 | emp-topbar-test.js, login-label-test.js | טופ-בר נקי במצב נאמן, תווית הכניסה |
 | home/nav/roles/print/modules/agents/eqi*/density/inv/ncr-* | רגרסיות של סבב ה-handoffs (#535–#558) |
+| flaky-test.py, rerun-guard-test.py, pr-shot-test.py | ארבעה כללי בדיקות (17/11/2026): טבלת `flaky.md` שלמה ושורה פתוחה לא יותר מ-14 יום; הרצה חוזרת של CI נחסמת בלי רישום; `tools/pr-shot.js` מצלם ברוחב טלפון וכותב את טביעת `index.html` |
