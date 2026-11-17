@@ -421,6 +421,7 @@ const callIn = async (body) => {
       && ['\u05ea\u05d9\u05e7\u05d9\u05d4 \u05d7\u05d3\u05e9\u05d4', 'a\u200fb', '\u202eabc'].every((x) => !OD_LEAD_MARKS.test(x));
     return pairs && !ok.error && ok.from.indexOf('\u200f\u200f') > 0
       && !!M('12_x/a\u200fb').error && !!M('12_x/\u202eabc').error && !!M('12_x/\u200f\u200f').error
+      && !!M('12_x/\u200f\u05dc\u05de\u05d7\u05d9\u05e7\u05d4').error && !!M('\u200f' + OD_INBOX + '/x').error && !!M('\u200f' + OD_TRIGGER_DIRS[0]).error
       && !!M('12_x/a', '12_x/\u200fb').error && !!M('12_x/\u200f\u200f\u200f\u200f\u200fz').error;
   })());
   check('od_trash 17/11/2026: a slide show and an html copy go to to-delete, not for od_dedupe; an empty folder only with folder:true and never a top or flow folder', (() => {

@@ -1753,7 +1753,9 @@ export function odMoveCheck(b) {
     // can be a SOURCE: marks only at the start of a from_dir segment, the rest clean; never in to_dir, the name or the file.
     const fdClean = fd.map((x) => x.replace(OD_LEAD_MARKS, ''));
     if (fdClean.some((x) => !x.length) || odd(fdClean) || odd(dir) || odd([name]) || odd(from)) return { error: 'bad path characters' };
-    if (!fd.length || fd.length > 8 || bad(fd) || OD_NO_DIR.test(fd.join('/')) || OD_TRIGGER_DIRS.indexOf(fd[0]) >= 0) return { error: 'bad from_dir' };
+    if (!fd.length || fd.length > 8 || bad(fd) || OD_NO_DIR.test(fd.join('/')) || OD_TRIGGER_DIRS.indexOf(fd[0]) >= 0
+      // security review 17/11/2026: the same checks on the names without the marks (a mark before "\u05dc\u05de\u05d7\u05d9\u05e7\u05d4" or a flow folder)
+      || OD_NO_DIR.test(fdClean.join('/')) || OD_TRIGGER_DIRS.indexOf(fdClean[0]) >= 0 || fdClean[0] === OD_INBOX) return { error: 'bad from_dir' };
     if (from.length !== 1 || bad(from) || !OD_EXT.test(from[0])) return { error: 'from: one file name inside from_dir' };
     if (!dir.length || dir.length > 8 || bad(dir) || OD_NO_DIR.test(dir.join('/')) || OD_TRIGGER_DIRS.indexOf(dir[0]) >= 0) return { error: 'bad to_dir' };
     if (!name || name.indexOf('/') >= 0 || OD_BAD.test(name) || name.length > 180 || !OD_EXT.test(name)) return { error: 'bad name' };
