@@ -116,6 +116,7 @@ const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', ONEDRIVE_CLIENT_ID: 'cid', ONEDR
   rawWorld({});
   res = await onRequest({ request: req({ 'x-raw-token': '' }, { path: 'x.pptx', raw: true }), env: ENV });
   check('no token stored: refused (never open by default)', res.status === 403);
+  check('17/11/2026 (folder audit 16): an old .ppt or .odp deck only as a raw read', !!safePath('16/a.ppt', true) && !!safePath('16/a.odp', true) && safePath('16/a.ppt') === null && safePath('16/a.odp') === null && safePath('16/a.exe', true) === null);
   check('other file types still refused', safePath('a/b.docx') === null && !!safePath('a/b.pptx'));
 
   // Scan (04/10/2026): the listing and the raw download of documents.

@@ -35,7 +35,7 @@ export function safePath(p, raw, root) {
   const parts = String(p || '').split('/').filter(Boolean);
   // jpg/jpeg/png (04/11/2026, the mail-filing agent): photos land in the mail inbox folder and were refused as 'bad path'.
   // audio (07/11/2026, Michael: "do it: a meeting recording to a protocol"): a raw read only, for tools/meeting-stt.py
-  const ext = raw ? /\.(xls[xmx]?|pptx|pdf|docx?|txt|csv|jpe?g|png|m4a|mp3|wav|aac|ogg|opus|webm)$/i : /\.(xls[xm]|pptx)$/i;
+  const ext = raw ? /\.(xls[xmx]?|pptx?|odp|pdf|docx?|txt|csv|jpe?g|png|m4a|mp3|wav|aac|ogg|opus|webm)$/i : /\.(xls[xm]|pptx)$/i;
   if (!parts.length || parts.some((x) => x === '..' || x === '.') || !ext.test(parts[parts.length - 1])) return null;
   // Photos only inside the safety folder: never from the whole desktop or the old ISO folder (security review 04/11/2026).
   if (root && /\.(jpe?g|png)$/i.test(parts[parts.length - 1])) return null;

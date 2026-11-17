@@ -424,6 +424,15 @@ const callIn = async (body) => {
       && !!M('12_x/\u200f\u05dc\u05de\u05d7\u05d9\u05e7\u05d4').error && !!M('\u200f' + OD_INBOX + '/x').error && !!M('\u200f' + OD_TRIGGER_DIRS[0]).error
       && !!M('12_x/a', '12_x/\u200fb').error && !!M('12_x/\u200f\u200f\u200f\u200f\u200fz').error;
   })());
+  check('od_move/od_archive 17/11/2026 (folder audit 16): a .ppt or .odp moves and archives; a source FILE with marks in front moves, marks inside it or in the new name are refused', (() => {
+    const M = (from, name) => odMoveCheck({ agent: 'folder-audit', why: 'a test move', from_dir: '16_x/2026/s/\u200f\u200f\u05ea', from, to_dir: '16_x/2026/s', name });
+    const ok = M('\u200f\u200f\u05e9\u05d1\u05d5\u05e2 27.pptx', '\u05e9\u05d1\u05d5\u05e2 27.pptx');
+    const ar = odArchiveCheck({ agent: 'folder-audit', why: 'old org chart', path: '15_x/h/a - 2025.ppt', replaced_by: 'a - 2026.pptx' });
+    const od = odArchiveCheck({ agent: 'folder-audit', why: 'old deck', path: '16_x/2023/a.odp', replaced_by: 'b.odp' });
+    return !ok.error && ok.from.endsWith('/\u200f\u200f\u05e9\u05d1\u05d5\u05e2 27.pptx') && !ar.error && !od.error
+      && !!M('a\u200fb.pptx', 'ab.pptx').error && !!M('\u202eab.pptx', 'ab.pptx').error && !!M('\u200f\u200f', 'a.pptx').error
+      && !!M('\u200f.pdf', 'a.pdf').error && !!M('a.pptx', '\u200fa.pptx').error && !!M('a.ppt', 'a.pptx').error && !!M('a.exe', 'a.exe').error;
+  })());
   check('od_trash 17/11/2026: a slide show and an html copy go to to-delete, not for od_dedupe; an empty folder only with folder:true and never a top or flow folder', (() => {
     const T = (path, extra, strict) => odTrashCheck(Object.assign({ agent: 'folder-audit', why: 'a test', path }, extra || {}), strict);
     const pp = T('11_x/m/a.ppsx'), ht = T('11_x/k/b/\u05de\u05e7\u05d5\u05e8/a.html'), fo = T('11_x/k/b/\u05de\u05e7\u05d5\u05e8', { folder: true });
