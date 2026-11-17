@@ -162,7 +162,7 @@ def changed_tests(files):
     """The tests that already existed and were changed in a PR that also changes code."""
     if not any(f.startswith(BREAK_DIRS) for f in files):
         return []
-    return [f for f in files if f.startswith(TEST_DIR) and existed(f)]
+    return [f for f in files if f.startswith(TEST_DIR) and not f.endswith(".md") and existed(f)]  # README.md and flaky.md are lists, not tests
 
 
 def assistant_synced(files):

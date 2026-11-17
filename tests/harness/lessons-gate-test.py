@@ -56,6 +56,7 @@ check('...two tests, one named: blocked, and the reason names the other', 'ci-wa
 check('code + a new test file: no line needed', ok('Tour screen', '', ['functions/api/x.js', N]))
 check('a test alone, no code: no line needed', ok('Tour screen', '', [T]))
 check('a test + a .md file: no line needed', ok('Tour screen', '', [T, 'STATUS.md']))
+check('code + the README or the flaky list of the harness (not tests): no line needed', ok('Tour screen', '', ['functions/api/x.js', 'tests/harness/README.md', 'tests/harness/flaky.md']))
 check('a line inside a sentence does not count', not ok('Tour screen', 'said \u05d1\u05d3\u05d9\u05e7\u05d4 \u05e9\u05d5\u05e0\u05ea\u05d4: lessons-gate-test later on', ['functions/api/x.js', T]))
 # (1): index.html changes with a screenshot line
 SH = '\u05e6\u05d9\u05dc\u05d5\u05dd: \u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea, .shots/home.png\n'
