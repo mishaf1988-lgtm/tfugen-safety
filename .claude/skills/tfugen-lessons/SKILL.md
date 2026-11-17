@@ -35,7 +35,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: עריכה בפקודה שנחסמה לא נכנסה, וה-PR טען שכן.
 הכלל: hook חוסם את כל הפקודה: מריצים שוב את כולה ובודקים ב-`git diff --stat` ו-`git branch --show-current`.
 נאכף: `lessons-gate.py` (skill בשורה = קובץ skill שהשתנה); `push-gate.py` חוסם commit על main בלי branch באותה פקודה (18/10/2026).
-חזר: 2 (18/10: guard-sql חסם פקודה עם `checkout -B`, ה-commit נכנס ל-main; נתפס לפני push. 21/10: push-gate בודק את ענף תיקיית העבודה ולא את ה-repo של ה-commit: ב-michael-skills נחסם עד שנפתח ענף גם ב-tfugen-safety).
+חזר: 3 (17/11: push-gate חסם `commit && push`, ה-commit לא נכנס; commit ו-push בנפרד. 18/10: guard-sql חסם `checkout -B`, ה-commit נכנס ל-main. 21/10: push-gate בודק את ענף תיקיית העבודה, לא את ה-repo של ה-commit).
 
 **39. הרגתי תהליך רקע כדי "להפעיל מחדש" (02/10/2026, PR זה).**
 מה קרה: kill בלי לקרוא מה רץ. 05/10: `pkill -f run.sh` תפס גם את ה-shell שלי (exit 144).
