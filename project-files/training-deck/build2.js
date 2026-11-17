@@ -58,9 +58,9 @@ async function icon(Comp, color, size = 512) {
 
   function title(s, t, sub) {
     s.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: 13.333, h: 1.25, fill: { color: COL.dark }, line: { color: COL.dark }, objectName: "hdr_band" });
-    s.addText(t, { ...R, x: 3.4, y: 0.15, w: 9.4, h: 0.95, fontSize: 32, bold: true, color: COL.white, margin: 0, valign: "middle", fit: "shrink" });
+    s.addText(t, { ...R, x: 3.4, y: 0.15, w: 9.4, h: 0.95, fontSize: 32, bold: true, color: COL.white, margin: 0, valign: "middle", fit: "shrink", objectName: "auto1r_title" });
     if (s._m) method(s, s._m, true);
-    if (sub) s.addText(sub, { ...R, x: 3.4, y: 1.38, w: 9.4, h: 0.7, fontSize: 17, color: COL.accent, margin: 0, valign: "top" });
+    if (sub) s.addText(sub, { ...R, x: 3.4, y: 1.38, w: 9.4, h: 0.7, fontSize: 17, color: COL.accent, margin: 0, valign: "top", objectName: "auto2b_sub" });
   }
   const titleDark = title;
   // התגית יושבת על פס הכותרת, ולכן מצוירת אחריו: method שומר, title מצייר (בשקף בלי פס: now)
@@ -104,11 +104,12 @@ async function icon(Comp, color, size = 512) {
       x: 9.6 - i * 3.0, y: 2.3, w: 2.6, h: 1.5, fontSize: 30, bold: true, color: COL.ink, fill: { color: COL.tint } });
   });
   box(s, [
-    { text: "בערך 45 עד 65 קמ\"ש, כמו מכונית בעיר", options: { bold: true, fontSize: 28, color: COL.white, breakLine: true } },
-    { text: "זרם המים מאיץ את תפוח האדמה, מיישר אותו ומטיח אותו ברשת סכינים קבועה. יוצאים מקלות צ'יפס שלמים בבת אחת.", options: { fontSize: 18, color: COL.white } },
-  ], { x: 0.6, y: 4.3, w: 12.1, h: 1.9, fill: { color: COL.dark }, objectName: "ani1_ans" });
+    { text: "בערך 45 עד 65 קמ\"ש, כמו מכונית בעיר", options: { bold: true, fontSize: 24, color: COL.white, breakLine: true } },
+    { text: "זרם המים מאיץ את תפוח האדמה, מיישר אותו ומטיח אותו ברשת סכינים קבועה. יוצאים מקלות צ'יפס שלמים בבת אחת.", options: { fontSize: 16, color: COL.white } },
+  ], { x: 5.0, y: 4.3, w: 7.7, h: 1.9, fill: { color: COL.dark }, objectName: "ani1_ans" });
+  s.addImage({ path: __dirname + "/clip-cut.gif", x: 0.6, y: 4.3, w: 4.18, h: 1.9, objectName: "ani1_clip" });
   src(s, "פטנטים של מערכות חיתוך במים (Hydro cutting): 12 עד 18 מטר לשנייה");
-  s.addNotes("להצביע עם הידיים: מי חושב 5? 20? 60? 150? (20 שניות). רק אחרי ההצבעה, קליק לתשובה. שיטה: שאלה מקדימה שיוצרת פער סקרנות. מבוגרים זוכרים יותר אחרי שהתחייבו לניחוש. המקור: פטנטים של מערכות חיתוך במים (Hydro cutting) נותנים 40 עד 60 רגל לשנייה, כלומר 12 עד 18 מטר לשנייה.");
+  s.addNotes("להצביע עם הידיים: מי חושב 5? 20? 60? 150? (20 שניות). רק אחרי ההצבעה, קליק לתשובה. עם התשובה עולה גם קטע אנימציה קצר שמתנגן לבד בלולאה: תפוח האדמה נורה בצינור ויוצא כמקלות. שיטה: שאלה מקדימה שיוצרת פער סקרנות. מבוגרים זוכרים יותר אחרי שהתחייבו לניחוש. המקור: פטנטים של מערכות חיתוך במים (Hydro cutting) נותנים 40 עד 60 רגל לשנייה, כלומר 12 עד 18 מטר לשנייה.");
 
   // ===== 3. הצגה עצמית =====
   s = pres.addSlide({ masterName: "LIGHT" });
@@ -185,10 +186,10 @@ async function icon(Comp, color, size = 512) {
     { text: "במפעל", options: { bold: true, fontSize: 24, color: COL.gold, breakLine: true } },
     { text: "סיר לחץ ענק עם קיטור. משחררים את הלחץ בבת אחת, הקליפה מתנפחת ומתקלפת, ומברשות מורידות אותה.", options: { fontSize: 18, color: COL.white } },
   ], { x: 0.6, y: 2.1, w: 4.0, h: 3.0, fill: { color: COL.deep }, objectName: "ani2_fac" });
-  s.addImage({ data: I.steamGold, x: 2.1, y: 5.3, w: 1.0, h: 1.0, objectName: "ani2_st" });
-  s.addText("קיטור בלחץ של 6 עד 12 בר, לשניות ספורות", { ...R, x: 3.3, y: 5.5, w: 6.0, h: 0.6, fontSize: 18, bold: true, color: COL.accent, objectName: "ani3_tx" });
+  s.addImage({ path: __dirname + "/clip-peel.gif", x: 0.6, y: 5.25, w: 3.3, h: 1.5, objectName: "ani2_clip" });
+  s.addText("קיטור בלחץ של 6 עד 12 בר, לשניות ספורות", { ...R, x: 4.1, y: 5.7, w: 5.2, h: 0.6, fontSize: 18, bold: true, color: COL.accent, objectName: "ani3_tx" });
   plant(s, "נמדד בשניות");
-  s.addNotes("להוציא את תפוח האדמה וסכין הקילוף ולקלף רצועה אחת מול הכיתה (20 שניות). קליק: 'בבית'. קליק: 'במפעל'. קליק: השורה התחתונה. שיטה: הדגמה חיה והשוואה (לפני ואחרי). ההשוואה בין מה שהם מכירים לבין המפעל היא מה שנחרט. נתון להוסיף בעל פה: כל שנייה נוספת בקיטור מורידה עוד חצי אחוז מתפוח האדמה לפסולת, ולכן מכוונים את הזמן בדיוק. השוואה: צמיג של רכב מנופח בערך ל-2 בר, כלומר הלחץ בקולף פי 3 עד 6. אם יש לך את הנתון של הקולף אצלנו, להחליף בו. מסר שתול: התגית הירוקה. לא להסביר אותה, רק לומר חצי משפט כמו: וגם פה, בודקים.");
+  s.addNotes("להוציא את תפוח האדמה וסכין הקילוף ולקלף רצועה אחת מול הכיתה (20 שניות). קליק: 'בבית'. קליק: 'במפעל'. יחד איתו עולה קטע אנימציה שמתנגן לבד: הלחץ עולה, משתחרר, והקליפה עפה. קליק: השורה התחתונה. שיטה: הדגמה חיה והשוואה (לפני ואחרי). ההשוואה בין מה שהם מכירים לבין המפעל היא מה שנחרט. נתון להוסיף בעל פה: כל שנייה נוספת בקיטור מורידה עוד חצי אחוז מתפוח האדמה לפסולת, ולכן מכוונים את הזמן בדיוק. השוואה: צמיג של רכב מנופח בערך ל-2 בר, כלומר הלחץ בקולף פי 3 עד 6. אם יש לך את הנתון של הקולף אצלנו, להחליף בו. מסר שתול: התגית הירוקה. לא להסביר אותה, רק לומר חצי משפט כמו: וגם פה, בודקים.");
 
   src(s, "FreshPlaza, Evolution of potato peeling; PotatoPro");
 
