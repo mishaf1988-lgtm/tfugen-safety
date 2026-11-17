@@ -1031,6 +1031,7 @@ export function factsFind(raw, q) {
 // ref + action again = dup, an action opened before the accident of 29/10/2026 = skip (same cut-off as THZ_SRC_FROM in the app).
 // Never a change or a delete of an existing row. Pure: { row, key }, { skip }, or { error }.
 export const THZ_SRC_FROM = '2026-10-29';
+export const THZ_TRAINING_RE = /\u05d4\u05d3\u05e8\u05db|\u05d4\u05e1\u05de\u05db|\u05e8\u05e2\u05e0\u05d5\u05df|\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4|\u05ea\u05e2\u05d5\u05d3\u05ea \u05d4\u05e1\u05de\u05db\u05d4/;
 export const THZ_SEV_DAYS = { '\u05d2\u05d1\u05d5\u05d4\u05d4': 3, '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea': 14, '\u05e0\u05de\u05d5\u05db\u05d4': 30 };
 export function thzAddRow(b, today, rand, maxN, depts) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
@@ -1042,6 +1043,10 @@ export function thzAddRow(b, today, rand, maxN, depts) {
   if (!/^[A-Za-z0-9._:-]{2,60}$/.test(ref)) return { error: 'ref: the investigation or meeting id (letters, digits, . _ : -)' };
   const action = short(b.action, 300);
   if (action.length < 3) return { error: 'action required' };
+  // training is no hazard (lesson 202, again 17/11/2026: Michael: "work at height goes into the defects, why? it is wrong";
+  // the committee of 04/11/2026 opened "refresh height training for 7 workers" as a tour hazard): a training, a
+  // certification or an expired certificate stays in the training register and the protocol, never in the tours
+  if (THZ_TRAINING_RE.test(action + ' ' + short(b.descr, 1000))) return { error: 'training or certificate: not a tour hazard (lesson 202); it stays in the training register and the protocol' };
   const dept = short(b.dept, 40);
   if (!Array.isArray(depts) || depts.indexOf(dept) < 0) return { error: 'dept: one of ' + (depts || []).join(', ') };
   const sev = b.sev === undefined ? '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea' : b.sev;
