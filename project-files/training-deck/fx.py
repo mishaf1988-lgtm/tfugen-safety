@@ -10,6 +10,7 @@ TRANS = {
     10: '<p:transition spd="med"><p:push dir="u"/></p:transition>',
     11: '<p:transition spd="med"><p:push dir="u"/></p:transition>',
     12: '<p:transition spd="slow"><p:fade thruBlk="1"/></p:transition>',
+    13: '<p:transition spd="slow"><p:fade thruBlk="1"/></p:transition>',
 }
 GRAD = ('<a:gradFill rotWithShape="1"><a:gsLst><a:gs pos="0"><a:srgbClr val="14485F"/></a:gs>'
         '<a:gs pos="100000"><a:srgbClr val="0B2635"/></a:gs></a:gsLst><a:lin ang="0" scaled="0"/></a:gradFill>')

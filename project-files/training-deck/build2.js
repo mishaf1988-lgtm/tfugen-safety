@@ -263,15 +263,20 @@ async function icon(Comp, color, size = 512) {
     "הדגמה והשוואה (7)", "שאלה מנחה (8)", "מנות קטנות ומיתוס (9)", "תרחיש והחלטה (10)", "חזרה ושליפה (11)"].forEach((m, i) => {
     const col = i % 4, row = Math.floor(i / 4);
     s.addText(m, { ...R, align: "center", shape: pres.ShapeType.roundRect, rectRadius: 0.15,
-      x: 9.9 - col * 3.1, y: 2.25 + row * 1.08, w: 2.8, h: 0.85, fontSize: 16, bold: true, color: COL.dark,
+      x: 9.9 - col * 3.1, y: 2.45 + row * 1.4, w: 2.8, h: 1.1, fontSize: 18, bold: true, color: COL.dark,
       fill: { color: COL.gold }, valign: "middle", objectName: "ani" + (row + 1) + "_m" + i });
   });
-  s.addText("ההדרכה הטובה ביותר היא זו שהקהל לא מרגיש שהוא בהדרכה.", { ...R, align: "center", x: 0.6, y: 6.25, w: 12.1, h: 0.55, fontSize: 18, italic: true, color: COL.accent, objectName: "ani5_q" });
-  s.addText([
-    { text: "והמסר ששתלתי: ", options: { bold: true, color: COL.white } },
-    { text: "כמו שכל צ'יפס נבדק בכל תחנה, גם כל עבודה אצלנו נבדקת בכל שלב.", options: { bold: true, color: COL.white } },
-  ], { ...R, align: "center", shape: pres.ShapeType.roundRect, rectRadius: 0.15, x: 0.6, y: 5.45, w: 12.1, h: 0.7, fontSize: 19, fill: { color: COL.green }, valign: "middle", objectName: "ani4_msg" });
-  s.addNotes("קליק 4: המסר השתול. לשאול לפני: מי שם לב לתגית הירוקה שחזרה בשקפים? רק אז קליק. שיטה: שתילת מסר, מסר שחוזר בלי להכריז עליו ונחשף בסוף. החשיפה: כל קליק מוסיף שורה. לחזור ל-3 המטרות משקף 5: הכרתם את התחנות? הבנתם למה? זיהיתם את הסיכון? לעצור אחרי השורה האחרונה ולתת לכיתה רגע. משפט סיום. אם נשאר זמן: 'איזו שיטה הכי עבדה עליכם?' (רמה 1 בקירקפטריק: תגובה). מקורות לשיטות: OSHA, Resource for Development and Delivery of Training to Workers; המוסד לבטיחות ולגיהות, הערכת יעילות הדרכה; עקרונות למידת מבוגרים של מלקולם נואלס.");
+  s.addNotes("החשיפה: כל קליק מוסיף שורה של שיטות (3 קליקים). לחזור ל-3 המטרות משקף 5: הכרתם את התחנות? הבנתם למה? זיהיתם את הסיכון? אם נשאר זמן: 'איזו שיטה הכי עבדה עליכם?' (רמה 1 בקירקפטריק: תגובה). מקורות לשיטות: OSHA, Resource for Development and Delivery of Training to Workers; המוסד לבטיחות ולגיהות, הערכת יעילות הדרכה; עקרונות למידת מבוגרים של מלקולם נואלס.");
+
+  // ===== 13. סיום: חזרה לתפוח האדמה =====
+  s = pres.addSlide({ masterName: "DARK" });
+  bg(s);
+  s.addImage({ data: I.potato, x: 5.77, y: 0.75, w: 1.8, h: 1.8, objectName: "auto1b_p" });
+  s.addText("התחלנו עם תפוח אדמה אחד.", { ...R, align: "center", x: 1.0, y: 2.75, w: 11.3, h: 0.8, fontSize: 30, color: COL.soft, objectName: "auto2b_a" });
+  s.addText("עד שהגיע למקפיא, בדקו אותו בכל תחנה.", { ...R, align: "center", x: 0.8, y: 3.55, w: 11.7, h: 1.1, fontSize: 44, bold: true, color: COL.white, objectName: "auto3b_b" });
+  s.addText("כך שומרים גם על אנשים: בודקים בכל שלב, כדי שכולם יחזרו הביתה.", { ...R, align: "center", x: 0.8, y: 4.85, w: 11.7, h: 0.8, fontSize: 26, bold: true, color: COL.gold, objectName: "auto4b_c" });
+  s.addText("תודה | מיכאל פרייליך", { ...R, align: "center", x: 1.0, y: 6.2, w: 11.3, h: 0.5, fontSize: 16, color: COL.soft, objectName: "auto5b_d" });
+  s.addNotes("סיום (20 שניות). להרים שוב את תפוח האדמה מהפתיחה, אותו אחד. שלושת המשפטים עולים לבד, בלי קליק. לומר אותם לאט, ולשתוק אחרי האחרון. שיטה: סגירת מעגל, חוזרים לחפץ מהפתיחה, וזה גם פורע את התגית הירוקה שחזרה בשקפים 6 עד 10 ('בכל תחנה: בדיקה').");
 
   await pres.writeFile({ fileName: "fries-raw.pptx" });
   console.log("ok");
