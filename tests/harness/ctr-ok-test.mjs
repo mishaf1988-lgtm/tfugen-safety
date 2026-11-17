@@ -4,11 +4,11 @@
 // No asks for the reason, then makes a draft to the contractor with a fresh link, and the page keeps what was typed.
 // The morning update asks again what is still waiting and makes a new link 30 days before a permanent year ends.
 // Mocked network, nothing leaves.
-import { ctrRefOf, ctrEnd, ctrAskText, normName, matchCtr, ctrNewRow, ctrUpdate, renewDue, ctrDraftBody, fastCtrOk, fastCtrMatch, fastCtrReason, ctrAsk, ctrMorning, nagDue, endedDue, ctrWorkerBody,
+import { ctrRefOf, ctrEnd, ctrAskText, normName, matchCtr, ctrNewRow, ctrUpdate, renewDue, ctrDraftBody, fastCtrOk, fastCtrMatch, fastCtrReason, ctrIsTest, CTR_TEST_CHOICE, ctrAsk, ctrMorning, nagDue, endedDue, ctrWorkerBody,
   CTR_S_OK, CTR_S_REJ, CTR_RENEW_KEY, CTR_TRAINED } from './_build/_ctrok.mjs';
 import { fastRoute, aboutLine } from './_build/wa-hook.mjs';
 import { formHtml, readCtrToken, ctrDeps } from './_build/ctr-link.mjs';
-import { CTR_STATE } from './_build/_ctr.mjs';
+import { CTR_STATE, canSend } from './_build/_ctr.mjs';
 import { ATTACH_SAID_RE } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
@@ -158,6 +158,21 @@ const filled = (o) => Object.assign({ id: 'cabc1234', kind: 'perm', ins: true, d
   check('no valid mail: the link is given to Michael to forward', /ctr-link\?k=/.test(r.text) && /אין מייל/.test(r.text), r.text);
   reset(); put([filled({ status: CTR_S_REJ, rej_at: new Date(NOW - 30 * 3600e3).toISOString() })]);
   check('a reason after a day is not taken', /כבר לא נמצאת/.test((await fastCtrReason(ENV, { id: 'cabc1234', text: 'חסר' }, NOW, {})).text));
+
+  // 17/11/2026 (dev-20261117055003-bd3e): "this was only a test" closed with no draft, no link, no register
+  reset(); put([filled()]);
+  r = await fastCtrOk(ENV, { id: 'cabc1234', yes: false }, NOW);
+  check('the reason question carries the test button', JSON.stringify(r.choices) === JSON.stringify([CTR_TEST_CHOICE]) && !BAD.test(r.text), r);
+  const td = [];
+  r = await fastCtrReason(ENV, { id: 'cabc1234', text: 'זו היתר הבדיקה. זה עדיין לא מה שהקבלן שלח. זה רק ניסיון. סיימנו עם הניסיונות.' }, NOW, { draft: async (b) => { td.push(b); return { ok: true }; } });
+  check('a test reason: closed, no draft, no register', td.length === 0 && ent('cabc1234').status === 'closed' && ent('cabc1234').closed === 'test' && db.ctr.length === 0 && r.ref === 'ctr-test' && !/ctr-link\?k=/.test(r.text), { r, e: ent('cabc1234') });
+  check('the closed request takes no send', !canSend(ent('cabc1234'), NOW));
+  reset(); put([filled({ status: CTR_S_REJ, rej_at: new Date(NOW).toISOString() })]);
+  r = await fastCtrReason(ENV, { id: 'cabc1234', text: CTR_TEST_CHOICE, test: true }, NOW, { draft: async (b) => { td.push(b); return { ok: true }; } });
+  check('the test button: closed, no draft', td.length === 0 && ent('cabc1234').closed === 'test', r);
+  check('the tap on the test button is routed as a test', (() => { const x = fastRoute({ choice: 1, text: CTR_TEST_CHOICE }, 'assistant | y | ref ctrr:cabc1234 | t', null); return x && x.kind === 'ctr_reason' && x.test === true && x.id === 'cabc1234'; })());
+  check('real reasons are not a test', ['חסר רישיון חשמלאי לעובד השני', 'חסר ביטוח', 'הבדיקה של הסולם פגה', 'אין אישור גובה', 'אין לעובדים ניסיון בעבודה בגובה', 'ביטול הפוליסה לא צורף', 'צריך לבטל את העובד השני', 'בדיקה של הביטוח חסרה', 'החתימה על אישור הביטוח לא אמיתית', 'המסמך נראה לא אמיתי', 'צירפו רק בדיקה רפואית בלי תעודת גובה', 'לעובדים יש רק ניסיון של חודש בגובה', 'יש ניסיון בלבד בלי תעודת הסמכה', 'היה ניסיון לזייף את האישור'].every((s) => !ctrIsTest(s)));
+  check('test words are a test', ['רק ניסיון', 'זה היה נסיון', 'ניסוי', 'בדיקה.', 'זו היתר הבדיקה. זה עדיין לא מה שהקבלן שלח. זה רק ניסיון. סיימנו עם הניסיונות.', CTR_TEST_CHOICE].every(ctrIsTest));
 
   console.log('\n6. the WhatsApp question and the morning update');
   reset(); put([filled()]);

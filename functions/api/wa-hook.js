@@ -87,7 +87,7 @@ async function note(env, value) {
 export { recentLine, RECENT_H, RECENT_N, RECENT_MAX } from '../_wa.js';
 import { domainLine } from '../_domains.js';
 import { stateCas } from '../_cas.js';
-import { ctrRefOf, fastCtrOk, fastCtrMatch, fastCtrReason } from '../_ctrok.js';
+import { ctrRefOf, fastCtrOk, fastCtrMatch, fastCtrReason, CTR_TEST_CHOICE } from '../_ctrok.js';
 // at = when the server logged the message, to the millisecond (atMs), not Meta's timestamp: 29/10/2026 13:09, three
 // photos and a line sent together carried the same second, two runs passed the same answers, and overlapReply took
 // the second run's reply for the first run's own message, so both answers went out (13:10 and 13:11).
@@ -505,6 +505,7 @@ export function fastRoute(m, about, prev) {
   const cm = ctrRefOf('ctrm', about, prev);
   if (cm && (cm.by === 'about' || tapIsPrev(m, prev)) && (Number(m.choice) === 1 || Number(m.choice) === 2 || raw === '1' || raw === '2')) return { kind: 'ctr_match', id: cm.rid, n: Number(m.choice || raw) };
   const cr = ctrRefOf('ctrr', about, prev);
+  if (cr && (cr.by === 'about' || tapIsPrev(m, prev)) && Number(m.choice) === 1) return { kind: 'ctr_reason', id: cr.rid, text: CTR_TEST_CHOICE, test: true };
   if (cr && (cr.by === 'about' || !about) && (m.choice === undefined || m.choice === null) && raw.length >= 3 && raw.length <= 600 && (cr.by === 'about' || !/\?\s*$/.test(raw))) return { kind: 'ctr_reason', id: cr.rid, text: raw };
   const ask = signAskOf(raw);
   // 22/10/2026 18:31 (Michael: "the assistant gets tangled again"): the assistant wrote "sending you the Negev permit to

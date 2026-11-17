@@ -27,6 +27,14 @@ export const CTR_S_CLOSED = 'closed';
 export const CTR_WLINK_SINCE = '2026-11-16T18:00:00Z';
 export const CTR_CHOICES = ['\u05d1\u05e6\u05e2', '\u05dc\u05d0'];
 export const CTR_MATCH_CHOICES = ['\u05d0\u05d5\u05ea\u05d5 \u05e7\u05d1\u05dc\u05df', '\u05e7\u05d1\u05dc\u05df \u05d7\u05d3\u05e9'];
+// 17/11/2026 (dev-20261117055003-bd3e: Michael answered the reason question with "this was only a test" and the server made a
+// correction draft to the contractor): a button on the reason question, and a reason that says test / cancel, close the
+// request with no draft, no register and no fix link.
+export const CTR_TEST_CHOICE = '\u05e0\u05d9\u05e1\u05d9\u05d5\u05df, \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d1\u05dc\u05d9 \u05de\u05d9\u05d9\u05dc';
+// A test only when one sentence is, whole, a test statement ("זה רק ניסיון."); a word inside a real reason never is
+// (security review 17/11/2026: "החתימה לא אמיתית", "רק ניסיון של חודש בגובה" are reasons). The button is the sure way.
+const TEST_SENT = /^(((\u05d6\u05d4|\u05d6\u05d5|\u05d6\u05d0\u05ea) )?((\u05d4\u05d9\u05d4|\u05d4\u05d9\u05d9\u05ea\u05d4|\u05e2\u05d3\u05d9\u05d9\u05df) )?(\u05e8\u05e7 )?(\u05e0\u05d9\u05e1\u05d9\u05d5\u05df|\u05e0\u05e1\u05d9\u05d5\u05df|\u05e0\u05d9\u05e1\u05d5\u05d9|\u05d1\u05d3\u05d9\u05e7\u05d4|\u05d8\u05e1\u05d8)( \u05d1\u05dc\u05d1\u05d3)?|\u05e1\u05d9\u05d9\u05de\u05e0\u05d5 \u05e2\u05dd (\u05d4)?(\u05e0\u05d9\u05e1\u05d9\u05d5\u05e0\u05d5\u05ea|\u05e0\u05e1\u05d9\u05d5\u05e0\u05d5\u05ea|\u05e0\u05d9\u05e1\u05d5\u05d9\u05d9\u05dd|\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea)|\u05dc\u05e1\u05d2\u05d5\u05e8 \u05d1\u05dc\u05d9 \u05de\u05d9\u05d9\u05dc|\u05e0\u05d9\u05e1\u05d9\u05d5\u05df, \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d1\u05dc\u05d9 \u05de\u05d9\u05d9\u05dc)$/;
+export const ctrIsTest = (s) => String(s || '').split(/[.!\n]+/).map((x) => x.replace(/\s+/g, ' ').trim()).some((x) => x && TEST_SENT.test(x));
 export const CTR_TRAINED = '\u05d4\u05d5\u05db\u05e9\u05e8', CTR_ACTIVE = '\u05e4\u05e2\u05d9\u05dc';
 const KIND_TY = { perm: '\u05e7\u05d1\u05d5\u05e2', temp: '\u05d6\u05de\u05e0\u05d9' };
 const RID = 'c[0-9a-z]{6,16}';
@@ -223,7 +231,7 @@ export async function fastCtrOk(env, fr, nowMs, deps) {
   if (!fr.yes) {
     const p = await ctrPatch(env, fr.id, { status: CTR_S_REJ, rej_at: iso }, CTR_S_FILLED);
     if (p.error) return { text: notWaiting(e), ref: 'ctr-gone' };
-    return { text: '\u05de\u05d4 \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df \u05d0\u05e6\u05dc ' + one(e.company, 60) + '? \u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05d1\u05de\u05e9\u05e4\u05d8 \u05d0\u05d7\u05d3. \u05d0\u05db\u05d9\u05df \u05d8\u05d9\u05d5\u05d8\u05ea \u05de\u05d9\u05d9\u05dc \u05dc\u05e7\u05d1\u05dc\u05df \u05e2\u05dd \u05d4\u05e1\u05d9\u05d1\u05d4 \u05d5\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05ea\u05d9\u05e7\u05d5\u05df, \u05d5\u05d0\u05ea\u05d4 \u05e9\u05d5\u05dc\u05d7 \u05d0\u05d5\u05ea\u05d4.', ref: 'ctrr:' + fr.id };
+    return { text: '\u05de\u05d4 \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df \u05d0\u05e6\u05dc ' + one(e.company, 60) + '? \u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05d1\u05de\u05e9\u05e4\u05d8 \u05d0\u05d7\u05d3. \u05d0\u05db\u05d9\u05df \u05d8\u05d9\u05d5\u05d8\u05ea \u05de\u05d9\u05d9\u05dc \u05dc\u05e7\u05d1\u05dc\u05df \u05e2\u05dd \u05d4\u05e1\u05d9\u05d1\u05d4 \u05d5\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05ea\u05d9\u05e7\u05d5\u05df, \u05d5\u05d0\u05ea\u05d4 \u05e9\u05d5\u05dc\u05d7 \u05d0\u05d5\u05ea\u05d4. \u05d0\u05dd \u05d6\u05d4 \u05d4\u05d9\u05d4 \u05e8\u05e7 \u05e0\u05d9\u05e1\u05d9\u05d5\u05df, \u05dc\u05d7\u05e5 \u05e2\u05dc \u05d4\u05db\u05e4\u05ea\u05d5\u05e8 \u05d5\u05d0\u05e1\u05d2\u05d5\u05e8 \u05d1\u05dc\u05d9 \u05de\u05d9\u05d9\u05dc.', ref: 'ctrr:' + fr.id, choices: [CTR_TEST_CHOICE] };
   }
   const until = ctrEnd(e, nowMs);
   // the one approval: under compare-and-swap from "filled", so a second tap finds it approved
@@ -273,6 +281,11 @@ export async function fastCtrReason(env, fr, nowMs, deps) {
   const e = (await ctrEntries(env)).find((x) => x.id === fr.id);
   if (!e || e.status !== CTR_S_REJ || nowMs - (Date.parse(e.rej_at || '') || 0) > CTR_REASON_MS) return { text: GONE, ref: 'ctr-gone' };
   const reason = one(fr.text, 600);
+  if (fr.test || ctrIsTest(reason)) {
+    const p = await ctrPatch(env, e.id, { status: CTR_S_CLOSED, closed: 'test', closed_at: new Date(nowMs).toISOString(), rej: reason }, CTR_S_REJ);
+    if (p.error) return { text: GONE, ref: 'ctr-gone' };
+    return { text: '\u05e1\u05d2\u05e8\u05ea\u05d9 \u05d0\u05ea ' + one(e.company, 60) + ' \u05db\u05e0\u05d9\u05e1\u05d9\u05d5\u05df: \u05d1\u05dc\u05d9 \u05de\u05d9\u05d9\u05dc \u05dc\u05e7\u05d1\u05dc\u05df, \u05d1\u05dc\u05d9 \u05de\u05e8\u05e9\u05dd \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd, \u05d5\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05db\u05d1\u05e8 \u05dc\u05d0 \u05e4\u05ea\u05d5\u05d7 \u05dc\u05de\u05d9\u05dc\u05d5\u05d9.', ref: 'ctr-test' };
+  }
   const ttl = linkTtlDays(e.kind, e.de, nowMs);
   if (!(ttl > 0)) {
     await ctrPatch(env, e.id, { status: 'closed', rej: reason }, CTR_S_REJ);
