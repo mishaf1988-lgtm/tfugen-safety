@@ -5860,13 +5860,18 @@ function closeAsk(id){
 // Back button: an open form gets its own history entry, so back closes the form (asking first
 // when it was changed) instead of leaving the page, or the installed app altogether.
 var _mhSkip=0;
+var _mhPendPage=null;   // a page opened while a form's history.back() is in flight; its entry waits for the landing
 function _mhTop(){var open=null;document.querySelectorAll('.modal').forEach(function(m){if(m.style.display==='block'||m.style.display==='flex')open=m;});return open;}
 function _mhPush(id){try{var hs=history.state;if(hs&&hs.modal)history.replaceState({modal:id,page:hs.page||null},'');else history.pushState({modal:id,page:(hs&&hs.page)||null},'');}catch(e){}}
 // A reload keeps history.state: an entry left by a form that was open is a page entry again.
 try{if(history.state&&history.state.modal)history.replaceState({page:history.state.page||null},'');}catch(e){}
 window.addEventListener('popstate',function(e){
   // Our own history.back() after a close. A form opened meanwhile gets its entry back.
-  if(_mhSkip>0){_mhSkip--;e.stopImmediatePropagation();var o=_mhTop();if(o&&o.id)_mhPush(o.id);return;}
+  if(_mhSkip>0){_mhSkip--;e.stopImmediatePropagation();
+    // A page opened while our back() was still on its way (17/11/2026): its entry is written now, on top of
+    // the entry the back landed on. Written earlier, the back stepped over it and the next back left the page.
+    if(_mhSkip===0&&_mhPendPage){var pp=_mhPendPage;_mhPendPage=null;try{if(!(history.state&&history.state.page===pp)){history.pushState({page:pp},'','#'+pp);if(typeof _navDepth!=='undefined')_navDepth++;}}catch(e2){}if(typeof _backBtnSync==='function')_backBtnSync();}
+    var o=_mhTop();if(o&&o.id)_mhPush(o.id);return;}
   var top=_mhTop();
   if(!top||!top.id)return;   // no form open: the page navigation below handles it
   e.stopImmediatePropagation();
@@ -28578,9 +28583,16 @@ function _photoPickBtn(fn){return '<button type="button" class="btn btn-s" style
   window.goPage=function(id){
     _g(id);
     try{
+      // 17/11/2026: a form was closed a moment ago and its history.back() has not landed yet. An entry pushed
+      // now is stepped over by that back (the history stays one page behind the screen), so it waits for the landing.
+      if(typeof _mhSkip!=='undefined'&&_mhSkip>0){_mhPendPage=id;if(typeof _backBtnSync==='function')_backBtnSync();return;}
+      _mhPendPage=null;
       if(history.state&&history.state.page===id){if(typeof _backBtnSync==='function')_backBtnSync();return;}
-      history.pushState({page:id},'','#'+id);
-      if(typeof _navDepth!=='undefined')_navDepth++;
+      // The entry of a form that was closed and not dropped yet (its timer has not run): the page takes it over
+      // instead of leaving a dead entry under itself, which cost an extra back.
+      if(history.state&&history.state.modal&&typeof _mhTop==='function'&&!_mhTop()){history.replaceState({page:id},'','#'+id);}
+      else{history.pushState({page:id},'','#'+id);
+      if(typeof _navDepth!=='undefined')_navDepth++;}
     }catch(e){}
     if(typeof _backBtnSync==='function')_backBtnSync();
   };
