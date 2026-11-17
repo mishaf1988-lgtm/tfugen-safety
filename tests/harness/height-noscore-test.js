@@ -36,6 +36,14 @@ async function score(page, tr) {
   await page.route(/^https?:\/\//, r => r.abort());
   await page.goto(HTML);
   await page.waitForFunction(() => typeof rDash === 'function' && typeof DB === 'object');
+  // pairs: names that must count as height approvals, and names that must not
+  const pairs = await page.evaluate(() => {
+    const yes = ['\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4', '\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 - \u05e8\u05e2\u05e0\u05d5\u05df', '\u05d4\u05d3\u05e8\u05db\u05ea \u05d2\u05d5\u05d1\u05d4'];
+    const no = ['\u05db\u05d9\u05d1\u05d5\u05d9 \u05d0\u05e9', '\u05de\u05dc\u05d2\u05d6\u05d4', '\u05e2\u05d6\u05e8\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4'];
+    return { yes: yes.map(n => _trNoScore({ n })), no: no.map(n => _trNoScore({ n })), empty: _trNoScore(null) };
+  });
+  check('3 height names are not scored', pairs.yes.every(Boolean), pairs);
+  check('3 other trainings are scored, and an empty row is safe', pairs.no.every(x => !x) && pairs.empty === false, pairs);
   const h = await score(page, rows(HEIGHT, 11));
   check('11 expired height approvals: score stays 100', h.score === 100, h);
   check('height approvals are not in the department percentages', h.deptTotal === 0, h);
