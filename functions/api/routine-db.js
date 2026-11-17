@@ -2089,6 +2089,9 @@ export const OD_TRASH_DIR = '\u05dc\u05de\u05d7\u05d9\u05e7\u05d4';
 // the reports folder (00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1) and the name of an old control-board backup at the top of the safety folder
 export const OD_REPORTS_DIR = '00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1';
 export const OD_ROOT_BACKUP = /^\u05dc\u05d5\u05d7 \u05d1\u05e7\u05e8\u05d4 - \u05d2\u05d9\u05d1\u05d5\u05d9 \d{2}\.\d{2}\.\d{4}[^\/]{0,80}\.xlsx$/;
+export const OD_TRASH_EXTRA = /\.(ppsx|pps|ppt|html?)$/i;
+// tables whose file_url may point at a folder: od_trash refuses an empty folder any of them links to
+export const OD_TRASH_LINKED = ['inc', 'docs', 'equip_inspections', 'tr', 'toolbox_talks'];
 export function odTrashCheck(b, strict) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
   if (String(b.why || '').trim().length < 5) return { error: 'why required' };
@@ -2104,7 +2107,17 @@ export function odTrashCheck(b, strict) {
   const leftover = !strict && parts.length >= 2 && parts[0] === OD_REPORTS_DIR && /\.(md|txt|zip)$/i.test(parts[parts.length - 1]);
   const rootBackup = !strict && parts.length === 1 && OD_ROOT_BACKUP.test(parts[0]);
   if (rootBackup && !parts.some(bad)) return { from: OD_ROOT + parts[0], to: OD_ROOT + OD_TRASH_DIR, name: ('\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea - ' + parts[0]).slice(-200) };
-  if (parts.length < 2 || parts.length > OD_MKDIR_DEPTH + 1 || parts.some(bad) || !(OD_EXT.test(parts[parts.length - 1]) || ocrTxt || leftover)) return { error: 'bad path' };
+  // 17/11/2026 (folder audit 11, Michael: "\u05de\u05d0\u05e9\u05e8"): a slide show (.ppsx/.pps/.ppt) and the .html copies the contractor
+  // link left in its "source" folders go to the to-delete folder too; not for od_dedupe (strict), which really deletes.
+  const extra = !strict && OD_TRASH_EXTRA.test(parts[parts.length - 1]);
+  // and an EMPTY folder (folder: true): the handler moves it only when OneDrive says it has no children. Never a top folder
+  // (2 levels at least), never the inbox, a flow folder, old versions, to-delete or ARCHIVE.
+  if (b.folder === true) {
+    if (strict || parts.length < 2 || parts.length > OD_MKDIR_DEPTH + 1 || parts.some(bad) || OD_NO_DIR.test(parts.join('/'))) return { error: 'bad path' };
+    if (parts[0] === OD_INBOX || isAutoTop(parts[0]) || OD_TRIGGER_DIRS.indexOf(parts[0]) >= 0 || parts[0] === OD_OCR_DIR) return { error: 'bad path' };
+    return { from: OD_ROOT + parts.join('/'), to: OD_ROOT + OD_TRASH_DIR, name: (parts[parts.length - 2] + ' - ' + parts[parts.length - 1]).slice(-200), folder: true };
+  }
+  if (parts.length < 2 || parts.length > OD_MKDIR_DEPTH + 1 || parts.some(bad) || !(OD_EXT.test(parts[parts.length - 1]) || ocrTxt || leftover || extra)) return { error: 'bad path' };
   if (OD_NO_DIR.test(parts.slice(0, -1).join('/'))) return { error: 'bad path' };
   const name = (parts[parts.length - 2] + ' - ' + parts[parts.length - 1]).slice(-200);
   return { from: OD_ROOT + parts.join('/'), to: OD_ROOT + OD_TRASH_DIR, name };
@@ -4502,17 +4515,26 @@ async function routineDbHandle(context) {
       return jsonResp({ ok: true, deleted: line.path, kept: line.kept, bin: true }, 200, {});
     }
     if (body.op === 'od_trash') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path', 'folder'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const c = odTrashCheck(body);
       if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
       const at = await accessToken(env);
       const gh = { Authorization: 'Bearer ' + at.token, 'Content-Type': 'application/json' };
       const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
       const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
-      const src = await fetch(G + enc(c.from) + '?select=id,file', { headers: gh, signal: tmo(GRAPH_MS) });
+      const src = await fetch(G + enc(c.from) + '?select=id,file,folder', { headers: gh, signal: tmo(GRAPH_MS) });
       if (!src.ok) return jsonResp({ ok: false, error: 'source ' + src.status }, 200, {});
       const sj = await src.json();
-      if (!sj.file) return jsonResp({ ok: false, error: 'source is not a file' }, 200, {});
+      if (c.folder) {
+        if (!sj.folder) return jsonResp({ ok: false, error: 'source is not a folder' }, 200, {});
+        if (sj.folder.childCount !== 0) return jsonResp({ ok: false, error: 'folder is not empty' }, 200, {});
+        // security review 17/11/2026: an empty folder a row links to (an employee's accident folder) stays; a failed read refuses too
+        for (const t of OD_TRASH_LINKED) {
+          const lr = await fetch(url + '/rest/v1/' + t + '?select=id&limit=1&file_url=like.' + encodeURIComponent('*' + c.from + '*'), { headers: h, signal: tmo(SB_MS) }).catch(() => null);
+          if (!lr || !lr.ok) return jsonResp({ ok: false, error: 'link check ' + t + ' ' + (lr ? lr.status : 'failed') }, 200, {});
+          if ((await lr.json().catch(() => [1])).length) return jsonResp({ ok: false, error: 'folder is linked from ' + t }, 200, {});
+        }
+      } else if (!sj.file) return jsonResp({ ok: false, error: 'source is not a file' }, 200, {});
       let tr = await fetch(G + enc(c.to) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
       if (tr.status === 404) {
         const root = await fetch(G + enc(OD_ROOT) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
@@ -4524,6 +4546,12 @@ async function routineDbHandle(context) {
       } else if (!tr.ok) return jsonResp({ ok: false, error: 'folder ' + tr.status }, 200, {});
       const tj = await tr.json();
       if (!tj.folder) return jsonResp({ ok: false, error: 'not a folder' }, 200, {});
+      // security review 17/11/2026: the folder is checked empty again right before the move (a file added meanwhile stays put)
+      if (c.folder) {
+        const again = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(sj.id) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
+        const aj = again.ok ? await again.json().catch(() => ({})) : {};
+        if (!aj.folder || aj.folder.childCount !== 0) return jsonResp({ ok: false, error: 'folder is not empty' }, 200, {});
+      }
       const mv = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(sj.id) + '?@microsoft.graph.conflictBehavior=rename', {
         method: 'PATCH', headers: gh, body: JSON.stringify({ parentReference: { id: tj.id }, name: c.name }), signal: tmo(GRAPH_MS),
       });
