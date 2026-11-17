@@ -91,7 +91,7 @@ def timing(groups, zoom_ids, autos=(), vids=()):
                       f'<p:par><p:cTn id="{inner}" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst>'
                       f'{effs}</p:childTnLst></p:cTn></p:par></p:childTnLst></p:cTn></p:par>')
     bld = "".join(f'<p:bldP spid="{sp}" grpId="0" animBg="1"/>' for sp, _ in autos)
-    bld += "".join(f'<p:bldP spid="{sp}" grpId="0" animBg="1"/>' for k in sorted(groups) for sp in groups[k])
+    bld += "".join(f'<p:bldP spid="{sp}" grpId="0" animBg="1"/>' for k in sorted(groups) for sp in groups[k] if sp not in vids)
     media = "".join(f'<p:video><p:cMediaNode vol="80000"><p:cTn id="{next(counter)}" fill="hold" display="0">'
                     f'<p:stCondLst><p:cond delay="indefinite"/></p:stCondLst></p:cTn><p:tgtEl><p:spTgt spid="{sp}"/></p:tgtEl>'
                     f'</p:cMediaNode></p:video>' for sp in vids)
@@ -111,6 +111,20 @@ for item in zin.infolist():
     if m:
         n = int(m.group(1))
         x = data.decode("utf-8")
+        # מספר זיהוי כפול: pptxgenjs נותן לווידאו מספר לפי הקשרים בשקף, והוא מתנגש בצורה אחרת.
+        # PowerPoint מציג "מצא בעיה בתוכן" (מיכאל 17/11/2026). כל כפילות מקבלת מספר חדש.
+        seen, top = set(), max(int(v) for v in re.findall(r'<p:cNvPr id="(\d+)"', x))
+        def renum(mm):
+            i = mm.group(1)
+            if i in seen:
+                renum.top += 1
+                return f'<p:cNvPr id="{renum.top}"'
+            seen.add(i)
+            return mm.group(0)
+        renum.top = top
+        x = re.sub(r'<p:cNvPr id="(\d+)"', renum, x)
+        ids = re.findall(r'<p:cNvPr id="(\d+)"', x)
+        assert len(ids) == len(set(ids)), item.filename
         groups, zoom, vids = {}, set(), set()
         for spid, k, rest in re.findall(r'<p:cNvPr id="(\d+)" name="ani(\d+)_([^"]*)"', x):
             groups.setdefault(int(k), []).append(spid)
