@@ -184,6 +184,9 @@
 //              first line (TALK_FIELD_HEAD); a second call replaces only that part. Only a draft of
 //              the last 7 days that nobody signed; body only (the translations are made in the app,
 //              from body, by the manager). Plain keyboard text, no ID-like digits. talkFieldApply.
+//   ctr_close   (17/11/2026, dev-20261117055003-bd3e) {id, why}: a contractor request that was only a test is closed
+//              (status closed, closed: 'test'): no draft, no register row, and its form link stops taking a send
+//              (canSend). Only a request not approved yet (sent, filled, rejecting). Nothing is deleted.
 //   ctr_link    (15/11/2026) {kind: perm|temp, ins: true|false, ds, de (temp only), company (optional)}: a contractor
 //              approval link (functions/api/ctr-link.js): a draft talk of kind 'contractor', an entry in server_state
 //              ctr_links, and {url, text, exp, instructions_missing} for Michael to forward himself.
@@ -206,6 +209,7 @@ import { rowContradictions } from './wa-morning.js';
 import { respUnknown } from './hazard-report.js';
 import { ttsWav, speechText } from './talk.js';
 import { ctrLinkCheck, ctrLinkCreate } from './ctr-link.js';
+import { CTR_STATE, statePatch } from '../_ctr.js';
 import { formProbe } from '../_formprobe.js';
 export const TTS_GEMINI = 'gemini', TTS_GEMINI_FILE = 'hakraa-ivrit.wav', TTS_FMTS = ['audio/mpeg', 'audio/ogg', 'audio/mp3'];
 // A voice answer to a voice message (13/11/2026, Michael in the questionnaire after the Gemini sample: "do it: understood,
@@ -1031,6 +1035,7 @@ export function factsFind(raw, q) {
 // ref + action again = dup, an action opened before the accident of 29/10/2026 = skip (same cut-off as THZ_SRC_FROM in the app).
 // Never a change or a delete of an existing row. Pure: { row, key }, { skip }, or { error }.
 export const THZ_SRC_FROM = '2026-10-29';
+export const THZ_TRAINING_RE = /\u05d4\u05d3\u05e8\u05db|\u05d4\u05e1\u05de\u05db|\u05e8\u05e2\u05e0\u05d5\u05df|\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4|\u05ea\u05e2\u05d5\u05d3\u05ea \u05d4\u05e1\u05de\u05db\u05d4/;
 export const THZ_SEV_DAYS = { '\u05d2\u05d1\u05d5\u05d4\u05d4': 3, '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea': 14, '\u05e0\u05de\u05d5\u05db\u05d4': 30 };
 export function thzAddRow(b, today, rand, maxN, depts) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
@@ -1042,6 +1047,10 @@ export function thzAddRow(b, today, rand, maxN, depts) {
   if (!/^[A-Za-z0-9._:-]{2,60}$/.test(ref)) return { error: 'ref: the investigation or meeting id (letters, digits, . _ : -)' };
   const action = short(b.action, 300);
   if (action.length < 3) return { error: 'action required' };
+  // training is no hazard (lesson 202, again 17/11/2026: Michael: "work at height goes into the defects, why? it is wrong";
+  // the committee of 04/11/2026 opened "refresh height training for 7 workers" as a tour hazard): a training, a
+  // certification or an expired certificate stays in the training register and the protocol, never in the tours
+  if (THZ_TRAINING_RE.test(action + ' ' + short(b.descr, 1000))) return { error: 'training or certificate: not a tour hazard (lesson 202); it stays in the training register and the protocol' };
   const dept = short(b.dept, 40);
   if (!Array.isArray(depts) || depts.indexOf(dept) < 0) return { error: 'dept: one of ' + (depts || []).join(', ') };
   const sev = b.sev === undefined ? '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea' : b.sev;
@@ -3892,6 +3901,21 @@ async function routineDbHandle(context) {
     }
     // security review 15/11/2026: a leaked "new worker" link of a contractor is closed from WhatsApp. Raising link_v
     // makes every permanent token of that contractor talk stop working (talk.js readPermToken / permOk).
+    if (body.op === 'ctr_close') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'id'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const rid = String(body.id || '');
+      if (!/^c[0-9a-z]{6,16}$/.test(rid)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
+      if (String(body.why || '').trim().length < 5) return jsonResp({ ok: false, error: 'why required' }, 400, {});
+      let err = null;
+      const w = await stateCas(url, h, CTR_STATE, (cur) => {
+        const p = statePatch(cur, rid, { status: 'closed', closed: 'test', closed_at: new Date().toISOString(), close_why: String(body.why).slice(0, 200) }, (e) => ['sent', 'filled', 'rejecting'].indexOf(e.status) >= 0);
+        if (p.error) { err = p; return { write: false }; }
+        return { value: JSON.stringify(p.list) };
+      }, () => tmo(SB_MS)).catch((x) => { err = { error: String(x && x.message || x) }; return null; });
+      if (err) return jsonResp({ ok: false, error: err.error === 'state' ? 'not open (status ' + err.status + ')' : err.error }, 200, {});
+      if (!w || !w.written) return jsonResp({ ok: false, error: 'write' }, 200, {});
+      return jsonResp({ ok: true, id: rid, status: 'closed' }, 200, {});
+    }
     if (body.op === 'ctr_revoke') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'id'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const rid = String(body.id || '');
