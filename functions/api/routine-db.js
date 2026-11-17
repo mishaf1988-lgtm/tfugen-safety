@@ -184,6 +184,9 @@
 //              first line (TALK_FIELD_HEAD); a second call replaces only that part. Only a draft of
 //              the last 7 days that nobody signed; body only (the translations are made in the app,
 //              from body, by the manager). Plain keyboard text, no ID-like digits. talkFieldApply.
+//   ctr_close   (17/11/2026, dev-20261117055003-bd3e) {id, why}: a contractor request that was only a test is closed
+//              (status closed, closed: 'test'): no draft, no register row, and its form link stops taking a send
+//              (canSend). Only a request not approved yet (sent, filled, rejecting). Nothing is deleted.
 //   ctr_link    (15/11/2026) {kind: perm|temp, ins: true|false, ds, de (temp only), company (optional)}: a contractor
 //              approval link (functions/api/ctr-link.js): a draft talk of kind 'contractor', an entry in server_state
 //              ctr_links, and {url, text, exp, instructions_missing} for Michael to forward himself.
@@ -206,6 +209,7 @@ import { rowContradictions } from './wa-morning.js';
 import { respUnknown } from './hazard-report.js';
 import { ttsWav, speechText } from './talk.js';
 import { ctrLinkCheck, ctrLinkCreate } from './ctr-link.js';
+import { CTR_STATE, statePatch } from '../_ctr.js';
 import { formProbe } from '../_formprobe.js';
 export const TTS_GEMINI = 'gemini', TTS_GEMINI_FILE = 'hakraa-ivrit.wav', TTS_FMTS = ['audio/mpeg', 'audio/ogg', 'audio/mp3'];
 // A voice answer to a voice message (13/11/2026, Michael in the questionnaire after the Gemini sample: "do it: understood,
@@ -3892,6 +3896,21 @@ async function routineDbHandle(context) {
     }
     // security review 15/11/2026: a leaked "new worker" link of a contractor is closed from WhatsApp. Raising link_v
     // makes every permanent token of that contractor talk stop working (talk.js readPermToken / permOk).
+    if (body.op === 'ctr_close') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'id'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const rid = String(body.id || '');
+      if (!/^c[0-9a-z]{6,16}$/.test(rid)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
+      if (String(body.why || '').trim().length < 5) return jsonResp({ ok: false, error: 'why required' }, 400, {});
+      let err = null;
+      const w = await stateCas(url, h, CTR_STATE, (cur) => {
+        const p = statePatch(cur, rid, { status: 'closed', closed: 'test', closed_at: new Date().toISOString(), close_why: String(body.why).slice(0, 200) }, (e) => ['sent', 'filled', 'rejecting'].indexOf(e.status) >= 0);
+        if (p.error) { err = p; return { write: false }; }
+        return { value: JSON.stringify(p.list) };
+      }, () => tmo(SB_MS)).catch((x) => { err = { error: String(x && x.message || x) }; return null; });
+      if (err) return jsonResp({ ok: false, error: err.error === 'state' ? 'not open (status ' + err.status + ')' : err.error }, 200, {});
+      if (!w || !w.written) return jsonResp({ ok: false, error: 'write' }, 200, {});
+      return jsonResp({ ok: true, id: rid, status: 'closed' }, 200, {});
+    }
     if (body.op === 'ctr_revoke') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'id'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const rid = String(body.id || '');
