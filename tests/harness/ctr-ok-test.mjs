@@ -171,8 +171,8 @@ const filled = (o) => Object.assign({ id: 'cabc1234', kind: 'perm', ins: true, d
   r = await fastCtrReason(ENV, { id: 'cabc1234', text: CTR_TEST_CHOICE, test: true }, NOW, { draft: async (b) => { td.push(b); return { ok: true }; } });
   check('the test button: closed, no draft', td.length === 0 && ent('cabc1234').closed === 'test', r);
   check('the tap on the test button is routed as a test', (() => { const x = fastRoute({ choice: 1, text: CTR_TEST_CHOICE }, 'assistant | y | ref ctrr:cabc1234 | t', null); return x && x.kind === 'ctr_reason' && x.test === true && x.id === 'cabc1234'; })());
-  check('real reasons are not a test', ['חסר רישיון חשמלאי לעובד השני', 'חסר ביטוח', 'הבדיקה של הסולם פגה', 'אין אישור גובה', 'אין לעובדים ניסיון בעבודה בגובה', 'ביטול הפוליסה לא צורף', 'צריך לבטל את העובד השני', 'בדיקה של הביטוח חסרה'].every((s) => !ctrIsTest(s)));
-  check('test words are a test', ['רק ניסיון', 'זה היה נסיון', 'ניסוי', 'בדיקה.', 'זה לא אמיתי', CTR_TEST_CHOICE].every(ctrIsTest));
+  check('real reasons are not a test', ['חסר רישיון חשמלאי לעובד השני', 'חסר ביטוח', 'הבדיקה של הסולם פגה', 'אין אישור גובה', 'אין לעובדים ניסיון בעבודה בגובה', 'ביטול הפוליסה לא צורף', 'צריך לבטל את העובד השני', 'בדיקה של הביטוח חסרה', 'החתימה על אישור הביטוח לא אמיתית', 'המסמך נראה לא אמיתי', 'צירפו רק בדיקה רפואית בלי תעודת גובה', 'לעובדים יש רק ניסיון של חודש בגובה', 'יש ניסיון בלבד בלי תעודת הסמכה', 'היה ניסיון לזייף את האישור'].every((s) => !ctrIsTest(s)));
+  check('test words are a test', ['רק ניסיון', 'זה היה נסיון', 'ניסוי', 'בדיקה.', 'זו היתר הבדיקה. זה עדיין לא מה שהקבלן שלח. זה רק ניסיון. סיימנו עם הניסיונות.', CTR_TEST_CHOICE].every(ctrIsTest));
 
   console.log('\n6. the WhatsApp question and the morning update');
   reset(); put([filled()]);
