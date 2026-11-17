@@ -233,6 +233,9 @@ console.log('\n4. the form, checked on the server');
   check('a worker not marked at height: no certificate needed, kept as not at height', !!notH.v && notH.v.workers[1].hgt === false && notH.v.hgtOn === true, notH.errors);
   const notHf = checkCtrForm({ ...base, workers: W2n }, files(['ins']).concat([pdf1(0), pdf1(1)]), tP);
   check('a certificate in the row of a worker not at height is not taken', !!notHf.v && notHf.v.files.filter((x) => x.doc === 'hgtc').length === 1, notHf.errors);
+  // security review 17/11/2026: a date typed with no certificate is dropped, and the red mark follows the row, not the name
+  const dNo = checkCtrForm({ ...base, workers: [W2[0], { ...W2[1], n: W2[0].n }] }, files(['ins']).concat([pdf1(0)]), tP);
+  check('no certificate: its typed date is dropped (not the first to end), the red mark only on that row', !!dNo.v && dNo.v.workers[1].e === '' && dNo.v.workers[1].nc === true && !dNo.v.workers[0].nc && (!dNo.v.firstE || dNo.v.firstE.label.indexOf('עבודה בגובה') < 0 || dNo.v.firstE.e === dNo.v.workers[0].e), dNo.errors || dNo.v.workers);
   const noneH = checkCtrForm({ ...base, workers: W2.map((w) => ({ ...w, hgt: false })) }, files(['ins']), tP);
   check('height work with no worker marked at height: passes (17/11/2026, no "at least one")', !!noneH.v && noneH.v.noCert.length === 0, noneH.errors);
   // 16/11/2026 (DECISIONS "חמש תוספות"): "valid until" for every document but "other"; the approval ends at the first
