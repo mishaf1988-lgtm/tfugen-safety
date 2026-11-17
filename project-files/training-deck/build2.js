@@ -5,10 +5,12 @@ const sharp = require("sharp");
 const gi = require("react-icons/gi");
 const fa = require("react-icons/fa6");
 
-// תבנית תפוגן (כמו מצגת ועדת הבטיחות), בלי הסמל: פס כותרת מדורג 0B2635 עד 14485F, רקע לבן
+// גוונים בהירים (מיכאל 17/11/2026: "הרבה רקעים שחורים, צריך צבעים יותר טובים לעיניים"): כחול בינוני במקום כחול לילה,
+// שקפי הפתיחה, החזון והסיום על רקע תכלת בהיר. navy רק לטקסט, לא לרקע.
 const COL = {
-  dark: "0B2635", deep: "14485F", gold: "E09A2F", red: "C0453B", ink: "1A1A1A", green: "53842B",
-  white: "FFFFFF", tint: "EFF2F5", ice: "DCE8F2", mute: "7F8C99", soft: "A9C4D8", accent: "1F608C",
+  dark: "1F608C", deep: "3A84B5", gold: "E09A2F", orange: "B86A0B", red: "C0453B", ink: "1A1A1A", green: "53842B",
+  white: "FFFFFF", tint: "EFF2F5", ice: "DCE8F2", mute: "7F8C99", soft: "5F7385", accent: "1F608C", navy: "14485F",
+  sky: "5BA4CF", pale: "EAF2F8",
 };
 const FONT = "Arial";
 const R = { rtlMode: true, align: "right", fontFace: FONT, isTextBox: true };
@@ -24,19 +26,19 @@ async function icon(Comp, color, size = 512) {
   pres.rtlMode = true;
   pres.title = "מתפוח אדמה למקפיא";
   pres.theme = { headFontFace: FONT, bodyFontFace: FONT };
-  pres.defineSlideMaster({ title: "DARK", background: { color: COL.dark },
+  pres.defineSlideMaster({ title: "DARK", background: { color: COL.pale },
     slideNumber: { x: 0.4, y: 6.95, w: 0.6, h: 0.35, color: COL.soft, fontFace: FONT, fontSize: 11 } });
   pres.defineSlideMaster({ title: "LIGHT", background: { color: COL.white },
     slideNumber: { x: 0.4, y: 6.95, w: 0.6, h: 0.35, color: COL.mute, fontFace: FONT, fontSize: 11 } });
   // רקע מדורג (fx.py הופך כל צורה ששמה hdr_ למילוי מדורג)
-  const bg = (s) => s.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: 13.333, h: 7.5, fill: { color: COL.dark }, line: { color: COL.dark }, objectName: "hdr_bg" });
+  const bg = (s) => s.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: 13.333, h: 7.5, fill: { color: COL.pale }, line: { color: COL.pale }, objectName: "hdr_bg" });
 
   const I = {
     potato: await icon(gi.GiPotato, COL.gold),
     fries: await icon(gi.GiFrenchFries, COL.gold),
     friesRed: await icon(gi.GiFrenchFries, COL.red),
-    snow: await icon(fa.FaSnowflake, COL.soft),
-    scroll: await icon(gi.GiTiedScroll, COL.dark),
+    snow: await icon(fa.FaSnowflake, COL.sky),
+    scroll: await icon(gi.GiTiedScroll, COL.navy),
     steam: await icon(gi.GiSteam, COL.white),
     steamGold: await icon(gi.GiSteam, COL.gold),
     drop: await icon(fa.FaDroplet, COL.white),
@@ -47,12 +49,12 @@ async function icon(Comp, color, size = 512) {
     seed: await icon(fa.FaSeedling, COL.white),
     box: await icon(fa.FaBoxOpen, COL.white),
     mask: await icon(gi.GiGasMask, COL.red),
-    q: await icon(fa.FaQuestion, COL.dark),
+    q: await icon(fa.FaQuestion, COL.navy),
     teacher: await icon(gi.GiTeacher, COL.gold),
     teacherW: await icon(gi.GiTeacher, COL.white),
     user: await icon(fa.FaUserShield, COL.white),
     flag: await icon(fa.FaFlag, COL.white),
-    eyeGold: await icon(fa.FaEye, COL.dark),
+    eyeGold: await icon(fa.FaEye, COL.navy),
     check: await icon(fa.FaCircleCheck, COL.white),
   };
 
@@ -67,11 +69,9 @@ async function icon(Comp, color, size = 512) {
   function method(s, t, now) {
     if (!now) { s._m = t; return; }
     s.addText(t, { ...R, align: "center", shape: pres.ShapeType.roundRect, rectRadius: 0.15,
-      x: 0.5, y: 0.4, w: 2.6, h: 0.45, fontSize: 12, bold: true, color: COL.dark, fill: { color: COL.white } });
+      x: 0.5, y: 0.4, w: 2.6, h: 0.45, fontSize: 12, bold: true, color: COL.navy, fill: { color: COL.white } });
   }
-  function src(s, t, dark) {
-    s.addText("מקור: " + t, { ...R, x: 1.2, y: 6.95, w: 11.5, h: 0.35, fontSize: 10, color: dark ? COL.soft : COL.mute, margin: 0 });
-  }
+  // המקורות ירדו מהשקפים (מיכאל 17/11/2026) ועברו להערות הדובר של כל שקף.
   function plant(s, t) {
     s.addShape(pres.ShapeType.roundRect, { x: 0.5, y: 1.4, w: 2.6, h: 0.45, rectRadius: 0.15, fill: { color: COL.green }, line: { color: COL.green } });
     s.addImage({ data: I.check, x: 2.7, y: 1.47, w: 0.3, h: 0.3 });
@@ -87,10 +87,10 @@ async function icon(Comp, color, size = 512) {
   s.addImage({ data: I.potato, x: 7.4, y: 0.7, w: 1.8, h: 1.8, objectName: "auto1b_a" });
   s.addImage({ data: I.fries, x: 5.75, y: 0.7, w: 1.8, h: 1.8, objectName: "auto2b_b" });
   s.addImage({ data: I.snow, x: 4.1, y: 0.8, w: 1.6, h: 1.6, objectName: "auto3b_c" });
-  s.addText("מתפוח אדמה למקפיא", { ...R, align: "center", x: 1.0, y: 2.9, w: 11.3, h: 1.2, fontSize: 54, bold: true, color: COL.white, objectName: "auto4b_t" });
-  s.addText("הסוד של הצ'יפס הקפוא, ב-10 דקות", { ...R, align: "center", x: 1.0, y: 4.0, w: 11.3, h: 0.7, fontSize: 26, color: COL.gold, objectName: "auto5b_s" });
+  s.addText("מתפוח אדמה למקפיא", { ...R, align: "center", x: 1.0, y: 2.9, w: 11.3, h: 1.2, fontSize: 54, bold: true, color: COL.navy, objectName: "auto4b_t" });
+  s.addText("הסוד של הצ'יפס הקפוא, ב-10 דקות", { ...R, align: "center", x: 1.0, y: 4.0, w: 11.3, h: 0.7, fontSize: 26, bold: true, color: COL.orange, objectName: "auto5b_s" });
   ["קולפים.", "חותכים.", "מטגנים.", "מקפיאים."].forEach((w, i) => {
-    s.addText(w, { ...R, align: "center", x: 9.15 - i * 2.75, y: 4.85, w: 2.5, h: 0.75, fontSize: 28, bold: true, color: i === 3 ? COL.soft : COL.white, objectName: "auto" + (6 + i) + "r_k" });
+    s.addText(w, { ...R, align: "center", x: 9.15 - i * 2.75, y: 4.85, w: 2.5, h: 0.75, fontSize: 28, bold: true, color: i === 3 ? COL.sky : COL.accent, objectName: "auto" + (6 + i) + "r_k" });
   });
   s.addText("מיכאל פרייליך | קורס מדריכי בטיחות", { ...R, align: "center", x: 1.0, y: 6.1, w: 11.3, h: 0.5, fontSize: 16, color: COL.soft, objectName: "auto10b_m" });
   s.addNotes("פתיחה (30 שניות). לעמוד מול הכיתה ולשתוק 3 שניות עד שהשקף מסיים לעלות. אחר כך: 'במפעל שבו אני עובד, תפוח אדמה הופך לצ'יפס קפוא בתוך פחות משעה. עד סוף ההדרכה תדעו בדיוק איך.' (לא לנקוב בזמן אם לא בדקת מול המפעל.) בלי קליק: הכול נכנס לבד ברצף, כמו סרטון (בערך 5 שניות). לחכות שהמילה האחרונה תנחת ורק אז לדבר. שיטה: פתיחה שיוצרת סקרנות (Hook), בתמונה ובשתיקה.");
@@ -108,8 +108,7 @@ async function icon(Comp, color, size = 512) {
     { text: "זרם המים מאיץ את תפוח האדמה, מיישר אותו ומטיח אותו ברשת סכינים קבועה. יוצאים מקלות צ'יפס שלמים בבת אחת.", options: { fontSize: 16, color: COL.white } },
   ], { x: 5.0, y: 4.3, w: 7.7, h: 1.9, fill: { color: COL.dark }, objectName: "ani1_ans" });
   s.addImage({ path: __dirname + "/clip-cut.gif", x: 0.6, y: 4.3, w: 4.18, h: 1.9, objectName: "ani1_clip" });
-  src(s, "פטנטים של מערכות חיתוך במים (Hydro cutting): 12 עד 18 מטר לשנייה");
-  s.addNotes("להצביע עם הידיים: מי חושב 5? 20? 60? 150? (20 שניות). רק אחרי ההצבעה, קליק לתשובה. עם התשובה עולה גם קטע אנימציה קצר שמתנגן לבד בלולאה: תפוח האדמה נורה בצינור ויוצא כמקלות. שיטה: שאלה מקדימה שיוצרת פער סקרנות. מבוגרים זוכרים יותר אחרי שהתחייבו לניחוש. המקור: פטנטים של מערכות חיתוך במים (Hydro cutting) נותנים 40 עד 60 רגל לשנייה, כלומר 12 עד 18 מטר לשנייה.");
+  s.addNotes("להצביע עם הידיים: מי חושב 5? 20? 60? 150? (20 שניות). רק אחרי ההצבעה, קליק לתשובה. עם התשובה עולה גם קטע אנימציה קצר שמתנגן לבד בלולאה: תפוח האדמה נורה בצינור ויוצא כמקלות. שיטה: שאלה מקדימה שיוצרת פער סקרנות. מבוגרים זוכרים יותר אחרי שהתחייבו לניחוש. המקור: פטנטים של מערכות חיתוך במים (Hydro cutting) נותנים 40 עד 60 רגל לשנייה, כלומר 12 עד 18 מטר לשנייה. מקור הנתונים: פטנטים של מערכות חיתוך במים (Hydro cutting): 12 עד 18 מטר לשנייה.");
 
   // ===== 3. הצגה עצמית =====
   s = pres.addSlide({ masterName: "LIGHT" });
@@ -119,9 +118,9 @@ async function icon(Comp, color, size = 512) {
   s.addShape(pres.ShapeType.ellipse, { x: 9.15, y: 1.95, w: 1.4, h: 1.4, fill: { color: COL.deep }, line: { color: COL.deep }, objectName: "ani1_c" });
   s.addImage({ data: I.user, x: 9.47, y: 2.27, w: 0.76, h: 0.76, objectName: "ani1_i" });
   s.addText([
-    { text: "מיכאל פרייליך", options: { bold: true, fontSize: 30, color: COL.gold, breakLine: true } },
+    { text: "מיכאל פרייליך", options: { bold: true, fontSize: 30, color: COL.white, breakLine: true } },
     { text: "מנהל בטיחות ואיכות סביבה", options: { fontSize: 22, color: COL.white, breakLine: true } },
-    { text: "תפוגן, מפעל לצ'יפס קפוא", options: { fontSize: 22, color: COL.soft } },
+    { text: "תפוגן, מפעל לצ'יפס קפוא", options: { fontSize: 22, color: COL.ice } },
   ], { ...R, align: "center", x: 7.2, y: 3.6, w: 5.3, h: 2.6, valign: "top", objectName: "ani1_tx" });
   [["את הקו הזה אני רואה כל יום", I.eye], ["אני אחראי שמי שעובד בו יחזור הביתה בשלום", I.user]].forEach(([t, img], i) => {
     const y = 2.0 + i * 2.1;
@@ -138,8 +137,8 @@ async function icon(Comp, color, size = 512) {
   method(s, "שלב 3: החזון", true);
   s.addShape(pres.ShapeType.ellipse, { x: 5.9, y: 1.2, w: 1.5, h: 1.5, fill: { color: COL.gold }, line: { color: COL.gold } });
   s.addImage({ data: I.eyeGold, x: 6.27, y: 1.57, w: 0.76, h: 0.76 });
-  s.addText("אחרי ההדרכה הזו, לא תסתכלו יותר על צלחת צ'יפס אותו דבר.", { ...R, align: "center", x: 1.2, y: 3.0, w: 10.9, h: 1.9, fontSize: 40, bold: true, color: COL.white, objectName: "auto1b_v" });
-  s.addText("כי תדעו כמה ידיים, מכונות ואנשי בטיחות עומדים מאחורי כל מקל.", { ...R, align: "center", x: 1.2, y: 5.0, w: 10.9, h: 0.8, fontSize: 22, color: COL.gold, objectName: "auto2b_v" });
+  s.addText("אחרי ההדרכה הזו, לא תסתכלו יותר על צלחת צ'יפס אותו דבר.", { ...R, align: "center", x: 1.2, y: 3.0, w: 10.9, h: 1.9, fontSize: 40, bold: true, color: COL.navy, objectName: "auto1b_v" });
+  s.addText("כי תדעו כמה ידיים, מכונות ואנשי בטיחות עומדים מאחורי כל מקל.", { ...R, align: "center", x: 1.2, y: 5.0, w: 10.9, h: 0.8, fontSize: 22, bold: true, color: COL.orange, objectName: "auto2b_v" });
   s.addNotes("לומר את החזון לאט, ולעצור. שני המשפטים עולים לבד מלמטה, בלי קליק. שיטה: חזון (שלב 03 במבנה ההרצאה). חזון אומר לקהל מה ירגישו וידעו בסוף, לא רק על מה מדברים.");
 
   // ===== 5. המטרות =====
@@ -149,7 +148,7 @@ async function icon(Comp, color, size = 512) {
   [["1", "להכיר את 8 התחנות בקו הייצור"], ["2", "להבין למה כל שלב קיים"], ["3", "לזהות את הסיכון הגדול בקו"]].forEach(([n, t], i) => {
     const x = 8.7 - i * 4.05;
     s.addShape(pres.ShapeType.roundRect, { x, y: 2.1, w: 3.75, h: 3.9, rectRadius: 0.2, fill: { color: i === 2 ? COL.red : COL.dark }, line: { color: i === 2 ? COL.red : COL.dark }, objectName: "ani" + (i + 1) + "_b" });
-    s.addText(n, { ...R, align: "center", shape: pres.ShapeType.ellipse, x: x + 1.2, y: 2.45, w: 1.35, h: 1.35, fontSize: 44, bold: true, color: COL.dark, fill: { color: COL.gold }, valign: "middle", objectName: "ani" + (i + 1) + "_n" });
+    s.addText(n, { ...R, align: "center", shape: pres.ShapeType.ellipse, x: x + 1.2, y: 2.45, w: 1.35, h: 1.35, fontSize: 44, bold: true, color: COL.navy, fill: { color: COL.gold }, valign: "middle", objectName: "ani" + (i + 1) + "_n" });
     s.addText(t, { ...R, align: "center", x: x + 0.2, y: 4.1, w: 3.35, h: 1.6, fontSize: 22, bold: true, color: COL.white, valign: "middle", objectName: "ani" + (i + 1) + "_t" });
   });
   s.addNotes("קליק לכל מטרה. לקרוא אותה בקול. שיטה: מטרות ברורות (שלב 04 במבנה ההרצאה). מבוגר מקשיב יותר כשהוא יודע מה ירוויח. בשקף 11 בודקים אם הושגו.");
@@ -165,7 +164,7 @@ async function icon(Comp, color, size = 512) {
   steps.forEach(([img, label], i) => {
     const row = Math.floor(i / 4), col = i % 4;
     const x = 10.0 - col * 3.05, y = 2.1 + row * 2.4, n = "ani" + (i + 1) + "_s";
-    const fill = i === 6 ? COL.accent : i === 5 ? COL.red : COL.dark;
+    const fill = i === 6 ? COL.sky : i === 5 ? COL.red : COL.dark;
     s.addShape(pres.ShapeType.roundRect, { x, y, w: 2.7, h: 2.0, rectRadius: 0.2, fill: { color: fill }, line: { color: fill }, objectName: n + "_bg" });
     s.addImage({ data: img, x: x + 1.0, y: y + 0.25, w: 0.7, h: 0.7, objectName: n + "_ic" });
     s.addText((i + 1) + ". " + label, { ...R, align: "center", x: x + 0.1, y: y + 1.1, w: 2.5, h: 0.6, fontSize: 17, bold: true, color: COL.white, objectName: n + "_tx" });
@@ -179,19 +178,17 @@ async function icon(Comp, color, size = 512) {
   titleDark(s, "כמה זמן לוקח לכם לקלף תפוח אדמה?", "בבית, עם סכין קילוף. ובמפעל?");
   s.addImage({ data: I.potato, x: 9.3, y: 2.1, w: 3.0, h: 3.0 });
   box(s, [
-    { text: "בבית", options: { bold: true, fontSize: 24, color: COL.gold, breakLine: true } },
-    { text: "סכין קילוף, דקה לתפוח אחד", options: { fontSize: 20, color: COL.white } },
-  ], { x: 4.9, y: 2.1, w: 4.0, h: 1.8, fill: { color: COL.deep }, objectName: "ani1_home" });
+    { text: "בבית", options: { bold: true, fontSize: 24, color: COL.accent, breakLine: true } },
+    { text: "סכין קילוף, דקה לתפוח אחד", options: { fontSize: 20, color: COL.ink } },
+  ], { x: 4.9, y: 2.1, w: 4.0, h: 1.8, fill: { color: COL.ice }, objectName: "ani1_home" });
   box(s, [
-    { text: "במפעל", options: { bold: true, fontSize: 24, color: COL.gold, breakLine: true } },
-    { text: "סיר לחץ ענק עם קיטור. משחררים את הלחץ בבת אחת, הקליפה מתנפחת ומתקלפת, ומברשות מורידות אותה.", options: { fontSize: 18, color: COL.white } },
-  ], { x: 0.6, y: 2.1, w: 4.0, h: 3.0, fill: { color: COL.deep }, objectName: "ani2_fac" });
+    { text: "במפעל", options: { bold: true, fontSize: 24, color: COL.accent, breakLine: true } },
+    { text: "סיר לחץ ענק עם קיטור. משחררים את הלחץ בבת אחת, הקליפה מתנפחת ומתקלפת, ומברשות מורידות אותה.", options: { fontSize: 18, color: COL.ink } },
+  ], { x: 0.6, y: 2.1, w: 4.0, h: 3.0, fill: { color: COL.ice }, objectName: "ani2_fac" });
   s.addImage({ path: __dirname + "/clip-peel.gif", x: 0.6, y: 5.25, w: 3.3, h: 1.5, objectName: "ani2_clip" });
   s.addText("קיטור בלחץ של 6 עד 12 בר, לשניות ספורות", { ...R, x: 4.1, y: 5.7, w: 5.2, h: 0.6, fontSize: 18, bold: true, color: COL.accent, objectName: "ani3_tx" });
   plant(s, "נמדד בשניות");
-  s.addNotes("לשאול את הכיתה: כמה זמן לוקח לכם לקלף תפוח אדמה אחד בבית? לתת ל-2 או 3 אנשים לענות (15 שניות). קליק: 'בבית'. ואז: ובמפעל, כשצריך לקלף טונות בשעה? קליק: 'במפעל', ויחד איתו עולה קטע אנימציה שמתנגן לבד: הלחץ עולה, משתחרר, והקליפה עפה. קליק: השורה התחתונה. שיטה: ניחוש והשוואה בין המוכר לחדש. הקהל מתחיל ממה שהוא עושה בבית, ולכן הפער מול המפעל נחרט. נתון להוסיף בעל פה: כל שנייה נוספת בקיטור מורידה עוד חצי אחוז מתפוח האדמה לפסולת, ולכן מכוונים את הזמן בדיוק. השוואה: צמיג של רכב מנופח בערך ל-2 בר, כלומר הלחץ בקולף פי 3 עד 6. אם יש לך את הנתון של הקולף אצלנו, להחליף בו. מסר שתול: התגית הירוקה. לא להסביר אותה, רק לומר חצי משפט כמו: וגם פה, בודקים.");
-
-  src(s, "FreshPlaza, Evolution of potato peeling; PotatoPro");
+  s.addNotes("לשאול את הכיתה: כמה זמן לוקח לכם לקלף תפוח אדמה אחד בבית? לתת ל-2 או 3 אנשים לענות (15 שניות). קליק: 'בבית'. ואז: ובמפעל, כשצריך לקלף טונות בשעה? קליק: 'במפעל', ויחד איתו עולה קטע אנימציה שמתנגן לבד: הלחץ עולה, משתחרר, והקליפה עפה. קליק: השורה התחתונה. שיטה: ניחוש והשוואה בין המוכר לחדש. הקהל מתחיל ממה שהוא עושה בבית, ולכן הפער מול המפעל נחרט. נתון להוסיף בעל פה: כל שנייה נוספת בקיטור מורידה עוד חצי אחוז מתפוח האדמה לפסולת, ולכן מכוונים את הזמן בדיוק. השוואה: צמיג של רכב מנופח בערך ל-2 בר, כלומר הלחץ בקולף פי 3 עד 6. אם יש לך את הנתון של הקולף אצלנו, להחליף בו. מסר שתול: התגית הירוקה. לא להסביר אותה, רק לומר חצי משפט כמו: וגם פה, בודקים. מקור הנתונים: FreshPlaza, Evolution of potato peeling; PotatoPro.");
 
   // ===== 6. שאלה מנחה: למה חולטים =====
   s = pres.addSlide({ masterName: "LIGHT" });
@@ -204,9 +201,7 @@ async function icon(Comp, color, size = 512) {
     { text: "החליטה (בלנשינג) במים של 60 עד 85 מעלות מנטרלת את האנזימים שמשחירים את תפוח האדמה, שוטפת סוכרים מהפנים כדי שהצבע יהיה אחיד, ומבשלת את הפנים מראש.", options: { fontSize: 19, color: COL.ink } },
   ], { x: 0.6, y: 4.9, w: 12.1, h: 1.75, fill: { color: COL.tint }, objectName: "ani1_ans" });
   plant(s, "נבדק בטמפרטורה");
-  s.addNotes("לשאול ולחכות 5 שניות בשקט. לא למהר לענות. אם אין תשובה, הרמז על השיש (תפוח חתוך משחיר). קליק לתשובה. שיטה: שאלה מנחה (סוקרטית). הקהל מגיע לתשובה בעצמו ולכן זוכר. בבטיחות: 'למה לדעתכם יש פה מעקה?' עדיף על 'חובה מעקה'. מסר שתול: התגית הירוקה. לא להסביר אותה, רק לומר חצי משפט כמו: וגם פה, בודקים.");
-
-  src(s, "PotatoPro, Frozen French Fries; Idaho Potato Commission");
+  s.addNotes("לשאול ולחכות 5 שניות בשקט. לא למהר לענות. אם אין תשובה, הרמז על השיש (תפוח חתוך משחיר). קליק לתשובה. שיטה: שאלה מנחה (סוקרטית). הקהל מגיע לתשובה בעצמו ולכן זוכר. בבטיחות: 'למה לדעתכם יש פה מעקה?' עדיף על 'חובה מעקה'. מסר שתול: התגית הירוקה. לא להסביר אותה, רק לומר חצי משפט כמו: וגם פה, בודקים. מקור הנתונים: PotatoPro, Frozen French Fries; Idaho Potato Commission.");
 
   // ===== 7. שלושה מספרים =====
   s = pres.addSlide({ masterName: "LIGHT" });
@@ -221,12 +216,11 @@ async function icon(Comp, color, size = 512) {
   });
   s.addText("ההקפאה: אוויר של מינוס 35 עד 40 מעלות, וכל צ'יפס קופא לחוד (IQF). לכן הם לא נדבקים בשקית.", { ...R, x: 0.6, y: 5.45, w: 12.1, h: 0.6, fontSize: 18, color: COL.mute, objectName: "ani4_tx" });
   plant(s, "מודדים, לא מנחשים");
-  s.addNotes("קליק לכל מספר, ולעצור אחרי כל אחד. שיטה: חלוקה למנות קטנות (Chunking). הזיכרון הקצר מחזיק מעט פריטים, ולכן 3 מספרים יישארו ו-20 לא. בבטיחות: 3 כללים לעבודה בגובה, לא שקף עם 15. הערה: הטמפרטורה והזמן משתנים לפי עובי החיתוך והמוצר; אם יש לך את הנתונים של הקו במפעל, להחליף בהם. קליק אחרון: המיתוס. לשאול קודם: מי חשב שהצ'יפס בשקית עוד לא טוגן? ורק אז קליק (שיטה: שבירת מיתוס, אמונה שמופרכת נחרטת חזק יותר). נתון בונוס: בטיגון המקדים הצ'יפס סופג 4 עד 8 אחוז שמן. מסר שתול: התגית הירוקה. לא להסביר אותה, רק לומר חצי משפט כמו: וגם פה, בודקים.");
+  s.addNotes("קליק לכל מספר, ולעצור אחרי כל אחד. שיטה: חלוקה למנות קטנות (Chunking). הזיכרון הקצר מחזיק מעט פריטים, ולכן 3 מספרים יישארו ו-20 לא. בבטיחות: 3 כללים לעבודה בגובה, לא שקף עם 15. הערה: הטמפרטורה והזמן משתנים לפי עובי החיתוך והמוצר; אם יש לך את הנתונים של הקו במפעל, להחליף בהם. קליק אחרון: המיתוס. לשאול קודם: מי חשב שהצ'יפס בשקית עוד לא טוגן? ורק אז קליק (שיטה: שבירת מיתוס, אמונה שמופרכת נחרטת חזק יותר). נתון בונוס: בטיגון המקדים הצ'יפס סופג 4 עד 8 אחוז שמן. מסר שתול: התגית הירוקה. לא להסביר אותה, רק לומר חצי משפט כמו: וגם פה, בודקים. מקור הנתונים: PotatoPro, Turnkey frozen french fry line; יצרני מקפיאי IQF.");
   s.addText([
     { text: "ומיתוס: ", options: { bold: true, color: COL.red } },
     { text: "\"צ'יפס קפוא עוד לא טוגן\"? הוא כבר טוגן פעם אחת במפעל. בבית מטגנים בפעם השנייה.", options: { color: COL.ink, bold: true } },
   ], { ...R, x: 0.6, y: 6.15, w: 12.1, h: 0.6, fontSize: 18, objectName: "ani5_myth" });
-  src(s, "PotatoPro, Turnkey frozen french fry line; יצרני מקפיאי IQF");
 
   // ===== 8. תרחיש: אמוניה =====
   s = pres.addSlide({ masterName: "LIGHT" });
@@ -251,7 +245,7 @@ async function icon(Comp, color, size = 512) {
   [["באיזו מהירות תפוח האדמה פוגש את הסכין?", "כ-60 קמ\"ש"], ["למה חולטים לפני הטיגון?", "שלא ישחים"], ["כמה פעמים טוגן הצ'יפס שאכלתם?", "פעמיים"]].forEach(([q, a], i) => {
     const y = 1.75 + i * 1.65;
     s.addText(q, { ...R, shape: pres.ShapeType.roundRect, rectRadius: 0.15, x: 4.3, y, w: 8.4, h: 1.3, fontSize: 22, color: COL.ink, fill: { color: COL.tint }, margin: 16, valign: "middle" });
-    s.addText(a, { ...R, align: "center", shape: pres.ShapeType.roundRect, rectRadius: 0.15, x: 0.6, y, w: 3.4, h: 1.3, fontSize: 26, bold: true, color: COL.dark, fill: { color: COL.gold }, valign: "middle", objectName: "ani" + (i + 1) + "_a" });
+    s.addText(a, { ...R, align: "center", shape: pres.ShapeType.roundRect, rectRadius: 0.15, x: 0.6, y, w: 3.4, h: 1.3, fontSize: 26, bold: true, color: COL.navy, fill: { color: COL.gold }, valign: "middle", objectName: "ani" + (i + 1) + "_a" });
   });
   s.addNotes("לשאול כל שאלה בקול, לתת לכיתה לענות ביחד, ורק אז קליק לתשובה. שיטה: שליפה מהזיכרון (Retrieval practice). לשלוף מידע מחזק אותו יותר מלשמוע אותו שוב. זו גם בדיקה של רמה 2 במודל קירקפטריק: האם למדו.");
 
@@ -260,8 +254,8 @@ async function icon(Comp, color, size = 512) {
   bg(s);
   s.addImage({ data: I.potato, x: 5.77, y: 0.75, w: 1.8, h: 1.8, objectName: "auto1b_p" });
   s.addText("התחלנו עם תפוח אדמה אחד.", { ...R, align: "center", x: 1.0, y: 2.75, w: 11.3, h: 0.8, fontSize: 30, color: COL.soft, objectName: "auto2b_a" });
-  s.addText("עד שהגיע למקפיא, בדקו אותו בכל תחנה.", { ...R, align: "center", x: 0.8, y: 3.55, w: 11.7, h: 1.1, fontSize: 44, bold: true, color: COL.white, objectName: "auto3b_b" });
-  s.addText("כך שומרים גם על אנשים: בודקים בכל שלב, כדי שכולם יחזרו הביתה.", { ...R, align: "center", x: 0.8, y: 4.85, w: 11.7, h: 0.8, fontSize: 26, bold: true, color: COL.gold, objectName: "auto4b_c" });
+  s.addText("עד שהגיע למקפיא, בדקו אותו בכל תחנה.", { ...R, align: "center", x: 0.8, y: 3.55, w: 11.7, h: 1.1, fontSize: 44, bold: true, color: COL.navy, objectName: "auto3b_b" });
+  s.addText("כך שומרים גם על אנשים: בודקים בכל שלב, כדי שכולם יחזרו הביתה.", { ...R, align: "center", x: 0.8, y: 4.85, w: 11.7, h: 0.8, fontSize: 26, bold: true, color: COL.orange, objectName: "auto4b_c" });
   s.addText("תודה | מיכאל פרייליך", { ...R, align: "center", x: 1.0, y: 6.2, w: 11.3, h: 0.5, fontSize: 16, color: COL.soft, objectName: "auto5b_d" });
   s.addNotes("סיום (20 שניות). שלושת המשפטים עולים לבד, בלי קליק. לומר אותם לאט, ולשתוק אחרי האחרון. שיטה: סגירת מעגל, חוזרים לתפוח האדמה משקף הפתיחה, וזה גם פורע את התגית הירוקה שחזרה בשקפים 6 עד 10 ('בכל תחנה: בדיקה').");
 
