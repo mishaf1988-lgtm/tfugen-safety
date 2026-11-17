@@ -2090,6 +2090,8 @@ export const OD_TRASH_DIR = '\u05dc\u05de\u05d7\u05d9\u05e7\u05d4';
 export const OD_REPORTS_DIR = '00_\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1';
 export const OD_ROOT_BACKUP = /^\u05dc\u05d5\u05d7 \u05d1\u05e7\u05e8\u05d4 - \u05d2\u05d9\u05d1\u05d5\u05d9 \d{2}\.\d{2}\.\d{4}[^\/]{0,80}\.xlsx$/;
 export const OD_TRASH_EXTRA = /\.(ppsx|pps|ppt|html?)$/i;
+// tables whose file_url may point at a folder: od_trash refuses an empty folder any of them links to
+export const OD_TRASH_LINKED = ['inc', 'docs', 'equip_inspections', 'tr', 'toolbox_talks'];
 export function odTrashCheck(b, strict) {
   if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
   if (String(b.why || '').trim().length < 5) return { error: 'why required' };
@@ -4526,6 +4528,12 @@ async function routineDbHandle(context) {
       if (c.folder) {
         if (!sj.folder) return jsonResp({ ok: false, error: 'source is not a folder' }, 200, {});
         if (sj.folder.childCount !== 0) return jsonResp({ ok: false, error: 'folder is not empty' }, 200, {});
+        // security review 17/11/2026: an empty folder a row links to (an employee's accident folder) stays; a failed read refuses too
+        for (const t of OD_TRASH_LINKED) {
+          const lr = await fetch(url + '/rest/v1/' + t + '?select=id&limit=1&file_url=like.' + encodeURIComponent('*' + c.from + '*'), { headers: h, signal: tmo(SB_MS) }).catch(() => null);
+          if (!lr || !lr.ok) return jsonResp({ ok: false, error: 'link check ' + t + ' ' + (lr ? lr.status : 'failed') }, 200, {});
+          if ((await lr.json().catch(() => [1])).length) return jsonResp({ ok: false, error: 'folder is linked from ' + t }, 200, {});
+        }
       } else if (!sj.file) return jsonResp({ ok: false, error: 'source is not a file' }, 200, {});
       let tr = await fetch(G + enc(c.to) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
       if (tr.status === 404) {
@@ -4538,6 +4546,12 @@ async function routineDbHandle(context) {
       } else if (!tr.ok) return jsonResp({ ok: false, error: 'folder ' + tr.status }, 200, {});
       const tj = await tr.json();
       if (!tj.folder) return jsonResp({ ok: false, error: 'not a folder' }, 200, {});
+      // security review 17/11/2026: the folder is checked empty again right before the move (a file added meanwhile stays put)
+      if (c.folder) {
+        const again = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(sj.id) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
+        const aj = again.ok ? await again.json().catch(() => ({})) : {};
+        if (!aj.folder || aj.folder.childCount !== 0) return jsonResp({ ok: false, error: 'folder is not empty' }, 200, {});
+      }
       const mv = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(sj.id) + '?@microsoft.graph.conflictBehavior=rename', {
         method: 'PATCH', headers: gh, body: JSON.stringify({ parentReference: { id: tj.id }, name: c.name }), signal: tmo(GRAPH_MS),
       });
