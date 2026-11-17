@@ -11,6 +11,8 @@ TRANS = {
     11: '<p:transition spd="med"><p:push dir="u"/></p:transition>',
     12: '<p:transition spd="slow"><p:fade thruBlk="1"/></p:transition>',
 }
+GRAD = ('<a:gradFill rotWithShape="1"><a:gsLst><a:gs pos="0"><a:srgbClr val="14485F"/></a:gs>'
+        '<a:gs pos="100000"><a:srgbClr val="0B2635"/></a:gs></a:gsLst><a:lin ang="0" scaled="0"/></a:gradFill>')
 DEFAULT_TRANS = '<p:transition spd="med"><p:wipe dir="l"/></p:transition>'
 
 
@@ -98,6 +100,13 @@ for item in zin.infolist():
         autos = sorted(((int(k), sp, d) for sp, k, d in re.findall(r'<p:cNvPr id="(\d+)" name="auto(\d+)([br])_', x)))
         autos = [(sp, d) for _, sp, d in autos]
         add = TRANS.get(n, DEFAULT_TRANS) + (timing(groups, zoom, autos) if (groups or autos) else "")
+        # תבנית תפוגן: פס כותרת ורקע מדורגים 0B2635 עד 14485F
+        x = re.sub(r'(name="hdr_[^"]*".*?)<a:solidFill><a:srgbClr val="0B2635"/></a:solidFill>',
+                   lambda mm: mm.group(1) + GRAD, x, flags=re.S)
+        # עברית: שפת הטקסט he-IL, אחרת PowerPoint בטלפון מציג עברית בכיוון ובגופן שגויים
+        x = x.replace('lang="en-US"', 'lang="he-IL" altLang="en-US"')
+        # תיבה עם כמה קטעי טקסט יוצאת מ-pptxgenjs בלי rtl: הנקודה בסוף המשפט קופצת לצד הלא נכון
+        x = re.sub(r'<a:pPr (?![^>]*rtl=)', '<a:pPr rtl="1" ', x)
         x = x.replace("</p:clrMapOvr></p:sld>", "</p:clrMapOvr>" + add + "</p:sld>")
         assert add in x, item.filename
         data = x.encode("utf-8")
