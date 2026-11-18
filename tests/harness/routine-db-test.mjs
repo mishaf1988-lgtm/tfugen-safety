@@ -1082,6 +1082,24 @@ const callIn = async (body) => {
       });
       check('equip_add fields were found in the source (' + addFields.length + ')', addFields.length >= 10, addFields);
       check('every report field equip_add writes, expiry_set updates (or IDENTITY says why not)', !gaps.length, gaps);
+      // 18/11/2026 (dev request 35pc: relief valves stayed "needs checking" after 26 certificates and Michael's "yes, all new")
+      { const OK = '\u05de\u05d5\u05ea\u05e8 \u05dc\u05e9\u05d9\u05de\u05d5\u05e9', NEED = '\u05d8\u05e2\u05d5\u05df \u05d0\u05d9\u05de\u05d5\u05ea';
+        const eb = { op: 'expiry_set', table: 'equip_inspections', id: 'xl1008-e91', agent: 'routine-wa-assistant', why: '26 certificates, Michael: all new', doc: 'valves 2026' };
+        const p1 = expiryPatch({ ...eb, s: OK }, { e: '2031-01-12', s: NEED, notes: '' }, '2026-11-18');
+        check('equip: s "allowed for use" with a document and a future e: set, and the note says from what', p1.patch && p1.patch.s === OK && p1.patch.e === undefined && p1.patch.notes.indexOf(NEED + ' -> ' + OK) >= 0, p1);
+        const p2 = expiryPatch({ ...eb, s: OK, e: '2031-01-12' }, { e: '2027-07-22', s: NEED }, '2026-11-18');
+        check('equip: s "allowed for use" with a new e in the same call: both set', p2.patch && p2.patch.s === OK && p2.patch.e === '2031-01-12', p2);
+        check('equip: s "allowed for use" without a document, with a past e, or with e null: refused',
+          !!expiryPatch({ ...eb, doc: undefined, s: OK }, { e: '2031-01-12' }, '2026-11-18').error
+          && !!expiryPatch({ ...eb, s: OK }, { e: '2026-01-01' }, '2026-11-18').error
+          && !!expiryPatch({ ...eb, s: OK, e: null }, { e: '2031-01-12' }, '2026-11-18').error);
+        check('equip: a disqualified or out-of-tracking row never moves to "allowed for use" (security review)',
+          !!expiryPatch({ ...eb, s: OK, e: '2031-01-12' }, { e: '2027-01-01', s: '\u05e4\u05e1\u05d5\u05dc' }, '2026-11-18').error
+          && !!expiryPatch({ ...eb, s: OK, e: '2031-01-12' }, { e: null, s: '\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9' }, '2026-11-18').error);
+        const p4 = expiryPatch({ ...eb, e: '2027-11-10' }, { e: '2026-11-10', s: NEED }, '2026-11-18');
+        check('equip: a new e alone leaves "needs checking" as it is (only s moves it)', p4.patch && p4.patch.s === undefined, p4);
+        check('equip: any other s stays refused', !!expiryPatch({ ...eb, s: '\u05ea\u05e7\u05d9\u05df' }, { e: '2031-01-12' }, '2026-11-18').error);
+      }
       // 18/11/2026 (dev-20261118142240-t2n8: the ammonia detector calibration got its new e and stayed "expired")
       { const EXP = '\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3', CHK = '\u05d8\u05e2\u05d5\u05df \u05d0\u05d9\u05de\u05d5\u05ea', T = '2026-11-18';
         const eb = { op: 'expiry_set', table: 'equip_inspections', id: 'q2', agent: 'wa-assistant', why: 'calibration certificate', doc: '09_x/cert.pdf' };
