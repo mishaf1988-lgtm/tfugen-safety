@@ -14,6 +14,7 @@
 - אחרי תיוק ידני מהנכנס: לעדכן `filed`/`wait` ברשומת `mail_filing` האחרונה (`.claude/skills/tfugen-db/references/lessons.md:149`)
 - תג `eb` רק לתאריך תפוגה; כל תאריך אחר דרך `fd` (`.claude/skills/tfugen-screen-review/SKILL.md:17`)
 - מחיקת שורה (`equip_inspections`, `docs`, `inc`) מהענן רק ב-`del_ask`, בקשה אחת פתוחה בכל פעם; החזרה מהגיבוי (200 אחרונות) ב-`undo_ask`, בלחיצה של מיכאל (`.claude/skills/tfugen-db/SKILL.md:89`)
+- תוקף חדש בציוד (`expiry_set` עם `e`) מעביר לבד את `s` בין "כשיר לעבודה" ל"פג תוקף"; ל"כשיר" רק עם `doc`; אותו `e` שוב מתקן שורה ישנה; "טעון אימות" לא זז (18/11/2026, `functions/api/routine-db.js` `expiryPatch`)
 - תיוק תסקיר עד הסוף בריצה אחת: `expiry_set` עם `report_number`, `inspector` ו-`doc`; ציוד בלי שורה = `equip_add` רק כש"כשיר לעבודה"; לא `dev_request` (`project-files/wa-topics/docs.md:15`)
 - אחרי תיוק תסקיר חדש: באותה הודעה "להעביר את הקודמים ל'פג תוקף'?" עם "בצע"/"לא", ואז `od_expire` לכל קובץ בפקודה נפרדת (`project-files/wa-topics/docs.md:15`)
 - `od_expire` מעביר את הישן מ-`בתוקף` ל-`פג תוקף` שלידה, באותו שם; השרת מסרב אם החדש לא שם (`project-files/wa-topics/docs.md:15`)
