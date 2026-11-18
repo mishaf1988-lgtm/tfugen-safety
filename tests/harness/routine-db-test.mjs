@@ -109,6 +109,8 @@ const callIn = async (body) => {
   console.log('\n2. select: only the listed tables, no embedding');
   let r = await call({ op: 'select', table: 'docs', query: 'select=id,n,e&e=lte.2026-12-31' });
   check('docs: read, the query passed on', r.json.ok && calls.some((c) => c.url === SB + '/rest/v1/docs?select=id%2Cn%2Ce&e=lte.2026-12-31'), calls.map((c) => c.url));
+  check('select with q instead of query: refused, nothing fetched', await (async () => { const n = calls.length; const x = await call({ op: 'select', table: 'docs', q: 'select=id&id=eq.x' }); return x.status === 400 && /field not allowed: q/.test(x.json.error) && calls.length === n; })());
+  check('select with agent: allowed', (await call({ op: 'select', table: 'docs', query: 'select=id', agent: 'folder-audit' })).json.ok === true);
   check('app_users: refused', (await call({ op: 'select', table: 'app_users', query: 'select=*' })).status === 400);
   check('server_state through select: refused', (await call({ op: 'select', table: 'server_state' })).status === 400);
   check('embedding another table: refused', cleanQuery('select=id,app_users(*)', 'docs') === null);

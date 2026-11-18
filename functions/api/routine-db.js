@@ -12,7 +12,7 @@
 // Israel).
 //
 // What it can do, and nothing else:
-//   select     GET one table of TABLES with a PostgREST query string. No "("
+//   select     {table, query, agent?}: GET one table of TABLES with a PostgREST query string (any other field = 400). No "("
 //              in select=, so no embedding of a table that is not on the list.
 //              Medical tables (med, hearing_tests) give only the expiry, and
 //              trustee_reports where, when, which task and who, never the free text
@@ -2924,6 +2924,8 @@ async function routineDbHandle(context) {
       return jsonResp({ ok: true, rows: empNamesRows(await r.json()) }, 200, {});
     }
     if (body.op === 'select') {
+      // 18/11/2026 (folder audit 21): a lookup sent as {q: ...} instead of {query: ...} silently read the whole table
+      for (const k of Object.keys(body)) if (['op', 'table', 'query', 'agent'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k + ' (the filter goes in query)' }, 400, {});
       if (TABLES.indexOf(body.table) < 0) return jsonResp({ ok: false, error: 'table not allowed' }, 400, {});
       const q = cleanQuery(body.query, body.table);
       if (q === null) return jsonResp({ ok: false, error: 'query not allowed' }, 400, {});
