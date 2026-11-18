@@ -41,5 +41,16 @@ def batch_problems(name, text):
 real = [p for b in BATCH for p in batch_problems(b, open(os.path.join(ROOT, 'project-files', b), encoding='utf-8').read())]
 check('every batch agent reports todo/done/left/left_what and reads its last agent_log', real == [], real)
 check('a batch prompt without left_what fails', len(batch_problems('a', 'x\n---\n"todo" "done" "left" agent_log\n---\n')) == 1)
+# asked-before (18/11/2026, quality checker: repeated twice): before a question in for_michael every agent greps
+# DECISIONS.md and the notebook (item_card) and writes the answer instead; a question with no decision stays.
+def asked_problems(text):
+    i = text.find('לפני שאלה ב-`for_michael`')
+    if i < 0: return ['no asked-before rule']
+    rule = text[i:i + 900]
+    return [w for w in ('DECISIONS.md', 'item_card', 'learned', 'השאלה נשארת ב-`for_michael`') if w not in rule]
+common = open(os.path.join(ROOT, 'project-files', 'agent-common.md'), encoding='utf-8').read()
+check('agent-common: grep DECISIONS and the notebook before a question in for_michael', asked_problems(common) == [], asked_problems(common))
+check('the rule keeps a new question (no decision) in for_michael', 'השאלה נשארת ב-`for_michael`' in common)
+check('a rule without the notebook check fails', asked_problems('לפני שאלה ב-`for_michael`: DECISIONS.md, השאלה נשארת ב-`for_michael`') != [])
 print('%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)
