@@ -2805,15 +2805,17 @@ export async function stagingPw(env, pw, liveUrl) {
   if (pw !== undefined && !(typeof pw === 'string' && STAGING_PW_RE.test(pw))) return { ok: false, bad: true, error: 'pw: 20-64 lowercase hex characters, or leave it out for a random one' };
   const set = pw === undefined ? 'random' : 'caller';
   const pass = pw === undefined ? Array.from(crypto.getRandomValues(new Uint8Array(18))).map((x) => x.toString(16).padStart(2, '0')).join('') : pw;
-  const h = { apikey: sk, Authorization: 'Bearer ' + sk, 'Content-Type': 'application/json' };
+  // a new-style secret key (sb_secret_...) is not a JWT: Supabase Auth refuses it as a Bearer token, so only apikey (18/11/2026, first live call: 403)
+  const h = /^sb_secret_/.test(sk) ? { apikey: sk, 'Content-Type': 'application/json' } : { apikey: sk, Authorization: 'Bearer ' + sk, 'Content-Type': 'application/json' };
+  const why = async (r) => { const j = await r.json().catch(() => ({})); return String((j && (j.error_code || j.msg || j.message || j.error)) || '').replace(/[^\w .:-]/g, '').slice(0, 80); };
   const lr = await fetch(su + '/auth/v1/admin/users?page=1&per_page=200', { headers: h, signal: tmo(SB_MS) });
-  if (!lr.ok) return { ok: false, error: 'list users ' + lr.status };
+  if (!lr.ok) return { ok: false, error: ('list users ' + lr.status + ' ' + (await why(lr))).trim() };
   const lj = await lr.json().catch(() => ({}));
   const users = Array.isArray(lj) ? lj : (lj.users || []);
   const u = users.filter((x) => x && String(x.email || '').toLowerCase() === STAGING_TEST_EMAIL);
   if (u.length !== 1 || !u[0].id) return { ok: false, error: 'test user not found on the test database' };
   const pr = await fetch(su + '/auth/v1/admin/users/' + encodeURIComponent(u[0].id), { method: 'PUT', headers: h, body: JSON.stringify({ password: pass }), signal: tmo(SB_MS) });
-  if (!pr.ok) return { ok: false, error: 'set password ' + pr.status };
+  if (!pr.ok) return { ok: false, error: ('set password ' + pr.status + ' ' + (await why(pr))).trim() };
   return { ok: true, set, at: new Date().toISOString() };
 }
 

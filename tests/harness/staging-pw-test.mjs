@@ -75,6 +75,21 @@ const call = async (body, env = ENV) => {
   r = await call({ op: 'staging_pw', pw }, { ...ENV, STAGING_SUPABASE_URL: STG + '/' });
   check('a trailing slash in STAGING_SUPABASE_URL is dropped (no // in the call)', r.json.ok && calls.length === 2 && calls.every((c) => c.url.startsWith(STG + '/auth/')), { r: r.json, calls: calls.map((c) => c.url) });
   r = await call({ op: 'staging_pw', pw }, { ...ENV, STAGING_SUPABASE_URL: SITE.supabaseUrl + '/' });
+  // 18/11/2026: the next live call got 403 from Supabase Auth; a new-style secret key goes only as apikey, and the reason is in the error
+  calls = [];
+  r = await call({ op: 'staging_pw', pw }, { ...ENV, STAGING_SUPABASE_SERVICE_ROLE_KEY: 'sb_secret_abc' });
+  const hdr = []; const f0 = globalThis.fetch;
+  globalThis.fetch = async (u, o = {}) => { hdr.push(o.headers || {}); return f0(u, o); };
+  await call({ op: 'staging_pw', pw }, { ...ENV, STAGING_SUPABASE_SERVICE_ROLE_KEY: 'sb_secret_abc' });
+  await call({ op: 'staging_pw', pw });
+  globalThis.fetch = f0;
+  check('sb_secret_ key: apikey only, no Bearer; a JWT key keeps the Bearer', r.json.ok && hdr.length === 4 && !hdr[0].Authorization && !hdr[1].Authorization && hdr[0].apikey === 'sb_secret_abc' && hdr[2].Authorization === 'Bearer stg-key', hdr);
+  putStatus = 403;
+  globalThis.fetch = async (u, o = {}) => (String(u).startsWith(STG + '/auth/v1/admin/users/') ? new Response(JSON.stringify({ code: 403, error_code: 'not_admin', msg: 'User not allowed' }), { status: 403 }) : f0(u, o));
+  r = await call({ op: 'staging_pw', pw });
+  globalThis.fetch = f0; putStatus = 200;
+  check('a refusal carries the reason from Supabase (not_admin), never the password', !r.json.ok && r.json.error === 'set password 403 not_admin' && r.text.indexOf(pw) < 0, r.json);
+  r = await call({ op: 'staging_pw', pw }, { ...ENV, STAGING_SUPABASE_URL: SITE.supabaseUrl + '/' });
   check('...and the live URL with a slash is still refused', !r.json.ok && /not a test project/.test(r.json.error || ''), r.json);
 
   console.log(`\n${pass} passed, ${fail} failed`);
