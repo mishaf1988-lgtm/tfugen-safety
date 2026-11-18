@@ -2790,6 +2790,33 @@ export async function liveInfo(request, env) {
 
 // Every successful write op also queues a line for the "Claude Log" sheet (02/11/2026, _claudelog.js; CLAUDE.md rule 9).
 // A failure to queue never changes the answer the caller gets.
+// 18/11/2026 (dev request from the fault alert, staging-e2e): the weekly test run set the password of the test user
+// with execute_sql of the Supabase connector, and in a scheduled run that tool waits for a tap (11/11 and 18/11/2026;
+// adding it to .claude/settings.json did not help, a scheduled run does not load it). Same answer as 09/10/2026:
+// through our server. Only the test database (STAGING_SUPABASE_URL, never the live one) and only the one test user.
+// pw from the caller = the run's password; no pw = a random one nobody sees (the reset at the end of the run).
+// The password is never echoed, logged or stored.
+export const STAGING_TEST_EMAIL = 'claude-test@' + SITE.loginDomain;
+export const STAGING_PW_RE = /^[0-9a-f]{20,64}$/;
+export async function stagingPw(env, pw, liveUrl) {
+  const su = String((env && env.STAGING_SUPABASE_URL) || '').trim().replace(/\/+$/, ''), sk = (env && env.STAGING_SUPABASE_SERVICE_ROLE_KEY) || '';
+  if (!su || !sk) return { ok: false, error: 'STAGING_SUPABASE_URL or STAGING_SUPABASE_SERVICE_ROLE_KEY is not set' };
+  if (!/^https:\/\/[a-z0-9]{20}\.supabase\.co$/.test(su) || su === SITE.supabaseUrl || su === SB_LIVE || su === liveUrl) return { ok: false, error: 'STAGING_SUPABASE_URL is not a test project URL' };
+  if (pw !== undefined && !(typeof pw === 'string' && STAGING_PW_RE.test(pw))) return { ok: false, bad: true, error: 'pw: 20-64 lowercase hex characters, or leave it out for a random one' };
+  const set = pw === undefined ? 'random' : 'caller';
+  const pass = pw === undefined ? Array.from(crypto.getRandomValues(new Uint8Array(18))).map((x) => x.toString(16).padStart(2, '0')).join('') : pw;
+  const h = { apikey: sk, Authorization: 'Bearer ' + sk, 'Content-Type': 'application/json' };
+  const lr = await fetch(su + '/auth/v1/admin/users?page=1&per_page=200', { headers: h, signal: tmo(SB_MS) });
+  if (!lr.ok) return { ok: false, error: 'list users ' + lr.status };
+  const lj = await lr.json().catch(() => ({}));
+  const users = Array.isArray(lj) ? lj : (lj.users || []);
+  const u = users.filter((x) => x && String(x.email || '').toLowerCase() === STAGING_TEST_EMAIL);
+  if (u.length !== 1 || !u[0].id) return { ok: false, error: 'test user not found on the test database' };
+  const pr = await fetch(su + '/auth/v1/admin/users/' + encodeURIComponent(u[0].id), { method: 'PUT', headers: h, body: JSON.stringify({ password: pass }), signal: tmo(SB_MS) });
+  if (!pr.ok) return { ok: false, error: 'set password ' + pr.status };
+  return { ok: true, set, at: new Date().toISOString() };
+}
+
 export async function onRequest(context) {
   const copy = context.request.method === 'POST' ? context.request.clone() : null;
   const res = await routineDbHandle(context);
@@ -2880,6 +2907,11 @@ async function routineDbHandle(context) {
     return { ids, live };
   };
   try {
+    if (body.op === 'staging_pw') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'pw'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const r = await stagingPw(env, body.pw, url);
+      return jsonResp(r, r.bad ? 400 : 200, {});
+    }
     if (body.op === 'emp_names') {
       // 07/11/2026: the names only, never the ID, phone or mail (emp stays out of select); for matching a protocol's owners
       // and for tools/pii-redact.py (IDs, phones and mails it finds by their shape).
