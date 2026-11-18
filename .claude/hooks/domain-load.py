@@ -43,6 +43,25 @@ def branch_text(root, k, v, text):
     return "ענף " + v["name"] + " (" + v["file"] + "):\n" + body
 
 
+# 18/11/2026 (Michael: "put it into the branches as a permanent work rule"): the section "חוקי עבודה לכל הענפים" of
+# domains/README.md goes with every branch that loads, once, so a rule for all branches is written in one place.
+def common_rules(root):
+    try:
+        lines = open(os.path.join(root, "project-files/domains/README.md"), encoding="utf-8").read().split("\n")
+    except Exception:
+        return ""
+    head = "## \u05d7\u05d5\u05e7\u05d9 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05dc\u05db\u05dc \u05d4\u05e2\u05e0\u05e4\u05d9\u05dd"
+    if head not in lines:
+        return ""
+    sec = []
+    for l in lines[lines.index(head) + 1:]:
+        if l.startswith("## "):
+            break
+        if l.strip().startswith("- "):
+            sec.append(l.strip())
+    return (head[3:] + " (project-files/domains/README.md):\n" + "\n".join(sec)) if sec else ""
+
+
 def main():
     try:
         d = json.load(sys.stdin)
@@ -69,6 +88,9 @@ def main():
         out.append(branch_text(root, k, v, text))
     if not out:
         print("{}"); return
+    common = common_rules(root)
+    if common:
+        out.append(common)
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": "\n\n".join(out)}}, ensure_ascii=False))
 
 
