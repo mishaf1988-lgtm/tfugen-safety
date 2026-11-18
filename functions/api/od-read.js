@@ -35,10 +35,13 @@ export function safePath(p, raw, root) {
   const parts = String(p || '').split('/').filter(Boolean);
   // jpg/jpeg/png (04/11/2026, the mail-filing agent): photos land in the mail inbox folder and were refused as 'bad path'.
   // audio (07/11/2026, Michael: "do it: a meeting recording to a protocol"): a raw read only, for tools/meeting-stt.py
-  const ext = raw ? /\.(xls[xmx]?|pptx?|odp|pdf|docx?|txt|csv|jpe?g|png|m4a|mp3|wav|aac|ogg|opus|webm)$/i : /\.(xls[xm]|pptx)$/i;
+  // 18/11/2026 (folder audit 17, Michael in the questionnaire: "\u05d1\u05e6\u05e2: \u05dc\u05d0\u05e4\u05e9\u05e8 \u05dc\u05e9\u05e8\u05ea \u05dc\u05e7\u05e8\u05d5\u05d0 zip"): a .zip as raw bytes only,
+  // so a folder audit can list what an old archive holds; the server never opens it.
+  const ext = raw ? /\.(xls[xmx]?|pptx?|odp|pdf|docx?|txt|csv|zip|jpe?g|png|m4a|mp3|wav|aac|ogg|opus|webm)$/i : /\.(xls[xm]|pptx)$/i;
   if (!parts.length || parts.some((x) => x === '..' || x === '.') || !ext.test(parts[parts.length - 1])) return null;
   // Photos only inside the safety folder: never from the whole desktop or the old ISO folder (security review 04/11/2026).
-  if (root && /\.(jpe?g|png)$/i.test(parts[parts.length - 1])) return null;
+  // and a .zip the same (security review 18/11/2026: an archive of photos would get round the line above).
+  if (root && /\.(jpe?g|png|zip)$/i.test(parts[parts.length - 1])) return null;
   if (root === 'iso-old') return raw ? ISO_OLD + parts.join('/') : null;
   // The whole desktop (24/10/2026, Michael: "I want access not only to the safety folder, to the desktop"):
   // the same read-only raw read with the one-off token; writing stays inside the safety folder.
