@@ -1,7 +1,7 @@
 // staging_pw (18/11/2026, dev request from the fault alert): the weekly staging-e2e run sets the test user's
 // password through /api/routine-db instead of execute_sql, which waits for a tap in a scheduled run.
 // Only the test database, only claude-test@tfugen.local, the password is never echoed.
-import { onRequest, stagingPw, STAGING_TEST_EMAIL } from './_build/routine-db.mjs';
+import { onRequest, stagingPw, STAGING_TEST_EMAIL, STAGING_PW_RE } from './_build/routine-db.mjs';
 import { SITE } from './_build/_shared.mjs';
 
 let pass = 0, fail = 0;
@@ -26,6 +26,11 @@ const call = async (body, env = ENV) => {
 
 (async () => {
   console.log('staging-pw-test');
+  // pairs: 3 that must match (the run's token_hex(10), 36 hex, the 64 max) and 3 that must not
+  const yes = ['0f1e2d3c4b5a69788796', 'a'.repeat(36), '0123456789abcdef'.repeat(4)];
+  const no = ['0f1e2d3c4b5a6978879', '0123456789ABCDEF0123', 'a'.repeat(65)];
+  check('STAGING_PW_RE: 3 real passwords match, 3 wrong ones (19 chars, uppercase, 65 chars) do not', yes.every((x) => STAGING_PW_RE.test(x)) && no.every((x) => !STAGING_PW_RE.test(x)));
+  check('the test email is claude-test at the login domain', STAGING_TEST_EMAIL === 'claude-test@' + SITE.loginDomain);
   // 1. caller password: set on the test user only, on the test database only, never echoed
   calls = [];
   const pw = 'a1b2c3d4e5f6a7b8c9d0';
