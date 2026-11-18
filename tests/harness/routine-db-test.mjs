@@ -1082,6 +1082,24 @@ const callIn = async (body) => {
       });
       check('equip_add fields were found in the source (' + addFields.length + ')', addFields.length >= 10, addFields);
       check('every report field equip_add writes, expiry_set updates (or IDENTITY says why not)', !gaps.length, gaps);
+      // 18/11/2026 (dev-20261118142240-t2n8: the ammonia detector calibration got its new e and stayed "expired")
+      { const EXP = '\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3', CHK = '\u05d8\u05e2\u05d5\u05df \u05d0\u05d9\u05de\u05d5\u05ea', T = '2026-11-18';
+        const eb = { op: 'expiry_set', table: 'equip_inspections', id: 'q2', agent: 'wa-assistant', why: 'calibration certificate', doc: '09_x/cert.pdf' };
+        const a = expiryPatch({ ...eb, e: '2027-11-10' }, { e: '2026-11-01', s: EXP }, T);
+        check('equipment: a later e on an expired row moves s to fit for work', a.patch && a.patch.e === '2027-11-10' && a.patch.s === EQUIP_FIT, a);
+        const b2 = expiryPatch({ ...eb, e: '2027-11-10' }, { e: '2027-11-10', s: EXP }, T);
+        check('equipment: the same e again with no note line from a document: refused (security review)', !!b2.error, b2);
+        const b3 = expiryPatch({ ...eb, e: '2027-11-10' }, { e: '2027-11-10', s: EXP, notes: '18/11/2026 Claude (wa-assistant): \u05ea\u05d5\u05e7\u05e3 10/11/2025 -> 10/11/2027. cert. \u05de\u05e1\u05de\u05da: 09_x/cert.pdf' }, T);
+        check('equipment: the same e again, the note shows it came from a document: s fixed (the row from before the rule)', b3.patch && b3.patch.s === EQUIP_FIT && !('e' in b3.patch), b3);
+        check('equipment: moving to fit for work without a document refused', !!expiryPatch({ ...eb, doc: undefined, e: '2027-11-10' }, { e: '2027-11-10', s: EXP }, T).error && !!expiryPatch({ ...eb, doc: undefined, e: '2027-12-10' }, { e: '2027-11-10', s: EXP }, T).error);
+        const c = expiryPatch({ ...eb, e: '2026-10-01' }, { e: '2026-12-01', s: EQUIP_FIT }, T);
+        check('equipment: an earlier e that already passed moves fit for work to expired', c.patch && c.patch.s === EXP, c);
+        const d = expiryPatch({ ...eb, e: '2027-11-10' }, { e: '2027-07-22', s: CHK }, T);
+        check('equipment: "needs checking" stays when e moves', d.patch && !('s' in d.patch) && d.patch.e === '2027-11-10', d);
+        const f = expiryPatch({ ...eb, file_url: FILE_URL_PREFIX + 'Documents/r.pdf' }, { e: '2027-11-10', s: EXP }, T);
+        check('equipment: a call without e does not touch s', f.patch && !('s' in f.patch), f);
+        const g = expiryPatch({ ...eb, e: '2026-10-01' }, { e: '2026-12-01', s: '\u05de\u05d5\u05ea\u05e8 \u05dc\u05e9\u05d9\u05de\u05d5\u05e9' }, T);
+        check('equipment: "allowed for use" with a passed e goes to expired; a future e keeps it', g.patch && g.patch.s === EXP && !('s' in (expiryPatch({ ...eb, e: '2028-01-01' }, { e: '2027-11-10', s: '\u05de\u05d5\u05ea\u05e8 \u05dc\u05e9\u05d9\u05de\u05d5\u05e9' }, T).patch || {})), g); }
       // 15/11/2026 (Michael in the interview: the filing agent fills the contractor insurance date, always with its file)
       { const cb = { op: 'expiry_set', table: 'ctr', id: 'ctr26-1', agent: 'mail-filing', why: 'insurance certificate', doc: '03_x/ins.pdf' };
         const p1 = expiryPatch({ ...cb, ins: '2027-03-31' }, { id: 'ctr26-1', ins: null, ins_src: null }, '2026-11-15');

@@ -69,7 +69,8 @@
 //   client_errors (27/10/2026) {agent, since}: errors from users' browsers, grouped, no user name
 //   expiry_set  (11/10/2026, Michael in the questionnaire: "בצע: תיוק מייל + תוקף")
 //              update one row of docs / equip_inspections after a document was read:
-//              e, file_url (only under Michael's OneDrive), s (docs) or d (equipment).
+//              e, file_url (only under Michael's OneDrive), s (docs) or d (equipment). On equipment a new e moves s
+//              between fit for work and expired by itself (18/11/2026), as on docs.
 //              A later e needs the document it came from (doc). The old value, the new
 //              one, why and the document are appended to the row's note, so every change
 //              is visible in the app. EXPIRY_TABLES, expiryPatch.
@@ -838,6 +839,8 @@ const short = (x, n) => String(x === undefined || x === null ? '' : x).replace(/
 // equip_inspections from a report that was read and filed: only "fit for work", both dates, the report number, the
 // filed file. Never a change or a delete; refused when the code or the report number is already there. Pure: the row.
 export const EQUIP_FIT = '\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4';
+// the valid states the table holds (18/11/2026: 40 "allowed for use", 39 "fit for work", 2 "valid"); a new e keeps the one there
+export const EQUIP_VALID = [EQUIP_FIT, '\u05de\u05d5\u05ea\u05e8 \u05dc\u05e9\u05d9\u05de\u05d5\u05e9', DOC_STATES[0]];
 export const EQUIP_FILE_DIR = '02_\u05ea\u05e1\u05e7\u05d9\u05e8\u05d9 \u05e6\u05d9\u05d5\u05d3/'; // the equipment reports folder
 // A file link is checked as the server will use it: decoded (02/11/2026, retro 28/10/2026 (b): "%2e%2e" passed the
 // check and became ".." after decodeURIComponent, and a broken "%" threw). false = not a usable link.
@@ -1137,6 +1140,22 @@ export function expiryPatch(b, row, today) {
   if (b.table === 'docs' && b.s === undefined && patch.e) {
     const ns = patch.e >= today ? DOC_STATES[0] : DOC_STATES[1];
     if ((row.s === DOC_STATES[0] || row.s === DOC_STATES[1] || !row.s) && row.s !== ns) { patch.s = ns; said.push('s ' + ns); }
+  }
+  // 18/11/2026 (the assistant's dev request dev-20261118142240-t2n8: the ammonia detector calibration got e 10/11/2027 from
+  // the certificate and stayed "expired"): the same on equipment, between fit for work and expired. Also when e is already
+  // the date the call carries (a row that got its e before this rule), so calling expiry_set again with it fixes the row.
+  // "needs checking", disqualified and out of tracking stay; a document is needed to move a row to fit for work.
+  // Security review 18/11/2026: the same e again moves it to fit for work only when the row's note already shows that e
+  // came in from a document (an earlier expiry_set line "... -> DD/MM/YYYY ... document"), not on a new free-text doc alone.
+  if (b.table === 'equip_inspections' && !outOfTracking && b.e !== undefined && (EQUIP_VALID.indexOf(row.s) >= 0 || row.s === DOC_STATES[1])) {
+    const ns = b.e >= today ? (EQUIP_VALID.indexOf(row.s) >= 0 ? row.s : EQUIP_FIT) : DOC_STATES[1];
+    if (row.s !== ns) {
+      if (ns === EQUIP_FIT && !doc) return { error: 'doc required to move s to ' + EQUIP_FIT };
+      const old = row.e ? String(row.e).slice(0, 10) : '';
+      const noted = String(row[t.note] || '').split(' | ').some((x) => x.indexOf('-> ' + ddmm(b.e)) >= 0 && x.indexOf('\u05de\u05e1\u05de\u05da: ') >= 0);
+      if (ns === EQUIP_FIT && !(old && b.e > old) && !noted) return { error: 'the same e moves s to ' + EQUIP_FIT + ' only when the note shows it came from a document' };
+      patch.s = ns; said.push('s ' + ns);
+    }
   }
   for (const k of Object.keys(b)) {
     if (['op', 'table', 'id', 'agent', 'why', 'doc', 'e', 'file_url', 'report_number', 'inspector', t.extra].concat(outOfTracking ? ['s'] : []).indexOf(k) < 0) return { error: 'field not allowed: ' + k };
@@ -3850,7 +3869,7 @@ async function routineDbHandle(context) {
       if (!t) return jsonResp({ ok: false, error: 'table not allowed' }, 400, {});
       const id = String(body.id === undefined || body.id === null ? '' : body.id);
       if (!/^[A-Za-z0-9_.-]{1,80}$/.test(id)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
-      const cols = ['id', 'e', 'file_url', t.note, t.extra].concat(body.table === 'equip_inspections' ? ['report_number', 'inspector'] : []).join(',');
+      const cols = ['id', 'e', 'file_url', t.note, t.extra].concat(body.table === 'equip_inspections' ? ['report_number', 'inspector', 's'] : []).join(',');
       const g = await fetch(url + '/rest/v1/' + body.table + '?select=' + cols + '&id=eq.' + encodeURIComponent(id), { headers: h, signal: tmo(SB_MS) });
       if (!g.ok) return jsonResp({ ok: false, error: 'read ' + g.status }, 200, {});
       const rows = await g.json();
@@ -3865,7 +3884,8 @@ async function routineDbHandle(context) {
         if (!Array.isArray(other)) return jsonResp({ ok: false, error: 'read ' + q.status }, 200, {});
         if (other.some((r) => r.id !== id)) return jsonResp({ ok: false, error: 'report_number already on ' + other.map((r) => r.id).join(',') }, 200, {});
       }
-      const w = await fetch(url + '/rest/v1/' + body.table + '?id=eq.' + encodeURIComponent(id), {
+      // security review 18/11/2026: s changes only if nobody changed it since the read (Michael marking it disqualified)
+      const w = await fetch(url + '/rest/v1/' + body.table + '?id=eq.' + encodeURIComponent(id) + (body.table === 'equip_inspections' && p.patch.s && rows[0].s ? '&s=eq.' + encodeURIComponent(rows[0].s) : ''), {
         method: 'PATCH', headers: { ...h, Prefer: 'return=representation' }, body: JSON.stringify(p.patch), signal: tmo(SB_MS),
       });
       if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status, detail: (await w.text()).slice(0, 300) }, 200, {});
