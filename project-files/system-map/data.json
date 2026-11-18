@@ -523,6 +523,7 @@
    "family": "תיוק ותוקף",
    "ops": [
     "agent_report",
+    "dev_request",
     "expiry_set",
     "invoice_set",
     "mail_request",
@@ -550,6 +551,7 @@
    "family": "תיוק ותוקף",
    "ops": [
     "agent_report",
+    "dev_request",
     "expiry_set",
     "invoice_set",
     "mail_request",
