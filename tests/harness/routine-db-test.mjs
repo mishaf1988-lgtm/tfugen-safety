@@ -1097,6 +1097,11 @@ const callIn = async (body) => {
         check('equip: a new future e moves "expired" to "allowed for use" by itself', p3.patch && p3.patch.s === OK, p3);
         const p4 = expiryPatch({ ...eb, e: '2027-11-10' }, { e: '2026-11-10', s: NEED }, '2026-11-18');
         check('equip: a new e leaves "needs checking" as it is (only s moves it)', p4.patch && p4.patch.s === undefined, p4);
+        check('equip: a disqualified or out-of-tracking row never moves to "allowed for use" (security review)',
+          !!expiryPatch({ ...eb, s: OK, e: '2031-01-12' }, { e: '2027-01-01', s: '\u05e4\u05e1\u05d5\u05dc' }, '2026-11-18').error
+          && !!expiryPatch({ ...eb, s: OK, e: '2031-01-12' }, { e: null, s: '\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9' }, '2026-11-18').error);
+        const p5 = expiryPatch({ ...eb, doc: undefined, e: '2027-01-01' }, { e: '2027-06-01', s: EXP }, '2026-11-18');
+        check('equip: an earlier e (no document needed) leaves "expired" as it is (security review)', p5.patch && p5.patch.s === undefined && p5.patch.e === '2027-01-01', p5);
         check('equip: any other s stays refused', !!expiryPatch({ ...eb, s: '\u05ea\u05e7\u05d9\u05df' }, { e: '2031-01-12' }, '2026-11-18').error);
       }
       // 15/11/2026 (Michael in the interview: the filing agent fills the contractor insurance date, always with its file)

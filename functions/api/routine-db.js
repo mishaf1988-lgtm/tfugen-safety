@@ -1092,6 +1092,8 @@ export function expiryPatch(b, row, today) {
     else if (b.s === EQUIP_OK) {
       const ne = b.e === undefined ? (row.e ? String(row.e).slice(0, 10) : '') : String(b.e || '');
       if (!isDay(ne) || ne < today) return { error: 'bad s: ' + EQUIP_OK + ' needs an e from today on' };
+      // security review 18/11/2026: a disqualified or out-of-tracking row comes back only by hand in the app (a new report)
+      if (row.s === EQUIP_DISQ || row.s === EQUIP_OUT) return { error: 'bad s: the row is ' + row.s + ', Michael changes it in the app' };
       if (row.s !== EQUIP_OK) { patch.s = EQUIP_OK; said.push('s ' + (row.s || '-') + ' -> ' + EQUIP_OK); }
     }
     else if (b.s !== EQUIP_OUT || b.e !== null) return { error: 'bad s' };
@@ -1151,7 +1153,9 @@ export function expiryPatch(b, row, today) {
     const ns = patch.e >= today ? DOC_STATES[0] : DOC_STATES[1];
     if ((row.s === DOC_STATES[0] || row.s === DOC_STATES[1] || !row.s) && row.s !== ns) { patch.s = ns; said.push('s ' + ns); }
   }
-  if (b.table === 'equip_inspections' && b.s === undefined && patch.e && patch.e >= today && row.s === EQUIP_EXPIRED) {
+  // security review 18/11/2026: only a later e, which already needed its document (an earlier e needs none)
+  const oldE = row.e ? String(row.e).slice(0, 10) : '';
+  if (b.table === 'equip_inspections' && b.s === undefined && patch.e && patch.e >= today && (!oldE || patch.e > oldE) && doc && row.s === EQUIP_EXPIRED) {
     patch.s = EQUIP_OK; said.push('s ' + EQUIP_EXPIRED + ' -> ' + EQUIP_OK);
   }
   for (const k of Object.keys(b)) {
