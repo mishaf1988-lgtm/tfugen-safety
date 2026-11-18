@@ -2796,7 +2796,7 @@ export async function liveInfo(request, env) {
 // through our server. Only the test database (STAGING_SUPABASE_URL, never the live one) and only the one test user.
 // pw from the caller = the run's password; no pw = a random one nobody sees (the reset at the end of the run).
 // The password is never echoed, logged or stored.
-export const STAGING_TEST_EMAIL = 'claude-test@tfugen.local';
+export const STAGING_TEST_EMAIL = 'claude-test@' + SITE.loginDomain;
 export const STAGING_PW_RE = /^[0-9a-f]{20,64}$/;
 export async function stagingPw(env, pw, liveUrl) {
   const su = String((env && env.STAGING_SUPABASE_URL) || ''), sk = (env && env.STAGING_SUPABASE_SERVICE_ROLE_KEY) || '';
