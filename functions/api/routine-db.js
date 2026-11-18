@@ -2799,7 +2799,7 @@ export async function liveInfo(request, env) {
 export const STAGING_TEST_EMAIL = 'claude-test@' + SITE.loginDomain;
 export const STAGING_PW_RE = /^[0-9a-f]{20,64}$/;
 export async function stagingPw(env, pw, liveUrl) {
-  const su = String((env && env.STAGING_SUPABASE_URL) || ''), sk = (env && env.STAGING_SUPABASE_SERVICE_ROLE_KEY) || '';
+  const su = String((env && env.STAGING_SUPABASE_URL) || '').trim().replace(/\/+$/, ''), sk = (env && env.STAGING_SUPABASE_SERVICE_ROLE_KEY) || '';
   if (!su || !sk) return { ok: false, error: 'STAGING_SUPABASE_URL or STAGING_SUPABASE_SERVICE_ROLE_KEY is not set' };
   if (!/^https:\/\/[a-z0-9]{20}\.supabase\.co$/.test(su) || su === SITE.supabaseUrl || su === SB_LIVE || su === liveUrl) return { ok: false, error: 'STAGING_SUPABASE_URL is not a test project URL' };
   if (pw !== undefined && !(typeof pw === 'string' && STAGING_PW_RE.test(pw))) return { ok: false, bad: true, error: 'pw: 20-64 lowercase hex characters, or leave it out for a random one' };

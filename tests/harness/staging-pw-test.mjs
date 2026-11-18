@@ -70,6 +70,12 @@ const call = async (body, env = ENV) => {
   check('PUT failed: ok:false with the status', !r.json.ok && /422/.test(r.json.error || ''), r.json);
   putStatus = 200;
   check('stagingPw direct: liveUrl equal to staging = refused', !(await stagingPw(ENV, pw, STG)).ok);
+  // 18/11/2026: production has STAGING_SUPABASE_URL with a trailing slash; the first live call was refused
+  calls = [];
+  r = await call({ op: 'staging_pw', pw }, { ...ENV, STAGING_SUPABASE_URL: STG + '/' });
+  check('a trailing slash in STAGING_SUPABASE_URL is dropped (no // in the call)', r.json.ok && calls.length === 2 && calls.every((c) => c.url.startsWith(STG + '/auth/')), { r: r.json, calls: calls.map((c) => c.url) });
+  r = await call({ op: 'staging_pw', pw }, { ...ENV, STAGING_SUPABASE_URL: SITE.supabaseUrl + '/' });
+  check('...and the live URL with a slash is still refused', !r.json.ok && /not a test project/.test(r.json.error || ''), r.json);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
