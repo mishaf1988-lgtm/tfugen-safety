@@ -70,6 +70,8 @@
 //   expiry_set  (11/10/2026, Michael in the questionnaire: "בצע: תיוק מייל + תוקף")
 //              update one row of docs / equip_inspections after a document was read:
 //              e, file_url (only under Michael's OneDrive), s (docs) or d (equipment).
+//              equipment s: out of tracking, disqualified, or (18/11/2026) allowed for use with a doc and a future e;
+//              a new future e moves an expired equipment row to allowed for use by itself.
 //              A later e needs the document it came from (doc). The old value, the new
 //              one, why and the document are appended to the row's note, so every change
 //              is visible in the app. EXPIRY_TABLES, expiryPatch.
@@ -827,6 +829,11 @@ export const EQUIP_OUT = '\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d
 // 27/10/2026 (Michael on WhatsApp: "1. extenders: disqualified", after the 25/10 inspection): the second state a run may
 // set, with a document (the report or his words). e stays; the morning update lists it apart from the expiries.
 export const EQUIP_DISQ = '\u05e4\u05e1\u05d5\u05dc';
+// 18/11/2026 (the assistant's dev requests: xl1008-e91 ammonia relief valves stayed "needs checking" after 26 new
+// certificates and Michael's "yes, all new"; 417b744ab6bc ammonia detectors stayed "expired" after a new e): the third
+// state a run may set, "allowed for use", only with a document and an e (new or kept) from today on. A new later e also
+// moves an "expired" row to it by itself; "needs checking" moves only when the call says so (s), after the reading.
+export const EQUIP_OK = '\u05de\u05d5\u05ea\u05e8 \u05dc\u05e9\u05d9\u05de\u05d5\u05e9', EQUIP_EXPIRED = '\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3';
 export const DOC_STATES = ['\u05d1\u05ea\u05d5\u05e7\u05e3', '\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3', '\u05d8\u05e2\u05d5\u05df \u05d0\u05d9\u05de\u05d5\u05ea'];
 export const FILE_URL_PREFIX = SITE.odFileUrl;
 const isDay = (x) => /^\d{4}-\d{2}-\d{2}$/.test(String(x || '')) && !isNaN(Date.parse(x + 'T00:00:00Z')) && new Date(x + 'T00:00:00Z').toISOString().slice(0, 10) === x;
@@ -1077,10 +1084,16 @@ export function expiryPatch(b, row, today) {
   if (why.length < 5) return { error: 'why required' };
   const patch = {}, said = [];
   const outOfTracking = b.table === 'equip_inspections' && b.s !== undefined;
+  const setsOk = outOfTracking && b.s === EQUIP_OK;
   if (outOfTracking) {
     // only this state, only together with e null and a document (his decision), so a run cannot hide a row by itself
     if (!doc) return { error: 'doc required for s' };
     if (b.s === EQUIP_DISQ && b.e === undefined) { patch.s = EQUIP_DISQ; said.push('s ' + EQUIP_DISQ); }
+    else if (b.s === EQUIP_OK) {
+      const ne = b.e === undefined ? (row.e ? String(row.e).slice(0, 10) : '') : String(b.e || '');
+      if (!isDay(ne) || ne < today) return { error: 'bad s: ' + EQUIP_OK + ' needs an e from today on' };
+      if (row.s !== EQUIP_OK) { patch.s = EQUIP_OK; said.push('s ' + (row.s || '-') + ' -> ' + EQUIP_OK); }
+    }
     else if (b.s !== EQUIP_OUT || b.e !== null) return { error: 'bad s' };
     else { const old = row.e ? String(row.e).slice(0, 10) : '';
     patch.e = null; patch.s = EQUIP_OUT;
@@ -1090,7 +1103,7 @@ export function expiryPatch(b, row, today) {
   }
   // security review 15/11/2026: on ctr an agent writes only the insurance date (ins), never the agreement date or the link
   if (b.table === 'ctr' && (b.e !== undefined || b.file_url !== undefined)) return { error: 'field not allowed: ' + (b.e !== undefined ? 'e' : 'file_url') };
-  if (b.e !== undefined && !outOfTracking) {
+  if (b.e !== undefined && (!outOfTracking || setsOk)) {
     if (!isDay(b.e) || b.e < '2000-01-01' || b.e > String(Number(today.slice(0, 4)) + 6) + today.slice(4)) return { error: 'bad e' };
     const old = row.e ? String(row.e).slice(0, 10) : '';
     // later than now = the run read a document that says so; earlier is always allowed (careful)
@@ -1137,6 +1150,9 @@ export function expiryPatch(b, row, today) {
   if (b.table === 'docs' && b.s === undefined && patch.e) {
     const ns = patch.e >= today ? DOC_STATES[0] : DOC_STATES[1];
     if ((row.s === DOC_STATES[0] || row.s === DOC_STATES[1] || !row.s) && row.s !== ns) { patch.s = ns; said.push('s ' + ns); }
+  }
+  if (b.table === 'equip_inspections' && b.s === undefined && patch.e && patch.e >= today && row.s === EQUIP_EXPIRED) {
+    patch.s = EQUIP_OK; said.push('s ' + EQUIP_EXPIRED + ' -> ' + EQUIP_OK);
   }
   for (const k of Object.keys(b)) {
     if (['op', 'table', 'id', 'agent', 'why', 'doc', 'e', 'file_url', 'report_number', 'inspector', t.extra].concat(outOfTracking ? ['s'] : []).indexOf(k) < 0) return { error: 'field not allowed: ' + k };
@@ -3850,7 +3866,7 @@ async function routineDbHandle(context) {
       if (!t) return jsonResp({ ok: false, error: 'table not allowed' }, 400, {});
       const id = String(body.id === undefined || body.id === null ? '' : body.id);
       if (!/^[A-Za-z0-9_.-]{1,80}$/.test(id)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
-      const cols = ['id', 'e', 'file_url', t.note, t.extra].concat(body.table === 'equip_inspections' ? ['report_number', 'inspector'] : []).join(',');
+      const cols = ['id', 'e', 'file_url', t.note, t.extra].concat(body.table === 'equip_inspections' ? ['report_number', 'inspector', 's'] : []).join(',');
       const g = await fetch(url + '/rest/v1/' + body.table + '?select=' + cols + '&id=eq.' + encodeURIComponent(id), { headers: h, signal: tmo(SB_MS) });
       if (!g.ok) return jsonResp({ ok: false, error: 'read ' + g.status }, 200, {});
       const rows = await g.json();
