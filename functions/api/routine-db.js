@@ -69,9 +69,9 @@
 //   client_errors (27/10/2026) {agent, since}: errors from users' browsers, grouped, no user name
 //   expiry_set  (11/10/2026, Michael in the questionnaire: "בצע: תיוק מייל + תוקף")
 //              update one row of docs / equip_inspections after a document was read:
-//              e, file_url (only under Michael's OneDrive), s (docs) or d (equipment).
-//              equipment s: out of tracking, disqualified, or (18/11/2026) allowed for use with a doc and a future e;
-//              a new future e moves an expired equipment row to allowed for use by itself.
+//              e, file_url (only under Michael's OneDrive), s (docs) or d (equipment). On equipment a new e moves s
+//              between fit for work and expired by itself (18/11/2026), as on docs.
+//              s "allowed for use" (18/11/2026) with a doc and an e from today on, e.g. a "needs checking" row verified.
 //              A later e needs the document it came from (doc). The old value, the new
 //              one, why and the document are appended to the row's note, so every change
 //              is visible in the app. EXPIRY_TABLES, expiryPatch.
@@ -829,11 +829,10 @@ export const EQUIP_OUT = '\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d
 // 27/10/2026 (Michael on WhatsApp: "1. extenders: disqualified", after the 25/10 inspection): the second state a run may
 // set, with a document (the report or his words). e stays; the morning update lists it apart from the expiries.
 export const EQUIP_DISQ = '\u05e4\u05e1\u05d5\u05dc';
-// 18/11/2026 (the assistant's dev requests: xl1008-e91 ammonia relief valves stayed "needs checking" after 26 new
-// certificates and Michael's "yes, all new"; 417b744ab6bc ammonia detectors stayed "expired" after a new e): the third
-// state a run may set, "allowed for use", only with a document and an e (new or kept) from today on. A new later e also
-// moves an "expired" row to it by itself; "needs checking" moves only when the call says so (s), after the reading.
-export const EQUIP_OK = '\u05de\u05d5\u05ea\u05e8 \u05dc\u05e9\u05d9\u05de\u05d5\u05e9', EQUIP_EXPIRED = '\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3';
+// 18/11/2026 (the assistant's dev request dev-20261118142537-35pc: xl1008-e91 ammonia relief valves stayed "needs checking"
+// after 26 new certificates and Michael's "yes, all new"): the third state a run may set, "allowed for use", only with a
+// document and an e (new or kept) from today on, never on a disqualified or out-of-tracking row (security review).
+export const EQUIP_OK = '\u05de\u05d5\u05ea\u05e8 \u05dc\u05e9\u05d9\u05de\u05d5\u05e9';
 export const DOC_STATES = ['\u05d1\u05ea\u05d5\u05e7\u05e3', '\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3', '\u05d8\u05e2\u05d5\u05df \u05d0\u05d9\u05de\u05d5\u05ea'];
 export const FILE_URL_PREFIX = SITE.odFileUrl;
 const isDay = (x) => /^\d{4}-\d{2}-\d{2}$/.test(String(x || '')) && !isNaN(Date.parse(x + 'T00:00:00Z')) && new Date(x + 'T00:00:00Z').toISOString().slice(0, 10) === x;
@@ -845,6 +844,8 @@ const short = (x, n) => String(x === undefined || x === null ? '' : x).replace(/
 // equip_inspections from a report that was read and filed: only "fit for work", both dates, the report number, the
 // filed file. Never a change or a delete; refused when the code or the report number is already there. Pure: the row.
 export const EQUIP_FIT = '\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4';
+// the valid states the table holds (18/11/2026: 40 "allowed for use", 39 "fit for work", 2 "valid"); a new e keeps the one there
+export const EQUIP_VALID = [EQUIP_FIT, '\u05de\u05d5\u05ea\u05e8 \u05dc\u05e9\u05d9\u05de\u05d5\u05e9', DOC_STATES[0]];
 export const EQUIP_FILE_DIR = '02_\u05ea\u05e1\u05e7\u05d9\u05e8\u05d9 \u05e6\u05d9\u05d5\u05d3/'; // the equipment reports folder
 // A file link is checked as the server will use it: decoded (02/11/2026, retro 28/10/2026 (b): "%2e%2e" passed the
 // check and became ".." after decodeURIComponent, and a broken "%" threw). false = not a usable link.
@@ -1092,7 +1093,6 @@ export function expiryPatch(b, row, today) {
     else if (b.s === EQUIP_OK) {
       const ne = b.e === undefined ? (row.e ? String(row.e).slice(0, 10) : '') : String(b.e || '');
       if (!isDay(ne) || ne < today) return { error: 'bad s: ' + EQUIP_OK + ' needs an e from today on' };
-      // security review 18/11/2026: a disqualified or out-of-tracking row comes back only by hand in the app (a new report)
       if (row.s === EQUIP_DISQ || row.s === EQUIP_OUT) return { error: 'bad s: the row is ' + row.s + ', Michael changes it in the app' };
       if (row.s !== EQUIP_OK) { patch.s = EQUIP_OK; said.push('s ' + (row.s || '-') + ' -> ' + EQUIP_OK); }
     }
@@ -1153,10 +1153,21 @@ export function expiryPatch(b, row, today) {
     const ns = patch.e >= today ? DOC_STATES[0] : DOC_STATES[1];
     if ((row.s === DOC_STATES[0] || row.s === DOC_STATES[1] || !row.s) && row.s !== ns) { patch.s = ns; said.push('s ' + ns); }
   }
-  // security review 18/11/2026: only a later e, which already needed its document (an earlier e needs none)
-  const oldE = row.e ? String(row.e).slice(0, 10) : '';
-  if (b.table === 'equip_inspections' && b.s === undefined && patch.e && patch.e >= today && (!oldE || patch.e > oldE) && doc && row.s === EQUIP_EXPIRED) {
-    patch.s = EQUIP_OK; said.push('s ' + EQUIP_EXPIRED + ' -> ' + EQUIP_OK);
+  // 18/11/2026 (the assistant's dev request dev-20261118142240-t2n8: the ammonia detector calibration got e 10/11/2027 from
+  // the certificate and stayed "expired"): the same on equipment, between fit for work and expired. Also when e is already
+  // the date the call carries (a row that got its e before this rule), so calling expiry_set again with it fixes the row.
+  // "needs checking", disqualified and out of tracking stay; a document is needed to move a row to fit for work.
+  // Security review 18/11/2026: the same e again moves it to fit for work only when the row's note already shows that e
+  // came in from a document (an earlier expiry_set line "... -> DD/MM/YYYY ... document"), not on a new free-text doc alone.
+  if (b.table === 'equip_inspections' && !outOfTracking && b.e !== undefined && (EQUIP_VALID.indexOf(row.s) >= 0 || row.s === DOC_STATES[1])) {
+    const ns = b.e >= today ? (EQUIP_VALID.indexOf(row.s) >= 0 ? row.s : EQUIP_FIT) : DOC_STATES[1];
+    if (row.s !== ns) {
+      if (ns === EQUIP_FIT && !doc) return { error: 'doc required to move s to ' + EQUIP_FIT };
+      const old = row.e ? String(row.e).slice(0, 10) : '';
+      const noted = String(row[t.note] || '').split(' | ').some((x) => x.indexOf('-> ' + ddmm(b.e)) >= 0 && x.indexOf('\u05de\u05e1\u05de\u05da: ') >= 0);
+      if (ns === EQUIP_FIT && !(old && b.e > old) && !noted) return { error: 'the same e moves s to ' + EQUIP_FIT + ' only when the note shows it came from a document' };
+      patch.s = ns; said.push('s ' + ns);
+    }
   }
   for (const k of Object.keys(b)) {
     if (['op', 'table', 'id', 'agent', 'why', 'doc', 'e', 'file_url', 'report_number', 'inspector', t.extra].concat(outOfTracking ? ['s'] : []).indexOf(k) < 0) return { error: 'field not allowed: ' + k };
@@ -3885,7 +3896,8 @@ async function routineDbHandle(context) {
         if (!Array.isArray(other)) return jsonResp({ ok: false, error: 'read ' + q.status }, 200, {});
         if (other.some((r) => r.id !== id)) return jsonResp({ ok: false, error: 'report_number already on ' + other.map((r) => r.id).join(',') }, 200, {});
       }
-      const w = await fetch(url + '/rest/v1/' + body.table + '?id=eq.' + encodeURIComponent(id), {
+      // security review 18/11/2026: s changes only if nobody changed it since the read (Michael marking it disqualified)
+      const w = await fetch(url + '/rest/v1/' + body.table + '?id=eq.' + encodeURIComponent(id) + (body.table === 'equip_inspections' && p.patch.s && rows[0].s ? '&s=eq.' + encodeURIComponent(rows[0].s) : ''), {
         method: 'PATCH', headers: { ...h, Prefer: 'return=representation' }, body: JSON.stringify(p.patch), signal: tmo(SB_MS),
       });
       if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status, detail: (await w.text()).slice(0, 300) }, 200, {});
