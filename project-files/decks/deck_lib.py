@@ -15,6 +15,33 @@ NAVY, NAVY2, BLUE, TEXT = '0B2635', '14485F', '1F608C', '1A1A1A'
 IDX, BAND, CARD, GREY = '1B4F6B', 'DCE1E6', 'EFF2F5', '7F8C99'
 RED, AMBER, GREEN, DBLUE = 'C00000', 'FFC000', '53842B', '1F4E79'
 W, H = 13.333, 7.5
+# Light look (19/11/2026, Michael on both decks: "the blue is too much for the eyes, we need lighter colours"; text
+# "not focused"). The decks keep naming the strong colours above; every fill is mapped here to a light tint, and white
+# text on it to a dark shade of the same hue, so a deck never draws a dark block. A tinted box gets a strong strip on
+# its right edge (RTL start) so the emphasis stays. Title bands and covers are light with dark text.
+INK = '1F3A4D'          # dark slate for titles and headings
+LINE = '7DB3D6'         # thin accent line under the title band
+SOFT = {RED: ('FCE8E8', '8E1B1B', 'D9534F'), DBLUE: ('E6F0F8', INK, '7DB3D6'), IDX: ('DDEBF4', INK, None),
+        BLUE: ('7DB3D6', 'FFFFFF', None), GREEN: ('E4F1DA', '2F5E17', '7DB357'), NAVY: ('E6F0F8', INK, '7DB3D6'),
+        AMBER: ('FFE699', TEXT, None), 'E36C09': ('FCE3CF', '8A3B00', None)}
+
+
+# 19/11/2026 (Michael: "numbers and English in the wrong place"): in a right-to-left paragraph "5 ppm" is drawn
+# "ppm 5", and "Level A" or "Pac 8000" break the same way. A run of Latin words and numbers with spaces between them is
+# wrapped in LRE ... PDF (U+202A / U+202C), so PowerPoint and LibreOffice keep it left-to-right as one piece.
+LTR_RUN = re.compile(r'(?<![0-9A-Za-z])[0-9A-Za-z][0-9A-Za-z.,%°/+\-]*(?: [0-9A-Za-z][0-9A-Za-z.,%°/+\-]*)+')
+
+
+def ltr(s):
+    return LTR_RUN.sub(lambda m: '\u202a' + m.group(0) + '\u202c', s)
+
+
+def soft(fill, color):
+    """(fill, text colour, strip colour or None) for the light look."""
+    if fill in SOFT:
+        f, ink, strip = SOFT[fill]
+        return f, (ink if color in ('FFFFFF', None) else (ink if color == fill else color)), strip
+    return fill, color, None
 
 
 def rgb(h):
@@ -71,7 +98,7 @@ class Deck:
             p._p.get_or_add_pPr().set('rtl', '1')
             p.space_after = Pt(opt.get('gap', gap))
             r = p.add_run()
-            r.text = ln
+            r.text = ltr(ln)
             f = r.font
             f.name = 'Arial'; f.size = Pt(opt.get('size', size)); f.bold = opt.get('bold', bold)
             f.color.rgb = rgb(opt.get('color', color))
@@ -79,12 +106,34 @@ class Deck:
 
     def box(self, s, x, y, w, h, lines, fill=CARD, color=TEXT, size=16, bold=False, align='r', anchor='m', line=None,
             round_=True, gap=4):
+        fill, color, strip = soft(fill, color)
+        lines = self._recolor(lines)
+        # 19/11/2026 (Michael: "the text is stuck to the side"): a card's text is centred, except a bullet list
+        flat = [lines] if isinstance(lines, str) else [l[0] if isinstance(l, tuple) else l for l in lines]
+        if align == 'r' and not any(str(l).lstrip().startswith(('•', '–')) for l in flat):
+            align = 'c'
         sh = self.rect(s, x, y, w, h, fill=fill, line=line,
                        shape=MSO_SHAPE.ROUNDED_RECTANGLE if round_ else MSO_SHAPE.RECTANGLE)
         if round_:
             sh.adjustments[0] = 0.08
-        self.text(s, x, y, w, h, lines, size=size, color=color, bold=bold, align=align, anchor=anchor, gap=gap, shape=sh)
+        # 19/11/2026 "not focused": text sits in the middle of its card, not stuck to the top with empty space below
+        self.text(s, x, y, w, h, lines, size=size, color=color, bold=bold, align=align, anchor='m', gap=gap, shape=sh)
+        if strip and w > 1.2:
+            self.rect(s, x + w - 0.09, y + 0.08, 0.09, h - 0.16, fill=strip)
         return sh
+
+    @staticmethod
+    def _recolor(lines):
+        """White text inside a tinted box becomes the box's dark ink (per-line colours set by a deck)."""
+        if isinstance(lines, str):
+            return lines
+        outl = []
+        for ln in lines:
+            if isinstance(ln, tuple) and ln[1].get('color') == 'FFFFFF':
+                o = dict(ln[1]); o.pop('color'); outl.append((ln[0], o))
+            else:
+                outl.append(ln)
+        return outl
 
     def pic(self, s, path, x, y, w, h):
         """Fit the picture inside the frame, centred, keeping its proportions."""
@@ -103,27 +152,23 @@ class Deck:
     def cover(self, title, sub, lines):
         s = self._slide()
         self._gradient(self.rect(s, 0, 0, W, H))
-        self.rect(s, 0, 5.55, W, 0.06, fill=AMBER)
-        card = self.rect(s, 0.6, 0.55, 2.5, 1.75, fill='FFFFFF', shape=MSO_SHAPE.ROUNDED_RECTANGLE)
-        card.adjustments[0] = 0.08
-        self.pic(s, self.logo, 0.7, 0.62, 2.3, 1.6)
-        self.text(s, 0.8, 2.3, W - 1.6, 1.5, title, size=46, color='FFFFFF', bold=True, anchor='m')
-        self.text(s, 0.8, 3.85, W - 1.6, 1.2, sub, size=24, color='DCE1E6', anchor='t')
-        self.text(s, 0.8, 5.8, W - 1.6, 1.3, lines, size=16, color='DCE1E6')
+        self.rect(s, 0, 5.55, W, 0.05, fill=LINE)
+        self.pic(s, self.logo, W - 3.1, 0.55, 2.5, 1.6)
+        self.text(s, 0.8, 2.3, W - 1.6, 1.5, title, size=46, color=INK, bold=True, anchor='m', align='c')
+        self.text(s, 0.8, 3.85, W - 1.6, 1.2, sub, size=24, color='3F5B6E', anchor='t', align='c')
+        self.text(s, 0.8, 5.8, W - 1.6, 1.3, lines, size=16, color='3F5B6E', align='c')
         return s
 
     def slide(self, title, source=None, kicker=None):
         s = self._slide()
-        self._gradient(self.rect(s, 0, 0, W, 1.2))
-        self.rect(s, 0, 1.2, W, 0.05, fill=AMBER)
-        card = self.rect(s, 0.3, 0.17, 1.3, 0.86, fill='FFFFFF', shape=MSO_SHAPE.ROUNDED_RECTANGLE)
-        card.adjustments[0] = 0.1
+        self.rect(s, 0, 0, W, 1.2, fill='F2F7FB')
+        self.rect(s, 0, 1.2, W, 0.04, fill=LINE)
         self.pic(s, self.logo, 0.36, 0.2, 1.18, 0.8)
         if kicker:
-            self.text(s, 1.8, 0.1, W - 2.2, 0.35, kicker, size=13, color='9FC3D9')
-            self.text(s, 1.8, 0.4, W - 2.2, 0.75, title, size=28, color='FFFFFF', bold=True, anchor='m')
+            self.text(s, 1.8, 0.1, W - 2.2, 0.35, kicker, size=13, color=GREY)
+            self.text(s, 1.8, 0.4, W - 2.2, 0.75, title, size=28, color=INK, bold=True, anchor='m')
         else:
-            self.text(s, 1.8, 0.15, W - 2.2, 0.9, title, size=30, color='FFFFFF', bold=True, anchor='m')
+            self.text(s, 1.8, 0.15, W - 2.2, 0.9, title, size=30, color=INK, bold=True, anchor='m')
         self.rect(s, 0.4, 7.02, W - 0.8, 0.012, fill=BAND)
         self.text(s, 0.4, 7.06, 1.2, 0.3, str(self.n), size=11, color=GREY, align='l')
         foot = self.footer + ('  |  מקור: ' + source if source else '')
@@ -133,9 +178,9 @@ class Deck:
     def section(self, num, title, sub):
         s = self._slide()
         self._gradient(self.rect(s, 0, 0, W, H))
-        self.text(s, 0.8, 1.9, W - 1.6, 1.3, num, size=80, color=AMBER, bold=True)
-        self.text(s, 0.8, 3.3, W - 1.6, 1.0, title, size=40, color='FFFFFF', bold=True)
-        self.text(s, 0.8, 4.4, W - 1.6, 1.0, sub, size=20, color='DCE1E6')
+        self.text(s, 0.8, 1.9, W - 1.6, 1.3, num, size=80, color=LINE, bold=True, align='c')
+        self.text(s, 0.8, 3.3, W - 1.6, 1.0, title, size=40, color=INK, bold=True, align='c')
+        self.text(s, 0.8, 4.4, W - 1.6, 1.0, sub, size=20, color='3F5B6E', align='c')
         return s
 
     def _gradient(self, sh):
@@ -145,10 +190,10 @@ class Deck:
                 sp.remove(e)
         g = etree.SubElement(sp, qn('a:gradFill')); g.set('rotWithShape', '1')
         gl = etree.SubElement(g, qn('a:gsLst'))
-        for pos, col in (('0', NAVY), ('100000', NAVY2)):
+        for pos, col in (('0', 'FFFFFF'), ('100000', 'DCEAF4')):
             gs = etree.SubElement(gl, qn('a:gs')); gs.set('pos', pos)
             c = etree.SubElement(gs, qn('a:srgbClr')); c.set('val', col)
-        lin = etree.SubElement(g, qn('a:lin')); lin.set('ang', '0'); lin.set('scaled', '1')
+        lin = etree.SubElement(g, qn('a:lin')); lin.set('ang', '5400000'); lin.set('scaled', '1')
         # gradFill must come before <a:ln>
         ln = sp.find(qn('a:ln'))
         if ln is not None:
@@ -163,7 +208,7 @@ class Deck:
                 t, o = it
                 o = dict(o)
                 if o.pop('head', False):
-                    lines.append((t, dict({'bold': True, 'color': NAVY, 'size': size + 1}, **o)))
+                    lines.append((t, dict({'bold': True, 'color': INK, 'size': size + 1}, **o)))
                 elif o.pop('sub', False):
                     lines.append(('– ' + t, dict({'size': size - 2, 'color': '3A4750'}, **o)))
                 else:
@@ -192,17 +237,19 @@ class Deck:
                 if r == 0:
                     fill, col, b = IDX, 'FFFFFF', True
                 else:
-                    fill, col, b = (BAND if r % 2 == 0 else 'FFFFFF'), TEXT, (c == 0 and bold_col0)
+                    fill, col, b = ('F3F7FA' if r % 2 == 0 else 'FFFFFF'), TEXT, (c == 0 and bold_col0)
                 fill = (fills or {}).get((r, c), fill)
                 col = (colors or {}).get((r, c), col)
+                fill, col, _ = soft(fill, col)
                 cell.fill.solid(); cell.fill.fore_color.rgb = rgb(fill)
                 tf = cell.text_frame; tf.word_wrap = True
                 parts = str(rows[r][c]).split('\n')
                 for i, part in enumerate(parts):
                     p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
-                    p.alignment = PP_ALIGN.RIGHT
+                    # short cells (numbers, dates, levels) centred; sentences stay right-aligned
+                    p.alignment = PP_ALIGN.CENTER if len(str(rows[r][c])) <= 18 else PP_ALIGN.RIGHT
                     p._p.get_or_add_pPr().set('rtl', '1')
-                    run = p.add_run(); run.text = part
+                    run = p.add_run(); run.text = ltr(part)
                     run.font.name = 'Arial'; run.font.size = Pt(11.5 if r == 0 and size < 11.5 else size)
                     run.font.bold = b; run.font.color.rgb = rgb(col)
         return gf
