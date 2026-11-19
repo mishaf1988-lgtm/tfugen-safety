@@ -49,7 +49,7 @@ for m in _domains _claudelog _xlsx _onedrive _closelink _xlsxpatch _ai _meeting 
 # _formprobe (16/11/2026): the weekly check of form 146.03 through Microsoft's PDF
 sed -i -e "s#'./_shared.js'#'./_shared.mjs'#" -e "s#'./_pdflib.js'#'./_pdflib.mjs'#" -e "s#'./_pdftext.js'#'./_pdftext.mjs'#" -e "s#'./_ctrform.js'#'./_ctrform.mjs'#" -e "s#'./_onedrive.js'#'./_onedrive.mjs'#" -e "s#'./_wa.js'#'./_wa.mjs'#" -e "s#'./api/ctr-link.js'#'./ctr-link.mjs'#" -e "s#'./api/talk.js'#'./talk.mjs'#" _build/_formprobe.mjs
 # _ctrok (16/11/2026): contractor link stage 2, approval on WhatsApp
-sed -i -e "s#'./_shared.js'#'./_shared.mjs'#" -e "s#'./_cas.js'#'./_cas.mjs'#" -e "s#'./_wa.js'#'./_wa.mjs'#" -e "s#'./_ctr.js'#'./_ctr.mjs'#" -e "s#'./api/ctr-link.js'#'./ctr-link.mjs'#" _build/_ctrok.mjs
+sed -i -e "s#'./_shared.js'#'./_shared.mjs'#" -e "s#'./_cas.js'#'./_cas.mjs'#" -e "s#'./_wa.js'#'./_wa.mjs'#" -e "s#'./_ctr.js'#'./_ctr.mjs'#" -e "s#'./api/ctr-link.js'#'./ctr-link.mjs'#" -e "s#'./_onedrive.js'#'./_onedrive.mjs'#" _build/_ctrok.mjs
 sed -i -e "s#'./_shared.js'#'./_shared.mjs'#" -e "s#'./_push.js'#'./_push.mjs'#" -e "s#'./_cas.js'#'./_cas.mjs'#" _build/_wa.mjs
 sed -i "s#'./_shared.js'#'./_shared.mjs'#" _build/_push.mjs
 sed -i -e "s#'./_shared.js'#'./_shared.mjs'#" -e "s#'./_wa.js'#'./_wa.mjs'#" -e "s#'./_stt.js'#'./_stt.mjs'#" _build/_voice.mjs

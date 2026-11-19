@@ -20,6 +20,7 @@ import { missMailHtml } from './_build/talk.mjs';
 import { failMailHtml } from './_build/_wa.mjs';
 import { approvalHtml, decisionHtml, permitHtml, mailHtml as worksMailHtml, askHtml } from './_build/works.mjs';
 import { mailHtml as ctrMailHtml } from './_build/ctr-link.mjs';
+import { ctrExtendMail } from './_build/_ctrok.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FN = path.join(HERE, '..', '..', 'functions');
@@ -46,7 +47,7 @@ console.log('\n1. every mail call site is known');
 // file -> number of call sites of sendMailTo( / sendMail( (definitions excluded). A new site anywhere = a failure.
 const KNOWN_SITES = {
   'api/hazard-report.js': 2, 'api/weekly-digest.js': 1, 'api/works.js': 1, 'api/mail-inbox.js': 1, 'api/codes.js': 1,
-  'api/trustee-gate.js': 1, 'api/talk.js': 5, 'api/ctr-link.js': 1, 'api/trustee-notify.js': 1, 'api/close-hazard.js': 1, '_watchdog.js': 1,
+  'api/trustee-gate.js': 1, 'api/talk.js': 5, 'api/ctr-link.js': 1, '_ctrok.js': 1, 'api/trustee-notify.js': 1, 'api/close-hazard.js': 1, '_watchdog.js': 1,
   '_wa.js': 1, // 07/11/2026: a WhatsApp message to Michael that Meta reported failed, to his own mailbox (failMailHtml, rendered below)
 };
 const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(dir, e.name)) : e.name.endsWith('.js') ? [path.join(dir, e.name)] : []));
@@ -89,6 +90,8 @@ const RENDER = [
   ['works.permitHtml', 'contractor/dept', permitHtml(work, FRI, false, 'a.pdf', 'https://x/y', true), true],
   ['works.mailHtml', 'contractor list', worksMailHtml(FRI, 'https://x/y'), true],
   ['_wa.failMailHtml', 'Michael only', failMailHtml([{ at: IL, code: 131047, text: 'x' }]), false],
+  // 19/11/2026: a contractor permit extension, to Michael's own mailbox
+  ['_ctrok.ctrExtendMail', 'Michael only', ctrExtendMail({ company: 'co', place: 'p', desc: 'd', folder: 'f', de: '2026-11-19', te: '16:00' }, '2026-11-19', '2026-11-20', '16:00', 'why', true), false],
   // 15/11/2026: the contractor approval form, to Michael's own mailbox
   ['ctr-link.mailHtml', 'Michael only', ctrMailHtml({ kind: 'temp', ins: false, ds: '2026-11-20', de: '2026-11-22' }, { company: 'co', cnum: '123456789', contact: 'c', mobile: '0501234567', email: 'a@b.co', place: 'p', works: ['hgt'], workers: [], optMissing: ['ins'], signer: 's' }, [{ doc: 'plat', name: 'a.pdf', url: 'https://x/y' }], { name: 's.pdf', url: 'https://x/s' }, ['s.pdf'], 'https://x/w', true), false],
 ];

@@ -9,6 +9,7 @@
 // - 30 days before a permanent contractor's year in the register ends, a new link is made and sent to Michael to forward.
 // The state of each request stays in server_state ctr_links (one entry per request), so several can wait at once.
 import { SITE, sbFrom, tmo, SB_TIMEOUT_MS } from './_shared.js';
+import { accessToken, sendMailTo } from './_onedrive.js';
 import { stateCas } from './_cas.js';
 import { sendToOwner, ownerWa, ownerWindowOpen, noteLastOut } from './_wa.js';
 import { CTR_STATE, CTR_S_FILLED, CTR_S_SENT, stateList, statePatch, linkTtlDays, ctrLinkId, addDays } from './_ctr.js';
@@ -406,7 +407,29 @@ export function ctrExtendCheck(e, de, te, today) {
 }
 export const ctrExtendText = (e, de, te, regOk) => '\u05d4\u05d4\u05d9\u05ea\u05e8 \u05e9\u05dc ' + one(e.company, 60) + ' \u05d4\u05d5\u05d0\u05e8\u05da \u05e2\u05d3 ' + dmy(de) + (te ? ' \u05d1\u05e9\u05e2\u05d4 ' + te : '') + '.'
   + (regOk ? ' \u05de\u05e8\u05e9\u05dd \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05e2\u05d5\u05d3\u05db\u05df \u05dc\u05d0\u05d5\u05ea\u05d5 \u05ea\u05d0\u05e8\u05d9\u05da.' : '') + ' \u05d8\u05d5\u05e4\u05e1 \u05d4\u05d0\u05d9\u05e9\u05d5\u05e8 \u05d4\u05d7\u05ea\u05d5\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05e7\u05d1\u05dc\u05df \u05e0\u05e9\u05d0\u05e8 \u05e2\u05dd \u05d4\u05ea\u05d0\u05e8\u05d9\u05db\u05d9\u05dd \u05d4\u05e7\u05d5\u05d3\u05de\u05d9\u05dd.';
-export async function ctrExtend(env, body, nowMs) {
+// 19/11/2026 (Michael after the first extension: "in such cases send me an update mail"): every extension mails Michael
+// (his own mailbox, like the approval mail of ctr-link; nobody else), with the old and new end, the reason and the folder.
+// A failed mail never undoes the extension; the answer says mail: 'sent' or the error. Pure.
+const escH = (x) => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  // a web address typed by the contractor is not made a link by Outlook (security review 19/11/2026)
+  .replace(/:\/\//g, ':/&#8203;/').replace(/www\./gi, 'www&#8203;.');
+export const ctrExtendSubject = (e) => '\u05d4\u05d0\u05e8\u05db\u05ea \u05d4\u05d9\u05ea\u05e8 \u05e7\u05d1\u05dc\u05df: ' + one(e.company, 60);
+export function ctrExtendMail(e, from, de, te, why, regOk) {
+  const row = (k, v) => '<tr><td style="padding:4px 8px;border:1px solid #ccc;background:#f3f4f6;white-space:nowrap"><b>' + k + '</b></td><td style="padding:4px 8px;border:1px solid #ccc">' + escH(v) + '</td></tr>';
+  return '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial;font-size:14px">'
+    + '<p>\u05d4\u05d4\u05d9\u05ea\u05e8 \u05d4\u05d6\u05de\u05e0\u05d9 \u05e9\u05dc <b>' + escH(one(e.company, 60)) + '</b> \u05d4\u05d5\u05d0\u05e8\u05da.</p>'
+    + '<table style="border-collapse:collapse;font-family:Arial;font-size:14px">'
+    + row('\u05e1\u05d5\u05e3 \u05e7\u05d5\u05d3\u05dd', dmy(from) + (e.te ? ' ' + one(e.te, 5) : ''))
+    + row('\u05e1\u05d5\u05e3 \u05d7\u05d3\u05e9', dmy(de) + (te ? ' \u05d1\u05e9\u05e2\u05d4 ' + te : ''))
+    + (one(e.place, 120) ? row('\u05de\u05e7\u05d5\u05dd', one(e.place, 120)) : '')
+    + (one(e.desc, 200) ? row('\u05d4\u05e2\u05d1\u05d5\u05d3\u05d4', one(e.desc, 200)) : '')
+    + row('\u05e1\u05d9\u05d1\u05d4', one(why, 200))
+    + row('\u05de\u05e8\u05e9\u05dd \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd', regOk ? '\u05e2\u05d5\u05d3\u05db\u05df \u05dc\u05d0\u05d5\u05ea\u05d5 \u05ea\u05d0\u05e8\u05d9\u05da' : '\u05dc\u05d0 \u05e2\u05d5\u05d3\u05db\u05df, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d1\u05d9\u05d3')
+    + (one(e.folder, 300) ? row('\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05e7\u05d1\u05dc\u05df', one(e.folder, 300).replace(/^\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4\//, '')) : '')
+    + '</table>'
+    + '<p>\u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05d7\u05ea\u05d5\u05dd (146.03) \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 \u05e2\u05d3\u05d9\u05d9\u05df \u05e2\u05dd \u05d4\u05ea\u05d0\u05e8\u05d9\u05db\u05d9\u05dd \u05d4\u05e7\u05d5\u05d3\u05de\u05d9\u05dd, \u05e2\u05d3 \u05e9\u05d9\u05d5\u05db\u05df \u05d8\u05d5\u05e4\u05e1 \u05de\u05e2\u05d5\u05d3\u05db\u05df.</p></div>';
+}
+export async function ctrExtend(env, body, nowMs, deps) {
   const rid = String(body.id || '');
   if (!new RegExp('^' + RID + '$').test(rid)) return { ok: false, error: 'bad id' };
   if (String(body.why || '').trim().length < 5) return { ok: false, error: 'why required' };
@@ -427,5 +450,12 @@ export async function ctrExtend(env, body, nowMs) {
       regOk = !!cur;
     } catch (x) { regOk = false; }
   }
-  return { ok: true, id: rid, de: c.de, te: c.te, until: c.de, reg: regOk ? e.reg : null, text: ctrExtendText(e, c.de, c.te, regOk) };
+  const d = deps || { accessToken, sendMailTo };
+  let mail = 'sent';
+  try {
+    const od = await d.accessToken(env);
+    if (!od || !od.token || !od.email) throw new Error('no mailbox');
+    await d.sendMailTo(od.token, [od.email], [], ctrExtendSubject(e), ctrExtendMail(e, e.de, c.de, c.te, body.why, regOk), []);
+  } catch (x) { mail = 'err: ' + one((x && x.message) || x, 120); }
+  return { ok: true, id: rid, de: c.de, te: c.te, until: c.de, reg: regOk ? e.reg : null, mail, text: ctrExtendText(e, c.de, c.te, regOk) };
 }
