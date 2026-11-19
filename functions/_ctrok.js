@@ -410,7 +410,9 @@ export const ctrExtendText = (e, de, te, regOk) => '\u05d4\u05d4\u05d9\u05ea\u05
 // 19/11/2026 (Michael after the first extension: "in such cases send me an update mail"): every extension mails Michael
 // (his own mailbox, like the approval mail of ctr-link; nobody else), with the old and new end, the reason and the folder.
 // A failed mail never undoes the extension; the answer says mail: 'sent' or the error. Pure.
-const escH = (x) => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const escH = (x) => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  // a web address typed by the contractor is not made a link by Outlook (security review 19/11/2026)
+  .replace(/:\/\//g, ':/&#8203;/').replace(/www\./gi, 'www&#8203;.');
 export const ctrExtendSubject = (e) => '\u05d4\u05d0\u05e8\u05db\u05ea \u05d4\u05d9\u05ea\u05e8 \u05e7\u05d1\u05dc\u05df: ' + one(e.company, 60);
 export function ctrExtendMail(e, from, de, te, why, regOk) {
   const row = (k, v) => '<tr><td style="padding:4px 8px;border:1px solid #ccc;background:#f3f4f6;white-space:nowrap"><b>' + k + '</b></td><td style="padding:4px 8px;border:1px solid #ccc">' + escH(v) + '</td></tr>';

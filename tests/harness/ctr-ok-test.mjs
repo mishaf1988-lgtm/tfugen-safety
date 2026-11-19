@@ -322,6 +322,7 @@ const filled = (o) => Object.assign({ id: 'cabc1234', kind: 'perm', ins: true, d
   reset(); put([xtmp({ company: 'A<b>&"' })]); db.ctr = [{ id: 'ctr26-t1', n: 'x', ty: 'זמני', e: today, s: 'פעיל' }];
   const xf = await ctrExtend(ENV, { id: 'cabc1234', de: addD(today, 1), why: 'mail down <script>' }, NOW, { accessToken: async () => { throw new Error('not connected'); }, sendMailTo: async () => {} });
   check('ctr_extend: a mail that fails keeps the extension and says so', xf.ok === true && /^err: not connected/.test(xf.mail) && ent('cabc1234').de === addD(today, 1), xf);
+  check('ctr_extend: a typed web address is not a link in the mail', !/https:\/\/|www\.evil/.test(ctrExtendMail({ company: 'see https://evil.example', place: 'www.evil.example', de: today }, today, addD(today, 1), null, 'x', true)));
   check('ctr_extend: the mail escapes what the contractor typed', !/<script>|<b>&"/.test(ctrExtendMail({ company: 'A<b>&"', de: today }, today, addD(today, 1), null, 'x <script>', true)));
   reset(); put([xtmp({ de: addD(today, 1), until: addD(today, 1) })]); db.ctr = [{ id: 'ctr26-t1', n: 'אלקטרו', ty: 'זמני', e: addD(today, 1), s: 'פעיל' }];
   check('ctr_extend: not to the same or an earlier day', again.ok === false && /after the current end/.test(again.error), again);
