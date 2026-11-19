@@ -1,6 +1,7 @@
 # Cold rooms and freezers training deck for warehouse / finished-goods / raw-material workers and forklift drivers
 # (19/11/2026, Michael: decks per coverage.md; "quality, interesting to teach", "attach pictures from the internet").
 # Roles only, no names or phone numbers. Brief: scratchpad decks/BRIEF.md.
+# 19/11/2026 Michael in the questionnaire: "30 minutes is the rule"; the bell, handle and emergency door "exist and are checked".
 # Usage: python3 coldrooms_deck.py <out.pptx> <logo.jpg>
 # Sources read on 19/11/2026 (every number on a slide comes from one of these):
 #   WH    OneDrive 15_תיק ניהול הבטיחות ונהלים/הוראות עבודה/נוהל עבודה במחסן ולכידת עובד.doc
@@ -126,7 +127,7 @@ for i, (t, d) in enumerate(ppe):
     D.box(s, 4.9, y, 5.5, 0.69, d, size=14.5, fill=CARD)
 D.box(s, 0.6, 1.5, 4.05, 2.25, [
     ('כמה זמן בפנים?', {'bold': True, 'size': 18, 'color': NAVY}),
-    ('בסקר הסיכונים של המחסנים: מלגזן נמצא בקירור פחות מ-30 דקות.', {'size': 14.5, 'bold': True}),
+    ('הכלל אצלנו: מלגזן נמצא בקירור פחות מ-30 דקות ברצף.', {'size': 14.5, 'bold': True}),
     ('אחר כך יוצאים להתחמם. סופרים את הזמן.', {'size': 14.5})], fill=DBLUE, gap=4)
 D.box(s, 0.6, 3.9, 4.05, 1.52, [
     ('החליפה קרועה? הרוכסן שבור?', {'bold': True, 'size': 16, 'color': 'FFFFFF'}),
