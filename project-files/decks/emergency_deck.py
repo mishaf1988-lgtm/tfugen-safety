@@ -38,6 +38,26 @@ from deck_lib import *
 
 out, logo = sys.argv[1], sys.argv[2]
 D = Deck(logo, 'הדרכת חירום, כיבוי אש ועזרה ראשונה  |  תעשיות תפוגן  |  19/11/2026')
+
+IMG = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img', 'emergency')
+
+
+def photo(s, x, y, w, h, files, credit):
+    """Illustrative internet picture(s) in the old photo-slot frame, with the credit line at the frame bottom.
+    Licences and source links: img/emergency/credits.json."""
+    D.rect(s, x, y, w, h, fill='F7F9FA', line=GREY, lw=0.75)
+    files = [files] if isinstance(files, str) else files
+    if w / h > 2.8:  # low wide frame: picture on the left, credit beside it on the right
+        D.pic(s, os.path.join(IMG, files[0]), x + 0.08, y + 0.06, w - 2.1, h - 0.12)
+        D.text(s, x + w - 1.95, y + 0.1, 1.85, h - 0.2, ['תמונה להמחשה:'] + credit.split(', ', 1), size=10, color=GREY,
+               align='c', anchor='m', gap=2)
+        return
+    pw = (w - 0.1) / len(files)
+    for i, f in enumerate(files):
+        D.pic(s, os.path.join(IMG, f), x + 0.05 + i * pw + 0.03, y + 0.06, pw - 0.06, h - 0.42)
+    D.text(s, x, y + h - 0.36, w, 0.33, 'תמונה להמחשה: ' + credit, size=9 if w < 3.3 else 10, color=GREY,
+           align='c', anchor='m')
+
 PLANT = 'תיק מפעל 31/03/2026'
 SCEN = 'נוהל חירום מפעלי, מיפוי תרחישים (03/2026)'
 P2603 = 'נוהל 26.03, סעיף 1.4'
@@ -138,7 +158,7 @@ D.box(s, 0.6, 4.5, 6.6, 2.35, [
     ('הכל נבדק', {'bold': True, 'size': 18, 'color': NAVY}),
     ('המטפים והגלגלונים נבדקו ב-20/07/2026 ונמצאו תקינים. האישור בתוקף עד 20/07/2027.', {'size': 15.5}),
     ('יש גם תותחי מים ווילון מים באזור חומר הגלם, ו-5 עגלות קצף במחלקות.', {'size': 15})], fill=CARD)
-D.photo_slot(s, 7.45, 4.5, 5.3, 2.35, 'עמדת כיבוי במפעל: ארון, גלגלון ומטף')
+photo(s, 7.45, 4.5, 5.3, 2.35, ['hose_reel.jpg', 'extinguishers.jpg'], 'Alina Kakshapati, CC0; Bruno Girin, CC BY-SA 2.0')
 
 # 9 ---------------------------------------------------------------------------------------------------------------
 s = D.slide('איזה מטף לאיזו אש', source=PLANT + ', אירוע שריפה; ' + SCEN)
@@ -216,9 +236,9 @@ D.box(s, 6.6, 4.5, 6.15, 2.35, [
     ('מקלחות חירום ברחבי המפעל.', {'size': 15}),
     ('2 דפיברילטורים (מכשירי החייאה).', {'size': 15}),
     ('ארגזי עזרה ראשונה ואלונקות. תדע איפה הקרוב אליך.', {'size': 15, 'bold': True})], fill=CARD)
-D.photo_slot(s, 0.6, 1.5, 2.9, 2.6, 'משטפת עיניים במחלקה')
-D.photo_slot(s, 3.55, 1.5, 2.9, 2.6, 'הדפיברילטור ומקום התלייה שלו')
-D.photo_slot(s, 0.6, 4.25, 5.85, 2.6, 'ארגז עזרה ראשונה מסומן במגן דוד אדום, ושלט המקום')
+photo(s, 0.6, 1.5, 2.9, 2.6, 'eyewash.jpg', 'eliduke, CC BY-SA 2.0')
+photo(s, 3.55, 1.5, 2.9, 2.6, 'aed.jpg', 'Lee J Haywood, CC BY-SA 2.0')
+photo(s, 0.6, 4.25, 5.85, 2.6, 'first_aid.jpg', 'Marcin Wichary, CC BY 2.0')
 
 # 14 --------------------------------------------------------------------------------------------------------------
 s = D.slide('לקחים מהמפעל שלנו', source='מכתב לכבאות 28/07/2026; סיורי בטיחות 2026; תרגיל 14/01/2026')

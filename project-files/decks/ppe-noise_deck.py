@@ -28,6 +28,26 @@ from deck_lib import *
 
 out, logo = sys.argv[1], sys.argv[2]
 D = Deck(logo, 'הדרכת ציוד מגן ורעש  |  תעשיות תפוגן  |  19/11/2026')
+
+IMG = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img', 'ppe-noise')
+
+
+def photo(s, x, y, w, h, files, credit):
+    """Illustrative internet picture(s) in the old photo-slot frame, with the credit line at the frame bottom.
+    Licences and source links: img/ppe-noise/credits.json."""
+    D.rect(s, x, y, w, h, fill='F7F9FA', line=GREY, lw=0.75)
+    files = [files] if isinstance(files, str) else files
+    if w / h > 2.8:  # low wide frame: picture on the left, credit beside it on the right
+        D.pic(s, os.path.join(IMG, files[0]), x + 0.08, y + 0.06, w - 2.1, h - 0.12)
+        D.text(s, x + w - 1.95, y + 0.1, 1.85, h - 0.2, ['תמונה להמחשה:'] + credit.split(', ', 1), size=10, color=GREY,
+               align='c', anchor='m', gap=2)
+        return
+    pw = (w - 0.1) / len(files)
+    for i, f in enumerate(files):
+        D.pic(s, os.path.join(IMG, f), x + 0.05 + i * pw + 0.03, y + 0.06, pw - 0.06, h - 0.42)
+    D.text(s, x, y + h - 0.36, w, 0.33, 'תמונה להמחשה: ' + credit, size=9 if w < 3.3 else 10, color=GREY,
+           align='c', anchor='m')
+
 PPE = 'תקנות ציוד מגן אישי, תשנ"ז-1997'
 NOISE = 'תקנות הרעש, תשמ"ד-1984'
 MON = 'ניטור רעש 26/06/2025, דוח 250413'
@@ -82,7 +102,7 @@ D.table(s, 0.6, 1.45, 8.75, [
     ['חומר גלם', 'נעלי עבודה, קסדה ליד ערימת תפוחי האדמה, אפוד זוהר.\nפריקה עם אבק: נשמית'],
     ['מחסנים ומקררים', 'ביגוד לקור. אחסון בגובה: קסדה. ליד מלגזות: אפוד זוהר'],
 ], [2.1, 6.65], size=13.5, row_h=0.78)
-D.photo_slot(s, 9.6, 1.45, 3.15, 2.75, 'שלט חובה של ציוד מגן בכניסה לאולם המטוגנים')
+photo(s, 9.6, 1.45, 3.15, 2.75, 'sign.jpg', 'Museums Victoria, CC BY 4.0')
 D.box(s, 9.6, 4.35, 3.15, 2.45, [
     ('בכל המפעל', {'bold': True, 'size': 17, 'color': NAVY}),
     ('נעלי בטיחות שהמפעל נתן.', {'size': 14.5}),
@@ -203,7 +223,7 @@ D.steps(s, 5.0, 1.5, 7.75, [
     [('מכניסים עמוק ומחזיקים', {'bold': True, 'color': NAVY}), ('כמה שניות, עד שהאטם מתנפח בפנים.', {'size': 14})],
     [('בודקים', {'bold': True, 'color': NAVY}), ('הקולות נשמעים עמומים. רואים חצי אטם בחוץ? להכניס שוב.', {'size': 14})],
 ], h=0.88, gap=0.14, size=17)
-D.photo_slot(s, 0.6, 1.5, 4.15, 3.2, 'עובד מכניס אטם: מושך את האוזן ומכניס עמוק')
+photo(s, 0.6, 1.5, 4.15, 3.2, 'earplug.jpg', 'Leonard Nevarez, CC BY-SA 2.0')
 D.box(s, 0.6, 4.85, 4.15, 1.95, [
     ('הורדת לרגע באזור רועש?', {'bold': True, 'size': 16, 'color': 'FFFFFF'}),
     ('כל דקה בלי הגנה באזור רועש מוסיפה לנזק. מורידים רק כשיוצאים מהאזור.', {'size': 14, 'color': 'FFFFFF'})],

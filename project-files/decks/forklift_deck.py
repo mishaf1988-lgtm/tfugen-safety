@@ -32,6 +32,26 @@ from deck_lib import *
 
 out, logo = sys.argv[1], sys.argv[2]
 D = Deck(logo, 'הדרכת מלגזנים  |  תעשיות תפוגן  |  19/11/2026')
+
+IMG = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img', 'forklift')
+
+
+def photo(s, x, y, w, h, files, credit):
+    """Illustrative internet picture(s) in the old photo-slot frame, with the credit line at the frame bottom.
+    Licences and source links: img/forklift/credits.json."""
+    D.rect(s, x, y, w, h, fill='F7F9FA', line=GREY, lw=0.75)
+    files = [files] if isinstance(files, str) else files
+    if w / h > 2.8:  # low wide frame: picture on the left, credit beside it on the right
+        D.pic(s, os.path.join(IMG, files[0]), x + 0.08, y + 0.06, w - 2.1, h - 0.12)
+        D.text(s, x + w - 1.95, y + 0.1, 1.85, h - 0.2, ['תמונה להמחשה:'] + credit.split(', ', 1), size=10, color=GREY,
+               align='c', anchor='m', gap=2)
+        return
+    pw = (w - 0.1) / len(files)
+    for i, f in enumerate(files):
+        D.pic(s, os.path.join(IMG, f), x + 0.05 + i * pw + 0.03, y + 0.06, pw - 0.06, h - 0.42)
+    D.text(s, x, y + h - 0.36, w, 0.33, 'תמונה להמחשה: ' + credit, size=9 if w < 3.3 else 10, color=GREY,
+           align='c', anchor='m')
+
 PK = 'פקודת הבטיחות בעבודה'
 LP = 'תקנות הרמת בני אדם במלגזות, 1983'
 WH = 'הוראות בטיחות במחסן לוגיסטי'
@@ -126,7 +146,7 @@ D.steps(s, 4.85, 1.45, 7.9, [
     [('צופר, אורות וזמזם רוורס', {'bold': True, 'color': NAVY}), ('הכל עובד ונשמע.', {'size': 14})],
     [('מצבר וחגורה', {'bold': True, 'color': NAVY}), ('כבל הטעינה מנותק ושלם. חגורה תקינה.', {'size': 14})],
 ], h=0.88, gap=0.15, size=17)
-D.photo_slot(s, 0.6, 1.45, 4.0, 3.0, 'מלגזה שלנו בבדיקה: מזלג, שרשרת ולוח עומס')
+photo(s, 0.6, 1.45, 4.0, 3.0, 'forklift.jpg', 'JeepersMedia, CC BY 2.0')
 D.box(s, 0.6, 4.6, 4.0, 2.2, [
     ('מצאת תקלה?', {'bold': True, 'size': 18, 'color': 'FFFFFF'}),
     ('לא נוסעים. תולים שלט "לא לשימוש",', {'size': 15, 'color': 'FFFFFF'}),
@@ -213,7 +233,7 @@ for i, (t, d) in enumerate(cards):
     x = 0.6 + (2 - i) * 4.1
     D.box(s, x, 1.55, 3.9, 0.7, t, size=18, bold=True, color='FFFFFF', fill=IDX, align='c')
     D.box(s, x, 2.32, 3.9, 2.55, [l for l in d if l], size=16.5, fill=CARD, gap=3)
-D.photo_slot(s, 6.85, 5.05, 5.9, 1.8, 'אזור טעינת המלגזות שלנו')
+photo(s, 6.85, 5.05, 5.9, 1.8, 'battery.jpg', 'SurfaceWarriors, CC BY-SA 2.0')
 D.box(s, 0.6, 5.05, 6.05, 1.8, [
     ('למה זה חשוב', {'bold': True, 'size': 17, 'color': 'FFFFFF'}),
     ('מזלג באוויר = מכשול שנכנסים בו ברגליים. מלגזה בפתח = אין יציאה בשריפה.',

@@ -24,6 +24,26 @@ from deck_lib import *
 
 out, logo = sys.argv[1], sys.argv[2]
 D = Deck(logo, 'הדרכת עבודה בגובה  |  תעשיות תפוגן  |  19/11/2026')
+
+IMG = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img', 'height')
+
+
+def photo(s, x, y, w, h, files, credit):
+    """Illustrative internet picture(s) in the old photo-slot frame, with the credit line at the frame bottom.
+    Licences and source links: img/height/credits.json."""
+    D.rect(s, x, y, w, h, fill='F7F9FA', line=GREY, lw=0.75)
+    files = [files] if isinstance(files, str) else files
+    if w / h > 2.8:  # low wide frame: picture on the left, credit beside it on the right
+        D.pic(s, os.path.join(IMG, files[0]), x + 0.08, y + 0.06, w - 2.1, h - 0.12)
+        D.text(s, x + w - 1.95, y + 0.1, 1.85, h - 0.2, ['תמונה להמחשה:'] + credit.split(', ', 1), size=10, color=GREY,
+               align='c', anchor='m', gap=2)
+        return
+    pw = (w - 0.1) / len(files)
+    for i, f in enumerate(files):
+        D.pic(s, os.path.join(IMG, f), x + 0.05 + i * pw + 0.03, y + 0.06, pw - 0.06, h - 0.42)
+    D.text(s, x, y + h - 0.36, w, 0.33, 'תמונה להמחשה: ' + credit, size=9 if w < 3.3 else 10, color=GREY,
+           align='c', anchor='m')
+
 REG = 'תקנות עבודה בגובה, תשס"ז-2007'
 PERMIT = 'הרשאת בטיחות לקבלנים, 30/10/2025'
 EQI = 'רשימת תסקירי הציוד באפליקציה'
@@ -118,7 +138,7 @@ D.bullets(s, 6.85, 1.5, 5.9, 3.4, [
     'זווית בין 65 ל-76 מעלות.',
     'לא מול דלת שנפתחת, ולא במעבר בלי חסימה.',
     'מעל פתח: הסולם בולט 30 ס"מ לפחות.'], size=16.5, gap=7)
-D.photo_slot(s, 6.85, 5.0, 5.9, 1.8, 'סולם המיקרו באריזה, עם הפינים נעולים ושרשרת הנעילה')
+photo(s, 6.85, 5.0, 5.9, 1.8, 'ladder.jpg', 'rawpixel, CC0')
 D.bullets(s, 0.6, 1.5, 6.0, 3.3, [
     ('בזמן הטיפוס', {'head': True}),
     'פנים לסולם, שתי ידיים פנויות.',
