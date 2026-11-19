@@ -144,3 +144,17 @@ cd /home/user/tfugen-safety; python3 -I project-files/doc-review/page_fields.py 
 - תמונות העמודים שהסוכן והשיחה הראשית הסתכלו עליהן (PNG בתוצאות כלי Read בתמליל; לא חולצו).
 - נוסח תקנות 2, 7, 10, 13 כפי שנקרא מנבו (בתמליל, לא חולץ; בדוח הסוכן רק תמצית).
 - תוכן טופס 08.02.01 ותוכן סקרי 33.01 (הורדו לתיקייה שנמחקה; צריך להוריד שוב מ-OneDrive).
+
+---
+
+# בנייה מחדש, 19/11/2026 (session_01HFfaw8LVhg6BCFV83JdYir)
+
+`render.sh` נשמר עכשיו בתיקייה הזו (תיקיית הגופנים כפרמטר, בלי נתיב של שיחה). מתיקיית המאגר, עם `F` תיקייה זמנית:
+```
+bash tools/od-get.sh '15_תיק ניהול הבטיחות ונהלים/נהלים - מערכת ניהול משולבת 2025/13.07 - פריסת גלאי אמוניה - 28.04.2026.docx' $F/t1307.docx
+curl -sS -o $F/fonts/DavidLibre-Regular.ttf https://raw.githubusercontent.com/google/fonts/main/ofl/davidlibre/DavidLibre-Regular.ttf   # וגם Bold
+python3 -I project-files/forms/risk-summary/build.py $F/t1307.docx $F/risk-summary.docx
+python3 -I project-files/doc-review/page_fields.py $F/risk-summary.docx 7 $F/fixed.docx && cp $F/fixed.docx $F/risk-summary.docx
+bash project-files/forms/risk-summary/render.sh $F/risk-summary.docx $F $F/fonts
+```
+התוצאה: Word 688783 בתים ו-PDF 290079 בתים, 7 עמודים, DavidLibre-Regular ו-Bold: אותם גדלים בדיוק כמו הטיוטה של אתמול. נבדק בעין: 7 העמודים (לוגו וכותרת בכל עמוד, עמוד לכל מחלקה, שום דבר לא חתוך), והטקסט ב-`build.py` נקרא מול `agent-report.md` בלי שגיאות הקלדה. נשלח למיכאל שוב (file_uuid 1a330820-f809-41b4-a143-2e16f577da34).
