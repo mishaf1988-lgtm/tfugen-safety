@@ -1,4 +1,5 @@
 # Forklift driver training deck (19/11/2026, for the factory's forklift drivers). Brief: scratchpad decks/BRIEF.md.
+# 19/11/2026 Michael in the questionnaire: the DB register is right (15 electric forklifts), so no diesel refuelling slide.
 # Usage: python3 forklift_deck.py <out.pptx> <logo.jpg>
 # Sources read on 19/11/2026 (every number on a slide comes from one of these):
 #   Nevo through the server (source_read), word by word:
@@ -47,7 +48,7 @@ s = D.slide('מה נלמד היום')
 parts = [('1', 'המלגזות שלנו והחוק', 'מי מותר לו לנהוג, ומה הבודק בודק'),
          ('2', 'לפני הנסיעה ועם המשא', 'בדיקה בתחילת משמרת, עומס, ויציבות'),
          ('3', 'נהיגה במפעל', 'הולכי רגל, רמפות, חדרי קירור ורציף העמסה'),
-         ('4', 'טעינה, תדלוק וחניה', 'ומה למדנו מאירועים אצלנו')]
+         ('4', 'טעינה וחניה', 'ומה למדנו מאירועים אצלנו')]
 for i, (n, t, d) in enumerate(parts):
     y = 1.6 + i * 1.3
     D.box(s, 11.6, y, 1.1, 1.1, n, size=34, bold=True, color='FFFFFF', fill=BLUE, align='c')
@@ -123,7 +124,7 @@ D.steps(s, 4.85, 1.45, 7.9, [
     [('גלגלים ונזילות', {'bold': True, 'color': NAVY}), ('גלגל שלם. אין שמן מתחת למלגזה.', {'size': 14})],
     [('בלמים והגה', {'bold': True, 'color': NAVY}), ('בולמת, בלם חניה מחזיק, ההגה עונה.', {'size': 14})],
     [('צופר, אורות וזמזם רוורס', {'bold': True, 'color': NAVY}), ('הכל עובד ונשמע.', {'size': 14})],
-    [('מצבר או דלק, וחגורה', {'bold': True, 'color': NAVY}), ('כבל הטעינה מנותק ושלם. חגורה תקינה.', {'size': 14})],
+    [('מצבר וחגורה', {'bold': True, 'color': NAVY}), ('כבל הטעינה מנותק ושלם. חגורה תקינה.', {'size': 14})],
 ], h=0.88, gap=0.15, size=17)
 D.photo_slot(s, 0.6, 1.45, 4.0, 3.0, 'מלגזה שלנו בבדיקה: מזלג, שרשרת ולוח עומס')
 D.box(s, 0.6, 4.6, 4.0, 2.2, [
@@ -204,16 +205,15 @@ D.box(s, 0.6, 5.15, 6.05, 1.65, [
      {'size': 14.5, 'color': 'FFFFFF'})], fill=RED, anchor='t')
 
 # 13 --------------------------------------------------------------------------------------------------------------
-s = D.slide('טעינה, תדלוק וחניה', source=WH + ' א2, ב3, ב5, ג3, ג6, ג7; הוראת עבודה 192')
+s = D.slide('טעינה וחניה', source=WH + ' א2, ב3, ב5, ג3, ג6, ג7')
 cards = [('טעינת מצבר', ['רק באזור הטעינה,', 'מחוץ למחסן.', 'מכבים לפני שמחברים.', 'בלי עישון ובלי אש.']),
-         ('תדלוק סולר', ['רק בעמדת התדלוק.', 'מחזירים את הפייה', 'למקום אחרי תדלוק.', 'נזילה? מדווחים מיד.']),
          ('חניה בסוף עבודה', ['מזלג על הרצפה.', 'בלם חניה, מנוע כבוי,', 'מוציאים מפתח.', '']),
          ('איפה לא חונים', ['לא מול יציאת חירום.', 'לא מול ארון כיבוי', 'או ארון חשמל.', ''])]
 for i, (t, d) in enumerate(cards):
-    x = 0.6 + (3 - i) * 3.08
-    D.box(s, x, 1.55, 2.9, 0.7, t, size=18, bold=True, color='FFFFFF', fill=IDX, align='c')
-    D.box(s, x, 2.32, 2.9, 2.55, [l for l in d if l], size=16.5, fill=CARD, gap=3)
-D.photo_slot(s, 6.85, 5.05, 5.9, 1.8, 'אזור טעינת המלגזות ועמדת התדלוק שלנו')
+    x = 0.6 + (2 - i) * 4.1
+    D.box(s, x, 1.55, 3.9, 0.7, t, size=18, bold=True, color='FFFFFF', fill=IDX, align='c')
+    D.box(s, x, 2.32, 3.9, 2.55, [l for l in d if l], size=16.5, fill=CARD, gap=3)
+D.photo_slot(s, 6.85, 5.05, 5.9, 1.8, 'אזור טעינת המלגזות שלנו')
 D.box(s, 0.6, 5.05, 6.05, 1.8, [
     ('למה זה חשוב', {'bold': True, 'size': 17, 'color': 'FFFFFF'}),
     ('מזלג באוויר = מכשול שנכנסים בו ברגליים. מלגזה בפתח = אין יציאה בשריפה.',

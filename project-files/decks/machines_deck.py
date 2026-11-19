@@ -1,5 +1,6 @@
 # Machine guarding and lockout/tagout training deck for line operators and maintenance (19/11/2026, Michael's
 # questionnaire: light look, field Hebrew, ~15 slides, lessons from our own events, quiz, six rules). Roles only.
+# 19/11/2026 Michael in the questionnaire: the key stays with whoever locked ("do it: whoever locked").
 # Usage: python3 machines_deck.py <out.pptx> <logo.jpg>
 # Sources read on 19/11/2026:
 #   - Nevo 74793 (פקודת הבטיחות בעבודה [נוסח חדש], תש"ל-1970) via routine-db source_read, full text (cut=False):
@@ -171,7 +172,7 @@ D.steps(s, 4.55, 1.45, 8.2, [
     'מודיעים למנהל המשמרת, ומקבלים ממנו את המכונה.',
     'עוצרים את המכונה במפסק הרגיל.',
     'מנתקים כל מקור אנרגיה: חשמל, לחץ, קיטור, שמן חם.',
-    'נועלים במנעול. מפתח ההפעלה לא נשאר במכונה.',
+    'נועלים במנעול. המפתח אצל מי שנעל, ורק הוא מסיר.',
     'תולים תג: "מכונה בטיפול - אין להפעיל".',
     'משחררים לחץ ושאריות, ומחכים שיתקרר.',
     'בודקים: אין מתח, המכונה לא זזה. רק אז מתחילים.',
