@@ -189,6 +189,9 @@
 //   ctr_close   (17/11/2026, dev-20261117055003-bd3e) {id, why}: a contractor request that was only a test is closed
 //              (status closed, closed: 'test'): no draft, no register row, and its form link stops taking a send
 //              (canSend). Only a request not approved yet (sent, filled, rejecting). Nothing is deleted.
+//   ctr_extend  (19/11/2026, dev-20261119145522-xlxt) {id, de, te?, why}: an approved temporary contractor job gets a later
+//              last day (and an end hour te HH:MM), the same request and no new link: de/until move, the register row's e
+//              follows (never shortened), each extension listed in ext. Not past the document that ends first. _ctrok.js ctrExtend.
 //   ctr_link    (15/11/2026) {kind: perm|temp, ins: true|false, ds, de (temp only), company (optional)}: a contractor
 //              approval link (functions/api/ctr-link.js): a draft talk of kind 'contractor', an entry in server_state
 //              ctr_links, and {url, text, exp, instructions_missing} for Michael to forward himself.
@@ -211,6 +214,7 @@ import { rowContradictions } from './wa-morning.js';
 import { respUnknown } from './hazard-report.js';
 import { ttsWav, speechText } from './talk.js';
 import { ctrLinkCheck, ctrLinkCreate } from './ctr-link.js';
+import { ctrExtend } from '../_ctrok.js';
 import { CTR_STATE, statePatch } from '../_ctr.js';
 import { formProbe } from '../_formprobe.js';
 export const TTS_GEMINI = 'gemini', TTS_GEMINI_FILE = 'hakraa-ivrit.wav', TTS_FMTS = ['audio/mpeg', 'audio/ogg', 'audio/mp3'];
@@ -4004,6 +4008,12 @@ async function routineDbHandle(context) {
     }
     // security review 15/11/2026: a leaked "new worker" link of a contractor is closed from WhatsApp. Raising link_v
     // makes every permanent token of that contractor talk stop working (talk.js readPermToken / permOk).
+    // 19/11/2026 (dev-20261119145522-xlxt, Michael: "extend it until tomorrow at four"): the same permit, a later end.
+    if (body.op === 'ctr_extend') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'id', 'de', 'te'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const r = await ctrExtend(env, body, Date.now()).catch((x) => ({ ok: false, error: String(x && x.message || x).slice(0, 200) }));
+      return jsonResp(r, 200, {});
+    }
     if (body.op === 'ctr_close') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'id'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const rid = String(body.id || '');
