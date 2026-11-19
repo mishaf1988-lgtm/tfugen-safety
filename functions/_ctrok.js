@@ -11,7 +11,7 @@
 import { SITE, sbFrom, tmo, SB_TIMEOUT_MS } from './_shared.js';
 import { stateCas } from './_cas.js';
 import { sendToOwner, ownerWa, ownerWindowOpen, noteLastOut } from './_wa.js';
-import { CTR_STATE, CTR_S_FILLED, CTR_S_SENT, stateList, statePatch, linkTtlDays, ctrLinkId } from './_ctr.js';
+import { CTR_STATE, CTR_S_FILLED, CTR_S_SENT, stateList, statePatch, linkTtlDays, ctrLinkId, addDays } from './_ctr.js';
 import { makeCtrToken, ctrUrl, workLabel, ctrLinkCreate, ilDay, workerLink } from './api/ctr-link.js';
 
 export const CTR_S_OK = 'approved', CTR_S_REJ = 'rejecting';
@@ -378,4 +378,54 @@ export async function ctrMorning(env, now) {
     await mark(r.id, r.e);
   }
   return out;
+}
+
+// ---- the extension of a temporary job (19/11/2026, dev-20261119145522-xlxt) ----
+// Michael on WhatsApp: "the permit I made until today, extend it until tomorrow at 16:00": the SAME approved request,
+// not a new contractor link. routine-db op ctr_extend {id, de, te?, why}. Only an approved temporary job; the new last
+// day is after the old one, not in the past, within a year of the start, and never past the document that ends first
+// (first_e, as ctrEnd). The request's de/until move (the new-worker link and the register follow until), the end hour te
+// is kept, every extension is listed in ext, and the register row's e moves too (never shortened, as ctrUpdate).
+// The signed form 146.03 in the contractor's folder keeps the old dates (a OneDrive write waits for Michael).
+export const HHMM_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
+const realDay = (s) => YMD_RE.test(s) && new Date(s + 'T00:00:00Z').toISOString().slice(0, 10) === s;
+export function ctrExtendCheck(e, de, te, today) {
+  if (!e) return { error: 'no such request' };
+  if (e.kind !== 'temp') return { error: 'only a temporary job has an end to extend' };
+  if (e.status !== CTR_S_OK) return { error: 'not approved (status ' + e.status + ')' };
+  de = String(de || '');
+  if (!realDay(de)) return { error: 'de (YYYY-MM-DD) required' };
+  if (te != null && te !== '' && !HHMM_RE.test(String(te))) return { error: 'te must be HH:MM' };
+  if (de < today) return { error: 'de in the past' };
+  if (YMD_RE.test(String(e.de || '')) && de <= e.de) return { error: 'de must be after the current end ' + e.de };
+  if (YMD_RE.test(String(e.ds || '')) && de > addDays(e.ds, 366)) return { error: 'de too far' };
+  const f = String(e.first_e || '');
+  if (YMD_RE.test(f) && de > f) return { error: 'past the document that ends first (' + one(e.first_doc, 60) + ', ' + f + ')' };
+  return { de, te: te ? String(te) : null };
+}
+export const ctrExtendText = (e, de, te, regOk) => '\u05d4\u05d4\u05d9\u05ea\u05e8 \u05e9\u05dc ' + one(e.company, 60) + ' \u05d4\u05d5\u05d0\u05e8\u05da \u05e2\u05d3 ' + dmy(de) + (te ? ' \u05d1\u05e9\u05e2\u05d4 ' + te : '') + '.'
+  + (regOk ? ' \u05de\u05e8\u05e9\u05dd \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05e2\u05d5\u05d3\u05db\u05df \u05dc\u05d0\u05d5\u05ea\u05d5 \u05ea\u05d0\u05e8\u05d9\u05da.' : '') + ' \u05d8\u05d5\u05e4\u05e1 \u05d4\u05d0\u05d9\u05e9\u05d5\u05e8 \u05d4\u05d7\u05ea\u05d5\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05e7\u05d1\u05dc\u05df \u05e0\u05e9\u05d0\u05e8 \u05e2\u05dd \u05d4\u05ea\u05d0\u05e8\u05d9\u05db\u05d9\u05dd \u05d4\u05e7\u05d5\u05d3\u05de\u05d9\u05dd.';
+export async function ctrExtend(env, body, nowMs) {
+  const rid = String(body.id || '');
+  if (!new RegExp('^' + RID + '$').test(rid)) return { ok: false, error: 'bad id' };
+  if (String(body.why || '').trim().length < 5) return { ok: false, error: 'why required' };
+  const today = ilDay(nowMs);
+  const e = (await ctrEntries(env)).find((x) => x.id === rid);
+  const c = ctrExtendCheck(e, body.de, body.te, today);
+  if (c.error) return { ok: false, error: c.error };
+  const at = new Date(nowMs).toISOString();
+  const ext = (Array.isArray(e.ext) ? e.ext : []).concat([{ from: e.de, to: c.de, te: c.te, at, why: one(body.why, 200) }]).slice(-10);
+  const p = await ctrPatch(env, rid, { de: c.de, until: c.de, te: c.te, ext }, (x) => x.status === CTR_S_OK && x.de === e.de);
+  if (!p.ok) return { ok: false, error: p.error === 'state' ? 'changed meanwhile, read again' : (p.error || 'write') };
+  let regOk = false;
+  if (/^[A-Za-z0-9-]{3,60}$/.test(String(e.reg || ''))) {
+    try {
+      const rows = await sb(env, 'ctr?select=id,e&id=eq.' + encodeURIComponent(e.reg));
+      const cur = Array.isArray(rows) && rows[0];
+      if (cur && !(YMD_RE.test(String(cur.e || '')) && String(cur.e) >= c.de)) await sb(env, 'ctr?id=eq.' + encodeURIComponent(e.reg), { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ e: c.de }) });
+      regOk = !!cur;
+    } catch (x) { regOk = false; }
+  }
+  return { ok: true, id: rid, de: c.de, te: c.te, until: c.de, reg: regOk ? e.reg : null, text: ctrExtendText(e, c.de, c.te, regOk) };
 }

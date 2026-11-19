@@ -4,10 +4,10 @@
 // No asks for the reason, then makes a draft to the contractor with a fresh link, and the page keeps what was typed.
 // The morning update asks again what is still waiting and makes a new link 30 days before a permanent year ends.
 // Mocked network, nothing leaves.
-import { ctrRefOf, ctrEnd, ctrAskText, normName, matchCtr, ctrNewRow, ctrUpdate, renewDue, ctrDraftBody, fastCtrOk, fastCtrMatch, fastCtrReason, ctrIsTest, CTR_TEST_CHOICE, ctrAsk, ctrMorning, nagDue, endedDue, ctrTestName, ctrWorkerBody,
+import { ctrRefOf, ctrEnd, ctrAskText, normName, matchCtr, ctrNewRow, ctrUpdate, renewDue, ctrDraftBody, fastCtrOk, fastCtrMatch, fastCtrReason, ctrIsTest, CTR_TEST_CHOICE, ctrAsk, ctrMorning, nagDue, endedDue, ctrTestName, ctrWorkerBody, ctrExtend, ctrExtendCheck, HHMM_RE,
   CTR_S_OK, CTR_S_REJ, CTR_RENEW_KEY, CTR_TRAINED } from './_build/_ctrok.mjs';
 import { fastRoute, aboutLine } from './_build/wa-hook.mjs';
-import { formHtml, readCtrToken, ctrDeps } from './_build/ctr-link.mjs';
+import { formHtml, readCtrToken, ctrDeps, workerLink } from './_build/ctr-link.mjs';
 import { CTR_STATE, canSend } from './_build/_ctr.mjs';
 import { ATTACH_SAID_RE } from './_build/routine-db.mjs';
 
@@ -303,6 +303,36 @@ const filled = (o) => Object.assign({ id: 'cabc1234', kind: 'perm', ins: true, d
   reset(); put([filled({ status: CTR_S_OK, until: addD(today, 300), reg: 'ctr26-1', ok_at: '2026-11-16T10:00:00Z' })]); db.ctr = [{ id: 'ctr26-1', n: 'אלקטרו', ty: 'קבוע', e: addD(today, 300), s: 'פעיל' }]; db.talks.push({ ...PUBT });
   mo = await ctrMorning(WA, new Date(NOW));
   check('an approval from before this change (it had its link at the send): nothing sent', !mo.wlink && !/\/api\/talk\?k=/.test(JSON.stringify(db.meta)), mo);
+
+  // 19/11/2026 (dev-20261119145522-xlxt): the same approved temporary job, a later end (Michael: "until tomorrow at four")
+  const xtmp = (o) => filled(Object.assign({ kind: 'temp', ds: addD(today, -2), de: today, status: CTR_S_OK, until: today, reg: 'ctr26-t1', first_e: addD(today, 10), first_doc: 'אישור גובה' }, o || {}));
+  reset(); put([xtmp()]); db.ctr = [{ id: 'ctr26-t1', n: 'אלקטרו', ty: 'זמני', e: today, s: 'פעיל' }];
+  const xt = await ctrExtend(ENV, { id: 'cabc1234', de: addD(today, 1), te: '16:00', why: 'Michael asked on WhatsApp' }, NOW);
+  const xe = ent('cabc1234');
+  check('ctr_extend: the same request moves to the new day and hour, the register row follows',
+    xt.ok === true && xe.de === addD(today, 1) && xe.until === addD(today, 1) && xe.te === '16:00' && xe.ext.length === 1 && xe.ext[0].from === today && db.ctr[0].e === addD(today, 1)
+    && xe.status === CTR_S_OK && JSON.parse(db.state[CTR_STATE].value).length === 1, { xt, xe, ctr: db.ctr });
+  check('ctr_extend: the answer says the day and hour, keyboard characters only', xt.text.indexOf(addD(today, 1).slice(8, 10) + '/') >= 0 && xt.text.indexOf('16:00') > 0 && !BAD.test(xt.text), xt.text);
+  const again = await ctrExtend(ENV, { id: 'cabc1234', de: addD(today, 1), why: 'twice the same' }, NOW);
+  check('ctr_extend: not to the same or an earlier day', again.ok === false && /after the current end/.test(again.error), again);
+  const far = await ctrExtend(ENV, { id: 'cabc1234', de: addD(today, 11), why: 'past the document' }, NOW);
+  check('ctr_extend: never past the document that ends first', far.ok === false && /document that ends first/.test(far.error) && ent('cabc1234').de === addD(today, 1), far);
+  check('ctr_extend: a bad hour, a past day, no reason are refused', ctrExtendCheck(xtmp(), addD(today, 1), '25:00', today).error === 'te must be HH:MM'
+    && ctrExtendCheck(xtmp(), addD(today, -1), null, today).error === 'de in the past'
+    && (await ctrExtend(ENV, { id: 'cabc1234', de: addD(today, 2) }, NOW)).error === 'why required');
+  check('ctr_extend: the hour pairs (16:00, 07:30, 23:59 pass; 24:00, 7:30, 16:00:00 do not)', ['16:00', '07:30', '23:59'].every((x) => HHMM_RE.test(x)) && !['24:00', '7:30', '16:00:00'].some((x) => HHMM_RE.test(x)));
+  db.talks.push({ ...PUBT });
+  const wl0 = await workerLink(ENV, { kind: 'temp', de: today }, Object.assign({}, xtmp(), { at: new Date(NOW).toISOString(), talk: 'ctr-cabc1234' }), NOW).catch(() => null);
+  const wl1 = await workerLink(ENV, { kind: 'temp', de: today }, Object.assign({}, xtmp(), { de: addD(today, 5), until: addD(today, 5), at: new Date(NOW).toISOString(), talk: 'ctr-cabc1234' }), NOW).catch(() => null);
+  const ttlOf = (u) => { try { return JSON.stringify(u); } catch (x) { return ''; } };
+  check('ctr_extend: the new-worker link follows the extended end (a later token than the original day)', !!wl0 && !!wl1 && wl0 !== wl1, { wl0: ttlOf(wl0), wl1: ttlOf(wl1) });
+  reset(); put([filled()]);
+  const pr = await ctrExtend(ENV, { id: 'cabc1234', de: addD(today, 2), why: 'a permanent one' }, NOW);
+  check('ctr_extend: a permanent contractor or a request not approved is not extended', pr.ok === false && /only a temporary/.test(pr.error)
+    && /not approved/.test(ctrExtendCheck(xtmp({ status: 'filled' }), addD(today, 1), null, today).error || ''), pr);
+  reset(); put([xtmp()]); db.ctr = [{ id: 'ctr26-t1', n: 'אלקטרו', ty: 'קבוע', e: addD(today, 200), s: 'פעיל' }];
+  await ctrExtend(ENV, { id: 'cabc1234', de: addD(today, 1), why: 'register has a longer year' }, NOW);
+  check('ctr_extend: a register row with a later end is not shortened', db.ctr[0].e === addD(today, 200), db.ctr);
 
   console.log(`\nctr-ok-test.mjs            ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
