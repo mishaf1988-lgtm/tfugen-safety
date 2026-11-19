@@ -4,7 +4,7 @@
 // No asks for the reason, then makes a draft to the contractor with a fresh link, and the page keeps what was typed.
 // The morning update asks again what is still waiting and makes a new link 30 days before a permanent year ends.
 // Mocked network, nothing leaves.
-import { ctrRefOf, ctrEnd, ctrAskText, normName, matchCtr, ctrNewRow, ctrUpdate, renewDue, ctrDraftBody, fastCtrOk, fastCtrMatch, fastCtrReason, ctrIsTest, CTR_TEST_CHOICE, ctrAsk, ctrMorning, nagDue, endedDue, ctrTestName, ctrWorkerBody, ctrExtend, ctrExtendCheck,
+import { ctrRefOf, ctrEnd, ctrAskText, normName, matchCtr, ctrNewRow, ctrUpdate, renewDue, ctrDraftBody, fastCtrOk, fastCtrMatch, fastCtrReason, ctrIsTest, CTR_TEST_CHOICE, ctrAsk, ctrMorning, nagDue, endedDue, ctrTestName, ctrWorkerBody, ctrExtend, ctrExtendCheck, HHMM_RE,
   CTR_S_OK, CTR_S_REJ, CTR_RENEW_KEY, CTR_TRAINED } from './_build/_ctrok.mjs';
 import { fastRoute, aboutLine } from './_build/wa-hook.mjs';
 import { formHtml, readCtrToken, ctrDeps } from './_build/ctr-link.mjs';
@@ -320,6 +320,7 @@ const filled = (o) => Object.assign({ id: 'cabc1234', kind: 'perm', ins: true, d
   check('ctr_extend: a bad hour, a past day, no reason are refused', ctrExtendCheck(xtmp(), addD(today, 1), '25:00', today).error === 'te must be HH:MM'
     && ctrExtendCheck(xtmp(), addD(today, -1), null, today).error === 'de in the past'
     && (await ctrExtend(ENV, { id: 'cabc1234', de: addD(today, 2) }, NOW)).error === 'why required');
+  check('ctr_extend: the hour pairs (16:00, 07:30, 23:59 pass; 24:00, 7:30, 16:00:00 do not)', ['16:00', '07:30', '23:59'].every((x) => HHMM_RE.test(x)) && !['24:00', '7:30', '16:00:00'].some((x) => HHMM_RE.test(x)));
   reset(); put([filled()]);
   const pr = await ctrExtend(ENV, { id: 'cabc1234', de: addD(today, 2), why: 'a permanent one' }, NOW);
   check('ctr_extend: a permanent contractor or a request not approved is not extended', pr.ok === false && /only a temporary/.test(pr.error)
