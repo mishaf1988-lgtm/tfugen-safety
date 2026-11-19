@@ -263,6 +263,7 @@ class Deck:
 
     def save(self, path):
         self.prs.save(path)
+        stamp(path)
         fix_fonts(path)
 
 
@@ -290,3 +291,37 @@ def fix_fonts(path):
         zout.writestr(item, data)
     zin.close(); zout.close()
     shutil.move(tmp, path)
+
+
+# 19/11/2026 (Michael: the decks must say they were prepared by him; questionnaire: "do it: on the cover and at the bottom
+# of every slide", "do it: with the role"). stamp() works on a saved file, so it also marks a deck Michael already edited
+# in PowerPoint (his pictures stay). A slide that already carries the line is left alone.
+BY = '\u05d4\u05d5\u05db\u05df \u05e2\u05dc \u05d9\u05d3\u05d9: \u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da, \u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d0\u05d9\u05db\u05d5\u05ea \u05d4\u05e1\u05d1\u05d9\u05d1\u05d4'
+
+
+def stamp(path):
+    prs = Presentation(path)
+    n = 0
+    for i, s in enumerate(prs.slides):
+        if any(sh.has_text_frame and BY in sh.text_frame.text for sh in s.shapes):
+            continue
+        cover = i == 0
+        tb = s.shapes.add_textbox(Inches(0.8), Inches(6.72 if cover else 7.25), Inches(W - 1.6), Inches(0.5 if cover else 0.22))
+        tf = tb.text_frame
+        tf.margin_top = tf.margin_bottom = Inches(0)
+        para = tf.paragraphs[0]
+        para.alignment = PP_ALIGN.CENTER
+        para._p.get_or_add_pPr().set('rtl', '1')
+        r = para.add_run(); r.text = BY
+        r.font.name = 'Arial'; r.font.size = Pt(16 if cover else 9); r.font.bold = cover
+        r.font.color.rgb = rgb(INK if cover else GREY)
+        n += 1
+    prs.save(path)
+    fix_fonts(path)
+    return n
+
+
+if __name__ == '__main__':
+    import sys
+    for f in sys.argv[1:]:
+        print(stamp(f), f)
