@@ -416,7 +416,7 @@ const escH = (x) => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/<
 export const ctrExtendSubject = (e) => '\u05d4\u05d0\u05e8\u05db\u05ea \u05d4\u05d9\u05ea\u05e8 \u05e7\u05d1\u05dc\u05df: ' + one(e.company, 60);
 export function ctrExtendMail(e, from, de, te, why, regOk) {
   const row = (k, v) => '<tr><td style="padding:4px 8px;border:1px solid #ccc;background:#f3f4f6;white-space:nowrap"><b>' + k + '</b></td><td style="padding:4px 8px;border:1px solid #ccc">' + escH(v) + '</td></tr>';
-  return '<div dir="rtl" style="font-family:Arial;font-size:14px">'
+  return '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial;font-size:14px">'
     + '<p>\u05d4\u05d4\u05d9\u05ea\u05e8 \u05d4\u05d6\u05de\u05e0\u05d9 \u05e9\u05dc <b>' + escH(one(e.company, 60)) + '</b> \u05d4\u05d5\u05d0\u05e8\u05da.</p>'
     + '<table style="border-collapse:collapse;font-family:Arial;font-size:14px">'
     + row('\u05e1\u05d5\u05e3 \u05e7\u05d5\u05d3\u05dd', dmy(from) + (e.te ? ' ' + one(e.te, 5) : ''))
