@@ -1,5 +1,6 @@
 # Hot work training deck for maintenance workers and contractors (19/11/2026, Michael: decks per coverage.md item 8;
 # "quality, interesting to teach", "attach pictures from the internet"). Roles only, no names or phone numbers.
+# 19/11/2026 Michael in the questionnaire: the 10 m / 6 kg / one shift-one place rules of WI 200 ARE the rules ("do it: keep, these are the rules"); the draft note came off the slides. He signs WI 200.
 # Usage: python3 hotwork_deck.py <out.pptx> <logo.jpg>
 # Sources read on 19/11/2026 (OneDrive safety folder unless noted):
 #   A20  15_תיק ניהול הבטיחות ונהלים/הוראות עבודה/הוראות עבודה אחזקה - מהדורה C - 08.10.2026.pdf
@@ -28,7 +29,7 @@ out, logo = sys.argv[1], sys.argv[2]
 img = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img', 'hotwork')
 D = Deck(logo, 'הדרכת עבודה חמה  |  תעשיות תפוגן  |  19/11/2026')
 A20 = 'הוראות בטיחות לאחזקה 20-30, מהדורה C'
-W200 = 'טיוטת הוראת עבודה 200 (24/10/2026)'
+W200 = 'הוראת עבודה 200 (24/10/2026)'
 FIRE = 'תחקיר אירוע חירום, שריפה בשטח סמוך, 26-27/07/2026'
 
 
@@ -139,7 +140,7 @@ D.box(s, 0.6, 1.5, 4.05, 2.1, [
 D.box(s, 0.6, 3.75, 4.05, 2.1, [
     ('היתר אחד = משמרת אחת, מקום אחד', {'bold': True, 'size': 16, 'color': NAVY}),
     ('עברת למקום אחר או למשמרת אחרת? היתר חדש.', {'size': 14.5}),
-    ('(לפי טיוטת הוראת עבודה 200)', {'size': 12, 'color': GREY})], fill=CARD, gap=3)
+    ('(לפי הוראת עבודה 200)', {'size': 12, 'color': GREY})], fill=CARD, gap=3)
 D.box(s, 0.6, 6.0, 4.05, 0.72, [('שאלה לדיון:  "זה רק שתי דקות השחזה". צריך היתר?', {'bold': True, 'size': 13.5})],
       fill=AMBER)
 
@@ -166,8 +167,6 @@ D.steps(s, 5.65, 1.5, 7.1, [
     [('גלאי עשן', {'bold': True, 'color': NAVY}),
      ('מנטרלים רק בתיאום עם מנהל האחזקה, ומחזירים בסוף.', {'size': 13.5})],
 ], h=0.84, gap=0.11, size=16.5)
-D.text(s, 5.65, 6.3, 7.1, 0.5, 'המספרים (10 מטר, 6 ק"ג): מטיוטת הנוהל, שעוד לא נחתמה.',
-       size=12.5, color=GREY, align='c')
 
 # 10 --------------------------------------------------------------------------------------------------------------
 s = D.slide('צופה אש: בזמן העבודה, וגם אחריה', source=A20 + ', סעיף 28(ה); ' + W200 + ', סעיף 7')

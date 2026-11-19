@@ -1,6 +1,7 @@
 # Confined space entry training deck for maintenance, wastewater-plant workers and contractors (19/11/2026, Michael's
 # questionnaire: light look, field Hebrew, ~15 slides, lessons from our own events, quiz, six rules, interesting to
 # teach: opening story, discussion questions, one exercise, real pictures). Roles only, no names or phone numbers.
+# 19/11/2026 Michael in the questionnaire: at our factory only certified contractors enter pits and tanks; factory workers do not.
 # Usage: python3 confined_deck.py <out.pptx> <logo.jpg>
 # Sources read on 19/11/2026:
 #   - Nevo 74793 (פקודת הבטיחות בעבודה [נוסח חדש], תש"ל-1970) via routine-db source_read, full text (cut=False):
@@ -170,8 +171,8 @@ D.box(s, 0.6, 1.5, 3.95, 3.45, [
     ('• רשומה תכנית חילוץ.', {'size': 15, 'color': 'FFFFFF'}),
     ('• קבלן מצרף אישור הדרכת מקום מוקף.', {'size': 15, 'color': 'FFFFFF'})], fill=DBLUE)
 D.box(s, 0.6, 5.1, 3.95, 1.7, [
-    ('עבודה לא שגרתית', {'bold': True, 'size': 16.5, 'color': 'FFFFFF'}),
-    ('גם אישור מנהל הבטיחות וסקר סיכונים, לפני שמתחילים.', {'size': 15, 'color': 'FFFFFF'})], fill=RED)
+    ('אצלנו נכנס רק קבלן מוסמך', {'bold': True, 'size': 16.5, 'color': 'FFFFFF'}),
+    ('עובדי המפעל לא נכנסים לבורות ולמיכלים. רק קבלן עם הציוד שלו ועם היתר.', {'size': 15, 'color': 'FFFFFF'})], fill=RED)
 
 # 10 --------------------------------------------------------------------------------------------------------------
 s = D.slide('מנתקים ונועלים כל מה שנכנס למיכל', source=PW + '; תחקירים 26/07/2026 ו-29/10/2026')
