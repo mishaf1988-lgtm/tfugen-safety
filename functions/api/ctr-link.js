@@ -414,7 +414,10 @@ export async function workerLink(env, t, entry, nowMs) {
   const talk = await talkRow(env, entry.talk);
   if (!talk || talk.s !== S_PUB) return null;
   const from = Date.parse(entry.at || '') || nowMs;
-  let ttl = workerTtlDays(t.kind, t.de, from);
+  // 19/11/2026 (ctr_extend, security review): an extended job's end is the request's own de (server state), later than the
+  // day the link's token carries; the approval's end (until) still caps it below.
+  const de = /^\d{4}-\d{2}-\d{2}$/.test(String(entry.de || '')) && String(entry.de) > String(t.de || '') ? entry.de : t.de;
+  let ttl = workerTtlDays(t.kind, de, from);
   if (/^\d{4}-\d{2}-\d{2}$/.test(String(entry.until || ''))) ttl = Math.min(ttl, Math.max(1 / 24, (jobEndMs(entry.until) - from) / 86400000));
   const tok = await makePermToken(env, talk.id, talk.link_v || 0, from, ttl);
   return tok ? talkUrl(tok) : null;

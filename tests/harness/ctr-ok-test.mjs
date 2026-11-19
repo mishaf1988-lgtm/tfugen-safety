@@ -7,7 +7,7 @@
 import { ctrRefOf, ctrEnd, ctrAskText, normName, matchCtr, ctrNewRow, ctrUpdate, renewDue, ctrDraftBody, fastCtrOk, fastCtrMatch, fastCtrReason, ctrIsTest, CTR_TEST_CHOICE, ctrAsk, ctrMorning, nagDue, endedDue, ctrTestName, ctrWorkerBody, ctrExtend, ctrExtendCheck, HHMM_RE,
   CTR_S_OK, CTR_S_REJ, CTR_RENEW_KEY, CTR_TRAINED } from './_build/_ctrok.mjs';
 import { fastRoute, aboutLine } from './_build/wa-hook.mjs';
-import { formHtml, readCtrToken, ctrDeps } from './_build/ctr-link.mjs';
+import { formHtml, readCtrToken, ctrDeps, workerLink } from './_build/ctr-link.mjs';
 import { CTR_STATE, canSend } from './_build/_ctr.mjs';
 import { ATTACH_SAID_RE } from './_build/routine-db.mjs';
 
@@ -321,6 +321,11 @@ const filled = (o) => Object.assign({ id: 'cabc1234', kind: 'perm', ins: true, d
     && ctrExtendCheck(xtmp(), addD(today, -1), null, today).error === 'de in the past'
     && (await ctrExtend(ENV, { id: 'cabc1234', de: addD(today, 2) }, NOW)).error === 'why required');
   check('ctr_extend: the hour pairs (16:00, 07:30, 23:59 pass; 24:00, 7:30, 16:00:00 do not)', ['16:00', '07:30', '23:59'].every((x) => HHMM_RE.test(x)) && !['24:00', '7:30', '16:00:00'].some((x) => HHMM_RE.test(x)));
+  db.talks.push({ ...PUBT });
+  const wl0 = await workerLink(ENV, { kind: 'temp', de: today }, Object.assign({}, xtmp(), { at: new Date(NOW).toISOString(), talk: 'ctr-cabc1234' }), NOW).catch(() => null);
+  const wl1 = await workerLink(ENV, { kind: 'temp', de: today }, Object.assign({}, xtmp(), { de: addD(today, 5), until: addD(today, 5), at: new Date(NOW).toISOString(), talk: 'ctr-cabc1234' }), NOW).catch(() => null);
+  const ttlOf = (u) => { try { return JSON.stringify(u); } catch (x) { return ''; } };
+  check('ctr_extend: the new-worker link follows the extended end (a later token than the original day)', !!wl0 && !!wl1 && wl0 !== wl1, { wl0: ttlOf(wl0), wl1: ttlOf(wl1) });
   reset(); put([filled()]);
   const pr = await ctrExtend(ENV, { id: 'cabc1234', de: addD(today, 2), why: 'a permanent one' }, NOW);
   check('ctr_extend: a permanent contractor or a request not approved is not extended', pr.ok === false && /only a temporary/.test(pr.error)
