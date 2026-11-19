@@ -914,8 +914,16 @@ export async function onRequest(context) {
   const which = body.file === 'xlsx' ? 'xlsx' : 'xlsm';
   // The requests fired below (archive, watch, retry and the twin; the deck
   // after the twin) are subrequests of this one too.
-  if (context.waitUntil && env.TRUSTEE_NOTIFY_SECRET) B.spend(which === 'xlsm' ? 4 : 1);
+  if (context.waitUntil && env.TRUSTEE_NOTIFY_SECRET) B.spend(which === 'xlsm' ? (env.MAINT_API_KEY ? 5 : 4) : 1);
   try {
+    // The maintenance app (maint-hook.js, 19/11/2026): a ticket for every new hazard of maintenance or electricity,
+    // in its own request. Off until MAINT_API_KEY exists.
+    if (which === 'xlsm' && context.waitUntil && env.TRUSTEE_NOTIFY_SECRET && env.MAINT_API_KEY) {
+      context.waitUntil(fetch(new URL('/api/maint-hook', request.url).toString(), {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-notify-secret': env.TRUSTEE_NOTIFY_SECRET },
+        body: JSON.stringify({ op: 'push' }),
+      }).catch(() => {}));
+    }
     // The archive housekeeping (runArchive), in its own request; it does
     // nothing on most runs (one state read).
     if (which === 'xlsm' && context.waitUntil && env.TRUSTEE_NOTIFY_SECRET) {
