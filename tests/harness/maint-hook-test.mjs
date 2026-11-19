@@ -36,6 +36,10 @@ check('a photo goes only as a public link of our storage', photoOf({ photo_url: 
 const mac = (s, raw) => crypto.createHmac('sha256', s).update(raw).digest('hex');
 check('a right signature passes, with and without sha256=', await sigOk('k', '{"a":1}', mac('k', '{"a":1}')) && await sigOk('k', '{"a":1}', 'sha256=' + mac('k', '{"a":1}')));
 check('a wrong, empty or other-body signature fails', !(await sigOk('k', '{"a":1}', mac('x', '{"a":1}'))) && !(await sigOk('k', '{"a":1}', '')) && !(await sigOk('k', '{"a":2}', mac('k', '{"a":1}'))) && !(await sigOk('', '{"a":1}', mac('', '{"a":1}'))));
+check('pairs, a closing status: closed, the Hebrew for closed and for handled match', ['closed', 'Done', '\u05e1\u05d2\u05d5\u05e8', '\u05e0\u05e1\u05d2\u05e8\u05d4', '\u05d8\u05d5\u05e4\u05dc'].every((x) => isClosing(x)));
+check('pairs, not a closing: assigned, in work, the Hebrew for open and for in work, "not closed"', ['assigned', 'in work', '\u05e4\u05ea\u05d5\u05d7', '\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc', 'not closed', 'closed?no'].every((x) => !isClosing(x)));
+check('pairs, the party: maintenance manager, electricity, maintenance + engineering match', ['\u05de\u05e0\u05d4\u05dc \u05d0\u05d7\u05d6\u05e7\u05d4', ELEC, MAINT + ' + \u05d4\u05e0\u05d3\u05e1\u05d4'].every((x) => isMaint({ resp: x })));
+check('pairs, the party: department manager, engineering, safety do not', [MGR, '\u05d4\u05e0\u05d3\u05e1\u05d4', '\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea'].every((x) => !isMaint({ resp: x })));
 
 console.log('requests');
 let state = {}, rows = [], out = [], patches = [], metas = [], maintStatus = 200;
