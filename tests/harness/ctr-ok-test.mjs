@@ -4,7 +4,7 @@
 // No asks for the reason, then makes a draft to the contractor with a fresh link, and the page keeps what was typed.
 // The morning update asks again what is still waiting and makes a new link 30 days before a permanent year ends.
 // Mocked network, nothing leaves.
-import { ctrRefOf, ctrEnd, ctrAskText, normName, matchCtr, ctrNewRow, ctrUpdate, renewDue, ctrDraftBody, fastCtrOk, fastCtrMatch, fastCtrReason, ctrIsTest, CTR_TEST_CHOICE, ctrAsk, ctrMorning, nagDue, endedDue, ctrWorkerBody,
+import { ctrRefOf, ctrEnd, ctrAskText, normName, matchCtr, ctrNewRow, ctrUpdate, renewDue, ctrDraftBody, fastCtrOk, fastCtrMatch, fastCtrReason, ctrIsTest, CTR_TEST_CHOICE, ctrAsk, ctrMorning, nagDue, endedDue, ctrTestName, ctrWorkerBody,
   CTR_S_OK, CTR_S_REJ, CTR_RENEW_KEY, CTR_TRAINED } from './_build/_ctrok.mjs';
 import { fastRoute, aboutLine } from './_build/wa-hook.mjs';
 import { formHtml, readCtrToken, ctrDeps } from './_build/ctr-link.mjs';
@@ -227,6 +227,23 @@ const filled = (o) => Object.assign({ id: 'cabc1234', kind: 'perm', ins: true, d
   reset(); put([sent()]);
   mo = await ctrMorning(ENV, new Date(NOW));
   check('a message that failed is not marked (told the next morning)', mo.nag === 0 && !ent('cnag1234').nag, mo);
+
+  // 19/11/2026 (dev-20261119044614-w1zg): Michael's test links are not told, a real one still is, several = one message
+  check('ctrTestName: test words and no name', ctrTestName('בדיקה לא') && ctrTestName('בדיקה') && ctrTestName('') && ctrTestName(null) && ctrTestName('קבלן ניסיון') && ctrTestName('Test'));
+  check('ctrTestName: a real name is not a test', !ctrTestName('גגות בע"מ') && !ctrTestName('בדיקות לא הרסניות בע"מ') && !ctrTestName('אלקטרו'));
+  reset(); put([sent({ id: 'ctst0001', company: 'בדיקה לא' }), sent({ id: 'ctst0002', company: '' }), sent()]);
+  mo = await ctrMorning(WA, new Date(NOW));
+  const realMsg = JSON.stringify(db.meta);
+  check('test links: no reminder; the real contractor still told', mo.nag === 1 && db.meta.length === 1 && realMsg.indexOf('גגות') >= 0 && realMsg.indexOf('בדיקה') < 0, mo);
+  check('test links are marked, not looked at again', ent('ctst0001').nag === ent('ctst0001').exp && ent('ctst0002').nag_skip === 'test');
+  reset(); put([sent({ id: 'ctst0001', company: 'בדיקה' })]);
+  mo = await ctrMorning(WA, new Date(NOW));
+  check('only test links: no message at all', mo.nag === 0 && db.meta.length === 0, mo);
+  reset(); put([sent(), sent({ id: 'cnag5678', company: 'צבע ושיפוץ', talk: 'ctr-cnag5678' })]);
+  mo = await ctrMorning(WA, new Date(NOW));
+  const twoMsg = JSON.stringify(db.meta);
+  check('two real links: one message with both', mo.nag === 2 && db.meta.length === 1 && twoMsg.indexOf('גגות') >= 0 && twoMsg.indexOf('צבע') >= 0 && !BAD.test(twoMsg), mo);
+  check('both marked', ent('cnag1234').nag === ent('cnag1234').exp && ent('cnag5678').nag === ent('cnag5678').exp);
 
   const tmp = (o) => filled(Object.assign({ id: 'ctmp1234', kind: 'temp', ds: addD(today, -5), de: addD(today, -1), ask_at: new Date(NOW - 22 * 3600e3).toISOString() }, o || {}));
   check('endedDue: a temp job whose last day passed', endedDue([tmp()], today).length === 1);
