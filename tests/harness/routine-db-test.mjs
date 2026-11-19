@@ -1389,7 +1389,8 @@ const callIn = async (body) => {
     check('two recipients: joined with ";" for the flow', g5.to === 'a@tapugan.co.il;b@tapugan.co.il', g5.to);
     puts = [];
     check('six recipients or one bad address among two: refused', (await call({ ...D, to: 'a@x.co;b@x.co;c@x.co;d@x.co;e@x.co;f@x.co' })).status === 400 && (await call({ ...D, to: 'a@x.co;nope' })).status === 400 && !puts.length);
-    check('devEta: the runner\'s next wake in Israel time (Sun-Thu 07:17-19:17, odd hours; 26/10/2026)', devEta(Date.parse('2026-10-26T12:40:00Z')) === '26/10 15:17' && devEta(Date.parse('2026-10-26T17:20:00Z')) === '27/10 07:17' && devEta(Date.parse('2026-10-29T17:30:00Z')) === '01/11 07:17' && devEta(Date.parse('2026-10-30T09:00:00Z')) === '01/11 07:17');
+    check('devEta: fired = built now, within the hour, Israel time (19/11/2026: the runner is off since 01/11/2026)', devEta(Date.parse('2026-11-19T14:59:00Z'), true) === '19/11 17:59' && devEta(Date.parse('2026-11-20T09:00:00Z'), true) === '20/11 12:00');
+    check('devEta: not fired = the daily safety net 19:23 Sun-Thu, 3 hours or more ahead', devEta(Date.parse('2026-11-19T10:00:00Z'), false) === '19/11 19:23' && devEta(Date.parse('2026-11-19T15:00:00Z'), false) === '22/11 19:23' && devEta(Date.parse('2026-11-22T06:00:00Z')) === '22/11 19:23');
     { const ours = (n) => Array.from({ length: n }, (_, i) => 'm' + i + '@tapugan.co.il').join(';');
       puts = []; await call({ ...D, to: ours(24), cc: 'stav@tapugan.co.il' });
       const g24 = puts[0] ? JSON.parse(puts[0].body) : {};

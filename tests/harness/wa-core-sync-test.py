@@ -69,5 +69,11 @@ for num in ["0ב.", "0ב1.", "0ב2.", "0ב3.", "0ב5."]:
 for rel, t in [("project-files/routine-wa-core.md", core)] + list(topics.items()):
     check(rel + ": no long dash", "\u2014" not in t)
 
+# 19/11/2026 (Michael: "development happens immediately and not by waiting, so you do not get this wrong again"): the
+# runner is off since 01/11/2026; no instruction may promise its "next wake" again
+_full = open(os.path.join(ROOT, "project-files", "routine-wa-assistant.md"), encoding="utf-8").read()
+for rel, t in [("project-files/routine-wa-core.md", core), ("project-files/routine-wa-assistant.md", _full)] + list(topics.items()):
+    check(rel + ": no 'next wake of the runner' promise", "\u05d1\u05d4\u05e9\u05db\u05de\u05d4 \u05d4\u05d1\u05d0\u05d4" not in t and "\u05d1\u05d4\u05e9\u05db\u05de\u05d4 \u05e9\u05dc \u05d4\u05de\u05e4\u05ea\u05d7" not in t)
+
 print("\n%d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)

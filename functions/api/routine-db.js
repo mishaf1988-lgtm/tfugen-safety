@@ -1898,17 +1898,21 @@ export async function devRequestOpen(env, url, h, agent, text, nowIso) {
     return { id: r.id, created: true, fired: fr.ok };
   } catch (x) { return { id: r.id, created: true, fired: false }; }
 }
-// 26/10/2026 (Michael: "upgrade", after the assistant told him "the dev session was fired now" and then "15:17"): the
-// fired session has no repository, so code waits for the runner (ACCOUNT-INVENTORY: Sun-Thu 07:17-19:17, every two
-// hours, Israel time). dev_request returns that wake as eta, and the assistant quotes it rather than guessing.
+// 26/10/2026 (Michael: "upgrade", after the assistant told him "the dev session was fired now" and then "15:17"):
+// dev_request returns eta, and the assistant quotes it rather than guessing. 19/11/2026 (Michael: "write down that
+// development happens immediately and not by waiting, so you do not get this wrong again"; the assistant said 17:17
+// for a fix the instant run was already building): the runner is off since 01/11/2026, so a fired request is built
+// now, eta = within the hour. Not fired: the daily safety net (routine-dev-safety.md, Sun-Thu 19:23 Israel time)
+// resends a request older than 3 hours, so eta = its first run 3 hours or more from now.
 const IL_PARTS = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-export function devEta(nowMs) {
-  let t = Math.floor(nowMs / 3600000) * 3600000 + 17 * 60000;
-  if (t <= nowMs) t += 3600000;
-  for (let i = 0; i < 200; i++, t += 3600000) {
-    const p = {}; for (const x of IL_PARTS.formatToParts(new Date(t))) p[x.type] = x.value;
-    const h = Number(p.hour);
-    if (['Fri', 'Sat'].indexOf(p.weekday) < 0 && h >= 7 && h <= 19 && h % 2 === 1 && p.minute === '17') return p.day + '/' + p.month + ' ' + p.hour + ':17';
+export const DEV_ETA_FIRED_MIN = 60;
+function ilParts(ms) { const p = {}; for (const x of IL_PARTS.formatToParts(new Date(ms))) p[x.type] = x.value; return p; }
+export function devEta(nowMs, fired) {
+  if (fired) { const p = ilParts(nowMs + DEV_ETA_FIRED_MIN * 60000); return p.day + '/' + p.month + ' ' + p.hour + ':' + p.minute; }
+  let t = Math.floor(nowMs / 60000) * 60000 + 3 * 3600000;
+  for (let i = 0; i < 8 * 24 * 60; i++, t += 60000) {
+    const p = ilParts(t);
+    if (['Fri', 'Sat'].indexOf(p.weekday) < 0 && p.hour === '19' && p.minute === '23') return p.day + '/' + p.month + ' 19:23';
   }
   return null;
 }
@@ -3195,7 +3199,7 @@ async function routineDbHandle(context) {
           wa = s.ok ? (s.via || 'sent') : (s.error || 'failed');
         } catch (x) { wa = 'failed'; }
       }
-      const eta = body.op === 'dev_request' ? devEta(Date.now()) : undefined;
+      const eta = body.op === 'dev_request' ? devEta(Date.now(), !!(fired && fired.session)) : undefined;
       return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length, wa, fired, eta, also: r.also }, 200, {});
     }
     // wa_file (22/10/2026, Michael to the assistant: "I asked to get the files here", and "the link is broken"): 1-5
