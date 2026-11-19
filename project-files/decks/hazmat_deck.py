@@ -1,5 +1,6 @@
 # Hazardous materials training deck for ALL employees (19/11/2026, Michael: a set of training decks for the topics
 # missing in the factory; this one = "חומרים מסוכנים לכל העובדים"). Roles only, no names, no phone numbers.
+# 19/11/2026 Michael in the questionnaire: caustic soda is used both as liquid and as crystals; an SDS for the crystals is still missing (task opened).
 # Usage: python3 hazmat_deck.py <out.pptx> <logo.jpg>
 # Sources read in this run (19/11/2026):
 #   - Nevo 74836, תקנות הבטיחות בעבודה (גיליון בטיחות, סיווג, אריזה, תיווי וסימון של אריזות), תשנ"ח-1998 (נוסח
@@ -97,7 +98,7 @@ s = D.slide('החומרים המסוכנים במפעל', source=PLANT + ', טב
 D.table(s, 4.25, 1.45, 8.5, [
     ['החומר', 'איפה הוא', 'מה הסכנה'],
     ['אמוניה', 'מערכות הקירור א ו-ב', 'גז רעיל'],
-    ['סודה קאוסטית', 'מחסן חומ"ס, דודי הקיטור. שקים', 'מאכל: שורף עור ועיניים'],
+    ['סודה קאוסטית', 'מחסן חומ"ס, דודי הקיטור. נוזל וגבישים', 'מאכל: שורף עור ועיניים'],
     ['אשלגן הידרוקסיד', 'מתקן השפכים. קוביה', 'מאכל: שורף עור ועיניים'],
     ['חומצה זרחתית', 'מחסן חומ"ס, טיפול במים. ג\'ריקנים', 'מאכל: שורף עור ועיניים'],
     ['חומצה פראצטית', 'מחסן חומ"ס. קוביה', 'מחמצן: מגביר אש'],
