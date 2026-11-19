@@ -112,7 +112,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04  # 12/11/2026: ubuntu-latest moved to 26.04, Playwright 1.56.1 has no chromium there
-    timeout-minutes: 30
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -134,8 +134,11 @@ jobs:
       # sends nothing for 30 s and retries it; a slow one keeps going. A shell timeout is no good: apt-get outlives it
       # and holds the dpkg lock, so a second try fails (seen on #2102).
       - run: printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\n' | sudo tee /etc/apt/apt.conf.d/99ci-net
+      # 19/11/2026 (#2923, shard 6): the slow mirror again. apt finished unpacking at minute 15 exactly and the step was
+      # cut before Chromium was fetched; no test ran. A slow install is let finish (22 minutes), and the job limit
+      # follows it (40), so a slow install plus the longest shard (about 14 minutes) still fits.
       - run: playwright install --with-deps chromium
-        timeout-minutes: 15
+        timeout-minutes: 22
       - run: SHARD=${{ matrix.shard }}/8 bash tests/harness/run.sh
 
   tests:
