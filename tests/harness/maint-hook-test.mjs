@@ -13,7 +13,7 @@ const toMjs = (src) => src.replace(/(from\s+['"])(\.{1,2}\/[^'"]+?)\.js(['"])/g,
 for (const d of ['', 'api']) for (const f of fs.readdirSync(path.join(ROOT, 'functions', d))) {
   if (f.endsWith('.js')) fs.writeFileSync(path.join(build, d, f.replace(/\.js$/, '.mjs')), toMjs(fs.readFileSync(path.join(ROOT, 'functions', d, f), 'utf8')));
 }
-const { onRequest, isMaint, ticketOf, photoOf, sigOk, MAINT_URL } = await import(path.join(build, 'api', 'maint-hook.mjs'));
+const { onRequest, isMaint, ticketOf, photoOf, sigOk, isClosing, MAINT_URL } = await import(path.join(build, 'api', 'maint-hook.mjs'));
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 300) : '')); } };
@@ -92,11 +92,19 @@ check('a signed body that was changed: refused', r.status === 403 && patches.len
 const other = JSON.stringify({ ext_id: 'th-mgr1', status: 'closed' });
 r = await post(E2, { 'x-signature': mac('HS', other) }, other);
 check('a hazard we never sent: nothing written', r.status === 200 && patches.length === 0 && metas.length === 0, r);
+const work = body.replace('"closed"', '"in work"');
+r = await post(E2, { 'x-signature': mac('HS', work) }, work);
+check('a signed update that is not a closing: acknowledged, nothing written, the closing still due', r.status === 200 && patches.length === 0 && metas.length === 0 && !state.maint_closed && isClosing('closed') && isClosing(undefined) && !isClosing('assigned'), r);
+state.maint_push_lock = new Date().toISOString();
 r = await post(E2, { 'x-signature': mac('HS', body) }, body);
-check('a signed closing: a note on the hazard, which stays open', r.status === 200 && patches.length === 1 && Object.keys(patches[0].b).join() === 'notes' && /rail replaced/.test(patches[0].b.notes) && !/‮/.test(patches[0].b.notes) && rows[0].s === OPEN, { r, patches });
+check('a signed closing while a push holds its lock: taken all the same, a note on the hazard, which stays open', r.status === 200 && patches.length === 1, r);
+check('a signed closing: a note on the hazard, which stays open', patches.length === 1 && Object.keys(patches[0].b).join() === 'notes' && /rail replaced/.test(patches[0].b.notes) && !/‮/.test(patches[0].b.notes) && rows[0].s === OPEN, { r, patches });
 check('Michael is told once', metas.length === 1, metas.length);
 r = await post(E2, { 'x-signature': mac('HS', body) }, body);
 check('the same closing again changes nothing', r.status === 200 && patches.length === 1 && metas.length === 1, r);
+delete state.maint_closed; rows[0].notes = 'x'.repeat(5000) + '\n' + patches[0].b.notes;
+r = await post(E2, { 'x-signature': mac('HS', body) }, body);
+check('the mark was lost but our note is on the row: no second note or message', r.status === 200 && patches.length === 1 && metas.length === 1 && !!state.maint_closed, r);
 r = await post(E2, { 'x-signature': mac('HS', '[1]') }, '[1]');
 check('a signed body that is not an object: 400', r.status === 400, r);
 const big = JSON.stringify({ ext_id: 'th-abc1', x: 'a'.repeat(21000) });

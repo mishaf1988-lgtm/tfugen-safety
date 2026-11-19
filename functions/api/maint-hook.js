@@ -11,7 +11,9 @@
 // Off until the secrets exist: MAINT_API_KEY (push) and MAINT_HOOK_SECRET (the way back). Nothing is sent and
 // nothing is accepted without them. The key is sent only to MAINT_URL (a constant here, not from the request).
 // State (server_state, no schema change): maint_from = the first day whose hazards are sent (set on the first run,
-// so the open backlog is not poured into the ticket app), maint_sent = {"<hazard id>": {at, ticket, closed?}}.
+// so the open backlog is not poured into the ticket app), maint_sent = {"<hazard id>": {at, ticket}} (written by the
+// push only) and maint_closed = {"<hazard id>": at} (written by the way back only, under its own lease, so a long push
+// never turns a closing away; security review 19/11/2026).
 import { jsonResp, secretOk, sbFrom, tmo, SB_TIMEOUT_MS as SB_MS } from '../_shared.js';
 import { stateGet, stateSet, runLeased } from '../_onedrive.js';
 import { respKey } from './hazard-report.js';
@@ -22,7 +24,10 @@ export const MAINT_KEYS = ['\u05d0\u05d7\u05d6\u05e7\u05d4', '\u05d7\u05e9\u05de
 const S_OPEN = '\u05e4\u05ea\u05d5\u05d7';
 const ID_RE = /^th-[0-9a-z]{1,24}$/;
 const MAX_PER_RUN = 10, MAX_SENT = 600, MAX_BODY = 20000, PUSH_MS = 10000;
-const DAY_RE = /^\d{4}-\d{2}-\d{2}/;
+const DAY_RE = /^\d{4}-\d{2}-\d{2}/, FROM_RE = /^\d{4}-\d{2}-\d{2}$/;
+// The way back acts only on a closing; any other status of a ticket (assigned, in work) is acknowledged and left.
+const CLOSED_RE = /^(closed?|done|resolved|completed|\u05e1\u05d2\u05d5\u05e8\u05d4?|\u05e0\u05e1\u05d2\u05e8\u05d4?|\u05d8\u05d5\u05e4\u05dc\u05d4?|\u05d1\u05d5\u05e6\u05e2\u05d4?)$/i;
+export const isClosing = (st) => st === undefined || st === null || st === '' || CLOSED_RE.test(String(st).trim());
 const clean = (x, n) => String(x == null ? '' : x).replace(/[\u0000-\u0008\u000b-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g, ' ').replace(/[ \t]+/g, ' ').trim().slice(0, n);
 const ilDay = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(d);
 const dmy = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || '')); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
@@ -76,7 +81,7 @@ export async function pushNew(env, now) {
   const sb = sbFrom(env);
   const st = await stateGet(env, ['maint_from', 'maint_sent', 'maint_err'], true);
   let from = st.maint_from && st.maint_from.value;
-  if (!DAY_RE.test(String(from || ''))) { from = ilDay(now || new Date()); await stateSet(env, { maint_from: from }); }
+  if (!FROM_RE.test(String(from || ''))) { from = ilDay(now || new Date()); await stateSet(env, { maint_from: from }); }
   const sent = parseMap(st.maint_sent && st.maint_sent.value);
   const r = await fetch(sb + '/rest/v1/tour_hazards?select=id,n,d,dept,loc,descr,sev,resp,resp2,action,due,s,photo_url&s=eq.' + encodeURIComponent(S_OPEN) + '&d=gte.' + from + '&order=n.asc&limit=500', { headers: sbH(env), signal: tmo(SB_MS) });
   if (!r.ok) return { ok: false, error: 'read ' + r.status };
@@ -111,23 +116,28 @@ export async function closedThere(env, b, now) {
   const id = String((b && b.ext_id) || '');
   if (!ID_RE.test(id)) return { status: 400, body: { ok: false, error: 'bad ext_id' } };
   const sb = sbFrom(env);
-  const st = await stateGet(env, ['maint_sent'], true);
-  const sent = parseMap(st.maint_sent && st.maint_sent.value);
+  if (!isClosing(b.status)) return { status: 200, body: { ok: true } };
+  const st = await stateGet(env, ['maint_sent', 'maint_closed'], true);
+  const sent = parseMap(st.maint_sent && st.maint_sent.value), closed = parseMap(st.maint_closed && st.maint_closed.value);
   // only a ticket we opened; an unknown id is answered the same as a known one that is done, so ids cannot be probed
-  if (!sent[id] || sent[id].closed) return { status: 200, body: { ok: true } };
+  if (!sent[id] || closed[id]) return { status: 200, body: { ok: true } };
   const r = await fetch(sb + '/rest/v1/tour_hazards?select=id,n,loc,dept,s,notes&id=eq.' + encodeURIComponent(id), { headers: sbH(env), signal: tmo(SB_MS) });
   if (!r.ok) return { status: 503, body: { ok: false, error: 'try again' } };
   const row = (await r.json())[0];
   const action = clean(b.action_taken, 300), by = clean(b.handled_by, 60), day = dmy(ilDay(now || new Date()));
-  if (row && row.s === S_OPEN) {
-    const line = '\u05de\u05d5\u05e7\u05d3 \u05d0\u05d7\u05d6\u05e7\u05d4 ' + day + ': \u05d4\u05e7\u05e8\u05d9\u05d0\u05d4 \u05e0\u05e1\u05d2\u05e8\u05d4' + (action ? '. \u05d1\u05d5\u05e6\u05e2: ' + action : '') + (by ? ' (' + by + ')' : '') + '. \u05de\u05de\u05ea\u05d9\u05df \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d1\u05e9\u05d8\u05d7';
+  const mark = '\u05de\u05d5\u05e7\u05d3 \u05d0\u05d7\u05d6\u05e7\u05d4 ';
+  // a note of ours already on the row = an earlier try wrote it and only the mark was lost: no second note or message
+  if (row && row.s === S_OPEN && String(row.notes || '').indexOf(mark) < 0) {
+    const line = mark + day + ': \u05d4\u05e7\u05e8\u05d9\u05d0\u05d4 \u05e0\u05e1\u05d2\u05e8\u05d4' + (action ? '. \u05d1\u05d5\u05e6\u05e2: ' + action : '') + (by ? ' (' + by + ')' : '') + '. \u05de\u05de\u05ea\u05d9\u05df \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d1\u05e9\u05d8\u05d7';
     const notes = (String(row.notes || '').trim() ? String(row.notes).trim() + '\n' : '') + line;
-    const w = await fetch(sb + '/rest/v1/tour_hazards?id=eq.' + encodeURIComponent(id) + '&s=eq.' + encodeURIComponent(S_OPEN), { method: 'PATCH', headers: { ...sbH(env), Prefer: 'return=minimal' }, body: JSON.stringify({ notes: notes.slice(0, 4000) }), signal: tmo(SB_MS) });
+    const w = await fetch(sb + '/rest/v1/tour_hazards?id=eq.' + encodeURIComponent(id) + '&s=eq.' + encodeURIComponent(S_OPEN), { method: 'PATCH', headers: { ...sbH(env), Prefer: 'return=minimal' }, body: JSON.stringify({ notes }), signal: tmo(SB_MS) });
     if (!w.ok) return { status: 503, body: { ok: false, error: 'try again' } };
     await tellOwner(env, sb, '\u05de\u05d5\u05e7\u05d3 \u05d4\u05d0\u05d7\u05d6\u05e7\u05d4 \u05e1\u05d2\u05e8 \u05e7\u05e8\u05d9\u05d0\u05d4 \u05e2\u05dc \u05dc\u05d9\u05e7\u05d5\u05d9 ' + (row.n != null ? row.n : '') + ' (' + (clean(row.loc, 80) || clean(row.dept, 60)) + ').' + (action ? '\n\u05d1\u05d5\u05e6\u05e2: ' + action : '') + (by ? '\n\u05d8\u05d9\u05e4\u05dc: ' + by : '') + '\n\u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05e9\u05d0\u05e8 \u05e4\u05ea\u05d5\u05d7 \u05d0\u05e6\u05dc\u05da \u05e2\u05d3 \u05e9\u05ea\u05d1\u05d3\u05d5\u05e7 \u05d1\u05e9\u05d8\u05d7.');
   }
-  sent[id] = Object.assign({}, sent[id], { closed: (now || new Date()).toISOString() });
-  await stateSet(env, { maint_sent: JSON.stringify(sent) });
+  closed[id] = (now || new Date()).toISOString();
+  const ks = Object.keys(closed);
+  if (ks.length > MAX_SENT) ks.sort((a, c) => String(closed[a]).localeCompare(String(closed[c]))).slice(0, ks.length - MAX_SENT).forEach((k) => { delete closed[k]; });
+  await stateSet(env, { maint_closed: JSON.stringify(closed) });
   return { status: 200, body: { ok: true } };
 }
 
@@ -135,6 +145,7 @@ export async function onRequest(context) {
   const { request, env } = context;
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, {});
   if (!env.SUPABASE_SERVICE_ROLE_KEY) return jsonResp({ error: 'server misconfigured' }, 500, {});
+  if (+(request.headers.get('content-length') || 0) > MAX_BODY) return jsonResp({ error: 'too large' }, 413, {});
   const raw = (await request.text()).slice(0, MAX_BODY + 1);
   if (raw.length > MAX_BODY) return jsonResp({ error: 'too large' }, 413, {});
   // 1. our own server
@@ -146,10 +157,11 @@ export async function onRequest(context) {
   }
   // 2. the maintenance app
   if (!env.MAINT_HOOK_SECRET) return jsonResp({ error: 'not configured' }, 503, {});
-  const hdr = String(env.MAINT_HOOK_HEADER || 'x-signature').toLowerCase();
+  let hdr = String(env.MAINT_HOOK_HEADER || 'x-signature').toLowerCase();
+  if (!/^[a-z0-9-]{3,40}$/.test(hdr) || hdr === 'x-notify-secret') hdr = 'x-signature';
   if (!(await sigOk(env.MAINT_HOOK_SECRET, raw, request.headers.get(hdr)))) return jsonResp({ error: 'forbidden' }, 403, {});
   let b = null; try { b = JSON.parse(raw); } catch (e) { b = null; }
   if (!b || typeof b !== 'object' || Array.isArray(b)) return jsonResp({ ok: false, error: 'bad json' }, 400, {});
-  try { const out = await runLeased(env, 'maint_push', 120000, () => closedThere(env, b, new Date())); return out && out.status ? jsonResp(out.body, out.status, {}) : jsonResp({ ok: false, error: 'try again' }, 503, {}); }
+  try { const out = await runLeased(env, 'maint_close', 30000, () => closedThere(env, b, new Date())); return out && out.status ? jsonResp(out.body, out.status, {}) : jsonResp({ ok: false, error: 'try again' }, 503, {}); }
   catch (e) { return jsonResp({ ok: false, error: 'try again' }, 503, {}); }
 }
