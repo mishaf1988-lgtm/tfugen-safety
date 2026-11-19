@@ -140,6 +140,16 @@ export function nagDue(list, nowMs) {
   return (Array.isArray(list) ? list : []).filter((x) => x && x.status === CTR_S_SENT && x.exp && x.nag !== x.exp
     && Date.parse(x.exp) > nowMs && Date.parse(x.exp) - nowMs <= CTR_NAG_MS && nowMs - (Date.parse(x.created_at || '') || 0) > 864e5);
 }
+// 19/11/2026 (dev-20261119044614-w1zg: three reminders on Michael's own test links, "\u05d1\u05d3\u05d9\u05e7\u05d4 \u05dc\u05d0", "\u05d1\u05d3\u05d9\u05e7\u05d4" and a nameless one): a link with
+// no company name, or whose name has a whole word test / trial, is not told (marked, so it is not looked at again).
+const TEST_WORDS = ['\u05d1\u05d3\u05d9\u05e7\u05d4', '\u05e0\u05d9\u05e1\u05d9\u05d5\u05df', '\u05e0\u05e1\u05d9\u05d5\u05df', '\u05e0\u05d9\u05e1\u05d5\u05d9', '\u05d8\u05e1\u05d8', 'test', 'demo'];
+export const ctrTestName = (s) => { const n = one(s, 80).toLowerCase(); return !n || n.split(/[^a-z0-9\u0590-\u05ff]+/).some((w) => TEST_WORDS.indexOf(w) >= 0); };
+// Several links due on one morning: one message, a line each.
+export function nagManyText(list) {
+  return '\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05e9\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05de\u05d9\u05dc\u05d0\u05d5 \u05d0\u05ea \u05d8\u05d5\u05e4\u05e1 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e7\u05d1\u05dc\u05df, \u05d5\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e9\u05dc\u05d4\u05dd \u05e4\u05d2 \u05d1\u05e7\u05e8\u05d5\u05d1:\n'
+    + list.map((e) => '- ' + one(e.company, 60) + ', \u05e4\u05d2 \u05d1-' + dmy(ilDay(Date.parse(e.exp)))).join('\n')
+    + '\n\u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05d6\u05db\u05d9\u05e8 \u05dc\u05d4\u05dd, \u05d5\u05d0\u05d7\u05e8\u05d9 \u05e9\u05d9\u05e4\u05d5\u05d2 \u05dc\u05d1\u05e7\u05e9 \u05de\u05d4\u05e2\u05d5\u05d6\u05e8 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9.';
+}
 export function nagText(e) {
   return '\u05d4\u05e7\u05d1\u05dc\u05df ' + (one(e.company, 60) || '\u05dc\u05dc\u05d0 \u05e9\u05dd') + ' \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05de\u05d9\u05dc\u05d0 \u05d0\u05ea \u05d8\u05d5\u05e4\u05e1 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e7\u05d1\u05dc\u05df, \u05d5\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e9\u05dc\u05d5 \u05e4\u05d2 \u05d1-' + dmy(ilDay(Date.parse(e.exp))) + '. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05d6\u05db\u05d9\u05e8 \u05dc\u05d5, \u05d5\u05d0\u05d7\u05e8\u05d9 \u05e9\u05d9\u05e4\u05d5\u05d2 \u05dc\u05d1\u05e7\u05e9 \u05de\u05d4\u05e2\u05d5\u05d6\u05e8 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9.';
 }
@@ -323,11 +333,11 @@ export async function ctrMorning(env, now) {
   }
   if (out.ended) list = await ctrEntries(env);
   // (5) a link the contractor did not fill, ending within three days: told once (a held message counts, it comes on Sunday)
-  for (const e of nagDue(list, nowMs).slice(0, CTR_MORNING_MAX)) {
-    const s = await ctrSay(env, nagText(e), 'ctr-nag', null);
-    if (!s.ok) continue;
-    out.nag++;
-    await ctrPatch(env, e.id, { nag: e.exp }, CTR_S_SENT);
+  const due = nagDue(list, nowMs), real = due.filter((e) => !ctrTestName(e.company)).slice(0, CTR_MORNING_MAX);
+  for (const e of due.filter((x) => ctrTestName(x.company))) await ctrPatch(env, e.id, { nag: e.exp, nag_skip: 'test' }, CTR_S_SENT);
+  if (real.length) {
+    const s = await ctrSay(env, real.length === 1 ? nagText(real[0]) : nagManyText(real), 'ctr-nag', null);
+    if (s.ok) for (const e of real) { out.nag++; await ctrPatch(env, e.id, { nag: e.exp }, CTR_S_SENT); }
   }
   for (const e of list.filter((x) => x.status === CTR_S_FILLED && x.files != null && nowMs - (Date.parse(x.ask_at || '') || 0) > CTR_AGAIN_MS).slice(0, CTR_MORNING_MAX)) {
     if ((await ctrAsk(env, e.id, nowMs)).ok) out.asked++;
