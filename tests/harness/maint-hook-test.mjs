@@ -86,7 +86,7 @@ check('when it is back the waiting hazard goes', r.j.opened === 1 && JSON.parse(
 const E2 = { ...ENV, MAINT_HOOK_SECRET: 'HS' };
 const body = JSON.stringify({ ext_id: 'th-abc1', status: 'closed', action_taken: 'rail replaced‮', handled_by: 'N', closed_at: '2026-11-21T10:00:00Z' });
 r = await post(ENV, { 'x-signature': mac('HS', body) }, body);
-check('the way back is off without its secret', r.status === 503, r);
+check('the way back is off without its secret: refused like a stranger', r.status === 403, r);
 r = await post(E2, {}, body);
 check('no signature: refused', r.status === 403 && patches.length === 0, r);
 r = await post(E2, { 'x-signature': mac('other', body) }, body);

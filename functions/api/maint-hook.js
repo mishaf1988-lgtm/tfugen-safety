@@ -156,7 +156,8 @@ export async function onRequest(context) {
     catch (e) { return jsonResp({ ok: false, error: 'push failed' }, 200, {}); }
   }
   // 2. the maintenance app
-  if (!env.MAINT_HOOK_SECRET) return jsonResp({ error: 'not configured' }, 503, {});
+  // off = closed like any stranger (403), so the address does not tell whether the link is set up
+  if (!env.MAINT_HOOK_SECRET) return jsonResp({ error: 'forbidden' }, 403, {});
   let hdr = String(env.MAINT_HOOK_HEADER || 'x-signature').toLowerCase();
   if (!/^[a-z0-9-]{3,40}$/.test(hdr) || hdr === 'x-notify-secret') hdr = 'x-signature';
   if (!(await sigOk(env.MAINT_HOOK_SECRET, raw, request.headers.get(hdr)))) return jsonResp({ error: 'forbidden' }, 403, {});
