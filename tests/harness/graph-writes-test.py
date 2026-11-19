@@ -34,6 +34,7 @@ APPROVED_SEND = {
     'functions/api/trustee-gate.js': 1,  # a guessing lock on the trustee password, to Michael (11/10/2026)
     'functions/api/codes.js': 1,  # a password changed: to Michael only, never the password (10/10/2026, "maasher")
     'functions/api/ctr-link.js': 1,  # the contractor approval form, its files and summary to Michael's own mailbox only (15/11/2026, Michael: "then a copy of the files to my mail for filing and checking")
+    'functions/_ctrok.js': 1,  # a contractor permit extension (ctr_extend), an update to Michael's own mailbox only (19/11/2026, Michael: "in such cases send me an update mail")
     'functions/api/works.js': 1,  # the weekly works link to maintenance, Wednesday 18:00 (Michael in the questionnaire 05/11/2026: "the server mails it by itself"); off until he approves the text (server_state works_mail_on), company domain only
 }
 APPROVED_DELETE = {
