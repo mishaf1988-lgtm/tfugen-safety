@@ -25,6 +25,15 @@ import { readSheetRows, sheetsDigest } from '../_xlsxpatch.js';
 import { makeCloseToken, closeUrl } from '../_closelink.js';
 import { FILES, REPORT_DEPTS, buildRegister, readAll, TASKS_Q, photoOf, signPhotos, fetchThumb, ilYear, folderFor } from './hazard-file.js';
 import { suggestAction } from '../_ai.js';
+import { stateCas } from '../_cas.js';
+// 20/11/2026 (data-overwrite protection, DECISIONS 11/11/2026): a list or a map that is read and written back goes through
+// stateCas, so two requests at the same moment do not lose each other's entry. change(raw) returns the new text.
+const casState = async (env, key, change) => {
+  const k = env.SUPABASE_SERVICE_ROLE_KEY;
+  const r = await stateCas(env.SUPABASE_URL || SB_LIVE, { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }, key, (v) => ({ value: change(v === undefined ? null : v) }), () => AbortSignal.timeout(10000));
+  if (!r || !r.written) throw new Error('state write ' + ((r && r.status) || 'conflict'));
+};
+
 
 const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
 const APP_URL = SITE.appUrl;
@@ -351,8 +360,9 @@ export async function onRequest(context) {
       }
       const at = new Date().toISOString();
       if (!test && sent.some((x) => !x.again)) {
-        sent.forEach((x) => { if (!x.again) lastBy[x.dept] = at; });
-        await stateSet(env, { hazard_status_last: JSON.stringify({ at, by: (who.user && who.user.email) || null, sent: sent.map((x) => x.dept) }), hazard_status_depts: JSON.stringify(lastBy) }).catch(() => {});
+        await stateSet(env, { hazard_status_last: JSON.stringify({ at, by: (who.user && who.user.email) || null, sent: sent.map((x) => x.dept) }) }).catch(() => {});
+        // the dates of the departments sent now go onto the map as it is now: a status sent to other departments at the same moment keeps its dates
+        await casState(env, 'hazard_status_depts', (raw) => { let m = {}; try { m = JSON.parse(raw || '{}') || {}; } catch (e) { m = {}; } Object.keys(lastBy).forEach((d) => { if (!m[d]) m[d] = lastBy[d]; }); sent.forEach((x) => { if (!x.again) m[x.dept] = at; }); return JSON.stringify(m); }).catch(() => {});
       }
       return jsonResp({ ok: !failed.length, at: test ? null : at, sent, skipped, failed }, 200, cors);
     }
