@@ -567,7 +567,16 @@ export async function deckWatch(env, now) {
 // accounting, approved, not forwarded yet (by supplier), "to check", no report, and the top suppliers. Kind 'agent'.
 // The month is marked only after the message went out; a failed read or send is tried again on the next tick until 12:00.
 export const INV_MONTH_KEY = 'inv_month';
-export const INV_MONTH_READ = 'invoices?select=supplier,num,amount,currency,inv_date,received_at,forwarded_at,approved_at,has_report,chk&limit=2000';
+// 20/11/2026 (retro 15/11): the read had limit=2000 and no month filter, and PostgREST stops at 1000 rows without a word, so
+// a full table would give a partial summary. Only the month's rows are read: received in it (a day wider on both sides for
+// the Israel offset; invMonthText keeps the exact month), or no received_at and dated in it. Pure.
+export function invMonthRead(ym) {
+  const y = Number(ym.slice(0, 4)), m = Number(ym.slice(5, 7));
+  const d = (yy, mm, dd) => new Date(Date.UTC(yy, mm - 1, dd)).toISOString().slice(0, 10);
+  const first = d(y, m, 1), next = d(y, m + 1, 1);
+  return 'invoices?select=supplier,num,amount,currency,inv_date,received_at,forwarded_at,approved_at,has_report,chk'
+    + '&or=(and(received_at.gte.' + d(y, m, 0) + ',received_at.lt.' + d(y, m + 1, 2) + '),and(received_at.is.null,inv_date.gte.' + first + ',inv_date.lt.' + next + '))&order=received_at.asc&limit=1000';
+}
 const HE_MONTHS = ['\u05d9\u05e0\u05d5\u05d0\u05e8', '\u05e4\u05d1\u05e8\u05d5\u05d0\u05e8', '\u05de\u05e8\u05e5', '\u05d0\u05e4\u05e8\u05d9\u05dc', '\u05de\u05d0\u05d9', '\u05d9\u05d5\u05e0\u05d9', '\u05d9\u05d5\u05dc\u05d9', '\u05d0\u05d5\u05d2\u05d5\u05e1\u05d8', '\u05e1\u05e4\u05d8\u05de\u05d1\u05e8', '\u05d0\u05d5\u05e7\u05d8\u05d5\u05d1\u05e8', '\u05e0\u05d5\u05d1\u05de\u05d1\u05e8', '\u05d3\u05e6\u05de\u05d1\u05e8'];
 const CUR_NAME = { ILS: '\u05e9"\u05d7', EUR: '\u05d0\u05d9\u05e8\u05d5', USD: '\u05d3\u05d5\u05dc\u05e8', GBP: '\u05dc\u05d9\u05e9"\u05d8' };
 // Pure: the month to summarise ('YYYY-MM'), or null when it is not time (or it was sent already).
@@ -617,7 +626,7 @@ export async function invMonthStep(env, now) {
   const ym = invMonthDue(now, last);
   if (!ym) return null;
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return { month: ym, ok: false, error: 'whatsapp not configured' };
-  const rows = await sb(env, INV_MONTH_READ);
+  const rows = await sb(env, invMonthRead(ym));
   const text = invMonthText(rows, ym);
   const to = await ownerWa(env, sbFrom(env));
   if (!to) return { month: ym, ok: false, error: 'no owner number in notification_prefs' };
@@ -651,7 +660,7 @@ export function usageCount(msgs, app) {
   const real = (Array.isArray(msgs) ? msgs : []).filter((p) => p && !/^\s*\[/.test(String(p.text || p.title || '')));
   const txt = (p) => String(p.text || p.title || '').trim();
   const c = { msgs: real.length, voice: real.filter((p) => p.voice).length, files: real.filter((p) => p.media_id || /^📎/.test(txt(p))).length,
-    taps: real.filter((p) => p.choice || /^\d{1,2}\.\s/.test(txt(p))).length, cmds: {}, app: {} };
+    taps: real.filter((p) => p.choice).length, cmds: {}, app: {} };
   real.forEach((p) => { const t = txt(p); const k = USAGE_CMDS.find((w) => t === w || t.startsWith(w + ' ') || t.startsWith(w + ':') || t.startsWith(w + '\n')); if (k) c.cmds[k] = (c.cmds[k] || 0) + 1; });
   (Array.isArray(app) ? app : []).forEach((r) => { const t = r && r.table_name; if (USAGE_APP[t]) c.app[t] = (c.app[t] || 0) + 1; });
   c.cmdsOff = USAGE_CMDS.filter((w) => !c.cmds[w]);
