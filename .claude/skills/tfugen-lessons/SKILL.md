@@ -17,7 +17,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 4. **מבנה** (נאכף): `**N. ... (DD/MM/YYYY, #PR).**`, ואז `מה קרה:`, `הכלל:`, `נאכף:`, `חזר:`.
    מספר לא משתנה (יש הפניות); חדש = הבא.
 5. אם אפשר לאכוף בקוד, להציע hook או בדיקה.
-6. **לקח של תחום אחד** (מיכאל, 11/10/2026: "כמה קבצים של לקחים... כל אחד מתעסק בתחום שלו") נכתב ב-skill של התחום, בסעיף "## לקחים בתחום" (ב-`tfugen-dev`: `references/lessons.md`, מ-27/10/2026), באותו מבנה ומספור. כאן נשאר מה שחל על כל עבודה. היום: `tfugen-dev` (23, 32, 65, 72, 81, 89, 111, 119, 132, 138, 148, 149, 185, 232), `tfugen-db` (30, 78, 80, 130, 131, 133, 178, 181, 184), `tfugen-lean` (26), `tfugen-guides` (88).
+6. **לקח של תחום אחד** (מיכאל, 11/10/2026: "כמה קבצים של לקחים... כל אחד מתעסק בתחום שלו") נכתב ב-skill של התחום, בסעיף "## לקחים בתחום" (ב-`tfugen-dev`: `references/lessons.md`, מ-27/10/2026), באותו מבנה ומספור. כאן נשאר מה שחל על כל עבודה. היום: `tfugen-dev` (23, 32, 39, 57, 217 (20/11/2026, לפינוי מקום), 65, 72, 81, 89, 111, 119, 132, 138, 148, 149, 185, 232), `tfugen-db` (30, 78, 80, 130, 131, 133, 178, 181, 184), `tfugen-lean` (26), `tfugen-guides` (88).
 
 ## רטרו בסוף משימה (01/10/2026)
 
@@ -36,12 +36,6 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 הכלל: hook חוסם את כל הפקודה: מריצים שוב את כולה ובודקים ב-`git diff --stat` ו-`git branch --show-current`.
 נאכף: `lessons-gate.py` (skill בשורה = קובץ skill שהשתנה); `push-gate.py` חוסם commit על main בלי branch באותה פקודה (18/10/2026).
 חזר: 3 (17/11: push-gate חסם `commit && push`, ה-commit לא נכנס; commit ו-push בנפרד. 18/10: guard-sql חסם `checkout -B`, ה-commit נכנס ל-main. 21/10: push-gate בודק את ענף תיקיית העבודה, לא את ה-repo של ה-commit).
-
-**39. הרגתי תהליך רקע כדי "להפעיל מחדש" (02/10/2026, PR זה).**
-מה קרה: kill בלי לקרוא מה רץ. 05/10: `pkill -f run.sh` תפס גם את ה-shell שלי (exit 144).
-הכלל: לפני kill לקרוא מה רץ; `ci-wait.sh` עוקב אחרי ה-head לבד; kill לפי PID מ-`ps`, לא `pkill -f`.
-נאכף: `ci-watch.py` אומר "כבר רץ" (`ci-watch-test.py`); pkill -f ו-pgrep -f בלולאה: `pkill-guard.py` חוסם (15/10/2026, `pkill-guard-test.py`; טקסט במירכאות וב-heredoc לא נחשב לפקודה).
-חזר: 2 (05/10; 10/10 `pkill -f "http.server"` בניסוי מהירות, exit 144)
 
 **2. נכשל ב-GitHub ועבר מקומית (01/10/2026, #1006).**
 מה קרה: `requests` חסר, playwright אחר.
@@ -62,18 +56,6 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 חזר: 1 (05/10: "mods לא נטענים בענן" נכתב בלי ניסוי)
 
 ## בדיקות שבודקות את הדבר הנכון
-
-**217. push אחרי בדיקה שנכשלה (13/11/2026, #2772).**
-מה קרה: גרש במחרוזת שבר את `_wa.js`; הבדיקה קרסה ו-`;` המשיך ל-push.
-הכלל: בדיקה, commit ו-push ב-`&&`. אחרי עריכת מחרוזת JS: `node --check`.
-נאכף: טקסט.
-חזר: 0.
-
-**57. hooks שקטים ב-Windows (05/10/2026, PR זה).**
-מה קרה: stdout ב-cp1255 ואימוג'י: session-start נפל בשקט. שיחה מחוץ לריפו: hooks לא נטענו.
-הכלל: hook קובע stdout ו-stdin ל-UTF-8, ובבדיקות `encoding="utf-8"`. בדיקה חיה רק מתיקיית הריפו, בלי `PYTHONUTF8=1`.
-נאכף: `hook-utf8-test.py` (stdout וגם stdin); התיקייה: בענן `session-start.py` מעתיק את ה-hooks ל-`~/.claude` (`session-start-test.py`).
-חזר: 3 (25/10: אחרי `add_repo`; לקריאה בלבד `get_file_contents`; 14/10).
 
 ## לפני כתיבה למקום משותף
 
