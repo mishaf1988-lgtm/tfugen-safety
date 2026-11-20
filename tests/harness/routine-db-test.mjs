@@ -388,6 +388,13 @@ const callIn = async (body) => {
     return odPutPdfCheck({ ...P, name: 'a.jpg', b64: jpg }).type === 'image/jpeg' && odPutPdfCheck({ ...P, name: 'a.JPEG', b64: jpg }).type === 'image/jpeg' && odPutPdfCheck({ ...P, name: 'a.png', b64: png }).type === 'image/png'
       && !!odPutPdfCheck({ ...P, name: 'a.jpg', b64: pdf }).error && !!odPutPdfCheck({ ...P, name: 'a.jpg', b64: zip }).error && !!odPutPdfCheck({ ...P, name: 'a.png', b64: jpg }).error && !!odPutPdfCheck({ ...P, name: 'a.gif', b64: jpg }).error;
   })());
+  check('od_put_pdf: a training video .mp4 by its ftyp signature; a PDF, zip or JPEG named .mp4 is refused (20/11/2026)', (() => {
+    const P = { agent: 'claude-code', why: 'training video', dir: '11_x/04_y' };
+    const mp4 = Buffer.from([0, 0, 0, 0x20, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6F, 0x6D]).toString('base64');
+    const pdf = Buffer.from('%PDF-1.4').toString('base64'), zip = Buffer.from('PK\x03\x04abcd').toString('base64'), jpg = Buffer.from([0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3, 4]).toString('base64');
+    return odPutPdfCheck({ ...P, name: 'a.mp4', b64: mp4 }).type === 'video/mp4' && !!odPutPdfCheck({ ...P, name: 'a.mp4', b64: pdf }).error
+      && !!odPutPdfCheck({ ...P, name: 'a.mp4', b64: zip }).error && !!odPutPdfCheck({ ...P, name: 'a.mp4', b64: jpg }).error && !!odPutPdfCheck({ ...P, name: 'a.pdf', b64: mp4 }).error;
+  })());
   check('od_put_pdf: an old .doc / .xls as it is, by the OLE signature; a zip or PDF named .doc is refused (24/10/2026)', (() => {
     const ole = Buffer.from([0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1, 1, 2]).toString('base64'), zip = Buffer.from('PK\x03\x04abcd').toString('base64');
     const P = { agent: 'dev', why: 'file as it is', dir: '22_x' };

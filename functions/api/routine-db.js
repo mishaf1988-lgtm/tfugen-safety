@@ -2302,7 +2302,7 @@ export function isoUpCheck(b) {
 // 8 MB from 24/10/2026: procedure 01 (4.3 MB) and the factory file (4.9 MB) did not fit into the ISO binder;
 // Graph's simple PUT takes up to 250 MB.
 export const OD_PUT_MAX = 8 * 1024 * 1024;
-export const OD_PUT_TYPES = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', doc: 'application/msword', xls: 'application/vnd.ms-excel', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png' };
+export const OD_PUT_TYPES = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', doc: 'application/msword', xls: 'application/vnd.ms-excel', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', jpg: 'image/jpeg', jpeg: 'image/jpeg', mp4: 'video/mp4', png: 'image/png' };
 export function odPutPdfCheck(b) {
   const c = odMkdirCheck({ agent: b.agent, why: b.why, parent: b.dir, name: b.name });
   if (c.error) return { error: c.error === 'bad parent' ? 'bad dir' : c.error };
@@ -2311,7 +2311,9 @@ export function odPutPdfCheck(b) {
   // pptx (28/10/2026, Michael in the questionnaire: "do it: connect to the assistant"): the safety committee deck, a zip like docx.
   // jpg / png (29/10/2026, an accident's photos: accidents.md files them in the worker's folder by their own name,
   // and the server refused them, so they could only go inside the investigation). Checked by the JPEG / PNG signature.
-  const ext = (/\.(pdf|docx|xlsx|pptx|doc|xls|jpg|jpeg|png)$/i.exec(c.name) || [])[1];
+  // mp4 (20/11/2026, Michael in the questionnaire: "do it: save in the decks folder"): a training video beside its deck,
+  // checked by the ISO media signature ("ftyp" at byte 4), within the same OD_PUT_MAX.
+  const ext = (/\.(pdf|docx|xlsx|pptx|doc|xls|jpg|jpeg|png|mp4)$/i.exec(c.name) || [])[1];
   if (!ext) return { error: 'bad name' };
   let bytes;
   try { bytes = Uint8Array.from(atob(String(b.b64 || '')), (ch) => ch.charCodeAt(0)); } catch (e) { return { error: 'bad b64' }; }
@@ -2322,7 +2324,8 @@ export function odPutPdfCheck(b) {
   const e = ext.toLowerCase(), ole = bytes[0] === 0xD0 && bytes[1] === 0xCF && bytes[2] === 0x11 && bytes[3] === 0xE0;
   const jpg = bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF;
   const png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A].every((v, i) => bytes[i] === v);
-  if (e === 'jpg' || e === 'jpeg' ? !jpg : e === 'png' ? !png : e === 'pdf' ? head !== '%PDF-' : (e === 'doc' || e === 'xls') ? !ole : head.slice(0, 4) !== 'PK\x03\x04') return { error: 'not a ' + e };
+  const mp4 = String.fromCharCode(...bytes.slice(4, 8)) === 'ftyp';
+  if (e === 'mp4' ? !mp4 : e === 'jpg' || e === 'jpeg' ? !jpg : e === 'png' ? !png : e === 'pdf' ? head !== '%PDF-' : (e === 'doc' || e === 'xls') ? !ole : head.slice(0, 4) !== 'PK\x03\x04') return { error: 'not a ' + e };
   return { dir: c.parent, name: c.name, bytes, type: OD_PUT_TYPES[ext.toLowerCase()] };
 }
 // od_pdf (01/11/2026, Michael: the assistant twice built form 08.01 from scratch and lost the factory logo, and once
