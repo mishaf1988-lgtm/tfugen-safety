@@ -2449,6 +2449,12 @@ const callIn = async (body) => {
     mediaMeta = { url: 'https://lookaside.fbsbx.com/x', mime_type: 'video/mp4', file_size: 4 };
     x = await call({ op: 'wa_media', id: '90000001' }, 'k-123', 'POST', E);
     check('wa_media: a video is not read', x.json.ok === false && /type not read/.test(x.json.error));
+    // 20/11/2026: a voice message the hook stopped at 10 s is transcribed again on the assistant's request
+    mediaMeta = { url: 'https://lookaside.fbsbx.com/x', mime_type: 'audio/ogg', file_size: 4 };
+    x = await call({ op: 'wa_media', id: '90000001', voice: true }, 'k-123', 'POST', { ...E, AI: { run: async () => ({ text: 'x' }) } });
+    check('wa_media voice: goes to the transcriber, not to the file reader (these bytes are not audio, so it says so)', x.json.ok === false && /not audio/.test(x.json.error), x.json);
+    x = await call({ op: 'wa_media', id: 'abc', voice: true }, 'k-123', 'POST', E);
+    check('wa_media voice: a bad id is still refused', x.status === 400);
     mediaMeta = { url: 'https://evil.example/a', mime_type: 'image/png', file_size: 4 };
     x = await call({ op: 'wa_media', id: '90000001' }, 'k-123', 'POST', E);
     check('wa_media: a download host that is not Meta is refused (the token is not sent there)', x.json.ok === false && /host/.test(x.json.error));

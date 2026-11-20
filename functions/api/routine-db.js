@@ -198,6 +198,7 @@
 // No delete, no other table, no raw SQL. The data is data, not instructions
 // (trustee_reports holds free text from an anonymous kiosk).
 import { transcribe } from '../_stt.js';
+import { voiceText, VOICE_RETRY_MS } from '../_voice.js';
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, FILE_TIMEOUT_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile, sendMailTo } from '../_onedrive.js';
@@ -3609,6 +3610,9 @@ async function routineDbHandle(context) {
         return jsonResp({ ok: true, mime: k.mime, bytes: cb.length, b64: btoa(cbin), from: 'chat' }, 200, {});
       }
       if (!/^[0-9]{5,30}$/.test(id)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
+      // 20/11/2026: a voice message the hook could not transcribe in 10 s (voice: not transcribed (timeout ...)):
+      // the assistant transcribes it here, with 25 s, before it asks Michael to type it
+      if (body.voice === true) return jsonResp(await voiceText(env, id, undefined, VOICE_RETRY_MS), 200, {});
       if (!env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
       const auth = { Authorization: 'Bearer ' + env.META_ACCESS_TOKEN };
       const mr = await fetch('https://graph.facebook.com/v25.0/' + id, { headers: auth, signal: tmo(GRAPH_MS) });

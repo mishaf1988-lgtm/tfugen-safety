@@ -11,6 +11,11 @@ import { STT_MODEL, STT_MAX, transcribe } from './_stt.js';
 export const VOICE_MODEL = STT_MODEL;
 // the whole step. wa-hook runs in waitUntil (about 30 seconds) and the fire after it can take up to 20 (review 07/11/2026)
 export const VOICE_MS = 10000;
+// 20/11/2026 (Michael: "do it: investigate now"; 18/11 16:16 a recording stopped at 10 s): the assistant's own retry
+// (routine-db wa_media voice) is a request of its own, not inside waitUntil, so it waits longer.
+export const VOICE_RETRY_MS = 25000;
+// only our own time limit is worth a retry; a model error, a bad id or a size limit would fail again
+export function voiceRetryable(err) { return /^timeout \d+ ms$/.test(String(err || '')); }
 export const VOICE_MARK = '\ud83c\udfa4 ';  // the microphone, so the log, the chat and the assistant see it was spoken
 export const VOICE_TEXT_MAX = 3000;
 
@@ -40,7 +45,8 @@ export async function readCapped(resp, max) {
 }
 
 // The WhatsApp media id -> {ok, text} or {ok:false, error}. Never throws, and gives up after VOICE_MS.
-export async function voiceText(env, mediaId, fetchFn) {
+export async function voiceText(env, mediaId, fetchFn, ms) {
+  const limit = ms || VOICE_MS;
   const f = fetchFn || fetch;
   const work = (async () => {
     if (!/^[0-9]{5,30}$/.test(String(mediaId || ''))) return { ok: false, error: 'bad media id' };
@@ -61,6 +67,6 @@ export async function voiceText(env, mediaId, fetchFn) {
     return t.ok ? { ok: true, text: String(t.text).slice(0, VOICE_TEXT_MAX) } : { ok: false, error: String(t.error).slice(0, 120) };
   })().catch((e) => ({ ok: false, error: String((e && e.message) || e).slice(0, 120) }));
   let timer;
-  const late = new Promise((res) => { timer = setTimeout(() => res({ ok: false, error: 'timeout ' + VOICE_MS + ' ms' }), VOICE_MS); });
+  const late = new Promise((res) => { timer = setTimeout(() => res({ ok: false, error: 'timeout ' + limit + ' ms' }), limit); });
   try { return await Promise.race([work, late]); } finally { clearTimeout(timer); }
 }
