@@ -123,6 +123,7 @@ export async function onRequest(context) {
       const value = b.value === undefined || b.value === null || b.value === '' ? randomCode(10) : String(b.value).trim().toLowerCase();
       if (!pwOk(value)) return jsonResp({ error: 'format', message: '\u05d4\u05e1\u05d9\u05e1\u05de\u05d4: 8 \u05e2\u05d3 32 \u05ea\u05d5\u05d5\u05d9\u05dd, \u05d0\u05d5\u05ea\u05d9\u05d5\u05ea \u05d1\u05d0\u05e0\u05d2\u05dc\u05d9\u05ea \u05d5\u05de\u05e1\u05e4\u05e8\u05d9\u05dd, \u05dc\u05e4\u05d7\u05d5\u05ea \u05d0\u05d7\u05d3 \u05de\u05db\u05dc \u05e1\u05d5\u05d2' }, 400, cors);
       const at = new Date().toISOString();
+      // cas-ok: the manager sets a whole new code, nothing read first, the last one set wins by design
       const w = await fetch(SB + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: h(env, { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify({ key, value, updated_at: at }), signal: tmo(SB_MS) });
       if (!w.ok) return jsonResp({ error: 'save failed' }, 502, cors);
       // Who and when, never the code. A failed log does not undo the change.

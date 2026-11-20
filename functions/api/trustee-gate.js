@@ -21,6 +21,7 @@
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, ipBucket, sbFrom, SITE, SB_LIVE } from '../_shared.js';
 import { accessToken, sendMailTo } from '../_onedrive.js';
+import { stateCas } from '../_cas.js';
 
 const WRONG_GUESS_DELAY_MS = 800;
 // The guessing lock (10/10/2026, the security review: a wrong guess only waited, and a script in
@@ -53,12 +54,12 @@ async function guessClear(env, key) {
   try { await fetch(GUESS_SB + '/rest/v1/rpc/guess_clear', { method: 'POST', headers: guessH(env), body: JSON.stringify({ p_key: key }), signal: AbortSignal.timeout(SB_MS) }); } catch (e) { /* the code was right */ }
 }
 async function guessLocked(env, scope) {
+  // 20/11/2026 (stateCas): two addresses locked in the same second both stay in the list
   try {
-    const r = await fetch(GUESS_SB + '/rest/v1/server_state?key=eq.guess_locks&select=value', { headers: guessH(env), signal: AbortSignal.timeout(SB_MS) });
-    const rows = r.ok ? await r.json() : [];
-    let list = []; try { list = JSON.parse((rows[0] && rows[0].value) || '[]'); } catch (e) { list = []; }
-    list = (Array.isArray(list) ? list : []).concat([{ at: new Date().toISOString(), s: scope }]).slice(-50);
-    await fetch(GUESS_SB + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: Object.assign(guessH(env), { Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify({ key: 'guess_locks', value: JSON.stringify(list), updated_at: new Date().toISOString() }), signal: AbortSignal.timeout(SB_MS) });
+    await stateCas(GUESS_SB, guessH(env), 'guess_locks', (v) => {
+      let list = []; try { list = JSON.parse(v || '[]'); } catch (e) { list = []; }
+      return { value: JSON.stringify((Array.isArray(list) ? list : []).concat([{ at: new Date().toISOString(), s: scope }]).slice(-50)) };
+    }, () => AbortSignal.timeout(SB_MS));
   } catch (e) { /* the lock holds anyway */ }
 }
 // A mail to Michael the moment an address is locked (11/10/2026, Michael: "\u05d1\u05e6\u05e2: \u05de\u05d9\u05d9\u05dc \u05dc\u05da \u05d5\u05db\u05e4\u05ea\u05d5\u05e8

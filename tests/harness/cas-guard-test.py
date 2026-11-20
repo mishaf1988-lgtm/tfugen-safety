@@ -21,8 +21,8 @@ def check(label, cond, detail=None):
 # how many unprotected server_state writes are left, per file. Only ever lower these.
 BASE = {
     "functions/api/routine-db.js": 0, "functions/api/wa-hook.js": 0, "functions/_wa.js": 0, "functions/_push.js": 0,
-    "functions/_onedrive.js": 1, "functions/api/works.js": 1, "functions/api/codes.js": 1, "functions/api/talk.js": 1,
-    "functions/api/trustee-gate.js": 1, "functions/api/wa-morning.js": 0,
+    "functions/_onedrive.js": 1, "functions/api/works.js": 0, "functions/api/codes.js": 0, "functions/api/talk.js": 0,
+    "functions/api/trustee-gate.js": 0, "functions/api/wa-morning.js": 0,
 }
 
 def unprotected(text):

@@ -412,8 +412,11 @@ async function stateGet(env, key) {
   const rows = await r.json();
   return rows && rows[0] ? rows[0].value : null;
 }
+// cas-ok below: whole values. The once-a-week marks (works_*_last) are written by the clock only, and works_mail_last is
+// claimed with its own compare-and-swap (claimWeek). works_sub is read before it is written: two submits in the same
+// second can both notify Michael (two messages, nothing lost); accepted, the rows themselves are saved in ptw.
 async function stateSet(env, key, value) {
-  const r = await fetch(SB + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }),
+  const r = await fetch(SB + '/rest/v1/server_state?on_conflict=key', { method: 'POST', /* cas-ok: whole values, see above */ headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }),
     body: JSON.stringify([{ key, value, updated_at: new Date().toISOString() }]) });
   if (!r.ok) throw new Error('state ' + r.status);
 }

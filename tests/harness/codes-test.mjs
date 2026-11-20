@@ -89,7 +89,7 @@ console.log('\n3. changing a code');
 
 console.log('\n4. the trustee screen reads the code from the app first');
 {
-  const src = fs.readFileSync(new URL('../../functions/api/trustee-gate.js', import.meta.url), 'utf8').replace("from '../_shared.js'", "from './_shared.mjs'").replace("from '../_onedrive.js'", "from './_onedrive.mjs'");
+  const src = fs.readFileSync(new URL('../../functions/api/trustee-gate.js', import.meta.url), 'utf8').replace("from '../_shared.js'", "from './_shared.mjs'").replace("from '../_onedrive.js'", "from './_onedrive.mjs'").replace("from '../_cas.js'", "from './_cas.mjs'");
   fs.writeFileSync(new URL('./_build/trustee-gate-c.mjs', import.meta.url), src);
   const { onRequest: gate } = await import('./_build/trustee-gate-c.mjs');
   const g = async (code, env) => (await gate({ request: new Request('https://tapugan-safety.pages.dev/api/trustee-gate', { method: 'POST', body: JSON.stringify({ code }), headers: { 'Content-Type': 'application/json', origin: 'https://tapugan-safety.pages.dev' } }), env })).status;
