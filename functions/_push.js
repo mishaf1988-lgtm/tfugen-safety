@@ -8,6 +8,7 @@
 // the page to subscribe. env.VAPID_PRIVATE with env.VAPID_PUBLIC replace it (the tests use their own pair).
 import { tmo, SB_TIMEOUT_MS } from './_shared.js';
 import { SITE } from './_site.js';
+import { stateCas } from './_cas.js';
 
 export const VAPID_KEY = 'vapid_keys';
 async function readKeys(env, sbUrl) {
@@ -104,18 +105,17 @@ export async function pushSubs(env, sbUrl) {
   if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { v = null; } }
   return Array.isArray(v) ? v.filter(pushSubOk) : [];
 }
-async function putSubs(env, sbUrl, subs) {
-  await fetch(sbUrl + '/rest/v1/server_state?on_conflict=key', { method: 'POST', signal: tmo(SB_TIMEOUT_MS),
-    headers: { ...sbH(env), Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify([{ key: PUSH_KEY, value: subs, updated_at: new Date().toISOString() }]) }).catch(() => null);
+// 20/11/2026 (data-overwrite protection, DECISIONS 11/11/2026): the list is read and written back, so two writers
+// at once (a phone that subscribes while a push drops a gone one) go through stateCas and neither is lost.
+const subsOf = (v) => { if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { v = null; } } return Array.isArray(v) ? v.filter(pushSubOk) : []; };
+async function casSubs(env, sbUrl, change) {
+  const r = await stateCas(sbUrl, sbH(env), PUSH_KEY, (v) => ({ value: JSON.stringify(change(subsOf(v))) }), () => tmo(SB_TIMEOUT_MS)).catch(() => null);
+  return !!(r && r.written);
 }
 // The newest phone first; the same endpoint again replaces itself; at most PUSH_MAX_SUBS.
 export async function pushSave(env, sbUrl, sub) {
-  const cur = await pushSubs(env, sbUrl);
-  if (cur === null) return false;
   const one = { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth }, at: new Date().toISOString() };
-  await putSubs(env, sbUrl, [one].concat(cur.filter((s) => s.endpoint !== sub.endpoint)).slice(0, PUSH_MAX_SUBS));
-  return true;
+  return casSubs(env, sbUrl, (cur) => [one].concat(cur.filter((s) => s.endpoint !== sub.endpoint)).slice(0, PUSH_MAX_SUBS));
 }
 // How the last push went (25/10/2026, handoff: with wa_owner_mode=chat the pop-up is Michael's only channel, so a
 // phone that dropped or pushes that keep failing must reach him; _watchdog.js reads these and mails). One write per
@@ -125,7 +125,7 @@ async function noteHealth(env, sbUrl, h) {
   const at = new Date().toISOString(), rows = [{ key: PUSH_LAST, value: JSON.stringify(Object.assign({ at }, h)), updated_at: at }];
   if (h.sent > 0) rows.push({ key: PUSH_OK_AT, value: at, updated_at: at });
   if (h.gone > 0) rows.push({ key: PUSH_GONE, value: JSON.stringify({ at, n: h.gone, left: h.left }), updated_at: at });
-  await fetch(sbUrl + '/rest/v1/server_state?on_conflict=key', { method: 'POST', signal: tmo(SB_TIMEOUT_MS),
+  await fetch(sbUrl + '/rest/v1/server_state?on_conflict=key', { method: 'POST', signal: tmo(SB_TIMEOUT_MS), // cas-ok: whole values, nothing read first, the last push wins by design
     headers: { ...sbH(env), Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }).catch(() => null);
 }
 // Every phone; one the push service says is gone (404, 410) is dropped. Never throws: a push is extra.
@@ -138,7 +138,7 @@ export async function pushOwner(env, sbUrl, text) {
     if (!keys) { await noteHealth(env, sbUrl, { sent: 0, failed: subs.length, gone: 0, left: subs.length, st: ['no key'] }); return { sent: 0, skipped: true }; }
     const obj = pushPayload(text), st = await Promise.all(subs.map((s) => sendPush(env, s, obj, keys)));
     const gone = subs.filter((s, i) => st[i] === 404 || st[i] === 410);
-    if (gone.length) await putSubs(env, sbUrl, subs.filter((s) => gone.indexOf(s) < 0));
+    if (gone.length) { const dead = gone.map((s) => s.endpoint); await casSubs(env, sbUrl, (cur) => cur.filter((s) => dead.indexOf(s.endpoint) < 0)); }
     const sent = st.filter((x) => x === 201 || x === 200).length;
     await noteHealth(env, sbUrl, { sent, failed: st.length - sent, gone: gone.length, left: subs.length - gone.length, st: st.slice(0, PUSH_MAX_SUBS) });
     return { sent, statuses: st };

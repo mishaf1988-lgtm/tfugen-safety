@@ -2,7 +2,7 @@
 // The payload is decrypted here the way the phone does it (RFC 8291), and the VAPID signature checked with the public key.
 import fs from "fs";
 import { readFileSync } from 'node:fs';
-import { vapidKeys, VAPID_KEY, pushEncrypt, vapidAuth, pushOwner, pushSubOk, pushPayload, unb64u, b64u, PUSH_KEY, PUSH_LAST, PUSH_OK_AT, PUSH_GONE } from './_build/_push.mjs';
+import { pushSave, vapidKeys, VAPID_KEY, pushEncrypt, vapidAuth, pushOwner, pushSubOk, pushPayload, unb64u, b64u, PUSH_KEY, PUSH_LAST, PUSH_OK_AT, PUSH_GONE } from './_build/_push.mjs';
 import { chatOnly, OWNER_MODE_KEY } from './_build/_wa.mjs';
 import { onRequest } from './_build/chat.mjs';
 import { sendToOwner } from './_build/_wa.mjs';
@@ -58,6 +58,10 @@ check('a private key with a public key that is not its half is refused', threw);
 console.log('\n3. sending to every phone');
 const SB = 'https://sb.test';
 let calls = [], stored = [], sends = {}, state = {};
+// 20/11/2026: the phone list goes through stateCas, so the mock keeps a version (updated_at) and a PATCH that names an
+// old version changes nothing, like PostgREST. onRead lets a test slip another writer in between the read and the write.
+let ver = 1, onRead = null;
+const verAt = () => new Date(Date.UTC(2026, 10, 20) + ver).toISOString();
 globalThis.fetch = async (u, init) => {
   const url = String(u), m = (init && init.method) || 'GET';
   calls.push({ url, m, body: init && init.body, headers: init && init.headers });
@@ -68,11 +72,22 @@ globalThis.fetch = async (u, init) => {
     const key = (url.match(/key=eq\.([a-z_]+)/) || [])[1];
     // server_state.value is a text column: an array or an object comes back as its JSON string, like the real one
     const asText = (v) => typeof v === 'string' ? v : JSON.stringify(v);
-    if (key === PUSH_KEY) return json(stored.length ? [{ value: asText(stored) }] : []);
+    if (key === PUSH_KEY) { const out = stored.length ? [{ value: asText(stored), updated_at: verAt() }] : []; if (onRead && /updated_at/.test(url)) { const f = onRead; onRead = null; f(); } return json(out); }
     return json(key in state ? [{ value: asText(state[key]) }] : []);
   }
+  if (url.startsWith(SB + '/rest/v1/server_state') && m === 'PATCH') {
+    const want = decodeURIComponent((url.match(/updated_at=eq\.([^&]+)/) || [])[1] || '');
+    if (!url.includes('key=eq.' + PUSH_KEY) || want !== verAt()) return json([]);
+    const b = JSON.parse(init.body); stored = typeof b.value === 'string' ? JSON.parse(b.value) : b.value; ver++;
+    return json([{ key: PUSH_KEY }]);
+  }
   if (url.startsWith(SB + '/rest/v1/server_state') && m === 'POST') {
-    for (const row of JSON.parse(init.body)) {
+    const rows = JSON.parse(init.body);
+    if (rows.length === 1 && rows[0].key === PUSH_KEY && /ignore-duplicates/.test(init.headers.Prefer)) {
+      if (stored.length) return json([]);
+      stored = typeof rows[0].value === 'string' ? JSON.parse(rows[0].value) : rows[0].value; ver++; return json([{ key: PUSH_KEY }]);
+    }
+    for (const row of rows) {
       if (row.key === PUSH_KEY) stored = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
       else if (!(row.key in state) || !/ignore-duplicates/.test(init.headers.Prefer)) state[row.key] = row.value;
     }
@@ -124,6 +139,27 @@ console.log('\n3b. how the last push went, for the watchdog (25/10/2026)');
   check('a push no phone took: push_last 0 sent, 1 failed; push_ok_at and push_gone untouched', r.sent === 0 && !!l2 && l2.sent === 0 && l2.failed === 1 && l2.st[0] === 500 && l2 && last && l2.at !== last.at && state[PUSH_OK_AT] === okBefore && !(PUSH_GONE in state), l2);
   delete sends['https://push.test/a'];
 }
+
+console.log('\n3a. two writers on the phone list at once (20/11/2026, stateCas)');
+{
+  const ph3 = await phone('https://push.test/new');
+  // a phone subscribes between the push's read and its write: the gone one is dropped and the new one stays
+  stored = [ph.sub, ph2.sub]; sends['https://push.test/gone'] = 410;
+  const f0 = globalThis.fetch; let once = false;
+  globalThis.fetch = async (u, i) => { const res = await f0(u, i); if (!once && String(u) === 'https://push.test/gone') { once = true; stored = [ph3.sub].concat(stored); ver++; } return res; };
+  await pushOwner(ENV, SB, 'x');
+  globalThis.fetch = f0;
+  check('a phone that subscribed while a push was dropping a gone one is kept, and the gone one is still dropped', stored.map((s) => s.endpoint).sort().join() === 'https://push.test/a,https://push.test/new', stored.map((s) => s.endpoint));
+  // another writer lands between pushSave's read and its write: the write is retried on the new list
+  stored = [ph.sub];
+  onRead = () => { stored = [ph2.sub].concat(stored); ver++; };
+  const ok = await pushSave(ENV, SB, ph3.sub);
+  check('pushSave: a phone saved by another writer between the read and the write is not lost', ok === true && stored.map((s) => s.endpoint).sort().join() === 'https://push.test/a,https://push.test/gone,https://push.test/new' && stored[0].endpoint === 'https://push.test/new', stored.map((s) => s.endpoint));
+  stored = []; ver++;
+  check('pushSave: the first phone ever (no row yet) is saved', (await pushSave(ENV, SB, ph.sub)) === true && stored.length === 1 && stored[0].endpoint === 'https://push.test/a');
+  delete sends['https://push.test/gone'];
+}
+
 
 {
   // sendToOwner itself: Meta accepts, then one wa_out line with the text sent, then the pop-up

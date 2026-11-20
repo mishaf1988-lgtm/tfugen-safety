@@ -367,7 +367,7 @@ async function noteMetaOut(env) {
   const k = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!k) return;
   try {
-    await fetch((env.SUPABASE_URL || SB_LIVE) + '/rest/v1/server_state?on_conflict=key', { method: 'POST', signal: tmo(SB_TIMEOUT_MS),
+    await fetch((env.SUPABASE_URL || SB_LIVE) + '/rest/v1/server_state?on_conflict=key', { method: 'POST', signal: tmo(SB_TIMEOUT_MS), // cas-ok: the time of the last send, nothing read first, the newest wins by design
       headers: { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify([{ key: META_OUT_KEY, value: { at: new Date().toISOString() }, updated_at: new Date().toISOString() }]) });
   } catch (e) { /* a missing note only silences one check */ }
@@ -473,7 +473,7 @@ export async function noteOwnerIn(env, sbUrl, iso) {
   const k = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!k) return;
   try {
-    await fetch(sbUrl + '/rest/v1/server_state?on_conflict=key', { method: 'POST', signal: tmo(SB_TIMEOUT_MS),
+    await fetch(sbUrl + '/rest/v1/server_state?on_conflict=key', { method: 'POST', signal: tmo(SB_TIMEOUT_MS), // cas-ok: the time of Michael's last message, nothing read first, the newest wins by design
       headers: { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify([{ key: OWNER_IN_KEY, value: iso, updated_at: new Date().toISOString() }]) });
   } catch (e) { /* the next message notes it again */ }
@@ -488,7 +488,7 @@ export async function noteLastOut(env, sbUrl, text, ref) {
   const k = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!k) return;
   try {
-    await fetch(sbUrl + '/rest/v1/server_state?on_conflict=key', { method: 'POST', signal: tmo(SB_TIMEOUT_MS),
+    await fetch(sbUrl + '/rest/v1/server_state?on_conflict=key', { method: 'POST', signal: tmo(SB_TIMEOUT_MS), // cas-ok: the last message sent, whole value, nothing read first, the newest wins by design
       headers: { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify([{ key: LAST_OUT_KEY, value: { at: new Date().toISOString(), text: String(text || '').slice(0, 4000), ref: ref ? String(ref).slice(0, 120) : null }, updated_at: new Date().toISOString() }]) });
   } catch (e) { /* a missing note only costs the context of one answer */ }
