@@ -17,8 +17,20 @@ globalThis.fetch = async (url, init) => {
   const j = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'Content-Type': 'application/json' } });
   if (u === SB + '/rest/v1/rpc/guess_hit') { if (w.rpcDown) return new Response('x', { status: 500 }); const k = JSON.parse(init.body).p_key; w.lastKey = k; w.counts[k] = (w.counts[k] || 0) + 1; return j(w.counts[k]); }
   if (u === SB + '/rest/v1/rpc/guess_clear') { const k = JSON.parse(init.body).p_key; w.clears.push(k); w.counts[k] = 0; return new Response(null, { status: 204 }); }
-  if (u.startsWith(SB + '/rest/v1/server_state') && m === 'POST') { const b = JSON.parse(init.body); if (b.key === 'guess_locks') w.locks = JSON.parse(b.value); return new Response(null, { status: 201 }); }
-  if (u.includes('key=eq.guess_locks')) return j(w.locks ? [{ value: JSON.stringify(w.locks) }] : []);
+  // 20/11/2026: the lock list goes through stateCas: a version, an insert that an existing row ignores, and a PATCH that
+  // names an old version changes nothing (like PostgREST). w.onRead runs once after a read: another writer in between.
+  const vAt = () => new Date(Date.UTC(2026, 9, 10) + (w.ver || 0)).toISOString();
+  if (u.startsWith(SB + '/rest/v1/server_state') && m === 'POST') {
+    const b = [].concat(JSON.parse(init.body))[0];
+    if (b.key === 'guess_locks') { if (w.locks) return j([]); w.locks = JSON.parse(b.value); w.ver = (w.ver || 0) + 1; return j([{ key: b.key }], 201); }
+    return new Response(null, { status: 201 });
+  }
+  if (u.includes('key=eq.guess_locks') && m === 'PATCH') {
+    const want = decodeURIComponent((/updated_at=eq\.([^&]*)/.exec(u) || [])[1] || '');
+    if (want !== vAt()) return j([]);
+    w.locks = JSON.parse(JSON.parse(init.body).value); w.ver++; return j([{ key: 'guess_locks' }]);
+  }
+  if (u.includes('key=eq.guess_locks')) { const out = w.locks ? [{ value: JSON.stringify(w.locks), updated_at: vAt() }] : []; if (w.onRead) { const f = w.onRead; w.onRead = null; f(); } return j(out); }
   if (u.includes('key=eq.induction_code')) return j([{ value: '246810' }]);
   if (u.includes('key=eq.trustee_code')) return j([]);
   if (u.startsWith(SB + '/rest/v1/toolbox_talks')) return j([IND]);
@@ -52,6 +64,12 @@ console.log('\n1. the HR code');
   check('both copies of guessKey count by ipBucket', gsrc.every((x) => x.includes('ipBucket(request.headers.get(')));
   r = await code('246810', '5.6.7.8');
   check('another address is not locked', r.st === 303);
+  { // 20/11/2026 (stateCas): a lock written by the trustee gate between this lock's read and its write is kept
+    const before = w.locks.length;
+    w.onRead = () => { w.locks = w.locks.concat([{ at: '2026-11-20T20:00:00.000Z', s: 'tru' }]); w.ver++; };
+    for (let i = 0; i < 11; i++) await code('000000', '9.9.9.9');
+    check('two locks at the same moment: both stay in the list', w.locks.length === before + 2 && w.locks.some((x) => x.s === 'tru' && x.at === '2026-11-20T20:00:00.000Z') && w.locks[w.locks.length - 1].s === 'ind', w.locks);
+  }
   w.rpcDown = true;
   r = await code('246810', '9.9.9.9');
   check('the count cannot be read: the check goes on (HR not shut out)', r.st === 303);
@@ -60,7 +78,7 @@ console.log('\n1. the HR code');
 
 console.log('\n2. the trustee code');
 {
-  const src = fs.readFileSync(new URL('../../functions/api/trustee-gate.js', import.meta.url), 'utf8').replace("from '../_shared.js'", "from './_shared.mjs'").replace("from '../_onedrive.js'", "from './_onedrive.mjs'");
+  const src = fs.readFileSync(new URL('../../functions/api/trustee-gate.js', import.meta.url), 'utf8').replace("from '../_shared.js'", "from './_shared.mjs'").replace("from '../_onedrive.js'", "from './_onedrive.mjs'").replace("from '../_cas.js'", "from './_cas.mjs'");
   fs.writeFileSync(new URL('./_build/trustee-gate-g.mjs', import.meta.url), src);
   const { onRequest: gate } = await import('./_build/trustee-gate-g.mjs');
   const g = async (c, ip) => { const r = await gate({ request: new Request('https://tapugan-safety.pages.dev/api/trustee-gate', { method: 'POST', body: JSON.stringify({ code: c }), headers: { 'Content-Type': 'application/json', origin: 'https://tapugan-safety.pages.dev', 'cf-connecting-ip': ip || '7.7.7.7' } }), env: ENV }); let b = null; try { b = await r.json(); } catch (e) { b = null; } return { st: r.status, b }; };

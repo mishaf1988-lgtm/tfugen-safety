@@ -19,7 +19,8 @@ fs.mkdirSync(build, { recursive: true });
 const out = path.join(build, 'trustee-gate.mjs');
 fs.writeFileSync(out, fs.readFileSync(path.join(ROOT, 'functions/api/trustee-gate.js'), 'utf8')
   .replace("from '../_shared.js'", 'from ' + JSON.stringify(path.join(ROOT, 'functions/_shared.js')))
-  .replace("from '../_onedrive.js'", 'from ' + JSON.stringify(path.join(ROOT, 'functions/_onedrive.js'))));
+  .replace("from '../_onedrive.js'", 'from ' + JSON.stringify(path.join(ROOT, 'functions/_onedrive.js')))
+  .replace("from '../_cas.js'", 'from ' + JSON.stringify(path.join(ROOT, 'functions/_cas.js'))));
 const { onRequest } = await import(out);
 
 const ORIGIN = 'https://tapugan-safety.pages.dev';

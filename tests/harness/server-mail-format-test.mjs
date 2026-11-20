@@ -28,7 +28,7 @@ let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + String(d).substring(0, 200) : '')); } };
 
 // trustee-gate is not in run.sh's build list: same copy trick as codes-test.mjs
-const gateSrc = fs.readFileSync(path.join(FN, 'api/trustee-gate.js'), 'utf8').replace("from '../_shared.js'", "from './_shared.mjs'").replace("from '../_onedrive.js'", "from './_onedrive.mjs'");
+const gateSrc = fs.readFileSync(path.join(FN, 'api/trustee-gate.js'), 'utf8').replace("from '../_shared.js'", "from './_shared.mjs'").replace("from '../_onedrive.js'", "from './_onedrive.mjs'").replace("from '../_cas.js'", "from './_cas.mjs'");
 fs.writeFileSync(path.join(HERE, '_build/trustee-gate-mf.mjs'), gateSrc);
 const { lockMailHtml: gateLockHtml } = await import('./_build/trustee-gate-mf.mjs');
 
