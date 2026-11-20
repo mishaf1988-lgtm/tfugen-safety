@@ -36,7 +36,8 @@ check("a merged answer is recognised", cr.merged({"tool_response": {"merged": Tr
 check("a failed merge is not", not cr.merged({"tool_response": {"merged": False}}) and not cr.merged({"tool_response": "error"}))
 import io, contextlib
 buf = io.StringIO()
-with contextlib.redirect_stdout(buf): cr.say("claim-release: released after the merge: x")
+with contextlib.redirect_stdout(buf):
+    if hasattr(cr, "say"): cr.say("claim-release: released after the merge: x")
 try: out = json.loads(buf.getvalue())
 except Exception: out = {}
 check("the message reaches the session (additionalContext JSON, not a plain print that stays in the transcript)",
