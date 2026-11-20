@@ -244,7 +244,10 @@ import { DOC_MAX, ownerWa, sendToOwner, sendDocToOwner, sendVoiceToOwner, ownerW
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks', 'toolbox_reads',
-  'trustees', 'trustee_tasks', 'trustee_winners'];
+  'trustees', 'trustee_tasks', 'trustee_winners',
+  // 20/11/2026 (the drill of 15/11/2026: the assistant answered "I have no tool" on open work permits, the waste log
+  // and more): the rest of the app's registers, read only, each with a column list in COLUMNS (no phone, no signer names).
+  'ptw', 'hzm', 'train_plan', 'wst', 'auds', 'drl', 'rsk', 'env', 'ins'];
 export const CARD_INV_N = 5;
 export const STATE_READ = ['topic_facts', 'golden_auto', 'second_gate', 'agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'drafts_id_live', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account', 'works_permit_err', 'weekend_held', 'weekend_held_last', 'wa_fail_mail_last', 'michael_checks', 'usage_month', 'inv_month', 'ctr_links', 'ctr_instructions', 'ctr_renew', 'form_probe'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
@@ -725,6 +728,17 @@ export const COLUMNS = {
   // 23/10/2026 (Michael in the questionnaire: "do it: how many signed the talk"): counts only, per talk and department;
   // no name, ID number, phone, signature or employee number.
   toolbox_reads: ['id', 'talk_id', 'dept', 'read_at', 'quiz_ok'],
+  // 20/11/2026: work permits without the phone (ph), the workers' names (wkr), the signers (sg1n..sg4n) and the safety
+  // text (it carries the site contact's mobile). The other registers: their data columns, nothing personal in them.
+  ptw: ['id', 'num', 'con', 'sup', 'area', 'dep', 'ds', 'de', 'ts', 'te', 'types', 'desc', 's'],
+  hzm: ['id', 'n', 'un', 'hs', 'q', 'loc', 'ms', 'em', 'h', 'file_url'],
+  train_plan: ['id', 'yr', 'n', 't', 'who', 'aud', 'q', 'done'],
+  wst: ['id', 'd', 'ty', 'q', 'c', 'h', 't', 'site', 'cert', 'file_url'],
+  auds: ['id', 'n', 'a', 'r', 'd', 'f', 'sc', 's', 'f2', 'sm'],
+  drl: ['id', 'ty', 'd', 'p', 'dur', 'sc', 'n'],
+  rsk: ['id', 'd', 'a', 'o', 'p', 'sv', 'ct', 'ac', 'last_review'],
+  env: ['id', 'd', 'ty', 'me', 'r', 'u', 'lim', 's'],
+  ins: ['id', 'd', 'a', 'i', 'sc', 'fn', 'ac', 's'],
 };
 
 // talk_field (15/10/2026). Pure: the new body, or { error }. row = the talk as it is now; today = YYYY-MM-DD (Israel).
@@ -2787,6 +2801,8 @@ export function cleanQuery(q, table) {
   if (only) {
     const sel = p.getAll('select');
     if (sel.length !== 1) return null;
+    // 20/11/2026 (security review): "num::x:ph" passed, because everything after "::" was dropped; a cast is one plain word
+    if (sel[0].split(',').some((c) => c.indexOf('::') >= 0 && !/^[a-z0-9_]+::[a-z0-9_]+$/.test(c.trim()))) return null;
     const cols = sel[0].split(',').map((c) => c.trim().split('::')[0]);
     if (!cols.length || cols.some((c) => only.indexOf(c) < 0)) return null;
     // a filter or an order on a column outside the list would still leak it
