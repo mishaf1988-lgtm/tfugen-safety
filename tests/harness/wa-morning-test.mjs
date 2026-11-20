@@ -459,7 +459,12 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     check('itemName: only a trailing "כנ"ל" (also ״ and ”), nothing else', itemName('X, כנ״ל') === 'X' && itemName('X כנ”ל') === 'X' && itemName('כנ"ל בתחילה') === 'כנ"ל בתחילה');
   }
   { // 14/11/2026 (Michael: "do it: monthly invoice summary"): first workday of the month, 08:00-12:00 Israel, once
-    const { invMonthDue, invMonthText, invMonthStep, INV_MONTH_KEY } = await import('./_build/wa-morning.mjs');
+    const { invMonthDue, invMonthText, invMonthStep, INV_MONTH_KEY, invMonthRead } = await import('./_build/wa-morning.mjs');
+    // 20/11/2026 (retro 15/11): the read asks only for the month (PostgREST stops at 1000 rows in silence)
+    { const q = invMonthRead('2026-10'), d = invMonthRead('2026-12'), j = invMonthRead('2026-01');
+      check('invMonthRead: only the month: received 30/09 to 02/11 (a day wider for Israel), or undated receipt with inv_date in October; limit 1000',
+        /received_at\.gte\.2026-09-30,received_at\.lt\.2026-11-02/.test(q) && /received_at\.is\.null,inv_date\.gte\.2026-10-01,inv_date\.lt\.2026-11-01/.test(q) && /limit=1000$/.test(q) && !/limit=2000/.test(q), q);
+      check('invMonthRead: December runs into January, January starts on 31/12', /received_at\.lt\.2027-01-02/.test(d) && /inv_date\.lt\.2027-01-01/.test(d) && /received_at\.gte\.2025-12-31/.test(j), [d, j]); }
     // winter: Israel = UTC+2. 01/11/2026 is a Sunday; 01/12/2026 a Tuesday; 01/01/2027 a Friday
     check('invMonthDue: Sunday 01/11 08:10 = October; 07:59 and 12:00 = not yet / too late; already sent = no',
       invMonthDue(new Date('2026-11-01T06:10:00Z'), null) === '2026-10' && invMonthDue(new Date('2026-11-01T05:59:00Z'), null) === null
@@ -497,6 +502,7 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     const n = metas.length;
     const s2 = await invMonthStep(ENV, new Date('2026-11-01T06:15:00Z'));
     check('invMonthStep: the next tick sends nothing', s2 === null && metas.length === n, s2);
+    check('invMonthStep: the read carries the month filter', invUrls.length > 0 && invUrls.every((u) => /received_at\.gte\.2026-09-30/.test(u)), invUrls);
     check('invMonthStep: a line in notifications_log with kind inv_month', logs.some((l) => l.event_type === 'inv_month' && l.payload.month === '2026-10'));
     check('watch() runs the monthly step', /const im = await invMonthStep\(env, now\)/.test(fs.readFileSync('../../functions/api/wa-morning.js', 'utf8')));
   }
@@ -504,19 +510,19 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     const { usageDue, usageCount, usageText, usageStep, USAGE_KEY, CHECKS_KEY, USAGE_MAX, USAGE_APP } = await import('./_build/wa-morning.mjs');
     check('usageDue: same first workday as the invoices but from 09:00; 08:30 = not yet; sent = no',
       usageDue(new Date('2026-11-01T07:05:00Z'), null) === '2026-10' && usageDue(new Date('2026-11-01T06:30:00Z'), null) === null && usageDue(new Date('2026-11-01T07:05:00Z'), '2026-10') === null);
-    const msgs = [{ text: 'סכם את המייל' }, { text: 'סכם: הישיבה' }, { text: 'השווה שתי הצעות' }, { text: '1. מה דחוף', choice: 1 }, { text: 'מה המצב', voice: true },
+    const msgs = [{ text: 'סכם את המייל' }, { text: 'סכם: הישיבה' }, { text: 'השווה שתי הצעות' }, { text: '1. מה דחוף', choice: 1 }, { text: '1. קודם לבדוק את המלגזה' }, { text: 'מה המצב', voice: true },
       { text: '📎 תסקיר.pdf', media_id: 'm' }, { text: '[ניסוי] סכם' }, { text: '[אימון] נוהל' }, { text: 'סכמתי' }, null];
     const app = [{ table_name: 'tour_hazards' }, { table_name: 'tour_hazards' }, { table_name: 'tasks' }, { table_name: 'web_vitals' }, { table_name: 'inc' }];
     const c = usageCount(msgs, app);
     check('usageCount: drills and tests ("[...") do not count; voice, taps, files; "סכמתי" is not the command',
-      c.msgs === 7 && c.voice === 1 && c.taps === 1 && c.files === 1 && c.cmds['סכם'] === 2 && c.cmds['השווה'] === 1 && !c.cmds['נוהל'], c);
+      c.msgs === 8 && c.voice === 1 && c.taps === 1 && c.files === 1 && c.cmds['סכם'] === 2 && c.cmds['השווה'] === 1 && !c.cmds['נוהל'], c);
     check('usageCount: app writes only for the listed modules; inc (rare on purpose) and web_vitals are not listed',
       c.app.tour_hazards === 2 && c.app.tasks === 1 && !('inc' in c.app) && !('web_vitals' in c.app) && c.appOff.indexOf('med') >= 0 && !Object.keys(USAGE_APP).includes('inc') && !['ncr', 'ppe', 'ctr'].some((k) => k in USAGE_APP), c.app);
     const prev = { cmdsOff: ['נוהל', 'סכם'], appOff: ['med'] };
     const checks = [{ t: 'פתח את הקישור להתקנה בכרום באייפון' }, { t: 'שלח "השווה" עם שתי הצעות' }, 'שלישי', 'רביעי', 'חמישי', 'שישי שלא מופיע'];
     const t = usageText(c, prev, checks, '2026-10');
     check('usageText: counts, commands used, app writes, unused this month, two months unused marked apart',
-      /אוקטובר 2026/.test(t) && /הודעות שלך לעוזר: 7 \(קוליות 1, כפתורים 1, קבצים 1\)/.test(t) && /סכם 2, השווה 1/.test(t) && /ליקויי סיור 2, משימות 1/.test(t)
+      /אוקטובר 2026/.test(t) && /הודעות שלך לעוזר: 8 \(קוליות 1, כפתורים 1, קבצים 1\)/.test(t) && /סכם 2, השווה 1/.test(t) && /ליקויי סיור 2, משימות 1/.test(t)
       && /חודשיים בלי שימוש[^\n]*נוהל[^\n]*בדיקות רפואיות/.test(t) && !/לא בשימוש החודש:[^\n]*נוהל/.test(t) && /לא בשימוש החודש:[^\n]*תחקיר/.test(t), t);
     check('usageText: at most 5 checks, numbered in order; keyboard characters only; under USAGE_MAX',
       /\n1\. פתח את הקישור/.test(t) && /\n5\. חמישי/.test(t) && !/שישי שלא מופיע/.test(t) && !/[–—־“”…]/.test(t) && t.length <= USAGE_MAX, t.length);
