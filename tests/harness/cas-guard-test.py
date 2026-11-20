@@ -22,7 +22,7 @@ def check(label, cond, detail=None):
 BASE = {
     "functions/api/routine-db.js": 0, "functions/api/wa-hook.js": 0, "functions/_wa.js": 0, "functions/_push.js": 0,
     "functions/_onedrive.js": 1, "functions/api/works.js": 1, "functions/api/codes.js": 1, "functions/api/talk.js": 1,
-    "functions/api/trustee-gate.js": 1, "functions/api/wa-morning.js": 1,
+    "functions/api/trustee-gate.js": 1, "functions/api/wa-morning.js": 0,
 }
 
 def unprotected(text):

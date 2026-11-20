@@ -221,10 +221,24 @@ async function stateGet(env, key) {
   const rows = await sb(env, 'server_state?key=eq.' + key + '&select=value');
   return rows && rows[0] ? rows[0].value : null;
 }
+// cas-ok below: what is left on stateSet are keys only this cron writes (its own marks: the last morning, the calendar
+// reminders, the watch, the monthly counts, the OCR queue), so nothing another writer saved can be lost.
 async function stateSet(env, key, value) {
-  await sb(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+  await sb(env, 'server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, // cas-ok: keys with one writer, this cron
     body: JSON.stringify([{ key, value, updated_at: new Date().toISOString() }]) });
 }
+// 20/11/2026 (data-overwrite protection, DECISIONS 11/11/2026): the promises have two writers, the assistant through
+// routine-db (already on stateCas) and this cron. A promise the assistant saved between this cron's read and its write
+// was lost. change(raw) gets the list as it is now and returns the new list, or null to write nothing.
+async function promiseCas(env, change) {
+  const k = env.SUPABASE_SERVICE_ROLE_KEY;
+  const r = await stateCas(sbFrom(env), { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }, PROMISE_KEY, (cur) => {
+    const next = change(cur === undefined ? null : cur);
+    return next ? { value: JSON.stringify(next) } : { write: false };
+  }, () => tmo(SB_TIMEOUT_MS));
+  return !!(r && r.written);
+}
+const promiseList = (raw) => { let l = []; try { l = JSON.parse(raw || '[]'); } catch (e) { l = []; } return Array.isArray(l) ? l : []; };
 
 export async function gather(env, now) {
   const today = ilDay(now);
@@ -403,19 +417,18 @@ async function promiseRemind(env, now) {
   if (!due.length) return null;
   // the assistant checks first (promiseToCheck); the plain reminder only when it cannot be woken
   if (assistantFire(env)) {
-    await stateSet(env, PROMISE_KEY, JSON.stringify(promiseToCheck(raw, due.map((x) => x.id), now.toISOString())));
+    // only what is still due in the list as it is now: a promise the assistant closed or re-timed meanwhile is left alone
+    await promiseCas(env, (cur) => { const ids = promiseDue(cur, now.getTime(), ilHour(now)).map((x) => x.id); return ids.length ? promiseToCheck(cur, ids, now.toISOString()) : null; });
     return { checks: due.length };
   }
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return null;
   const to = await ownerWa(env, sbFrom(env));
   if (!to) return null;
-  let list = []; try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
   const ids = due.map((x) => x.id);
-  list.forEach((x) => { if (x && ids.indexOf(x.id) >= 0) x.reminded_at = now.toISOString(); });
   const text = promiseRemindText(due);
   const r = await sendToOwner(env, to, text, { kind: 'reminder', ref: ids.join(' '), windowOpen: await ownerWindowOpen(env, sbFrom(env)) });
   // marked reminded only after it went out (26/10/2026 retro)
-  if (r.ok) await stateSet(env, PROMISE_KEY, JSON.stringify(list));
+  if (r.ok) await promiseCas(env, (cur) => { const list = promiseList(cur); list.forEach((x) => { if (x && ids.indexOf(x.id) >= 0) x.reminded_at = now.toISOString(); }); return list; });
   await sb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
     body: JSON.stringify([{ id: 'wp' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
       event_type: 'promise', channel: r.ok ? 'whatsapp' : 'whatsapp_error', payload: { title: clip(text, 120), kind: 'promise', detail: r.error || null } }]) }).catch(() => {});
@@ -428,12 +441,17 @@ export async function promiseCheck(env, now) {
   const p = promiseCheckDue(raw, now.getTime(), ilHour(now));
   const af = p && await assistantFireNow(env);
   if (!af) return null;
-  let list = []; try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
-  const e = list.find((x) => x && x.id === p.id);
-  if (!e) return null;
-  // 02/11/2026 (security review): a check counts as the day-old reminder too, or promiseDue woke the assistant again minutes later
-  e.checks = (e.checks || 0) + 1; e.checked_at = now.toISOString(); delete e.check_at; if (!e.reminded_at) e.reminded_at = now.toISOString();
-  await stateSet(env, PROMISE_KEY, JSON.stringify(list));
+  // the mark goes on the list as it is now (stateCas); a promise that was closed or already checked meanwhile is not fired
+  let e = null;
+  const marked = await promiseCas(env, (cur) => {
+    const list = promiseList(cur);
+    e = list.find((x) => x && x.id === p.id && x.status === 'open' && x.check_at && Date.parse(x.check_at) <= now.getTime()) || null; // a check the assistant moved ahead meanwhile waits for its time
+    if (!e) return null;
+    // 02/11/2026 (security review): a check counts as the day-old reminder too, or promiseDue woke the assistant again minutes later
+    e.checks = (e.checks || 0) + 1; e.checked_at = now.toISOString(); delete e.check_at; if (!e.reminded_at) e.reminded_at = now.toISOString();
+    return list;
+  });
+  if (!marked || !e) return null;
   const fr = await fetch(af.url, { method: 'POST', signal: tmo(20000),
     headers: { Authorization: 'Bearer ' + af.token, 'anthropic-beta': 'experimental-cc-routine-2026-04-01', 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
     body: JSON.stringify({ text: promiseCheckFireText(e, now.toISOString()) }) }).catch(() => null);
@@ -479,12 +497,10 @@ async function ocrAuto(env, now) {
 }
 export async function watch(env, now) {
   try {
-    const ev = eveningAdd(await stateGet(env, PROMISE_KEY), ilDay(now), ilDow(now), ilHour(now), now.toISOString());
-    if (ev) await stateSet(env, PROMISE_KEY, JSON.stringify(ev));
+    await promiseCas(env, (cur) => eveningAdd(cur, ilDay(now), ilDow(now), ilHour(now), now.toISOString()));
   } catch (e) { /* no list tonight; the next tick tries again within the hour */ }
   try {
-    const iw = isoWeekAdd(await stateGet(env, PROMISE_KEY), ilDay(now), ilDow(now), ilHour(now), now.toISOString());
-    if (iw) await stateSet(env, PROMISE_KEY, JSON.stringify(iw));
+    await promiseCas(env, (cur) => isoWeekAdd(cur, ilDay(now), ilDow(now), ilHour(now), now.toISOString()));
   } catch (e) { /* the next tick tries again within the hour */ }
   const oc = await ocrAuto(env, now).catch(() => null);
   const pc = await promiseCheck(env, now).catch(() => null);

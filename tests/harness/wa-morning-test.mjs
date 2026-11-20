@@ -9,6 +9,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co', OWNER = '972501234567';
 const ENV = { TRUSTEE_NOTIFY_SECRET: 'sec', SUPABASE_SERVICE_ROLE_KEY: 'srv', META_PHONE_NUMBER_ID: 'P1', META_ACCESS_TOKEN: 'mt' };
 let state = {}, metas = [], logs = [], docs = [], equip = [], puts = [], putFail = 0;
+const sver = {}, casRead = {};
 globalThis.fetch = async (url, opt = {}) => {
   const m = opt.method || 'GET';
   if (url.startsWith(SB + '/rest/v1/oauth_tokens')) return new Response(JSON.stringify([{ user_email: 'm', refresh_token: 'r', access_token: 'AT', expires_at: new Date(Date.now() + 3600000).toISOString(), scope: '' }]), { status: 200 });
@@ -18,10 +19,23 @@ globalThis.fetch = async (url, opt = {}) => {
   }
   if (url.startsWith(SB + '/rest/v1/notification_prefs')) return new Response(JSON.stringify([{ prefs: { trustee_hazard: { whatsapp_to: '+' + OWNER } } }]), { status: 200 });
   if (url.startsWith(SB + '/rest/v1/server_state')) {
-    if (m === 'POST') { JSON.parse(opt.body).forEach((r) => { state[r.key] = r.value; }); return new Response('[{}]', { status: 201 }); }
+    // 20/11/2026: a version per key, and a PATCH that names an old version changes nothing, like PostgREST (stateCas).
+    // casRead[k] runs once after a versioned read of k: another writer between the read and the write.
+    const vAt = (k) => new Date(Date.UTC(2026, 0, 1) + (sver[k] || 0)).toISOString();
+    if (m === 'POST') {
+      const rows = JSON.parse(opt.body), ign = /ignore-duplicates/.test((opt.headers || {}).Prefer || '');
+      if (ign && rows.every((r) => r.key in state)) return new Response('[]', { status: 200 });
+      rows.forEach((r) => { state[r.key] = r.value; sver[r.key] = (sver[r.key] || 0) + 1; }); return new Response('[{}]', { status: 201 });
+    }
     const k = /key=eq\.([^&]*)/.exec(url)[1];
-    if (m === 'PATCH') { state[k] = JSON.parse(opt.body).value; return new Response('[{}]', { status: 200 }); } // stateCas
-    return new Response(JSON.stringify(k in state ? [{ value: state[k], updated_at: '2026-01-01T00:00:00.000Z' }] : []), { status: 200 });
+    if (m === 'PATCH') {
+      const want = decodeURIComponent((/updated_at=eq\.([^&]*)/.exec(url) || [])[1] || '');
+      if (want && want !== vAt(k)) return new Response('[]', { status: 200 });
+      state[k] = JSON.parse(opt.body).value; sver[k] = (sver[k] || 0) + 1; return new Response('[{}]', { status: 200 });
+    }
+    const out = JSON.stringify(k in state ? [{ value: state[k], updated_at: vAt(k) }] : []);
+    if (casRead[k] && /updated_at/.test(url)) { const f = casRead[k]; delete casRead[k]; f(); }
+    return new Response(out, { status: 200 });
   }
   if (url.startsWith(SB + '/rest/v1/audit_log')) { useUrls.push(url); return new Response(JSON.stringify(useApp), { status: 200 }); }
   if (url.startsWith(SB + '/rest/v1/notifications_log') && m === 'GET' && /event_type=eq\.owner_in&ts=gte/.test(url)) { useUrls.push(url); return new Response(JSON.stringify(useMsgs), { status: 200 }); }
@@ -280,8 +294,8 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
         && JSON.parse(state[DEV_WARN_KEY] || '[]')[0] === 'dev-20261025090000-aaaa', { r1, w1, r2, w: state[DEV_WARN_KEY] });
       globalThis.fetch = f0; state = {}; logs = []; metas = [];
     }
-    const iW = wm.indexOf('stateSet(env, WATCH_KEY'), iP = wm.indexOf('stateSet(env, PROMISE_KEY, JSON.stringify(list))');
-    check('watch alert and promise reminder: marked only after a send that went out, so a failed one is tried again (source check; 26/10/2026 retro)', iW > 0 && /if \(r\.ok\) await stateSet\(env, WATCH_KEY/.test(wm.slice(iW - 40, iW + 60)) && iP > 0 && /if \(r\.ok\) await stateSet\(env, PROMISE_KEY, JSON\.stringify\(list\)\)/.test(wm.slice(iP - 40, iP + 80)));
+    const iW = wm.indexOf('stateSet(env, WATCH_KEY'), iP = wm.indexOf('promiseCas(env, (cur) => { const list = promiseList(cur);'); // 20/11/2026: the mark goes through stateCas
+    check('watch alert and promise reminder: marked only after a send that went out, so a failed one is tried again (source check; 26/10/2026 retro)', iW > 0 && /if \(r\.ok\) await stateSet\(env, WATCH_KEY/.test(wm.slice(iW - 40, iW + 60)) && iP > 0 && /if \(r\.ok\) await promiseCas\(env/.test(wm.slice(iP - 40, iP + 80)));
     check('dev guard: bad state = nothing, never a throw', devStuck('x', 'y', T, 15).length === 0 && devStuck(null, null, T, 15).length === 0);
     const tx = devStuckText(d[0]);
     check('dev guard: the time in Israel (UTC+2 after 25/10), no internal id', /11:00/.test(tx) && !/dev-\d{14}/.test(tx), tx);
@@ -532,6 +546,17 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     check('usageStep: the next tick sends nothing', (await usageStep(ENV, new Date('2026-11-01T07:10:00Z'))) === null && metas.length === n);
     check('usageStep: a notifications_log line usage_month', logs.some((l) => l.event_type === 'usage_month' && l.payload.month === '2026-10'));
     check('watch() runs the usage step', /const um = await usageStep\(env, now\)/.test(fs.readFileSync('../../functions/api/wa-morning.js', 'utf8')));
+  }
+  { // 20/11/2026 (stateCas on the promises): the assistant saves a promise between this cron's read and its write
+    const K = 'promises';
+    state[K] = JSON.stringify([{ id: 'p-a', at: '2026-11-17T08:00:00.000Z', agent: 'routine-wa-assistant', text: 'first', status: 'open' }]); sver[K] = (sver[K] || 0) + 1;
+    casRead[K] = () => { const l = JSON.parse(state[K]); l.push({ id: 'p-b', at: '2026-11-17T13:01:59.000Z', agent: 'routine-wa-assistant', text: 'saved meanwhile', status: 'open' }); state[K] = JSON.stringify(l); sver[K]++; };
+    await watch(ENV, new Date('2026-11-17T13:02:00Z'));
+    const ids = JSON.parse(state[K]).map((x) => x.id);
+    check('promises: the evening list is added (Tuesday 15:00) and a promise the assistant saved between the read and the write is kept', ids.indexOf('p-a') >= 0 && ids.indexOf('p-b') >= 0 && ids.indexOf('p-evening-20261117') >= 0, ids);
+    const n = ids.length;
+    await watch(ENV, new Date('2026-11-17T13:20:00Z'));
+    check('...and the same hour again adds nothing', JSON.parse(state[K]).length === n);
   }
   console.log('\nwa-morning-test: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
