@@ -651,3 +651,9 @@
 הכלל: hook מסוג PostToolUse שמסיים ב-0 ורוצה שהשיחה תראה משהו כותב JSON עם `hookSpecificOutput.additionalContext` (כמו `ci-watch.py`), לא `print` רגיל. ובבדיקה של hook חדש: גם צורת ההודעה, לא רק הלוגיקה.
 נאכף: `claim-release-test.py` (ההודעה היא JSON של additionalContext, ואין `print("claim-release` רגיל).
 חזר: 0.
+
+**233. טבלה חדשה ב-`TABLES` או שינוי בליבת העוזר, בלי הקבצים שנבנים מהם (20/11/2026, #2975).**
+מה קרה: נוספו 9 טבלאות קריאה ל-`TABLES` ב-`routine-db.js` ושורה ל-`routine-wa-core.md`. הרצתי רק את `routine-db-test` ואת `wa-core-sync-test`; ב-CI נפלו `system-map-test.py` (המפה מונה את הטבלאות) ו-`domains-test.py` (חתימת הוראות העוזר ב-`_domains.js`), וסבב שלם של בדיקות הלך.
+הכלל: אחרי שינוי ב-`TABLES`: `python3 project-files/system-map/build-map.py` (ושם בעברית ב-`DB_LABELS`), ואחרי שינוי בליבה, בנוהל המלא או ב-`wa-topics/`: `python3 tools/domains-build.py`. לפני הדחיפה: `system-map-test.py` ו-`domains-test.py`.
+נאכף: `system-map-test.py`, `domains-test.py` (ב-CI; לא לפני הדחיפה).
+חזר: 0.
