@@ -198,6 +198,7 @@
 // No delete, no other table, no raw SQL. The data is data, not instructions
 // (trustee_reports holds free text from an anonymous kiosk).
 import { transcribe } from '../_stt.js';
+import { voiceText, VOICE_RETRY_MS } from '../_voice.js';
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, FILE_TIMEOUT_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile, sendMailTo } from '../_onedrive.js';
@@ -3609,6 +3610,9 @@ async function routineDbHandle(context) {
         return jsonResp({ ok: true, mime: k.mime, bytes: cb.length, b64: btoa(cbin), from: 'chat' }, 200, {});
       }
       if (!/^[0-9]{5,30}$/.test(id)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
+      // 20/11/2026: a voice message the hook could not transcribe in 10 s (voice: not transcribed (timeout ...)):
+      // the assistant transcribes it here, with 25 s, before it asks Michael to type it
+      if (body.voice === true) return jsonResp(await voiceText(env, id, undefined, VOICE_RETRY_MS), 200, {});
       if (!env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
       const auth = { Authorization: 'Bearer ' + env.META_ACCESS_TOKEN };
       const mr = await fetch('https://graph.facebook.com/v25.0/' + id, { headers: auth, signal: tmo(GRAPH_MS) });
@@ -3678,10 +3682,10 @@ async function routineDbHandle(context) {
       for (const k of Object.keys(body)) if (['op', 'agent', 'since'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const since = Date.parse(String(body.since || ''));
       if (isNaN(since) || Date.now() - since > 4 * 864e5) return jsonResp({ ok: false, error: 'since: an ISO time in the last 4 days' }, 400, {});
-      const r = await fetch(url + '/rest/v1/notifications_log?select=ts,event_type,payload->>text,payload->>title,payload->>ref,payload->>agent&event_type=in.(wa_out,owner_in,assistant)&ts=gte.'
+      const r = await fetch(url + '/rest/v1/notifications_log?select=ts,event_type,payload->>text,payload->>title,payload->>ref,payload->>agent,payload->>voice_err,payload->>voice,payload->>media_id&event_type=in.(wa_out,owner_in,assistant)&ts=gte.'
         + encodeURIComponent(new Date(since).toISOString()) + '&order=ts.desc&limit=300', { headers: h, signal: tmo(SB_MS) }); // the newest 300, oldest first below (29/10/2026 retro, as wa_review)
       if (!r.ok) return jsonResp({ ok: false, error: 'read ' + r.status }, 200, {});
-      const rows = (await r.json()).reverse().map((x) => ({ ts: x.ts, type: x.event_type, ref: x.ref || undefined, agent: x.agent || undefined, text: String(x.text || x.title || '').slice(0, 1500) }));
+      const rows = (await r.json()).reverse().map((x) => ({ ts: x.ts, type: x.event_type, ref: x.ref || undefined, agent: x.agent || undefined, voice_err: x.voice_err || undefined, media_id: x.voice === 'true' && x.media_id ? x.media_id : undefined, text: String(x.text || x.title || '').slice(0, 1500) })); // voice_err (20/11/2026): why a voice message was not transcribed, so a review can tell a one-off from a fault
       return jsonResp({ ok: true, rows }, 200, {});
     }
     // 27/10/2026 (Michael in the questionnaire: "do it: to our own server"): the errors the app sends from users' browsers

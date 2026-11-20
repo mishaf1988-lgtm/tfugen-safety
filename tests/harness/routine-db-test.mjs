@@ -1846,6 +1846,7 @@ const callIn = async (body) => {
     const r = await call({ op: 'out_log', agent: 'routine-quality', since: new Date(Date.now() - 86400000).toISOString() });
     const q = calls.filter((c) => /notifications_log\?select=ts,event_type/.test(c.url)).pop();
     check('out_log: reads wa_out, owner_in and assistant since the time, the newest 300 (desc, turned back to oldest first); answers rows', r.json.ok && Array.isArray(r.json.rows) && q && /event_type=in\.\(wa_out,owner_in,assistant\)/.test(q.url) && /order=ts\.desc/.test(q.url), { j: r.json, url: q && q.url });
+    check('out_log: asks for voice_err too, so a review sees why a voice message was not transcribed (20/11/2026)', q && /payload->>voice_err/.test(q.url) && /payload->>media_id/.test(q.url));
     check('out_log: no since, more than 4 days back, or an extra field = refused', (await call({ op: 'out_log' })).status === 400 && (await call({ op: 'out_log', since: '2020-01-01T00:00:00Z' })).status === 400 && (await call({ op: 'out_log', since: new Date().toISOString(), table: 'x' })).status === 400);
   }
 
@@ -2448,6 +2449,12 @@ const callIn = async (body) => {
     mediaMeta = { url: 'https://lookaside.fbsbx.com/x', mime_type: 'video/mp4', file_size: 4 };
     x = await call({ op: 'wa_media', id: '90000001' }, 'k-123', 'POST', E);
     check('wa_media: a video is not read', x.json.ok === false && /type not read/.test(x.json.error));
+    // 20/11/2026: a voice message the hook stopped at 10 s is transcribed again on the assistant's request
+    mediaMeta = { url: 'https://lookaside.fbsbx.com/x', mime_type: 'audio/ogg', file_size: 4 };
+    x = await call({ op: 'wa_media', id: '90000001', voice: true }, 'k-123', 'POST', { ...E, AI: { run: async () => ({ text: 'x' }) } });
+    check('wa_media voice: goes to the transcriber, not to the file reader (these bytes are not audio, so it says so)', x.json.ok === false && /not audio/.test(x.json.error), x.json);
+    x = await call({ op: 'wa_media', id: 'abc', voice: true }, 'k-123', 'POST', E);
+    check('wa_media voice: a bad id is still refused', x.status === 400);
     mediaMeta = { url: 'https://evil.example/a', mime_type: 'image/png', file_size: 4 };
     x = await call({ op: 'wa_media', id: '90000001' }, 'k-123', 'POST', E);
     check('wa_media: a download host that is not Meta is refused (the token is not sent there)', x.json.ok === false && /host/.test(x.json.error));
