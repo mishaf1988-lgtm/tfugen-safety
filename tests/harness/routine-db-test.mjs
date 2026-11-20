@@ -116,6 +116,16 @@ const callIn = async (body) => {
   check('embedding another table: refused', cleanQuery('select=id,app_users(*)', 'docs') === null);
   check('in.() filter on a plain table: allowed', cleanQuery('select=id&s=in.(a,b)', 'tasks') !== null);
   check('the table list has no users / auth / backup table', !TABLES.some((t) => /user|auth|backup|server_state/.test(t)));
+  // 20/11/2026: the registers the assistant said it had no tool for; every one of them has a column list
+  check('new registers (ptw, hzm, train_plan, wst, auds, drl, rsk, env, ins): listed, each with a column list',
+    ['ptw', 'hzm', 'train_plan', 'wst', 'auds', 'drl', 'rsk', 'env', 'ins'].every((t) => TABLES.indexOf(t) >= 0 && Array.isArray(COLUMNS[t]) && COLUMNS[t].length > 0));
+  check('ptw: open permits by date are read', cleanQuery('select=num,con,area,ds,de,types,s&de=gte.2026-11-20&order=ds', 'ptw') !== null && (await call({ op: 'select', table: 'ptw', query: 'select=num,con,s&s=neq.x' })).json.ok === true);
+  check('ptw: no phone, workers, signers or safety text: select, filter and order all refused',
+    cleanQuery('select=num,ph', 'ptw') === null && cleanQuery('select=*', 'ptw') === null && cleanQuery('select=num,wkr', 'ptw') === null && cleanQuery('select=num,sg1n', 'ptw') === null
+    && cleanQuery('select=num,safety', 'ptw') === null && cleanQuery('select=num&ph=like.05*', 'ptw') === null && cleanQuery('select=num&order=ph', 'ptw') === null && cleanQuery('select=num&or=(ph.like.05*)', 'ptw') === null);
+  check('a cast is one plain word: "num::x:ph" and "num::text::ph" refused, "e::text" and "num::text" allowed',
+    cleanQuery('select=num::x:ph', 'ptw') === null && cleanQuery('select=num::text::ph', 'ptw') === null && cleanQuery('select=num::text,con', 'ptw') !== null && cleanQuery('select=id,e::text', 'med') !== null && cleanQuery('select=x:ph', 'ptw') === null);
+  check('hzm and train_plan: data columns read; a column outside the list refused', cleanQuery('select=n,un,loc,em,h', 'hzm') !== null && cleanQuery('select=n,t,who,aud,q,done&yr=eq.2026', 'train_plan') !== null && cleanQuery('select=n,location_id', 'hzm') === null && cleanQuery('select=id', 'emp') !== null && TABLES.indexOf('emp') < 0 && TABLES.indexOf('invoices') < 0);
 
   console.log('\n3. medical tables: expiry only; trustee reports: no text, no names');
   check('toolbox_reads: counts per talk and department allowed (23/10/2026)', cleanQuery('select=id,talk_id,dept&talk_id=eq.w20261018', 'toolbox_reads') !== null);
