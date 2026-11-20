@@ -34,6 +34,16 @@ check("no session id: nothing is released", cr.to_release(claims, "", BR, fork, 
 check("no own commit yet: only the queue is released", cr.to_release(claims, ME, BR, fork, None) == ["status-md"])
 check("a merged answer is recognised", cr.merged({"tool_response": {"merged": True, "sha": "x"}}) and cr.merged({"tool_response": '{"sha":"x","merged":true}'}))
 check("a failed merge is not", not cr.merged({"tool_response": {"merged": False}}) and not cr.merged({"tool_response": "error"}))
+import io, contextlib
+buf = io.StringIO()
+with contextlib.redirect_stdout(buf):
+    if hasattr(cr, "say"): cr.say("claim-release: released after the merge: x")
+try: out = json.loads(buf.getvalue())
+except Exception: out = {}
+check("the message reaches the session (additionalContext JSON, not a plain print that stays in the transcript)",
+      out.get("hookSpecificOutput", {}).get("hookEventName") == "PostToolUse" and "released after the merge" in out.get("hookSpecificOutput", {}).get("additionalContext", ""), buf.getvalue())
+src = open(os.path.join(ROOT, ".claude", "hooks", "claim-release-on-merge.py"), encoding="utf-8").read()
+check("no plain print of a claim-release message is left in the hook", 'print("claim-release' not in src)
 s = json.load(open(os.path.join(ROOT, ".claude", "settings.json"), encoding="utf-8"))
 hooked = any(h.get("matcher") == "mcp__github__merge_pull_request" and any("claim-release-on-merge.py" in x.get("command", "") for x in h.get("hooks", []))
              for h in s.get("hooks", {}).get("PostToolUse", []))

@@ -63,6 +63,12 @@ def git(args):
     return p.stdout.strip() if p.returncode == 0 else ""
 
 
+def say(msg):
+    # 20/11/2026: a plain print of a PostToolUse hook that exits 0 stays in the transcript and never reaches the model
+    # (two merges, #2959 and #2962, released their claims and the session saw nothing). additionalContext does.
+    print(json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": msg}}, ensure_ascii=False))
+
+
 def main():
     try:
         payload = json.load(sys.stdin)
@@ -82,7 +88,7 @@ def main():
                            capture_output=True, text=True, timeout=60)
         claims = json.loads(p.stdout or "{}").get("claims", {})
     except Exception as e:
-        print("claim-release: could not read the claims (%s); release by hand: claim.sh <item> --release" % e)
+        say("claim-release: could not read the claims (%s); release by hand: claim.sh <item> --release" % e)
         return 0
     items = to_release(claims, session, branch, fork_ts, first_ts)
     done = []
@@ -92,7 +98,7 @@ def main():
         if '"released":true' in (p.stdout or "").replace(" ", ""):
             done.append(item)
     if done:
-        print("claim-release: released after the merge: " + ", ".join(done))
+        say("claim-release: released after the merge: " + ", ".join(done))
     return 0
 
 
@@ -100,5 +106,5 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except Exception as e:
-        print("claim-release: skipped (%s)" % e)
+        say("claim-release: skipped (%s)" % e)
         sys.exit(0)
