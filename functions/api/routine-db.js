@@ -3446,7 +3446,7 @@ async function routineDbHandle(context) {
     // line aloud with each candidate model and sends it to Michael as a voice message, so he can judge the Hebrew. A probe
     // only: no ordinary answer goes through it, and the text is the caller's own, never a row from the database.
     if (body.op === 'tts_probe') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'text', 'model', 'send', 'fmt'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'text', 'model', 'send', 'fmt', 'b64'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const text = String(body.text || '').trim();
       if (text.length < 4 || text.length > 300) return jsonResp({ ok: false, error: 'text: 4-300 characters' }, 400, {});
       // 13/11/2026: 'gemini' = the Hebrew voice the induction page already reads with (talk.js ttsUpstream, Gemini TTS, voice
@@ -3459,6 +3459,9 @@ async function routineDbHandle(context) {
         let w; try { w = await ttsWav(env, text, 'he', fmt); } catch (e) { w = { error: String((e && e.message) || e).slice(0, 200) }; }
         const r = { model: TTS_GEMINI, ms: Date.now() - t0 };
         if (w.error) r.error = String(w.error).slice(0, 300); else { r.bytes = w.bytes.length; r.mime = w.mime; }
+        // b64 (20/11/2026, Michael: a training video "and voice?"): the audio itself back to the caller, for a narration
+        // track; only with send:false (nothing reaches WhatsApp), and the text is still the caller's own 4-300 characters.
+        if (!w.error && body.b64 === true && body.send === false && w.bytes.length <= 3000000) { let bin = ''; for (let i = 0; i < w.bytes.length; i += 32768) bin += String.fromCharCode.apply(null, w.bytes.subarray(i, i + 32768)); r.b64 = btoa(bin); }
         if (!w.error && body.send !== false) {
           const to = await ownerWa(env, url);
           const voice = w.mime === 'audio/mpeg' || w.mime === 'audio/mp3' || w.mime === 'audio/ogg'; // the API names mp3 "audio/mp3" (13/11/2026)
