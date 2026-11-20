@@ -517,6 +517,51 @@
    "what": "טבלה trustee_winners"
   },
   {
+   "zone": "db",
+   "name": "היתרי עבודה",
+   "what": "טבלה ptw"
+  },
+  {
+   "zone": "db",
+   "name": "חומרים מסוכנים",
+   "what": "טבלה hzm"
+  },
+  {
+   "zone": "db",
+   "name": "תכנית הדרכות שנתית",
+   "what": "טבלה train_plan"
+  },
+  {
+   "zone": "db",
+   "name": "יומן פסולת",
+   "what": "טבלה wst"
+  },
+  {
+   "zone": "db",
+   "name": "מבדקים",
+   "what": "טבלה auds"
+  },
+  {
+   "zone": "db",
+   "name": "תרגילים",
+   "what": "טבלה drl"
+  },
+  {
+   "zone": "db",
+   "name": "סיכונים",
+   "what": "טבלה rsk"
+  },
+  {
+   "zone": "db",
+   "name": "ניטור סביבתי",
+   "what": "טבלה env"
+  },
+  {
+   "zone": "db",
+   "name": "סיורים",
+   "what": "טבלה ins"
+  },
+  {
    "id": "trig_01LfFp3qxNuyTcwjxaBhgSEZ",
    "zone": "routines",
    "name": "תיוק מהמייל ועדכון תוקף",

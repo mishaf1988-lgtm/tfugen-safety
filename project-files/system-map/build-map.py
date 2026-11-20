@@ -68,7 +68,7 @@ FIXED = {
 DB_LABELS = {"docs": "מסמכים ותוקף", "equip_inspections": "ציוד ותסקירים", "tr": "הדרכות", "ppe": "ציוד מגן", "ctr": "קבלנים", "tasks": "משימות",
              "leg": "חקיקה", "ncr": "אי-התאמות", "trustee_reports": "דיווחי נאמנים", "toolbox_talks": "הדרכות שבועיות", "server_state": "מצב הסוכנים",
              "tour_hazards": "ליקויי סיור", "near_miss": "כמעט תאונה", "inc": "אירועים",
-             "med": "בדיקות רפואיות", "hearing_tests": "בדיקות שמיעה", "toolbox_reads": "קריאות הדרכה"}
+             "med": "בדיקות רפואיות", "hearing_tests": "בדיקות שמיעה", "toolbox_reads": "קריאות הדרכה", "ptw": "היתרי עבודה", "hzm": "חומרים מסוכנים", "train_plan": "תכנית הדרכות שנתית", "wst": "יומן פסולת", "auds": "מבדקים", "drl": "תרגילים", "rsk": "סיכונים", "env": "ניטור סביבתי", "ins": "סיורים"}
 # 28/10/2026 (Michael in the questionnaire: "do it: 5 families and a weekly clock"): the agents in five families, so the ring
 # of 30 labels reads. Keyed by the doc's stem (routine-<stem>.md); anything not listed falls back by zone.
 FAMILY = {

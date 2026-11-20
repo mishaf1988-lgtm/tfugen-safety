@@ -104,6 +104,15 @@
 - trustees: טבלה trustees
 - trustee_tasks: טבלה trustee_tasks
 - trustee_winners: טבלה trustee_winners
+- היתרי עבודה: טבלה ptw
+- חומרים מסוכנים: טבלה hzm
+- תכנית הדרכות שנתית: טבלה train_plan
+- יומן פסולת: טבלה wst
+- מבדקים: טבלה auds
+- תרגילים: טבלה drl
+- סיכונים: טבלה rsk
+- ניטור סביבתי: טבלה env
+- סיורים: טבלה ins
 
 ## Microsoft 365
 - Outlook: מייל נכנס ויוצא, טיוטות בלבד
