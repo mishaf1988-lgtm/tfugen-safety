@@ -239,8 +239,16 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
       const r = await voiceText({ META_ACCESS_TOKEN: 'mt', AI: { run: async () => ({ text: 'x' }) } }, '7777700009', ff);
       check('a recording over the limit with no size from Meta is stopped while reading, and no redirect is followed (review 07/11/2026)', !r.ok && /too long/.test(r.error) && calls.every((c) => c.redirect === 'manual'), { r, calls });
     }
+    {
+      const { voiceText, VOICE_RETRY_MS } = await import('./_build/_voice.mjs');
+      const ff = async (u) => /graph\.facebook/.test(u) ? new Response(JSON.stringify({ url: 'https://lookaside.fbsbx.com/x', mime_type: 'audio/ogg' })) : new Response(new Uint8Array([0x4F, 0x67, 0x67, 0x53, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]));
+      const slow = { META_ACCESS_TOKEN: 'mt', AI: { run: () => new Promise((r) => setTimeout(() => r({ text: 'late' }), 120)) } };
+      const a = await voiceText(slow, '7777700010', ff, 40), b = await voiceText(slow, '7777700010', ff, 400);
+      check('voiceText: the limit is a parameter (the hook 10 s, the assistant retry 25 s; 20/11/2026)', !a.ok && a.error === 'timeout 40 ms' && b.ok && b.text === 'late' && VOICE_RETRY_MS === 25000, { a, b });
+    }
     delete ENV.AI; graph = null;
     const src = fs.readFileSync(new URL('../../functions/api/wa-hook.js', import.meta.url), 'utf8');
+    check('a timeout tells the assistant to transcribe again with wa_media voice before asking Michael to type (20/11/2026)', /\/\^timeout\/\.test\(String\(m\.voiceErr\)\) && m\.media \? '; first routine-db wa_media/.test(src));
     check('a voice message never takes the fast lane or a rating (an approval stays a tap or typed text)', /const rt = isVoice\(m\) \? null : rateOf\(/.test(src) && /const fr0 = wa && !isVoice\(m\) \? fastRoute\(/.test(src));
   }
   check('fireText marks a non-text message', /type: image/.test(fireText({ id: 'w', ts: 0, type: 'image', text: '', context: '' }, '')));
