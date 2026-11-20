@@ -48,7 +48,7 @@
 | `trig_015zHPtWJFZP77uqRzL5wfBA` | תזכורת פרסום ההדרכה | א' 12:13 | `routine-talk-publish.md` | משימת צ'אט מתוזמנת (Cowork), שיחה חדשה בכל ריצה, בלי מאגר (28/10/2026; המזהה הקודם `trig_01VtyJkVLuqYrQNVgWHhMzhV` כבוי) |
 | `trig_01X1tzZrjA1X3F3oZHrtNzAo` | בודק לתור המשימות למחשב | כל יום 09:37 | `routine-cowork-check.md` | `session_01HFfawAaLSpdi53jYwjkWcG` |
 | `trig_01DWN5BuY5P67qFJGJMqWMe8` | בדיקת הניסוי השבועית | ד' 06:29 | `routine-staging-e2e.md` | `session_01HFfawAaLSpdi53jYwjkWcG` |
-| `trig_01Rr1bCyYMtchy3HARUJ9Pc3` | סרטוני הדרכה: התור היומי | כל יום 10:23 | `tools/deck-video-run.py` (`project-files/decks/video/README.md`) | `session_01HFfaw7CRFM6K69rPSQE7m9` |
+| `trig_01GDzZY8YjrWKKw3FewqnDHW` | סרטוני הדרכה: התור היומי | כל יום 10:23 | `tools/deck-video-run.py` (`project-files/decks/video/README.md`); במקום `trig_01Rr1bCyYMtchy3HARUJ9Pc3` (כבויה 20/11/2026) | `session_01HFfaw6qacVLagPiui7iX9Z` |
 | `trig_017ita3taHBGjtRrgExMqxXS` (מ-01/11/2026, סונט; במקום `trig_01Fm5346rt5BNgeF49DqGbyz`, מושהה, C69) | המגייס: החלפה שבועית | ו' 13:07 (ראשונה 23/10/2026) | `routine-rotation.md` | `session_01HFfaw7Zw3uqx6WWgcneouV` (המגייס מ-01/11/2026; הקודם `session_01Q3LMWMr65icNtoe5zLifqr` בארכיון מ-03/11/2026, מיכאל בשאלון: "בצע: כל הארבע") |
 | `trig_01Py8YXifD3HtnQUmFgoTRft` | הדוור של הצ'אט במשרד | א'-ה' 10:11, 14:11 (מ-01/11/2026, בדיקת החיסכון; קודם 08:11, 12:11, 16:11) | `routine-chat-relay.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
 | `trig_0114iVUybrBb6vRqZt1EyoyL` | פיתוח מיידי: בקשה מהעוזר | בלי תזמון: השרת מפעיל לכל `dev_request` חדש (`DEV_FIRE_TOKEN`), שיחה חדשה בכל הפעלה | `routine-dev-fire.md` | אין (שיחה חדשה כל פעם) |

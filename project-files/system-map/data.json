@@ -987,13 +987,13 @@
    "reports": true
   },
   {
-   "id": "trig_01Rr1bCyYMtchy3HARUJ9Pc3",
+   "id": "trig_01GDzZY8YjrWKKw3FewqnDHW",
    "zone": "routines",
    "name": "סרטוני הדרכה",
    "what": "סרטוני הדרכה: התור היומי",
    "when": "כל יום 10:23",
    "when_full": "כל יום 10:23",
-   "doc": "tools/deck-video-run.py (project-files/decks/video/README.md)",
+   "doc": "tools/deck-video-run.py (project-files/decks/video/README.md); במקום trig_01Rr1b",
    "key": "README",
    "family": "תקשורת ומשרד",
    "ops": [],
