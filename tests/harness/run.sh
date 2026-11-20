@@ -51,7 +51,7 @@ sed -i -e "s#'./_shared.js'#'./_shared.mjs'#" -e "s#'./_pdflib.js'#'./_pdflib.mj
 # _ctrok (16/11/2026): contractor link stage 2, approval on WhatsApp
 sed -i -e "s#'./_shared.js'#'./_shared.mjs'#" -e "s#'./_cas.js'#'./_cas.mjs'#" -e "s#'./_wa.js'#'./_wa.mjs'#" -e "s#'./_ctr.js'#'./_ctr.mjs'#" -e "s#'./api/ctr-link.js'#'./ctr-link.mjs'#" -e "s#'./_onedrive.js'#'./_onedrive.mjs'#" _build/_ctrok.mjs
 sed -i -e "s#'./_shared.js'#'./_shared.mjs'#" -e "s#'./_push.js'#'./_push.mjs'#" -e "s#'./_cas.js'#'./_cas.mjs'#" _build/_wa.mjs
-sed -i "s#'./_shared.js'#'./_shared.mjs'#" _build/_push.mjs
+sed -i -e "s#'./_shared.js'#'./_shared.mjs'#" -e "s#'./_cas.js'#'./_cas.mjs'#" _build/_push.mjs
 sed -i -e "s#'./_shared.js'#'./_shared.mjs'#" -e "s#'./_wa.js'#'./_wa.mjs'#" -e "s#'./_stt.js'#'./_stt.mjs'#" _build/_voice.mjs
 # _sign (21/10/2026): the owner's signature, pdf-lib and the caption beside it
 sed -i -e "s#'./_shared.js'#'./_shared.mjs'#" -e "s#'./_pdflib.js'#'./_pdflib.mjs'#" -e "s#'./_signcaption.js'#'./_signcaption.mjs'#" _build/_sign.mjs
