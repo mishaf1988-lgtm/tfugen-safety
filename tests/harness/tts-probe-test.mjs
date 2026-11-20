@@ -51,7 +51,8 @@ for (const bad of [null, undefined, {}, { ms: 5 }, 42]) {
 {
   const src = fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
   const op = src.split("if (body.op === 'tts_probe') {")[1].split("if (body.op === 'ocr_probe')")[0];
-  check('tts_probe: only its own fields are accepted', /\['op', 'agent', 'text', 'model', 'send', 'fmt'\]/.test(op));
+  check('tts_probe: only its own fields are accepted', /\['op', 'agent', 'text', 'model', 'send', 'fmt', 'b64'\]/.test(op));
+  check('tts_probe: the audio comes back (b64) only with send:false, never also to WhatsApp', /body\.b64 === true && body\.send === false/.test(op));
   check('tts_probe: the text is the caller\'s own, 4 to 300 characters, never a row from the database', /text: 4-300 characters/.test(op) && !/select|sbJson|from\(/.test(op));
   check('tts_probe: without the Workers AI binding it answers instead of throwing', /Workers AI binding missing/.test(op));
   check('tts_probe: an unknown model name is refused with the list', /model: ' \+ TTS_MODELS\.map/.test(op));
