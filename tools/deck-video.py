@@ -67,6 +67,8 @@ def tts(scenes, work):
                 m = {'error': (r.stdout or r.stderr)[:200]}
             if m.get('b64'): break
             print('scene %d: %s (try %d)' % (i, m.get('error'), attempt + 1), file=sys.stderr)
+            if 'per day' in str(m.get('error')):   # 100 recordings a day (20/11/2026): retrying only burns the day
+                raise SystemExit('scene %d: voice quota per day reached' % i)
             if '429' in str(m.get('error')): time.sleep(60)   # the voice allows 10 requests a minute (20/11/2026)
         else:
             raise SystemExit('scene %d: no audio' % i)
