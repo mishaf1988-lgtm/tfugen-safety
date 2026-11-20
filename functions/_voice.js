@@ -14,6 +14,8 @@ export const VOICE_MS = 10000;
 // 20/11/2026 (Michael: "do it: investigate now"; 18/11 16:16 a recording stopped at 10 s): the assistant's own retry
 // (routine-db wa_media voice) is a request of its own, not inside waitUntil, so it waits longer.
 export const VOICE_RETRY_MS = 25000;
+// only our own time limit is worth a retry; a model error, a bad id or a size limit would fail again
+export function voiceRetryable(err) { return /^timeout \d+ ms$/.test(String(err || '')); }
 export const VOICE_MARK = '\ud83c\udfa4 ';  // the microphone, so the log, the chat and the assistant see it was spoken
 export const VOICE_TEXT_MAX = 3000;
 
