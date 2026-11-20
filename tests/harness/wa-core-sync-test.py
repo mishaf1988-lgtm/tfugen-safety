@@ -75,5 +75,14 @@ _full = open(os.path.join(ROOT, "project-files", "routine-wa-assistant.md"), enc
 for rel, t in [("project-files/routine-wa-core.md", core), ("project-files/routine-wa-assistant.md", _full)] + list(topics.items()):
     check(rel + ": no 'next wake of the runner' promise", "\u05d1\u05d4\u05e9\u05db\u05de\u05d4 \u05d4\u05d1\u05d0\u05d4" not in t and "\u05d1\u05d4\u05e9\u05db\u05de\u05d4 \u05e9\u05dc \u05d4\u05de\u05e4\u05ea\u05d7" not in t)
 
+# 20/11/2026: rules folded from the notebook went only into the full procedure, which the assistant does not read. The
+# topic file wa-topics/notebook.md is built from those sections (tools/notebook-build.py) and the core greps it before wa_me.
+import subprocess
+nb = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "notebook-build.py"), "--check"], capture_output=True, text=True)
+check("wa-topics/notebook.md is built from the notebook sections of the full procedure", nb.returncode == 0, nb.stdout.strip())
+check("the core greps wa-topics/notebook.md", "project-files/wa-topics/notebook.md" in core)
+nbt = topics.get(os.path.join("project-files", "wa-topics", "notebook.md"), "")
+check("notebook.md has the rules of 17-20/11/2026", "[17-20/11/2026]" in nbt)
+
 print("\n%d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)

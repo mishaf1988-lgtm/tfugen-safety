@@ -1036,9 +1036,11 @@
     "dev_done",
     "dev_request",
     "learn",
+    "out_log",
     "select",
     "state_get",
-    "wa_me"
+    "wa_me",
+    "wa_review"
    ],
    "m365": false,
    "reports": true
@@ -1267,6 +1269,7 @@
     "cal_move_ask",
     "claim",
     "client_errors",
+    "ctr_close",
     "del_ask",
     "dev_done",
     "dev_request",
@@ -1343,6 +1346,7 @@
     "invoice_find",
     "invoice_set",
     "learn",
+    "learn_done",
     "mail_draft",
     "mail_request",
     "ocr_txt",
@@ -1382,6 +1386,7 @@
     "cal_move_ask",
     "claim",
     "client_errors",
+    "ctr_close",
     "del_ask",
     "dev_done",
     "dev_request",
