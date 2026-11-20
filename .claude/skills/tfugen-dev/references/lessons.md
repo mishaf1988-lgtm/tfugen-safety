@@ -627,3 +627,9 @@
   הכלל: לפני שכותבים כלל לסוכן, לבדוק בטריגר שלו (`get_trigger`, השדה `prompt`) איזה קובץ הוא קורא, ולכתוב שם או בקובץ שהוא מפנה אליו. לעוזר: סעיף מחברת בנוהל המלא ואז `python3 tools/notebook-build.py`.
   נאכף: `wa-core-sync-test.py` (`wa-topics/notebook.md` נבנה מהסעיפים, `notebook-build.py --check`, והליבה מפנה אליו).
   חזר: 0.
+
+**232. הודעה של hook שלא מגיעה לשיחה (20/11/2026, #2955 ו-PR זה).**
+מה קרה: `claim-release-on-merge.py` שחרר תפיסות אחרי שני מיזוגים (#2959, #2962), אבל ה-`print` הרגיל שלו נשאר ביומן ולא הגיע לשיחה, כך שאי אפשר היה לאמת אותו ממנה. 12 הבדיקות בדקו רק את הלוגיקה, לא את ההודעה.
+הכלל: hook מסוג PostToolUse שמסיים ב-0 ורוצה שהשיחה תראה משהו כותב JSON עם `hookSpecificOutput.additionalContext` (כמו `ci-watch.py`), לא `print` רגיל. ובבדיקה של hook חדש: גם צורת ההודעה, לא רק הלוגיקה.
+נאכף: `claim-release-test.py` (ההודעה היא JSON של additionalContext, ואין `print("claim-release` רגיל).
+חזר: 0.
