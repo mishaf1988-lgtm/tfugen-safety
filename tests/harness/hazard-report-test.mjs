@@ -110,8 +110,15 @@ const ROWS = [
       if (u.startsWith(SB + '/storage/v1/render/image/')) { w.thumbs = (w.thumbs || 0) + 1; return new Response(new Uint8Array([0xFF, 0xD8, 0xFF, 0xC0, 0, 17, 8, 0, 48, 0, 64, 3, 1, 34, 0, 2, 17, 1, 3, 17, 1, 0xFF, 0xD9]), { status: 200 }); }
       if (u.startsWith(SB + '/rest/v1/trustee_reports')) return json([]);
       if (u.startsWith(SB + '/rest/v1/tasks')) return json([]);
+      // stateCas (20/11/2026): one key with its version, then a PATCH that names it (or an insert when there is no row).
+      // o.casRead[key] runs once after the read: another writer in between, which makes the first PATCH miss.
+      const one = /select=value,updated_at&key=eq\.([^&]+)/.exec(decodeURIComponent(u));
+      const curOf = (k) => (k in w.state ? w.state[k] : ((o.stateRows || []).find((r) => r.key === k) || {}).value);
+      w.ver = w.ver || {}; const vAt = (k) => new Date(Date.UTC(2026, 10, 1) + (w.ver[k] || 0)).toISOString();
+      if (one && mth === 'GET') { const k = one[1], v = curOf(k), out = v === undefined ? [] : [{ value: v, updated_at: vAt(k) }]; if (o.casRead && o.casRead[k]) { const f = o.casRead[k]; delete o.casRead[k]; f(w); w.ver[k] = (w.ver[k] || 0) + 1; } return json(out); }
       if (u.startsWith(SB + '/rest/v1/server_state') && mth === 'GET') return json((o.stateRows || []).concat(o.sheets ? [{ key: 'hazard_xlsm_sheets', value: o.sheets, updated_at: 'x' }] : []));
-      if (u.startsWith(SB + '/rest/v1/server_state')) { if (mth === 'POST') JSON.parse(init.body).forEach((r) => { w.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
+      if (u.startsWith(SB + '/rest/v1/server_state') && mth === 'PATCH') { const du = decodeURIComponent(u), k = /key=eq\.([^&]+)/.exec(du)[1], ver = (/updated_at=eq\.([^&]+)/.exec(du) || [])[1]; if (ver !== vAt(k)) return json([]); w.state[k] = JSON.parse(init.body).value; w.ver[k] = (w.ver[k] || 0) + 1; return json([{ key: k }]); }
+      if (u.startsWith(SB + '/rest/v1/server_state')) { if (mth === 'POST') { JSON.parse(init.body).forEach((r) => { w.state[r.key] = r.value; }); return json(JSON.parse(init.body).map((r) => ({ key: r.key })), 201); } return new Response(null, { status: 201 }); }
       if (u.startsWith('https://graph.microsoft.com/v1.0/me/sendMail')) { w.mails.push(JSON.parse(init.body)); return new Response(null, { status: o.mailFail ? 500 : 202 }); }
       if (u.startsWith('https://graph.microsoft.com/') && mth === 'GET') { w.read = decodeURIComponent(u); return new Response(book, { status: 200 }); }
       return json({ error: 'unexpected ' + u }, 599);
@@ -254,6 +261,10 @@ const ROWS = [
     check('status: "since" is the department\'s own last status (yesterday): the one closed two days ago is not in it', p.j.ok && body && !body.includes('מעקה רופף') && p.j.sent[0].since === new Date(Date.now() - 864e5).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }), p.j.sent);
     const saved = JSON.parse(p.w.state.hazard_status_depts || '{}');
     check('a real send: the department gets now, the others are kept', saved['חומר גלם'] === p.j.at && saved['מעבדות'] === '2026-10-01T08:00:00Z', saved);
+    // 20/11/2026 (stateCas): a status sent to another department between this send's read and its write keeps its date
+    p = await call({ email: 'admin@tfugen.local', hz: HZS, stateRows: [old, map], casRead: { hazard_status_depts: (w) => { const m = JSON.parse(map.value); m['אריזה'] = '2026-11-20T10:00:00.000Z'; w.state.hazard_status_depts = JSON.stringify(m); } } }, { op: 'statusSend', depts: ['חומר גלם'], note: 'x' });
+    const s2 = JSON.parse(p.w.state.hazard_status_depts || '{}');
+    check('two status sends at the same moment: the other department\'s date is not lost', p.j.ok && s2['חומר גלם'] === p.j.at && s2['אריזה'] === '2026-11-20T10:00:00.000Z' && s2['מעבדות'] === '2026-10-01T08:00:00Z', s2);
     p = await call({ email: 'admin@tfugen.local', hz: HZS, stateRows: [map] }, { op: 'statusSend', depts: ['חומר גלם'], test: true, note: 'x' });
     check('a test send does not move the date', !p.w.state.hazard_status_depts && p.j.at === null, p.w.state);
   }

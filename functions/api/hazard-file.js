@@ -43,6 +43,15 @@ import { odConfigured, accessToken, stateGet, stateSet, tokenRow, runLeased } fr
 import { patchSheetRows, sheetsDigest, readSheetRows, picInfo, PIC_ROW_PT } from '../_xlsxpatch.js';
 import { runWatch, WATCH_KEY } from '../_watchdog.js';
 import { CLAUDE_LOG_Q, queuePending } from '../_claudelog.js';
+import { stateCas } from '../_cas.js';
+// 20/11/2026 (data-overwrite protection, DECISIONS 11/11/2026): a list or a map that is read and written back goes through
+// stateCas, so two requests at the same moment do not lose each other's entry. change(raw) returns the new text.
+const casState = async (env, key, change) => {
+  const k = env.SUPABASE_SERVICE_ROLE_KEY;
+  const r = await stateCas(env.SUPABASE_URL || SB_LIVE, { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }, key, (v) => ({ value: change(v === undefined ? null : v) }), () => AbortSignal.timeout(10000));
+  if (!r || !r.written) throw new Error('state write ' + ((r && r.status) || 'conflict'));
+};
+
 // 16/10/2026 (BACKLOG 14.5): every outbound call has a time limit, as in _onedrive.js. A Graph or
 // database call that hung held the run (and its lease) until Cloudflare gave up. The requests this
 // file sends to itself in waitUntil are the exception: they are other runs, not calls to wait on.
@@ -885,15 +894,13 @@ export async function onRequest(context) {
     // "\u05d8\u05d5\u05e4\u05dc" on an item of the not-taken list.
     if (body.op === 'dismiss') {
       const f = body.file === 'xlsx' ? 'xlsx' : 'xlsm', k = String(body.key || '').substring(0, 300), sk = 'hazard_' + f + '_dropped', dk = 'hazard_' + f + '_dismissed';
-      const s = await stateGet(env, [sk, dk]).catch(() => ({}));
-      let d = null, ds = []; try { d = JSON.parse((s[sk] && s[sk].value) || 'null'); } catch (e) { d = null; }
-      try { ds = JSON.parse((s[dk] && s[dk].value) || '[]'); } catch (e) { ds = []; }
-      const items = ((d && d.items) || []).filter((x) => dropKey(x) !== k);
-      // Also remembered apart, so a run that read the list a moment before
-      // does not bring the item back.
-      if (k && ds.indexOf(k) < 0) ds = ds.concat([k]).slice(-100);
-      try { await stateSet(env, { [sk]: JSON.stringify({ at: (d && d.at) || new Date().toISOString(), items }), [dk]: JSON.stringify(ds) }); }
-      catch (e) { return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 503, cors); }
+      // Also remembered apart (dk), so a run that read the list a moment before does not bring the item back.
+      // Both through stateCas (20/11/2026): two "handled" clicks at the same moment both stay.
+      let items = [];
+      try {
+        if (k) await casState(env, dk, (raw) => { let ds = []; try { ds = JSON.parse(raw || '[]'); } catch (e) { ds = []; } if (!Array.isArray(ds)) ds = []; return JSON.stringify(ds.indexOf(k) < 0 ? ds.concat([k]).slice(-100) : ds); });
+        await casState(env, sk, (raw) => { let d = null; try { d = JSON.parse(raw || 'null'); } catch (e) { d = null; } items = ((d && d.items) || []).filter((x) => dropKey(x) !== k); return JSON.stringify({ at: (d && d.at) || new Date().toISOString(), items }); });
+      } catch (e) { return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 503, cors); }
       return jsonResp({ ok: true, left: items.length }, 200, cors);
     }
     force = body.force === true;

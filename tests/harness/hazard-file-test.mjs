@@ -85,14 +85,21 @@ function world(o) {
     }
     if (u.startsWith(SB + '/rest/v1/server_state')) {
       const pref = (init && init.headers && init.headers.Prefer) || '';
-      if (m === 'POST') { JSON.parse(init.body).forEach((r) => { if (/ignore-duplicates/.test(pref) && r.key in w.state) return; w.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
+      w.ver = w.ver || {}; const vAt = (k) => new Date(Date.UTC(2026, 10, 1) + (w.ver[k] || 0)).toISOString();
+      if (m === 'POST') { const wrote = []; JSON.parse(init.body).forEach((r) => { if (/ignore-duplicates/.test(pref) && r.key in w.state) return; w.state[r.key] = r.value; w.ver[r.key] = (w.ver[r.key] || 0) + 1; wrote.push({ key: r.key }); }); return /return=representation/.test(pref) ? json(wrote, 201) : new Response(null, { status: 201 }); }
       if (m === 'PATCH') {
         // the lease: take it only when free; give it back only with its token
         const du = decodeURIComponent(u), key = /key=eq\.([^&]+)/.exec(du)[1], body = JSON.parse(init.body), cur = w.state[key] || '';
         if (/&or=/.test(du)) { if (o.lockHeld || cur) return json([]); w.state[key] = body.value; w.locks = (w.locks || 0) + 1; return json([{ key }]); }
+        // stateCas (20/11/2026): a PATCH that names the version it read; an old version changes nothing
+        const ver = /&updated_at=eq\.([^&]+)/.exec(du);
+        if (ver) { if (ver[1] !== vAt(key)) return json([]); w.state[key] = body.value; w.ver[key] = (w.ver[key] || 0) + 1; return json([{ key }]); }
         const tok = /&value=eq\.(.+)$/.exec(du); if (tok && tok[1] === cur) w.state[key] = body.value;
         return new Response(null, { status: 204 });
       }
+      // one key asked with its version (stateCas): that row only; w.casRead[key] runs once after it (another writer in between)
+      const one = /select=value,updated_at&key=eq\.([^&]+)/.exec(decodeURIComponent(u));
+      if (one) { const k = one[1], out = k in w.state ? [{ value: w.state[k], updated_at: vAt(k) }] : []; if (w.casRead && w.casRead[k]) { const f = w.casRead[k]; delete w.casRead[k]; f(); } return json(out); }
       return json(Object.keys(w.state).map((k) => ({ key: k, value: w.state[k], updated_at: 'x' })));
     }
     if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return json([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite' }]);
@@ -418,6 +425,15 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   const dres = await (await onRequest({ request: dreq({ op: 'dismiss', file: 'xlsm', key: dropKey(oldItem) }), env: ENV })).json();
   const after = JSON.parse(w.state.hazard_xlsm_dropped).items;
   check('"טופל" removes that one item and remembers it apart', dres.ok && dres.left === 1 && after.length === 1 && after[0].ci === 6 && JSON.parse(w.state.hazard_xlsm_dismissed)[0] === dropKey(oldItem), [dres, after, w.state.hazard_xlsm_dismissed]);
+  { // 20/11/2026 (stateCas): another "handled" click lands between this one's read and its write: both stay
+    const other = 'other-key-' + Date.now();
+    w.state.hazard_xlsm_dropped = JSON.stringify({ at: NOW, items: [oldItem, itm] }); w.ver.hazard_xlsm_dropped = (w.ver.hazard_xlsm_dropped || 0) + 1;
+    w.casRead = { hazard_xlsm_dismissed: () => { w.state.hazard_xlsm_dismissed = JSON.stringify(JSON.parse(w.state.hazard_xlsm_dismissed || '[]').concat([other])); w.ver.hazard_xlsm_dismissed = (w.ver.hazard_xlsm_dismissed || 0) + 1; } };
+    const d2 = await (await onRequest({ request: dreq({ op: 'dismiss', file: 'xlsm', key: dropKey(itm) }), env: ENV })).json();
+    const ds = JSON.parse(w.state.hazard_xlsm_dismissed);
+    check('two "handled" at the same moment: both keys stay in the remembered list', d2.ok && ds.indexOf(other) >= 0 && ds.indexOf(dropKey(itm)) >= 0, [d2, ds]);
+    w.state.hazard_xlsm_dropped = JSON.stringify({ at: NOW, items: [itm] }); w.ver.hazard_xlsm_dropped++;
+  }
   globalThis.fetch = async (u, init) => (String(u).includes('/auth/v1/user') ? new Response('{}', { status: 401 }) : wf(u, init));
   const bad = await onRequest({ request: dreq({ op: 'dismiss', file: 'xlsm', key: dropKey(itm) }), env: ENV });
   check('... without a valid session: refused, nothing removed', bad.status === 401 && JSON.parse(w.state.hazard_xlsm_dropped).items.length === 1, bad.status);

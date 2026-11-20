@@ -84,7 +84,7 @@ console.log('\n2. the same, at run time: which limit each call gets');
 console.log('\n5. callers that did not catch a stateSet now answer, not crash');
 {
   const hf = src('api/hazard-file.js'), hd = src('api/hazard-deck.js'), ma = src('api/ms-auth.js');
-  check('hazard-file "dismiss": a failed write answers 503 JSON', /try \{ await stateSet\(env, \{ \[sk\][\s\S]{0,200}\}\s*\n\s*catch \(e\) \{ return jsonResp\([\s\S]{0,120}503, cors\); \}/.test(hf));
+  check('hazard-file "dismiss": a failed write answers 503 JSON', /await casState\(env, sk, [\s\S]{0,400}\n\s*\} catch \(e\) \{ return jsonResp\([\s\S]{0,120}503, cors\); \}/.test(hf)); // 20/11/2026: the write goes through stateCas (casState throws when nothing was written)
   check('hazard-deck "setDate": a failed write answers 503 JSON', /try \{ await stateSet\(env, \{ deck_meeting_date: body\.date \}\); \}\s*\n\s*catch \(e\) \{ return jsonResp\([\s\S]{0,120}503, cors\); \}/.test(hd));
   check('ms-auth "start": no sign-in link without the saved nonce (503)', /try \{ await stateSet\(env, \{ \[NONCE_KEY\][\s\S]{0,120}\}\s*\n\s*catch \(e\) \{ return jsonResp\(\{ error: 'state store unavailable, try again' \}, 503, cors\); \}/.test(ma));
 }
