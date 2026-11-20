@@ -686,6 +686,14 @@ const callIn = async (body) => {
       check('a second signed copy "(2)" is never offered for signing', !!signRequestCheck({ agent: 'routine-wa-assistant', why: 'test test', path: '99_x/a - \u05d7\u05ea\u05d5\u05dd (2).pdf' }).error); }
     { const { permitSpot } = await import('./_build/routine-db.mjs');
       check('a scanned 2-page safety permit gets the safety officer row, anything else nothing (23/10/2026)', permitSpot('2026-10-22 0943 - \u05d4\u05e8\u05e9\u05d0\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e0\u05d2\u05d1.pdf', 2).page === 2 && permitSpot('\u05d4\u05e8\u05e9\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 x.pdf', 2).x === 225 && permitSpot('\u05d4\u05e8\u05e9\u05d0\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.pdf', 3) === null && permitSpot('\u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8.pdf', 2) === null); }
+    { const { pastDateGate } = await import('./_build/routine-db.mjs'); const T = '2026-11-18';
+      check('past date gate: the two real lines of 18/11/2026 stop ("a letter from 30/04/2027", "asked on 03/05/2027"), and a mail "received on" next month',
+        /30\/04\/2027/.test(pastDateGate('2. 05/01/2027: מכתב סימקין מ-30/04/2027 (נשלח לאריה): הפסולת נדחתה', T) || '') && /03\/05\/2027/.test(pastDateGate('אישור קליטה חסר (אריה ביקש ב-03/05/2027, לא הגיע).', T) || '') && !!pastDateGate('המייל התקבל ב-2/12/2026', T));
+      check('past date gate: a past date, today, a future validity, a due date and a planned check all pass',
+        pastDateGate('מכתב סימקין מ-30/04/2026 תויק. נבדק ב-18/11/2026.', T) === null && pastDateGate('כויל 12/11/2026, כיול הבא 14/05/2027. התוקף עודכן ל-10/11/2027', T) === null
+        && pastDateGate('ההיתר הוארך עד 20/11/2026 בשעה 16:00', T) === null && pastDateGate('הבדיקה תתבצע ב-03/05/2027', T) === null && pastDateGate('נבדק. הבא ב-01/02/2027', T) === null && pastDateGate('נבדק 12/11/2026, כיול הבא ב-14/05/2027', T) === null && pastDateGate('נבדק והכיול הבא ב-14/05/2027', T) === null && pastDateGate('תויק, בתוקף מ-01/01/2027', T) === null && pastDateGate('נשלח ב-45/13/2027', T) === null && pastDateGate('', T) === null);
+      const rq = await call({ op: 'wa_me', agent: 'routine-wa-assistant', text: 'מכתב הספק מ-30/04/2099 כבר בתיק.' });
+      check('wa_me: a past event dated in the future is refused before anything is sent', rq.status === 400 && /date in the future/.test(rq.json.error), rq.json); }
     { const { claimGate } = await import('./_build/routine-db.mjs');
       { const { draftThreadGate } = await import('./_build/routine-db.mjs');
         const base = { agent: 'routine-wa-assistant', to: 'shlomi@tapugan.co.il' };

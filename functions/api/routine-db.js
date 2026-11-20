@@ -2726,6 +2726,23 @@ export function addYear(text, now) {
     return best ? pre + dd + '/' + mm + '/' + best.y : m;
   });
 }
+// pastDateGate (20/11/2026; Michael on WhatsApp 18/11/2026: "why is it written 2027, we have not reached that year yet"):
+// the assistant wrote "a letter from 30/04/2027" and "asked on 03/05/2027" about things that had already happened. A date
+// that follows a word for something done (sent, received, filed, checked, a letter, a mail) cannot be after today. Run on
+// the assistant's answers of the 45 days before: these two stops and no other. Pure: null = send, or the error text.
+// The words between stop at a comma, and at "next", "until", "valid" ("checked 12/11, the next one on 14/05/2027" is a plan).
+// today = YYYY-MM-DD (Israel). A date that is no real date is left to pass.
+const PAST_DATE_RE = /(?:\u05e0\u05e9\u05dc\u05d7|\u05d4\u05ea\u05e7\u05d1\u05dc|\u05d4\u05d2\u05d9\u05e2|\u05d1\u05d9\u05e7\u05e9|\u05db\u05ea\u05d1|\u05e9\u05dc\u05d7\u05d5?|\u05ea\u05d5\u05d9\u05e7|\u05d1\u05d5\u05e6\u05e2|\u05e0\u05d1\u05d3\u05e7|\u05db\u05d5\u05d9\u05dc|\u05e4\u05d5\u05e0\u05d4|\u05e4\u05d5\u05e0\u05ea\u05d4|\u05e0\u05d3\u05d7\u05d4|\u05e0\u05d3\u05d7\u05ea\u05d4|\u05de\u05db\u05ea\u05d1|\u05de\u05d9\u05d9\u05dc)(?:(?!\u05d4\u05d1\u05d0|\u05e2\u05d3 |\u05ea\u05d5\u05e7\u05e3|\u05d9\u05e4\u05d5\u05d2)[^.\n,;:]){0,40}?[\u05d1\u05de]-?(\d{1,2})\/(\d{1,2})\/(\d{4})/g;
+export function pastDateGate(text, today) {
+  const t = String(text || ''); let m; PAST_DATE_RE.lastIndex = 0;
+  while ((m = PAST_DATE_RE.exec(t))) {
+    const d = m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0');
+    if (Number(m[2]) >= 1 && Number(m[2]) <= 12 && Number(m[1]) >= 1 && Number(m[1]) <= 31 && d > String(today)) {
+      return 'date in the future: "' + m[0].slice(-60) + '" says something already happened on ' + m[1] + '/' + m[2] + '/' + m[3] + ', after today (' + today + '). Check the year in the source (a two digit year "26" is 2026) and send again with the right date.';
+    }
+  }
+  return null;
+}
 export function claimGate(text, checked) {
   const t = String(text || '');
   if (SENT_RE.test(t)) return 'the text says you sent a mail: you only make drafts. Write "\u05d4\u05db\u05e0\u05ea\u05d9 \u05d8\u05d9\u05d5\u05d8\u05d4" or "\u05e0\u05e9\u05dc\u05d7 \u05de\u05de\u05da \u05d1-<\u05e9\u05e2\u05d4>" (after Sent Items)';
@@ -4849,6 +4866,8 @@ async function routineDbHandle(context) {
       if (tg) return jsonResp({ ok: false, error: tg }, 400, {});
       const cg = claimGate(body.text, body.checked);
       if (cg) return jsonResp({ ok: false, error: cg }, 400, {});
+      const pg = pastDateGate(body.text, new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date()));
+      if (pg) return jsonResp({ ok: false, error: pg }, 400, {});
       // the assistant only: another agent's summary ("3 files filed in the folder") names many files, not one it saved
       if (String(body.agent || '') === 'routine-wa-assistant' && body.askInternal !== true && savedNeeded(body.text)) {
         const sp = savedPath(body.saved);
