@@ -129,6 +129,16 @@ const JPEG = Buffer.from('/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDB
   console.log('\n4. closing a half-filled form asks first; back closes the form, not the page');
   {
     await ev(() => goPage('docs'));
+    // 21/11/2026 (flaky.md): no fixed sleeps in this section. Every back waits for its popstate to be handled
+    // (counted in the capture phase, before the app's listener can stop it) and for the app's own history.back()
+    // calls to land (_mhSkip === 0). A sleep passed locally and was too short on a busy CI runner.
+    await ev(() => { window.__pops = 0; window.addEventListener('popstate', () => { window.__pops++; }, true); });
+    const back = async () => {
+      const n = await ev(() => __pops);
+      await page.goBack();
+      await page.waitForFunction((n) => __pops > n && _mhSkip === 0, n, { timeout: 5000 }).catch(() => {});
+    };
+    const closed = (m) => page.waitForFunction((m) => { const e = document.getElementById(m); return !e || (e.style.display !== 'block' && e.style.display !== 'flex'); }, m, { timeout: 5000 }).catch(() => {});
     await ev(() => openModal('m-doc'));
     dlgN = 0;
     await page.click('#m-doc .close-btn');
@@ -143,46 +153,52 @@ const JPEG = Buffer.from('/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDB
     check('Escape asks once (not twice)', dlgN === 1 && (await isOpen('m-doc')), dlgN);
     dlgN = 0;
     const url0 = page.url();
-    await page.goBack(); await page.waitForTimeout(150);
+    await back();
     check('back asks, and on "cancel" the form stays and the page stays', dlgN === 1 && (await isOpen('m-doc')) && page.url() === url0 && (await ev(() => CUR)) === 'docs', { dlgN, url: page.url() });
     dlgAnswer = 'accept'; dlgN = 0;
-    await page.goBack(); await page.waitForTimeout(150);
+    await back();
     check('back again, "OK": the form closes, still on the same page', dlgN === 1 && !(await isOpen('m-doc')) && (await ev(() => CUR)) === 'docs', { dlgN, cur: await ev(() => CUR) });
     await ev(() => openModal('m-doc'));
     await page.fill('#d-n', 'נוהל שנשמר');
     dlgN = 0;
-    await ev(() => svDoc()); await page.waitForTimeout(100);
+    await ev(() => svDoc()); await closed('m-doc');
     check('a save closes with no question', dlgN === 0 && !(await isOpen('m-doc')), dlgN);
     // The save drops the form's history entry with a history.back() that lands asynchronously; on a busy
     // runner it landed after the next openModal and the stack came out one entry short (CI, 15/10/2026).
-    await page.waitForFunction(() => !(history.state && history.state.modal) && _mhSkip === 0, null, { timeout: 5000 }); await page.waitForTimeout(100);
+    await page.waitForFunction(() => !(history.state && history.state.modal) && _mhSkip === 0, null, { timeout: 5000 });
     // An untouched form and back: closes quietly, no page change
     await ev(() => openModal('m-doc')); dlgN = 0;
-    await page.goBack(); await page.waitForTimeout(150);
+    await back();
     check('back on an untouched form: closes quietly, still on the page', dlgN === 0 && !(await isOpen('m-doc')) && (await ev(() => CUR)) === 'docs', dlgN);
     // Page navigation by back still works once no form is open. Wait first until the history.back()
     // queued by the earlier closes has landed (on a busy CI runner it arrived after goPage and popped it).
-    await page.waitForFunction(() => !(history.state && history.state.modal) && _mhSkip === 0 && CUR === 'docs', null, { timeout: 5000 }); await page.waitForTimeout(300);
-    await ev(() => goPage('ncr')); await page.waitForTimeout(50);
+    await page.waitForFunction(() => !(history.state && history.state.modal) && _mhSkip === 0 && CUR === 'docs', null, { timeout: 5000 });
+    await ev(() => goPage('ncr'));
+    await page.waitForFunction(() => CUR === 'ncr' && !!history.state && history.state.page === 'ncr' && _mhSkip === 0, null, { timeout: 5000 });
     await ev(() => { openModal('m-doc'); closeModal('m-doc'); });
-    await page.waitForFunction(() => !(history.state && history.state.modal) && _mhSkip === 0, null, { timeout: 3000 }); await page.waitForTimeout(100);
-    await page.goBack(); await page.waitForTimeout(150);
+    await page.waitForFunction(() => !(history.state && history.state.modal) && _mhSkip === 0, null, { timeout: 3000 });
+    await back(); await page.waitForFunction(() => CUR !== 'ncr', null, { timeout: 3000 }).catch(() => {});
     check('a form opened and closed leaves no extra back step: back goes to the previous page', (await ev(() => CUR)) === 'docs', await ev(() => CUR));
     // 17/11/2026 (flaky.md): the check above failed in CI twice in one day with "dash". The cause was in the app, not
     // in the waits: closing a form calls history.back() to drop the form's entry, and that back lands a moment later.
     // A page opened in between pushed its entry before the landing, the back stepped over it, and the history stayed
     // one page behind the screen. Reproduced with the CPU slowed 12 times and more; here it is forced: goPage runs in
-    // the timer right after the one that called back().
-    const sk = await ev(() => new Promise((res) => { openModal('m-doc'); closeModal('m-doc'); setTimeout(() => { const k = _mhSkip; goPage('ncr'); res(k); }, 0); }));
+    // the same task that called back().
+    // 21/11/2026: goPage is called from inside the app's own history.back() call, not from a second timer. With the
+    // CPU slowed 12 times the back sometimes landed before the second timer ran, and nothing was in flight (sk 0).
+    const sk = await ev(() => new Promise((res) => {
+      history.back = function () { delete history.back; history.back(); const k = _mhSkip; goPage('ncr'); res(k); };
+      openModal('m-doc'); closeModal('m-doc');
+    }));
     await page.waitForFunction(() => _mhSkip === 0 && !!history.state && history.state.page === 'ncr', null, { timeout: 5000 }).catch(() => {});
     const landed = await ev(() => ({ st: history.state, cur: CUR }));
     await page.goBack(); await page.waitForFunction(() => CUR !== 'ncr', null, { timeout: 3000 }).catch(() => {});
     check('a page opened while the closed form\'s back() is in flight gets its own entry, and back returns to the page before it',
       sk === 1 && landed.cur === 'ncr' && !!landed.st && landed.st.page === 'ncr' && (await ev(() => CUR)) === 'docs', { sk, landed, cur: await ev(() => CUR) });
     // ...and in the same tick as the close (the form's timer has not run): the page takes the dead form entry over
-    await page.waitForFunction(() => _mhSkip === 0 && CUR === 'docs', null, { timeout: 5000 }).catch(() => {}); await page.waitForTimeout(100);
+    await page.waitForFunction(() => _mhSkip === 0 && CUR === 'docs', null, { timeout: 5000 }).catch(() => {});
     await ev(() => { openModal('m-doc'); closeModal('m-doc'); goPage('ncr'); });
-    await page.waitForFunction(() => _mhSkip === 0 && !!history.state && history.state.page === 'ncr', null, { timeout: 5000 }).catch(() => {}); await page.waitForTimeout(100);
+    await page.waitForFunction(() => _mhSkip === 0 && !!history.state && history.state.page === 'ncr', null, { timeout: 5000 }).catch(() => {});
     await page.goBack(); await page.waitForFunction(() => CUR !== 'ncr', null, { timeout: 3000 }).catch(() => {});
     check('a page opened in the same tick as the close leaves no dead form entry: one back returns to the page before it', (await ev(() => CUR)) === 'docs', await ev(() => ({ cur: CUR, st: history.state })));
     check('the X buttons and the overlays of the forms go through closeAsk', await ev(() => { const x = document.querySelector('#m-doc .close-btn').getAttribute('onclick'); const ov = document.getElementById('ov-doc').getAttribute('onclick'); return /^closeAsk\(/.test(x) && /^closeAsk\(/.test(ov); }));
@@ -344,10 +360,12 @@ const JPEG = Buffer.from('/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDB
     check('tour hazard: ✎ shows the stored photo, and removing it removes it', r.thzShown === 'https://x/th1.jpg' && r.thz === null, r);
     check('svNcr / svTsk edit: the local row keeps the columns the form does not carry', r.ncrv === 'מיכאל' && r.tskx === 'od', r);
     await ev(() => { DB.docs = [{ id: 'dv1', n: 'ישן', s: 'בתוקף' }]; showView('docs', 'dv1'); });
-    await page.waitForTimeout(100);
+    await page.waitForFunction(() => CUR === 'view' && /ישן/.test(document.getElementById('pg-view').textContent), null, { timeout: 5000 }).catch(() => {});
     await ev(() => { _genEdit('docs', 'dv1'); g('d-n').value = 'חדש'; svDoc(); });
-    // not a fixed wait (17/11/2026): with the CPU slowed 6 times the view was read before it was drawn again
-    await page.waitForFunction(() => /חדש/.test((document.getElementById('pg-view') || document.body).textContent), null, { timeout: 5000 }).catch(() => {});
+    // not a fixed wait (17/11/2026): with the CPU slowed 6 times the view was read before it was drawn again.
+    // 21/11/2026: the new name alone is not the sign (it matched before the redraw with the CPU slowed 12 times,
+    // and the old name was still on the page): wait until the old name is gone as well.
+    await page.waitForFunction(() => { const t = (document.getElementById('pg-view') || document.body).textContent; return /חדש/.test(t) && !/ישן/.test(t); }, null, { timeout: 5000 }).catch(() => {});
     const vw = await ev(() => ({ cur: CUR, txt: (document.getElementById('pg-view') || document.body).textContent }));
     check('✎+save on the view page shows the new value there', vw.cur === 'view' && /חדש/.test(vw.txt) && !/ישן/.test(vw.txt), { cur: vw.cur });
   }

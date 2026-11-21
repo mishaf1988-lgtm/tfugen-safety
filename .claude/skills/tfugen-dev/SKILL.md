@@ -170,3 +170,9 @@ fetch('/api/claude', {
 ## הלקחים של התחום: `references/lessons.md`
 
 הלקחים של תחום הפיתוח (כ-5,400 מילים) עברו לקובץ נפרד ב-27/10/2026 (מיכאל בשאלון: "בצע: לפצל את שני הגדולים"; המדריך של Anthropic לבניית skills). אותו מבנה ומספור כמו ב-`tfugen-lessons`, ו-`lessons-format-test.py` ו-`lessons-gate.py` קוראים גם אותו. **לפני שינוי באזור:** `grep -n -i "<מילת מפתח>" .claude/skills/tfugen-dev/references/lessons.md`. לקח חדש בתחום הפיתוח נכתב שם, לא כאן.
+
+## המתנות בבדיקות playwright (21/11/2026, `forms-review-test.js`)
+- לא `waitForTimeout` אחרי פעולה: מחכים למצב. אחרי `page.goBack()`: מונה `popstate` בשלב ה-capture (`addEventListener('popstate', fn, true)`, כי המאזין של האפליקציה עוצר את האירוע) ו-`_mhSkip === 0`.
+- סימן ההמתנה חייב להיות משהו שלא נכון לפני הפעולה: "הטקסט החדש מופיע" התקיים מוקדם מדי, "הטקסט הישן נעלם" לא.
+- כדי לכפות מצב ביניים לא משתמשים בטיימר שני: עוטפים את הקריאה של האפליקציה עצמה (`history.back = function(){ delete history.back; history.back(); ... }`).
+- בדיקת יציבות לפני מיזוג: עותק זמני של הבדיקה עם `Emulation.setCPUThrottlingRate` 12 (`ctx.newCDPSession(page)`), כמה הרצות במקביל, גם על הגרסה הישנה להשוואה.
