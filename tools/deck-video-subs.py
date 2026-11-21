@@ -8,7 +8,7 @@ ffmpeg (libass), nothing leaves the machine.
 
 A scene lasts its narration + PAD and the voice starts LEAD into it (tools/deck-video.py). A narration is cut into
 captions of at most MAXC characters at sentence ends, then at commas, then at spaces; each caption gets a share of
-the scene's voice time by its length."""
+the scene's voice time by its length. Two lines to a caption."""
 import json, os, re, subprocess, sys
 
 PAD, LEAD = 1.2, 0.4      # as tools/deck-video.py
@@ -44,7 +44,9 @@ def cues(scenes, durs):
     """Pure: [(start, end, text)] over the whole video."""
     res, t = [], 0.0
     for x, d in zip(scenes, durs):
-        cs = chunks(x[5]); total = sum(len(c) for c in cs) or 1
+        ls = chunks(x[5])
+        cs = [' \\N'.join(ls[k:k + 2]) for k in range(0, len(ls), 2)]   # two lines a caption: no one-word caption left alone
+        total = sum(len(c) for c in cs) or 1
         s = t + LEAD
         for c in cs:
             e = s + d * len(c) / total
@@ -56,6 +58,11 @@ def cues(scenes, durs):
 def stamp(sec):
     h = int(sec // 3600); m = int(sec % 3600 // 60); s = sec % 60
     return '%d:%02d:%05.2f' % (h, m, s)
+
+
+def rtl(t):
+    """Pure: a right-to-left mark around every line, or libass puts the closing full stop or colon on the right."""
+    return ' \\N'.join('\u200f' + l.strip() + '\u200f' for l in t.replace('\n', ' ').split('\\N'))
 
 
 def ass(cs):
@@ -72,7 +79,7 @@ Style: cap,Liberation Sans,54,&H00FFFFFF,&H00FFFFFF,&HC0000000,&HC0000000,1,0,0,
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 ''' % MARGIN_V
-    return head + ''.join('Dialogue: 0,%s,%s,cap,,0,0,0,,%s\n' % (stamp(s), stamp(e), t.replace('\n', ' ')) for s, e, t in cs)
+    return head + ''.join('Dialogue: 0,%s,%s,cap,,0,0,0,,%s\n' % (stamp(s), stamp(e), rtl(t)) for s, e, t in cs)
 
 
 def main():
