@@ -667,6 +667,7 @@ const callIn = async (body) => {
       check('office_ask: the notebook rides along like from WhatsApp, and only when there is one (01/11/2026, the coach drill)', tl.split('\n').pop().startsWith('learned (') && tl.includes('סעיף 38') && !t.includes('learned ('), tl);
       { const { drillFireText, DRILL_ROW, DRILL_HEAD } = await import('./_build/routine-db.mjs');
         const dr = drillFireText('drill-0111-1', 'טופס אדם כשיר', '2026-11-01T18:00:00.000Z', 'correction: סעיף 38');
+        check('drill text (21/11/2026): the office answer and the closing agent_report are named as allowed, and no bare "no writing to the database"', /agent_report/.test(dr) && /\u05de\u05d5\u05ea\u05e8\u05d5\u05ea \u05d5\u05e0\u05d3\u05e8\u05e9\u05d5\u05ea/.test(dr) && !/\u05d1-365 \u05d0\u05d5 \u05d1\u05de\u05e1\u05d3/.test(dr), dr);
         check('drill_ask: the office head with a drill- row (accepted by the routine prompt), office answer only, no wa_me, the notebook rides along, no conversation (01/11/2026)', dr.startsWith(DRILL_HEAD + 'drill-0111-1]') && dr.split('\n')[0] === officeFireText('drill-0111-1', 'x', 't').split('\n')[0] && dr.indexOf('לענות לו בוואטסאפ') < 0 && dr.includes('ans-drill-0111-1') && dr.includes('בלי wa_me') && dr.split('\n').pop().startsWith('learned (') && dr.indexOf('recent (') < 0, dr);
         for (const f of ['routine-wa-core.md', 'routine-wa-assistant.md']) {
           const md = readFileSync(new URL('../../project-files/' + f, import.meta.url), 'utf8');
