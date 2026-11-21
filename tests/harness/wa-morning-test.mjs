@@ -39,6 +39,7 @@ globalThis.fetch = async (url, opt = {}) => {
   }
   if (url.startsWith(SB + '/rest/v1/audit_log')) { useUrls.push(url); return new Response(JSON.stringify(useApp), { status: 200 }); }
   if (url.startsWith(SB + '/rest/v1/notifications_log') && m === 'GET' && /event_type=eq\.owner_in&ts=gte/.test(url)) { useUrls.push(url); return new Response(JSON.stringify(useMsgs), { status: 200 }); }
+  if (url.startsWith(SB + '/rest/v1/notifications_log') && m === 'GET' && /event_type=eq\.agent_report/.test(url)) { reportUrls.push(url); return new Response(JSON.stringify(reportRows), { status: 200 }); }
   if (url.startsWith(SB + '/rest/v1/invoices')) { invUrls.push(url); if (invFail) return new Response('x', { status: 500 }); return new Response(JSON.stringify(invRows), { status: 200 }); }
   if (url.startsWith(SB + '/rest/v1/docs')) return new Response(JSON.stringify(docs), { status: 200 });
   if (url.startsWith(SB + '/rest/v1/equip_inspections')) { equipUrls.push(url); return new Response(JSON.stringify(equip), { status: 200 }); }
@@ -49,6 +50,7 @@ globalThis.fetch = async (url, opt = {}) => {
 };
 const equipUrls = [], stagingCalls = [], invUrls = [];
 let invRows = [], invFail = false, useApp = [], useMsgs = [];
+let reportRows = []; const reportUrls = [];
 const useUrls = [];
 const call = async (body, secret) => (await onRequest({ request: new Request('https://x/api/wa-morning', { method: 'POST', headers: secret === null ? {} : { 'x-notify-secret': secret || 'sec' }, body: JSON.stringify(body || {}) }), env: ENV })).json();
 
@@ -222,6 +224,33 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     check('watch: marked (checks 1, no check_at), logged as promise_check with the session', st.checks === 1 && !st.check_at && logs.some((l) => l.event_type === 'promise_check' && l.payload.session === 'session_X1'), { st, logs });
     await run(E, new Date(NM + 36 * 60e3), { watch: true });
     check('watch: not fired twice', fires.length === 1);
+    { // 21/11/2026: the weekly summary of 19/11/2026 was fired, the run died on the usage limit, and nothing tried again
+      const { promiseRetryCand, promiseRunAlive, PROMISE_RETRY_MIN } = await import('./_build/_wa.mjs');
+      const T1 = NM + 31 * 60e3;
+      check('retry: not looked at before ' + PROMISE_RETRY_MIN + ' minutes passed since the fire (no read of the log)', reportUrls.length === 0 && promiseRetryCand(state.promises, T1 + 24 * 60e3) === null && !!promiseRetryCand(state.promises, T1 + 26 * 60e3));
+      check('retry: a report of the assistant is a living run; a drill report, another agent and no report are not',
+        promiseRunAlive([{ agent: 'routine-wa-assistant', line: 'רשימת מחר נשלחה' }]) && !promiseRunAlive([{ agent: 'routine-wa-assistant', line: 'תרגיל drill-261120-pm04: נענה במשרד' }, { agent: 'routine-mail-filing', line: 'x' }]) && !promiseRunAlive([]) && !promiseRunAlive(null));
+      reportRows = [{ payload: { agent: 'routine-wa-assistant', line: 'תרגיל drill-261120-pm04: נענה במשרד' } }];
+      const wr = await run(E, new Date(T1 + 26 * 60e3), { watch: true });
+      await run(E, new Date(T1 + 31 * 60e3), { watch: true }); // the verdict sets the check, the next tick fires it
+      const s2 = JSON.parse(state.promises)[0];
+      check('retry: no report of the run since the fire = fired once more (check 2 of 3), logged as promise_retry, the log read from the fire time',
+        fires.length === 2 && /check_no: 2 of 3/.test(fires[1].text) && s2.checks === 2 && !!s2.retry_seen && logs.some((l) => l.event_type === 'promise_retry' && l.payload.ref === s2.id) && reportUrls.length === 1 && /ts=gte\./.test(reportUrls[0]), { wr, s2, n: fires.length });
+      await run(E, new Date(T1 + 56 * 60e3), { watch: true }); await run(E, new Date(T1 + 90 * 60e3), { watch: true });
+      check('retry: once a promise, never a third fire, and no more reads of the log', fires.length === 2 && reportUrls.length === 1);
+      // a run that reported: looked at once, marked alive, not fired again
+      const L2 = JSON.stringify([{ id: 'p-evening-20261119', at: new Date(NM).toISOString(), agent: 'wa-morning', text: 'סיכום שבוע', status: 'open', check_at: new Date(NM).toISOString(), check: 'weekly', reminded_at: new Date(NM).toISOString() }]);
+      state = { promises: L2 }; fires.length = 0; reportUrls.length = 0;
+      await run(E, new Date(NM + 60e3), { watch: true });
+      reportRows = [{ payload: { agent: 'routine-wa-assistant', line: 'סיכום שבוע נשלח למיכאל' } }];
+      await run(E, new Date(NM + 30 * 60e3), { watch: true }); await run(E, new Date(NM + 35 * 60e3), { watch: true });
+      const s3 = JSON.parse(state.promises)[0];
+      check('retry: the run reported = marked alive after one read, not fired again', fires.length === 1 && s3.retry_seen === 'alive' && s3.checks === 1 && reportUrls.length === 1, { s3, n: fires.length });
+      // the real case: the summary fired at 15:00 and no report at all
+      state = { promises: L2 }; fires.length = 0; reportUrls.length = 0; reportRows = [];
+      await run(E, new Date(NM + 60e3), { watch: true }); await run(E, new Date(NM + 27 * 60e3), { watch: true }); await run(E, new Date(NM + 32 * 60e3), { watch: true });
+      check('retry: the weekly summary whose run died is fired again about half an hour later', fires.length === 2 && /p-evening-20261119/.test(fires[1].text), fires.length);
+      reportRows = []; }
     { // 02/11/2026 (security review): a promise with the default 24-hour check wakes the assistant once, not again minutes later through the day-old path
       const D0 = '2026-11-02T08:00:00.000Z';
       const pd = promiseAdd('[]', { agent: 'routine-wa-assistant', text: 'the default check promise', who: 'docs' }, D0);

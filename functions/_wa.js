@@ -231,6 +231,29 @@ export function promiseCheckSet(p, b, nowIso) {
   if (c) p.check = c;
   return {};
 }
+// A check whose run died (21/11/2026: the weekly summary of Thursday 19/11/2026 was fired at 15:00, the run stopped at
+// once on the 5-hour usage limit, and nothing went out and nothing tried again). A fired check that left the promise
+// exactly as the fire marked it (open, no next check) is looked at once, PROMISE_RETRY_MIN minutes later: the assistant
+// closes every run with agent_report, so no report of its own since the fire (a drill's report does not count) = the run
+// died, and the check is set to fire again, once a promise. Pure.
+export const PROMISE_RETRY_MIN = 25, PROMISE_RETRY_MAX_MIN = 240;
+export function promiseRetryCand(raw, nowMs) {
+  return plist(raw).find((x) => { const age = x && x.checked_at ? nowMs - Date.parse(x.checked_at) : -1;
+    return x && x.status === 'open' && (x.checks || 0) >= 1 && (x.checks || 0) < PROMISE_CHECKS_MAX && !x.check_at && !x.retry_seen
+      && age >= PROMISE_RETRY_MIN * 60e3 && age <= PROMISE_RETRY_MAX_MIN * 60e3; }) || null;
+}
+// payloads = the agent_report rows since the fire
+export function promiseRunAlive(payloads) {
+  return (Array.isArray(payloads) ? payloads : []).some((p) => p && p.agent === 'routine-wa-assistant' && !/drill-/.test(String(p.line || '')));
+}
+// The list with the verdict written on the promise, or null when it changed meanwhile (closed, checked again, a new check set).
+export function promiseRetrySet(raw, id, checkedAt, nowIso, alive) {
+  const list = plist(raw), x = list.find((y) => y && y.id === id);
+  if (!x || x.status !== 'open' || x.check_at || x.retry_seen || x.checked_at !== checkedAt) return null;
+  x.retry_seen = alive ? 'alive' : nowIso;
+  if (!alive) x.check_at = nowIso;
+  return list;
+}
 // The one to check now: open, check_at passed, between 07:00 and 21:59 in Israel (later waits for the morning).
 export function promiseCheckDue(raw, nowMs, hourIL) {
   if (!(hourIL >= 7 && hourIL < 22)) return null;
