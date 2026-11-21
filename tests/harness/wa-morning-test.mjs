@@ -3,13 +3,14 @@
 import { listEnd, unDot, weekendText, deckCheckDue, DECK_CHECK_KEY, stagingDue, watch, clip, areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT, splitUrgent, WAIT_DAYS, rowContradictions, expOff, devRemind, DEV_WARN_KEY } from './_build/wa-morning.mjs';
 import { OD_ROOT } from './_build/routine-db.mjs';
 import fs from 'fs';
+import { stateMock } from './lib/state-mock.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 300) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co', OWNER = '972501234567';
 const ENV = { TRUSTEE_NOTIFY_SECRET: 'sec', SUPABASE_SERVICE_ROLE_KEY: 'srv', META_PHONE_NUMBER_ID: 'P1', META_ACCESS_TOKEN: 'mt' };
 let state = {}, metas = [], logs = [], docs = [], equip = [], puts = [], putFail = 0;
-const sver = {}, casRead = {};
+const db = stateMock(() => state), sver = db.ver, casRead = db.casRead;
 globalThis.fetch = async (url, opt = {}) => {
   const m = opt.method || 'GET';
   if (url.startsWith(SB + '/rest/v1/oauth_tokens')) return new Response(JSON.stringify([{ user_email: 'm', refresh_token: 'r', access_token: 'AT', expires_at: new Date(Date.now() + 3600000).toISOString(), scope: '' }]), { status: 200 });
@@ -19,23 +20,7 @@ globalThis.fetch = async (url, opt = {}) => {
   }
   if (url.startsWith(SB + '/rest/v1/notification_prefs')) return new Response(JSON.stringify([{ prefs: { trustee_hazard: { whatsapp_to: '+' + OWNER } } }]), { status: 200 });
   if (url.startsWith(SB + '/rest/v1/server_state')) {
-    // 20/11/2026: a version per key, and a PATCH that names an old version changes nothing, like PostgREST (stateCas).
-    // casRead[k] runs once after a versioned read of k: another writer between the read and the write.
-    const vAt = (k) => new Date(Date.UTC(2026, 0, 1) + (sver[k] || 0)).toISOString();
-    if (m === 'POST') {
-      const rows = JSON.parse(opt.body), ign = /ignore-duplicates/.test((opt.headers || {}).Prefer || '');
-      if (ign && rows.every((r) => r.key in state)) return new Response('[]', { status: 200 });
-      rows.forEach((r) => { state[r.key] = r.value; sver[r.key] = (sver[r.key] || 0) + 1; }); return new Response('[{}]', { status: 201 });
-    }
-    const k = /key=eq\.([^&]*)/.exec(url)[1];
-    if (m === 'PATCH') {
-      const want = decodeURIComponent((/updated_at=eq\.([^&]*)/.exec(url) || [])[1] || '');
-      if (want && want !== vAt(k)) return new Response('[]', { status: 200 });
-      state[k] = JSON.parse(opt.body).value; sver[k] = (sver[k] || 0) + 1; return new Response('[{}]', { status: 200 });
-    }
-    const out = JSON.stringify(k in state ? [{ value: state[k], updated_at: vAt(k) }] : []);
-    if (casRead[k] && /updated_at/.test(url)) { const f = casRead[k]; delete casRead[k]; f(); }
-    return new Response(out, { status: 200 });
+    return db.handle(url, opt); // the shared server_state mock (lib/state-mock.mjs, 21/11/2026)
   }
   if (url.startsWith(SB + '/rest/v1/audit_log')) { useUrls.push(url); return new Response(JSON.stringify(useApp), { status: 200 }); }
   if (url.startsWith(SB + '/rest/v1/notifications_log') && m === 'GET' && /event_type=eq\.owner_in&ts=gte/.test(url)) { useUrls.push(url); return new Response(JSON.stringify(useMsgs), { status: 200 }); }
