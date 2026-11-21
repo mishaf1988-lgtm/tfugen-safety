@@ -106,8 +106,8 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 **15. סעיף ישן ב-STATUS אמר "אין משימה פתוחה" (21/09 עד 01/10/2026, #1011).**
 מה קרה: סעיף ישן נשאר באמצע STATUS של 393KB.
 הכלל: ב-STATUS רק מה שפתוח; פריט שנסגר עובר ל-`project-files/STATUS-archive.md` באותו PR. לפני שאלה למיכאל על פריט פתוח: להריץ את הבדיקה שלו או `grep`, אולי כבר בוצע.
-נאכף: `status-dup-test.py` (`[ ]` ב-STATUS שהוא `[x]` בארכיון = אדום); `session-start.py` מציג "אולי כבר בוצעו" ("נבדק DD/MM/YYYY" משתיק); השאר טקסט.
-חזר: 4 (02/10: Vitre. 14/10: "שאר תווי המקלדת", שאלתי לפני `keyboard-only-test.js`. 16/10: `received_at`, לפי שורה ישנה ב-BACKLOG; מאז `live-check.py`).
+נאכף: `status-dup-test.py` (`[ ]` ב-STATUS שהוא `[x]` בארכיון = אדום); `session-start.py` מציג "אולי כבר בוצעו" ("נבדק DD/MM/YYYY" משתיק) ומסנן רעיון שהוכרע; לפני שאלה על רעיון: לקרוא את שורת `מצב` שלו. השאר טקסט.
+חזר: 5 (21/11: שאלתי את מיכאל על רעיון 33, שנבנה ב-12/11; `ideas_waiting` הכיר רק "נבחר"/"נדחה", תוקן ונבדק ב-`session-start-test.py`. 02/10: Vitre. 14/10: "שאר תווי המקלדת", שאלתי לפני `keyboard-only-test.js`. 16/10: `received_at`, לפי שורה ישנה ב-BACKLOG; מאז `live-check.py`).
 
 **18. תוכנית הוצגה לפני מבט בנתונים (01/10/2026, #1016).**
 מה קרה: "מפגע חוזר = אותו מיקום"; ב-DB 48 מיקומים ל-53 מפגעים.
