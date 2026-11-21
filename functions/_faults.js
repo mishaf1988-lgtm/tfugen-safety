@@ -81,7 +81,8 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
     if (!r || String(r.ts || '') <= since) return;
     let t; try { t = JSON.parse(String(r.title || '')); } catch (e) { return; }
     if (!t || !t.m) return;
-    add('err:' + cut(t.m, 80) + '|' + (t.f || '') + '|' + (t.l || 0), '\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d0\u05e6\u05dc \u05de\u05e9\u05ea\u05de\u05e9: ' + cut(t.m, 120) + (t.p ? ' (\u05de\u05e1\u05da ' + cut(t.p, 30) + ')' : ''), 'ERRDEV');
+    // the file and the line come from the browser: cut and a number only, since the key is kept in fault_alert, which agents read (security review 21/11/2026)
+    add('err:' + cut(t.m, 80) + '|' + cut(t.f || '', 60) + '|' + (Number(t.l) || 0), '\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d0\u05e6\u05dc \u05de\u05e9\u05ea\u05de\u05e9: ' + cut(t.m, 120) + (t.p ? ' (\u05de\u05e1\u05da ' + cut(t.p, 30) + ')' : ''), 'ERRDEV');
   });
   (agentLog || []).forEach((r) => {
     if (!r || r.ok !== false || String(r.at || '') <= since) return;

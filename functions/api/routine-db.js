@@ -249,7 +249,11 @@ export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing
   // and more): the rest of the app's registers, read only, each with a column list in COLUMNS (no phone, no signer names).
   'ptw', 'hzm', 'train_plan', 'wst', 'auds', 'drl', 'rsk', 'env', 'ins'];
 export const CARD_INV_N = 5;
-export const STATE_READ = ['topic_facts', 'golden_auto', 'second_gate', 'agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'drafts_id_live', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account', 'works_permit_err', 'weekend_held', 'weekend_held_last', 'wa_fail_mail_last', 'michael_checks', 'usage_month', 'inv_month', 'ctr_links', 'ctr_instructions', 'ctr_renew', 'form_probe'];
+export const STATE_READ = ['topic_facts', 'golden_auto', 'second_gate', 'agents_registry', 'quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run', 'wa_hook_last', 'wa_last_out', 'dev_inbox', 'worker_jobs', LEARN_KEY, 'assistant_ratings', PROMISE_KEY, 'iso_tasks', 'od_deleted', 'mail_triage', 'quality_run', 'cal_moved', 'cal_invited', 'cal_invite_ask', 'cal_move_ask', 'drafts_made', 'drafts_trashed', 'drafts_text', 'drafts_id_live', 'quota_mode', 'live_note', 'agents_pause', 'assistant_account', 'works_permit_err', 'weekend_held', 'weekend_held_last', 'wa_fail_mail_last', 'michael_checks', 'usage_month', 'inv_month', 'ctr_links', 'ctr_instructions', 'ctr_renew', 'form_probe',
+  // 21/11/2026 (Michael in the questionnaire: "do it: open the four"): results of the server's own nightly jobs, system data with
+  // no personal details, so the assistant can answer "what is the weather tomorrow", "did the backup run", "is there an open fault",
+  // "what does the control board say". Read only: none of them is in STATE_WRITE.
+  'weather_tomorrow', 'backup_od', 'fault_alert', 'xlsx_gaps'];
 // wa_last_out (20/10/2026, Michael in the questionnaire: "בצע: לפתוח"): the assistant's last WhatsApp answer in full, so "try
 // again" picks up the same wording; the fire text carries only its first 1,500 characters on one line.
 export const AGENT_LOG_MAX = 200;

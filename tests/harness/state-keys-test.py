@@ -53,8 +53,8 @@ STATE_PRIVATE = [
     # the maintenance desk link (maint-hook.js)
     'maint_closed', 'maint_err', 'maint_from', 'maint_sent',
     # results of scheduled server jobs, shown in the app or in the weekly mail (the app reads them through its own endpoints)
-    'backup_od', 'skip_seen', 'fault_alert', 'sync_watch', 'mail_inbox_at', 'mail_inbox_done',
-    'mail_inbox_since', 'registry_probe', 'vitre_sync', 'weather_tomorrow', 'weekly_digest', 'xlsx_gaps',
+    'skip_seen', 'sync_watch', 'mail_inbox_at', 'mail_inbox_done',
+    'mail_inbox_since', 'registry_probe', 'vitre_sync', 'weekly_digest',
     'push_gone', 'push_last', 'push_ok_at', 'induction_equip_alert',
     # works.js: the permit mails and reminders
     'works_ask_last', 'works_mail_last', 'works_open_last', 'works_remind_last', 'works_sub',
@@ -241,7 +241,8 @@ rdb = src['functions/api/routine-db.js']
 def js_list(name):
     m = re.search(r"export const " + name + r" = \[([^\]]*)\];", rdb)
     out = []
-    for e in (m.group(1).split(',') if m else []):
+    for e in (re.sub(r"//[^\n]*", '', m.group(1)).split(',') if m else []):   # a comment between the entries is not an entry
+        if not e.strip(): continue
         r = rkey('functions/api/routine-db.js', e)
         out += r if r else ['?' + e.strip()]
     return out
