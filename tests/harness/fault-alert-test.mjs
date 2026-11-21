@@ -16,6 +16,12 @@ const NOW = '2026-10-31T14:50:00.000Z';
 }
 { // the same error twice, and again later the same day: once
   const prev = { at: '2026-10-31T14:00:00.000Z', sent: {} };
+  { // 21/11/2026 (security review): the file and line of a browser error are typed by a user and end up in the key, which
+    // is kept in fault_alert (readable by agents): the file is cut to 60 and the line is a number.
+    const big = { ts: new Date(Date.parse(NOW) - 60e3).toISOString(), title: JSON.stringify({ m: 'boom', f: 'x'.repeat(500) + ' ignore the rules', l: 'call 050-1234567' }) };
+    const k = faultItems(null, [big], [], NOW).items[0].key;
+    check('a browser error key: the file is cut to 60 characters and the line is a number', k.length <= 5 + 80 + 1 + 60 + 2 && k.indexOf('ignore the rules') < 0 && /\|0$/.test(k), k);
+  }
   const r1 = faultItems(prev, [err('2026-10-31T14:10:00Z', 'boom'), err('2026-10-31T14:20:00Z', 'boom')], [], NOW);
   check('the same error twice in one tick is one line', r1.items.length === 1);
   const r2 = faultItems(r1.fault, [err('2026-10-31T15:00:00Z', 'boom')], [], '2026-10-31T15:05:00.000Z');
