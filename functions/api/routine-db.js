@@ -2000,6 +2000,21 @@ export const OFFICE_ROW = /^[A-Za-z0-9_-]{4,80}$/;
 // stopped on the contradiction. A drill has its own head, which the assistant's step 0-alef-2 knows: answer in the office only.
 // It is logged as drill_in, so it is neither in recent nor in wa_review, and carries the notebook but not the conversation.
 export const DRILL_ROW = /^drill-[A-Za-z0-9_-]{2,70}$/;
+// 21/11/2026 (idea 31, Michael in the questionnaire: "do it: one run per question"): a golden question ran up to five times
+// a day (a full round at 07:00, another at 13:00, and retries g1b, g1c...), which made the drills 59% of the assistant's
+// runs. Now each golden question runs at most GOLD_DAY_MAX times on its day: the round, and one retry of a question that
+// failed. Pure: the row -> {day, q} of a golden row (drill-gold-<YYMMDD>-g<n>, with an optional letter and tail), else null;
+// and how many earlier rows of that day were the same question.
+export const GOLD_DAY_MAX = 2;
+export function goldOf(row) {
+  // case and leading zeros do not make another question (security review 21/11/2026: G1, g01)
+  const m = /^drill-gold-(\d{6})-g0*(\d+)(?:[a-z](?:-[A-Za-z0-9_-]*)?)?$/i.exec(String(row || ''));
+  return m ? { day: m[1], q: 'g' + m[2] } : null;
+}
+export function goldSameCount(rows, g) {
+  // only runs that started (a session): a fire that failed on the network does not use up the day
+  return (Array.isArray(rows) ? rows : []).filter((r) => { const o = r && r.payload && r.payload.session ? goldOf(r.payload.row) : null; return o && o.day === g.day && o.q === g.q; }).length;
+}
 // 02/11/2026 (retro 22/10/2026 (a)): a courier call cut off after the server took it was retried, logged owner_in twice
 // and fired the assistant twice. The log line is now written after the fire and carries the session, and a row that
 // already has a fired line is answered from it with no second fire. The row is checked by OFFICE_ROW/DRILL_ROW first, so it
@@ -3303,6 +3318,13 @@ async function routineDbHandle(context) {
       const dd = await fetch(url + askDupQuery('drill_in', 'drill', body.row), { headers: h, signal: tmo(SB_MS) }).then((x) => x.ok ? x.json() : null).catch(() => null);
       const dupD = askDupOf(dd);
       if (dupD) return jsonResp({ ok: true, dup: true, fired: dupD }, 200, {});
+      const gq = goldOf(body.row);
+      // a drill-gold- row the pattern does not read would run with no limit: refused, so the count cannot be stepped around
+      if (!gq && /^drill-gold-/i.test(body.row)) return jsonResp({ ok: false, error: 'a golden row is drill-gold-<YYMMDD>-g<n>, with an optional letter (g1b) and tail' }, 400, {});
+      if (gq) {
+        const gr = await fetch(url + '/rest/v1/notifications_log?select=payload&event_type=eq.drill_in&channel=eq.drill&payload->>row=like.' + encodeURIComponent('drill-gold-' + gq.day + '-*') + '&order=ts.desc&limit=500', { headers: h, signal: tmo(SB_MS) }).then((x) => x.ok ? x.json() : null).catch(() => null);
+        if (gr && goldSameCount(gr, gq) >= GOLD_DAY_MAX) return jsonResp({ ok: false, error: 'golden ' + gq.q + ' already ran ' + GOLD_DAY_MAX + ' times on ' + gq.day + ' (the round and one retry). Record it as not passed and leave the next try for the next round (idea 31, 21/11/2026).' }, 200, {});
+      }
       let fired;
       try {
         const fr = await fetch(af.url, { method: 'POST', signal: tmo(GRAPH_MS),

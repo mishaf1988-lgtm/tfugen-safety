@@ -47,6 +47,7 @@ const NOW = '2026-10-31T14:50:00.000Z';
   check('a failed fixer (dev-fire, dev-safety) is quiet; another agent that failed still opens a request (held for 3 hours since 12/11/2026)', q.join() === 'agentq:dev-fire,agentq:dev-safety' && loud.join() === 'agenti:mail-filing', r.items);
   check('FAULT_FIXERS: the three fired developers only; a failure under the shared name "dev" stays loud', FAULT_FIXERS.join() === 'dev-fire,dev-safety,dev-runner' && faultItems(prev, [], [{ agent: 'dev', at: '2026-11-11T05:55:00Z', ok: false, line: 'x' }], '2026-11-11T06:00:00.000Z').items.every((x) => !x.quiet));
 }
+check('golden: one automatic round a working day at most (20 hours between rounds, idea 31, 21/11/2026; was 6 and it ran at 07:00 and 13:00)', GOLDEN_GAP_MS === 20 * 3600e3);
 { // 11/11/2026: the golden questions run by themselves after the assistant's instructions changed (goldenStep)
   const T = (m) => new Date(Date.parse('2026-11-11T08:00:00.000Z') + m * 60e3).toISOString(); // Wednesday, 10:00 in Israel
   const g0 = goldenStep(null, 'aaa', T(0), 10, 3);

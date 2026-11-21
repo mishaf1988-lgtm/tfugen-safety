@@ -191,10 +191,11 @@ async function openFix(env, url, k, items, nowIso, fireOk) {
 // seen only because the questions were run by hand. The deployed code carries a hash of the instruction files
 // (WA_RULES_HASH, tools/domains-build.py). A watchdog tick that sees a hash it did not see before marks the run as
 // pending; when the hash has stood still for GOLDEN_SETTLE_MS (several merges in a row are one run), at most once in
-// GOLDEN_GAP_MS, on a working day between 07:00 and 20:00 in Israel, one request opens for the immediate developer
+// GOLDEN_GAP_MS (20 hours from 21/11/2026, idea 31: was 6, and a full round ran at 07:00 and again at 13:00 every working
+// day, about 20 of the assistant's runs a day), on a working day between 07:00 and 20:00 in Israel, one request opens for the immediate developer
 // (agent golden-auto, routine-dev-fire.md step 3g), which runs the ten questions and fixes or reports. The first hash
 // ever seen is the baseline and runs nothing. Pure: prev = the stored state or null; hour and dow in Israel.
-export const GOLDEN_KEY = 'golden_auto', GOLDEN_SETTLE_MS = 30 * 60e3, GOLDEN_GAP_MS = 6 * 3600e3, GOLDEN_AGENT = 'golden-auto';
+export const GOLDEN_KEY = 'golden_auto', GOLDEN_SETTLE_MS = 30 * 60e3, GOLDEN_GAP_MS = 20 * 3600e3, GOLDEN_AGENT = 'golden-auto';
 export const GOLDEN_TEXT = 'the assistant\'s instruction files changed on main (routine-wa-core.md, routine-wa-assistant.md or wa-topics/): run the golden questions now, as project-files/assistant-golden.md and routine-dev-fire.md step 3g say, and close this request with the score';
 export function goldenStep(prev, hash, nowIso, hourIL, dowIL) {
   const now = Date.parse(nowIso);
