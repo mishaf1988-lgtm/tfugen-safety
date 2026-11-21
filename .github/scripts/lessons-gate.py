@@ -200,41 +200,45 @@ def has_domain_lessons(f):
         return False
 
 
-def check(title, body, files):
+def _walk(title, body, files):
+    # 21/11/2026 (Michael in the questionnaire: "do it: all the requirements at once"): yields every missing line, in the
+    # order check() used to return them, and at the end ('ok', why) when nothing is missing. check() gives the first one,
+    # as before (CI and the tests read it); check_all() gives the whole list, for pr-gate.py before the PR is opened.
     if not RETRO.search(body or ""):
-        return False, ("no retro line. Add to the PR description a line 'רטרו: <answer>' "
+        yield ("no retro line. Add to the PR description a line 'רטרו: <answer>' "
                        "(what failed on the first try, what Michael corrected, what took too "
                        "many rounds), or 'רטרו: אין'. See tfugen-lessons, section Retro.")
     sk = SKILL.search(body or "")
     if not sk:
-        return False, ("no skill line. Add 'skill: <what was learned, which skill was updated>' "
+        yield ("no skill line. Add 'skill: <what was learned, which skill was updated>' "
                        "or 'skill: אין'. See tfugen-lessons, section Retro.")
-    if not RETRO_NONE.match(sk.group(2).strip()) and not any(f.startswith(SKILL_DIRS) for f in files) and not EXT.search(sk.group(2)):
-        return False, ("the skill line says something was learned, but no skill file changed. "
-                       "Update a SKILL.md under .claude/skills/ (or name the michael-skills PR: michael-skills#N) "
-                       "in this PR, or write 'skill: אין'.")
-    # A skill named in the line is the one that changed (17/10/2026, #1619 said "tfugen-ref" and
-    # only tfugen-lessons changed: the edit sat in a Bash command a hook blocked before it ran).
-    named = [n for n in sorted(set(re.findall(r"\btfugen-[a-z]+(?:-[a-z]+)*\b", sk.group(2))))
-             if os.path.isdir(os.path.join(ROOT, ".claude", "skills", n))]
-    missing = [n for n in named if not any(f.startswith(".claude/skills/%s/" % n) for f in files)]
-    if missing:
-        return False, ("the skill line names %s, but no file of it changed in this PR. Update it, "
-                       "or name the skill that did change." % ", ".join(missing))
+    if sk:
+        if not RETRO_NONE.match(sk.group(2).strip()) and not any(f.startswith(SKILL_DIRS) for f in files) and not EXT.search(sk.group(2)):
+            yield ("the skill line says something was learned, but no skill file changed. "
+                           "Update a SKILL.md under .claude/skills/ (or name the michael-skills PR: michael-skills#N) "
+                           "in this PR, or write 'skill: אין'.")
+        # A skill named in the line is the one that changed (17/10/2026, #1619 said "tfugen-ref" and
+        # only tfugen-lessons changed: the edit sat in a Bash command a hook blocked before it ran).
+        named = [n for n in sorted(set(re.findall(r"\btfugen-[a-z]+(?:-[a-z]+)*\b", sk.group(2))))
+                 if os.path.isdir(os.path.join(ROOT, ".claude", "skills", n))]
+        missing = [n for n in named if not any(f.startswith(".claude/skills/%s/" % n) for f in files)]
+        if missing:
+            yield ("the skill line names %s, but no file of it changed in this PR. Update it, "
+                           "or name the skill that did change." % ", ".join(missing))
     sens = sensitive(files)
     if sens and not REVIEW.search(body or ""):
-        return False, ("this PR touches login, users or database permissions (%s). Run a security review by a "
+        yield ("this PR touches login, users or database permissions (%s). Run a security review by a "
                        "separate agent that gets the diff (CLAUDE.md, core rule 8; the brief: project-files/security-review.md), fix what it finds, and add "
                        "'סקירה: <what it checked and found>' to the PR description." % ", ".join(sens))
     if sens and not REFUTE.search(body or ""):
-        return False, ("this PR touches login, users or database permissions (%s). Each confirmed finding of the review "
+        yield ("this PR touches login, users or database permissions (%s). Each confirmed finding of the review "
                        "goes to a fresh agent that tries to disprove it (project-files/security-review.md); add "
                        "'הפרכה: <what held and what was disproved>' or 'הפרכה: אין ממצא מאושר'." % ", ".join(sens))
     if any(f.startswith(UNCHECKED_DIRS) for f in files) and not UNCHECKED.search(body or ""):
-        return False, ("this PR changes server code (functions/). Add a line 'מה לא נבדק: <what was skipped or not tried, "
+        yield ("this PR changes server code (functions/). Add a line 'מה לא נבדק: <what was skipped or not tried, "
                        "and a risk Michael should know>' or 'מה לא נבדק: אין' (tfugen-dev, the ladder).")
     if any(f.startswith(SYNC_TRIGGERS) for f in files) and not assistant_synced(files) and not ASSISTANT.search(body or ""):
-        return False, ("this PR adds a decision or changes the server, and the assistant did not learn it (Michael 06/11/2026: "
+        yield ("this PR adds a decision or changes the server, and the assistant did not learn it (Michael 06/11/2026: "
                        "a sync rule). Update what it reads (project-files/domains/rules/<branch>.md, wa-topics/, routine-wa-core.md), "
                        "or add 'עוזר: <why the assistant is not touched>'.")
     ct = changed_tests(files)
@@ -242,34 +246,47 @@ def check(title, body, files):
         m = TEST_CHANGED.search(body or "")
         unnamed = [f for f in ct if not m or os.path.splitext(os.path.basename(f))[0] not in m.group(2)]
         if unnamed:
-            return False, ("this PR changes code and a test that already existed (%s). A change does not touch the test that "
+            yield ("this PR changes code and a test that already existed (%s). A change does not touch the test that "
                            "judges it without saying so: add one line '\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e9\u05d5\u05e0\u05ea\u05d4: <each test by name, and why>' "
                            "(Michael 17/11/2026, four test rules)." % ", ".join(unnamed))
     if "index.html" in files and not SHOT.search(body or ""):
-        return False, ("this PR changes index.html. Take a phone screenshot of the changed screen "
+        yield ("this PR changes index.html. Take a phone screenshot of the changed screen "
                        "(NODE_PATH=$(npm root -g) node tools/pr-shot.js <name> --page <id>) and add "
                        "'\u05e6\u05d9\u05dc\u05d5\u05dd: <screen>, .shots/<name>.png' (Michael 17/11/2026, four test rules).")
-    retro_mistake = not RETRO_CLEAN.match(RETRO.search(body or "").group(2).strip())
+    rt = RETRO.search(body or "")
+    retro_mistake = bool(rt) and not RETRO_CLEAN.match(rt.group(2).strip())
     if FIX.search(title or "") and not SIBLINGS.search(body or ""):
-        return False, ("a fix PR names the siblings of what it fixed: 'אחים: <the grep of the pattern, each place found: "
+        yield ("a fix PR names the siblings of what it fixed: 'אחים: <the grep of the pattern, each place found: "
                        "fixed / left on purpose and why>' (Michael 02/11/2026, retro 29/10/2026 (f)).")
     if FIX.search(title or "") and any(f.startswith(BREAK_DIRS) for f in files) and not BREAK.search(body or ""):
-        return False, ("a fix PR that changes code proves its test catches the bug: take the fix out, run the test, "
+        yield ("a fix PR that changes code proves its test catches the bug: take the fix out, run the test, "
                        "and add 'שבירה: <what was taken out, which test failed and how many>' (Michael 03/11/2026, "
                        "retro 21/10/2026 (b), lesson 141).")
     flt = [f for f in files if f.startswith(FILTER_DIRS) and f.endswith((".js", ".html"))]
     if flt and not PAIRS.search(body or "") and any(changes_regex(file_diff(f) or "") for f in flt):
-        return False, ("this PR changes a regex or a text filter (%s). Add 'זוגות: <the test that tries it on 3 real lines "
+        yield ("this PR changes a regex or a text filter (%s). Add 'זוגות: <the test that tries it on 3 real lines "
                        "that must match and 3 that must not>' (Michael 02/11/2026, retro 28/10/2026 (d))." % ", ".join(flt))
     if not FIX.search(title or "") and not retro_mistake:
-        return True, "not a fix PR"
+        yield ("ok", "not a fix PR"); return
     if LESSONS in files or any(has_domain_lessons(f) for f in files):
-        return True, "fix PR with a lesson"
+        yield ("ok", "fix PR with a lesson"); return
     m = WAIVER.search(body or "")
     if m:
-        return True, "fix PR, no lesson: " + m.group(2).strip()
-    return False, (("the retro line names a mistake, " if not FIX.search(title or "") else "") + "fix PR without a lesson. Add an entry to %s in this PR, or a line "
-                   "'no-lesson: <reason>' (or 'בלי לקח: <סיבה>') to the PR description." % LESSONS)
+        yield ("ok", "fix PR, no lesson: " + m.group(2).strip()); return
+    yield (("the retro line names a mistake, " if not FIX.search(title or "") else "") + "fix PR without a lesson. Add an entry to %s in this PR, or a line "
+           "'no-lesson: <reason>' (or 'בלי לקח: <סיבה>') to the PR description." % LESSONS)
+
+
+def check_all(title, body, files):
+    """Every missing line at once: (ok, [problems]) or (True, [why])."""
+    out = list(_walk(title, body, files))
+    bad = [x for x in out if not isinstance(x, tuple)]
+    return (False, bad) if bad else (True, [x[1] for x in out if isinstance(x, tuple)][:1])
+
+
+def check(title, body, files):
+    ok, why = check_all(title, body, files)
+    return ok, (why[0] if why else "")
 
 
 if __name__ == "__main__":
