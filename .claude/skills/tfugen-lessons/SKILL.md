@@ -101,7 +101,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: קישור `/public/` לתמונה בוואטסאפ, וה-bucket פרטי מ-21/04: "Bucket not found".
 הכלל: הנחה על דבר חי (bucket, RLS, הרשאה, צורת תשובה של API) נבדקת מול האמיתי לפני קוד; מוק נבנה מתשובה אמיתית. קישור שיוצא נבדק בלי התחברות.
 נאכף: hook `live-check.py` (שאלון עם "הקיים"/"כבר עובד" נעצר פעם אחת לבדיקה); `trustee-route-test.js` (אין `/object/public/`), `od-pick-test.mjs` (חיפוש בלי path, כמו האמיתי).
-חזר: 7 (30/10: בלי `get_trigger`. 28/10: "לא משנה לאחרים" (ארגון). 10/10: 2FA שכבר פעיל. 08/10: תכנית על סריקת מייל שמושבתת מ-27/09. 07/10: מוק Graph עם `parentReference.path`; "אין repo" בלי `list_repos`. 08/10: Routine בשיחה אחרת נבדק רק בהודעה, לא בהפעלה. `tfugen-db` 7). משימה מתוזמנת ו-repo פרטי: `tfugen-ref`.
+חזר: 8 (21/11: הצעתי למיכאל "גופן רוסי חסר" בלי `fc-list`; הגופן היה, והסיבה הייתה גרסת Playwright שונה מ-CI. 30/10: בלי `get_trigger`. 28/10: "לא משנה לאחרים" (ארגון). 10/10: 2FA שכבר פעיל. 08/10: תכנית על סריקת מייל שמושבתת מ-27/09. 07/10: מוק Graph עם `parentReference.path`; "אין repo" בלי `list_repos`. 08/10: Routine בשיחה אחרת נבדק רק בהודעה, לא בהפעלה. `tfugen-db` 7). משימה מתוזמנת ו-repo פרטי: `tfugen-ref`.
 
 **15. סעיף ישן ב-STATUS אמר "אין משימה פתוחה" (21/09 עד 01/10/2026, #1011).**
 מה קרה: סעיף ישן נשאר באמצע STATUS של 393KB.
