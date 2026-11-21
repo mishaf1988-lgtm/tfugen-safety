@@ -123,6 +123,11 @@ fetch('/api/claude', {
 - `Write` כותב `\uXXXX` כתווים גולמיים: אחרי כל `Write` של קובץ שרת, `python3 tools/esc-hebrew.py`, ותו מיוחד (`￾`) שאינו עברית לבדוק ב-`grep -cP "[^\x00-\x7F]"`.
 - דף לאדם מבחוץ: בדיקת Playwright בגודל טלפון (`devices['iPhone 13']`), עם גלילה אל הקנבס (scroll into view) לפני ציור על קנבס (בלי זה העכבר מצייר מחוץ למסך ונראה כמו באג בדף).
 
+### בדיקה לקוד שכותב ל-`server_state` (21/11/2026, מיכאל בשאלון: "בצע: הדמיית מסד משותפת לבדיקות")
+- ההדמיה: `tests/harness/lib/state-mock.mjs` (`stateMock()`; `stateMock(() => state)` כשהבדיקה מחליפה את המפה בעצמה). עונה כמו PostgREST: `key=eq`/`key=in`, `merge-duplicates`/`ignore-duplicates`, ו-`PATCH` מותנה ב-`updated_at` (כך `stateCas` עובד מולה). לא לכתוב העתק בקובץ הבדיקה.
+- כותב שני בין הקריאה לכתיבה: `db.casRead[key] = (d) => d.set(key, ...)`. כל מעבר ל-`stateCas` מקבל בדיקה כזו, ושבירה מכוונת (קריאה ואז כתיבה שלמה) שמפילה אותה.
+- דוגמה שעובדת: `state-mock-test.mjs`, `wa-morning-test.mjs`. בדיקות ישנות עם העתק משלהן (push, guess-lock, hazard-file, hazard-report) עוברות להדמיה כשנוגעים בהן.
+
 ## Verification Checklist (לפני PR)
 - [ ] `git diff` - שינויים קטנים וממוקדים בלבד
 - [ ] אין עברית raw ב-strings של JS

@@ -1,0 +1,32 @@
+// The shared server_state mock answers like PostgREST for what stateCas and the plain writes use (21/11/2026).
+import { stateMock } from './lib/state-mock.mjs';
+import { stateCas } from './_build/_cas.mjs';
+let pass = 0, fail = 0;
+const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 300) : '')); } };
+const SB = 'https://sb.test', H = { apikey: 'k' };
+const db = stateMock({ a: '1' });
+globalThis.fetch = async (u, i) => db.handle(u, i);
+const get = async (q) => (await fetch(SB + '/rest/v1/server_state' + q)).json();
+check('GET one key: the row with a version', (await get('?select=value,updated_at&key=eq.a'))[0].value === '1' && (await get('?key=eq.a'))[0].updated_at === db.at('a'));
+check('GET a key that is not there: no row', (await get('?key=eq.none')).length === 0);
+await fetch(SB + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify([{ key: 'a', value: '2' }, { key: 'b', value: { x: 1 } }]) });
+check('POST merge-duplicates: replaces, and an object value is kept as its JSON text (the column is text)', db.state.a === '2' && db.state.b === '{"x":1}');
+check('GET in.(...): those keys only', (await get('?key=in.(a,none)')).map((r) => r.key).join() === 'a' && (await get('')).length === 2);
+let r = await fetch(SB + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates,return=representation' }, body: JSON.stringify([{ key: 'a', value: '9' }]) });
+check('POST ignore-duplicates on an existing row: nothing written, [] back', db.state.a === '2' && (await r.json()).length === 0);
+const v0 = db.at('a');
+r = await fetch(SB + '/rest/v1/server_state?key=eq.a&updated_at=eq.' + encodeURIComponent('2020-01-01T00:00:00.000Z'), { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ value: '3' }) });
+check('PATCH with an old version: nothing changes, [] back', db.state.a === '2' && (await r.json()).length === 0);
+r = await fetch(SB + '/rest/v1/server_state?key=eq.a&updated_at=eq.' + encodeURIComponent(v0), { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ value: '3' }) });
+check('PATCH with the current version: written, the version moves', db.state.a === '3' && (await r.json()).length === 1 && db.at('a') !== v0);
+r = await fetch(SB + '/rest/v1/server_state?key=eq.a&value=eq.wrong', { method: 'PATCH', body: JSON.stringify({ value: 'x' }) });
+check('PATCH on value=eq (a lease token): a wrong token changes nothing, the right one writes', db.state.a === '3' && (await (await fetch(SB + '/rest/v1/server_state?key=eq.a&value=eq.3', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ value: '' }) })).json()).length === 1 && db.state.a === '');
+// the real stateCas against the mock, with another writer between its read and its write
+db.set('list', '["one"]');
+db.casRead.list = (d) => d.set('list', JSON.stringify(JSON.parse(d.state.list).concat(['other'])));
+const out = await stateCas(SB, H, 'list', (v) => ({ value: JSON.stringify(JSON.parse(v || '[]').concat(['mine'])) }));
+check('stateCas on the mock: another writer between the read and the write is kept, the write is retried', out.written === true && db.state.list === '["one","other","mine"]', db.state.list);
+const first = await stateCas(SB, H, 'fresh', () => ({ value: 'v' }));
+check('stateCas on a key with no row: inserted', first.written === true && db.state.fresh === 'v');
+console.log('\nstate-mock-test: ' + pass + ' passed, ' + fail + ' failed');
+process.exit(fail ? 1 : 0);
