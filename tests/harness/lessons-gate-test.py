@@ -189,5 +189,27 @@ ok_all, whys = gate.check_all('x', '', ['functions/_wa.js'])
 check('check_all: an empty description on a server file names all six, in the order check() gave them', not ok_all and len(whys) == 6 and 'retro' in whys[0] and 'skill line' in whys[1] and gate.check('x', '', ['functions/_wa.js'])[1] == whys[0], whys)
 check('check_all: a good description is ok with its reason', gate.check_all('Tour screen', R, ['chat/x.html']) == (True, ['not a fix PR']), gate.check_all('Tour screen', R, ['chat/x.html']))
 
+# 17/11/2026 (#2884): CI compared the merge commit with pull_request.base.sha, an older main, so files that other
+# PRs merged meanwhile were counted as this PR's. pr-base.sh gives the main the PR was merged with.
+import tempfile, re as _re
+_d = tempfile.mkdtemp()
+def _g(*a, **k):
+    return subprocess.run(['git', '-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false'] + list(a), cwd=_d, capture_output=True, text=True, **k).stdout.strip()
+def _w(n, t):
+    open(os.path.join(_d, n), 'w').write(t); _g('add', n); _g('commit', '-q', '-m', n)
+_g('init', '-q', '-b', 'main'); _w('a.txt', '1'); _old = _g('rev-parse', 'HEAD')
+_g('checkout', '-q', '-b', 'pr'); _w('mine.js', '1')
+_g('checkout', '-q', 'main'); _w('other-pr.js', '1')
+_g('checkout', '-q', '--detach', 'main'); _g('merge', '-q', '--no-ff', '-m', 'merge', 'pr')
+_SH = os.path.join(os.path.dirname(P), 'pr-base.sh')
+_base = subprocess.run(['bash', _SH], cwd=_d, capture_output=True, text=True, env=dict(os.environ, BASE=_old)).stdout.strip()
+check('pr-base: the old base lists a file another PR merged meanwhile (the bug)', sorted(_g('diff', '--name-only', _old, 'HEAD').split()) == ['mine.js', 'other-pr.js'])
+check('pr-base: on the merge commit the base is the main it was merged with, and the diff is the PR\'s own file', _base and _base != _old and _g('diff', '--name-only', _base, 'HEAD').split() == ['mine.js'], _base)
+_g('checkout', '-q', 'pr')
+check('pr-base: not a merge commit: BASE as given', subprocess.run(['bash', _SH], cwd=_d, capture_output=True, text=True, env=dict(os.environ, BASE=_old)).stdout.strip() == _old)
+_yml = open(os.path.join(os.path.dirname(P), '..', 'workflows', 'tests.yml'), encoding='utf-8').read()
+_raw = [l.strip()[:90] for l in _yml.split('\n') if _re.search(r'run:.*(\$BASE|-gate\.py)', l) and 'pr-base.sh' not in l and 'hook-coverage' not in l]
+check('tests.yml: every step that reads BASE takes it from pr-base.sh', not _raw and _yml.count('pr-base.sh') >= 5, _raw)
+
 print('%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)
