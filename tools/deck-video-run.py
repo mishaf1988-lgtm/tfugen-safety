@@ -70,10 +70,31 @@ def setup():
     return hf
 
 
+def duration(path):
+    r = sh(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=nw=1:nk=1', path])
+    try: return float(r.stdout.strip())
+    except ValueError: return 0.0
+
+
 def compress(src, out):
+    """Under MAX. Two fixed-quality tries first (they fit a deck of up to about 30 scenes), then a bitrate computed
+    from the length (21/11/2026: the ammonia video, 52 scenes, was over 8MB even at 540p and stopped the whole queue)."""
     for scale, crf in (('720', '34'), ('540', '36')):
         sh(['ffmpeg', '-y', '-loglevel', 'error', '-i', src, '-c:v', 'libx264', '-crf', crf, '-preset', 'slow', '-tune', 'stillimage',
             '-vf', 'scale=%s:-2' % scale, '-c:a', 'aac', '-b:a', '48k', '-ac', '1', out])
+        if os.path.exists(out) and 0 < os.path.getsize(out) <= MAX: return True
+    sec = duration(src)
+    if sec <= 0: return False
+    for scale, abr in (('540', 32), ('480', 24)):
+        # 15% for the container: at 30 fps the mp4 index alone was 1MB of a 15-minute video (measured 21/11/2026),
+        # so this path also drops to 15 fps (still slides) with a keyframe every 20 seconds
+        vbr = int(MAX * 8 * 0.85 / sec / 1000) - abr
+        if vbr < 25: continue
+        log = os.path.join(os.path.dirname(out) or '.', 'x264pass')
+        base = ['ffmpeg', '-y', '-loglevel', 'error', '-i', src, '-c:v', 'libx264', '-b:v', '%dk' % vbr, '-maxrate', '%dk' % (vbr * 2),
+                '-bufsize', '%dk' % (vbr * 4), '-preset', 'slow', '-tune', 'stillimage', '-vf', 'scale=%s:-2' % scale, '-r', '15', '-g', '300', '-passlogfile', log]
+        sh(base + ['-pass', '1', '-an', '-f', 'mp4', os.devnull])
+        sh(base + ['-pass', '2', '-c:a', 'aac', '-b:a', '%dk' % abr, '-ac', '1', out])
         if os.path.exists(out) and 0 < os.path.getsize(out) <= MAX: return True
     return False
 
@@ -101,7 +122,7 @@ def main():
     print('to build: ' + ', '.join('%s (%d)' % (t, len(sc)) for t, _, sc in todo))
     if dry or not todo: return
     hf = setup()
-    done, stop = [], ''
+    done, skipped, stop = [], [], ''
     for t, p, sc in todo:
         work = os.path.join(W, 'work', t)
         r = sh([sys.executable, os.path.join(ROOT, 'tools/deck-video.py'), 'tts', p, work])
@@ -122,7 +143,8 @@ def main():
         r = sh(['npx', 'hyperframes', 'render', '-o', 'out.mp4', '-q', 'standard'], cwd=proj, timeout=3600)
         if r.returncode or not os.path.exists(os.path.join(proj, 'out.mp4')): stop = t + ': render ' + r.stdout[-160:]; break
         mp4 = os.path.join(W, t + '.mp4')
-        if not compress(os.path.join(proj, 'out.mp4'), mp4): stop = t + ': over 8MB after compression'; break
+        if not compress(os.path.join(proj, 'out.mp4'), mp4):
+            skipped.append(t + ' (%d MB)' % (os.path.getsize(os.path.join(proj, 'out.mp4')) // 1048576)); continue   # the next topic still runs
         name = fname(t, sc)
         u = upload(mp4, name)
         if not u.get('ok'): stop = t + ': upload ' + str(u.get('error'))[:120]; break
@@ -130,7 +152,8 @@ def main():
         done.append(name)
         print('saved: ' + name)
     line = ('סרטונים שנשמרו בתיקיית המצגות: ' + (', '.join(done) or 'אין')) + ('. נעצר: ' + stop if stop else '')
-    rdb({'op': 'agent_report', 'agent': 'deck-video', 'ok': not stop or 'per day' in stop, 'line': line[:300], 'learned': 'אין'})
+    if skipped: line += '. over 8MB after compression: ' + ', '.join(skipped)
+    rdb({'op': 'agent_report', 'agent': 'deck-video', 'ok': (not stop or 'per day' in stop) and not skipped, 'line': line[:300], 'learned': 'אין'})
     print(line)
 
 
