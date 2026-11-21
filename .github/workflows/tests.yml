@@ -29,7 +29,7 @@ permissions:
 
 jobs:
   changes:
-    runs-on: ubuntu-24.04  # 12/11/2026: ubuntu-latest moved to 26.04, Playwright 1.56.1 has no chromium there
+    runs-on: ubuntu-24.04  # 12/11/2026: ubuntu-latest moved to 26.04, Playwright 1.56.1 had no chromium there (1.63.0 from 21/11/2026, not tried on 26.04)
     outputs:
       code: ${{ steps.diff.outputs.code }}
     steps:
@@ -50,7 +50,7 @@ jobs:
   # through env, never into the script text: PR text is untrusted input.
   lessons:
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-24.04  # 12/11/2026: ubuntu-latest moved to 26.04, Playwright 1.56.1 has no chromium there
+    runs-on: ubuntu-24.04  # 12/11/2026: ubuntu-latest moved to 26.04, Playwright 1.56.1 had no chromium there (1.63.0 from 21/11/2026, not tried on 26.04)
     steps:
       - uses: actions/checkout@v4
         with:
@@ -111,7 +111,7 @@ jobs:
   harness:
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-24.04  # 12/11/2026: ubuntu-latest moved to 26.04, Playwright 1.56.1 has no chromium there
+    runs-on: ubuntu-24.04  # 12/11/2026: ubuntu-latest moved to 26.04, Playwright 1.56.1 had no chromium there (1.63.0 from 21/11/2026, not tried on 26.04)
     timeout-minutes: 40
     strategy:
       fail-fast: false
@@ -125,9 +125,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      # The same playwright as the cloud sessions (1.56.1): a newer Chromium reads
-      # inline styles differently and backlog-visual-test saw 0 menu separators.
-      - run: npm i -g playwright@1.56.1 acorn
+      # The same playwright as the cloud sessions: a newer Chromium reads inline styles differently and
+      # backlog-visual-test saw 0 menu separators. 21/11/2026: the cloud sessions moved to 1.63.0 (1.56.1 until then),
+      # and its Chromium measures text a little wider: a Russian placeholder fitted here and was cut there.
+      - run: npm i -g playwright@1.63.0 acorn
       - run: pip install requests pillow python-docx openpyxl  # pillow: tools/make-logo.py (17/10/2026); docx, openpyxl: doc-review-test.py (24/10/2026)
       # 27/10/2026: the install sat until the 30-minute job limit twice in one day (#2097, #2099). The Azure apt mirror
       # was slow (87 kB/s, 25.9 MB in 4:57), and a stalled connection waits forever. apt now drops a connection that
@@ -144,7 +145,7 @@ jobs:
   tests:
     needs: [changes, lessons, harness]
     if: always()
-    runs-on: ubuntu-24.04  # 12/11/2026: ubuntu-latest moved to 26.04, Playwright 1.56.1 has no chromium there
+    runs-on: ubuntu-24.04  # 12/11/2026: ubuntu-latest moved to 26.04, Playwright 1.56.1 had no chromium there (1.63.0 from 21/11/2026, not tried on 26.04)
     steps:
       - run: |
           echo "changes=${{ needs.changes.result }} code=${{ needs.changes.outputs.code }} lessons=${{ needs.lessons.result }} harness=${{ needs.harness.result }}"
