@@ -4,7 +4,8 @@ after the work-at-height trial; DECISIONS 20/11/2026). The height video's index.
 builds the same composition from scenes.json, so every deck gets the same look.
 
 scenes.json: a list of scenes, each [kind, tag, title, lines, warn, narration, image?]
-  kind 'title' (the cover), 'list', or 'photo' (a list with image = [file, credit] above it).
+  kind 'title' (the cover), 'list', 'photo' (a list with image = [file, credit] above it), or 'anim' (a list with a
+  moving drawing above it, x[6] = a name from tools/deck_anim.py NAMES; 21/11/2026).
   narration: 4-300 characters (tts_probe), numbers in words.
 
 Usage:
@@ -14,6 +15,9 @@ Then, in a hyperframes project (project-files/decks/video/README.md): copy index
 images, and render.
 """
 import base64, html, json, os, subprocess, sys, time
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import deck_anim  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BY = 'הוכן על ידי: מיכאל פרייליך, ממונה בטיחות ואיכות הסביבה'
@@ -31,6 +35,7 @@ ul{list-style:none} li{font-size:54px;line-height:1.35;margin-bottom:42px;paddin
 ul.sm li{font-size:46px;margin-bottom:30px} ul.xs li{font-size:41px;margin-bottom:24px}
 li:before{content:"";position:absolute;right:0;top:22px;width:26px;height:26px;border-radius:50%;background:#ffc300}
 .warn{margin-top:40px;background:#d62828;font-size:50px;font-weight:700;padding:30px 36px;border-radius:20px;text-align:center}
+.anim{display:block;width:100%;height:auto;margin-bottom:40px}
 .photo{display:block;width:100%;height:520px;object-fit:cover;border-radius:20px;margin-bottom:6px} .credit{font-size:26px;color:#cfd8e3;margin-bottom:40px}
 .by{position:absolute;right:80px;left:80px;bottom:96px;font-size:28px;color:#cfd8e3;text-align:center}
 .num{position:absolute;left:80px;top:70px;font-size:32px;color:#cfd8e3}
@@ -40,9 +45,10 @@ li:before{content:"";position:absolute;right:0;top:22px;width:26px;height:26px;b
 def load(p):
     s = json.load(open(p, encoding='utf-8'))
     for i, x in enumerate(s):
-        if x[0] not in ('title', 'list', 'photo'): raise SystemExit('scene %d: kind %r' % (i, x[0]))
+        if x[0] not in ('title', 'list', 'photo', 'anim'): raise SystemExit('scene %d: kind %r' % (i, x[0]))
         if not 4 <= len(x[5] or '') <= 300: raise SystemExit('scene %d: narration %d characters (4-300)' % (i, len(x[5] or '')))
         if x[0] == 'photo' and (len(x) < 7 or not x[6]): raise SystemExit('scene %d: photo with no image' % i)
+        if x[0] == 'anim' and (len(x) < 7 or x[6] not in deck_anim.NAMES): raise SystemExit('scene %d: anim %r (one of %s)' % (i, x[6] if len(x) > 6 else None, ', '.join(deck_anim.NAMES)))
     return s
 
 
@@ -98,7 +104,11 @@ def build(scenes, work):
             body.append('<div class="h" id="s%d_t">%s</div>' % (i, e(title)))
             if kind == 'photo':
                 body.append('<img class="photo" src="%s"><div class="credit">%s</div>' % (e(x[6][0]), e(x[6][1])))
-            chars = sum(len(l) for l in lines) + (len(warn) if warn else 0) + (500 if kind == 'photo' else 0)
+            if kind == 'anim':
+                svg, atl = deck_anim.anim(x[6], i, t, d)
+                body.append(svg)
+                tl.extend(atl)
+            chars = sum(len(l) for l in lines) + (len(warn) if warn else 0) + (500 if kind in ('photo', 'anim') else 0)
             cls = ' class="xs"' if chars > 330 else (' class="sm"' if chars > 220 or len(lines) > 5 else '')
             body.append('<ul%s>%s</ul>' % (cls, ''.join('<li id="s%d_l%d">%s</li>' % (i, k, e(l)) for k, l in enumerate(lines))))
             if warn: body.append('<div class="warn" id="s%d_w">%s</div>' % (i, e(warn)))
