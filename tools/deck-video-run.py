@@ -86,11 +86,13 @@ def compress(src, out):
     sec = duration(src)
     if sec <= 0: return False
     for scale, abr in (('540', 32), ('480', 24)):
-        vbr = int(MAX * 8 * 0.9 / sec / 1000) - abr   # 10% for the container and x264 overshoot
+        # 15% for the container: at 30 fps the mp4 index alone was 1MB of a 15-minute video (measured 21/11/2026),
+        # so this path also drops to 15 fps (still slides) with a keyframe every 20 seconds
+        vbr = int(MAX * 8 * 0.85 / sec / 1000) - abr
         if vbr < 25: continue
         log = os.path.join(os.path.dirname(out) or '.', 'x264pass')
         base = ['ffmpeg', '-y', '-loglevel', 'error', '-i', src, '-c:v', 'libx264', '-b:v', '%dk' % vbr, '-maxrate', '%dk' % (vbr * 2),
-                '-bufsize', '%dk' % (vbr * 4), '-preset', 'slow', '-tune', 'stillimage', '-vf', 'scale=%s:-2' % scale, '-passlogfile', log]
+                '-bufsize', '%dk' % (vbr * 4), '-preset', 'slow', '-tune', 'stillimage', '-vf', 'scale=%s:-2' % scale, '-r', '15', '-g', '300', '-passlogfile', log]
         sh(base + ['-pass', '1', '-an', '-f', 'mp4', os.devnull])
         sh(base + ['-pass', '2', '-c:a', 'aac', '-b:a', '%dk' % abr, '-ac', '1', out])
         if os.path.exists(out) and 0 < os.path.getsize(out) <= MAX: return True
