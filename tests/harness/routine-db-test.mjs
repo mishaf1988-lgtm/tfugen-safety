@@ -2669,6 +2669,29 @@ const callIn = async (body) => {
         check(op + ': a retry of the same row fires once, logs once, and answers ok with the first session (retro 22/10/2026 (a))',
           a.ok && !a.dup && b.ok && b.dup === true && fires.length === 1 && mine.length === 1 && mine[0].payload.session === fireSession && b.fired.session === fireSession, { a, b, fires: fires.length, mine });
       }
+      // 21/11/2026 (idea 31): a golden question runs at most twice on its day (the round and one retry)
+      {
+        const { goldOf, goldSameCount, GOLD_DAY_MAX } = await import('./_build/routine-db.mjs');
+        const gm = globalThis.fetch;
+        globalThis.fetch = async (u, o = {}) => {
+          const su = String(u), lm = /event_type=eq\.drill_in&channel=eq\.drill&payload->>row=like\.([^&]*)/.exec(su);
+          if (lm) { const pre = decodeURIComponent(lm[1]).replace(/\*$/, ''); return new Response(JSON.stringify(logs.filter((r) => r.event_type === 'drill_in' && r.payload.row.startsWith(pre)).map((r) => ({ payload: r.payload }))), { status: 200 }); }
+          return gm(u, o);
+        };
+        try {
+          fires.length = 0;
+          const callG = async (row) => { const r = await onRequest({ request: new Request('https://x/api/routine-db', { method: 'POST', headers: { 'x-routine-key': 'k-123', 'content-type': 'application/json' }, body: JSON.stringify({ op: 'drill_ask', agent: 'dev-fire', row, text: 'q' }) }), env: E2 }); return r.json(); };
+          const g1 = await callG('drill-gold-261121-g1'), g1b = await callG('drill-gold-261121-g1b'), g1c = await callG('drill-gold-261121-g1c');
+          const g10 = await callG('drill-gold-261121-g10'), other = await callG('drill-gold-261122-g1'), plain = await callG('drill-261121-x1');
+          const big = await callG('drill-gold-261121-G1'), zero = await callG('drill-gold-261121-g01'), odd = await callG('drill-gold-261121-g1-retry');
+          check('golden: a question runs at most twice a day: the round and one retry; the third is refused with no fire (idea 31, 21/11/2026)',
+            GOLD_DAY_MAX === 2 && g1.ok && g1b.ok && !g1c.ok && /already ran 2 times/.test(g1c.error || '') && g10.ok && other.ok && plain.ok && fires.length === 5, { g1, g1b, g1c, g10, other, plain, fires: fires.length });
+          check('golden: a capital G, a leading zero or a row outside the pattern does not step around the count (security review 21/11/2026)', !big.ok && !zero.ok && !odd.ok && /already ran/.test(big.error || '') && /already ran/.test(zero.error || '') && /a golden row is/.test(odd.error || '') && fires.length === 5, { big, zero, odd });
+          check('golden: g1 and g10 are different questions, a letter or a tail is the same question, a training drill is not golden',
+            goldOf('drill-gold-261121-g10').q === 'g10' && goldOf('drill-gold-261115-g4e-1755').q === 'g4' && goldOf('drill-gold-261121-g1c').q === 'g1' && goldOf('drill-261121-x1') === null && goldOf('drill-gold-261121-x') === null
+            && goldSameCount([{ payload: { row: 'drill-gold-261121-g1', session: 's' } }, { payload: { row: 'drill-gold-261121-g1b', session: null } }, { payload: { row: 'drill-gold-261121-g10', session: 's' } }, { payload: { row: 'drill-gold-261120-g1', session: 's' } }], { day: '261121', q: 'g1' }) === 1 && goldSameCount(null, { day: '1', q: 'g1' }) === 0);
+        } finally { globalThis.fetch = gm; }
+      }
       check('askDup: a line with no session (the fire failed) does not block a retry', askDupOf([{ payload: { row: 'x', session: null } }]) === null && askDupOf(null) === null && askDupOf([{ payload: { session: 's1' } }]).session === 's1');
       check('askDup: the row goes into the query encoded, and only after OFFICE_ROW/DRILL_ROW', /payload->>row=eq\.ab_c-1&/.test(askDupQuery('owner_in', 'office', 'ab_c-1')));
     } finally { globalThis.fetch = f0; }
