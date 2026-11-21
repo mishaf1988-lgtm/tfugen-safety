@@ -2689,6 +2689,9 @@ const callIn = async (body) => {
           check('golden: a capital G, a leading zero or a row outside the pattern does not step around the count (security review 21/11/2026)', !big.ok && !zero.ok && !odd.ok && /already ran/.test(big.error || '') && /already ran/.test(zero.error || '') && /a golden row is/.test(odd.error || '') && fires.length === 5, { big, zero, odd });
           check('golden: g1 and g10 are different questions, a letter or a tail is the same question, a training drill is not golden',
             goldOf('drill-gold-261121-g10').q === 'g10' && goldOf('drill-gold-261115-g4e-1755').q === 'g4' && goldOf('drill-gold-261121-g1c').q === 'g1' && goldOf('drill-261121-x1') === null && goldOf('drill-gold-261121-x') === null
+            // real rows from notifications_log (drill_in, 14/11 to 21/11/2026)
+            && goldOf('drill-gold-261115-g4e-1755').day === '261115' && goldOf('drill-gold-261119-g2c').q === 'g2' && goldOf('drill-gold-261116-g10c').q === 'g10'
+            && goldOf('drill-261120-pm10') === null && goldOf('drill-261115-ops-01') === null && goldOf('drill-261114-5b') === null
             && goldSameCount([{ payload: { row: 'drill-gold-261121-g1', session: 's' } }, { payload: { row: 'drill-gold-261121-g1b', session: null } }, { payload: { row: 'drill-gold-261121-g10', session: 's' } }, { payload: { row: 'drill-gold-261120-g1', session: 's' } }], { day: '261121', q: 'g1' }) === 1 && goldSameCount(null, { day: '1', q: 'g1' }) === 0);
         } finally { globalThis.fetch = gm; }
       }
