@@ -14,6 +14,14 @@ out = run("pr-gate.py", dict(base, tool_input={"title": "x", "body": "רטרו: 
 check("retro but no skill line: deny", deny(out) and "skill" in out, out)
 out = run("pr-gate.py", dict(base, tool_input={"title": "x", "body": "רטרו: אין\nskill: אין"}), env)
 check("both lines: pass", out == "{}", out)
+# 21/11/2026 (Michael: "do it: all the requirements at once"): a server change with nothing in the description gets
+# every missing line in one answer (retro, skill, the review pair, what was not checked, the assistant line), numbered.
+env_srv = dict(env, PR_GATE_CHANGED="functions/_wa.js")
+out = run("pr-gate.py", dict(base, tool_input={"title": "x", "body": "שינוי"}), env_srv)
+check("everything missing at once: one deny that names retro, skill, the review, the refutation, what was not checked and the assistant line",
+      deny(out) and all(w in out for w in ("retro", "skill line", "סקירה:", "הפרכה:", "מה לא נבדק:", "עוזר:")) and "1. " in out and "6. " in out, out)
+out = run("pr-gate.py", dict(base, tool_input={"title": "x", "body": "רטרו: אין\nskill: אין\nסקירה: סוכן נפרד, אין ממצא\nהפרכה: אין ממצא מאושר\nעוזר: לא רלוונטי"}), env_srv)
+check("one thing missing: that one alone, not numbered", deny(out) and "מה לא נבדק:" in out and "1. " not in out and "retro" not in out, out)
 out = run("pr-gate.py", dict(base, tool_input={"title": "x", "body": "רטרו: אין\nskill: למדתי משהו"}), env)
 check("skill says learned, no skill file changed: deny", deny(out), out)
 out = run("pr-gate.py", dict(base, tool_input={"title": "x", "body": "רטרו: אין\nskill: למדתי משהו"}),

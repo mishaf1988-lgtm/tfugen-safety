@@ -184,5 +184,10 @@ try:
 finally:
     os.remove(os.path.join(gate.ROOT, mig))
 
+# 21/11/2026: check_all gives every missing line; check stays the first one (CI prints it)
+ok_all, whys = gate.check_all('x', '', ['functions/_wa.js'])
+check('check_all: an empty description on a server file names all six, in the order check() gave them', not ok_all and len(whys) == 6 and 'retro' in whys[0] and 'skill line' in whys[1] and gate.check('x', '', ['functions/_wa.js'])[1] == whys[0], whys)
+check('check_all: a good description is ok with its reason', gate.check_all('Tour screen', R, ['chat/x.html']) == (True, ['not a fix PR']), gate.check_all('Tour screen', R, ['chat/x.html']))
+
 print('%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)

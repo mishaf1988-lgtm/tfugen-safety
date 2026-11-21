@@ -130,7 +130,15 @@ def check(cwd, src, inp):
         spec = importlib.util.spec_from_file_location("lessons_gate", os.path.join(src, GATE))
         gate = importlib.util.module_from_spec(spec); spec.loader.exec_module(gate)
         files = changed(cwd, inp.get("head"))
-        ok, why = gate.check(inp.get("title", ""), inp.get("body", ""), files)
+        # 21/11/2026 (Michael in the questionnaire: "do it: all the requirements at once"; the night of 20/11/2026 the gate
+        # refused one PR three times in a row, each time for another line): every missing line in one answer.
+        if hasattr(gate, "check_all"):
+            ok, all_why = gate.check_all(inp.get("title", ""), inp.get("body", ""), files)
+            why = all_why[0] if len(all_why) == 1 else "\n".join("%d. %s" % (n + 1, w) for n, w in enumerate(all_why))
+            if not ok and len(all_why) > 1:
+                why = "\u05d7\u05e1\u05e8\u05d9\u05dd %d \u05d3\u05d1\u05e8\u05d9\u05dd, \u05dc\u05ea\u05e7\u05df \u05d0\u05ea \u05db\u05d5\u05dc\u05dd \u05d1\u05e4\u05e2\u05dd \u05d0\u05d7\u05ea:\n" % len(all_why) + why
+        else:
+            ok, why = gate.check(inp.get("title", ""), inp.get("body", ""), files)
     except Exception:
         print("{}"); return        # the gate is missing or broken: CI still checks
     if ok and "index.html" in files:
