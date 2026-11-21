@@ -71,12 +71,9 @@ def setup():
 
 
 def compress(src, out):
-    # 21/11/2026: the ammonia video (52 scenes, 16 minutes) was 10.3MB after both steps, and the voice alone was 4.8MB of
-    # it. A long video gets 12 frames a second (the slides stand still) and a 24k voice: 7.2MB.
-    for scale, crf, extra in (('720', '34', ['-b:a', '48k']), ('540', '36', ['-b:a', '48k']),
-                              ('720', '35', ['-r', '12', '-b:a', '24k', '-ar', '22050'])):
+    for scale, crf in (('720', '34'), ('540', '36')):
         sh(['ffmpeg', '-y', '-loglevel', 'error', '-i', src, '-c:v', 'libx264', '-crf', crf, '-preset', 'slow', '-tune', 'stillimage',
-            '-vf', 'scale=%s:-2' % scale, '-c:a', 'aac', '-ac', '1'] + extra + [out])
+            '-vf', 'scale=%s:-2' % scale, '-c:a', 'aac', '-b:a', '48k', '-ac', '1', out])
         if os.path.exists(out) and 0 < os.path.getsize(out) <= MAX: return True
     return False
 
