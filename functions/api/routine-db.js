@@ -1863,7 +1863,9 @@ export function odMkdirCheck(b) {
 // 20/10/2026 (Michael: "you have a tool to make a draft, attach the unsigned draft"): files a draft may
 // carry, up to 5, each a .pdf/.docx/.xlsx path inside the safety folder and outside the protected
 // folders. The flow reads each by its full path ("/" + OD_ROOT + rel) and attaches it.
-export const POSTMAN_TRIGGER = 'trig_01Py8YXifD3HtnQUmFgoTRft', RELAY_FIRE_KEY = 'relay_fire_at', RELAY_FIRE_GAP_S = 120;
+// 21/11/2026: the postman moved to a new standing chat (trig_01DSEbnefGCHHZ5g86wjbtpn). The old trigger and its API token are gone,
+// so relay_fire needs a new POSTMAN_FIRE_TOKEN made by Michael for this trigger (routine-rotation.md, chrome-queue.md C27).
+export const POSTMAN_TRIGGER = 'trig_01DSEbnefGCHHZ5g86wjbtpn', RELAY_FIRE_KEY = 'relay_fire_at', RELAY_FIRE_GAP_S = 120;
 // fire_probe and fire_probe_trigger each open a real, billed assistant run. At most FIRE_PROBE_MAX a day (UTC),
 // counted in server_state as "YYYY-MM-DD:n" (STATUS retro 20/10/2026, done 31/10/2026): a Routine taken over by
 // text in a mail or a file cannot fire them in a loop.

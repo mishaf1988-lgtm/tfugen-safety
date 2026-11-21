@@ -323,7 +323,7 @@
 - [x] **C27. טוקן לדוור, כדי שהשרת יעיר אותו מיד** (נסגר 20/10/2026: מיכאל ביצע מהטלפון, הסוד קיים ונפרס; אבל הבדיקה הראתה שהפעלה דרך ה-API פותחת שיחה חדשה בלי send_message, ולכן זה לא מוסר משימות. לקח 133) (20/10/2026, מיכאל בשאלון: "בצע: טוקן לדוור (מומלץ)"). משימה שהעוזר בוואטסאפ מעביר לעובד מחכה היום לסבב הדוור הבא (עד 4 שעות). עם הטוקן, `relay_fire` בשרת מעיר את הדוור מיד, ורק כשיש משימה. טקסט להדבקה בכרום:
   ```
   משימה: טוקן API לדוור של משרד הסוכנים. שני חלקים, לפי הסדר. לא לשנות שום הגדרה אחרת, לא למחוק, ולא לכתוב את הטוקן בצ'אט, בצילום או בתשובה: רק להעתיק ישר משדה לשדה. אם משהו לא נראה כמו שכתוב, לעצור ולתאר מה רואים.
-  חלק 1: https://claude.ai/code/routines/trig_01Py8YXifD3HtnQUmFgoTRft > Edit > Select a trigger > Add another trigger > API > Generate token (להעתיק מיד) > שמירה. לא לגעת בתזמון (08:11, 12:11, 16:11).
+  חלק 1: https://claude.ai/code/routines/trig_01DSEbnefGCHHZ5g86wjbtpn > Edit > Select a trigger > Add another trigger > API > Generate token (להעתיק מיד) > שמירה. לא לגעת בתזמון (08:11, 12:11, 16:11).
   חלק 2: https://dash.cloudflare.com/c9d388e3a5f9ee9546e8aa6b6353ec87/pages/view/tapugan-safety/settings/environment-variables > Production > Add > Secret, POSTMAN_FIRE_TOKEN = הטוקן > Save. לא לגעת במשתנה אחר.
   בסוף: דוח קצר, האם שני החלקים עברו.
   ```
