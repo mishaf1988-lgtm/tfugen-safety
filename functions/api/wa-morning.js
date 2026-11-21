@@ -19,7 +19,7 @@
 //   body {watch: true}  the watchdog for a stuck run, every 5 minutes (watchVerdict)
 // The same run writes calendar requests for upcoming expiries (calendarStep, below).
 import { jsonResp, sbFrom, SB_TIMEOUT_MS, tmo, SITE, secretOk } from '../_shared.js';
-import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, WEEKEND_KEY, WEEKEND_LAST_KEY, weekendList, PROMISE_KEY, promiseDue, promiseRemindText, promiseToCheck, eveningAdd, isoWeekAdd, promiseCheckDue, promiseCheckFireText, assistantFire, assistantFireNow } from '../_wa.js';
+import { ownerWa, sendToOwner, ownerWindowOpen, noteLastOut, stripInternalIds, WEEKEND_KEY, WEEKEND_LAST_KEY, weekendList, PROMISE_KEY, promiseDue, promiseRemindText, promiseToCheck, promiseRetryCand, promiseRunAlive, promiseRetrySet, eveningAdd, isoWeekAdd, promiseCheckDue, promiseCheckFireText, assistantFire, assistantFireNow } from '../_wa.js';
 import { odConfigured, accessToken, putFile, sendMailTo } from '../_onedrive.js';
 import { worksTick } from './works.js';
 import { stateCas } from '../_cas.js';
@@ -434,11 +434,26 @@ async function promiseRemind(env, now) {
       event_type: 'promise', channel: r.ok ? 'whatsapp' : 'whatsapp_error', payload: { title: clip(text, 120), kind: 'promise', detail: r.error || null } }]) }).catch(() => {});
   return { reminded: ids.length, sent: r.ok };
 }
+// 21/11/2026: a fired check whose run left no report (it died, e.g. on the usage limit) is fired once more (_wa.js
+// promiseRetryCand). One read of the log per promise: the verdict is written on it, alive or not. It runs from
+// promiseCheck on a tick with nothing due, on the list that tick already read (no extra call to the database).
+export async function promiseRetryStep(env, now, raw) {
+  const c = promiseRetryCand(raw, now.getTime());
+  if (!c) return null;
+  const rows = await sb(env, 'notifications_log?select=payload&event_type=eq.agent_report&ts=gte.' + encodeURIComponent(c.checked_at) + '&order=ts.desc&limit=40');
+  const alive = promiseRunAlive((Array.isArray(rows) ? rows : []).map((r) => r && r.payload));
+  const set = await promiseCas(env, (cur) => promiseRetrySet(cur, c.id, c.checked_at, now.toISOString(), alive));
+  if (set && !alive) await sb(env, 'notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify([{ id: 'wy' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now.toISOString(),
+      event_type: 'promise_retry', channel: 'routine', payload: { title: clip(c.text, 120), kind: 'promise_retry', ref: c.id, fired_at: c.checked_at } }]) }).catch(() => {});
+  return { id: c.id, alive, retry: !!set && !alive };
+}
 // 21/10/2026: a check the assistant scheduled (promise check_in_min): wake it now, one per call. The mark is
 // written before the fire, so a slow fire is never fired twice; a failed fire is logged and not retried.
 export async function promiseCheck(env, now) {
   const raw = await stateGet(env, PROMISE_KEY);
   const p = promiseCheckDue(raw, now.getTime(), ilHour(now));
+  if (!p) { await promiseRetryStep(env, now, raw).catch(() => null); return null; }
   const af = p && await assistantFireNow(env);
   if (!af) return null;
   // the mark goes on the list as it is now (stateCas); a promise that was closed or already checked meanwhile is not fired
