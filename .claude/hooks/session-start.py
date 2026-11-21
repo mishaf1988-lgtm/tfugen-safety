@@ -78,9 +78,11 @@ def ideas_waiting(cwd):
     sec = t.split("## ממתין להחלטה", 1)[1].split("\n## ", 1)[0] if "## ממתין להחלטה" in t else ""
     # An idea already chosen or rejected but left under this heading is not asked again
     # (17/10/2026: idea 10, built on 16/10, came back in the end-of-task questionnaire).
+    # 21/11/2026: the status is often bold and worded "\u05d4\u05d5\u05d7\u05dc\u05d8" / "\u05d1\u05d5\u05e6\u05e2" / "\u05e0\u05d2\u05e0\u05d6" / "\u05d1\u05e0\u05d9\u05e1\u05d5\u05d9"; only the two words
+    # above were known, so 9 decided ideas were listed as waiting and Michael was asked about idea 33, built on 12/11/2026.
     blocks = re.split(r"(?m)^### ", sec)[1:]
     return [b.splitlines()[0].strip()[:100] for b in blocks
-            if not re.search(r"\*\*מצב:\*\*\s*(נבחר|נדחה)", b)]
+            if not re.search(r"\*\*מצב:\*\*[\s*]*(נבחר|נדחה|הוחלט|בוצע|נגנז|בניסוי)", b)]
 
 
 def _age_note(at, now=None):
