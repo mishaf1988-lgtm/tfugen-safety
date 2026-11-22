@@ -7,9 +7,9 @@ TRANS = {
     1: '<p:transition spd="slow"><p:fade/></p:transition>',
     4: '<p:transition spd="slow"><p:fade thruBlk="1"/></p:transition>',
     7: '<p:transition spd="med"><p:push dir="u"/></p:transition>',
-    12: '<p:transition spd="med"><p:push dir="u"/></p:transition>',  # אמוניה (14 שקפים מ-22/11/2026)
-    13: '<p:transition spd="med"><p:push dir="u"/></p:transition>',
-    14: '<p:transition spd="slow"><p:fade thruBlk="1"/></p:transition>',
+    11: '<p:transition spd="med"><p:push dir="u"/></p:transition>',  # אמוניה (13 שקפים מ-22/11/2026, שקף המכונה התקועה ירד)
+    12: '<p:transition spd="med"><p:push dir="u"/></p:transition>',
+    13: '<p:transition spd="slow"><p:fade thruBlk="1"/></p:transition>',
 }
 def grad(left, right):
     return ('<a:gradFill rotWithShape="1"><a:gsLst><a:gs pos="0"><a:srgbClr val="%s"/></a:gs>'

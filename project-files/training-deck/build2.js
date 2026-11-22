@@ -57,10 +57,6 @@ async function icon(Comp, color, size = 512) {
     flag: await icon(fa.FaFlag, COL.white),
     eyeGold: await icon(fa.FaEye, COL.navy),
     check: await icon(fa.FaCircleCheck, COL.white),
-    power: await icon(fa.FaPowerOff, COL.white),
-    lock: await icon(fa.FaLock, COL.white),
-    tag: await icon(fa.FaTag, COL.white),
-    hand: await icon(fa.FaHandPointer, COL.white),
     fire: await icon(fa.FaFire, COL.red),
     ext: await icon(fa.FaFireExtinguisher, COL.white),
   };
@@ -231,24 +227,6 @@ async function icon(Comp, color, size = 512) {
   plant(s, "נמדד בשניות");
   s.addNotes("קליק: 'בבית', דקה לתפוח אחד עם סכין קילוף, כמו שכולם מכירים. קליק: 'במפעל', ויחד איתו עולה קטע אנימציה שמתנגן לבד: הלחץ עולה, משתחרר, והקליפה עפה. קליק: השורה התחתונה. שיטה: השוואה בין המוכר לחדש. מתחילים ממה שהקהל עושה בבית, ולכן הפער מול המפעל נחרט. נתון מעניין לספר: כל שנייה נוספת בקיטור מורידה עוד חצי אחוז מתפוח האדמה לפסולת, ולכן מכוונים את הזמן בדיוק. השוואה: צמיג של רכב מנופח בערך ל-2 בר, כלומר הלחץ בקולף פי 3 עד 6. אם יש לך את הנתון של הקולף אצלנו, להחליף בו. מסר שתול: התגית הירוקה. לא להסביר אותה, רק לומר חצי משפט כמו: וגם פה, בודקים. מקור הנתונים: FreshPlaza, Evolution of potato peeling; PotatoPro.");
 
-  // ===== חדש 22/11/2026: מכונה נתקעה (נעילה ותיוג), מיכאל בשאלון "בצע: מכונה נתקעה" =====
-  s = pres.addSlide({ masterName: "LIGHT" });
-  method(s, "שלב אחר שלב");
-  title(s, "הסכינים נתקעו: 4 פעולות לפני שמכניסים יד", "תמיד באותו סדר");
-  [[I.power, "1. מכבים", "עוצרים את המכונה במפסק"], [I.lock, "2. נועלים", "מנעול אישי על המפסק. המפתח אצלך בכיס"],
-   [I.tag, "3. מסמנים", "תג \"לא להפעיל\" עם השם שלך"], [I.hand, "4. בודקים", "מנסים להפעיל. לא זזה? רק עכשיו נוגעים"]].forEach(([img, h, t], i) => {
-    const x = 9.85 - i * 3.08, n = "ani" + (i + 1) + "_k";
-    s.addShape(pres.ShapeType.roundRect, { x, y: 2.15, w: 2.85, h: 3.0, rectRadius: 0.2, fill: { color: i === 3 ? COL.green : COL.dark }, line: { color: i === 3 ? COL.green : COL.dark }, objectName: n + "_bg" });
-    s.addImage({ data: img, x: x + 1.05, y: 2.4, w: 0.75, h: 0.75, objectName: n + "_ic" });
-    s.addText([
-      { text: h, options: { fontSize: 24, bold: true, color: COL.white, breakLine: true } },
-      { text: t, options: { fontSize: 16, color: COL.white } },
-    ], { ...R, align: "center", x: x + 0.12, y: 3.3, w: 2.6, h: 1.7, valign: "top", objectName: n + "_tx" });
-  });
-  s.addText("מכונה שכבתה במפסק עוד יכולה לזוז: מישהו אחר מדליק אותה. רק המנעול שלך שומר עליך.", { ...R, x: 0.6, y: 5.5, w: 12.1, h: 0.8, fontSize: 19, bold: true, color: COL.red, objectName: "ani5_tx" });
-  plant(s, "בודקים לפני שנוגעים");
-  s.addNotes("לספר: הרגע המסוכן במכונה הוא לא כשהיא עובדת, אלא כשהיא נתקעת ומישהו מכניס יד 'רק לשנייה'. קליק לכל פעולה, ולומר את הפועל בקול: מכבים, נועלים, מסמנים, בודקים. קליק אחרון: המשפט האדום. שיטה: הדגמה שלב אחר שלב. מחלקים פעולה מורכבת לשלבים קצרים, כל שלב פועל אחד ותמונה אחת, ובאותו סדר תמיד, כך שהעובד זוכר את הרצף ולא רק את הכלל. בבטיחות זה נוהל נעילה ותיוג: הסיבה הנפוצה לפגיעות במכונות היא תיקון תקלה כשהמכונה לא מנותקת. אצלנו: לפי נוהל הנעילה והתיוג של המפעל. מסר שתול: התגית הירוקה. לא להסביר אותה, רק לומר חצי משפט כמו: וגם פה, בודקים.");
-
   // ===== טבילה במים חמים: הסבר עם סיבה (22/11/2026, במקום שאלה מנחה) =====
   s = pres.addSlide({ masterName: "LIGHT" });
   method(s, "הסבר עם סיבה");
@@ -339,7 +317,7 @@ async function icon(Comp, color, size = 512) {
   s.addText("עד שהגיע למקפיא, בדקו אותו בכל תחנה.", { ...R, align: "center", x: 0.8, y: 3.55, w: 11.7, h: 1.1, fontSize: 44, bold: true, color: COL.navy, objectName: "auto3b_b" });
   s.addText("כך שומרים גם על אנשים: בודקים בכל שלב, כדי שכולם יחזרו הביתה.", { ...R, align: "center", x: 0.8, y: 4.85, w: 11.7, h: 0.8, fontSize: 26, bold: true, color: COL.orange, objectName: "auto4b_c" });
   s.addText("תודה | מיכאל פרייליך", { ...R, align: "center", x: 1.0, y: 6.2, w: 11.3, h: 0.5, fontSize: 16, color: COL.soft, objectName: "auto5b_d" });
-  s.addNotes("סיום (20 שניות). שלושת המשפטים עולים לבד, בלי קליק. לומר אותם לאט, ולשתוק אחרי האחרון. שיטה: סגירת מעגל, חוזרים לתפוח האדמה משקף הפתיחה, וזה גם פורע את התגית הירוקה שחזרה בשקפים 6 עד 12 ('בכל תחנה: בדיקה').");
+  s.addNotes("סיום (20 שניות). שלושת המשפטים עולים לבד, בלי קליק. לומר אותם לאט, ולשתוק אחרי האחרון. שיטה: סגירת מעגל, חוזרים לתפוח האדמה משקף הפתיחה, וזה גם פורע את התגית הירוקה שחזרה בשקפים 6 עד 11 ('בכל תחנה: בדיקה').");
 
   await pres.writeFile({ fileName: "fries-raw.pptx" });
   console.log("ok");
