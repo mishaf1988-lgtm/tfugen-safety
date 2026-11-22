@@ -84,8 +84,14 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
     // the file and the line come from the browser: cut and a number only, since the key is kept in fault_alert, which agents read (security review 21/11/2026)
     add('err:' + cut(t.m, 80) + '|' + cut(t.f || '', 60) + '|' + (Number(t.l) || 0), '\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d0\u05e6\u05dc \u05de\u05e9\u05ea\u05de\u05e9: ' + cut(t.m, 120) + (t.p ? ' (\u05de\u05e1\u05da ' + cut(t.p, 30) + ')' : ''), 'ERRDEV');
   });
+  // 22/11/2026 (dev-20261121190001-uduk): main-chat failed four times at 18:51-18:53 on a session without the connector, and
+  // measured fine at 18:59; the alert still reached Michael at 00:00 as "not fixed within 3 hours". A failure that the same agent
+  // followed with an ok:true line is a recovered fault, not an open one.
+  const lastOk = {};
+  (agentLog || []).forEach((r) => { if (r && r.ok === true) { const k = agentKey(r.agent), a = String(r.at || ''); if (a > (lastOk[k] || '')) lastOk[k] = a; } });
   (agentLog || []).forEach((r) => {
     if (!r || r.ok !== false || String(r.at || '') <= since) return;
+    if ((lastOk[agentKey(r.agent)] || '') > String(r.at || '')) return;
     // 02/11/2026 (dev-20261102064502-t3yo): the assistant failed on a zip, opened its own dev request for it, and that
     // request was closed 3 minutes later; the alert then opened a second request for the same line. The id it cites
     // (only the id, matched exactly) lets openFix leave out a failure that already has a request.
