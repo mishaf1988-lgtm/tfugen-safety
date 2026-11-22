@@ -67,6 +67,7 @@
 //              the WABA's subscribed apps, and with fire_probe the fire token (status only). subscribe: true
 //              adds the "messages" field and the WABA subscription when missing.
 //   client_errors (27/10/2026) {agent, since}: errors from users' browsers, grouped, no user name
+//   docs_add    (22/11/2026) one new docs expiry row Michael approved, see docsAddRow
 //   expiry_set  (11/10/2026, Michael in the questionnaire: "בצע: תיוק מייל + תוקף")
 //              update one row of docs / equip_inspections after a document was read:
 //              e, file_url (only under Michael's OneDrive), s (docs) or d (equipment). On equipment a new e moves s
@@ -909,6 +910,34 @@ export function equipAddRow(b, today, rand) {
     notes: ddmm(today) + ' Claude (' + b.agent + '): \u05e9\u05d5\u05e8\u05d4 \u05d7\u05d3\u05e9\u05d4. ' + why + '. \u05de\u05e1\u05de\u05da: ' + doc }; // "new row", "document"
   for (const [k, max] of [['loc', 80], ['vendor', 80], ['inspector', 60]]) if (b[k] !== undefined) { const v = short(b[k], max); if (/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/.test(v)) return { error: 'bad ' + k }; if (v) row[k] = v; }
   return { row };
+}
+// docs_add (22/11/2026, the assistant's dev request dev-20261122051453-9pdt: Michael approved "do it all" to track the
+// work visas of 7 new Thai workers, and no op could add a docs row; expiry_set only updates one). ONE new row of `docs`
+// for an expiry Michael approved: a name, an e from today up to 6 years, the document it was read from, and a link to a
+// file or folder under the safety folder (the handler checks it is there). Never a change or a delete; refused when a
+// row with the same name is already there. No owner (a name of a person) and no state but "valid". Pure: the row.
+export const DOCS_ADD_FIELDS = ['op', 'agent', 'why', 'doc', 'n', 'c', 'e', 'file_url', 'nt'];
+export const docsFilePrefix = () => SITE.odFileUrl + 'Documents/' + OD_ROOT;
+export function docsAddRow(b, today, rand) {
+  for (const k of Object.keys(b || {})) if (DOCS_ADD_FIELDS.indexOf(k) < 0) return { error: 'field not allowed: ' + k };
+  if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
+  if (['why', 'doc', 'n', 'c', 'e', 'file_url', 'nt'].some((k) => b[k] !== undefined && typeof b[k] !== 'string')) return { error: 'fields are text' };
+  const bad = /[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069<>]/;
+  const why = short(b.why, 300), doc = short(b.doc, 300);
+  if (why.length < 5 || doc.length < 5) return { error: 'why (Michael\'s approval) and doc (where the date was read) required' };
+  if (bad.test(why) || bad.test(doc)) return { error: 'why, doc: control or direction characters' }; // security review 22/11/2026
+  const n = short(b.n, 200);
+  if (n.length < 5 || bad.test(String(b.n))) return { error: 'n: what expires, 5-200 characters, one line' };
+  const c = b.c === undefined ? null : short(b.c, 60);
+  if (c !== null && bad.test(String(b.c))) return { error: 'bad c' };
+  const top = String(Number(today.slice(0, 4)) + 6) + today.slice(4);
+  if (!isDay(b.e) || b.e < today || b.e > top) return { error: 'e: YYYY-MM-DD, from today up to 6 years' };
+  const file = String(b.file_url || '');
+  if (!file.startsWith(docsFilePrefix()) || file.length > 600 || /[\t\r\n\f\v"'<>\x00-\x1f]/.test(file) || /\/\.\.?\//.test(file) || linkPathBad(file)) return { error: 'file_url: a file or folder under ' + docsFilePrefix() };
+  const extra = b.nt === undefined ? '' : short(b.nt, 300);
+  if (extra && bad.test(String(b.nt))) return { error: 'bad nt' };
+  const nt = (extra ? extra + ' | ' : '') + ddmm(today) + ' Claude (' + b.agent + '): \u05e9\u05d5\u05e8\u05d4 \u05d7\u05d3\u05e9\u05d4. ' + why + '. \u05de\u05e1\u05de\u05da: ' + doc; // "new row", "document"
+  return { row: { id: rand, n, c, o: null, e: b.e, s: DOC_STATES[0], file_url: file, nt } };
 }
 // inc_add (29/10/2026, Michael: "all of this has to be an automatic flow, I should not have to check it"; the accident of
 // 29/10 sat unrecorded in the app because no op wrote a row to `inc` and the dev request waited for the agents' pause to
@@ -4031,6 +4060,27 @@ async function routineDbHandle(context) {
       // 02/11/2026 (retro 28/10/2026 (b)): two requests at once both passed the check above; the unique index on the code
       // (equip_inspections_code_uq) refuses the second, answered like the check
       if (w.status === 409) return jsonResp({ ok: false, error: 'already in the table (same code, a request at the same moment)' }, 200, {});
+      if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status, detail: (await w.text()).slice(0, 300) }, 200, {});
+      const after = await w.json();
+      if (!Array.isArray(after) || after.length !== 1) return jsonResp({ ok: false, error: 'write touched ' + (Array.isArray(after) ? after.length : '?') + ' rows' }, 200, {});
+      return jsonResp({ ok: true, id: after[0].id, row: after[0] }, 200, {});
+    }
+    if (body.op === 'docs_add') {
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+      const rand = Array.from(crypto.getRandomValues(new Uint8Array(6))).map((x) => x.toString(16).padStart(2, '0')).join('');
+      const c = docsAddRow(body, today, rand);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      // the linked file or folder is really there (a link alone proves nothing)
+      const at = await accessToken(env);
+      const rel = decodeURIComponent(c.row.file_url.slice((SITE.odFileUrl + 'Documents/').length));
+      const fr = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + rel.split('/').filter(Boolean).map(encodeURIComponent).join('/') + '?select=id,file,folder', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) });
+      const fj = fr.ok ? await fr.json().catch(() => ({})) : {};
+      if (!fr.ok || !(fj.file || fj.folder)) return jsonResp({ ok: false, error: 'file_url: no such file or folder (' + fr.status + ')' }, 200, {});
+      const g = await fetch(url + '/rest/v1/docs?select=id,n,e&n=eq.' + encodeURIComponent(c.row.n), { headers: h, signal: tmo(SB_MS) });
+      if (!g.ok) return jsonResp({ ok: false, error: 'read ' + g.status }, 200, {});
+      const there = await g.json();
+      if (!Array.isArray(there) || there.length) return jsonResp({ ok: false, error: 'already there: ' + (Array.isArray(there) ? there.map((r) => r.id).join(',') : '?') + ' (expiry_set updates a row)' }, 200, {});
+      const w = await fetch(url + '/rest/v1/docs', { method: 'POST', headers: { ...h, Prefer: 'return=representation' }, body: JSON.stringify(c.row), signal: tmo(SB_MS) });
       if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status, detail: (await w.text()).slice(0, 300) }, 200, {});
       const after = await w.json();
       if (!Array.isArray(after) || after.length !== 1) return jsonResp({ ok: false, error: 'write touched ' + (Array.isArray(after) ? after.length : '?') + ' rows' }, 200, {});
