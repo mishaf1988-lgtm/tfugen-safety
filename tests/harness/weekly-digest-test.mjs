@@ -6,7 +6,7 @@
 // missing permission or a refusing Outlook is reported, not swallowed.
 import { planLateLine, planLate, pendingActionsLine } from './_build/weekly-digest.mjs';
 import { attachQuotes, quoteKey, contactOf, vendorOf, QUOTE_WAIT_DAYS, QUOTE_HREF_MAX } from './_build/weekly-digest.mjs';
-import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS, assistantLine, assistantQueue, agentsLine, AGENT_PERIODS, mailFilingLine, MF_STALE_DAYS, validityLine, VD_STALE_DAYS, statusBlock, eqiFailLine, markNoTask, NO_TASK_DAYS, heightOf, heightHtml, heightSubject } from './_build/weekly-digest.mjs';
+import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS, assistantLine, assistantQueue, agentsLine, AGENT_PERIODS, mailFilingLine, MF_STALE_DAYS, validityLine, VD_STALE_DAYS, statusBlock, eqiFailLine, markNoTask, NO_TASK_DAYS, heightOf, heightHtml, heightSubject, trHeight } from './_build/weekly-digest.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -544,6 +544,7 @@ const ROWS = [
     // 22/11/2026: the height approvals, the same rule as _trNoScore (the name holds "גובה").
     const TRR = [{ id: 'a', n: 'עבודה בגובה', w: 'ב', e: plus(-3) }, { id: 'b', n: 'עבודה בגובה', w: 'א', e: plus(10) }, { id: 'c', n: 'עבודה בגובה', w: 'ג', e: plus(31) }, { id: 'd', n: 'מלגזה', w: 'ד', e: plus(-1) }, { id: 'e', n: 'עבודה בגובה', w: 'ה', e: null }];
     const hl = heightOf(TRR, TODAY);
+    check('trHeight pairs: 3 real names that match, 3 that do not', ['עבודה בגובה', 'רענון עבודה בגובה', 'הדרכת עבודה בגובה - קבלן'].every((n) => trHeight({ n })) && !['מלגזה', 'עזרה ראשונה', 'אמוניה - הדרכה שנתית'].some((n) => trHeight({ n })) && !trHeight(null));
     check('heightOf: only height rows within 30 days, expired first, no date left out', hl.map((x) => x.w).join() === 'ב,א' && hl[0].days === -3, hl);
     const ex = expiringOf([['הדרכה', ['n'], ['w'], TRR, undefined, 'tr'], ['מסמך', ['n'], ['o'], [{ id: 'x', n: 'אישור גובה של הקבלן', e: plus(2) }], undefined, 'docs']], TODAY);
     check('expiringOf: a tr height row is out, another training stays, a document named height stays', ex.length === 2 && ex.some((x) => x.name === 'מלגזה') && ex.some((x) => x.label === 'מסמך'), ex);
