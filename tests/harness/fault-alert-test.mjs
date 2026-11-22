@@ -37,6 +37,15 @@ const NOW = '2026-10-31T14:50:00.000Z';
   const r = faultItems(prev, [], log, NOW);
   check('an agent that failed since the last tick, once, by its short name', r.items.length === 1 && r.items[0].key === 'agenti:map-lights', r.items); // internal since 12/11/2026, its own key
 }
+{ // 22/11/2026: a failure the same agent followed with a success is recovered; a failure after the success is still open
+  const prev = { at: '2026-11-21T18:00:00.000Z', sent: {} };
+  const rec = [{ agent: 'main-chat', at: '2026-11-21T18:51:37Z', ok: false, line: 'quota not measured' },
+    { agent: 'main-chat', at: '2026-11-21T18:59:41Z', ok: true, line: 'quota 15%' }];
+  check('a failure followed by a success of the same agent is not reported', faultItems(prev, [], rec, '2026-11-21T21:00:00.000Z').items.length === 0);
+  const open = rec.concat([{ agent: 'main-chat', at: '2026-11-21T19:30:00Z', ok: false, line: 'timeout' }]);
+  check('a failure after the success is still reported', faultItems(prev, [], open, '2026-11-21T21:00:00.000Z').items.length === 1);
+  check('a success of another agent does not clear it', faultItems(prev, [], [rec[0], { agent: 'wa-assistant', at: '2026-11-21T19:00:00Z', ok: true, line: 'x' }], '2026-11-21T21:00:00.000Z').items.length === 1);
+}
 { // 11/11/2026: the developer that was fired on a fault and failed is the same fault going on: quiet, no second alert
   const prev = { at: '2026-11-11T05:40:00.000Z', sent: { 'agent:staging-e2e': '2026-11-11' } };
   const log = [{ agent: 'dev-fire', at: '2026-11-11T05:51:01Z', ok: false, line: '11/11/2026: staging-e2e was not run again today' },
