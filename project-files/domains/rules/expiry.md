@@ -16,6 +16,7 @@
 - מחיקת שורה (`equip_inspections`, `docs`, `inc`) מהענן רק ב-`del_ask`, בקשה אחת פתוחה בכל פעם; החזרה מהגיבוי (200 אחרונות) ב-`undo_ask`, בלחיצה של מיכאל (`.claude/skills/tfugen-db/SKILL.md:89`)
 - תוקף חדש בציוד (`expiry_set` עם `e`) מעביר לבד את `s` בין "כשיר לעבודה" ל"פג תוקף"; ל"כשיר" רק עם `doc`; אותו `e` שוב מתקן שורה ישנה; "טעון אימות" לא זז (18/11/2026, `functions/api/routine-db.js` `expiryPatch`)
 - תיוק תסקיר עד הסוף בריצה אחת: `expiry_set` עם `report_number`, `inspector` ו-`doc`; ציוד בלי שורה = `equip_add` רק כש"כשיר לעבודה"; לא `dev_request` (`project-files/wa-topics/docs.md:15`)
+- תפוגה חדשה בלי שורה במסמכים: `docs_add` אחרי "בצע" של מיכאל, עם `doc` ו-`file_url` בתוך "ניהול בטיחות", בלי שמות אנשים ב-`n`; שם קיים = `expiry_set` (`project-files/wa-topics/docs.md:25`)
 - אחרי תיוק תסקיר חדש: באותה הודעה "להעביר את הקודמים ל'פג תוקף'?" עם "בצע"/"לא", ואז `od_expire` לכל קובץ בפקודה נפרדת (`project-files/wa-topics/docs.md:15`)
 - `od_expire` מעביר את הישן מ-`בתוקף` ל-`פג תוקף` שלידה, באותו שם; השרת מסרב אם החדש לא שם (`project-files/wa-topics/docs.md:15`)
 - נבדק ואין עדיין תסקיר: `expiry_set` עם `d` = יום הבדיקה ו-`doc`; 14 יום בשורה "מחכה לתסקיר" (`project-files/wa-topics/ops.md:14`)
