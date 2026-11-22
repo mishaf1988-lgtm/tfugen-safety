@@ -682,12 +682,13 @@ export function claimApply(map, b, nowIso) {
   // answer names every fresh claim of another session on one of them. It is a warning, not a refusal: two fixes in one
   // big file are often unrelated, so the caller reads the note and decides.
   const files = claimFiles(b.files);
+  const renewed = !!cur; // the same session renewing its own claim: the other session's own claim call already logged the overlap
   if (files.length) m[item].files = files;
   const overlap = files.length ? Object.keys(m).filter((k) => k !== item && m[k].session !== session && (m[k].files || []).some((f) => files.indexOf(f) >= 0))
     .map((k) => ({ item: k, session: m[k].session, at: m[k].at, note: m[k].note, files: m[k].files.filter((f) => files.indexOf(f) >= 0) })) : [];
   const keys = Object.keys(m).sort((a, c) => Date.parse(m[c].at) - Date.parse(m[a].at));
   keys.slice(CLAIM_MAX).forEach((k) => { delete m[k]; });
-  return { map: m, ans: Object.assign({ mine: true, item, claim: m[item] }, overlap.length ? { overlap } : {}) };
+  return { map: m, ans: Object.assign({ mine: true, item, claim: m[item] }, overlap.length ? { overlap } : {}, renewed ? { renewed: true } : {}) };
 }
 // Up to 8 repo paths, as git prints them; anything else is dropped (the list is data another agent reads).
 export function claimFiles(x) {
@@ -3953,7 +3954,7 @@ async function routineDbHandle(context) {
       }
       // 11/11/2026 (Michael: "do it: count the duplicates saved"): one log row per overlap warning, and one when a claim
       // is released as a duplicate ("dup": true, claim.sh --release-dup), so a month later the number is a query, not a guess.
-      const cEv = res.ans && res.ans.overlap ? 'claim_overlap' : (res.ans && res.ans.released && body.dup === true ? 'claim_dup' : null);
+      const cEv = res.ans && res.ans.overlap && !res.ans.renewed ? 'claim_overlap' : (res.ans && res.ans.released && body.dup === true ? 'claim_dup' : null);
       if (cEv) {
         await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
           body: JSON.stringify([{ id: 'cl' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: now, event_type: cEv, channel: 'claims',
