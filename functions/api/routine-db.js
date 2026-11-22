@@ -2568,7 +2568,10 @@ const WAIT_VERB = /(^|[\s(:,])(\u05de\u05d7\u05db\u05d4|\u05de\u05d7\u05db\u05d9
 // "0 waiting for an answer", "no ... waiting", "not waiting": not a wait
 const WAIT_NOT = /(?:^|\s)(?:0|\u05d0\u05d9\u05df|\u05dc\u05d0)\s+$/;
 const WAIT_DEV = /^-?\s*(?:\u05d4|\u05e9\u05d9\u05d7\u05ea )?(?:\u05de\u05e4\u05ea\u05d7|\u05e4\u05d9\u05ea\u05d5\u05d7|\u05d4\u05e4\u05d9\u05ea\u05d5\u05d7|\u05e6['\u05f3\u2019]\u05d0\u05d8|dev)/i;
-const WAIT_MICHAEL = /^-?\s*(?:\u05de\u05d9\u05db\u05d0\u05dc|\u05da(?=[\s:,.;)]|$))/;
+// "waiting for a decision" is Michael's (CLAUDE.md rule 5: a decision is his). 22/11/2026, a dev request from the quality checker:
+// the mail filer wrote "two 260355arc files wait for a decision on the version" in left_what on 18/11 and 19/11 with no
+// for_michael, so nobody was asked.
+const WAIT_MICHAEL = /^-?\s*(?:\u05de\u05d9\u05db\u05d0\u05dc|\u05da(?=[\s:,.;)]|$)|\u05d4\u05d7\u05dc\u05d8\u05d4)/;
 // Pure: the waits in one report line, [{to: 'dev' | 'michael' | 'other', what, key}], at most WAIT_MAX. what = the clause from
 // the verb to the end of its sentence (a decimal point as in 26.04 does not end it).
 export function waitParse(line) {
@@ -2584,6 +2587,18 @@ export function waitParse(line) {
     const to = WAIT_DEV.test(rest) ? 'dev' : WAIT_MICHAEL.test(rest) ? 'michael' : 'other';
     out.push({ to, what, key: to + ':' + what.replace(/\s+/g, ' ').slice(0, 60) });
   }
+  return out;
+}
+// Pure: the waits for Michael in left_what (22/11/2026, same request). left_what names the unit before the verb ("two
+// 260355arc files wait for a decision"), so here what = the whole clause up to ; or a sentence end, not from the verb on.
+export function leftWaits(leftWhat) {
+  const out = [];
+  String(leftWhat || '').split(/[;|]\s*|\.\s+/).forEach((seg) => {
+    const t = seg.trim();
+    if (!t || out.length >= WAIT_MAX || !waitParse(t).some((w) => w.to === 'michael')) return;
+    const what = t.slice(0, 160);
+    out.push({ to: 'michael', what, key: 'michael:' + what.replace(/\s+/g, ' ').slice(0, 60) });
+  });
   return out;
 }
 // The developer's own "waiting for the developer" is itself; the server's requesters open their own requests.
@@ -3828,7 +3843,7 @@ async function routineDbHandle(context) {
       // and a later run read them as "runs that fell midway". A report with nothing in it is refused.
       if (!e.line && !e.for_michael) return jsonResp({ ok: false, error: 'line required (fields: ok, line, learned, for_michael)' }, 400, {});
       // the handoff (11/11/2026, waitParse above): every wait in the line gets an owner
-      const waits = waitParse(e.line);
+      const waits = waitParse(e.line).concat(leftWaits(e.left_what)).slice(0, WAIT_MAX);
       if (waits.length) e.wait = waits.map((w) => ({ to: w.to, what: w.what, key: w.key }));
       const fm0 = e.for_michael;
       let devWaits = [];
