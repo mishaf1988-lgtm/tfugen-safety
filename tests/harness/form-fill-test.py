@@ -167,8 +167,8 @@ def main():
         m = load_tool()
         orig = m.write_docx
 
-        def lose_logo(src, dst, px):
-            orig(src, dst, px)
+        def lose_logo(src, dst, px, extra=None):
+            orig(src, dst, px, extra)
             tmpd = dst + '.x'
             strip_images(dst, tmpd)
             os.replace(tmpd, dst)
@@ -179,12 +179,12 @@ def main():
         j4 = json.loads(o.getvalue().strip().splitlines()[-1])
         check('verification breaks when the output loses the logo: exit 1, "logo lost", ok false', rc4 == 1 and 'logo lost' in e.getvalue() and j4.get('ok') is False and j4.get('images') == 0, (rc4, e.getvalue()))
 
-        def lose_form_no(src, dst, px):
+        def lose_form_no(src, dst, px, extra=None):
             for n, root in px.items():
                 if 'header' in n:
                     for t in root.iter(qn('w:t')):
                         t.text = (t.text or '').replace('08.01', '')
-            orig(src, dst, px)
+            orig(src, dst, px, extra)
         m.write_docx = lose_form_no
         o, e = io.StringIO(), io.StringIO()
         with redirect_stdout(o), redirect_stderr(e):
@@ -195,7 +195,10 @@ def main():
         nologo = os.path.join(tmp, 'nologo.docx')
         strip_images(tpl, nologo)
         rc6, js6, _ = run('--template', nologo, '--spec', sp, '--out', os.path.join(tmp, 'out', 'n2'))
-        check('a template with no image: images 0 in the summary (compared with the template, not a fixed number)', rc6 == 0 and js6.get('images') == 0, js6)
+        # 22/11/2026: nothing was lost, but the visual check (when poppler is here) still says the page has no logo
+        vis6 = shutil.which('soffice') and shutil.which('pdftotext')
+        logo6 = any('\u05dc\u05d5\u05d2\u05d5' in x for x in js6.get('errors') or [])
+        check('a template with no image: images 0 in the summary (compared with the template, not a fixed number); the visual check names the missing logo', js6.get('images') == 0 and (rc6 == 1 and logo6 if vis6 else rc6 == 0), js6)
         bad = dict(spec, cells=[{'label': 'no such label', 'value': 'x'}])
         with open(sp, 'w', encoding='utf-8') as f:
             json.dump(bad, f, ensure_ascii=False)

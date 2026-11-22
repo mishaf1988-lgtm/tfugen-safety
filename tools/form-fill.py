@@ -85,7 +85,7 @@ def parts_xml(docx):
     out = {}
     with zipfile.ZipFile(docx) as z:
         for n in z.namelist():
-            if re.match(r'word/(document|header\d*|footer\d*)\.xml$', n):
+            if re.match(r'word/(document|header\d*|footer\d*|styles)\.xml$', n):
                 out[n] = etree.fromstring(z.read(n))
     return out
 
@@ -163,7 +163,7 @@ def set_cell(tc, value):
     for ch in list(p0):
         if ch.tag != q('pPr'):
             p0.remove(ch)
-    lines = str(value).split('\n')
+    lines = fix_value(value).split('\n')
     for i, line in enumerate(lines):
         p = p0 if i == 0 else copy.deepcopy(p0)
         if i:
@@ -303,13 +303,260 @@ def replace_in(root, find, value):
 
 
 # ---- main --------------------------------------------------------------------------------------------------
-def write_docx(src, dst, px):
+def write_docx(src, dst, px, extra=None):
+    """extra: {part name: root} written as well (new parts, or rels / content types that replace the template's)."""
+    extra = extra or {}
+    ser = lambda r: etree.tostring(r, xml_declaration=True, encoding='UTF-8', standalone=True)
     with zipfile.ZipFile(src) as zin, zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED) as zout:
+        names = set()
         for item in zin.infolist():
             data = zin.read(item.filename)
             if item.filename in px:
-                data = etree.tostring(px[item.filename], xml_declaration=True, encoding='UTF-8', standalone=True)
+                data = ser(px[item.filename])
+            elif item.filename in extra:
+                data = ser(extra[item.filename])
             zout.writestr(item, data)
+            names.add(item.filename)
+        for n, r in extra.items():
+            if n not in names:
+                zout.writestr(n, ser(r))
+
+
+# ---- polish (22/11/2026, Michael on the training package sent to the department manager: page 1 said "page 2 of 2",
+# page 2 had no header or logo, a heading alone at the bottom of page 1, David / Times beside Arial, ":signature",
+# 22.11.2026). Every Word file this tool writes gets these; tools/pdf-visual-check.py then checks the PDF. -------------
+R_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+PKG = 'http://schemas.openxmlformats.org/package/2006/relationships'
+CT_NS = 'http://schemas.openxmlformats.org/package/2006/content-types'
+HDR_CT = 'application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml'
+HDR_REL = R_NS + '/header'
+STATIC_PAGE_OF = re.compile('^(.*?)' + PAGE_WORD + r'\s*(\d+)\s*\u05de\u05ea\u05d5\u05da\s*(\d+)(.*)$', re.S)
+HEADING = re.compile(r'^\s*\d{1,2}(\.\d{1,2})*\s*\.?\s+\S')
+DOT_DATE = re.compile(r'(?<![\d.])(\d{1,2})\.(\d{1,2})\.(\d{4})(?![\d.])')
+HEB = re.compile('[\u0590-\u05ff]')
+
+
+def fix_value(v):
+    """A value written into the form: dates DD/MM/YYYY, and a colon / dot typed at the start of Hebrew text moved to its end."""
+    out = []
+    for line in str(v).split('\n'):
+        line = DOT_DATE.sub(r'\1/\2/\3', line)
+        m = re.match(r'^\s*([:.,;])\s*(.+)$', line)
+        if m and HEB.search(m.group(2)):
+            line = m.group(2).rstrip() + m.group(1)
+        out.append(line)
+    return '\n'.join(out)
+
+
+def arial(px):
+    """Every font in the document, headers, footers and styles = Arial (David is not on an iPhone, Times looks foreign)."""
+    n = 0
+    for root in px.values():
+        for f in root.iter(q('rFonts')):
+            for k in ('ascii', 'hAnsi', 'cs', 'eastAsia'):
+                if f.get(q(k)) not in (None, 'Arial'):
+                    f.set(q(k), 'Arial')
+                    n += 1
+            for k in ('asciiTheme', 'hAnsiTheme', 'cstheme', 'eastAsiaTheme'):
+                if f.get(q(k)) is not None:
+                    del f.attrib[q(k)]
+                    f.set(q(k.replace('Theme', '').replace('cstheme', 'cs')), 'Arial')
+                    n += 1
+    return n
+
+
+def _run(rpr, text=None, fld=None):
+    if fld:
+        el = etree.Element(q('fldSimple'))
+        el.set(q('instr'), ' %s ' % fld)
+        r = etree.SubElement(el, q('r'))
+    else:
+        el = r = etree.Element(q('r'))
+    if rpr is not None:
+        r.append(copy.deepcopy(rpr))
+    t = etree.SubElement(r, q('t'))
+    t.text = text if text is not None else '1'
+    t.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+    return el
+
+
+def page_fields(px):
+    """A typed "page X of Y" becomes PAGE / NUMPAGES fields, so every page says its own number."""
+    n = 0
+    for root in px.values():
+        for p in root.iter(q('p')):
+            if p.find('.//' + q('fldSimple')) is not None or p.find('.//' + q('instrText')) is not None:
+                continue
+            full = ''.join(t.text or '' for t in p.iter(q('t')))
+            m = STATIC_PAGE_OF.match(full)
+            if not m:
+                continue
+            r0 = p.find('.//' + q('r'))
+            rpr = r0.find(q('rPr')) if r0 is not None else None
+            for ch in list(p):
+                if ch.tag != q('pPr'):
+                    p.remove(ch)
+            for el in (_run(rpr, m.group(1) + PAGE_WORD + ' '), _run(rpr, m.group(2), 'PAGE'), _run(rpr, ' \u05de\u05ea\u05d5\u05da '),
+                       _run(rpr, m.group(3), 'NUMPAGES'), _run(rpr, m.group(4)) if m.group(4) else None):
+                if el is not None:
+                    p.append(el)
+            n += 1
+    return n
+
+
+def keep_headings(doc):
+    """A numbered section heading in the body keeps with the paragraph after it (no heading alone at a page's foot)."""
+    n = 0
+    body = doc.find(q('body'))
+    for p in body.findall(q('p')):
+        t = ''.join(x.text or '' for x in p.iter(q('t'))).strip()
+        if not t or not HEADING.match(t) or len(t.split()) > 8:
+            continue
+        ppr = p.find(q('pPr'))
+        if ppr is None:
+            ppr = etree.Element(q('pPr'))
+            p.insert(0, ppr)
+        if ppr.find(q('keepNext')) is None:
+            k = etree.Element(q('keepNext'))
+            at = 1 if ppr.find(q('pStyle')) is not None else 0
+            ppr.insert(at, k)
+            n += 1
+    return n
+
+
+PPR_AFTER_BIDI = ('adjustRightInd', 'snapToGrid', 'spacing', 'ind', 'contextualSpacing', 'mirrorIndents', 'suppressOverlap', 'jc',
+                  'textDirection', 'textAlignment', 'textboxTightWrap', 'outlineLvl', 'divId', 'cnfStyle', 'rPr', 'sectPr', 'pPrChange')
+STRONG = re.compile('[A-Za-z\u0590-\u05ff]')
+
+
+def rtl_paras(px):
+    """A paragraph whose text starts in Hebrew but has no RTL direction shows its colon / dot on the wrong side
+    (":signature"); it gets w:bidi."""
+    n = 0
+    for name, root in px.items():
+        if name.endswith('styles.xml'):
+            continue
+        for p in root.iter(q('p')):
+            t = ''.join(x.text or '' for x in p.iter(q('t')))
+            m = STRONG.search(t)
+            if not m or not HEB.match(m.group(0)):
+                continue
+            ppr = p.find(q('pPr'))
+            if ppr is None:
+                ppr = etree.Element(q('pPr'))
+                p.insert(0, ppr)
+            if ppr.find(q('bidi')) is not None:
+                continue
+            b = etree.Element(q('bidi'))
+            after = next((ch for ch in ppr if isinstance(ch.tag, str) and ch.tag.split('}')[1] in PPR_AFTER_BIDI), None)
+            if after is not None:
+                after.addprevious(b)
+            else:
+                ppr.append(b)
+            n += 1
+    return n
+
+
+SECT_AFTER_TITLEPG = ('textDirection', 'bidi', 'rtlGutter', 'docGrid', 'printerSettings', 'sectPrChange')
+
+
+def repeat_header(src, px):
+    """The header table sits at the top of the body (31/10/2026: a phone preview does not show Word's header), so
+    pages 2.. had no header, no logo and no page number. Copy it into Word's header for pages 2.. (first page: an empty
+    header, the body copy is there), images and all. Returns the extra parts for write_docx, or None when not needed."""
+    doc = px['word/document.xml']
+    if any(not n.endswith(('document.xml', 'styles.xml')) and r.xpath('.//*[local-name()="blip"]') for n, r in px.items()):
+        return None
+    body = doc.find(q('body'))
+    tbl = next((ch for ch in body if ch.tag == q('tbl')), None)
+    if tbl is None or not tbl.xpath('.//*[local-name()="blip"]') or PAGE_WORD not in ''.join(tbl.itertext()):
+        return None
+    with zipfile.ZipFile(src) as z:
+        rels = etree.fromstring(z.read('word/_rels/document.xml.rels'))
+        ct = etree.fromstring(z.read('[Content_Types].xml'))
+    by_id = {r.get('Id'): r for r in rels}
+    hdr_rels = etree.Element('{%s}Relationships' % PKG, nsmap={None: PKG})
+    copy_t = copy.deepcopy(tbl)
+    for el in copy_t.iter():
+        for k, v in el.attrib.items():
+            if k.startswith('{%s}' % R_NS) and v in by_id and hdr_rels.find('*[@Id="%s"]' % v) is None:
+                hdr_rels.append(copy.deepcopy(by_id[v]))
+    nsmap = {'w': W, 'r': R_NS}
+
+    def hdr(content):
+        h = etree.Element(q('hdr'), nsmap=nsmap)
+        for c in content:
+            h.append(c)
+        h.append(etree.Element(q('p')))
+        return h
+    ids = [r.get('Id') for r in rels]
+    rid = lambda base: next(base + str(k) for k in range(1, 999) if base + str(k) not in ids)
+    rid_d, rid_f = rid('rIdFfH'), rid('rIdFfF')
+    for i_, t_ in ((rid_d, 'header-ff2.xml'), (rid_f, 'header-ff1.xml')):
+        r = etree.SubElement(rels, '{%s}Relationship' % PKG)
+        r.set('Id', i_); r.set('Type', HDR_REL); r.set('Target', t_)
+    for part in ('/word/header-ff2.xml', '/word/header-ff1.xml'):
+        o = etree.SubElement(ct, '{%s}Override' % CT_NS)
+        o.set('PartName', part); o.set('ContentType', HDR_CT)
+    for sp in doc.iter(q('sectPr')):
+        for hr in sp.findall(q('headerReference')):
+            if hr.get(q('type')) in ('default', 'first', None):
+                sp.remove(hr)
+        for typ, i_ in (('first', rid_f), ('default', rid_d)):
+            hr = etree.Element(q('headerReference'))
+            hr.set(q('type'), typ); hr.set('{%s}id' % R_NS, i_)
+            sp.insert(0, hr)
+        fd = next((f for f in sp.findall(q('footerReference')) if f.get(q('type')) in ('default', None)), None)
+        if fd is not None and not any(f.get(q('type')) == 'first' for f in sp.findall(q('footerReference'))):
+            ff = copy.deepcopy(fd); ff.set(q('type'), 'first'); fd.addnext(ff)
+        if sp.find(q('titlePg')) is None:
+            tp = etree.Element(q('titlePg'))
+            after = next((ch for ch in sp if ch.tag.split('}')[1] in SECT_AFTER_TITLEPG), None)
+            if after is not None:
+                after.addprevious(tp)
+            else:
+                sp.append(tp)
+    return {'word/header-ff2.xml': hdr([copy_t]), 'word/header-ff1.xml': hdr([]),
+            'word/_rels/header-ff2.xml.rels': hdr_rels, 'word/_rels/document.xml.rels': rels, '[Content_Types].xml': ct}
+
+
+def polish(src, px, log):
+    """All the fixes; returns the extra parts for write_docx."""
+    extra = repeat_header(src, px)
+    if extra:
+        log.append('header repeated on every page')
+    # the header copies first, so their page text becomes fields too
+    parts = dict(px)
+    for n, r in (extra or {}).items():
+        if n.startswith('word/header-ff'):
+            parts[n] = r
+    for name, n in (('fonts to Arial', arial(parts)), ('page fields', page_fields(parts)), ('RTL paragraphs', rtl_paras(parts)), ('headings kept with next', keep_headings(px['word/document.xml']))):
+        if n:
+            log.append('%s x%d' % (name, n))
+    return extra
+
+
+def visual_check(pdf, expect):
+    """tools/pdf-visual-check.py on the PDF; returns the problems (Hebrew lines), [] when clean or not checkable here."""
+    tool = os.path.join(HERE, 'pdf-visual-check.py')
+    if not (shutil.which('pdftotext') and os.path.exists(tool)):
+        return []
+    ef = None
+    try:
+        args = [sys.executable, tool, pdf, '--json']
+        if expect:
+            fd, ef = tempfile.mkstemp(suffix='.txt')
+            with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                f.write('\n'.join(expect))
+            args += ['--expect', ef]
+        r = subprocess.run(args, capture_output=True, text=True, timeout=300)
+        js = json.loads(r.stdout.strip().splitlines()[-1]) if r.stdout.strip() else {}
+        return [x['msg'] for x in js.get('problems') or []] if isinstance(js.get('problems'), list) else []
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return []
+    finally:
+        if ef:
+            os.unlink(ef)
 
 
 def main(argv=None):
@@ -341,10 +588,11 @@ def main(argv=None):
             if not n:
                 raise Fail('replace_text: "%s" not found' % r['find'])
             log.append('replace "%s" x%d' % (r['find'], n))
+        extra = polish(acc, px, log) if spec.get('polish', True) else None
         out = os.path.abspath(a.out)
         os.makedirs(os.path.dirname(out), exist_ok=True)
         docx = out + '.docx'
-        write_docx(acc, docx, px)
+        write_docx(acc, docx, px, extra)
         summary['docx'] = docx
         summary['filled'] = len(log)
         after = marks(docx)
@@ -369,7 +617,7 @@ def main(argv=None):
                     h = max(MIN_H, h - 20)
                     for tr in extended:
                         set_height(tr, h)
-                    write_docx(acc, docx, px)
+                    write_docx(acc, docx, px, extra)
                     pdf = run_soffice(docx, 'pdf', pdfdir)
                     pages = pdf_pages(pdf)
                 summary['row_height'] = h
@@ -382,6 +630,12 @@ def main(argv=None):
                 errs.append('PDF lost images / \u05ea\u05de\u05d5\u05e0\u05d4 \u05e0\u05e2\u05dc\u05de\u05d4 \u05d1-PDF: %d < template %d' % (oi, ti))
             if spec.get('fit_one_page') and tpages and pages and pages > tpages:
                 errs.append('does not fit / \u05dc\u05d0 \u05e0\u05db\u05e0\u05e1: %d pages > template %d (rows already at %d twips)' % (pages, tpages, MIN_H))
+            if spec.get('visual', True):
+                expect = [fix_value(c.get('value', '')) for c in (spec.get('cells') or []) + (spec.get('table_cells') or [])]
+                expect += [fix_value(v) for r in rs for row in (r.get('data') or []) for v in row]
+                vis = visual_check(out + '.pdf', [x for x in expect if str(x).strip()])
+                summary['visual'] = vis or 'ok'
+                errs += ['visual / \u05d1\u05d3\u05d9\u05e7\u05d4 \u05d5\u05d9\u05d6\u05d5\u05d0\u05dc\u05d9\u05ea: ' + v for v in vis]
             summary['pdf_note'] = 'LibreOffice PDF for checking; the PDF to file: od_put_pdf the .docx, then op od_pdf (Microsoft)'
         else:
             summary['pdf_note'] = 'no soffice here: the PDF must be made by the server, od_put_pdf the .docx, then op od_pdf'
