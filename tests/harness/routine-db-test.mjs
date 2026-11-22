@@ -579,6 +579,14 @@ const callIn = async (body) => {
     check('wait: a wait for Michael or the developer is never unowned', waitUnowned([W('m', ago(3 * WAIT_UNOWNED_MS), waitParse('מחכה למיכאל: X')[0]), W('m', ago(60e3), waitParse('מחכה למיכאל: X')[0])], now).length === 0);
     const r1 = (await call({ op: 'agent_report', agent: 'cowork-check', ok: true, line: '2 נחסמו. מחכה למיכאל: t-2026-10-11-pump-reports-mail נחסמה' })).json;
     check('agent_report: a wait for Michael with no for_michael gets one from the line', r1.ok && /^מחכה למיכאל: t-2026-10-11/.test(r1.entry.for_michael || '') && r1.entry.wait[0].to === 'michael', r1);
+    // 22/11/2026 (dev request from the quality checker): "waiting for a decision" in left_what reached nobody on 18/11 and 19/11
+    const { leftWaits } = await import('./_build/routine-db.mjs');
+    check('wait: "waiting for a decision" = michael (a decision is his)', to('2 קבצים ממתינים להחלטה על גרסה') === 'michael' && to('מחכה להחלטה של מיכאל') === 'michael');
+    const lw = leftWaits('שני קבצי 260355arc מדידות אדריכליות ממתינים להחלטה על גרסה; רשימת SAP11 בלי תיקייה');
+    check('left_what: the decision clause is taken whole, with the files it names; a clause with no wait is not', lw.length === 1 && lw[0].what === 'שני קבצי 260355arc מדידות אדריכליות ממתינים להחלטה על גרסה', lw);
+    check('left_what: a wait for a supplier or for routine-coa is not a question to Michael', leftWaits('קובץ COA ל-routine-coa; ממתין לדוח ניילונים מבקשת זרימה 2').length === 0 && leftWaits('').length === 0);
+    const rlw = (await call({ op: 'agent_report', agent: 'routine-mail-filing', ok: true, done: 4, left: 7, line: '19/11/2026: 11 קבצים בנכנס.', left_what: '2 קובצי 260355arc ממתינים להחלטה על גרסה; 2 מיילים עם mail_request לתיוק בריצה הבאה' })).json;
+    check('agent_report: a decision waiting in left_what with no for_michael becomes for_michael (the 19/11 report)', rlw.ok && rlw.entry.for_michael === '2 קובצי 260355arc ממתינים להחלטה על גרסה' && rlw.entry.wait.some((w) => w.to === 'michael'), rlw);
     const r2 = (await call({ op: 'agent_report', agent: 'cowork-check', ok: true, line: '2 נחסמו. מחכה למיכאל: אחר', for_michael: 'כתבתי בעצמי' })).json;
     check('agent_report: a for_michael the agent wrote is kept as it is', r2.ok && r2.entry.for_michael === 'כתבתי בעצמי', r2);
     const { asksApiCredit: aac } = await import('./_build/routine-db.mjs');
