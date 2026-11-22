@@ -14,7 +14,7 @@ import { fileURLToPath } from 'url';
 import { SITE } from './_build/_site.mjs';
 import { changeMailHtml } from './_build/codes.mjs';
 import { mailHtml as watchdogHtml } from './_build/_watchdog.mjs';
-import { digestOf, digestHtml } from './_build/weekly-digest.mjs';
+import { digestOf, digestHtml, heightHtml } from './_build/weekly-digest.mjs';
 import { buildReport, buildStatus, SIGNATURE } from './_build/hazard-report.mjs';
 import { missMailHtml } from './_build/talk.mjs';
 import { failMailHtml } from './_build/_wa.mjs';
@@ -46,7 +46,7 @@ const textOf = (html) => String(html).replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;
 console.log('\n1. every mail call site is known');
 // file -> number of call sites of sendMailTo( / sendMail( (definitions excluded). A new site anywhere = a failure.
 const KNOWN_SITES = {
-  'api/hazard-report.js': 2, 'api/weekly-digest.js': 1, 'api/works.js': 1, 'api/mail-inbox.js': 1, 'api/codes.js': 1,
+  'api/hazard-report.js': 2, 'api/weekly-digest.js': 2, 'api/works.js': 1, 'api/mail-inbox.js': 1, 'api/codes.js': 1,
   'api/trustee-gate.js': 1, 'api/talk.js': 5, 'api/ctr-link.js': 1, '_ctrok.js': 1, 'api/trustee-notify.js': 1, 'api/close-hazard.js': 1, '_watchdog.js': 1,
   '_wa.js': 1, // 07/11/2026: a WhatsApp message to Michael that Meta reported failed, to his own mailbox (failMailHtml, rendered below)
 };
@@ -81,6 +81,7 @@ const RENDER = [
   ['trustee-gate.lockMailHtml', 'Michael only', gateLockHtml('tru', IL), false],
   ['_watchdog.mailHtml', 'Michael only', watchdogHtml({ a: { title: 'A', detail: 'd' } }, ['a'], [], SITE.appUrl), false],
   ['weekly-digest.digestHtml', 'Michael only', digestHtml(digest, '2026-11-06', {}), false],
+  ['weekly-digest.heightHtml', 'Michael only', heightHtml([{ w: 'w1', e: '2026-11-01', days: -5 }, { w: 'w2', e: '2026-11-20', days: 14 }], '2026-11-06'), false],
   ['hazard-report.buildReport', 'dept managers', buildReport('x', hrows, rcpt, {}, '2026-11-06', null, null).html, true],
   ['hazard-report.buildStatus', 'dept managers', buildStatus('x', hrows, rcpt, '', null, '2026-11-06', null, null).html, true],
   ['talk.missMailHtml', 'dept managers', missMailHtml({ id: 't', title: 'ttl', kind: 'weekly', d: '2026-11-05' }, 'dept', [{ n: 'name' }], 'https://x/y', []), true],

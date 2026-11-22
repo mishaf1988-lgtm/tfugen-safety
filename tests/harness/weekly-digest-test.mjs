@@ -6,7 +6,7 @@
 // missing permission or a refusing Outlook is reported, not swallowed.
 import { planLateLine, planLate, pendingActionsLine } from './_build/weekly-digest.mjs';
 import { attachQuotes, quoteKey, contactOf, vendorOf, QUOTE_WAIT_DAYS, QUOTE_HREF_MAX } from './_build/weekly-digest.mjs';
-import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS, assistantLine, assistantQueue, agentsLine, AGENT_PERIODS, mailFilingLine, MF_STALE_DAYS, validityLine, VD_STALE_DAYS, statusBlock, eqiFailLine, markNoTask, NO_TASK_DAYS } from './_build/weekly-digest.mjs';
+import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS, assistantLine, assistantQueue, agentsLine, AGENT_PERIODS, mailFilingLine, MF_STALE_DAYS, validityLine, VD_STALE_DAYS, statusBlock, eqiFailLine, markNoTask, NO_TASK_DAYS, heightOf, heightHtml, heightSubject, trHeight } from './_build/weekly-digest.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -286,9 +286,13 @@ const ROWS = [
   check('Outlook refuses: the error with its status, recorded', !c.j.ok && /outlook 500/.test(c.j.error) && rec && /outlook 500/.test(rec.error), c.j);
 
   const now = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-  c = await call({ exp: { docs: [{ id: 'd1', n: 'סוד Azure של OneDrive', o: 'מיכאל', e: plus(10, now) }], tr: [{ id: 't1', n: 'עבודה בגובה', w: 'דוד', e: plus(-2, now) }] } }, { op: 'send', force: true }, 'nsec');
+  c = await call({ exp: { docs: [{ id: 'd1', n: 'סוד Azure של OneDrive', o: 'מיכאל', e: plus(10, now) }], tr: [{ id: 't1', n: 'מלגזה', w: 'דוד', e: plus(-2, now) }, { id: 't2', n: 'עבודה בגובה', w: 'יוסי', e: plus(-5, now) }] } }, { op: 'send', force: true }, 'nsec');
   const mx = c.w.mails[0] && c.w.mails[0].message.body.content;
-  check('the endpoint reads all seven tables up to today + 30, and the mail carries the rows', (c.w.expUrls || []).length === 7 && c.w.expUrls.every((u) => u.includes('&e=lte.' + plus(30, now))) && /סוד Azure של OneDrive/.test(mx) && /עבודה בגובה/.test(mx) && c.j.counts.expiring === 2 && c.j.counts.expired === 1, [c.j.counts, (c.w.expUrls || []).length]);
+  check('the endpoint reads all seven tables up to today + 30, and the mail carries the rows', (c.w.expUrls || []).length === 7 && c.w.expUrls.every((u) => u.includes('&e=lte.' + plus(30, now))) && /סוד Azure של OneDrive/.test(mx) && /מלגזה/.test(mx) && c.j.counts.expiring === 2 && c.j.counts.expired === 1, [c.j.counts, (c.w.expUrls || []).length]);
+  // 22/11/2026 (Michael: work at height is managed separately, a mail of its own): the height row is not in the weekly mail, it is the second mail.
+  const mh = c.w.mails[1] && c.w.mails[1].message;
+  check('height: not in the weekly mail, a second mail to the same mailbox with the worker and the date', !/גובה|יוסי/.test(mx) && c.w.mails.length === 2 && c.j.heightSent === true && c.j.counts.height === 1 && mh.toRecipients[0].emailAddress.address === 'sviva@tapugan.co.il' && /אישורי עבודה בגובה/.test(mh.subject) && /1 פגו, 0 יפוגו/.test(mh.subject) && /יוסי/.test(mh.body.content) && mh.body.content.includes(fdAgo(5).replace(/\./g, '/')) && !/מלגזה/.test(mh.body.content), [c.w.mails.length, mh && mh.subject]);
+  check('height: no height row = one mail only', (await call({ exp: { tr: [{ id: 't1', n: 'מלגזה', w: 'דוד', e: plus(-2, now) }] } }, { op: 'send', force: true }, 'nsec')).w.mails.length === 1);
   const eqOld = { equip_inspections: [{ id: 'e67', n: 'מלגזה ישנה', e: plus(-95, now) }, { id: 'e37', n: 'במה ישנה', e: plus(-95, now) }] };
   c = await call({ exp: eqOld, links: [{ source_table: 'equip_inspections', source_id: 'e37', status: 'בטיפול' }] }, { op: 'send', force: true }, 'nsec');
   const mnt = c.w.mails[0] && c.w.mails[0].message.body.content;
@@ -535,6 +539,18 @@ const ROWS = [
     check('pending actions: none = no line', pendingActionsLine([hz[2]], [tr[1]]) === null);
     const html = digestHtml(digestOf([], '2026-10-20'), '2026-10-20', { pendAct: pa });
     check('pending actions: the line is in the mail', html.includes('\u05e0-16'));
+  }
+  {
+    // 22/11/2026: the height approvals, the same rule as _trNoScore (the name holds "גובה").
+    const TRR = [{ id: 'a', n: 'עבודה בגובה', w: 'ב', e: plus(-3) }, { id: 'b', n: 'עבודה בגובה', w: 'א', e: plus(10) }, { id: 'c', n: 'עבודה בגובה', w: 'ג', e: plus(31) }, { id: 'd', n: 'מלגזה', w: 'ד', e: plus(-1) }, { id: 'e', n: 'עבודה בגובה', w: 'ה', e: null }];
+    const hl = heightOf(TRR, TODAY);
+    check('trHeight pairs: 3 real names that match, 3 that do not', ['עבודה בגובה', 'רענון עבודה בגובה', 'הדרכת עבודה בגובה - קבלן'].every((n) => trHeight({ n })) && !['מלגזה', 'עזרה ראשונה', 'אמוניה - הדרכה שנתית'].some((n) => trHeight({ n })) && !trHeight(null));
+    check('heightOf: only height rows within 30 days, expired first, no date left out', hl.map((x) => x.w).join() === 'ב,א' && hl[0].days === -3, hl);
+    const ex = expiringOf([['הדרכה', ['n'], ['w'], TRR, undefined, 'tr'], ['מסמך', ['n'], ['o'], [{ id: 'x', n: 'אישור גובה של הקבלן', e: plus(2) }], undefined, 'docs']], TODAY);
+    check('expiringOf: a tr height row is out, another training stays, a document named height stays', ex.length === 2 && ex.some((x) => x.name === 'מלגזה') && ex.some((x) => x.label === 'מסמך'), ex);
+    const hh = heightHtml(hl, TODAY);
+    check('heightHtml: both parts, the dates as DD/MM/YYYY, keyboard characters only', /פג תוקף \(1\)/.test(hh) && /יפוג ב-30 יום \(1\)/.test(hh) && hh.includes('01/10/2026') && hh.includes('14/10/2026') && !/[—–־«»“”…•→←]/.test(hh), hh.slice(0, 300));
+    check('heightSubject: the counts', /1 פגו, 1 יפוגו ב-30 יום/.test(heightSubject(hl, TODAY)));
   }
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
 })();
