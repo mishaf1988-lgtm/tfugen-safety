@@ -83,7 +83,7 @@ export function heightHtml(list, today) {
   const tbl = (items) => '<table style="border-collapse:collapse;width:100%;margin-bottom:8px"><tr>' + ['\u05e2\u05d5\u05d1\u05d3', '\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3', '\u05de\u05e6\u05d1'].map((t) => '<th style="' + cell + ';background:#1f3864;color:#fff">' + esc(t) + '</th>').join('') + '</tr>'
     + items.map((x) => '<tr style="background:' + (x.days < 0 ? '#fde8e8' : '#fff') + '"><td style="' + cell + '">' + esc(x.w || '\u05d1\u05dc\u05d9 \u05e9\u05dd') + '</td><td style="' + cell + ';white-space:nowrap">' + fd(x.e) + '</td><td style="' + cell + '">' + esc(expWhen(x)) + '</td></tr>').join('') + '</table>';
   const h3 = (t, n) => '<h3 style="margin:14px 0 6px;color:#1f3864">' + esc(t) + ' (' + n + ')</h3>';
-  return '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">'
+  return '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">'
     + '<h2 style="color:#1f3864">\u05d0\u05d9\u05e9\u05d5\u05e8\u05d9 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4: \u05e4\u05d2 \u05d0\u05d5 \u05d9\u05e4\u05d5\u05d2 \u05d1-' + EXP_DAYS + ' \u05d9\u05d5\u05dd</h2>'
     + '<p>\u05e0\u05db\u05d5\u05df \u05dc-' + fd(today) + '. \u05e0\u05e9\u05dc\u05d7 \u05d1\u05e0\u05e4\u05e8\u05d3 \u05de\u05d4\u05e1\u05d9\u05db\u05d5\u05dd \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9, \u05dc\u05d1\u05e7\u05e9\u05ea\u05da (22/11/2026). \u05d4\u05ea\u05d5\u05e7\u05e3 \u05dc\u05e4\u05d9 \u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4.</p>'
     + (ex.length ? h3('\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3', ex.length) + tbl(ex) : '')
