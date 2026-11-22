@@ -1793,6 +1793,7 @@ const callIn = async (body) => {
       const lw1 = leftWaits('x'.repeat(52) + ' 0501234567 ממתין להחלטה');
       check('leftWaits: a number cut in the middle by the 60-char key is scrubbed before the cut (retro 22/11/2026)', lw1.length === 1 && !/\d{5}/.test(lw1[0].key + lw1[0].what), lw1);
       check('leftWaits: a clause that opens with no/0/not is not a wait', leftWaits('אין קבצים ממתינים להחלטה').length === 0 && leftWaits('0 קבצים ממתינים להחלטה').length === 0 && leftWaits('2 קבצים ממתינים להחלטה').length === 1);
+      check('leftWaits: 3 real lines that must be a wait and 3 that must not (retro 22/11/2026)', ['2 קובצי 260355arc ממתינים להחלטה על גרסה', 'הצעה אחת ממתינה להחלטה', 'שני מיילים ממתינים להחלטה'].every((x) => leftWaits(x).length === 1) && ['אין קבצים ממתינים להחלטה', '0 מיילים ממתינים להחלטה', 'לא נשאר דבר שממתין להחלטה'].every((x) => leftWaits(x).length === 0));
       const arw = agentArchive({ agent: 'x', wait: [{ to: 'michael', what: 'ספק 0501234567 מחכה', key: 'michael:ספק 0501234567' }] });
       check('agentArchive: wait[].what and key from left_what are scrubbed too (retro 22/11/2026)', arw.wait[0].what.indexOf('0501234567') < 0 && arw.wait[0].key.indexOf('0501234567') < 0, arw);
       check('agentEntry: line and learned are scrubbed before they are stored; for_michael and left_what stay as written', e.line === S[0].out && e.learned === S[1].out && e.for_michael === S[0].in && e.left_what === 'file 123456782.pdf', e); }
