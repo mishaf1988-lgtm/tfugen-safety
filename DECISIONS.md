@@ -4930,3 +4930,9 @@ Meta סיווגה את `tfugen_assistant_update` כ-MARKETING (0.0353 דולר �
 - **נבחר אחר: הכל** (ההמלצה הייתה רק בטיחות ומבחן).
 - **איפה:** `routine-mail-filing.md` צעד 2, `wa-topics/docs.md` 0ב8, `domains/rules/training.md` ו-`expiry.md`.
 - עוזר: `wa-topics/docs.md` 0ב8 עודכן באותו PR.
+
+## 22/11/2026: המפקח מרענן את origin/main לפני שבודק "commits לא ממוזגים"
+- **הבעיה:** מיד אחרי מיזוג squash ה-`origin/main` המקומי היה ישן, והמפקח חסם פעמיים באותו יום כאילו הענף לא ממוזג.
+- **תיקון:** `supervisor.py` מריץ `git fetch origin main` לפני ההשוואה (כשל ב-fetch לא משנה דבר). נוספה שורה ל-`tfugen-sessions` על אישור מראש למחיקת טריגרים ישנים.
+- **נבחר: מומלץ** (מיכאל אישר את ההצעות ב-22/11/2026).
+- עוזר: לא נוגע.
