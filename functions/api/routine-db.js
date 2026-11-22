@@ -290,6 +290,8 @@ export function scrubPii(t) {
 export function agentArchive(e) {
   const a = Object.assign({}, e);
   ['for_michael', 'left_what'].forEach((k) => { if (a[k]) a[k] = scrubPii(a[k]); });
+  // wait[].what can come from left_what (22/11/2026 retro), which is not scrubbed in the entry
+  if (Array.isArray(a.wait)) a.wait = a.wait.map((w) => Object.assign({}, w, { what: scrubPii(w.what), key: scrubPii(w.key) }));
   return a;
 }
 // One run report, cleaned: a short agent name and three short texts.
@@ -2594,8 +2596,10 @@ export function waitParse(line) {
 export function leftWaits(leftWhat) {
   const out = [];
   String(leftWhat || '').split(/[;|]\s*|\.\s+/).forEach((seg) => {
-    const t = seg.trim();
-    if (!t || out.length >= WAIT_MAX || !waitParse(t).some((w) => w.to === 'michael')) return;
+    // scrubbed before the cut to 160/60 (a number cut in the middle is not caught afterwards); a clause that opens with
+    // "no" / 0 / "not" ("no files wait for a decision") is not a wait (retro challenger 22/11/2026)
+    const t = scrubPii(seg.trim());
+    if (!t || /^(?:0|\u05d0\u05d9\u05df|\u05dc\u05d0)(?:\s|$)/.test(t) || out.length >= WAIT_MAX || !waitParse(t).some((w) => w.to === 'michael')) return;
     const what = t.slice(0, 160);
     out.push({ to: 'michael', what, key: 'michael:' + what.replace(/\s+/g, ' ').slice(0, 60) });
   });
