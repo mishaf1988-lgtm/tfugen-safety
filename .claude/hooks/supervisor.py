@@ -226,6 +226,12 @@ def verdict(cwd, text, tools, waiting, recent=None, turn=None):
     rc, dirty = git(cwd, "status", "--porcelain", "--untracked-files=no")
     if rc == 0 and dirty:
         return "המפקח: יש שינויים שלא נכנסו ל-commit:\n" + dirty[:400] + "\nלסיים: בדיקות, commit, PR, מיזוג. או להסביר למיכאל למה עוצרים."
+    # 22/11/2026: right after a squash merge the local origin/main was stale, so the branch still looked unmerged
+    # (a false block twice in one day). Refresh it before comparing; a failed fetch changes nothing.
+    try:
+        subprocess.run(["git", "fetch", "-q", "origin", "main"], cwd=cwd, capture_output=True, timeout=20)
+    except Exception:
+        pass
     rc, ahead = git(cwd, "rev-list", "--count", "origin/main..HEAD")
     if rc == 0 and ahead not in ("", "0") and not squashed_into_main(cwd):
         return ("המפקח: %s commits על ה-branch עוד לא ב-main (Cloudflare מפרסם רק את main). "
