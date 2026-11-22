@@ -951,6 +951,10 @@ const callIn = async (body) => {
       check('claim files: another session on the same file is named in overlap, with its note and only the shared file', r1.ans.mine && !r1.ans.overlap && r2.ans.mine === true && r2.ans.overlap.length === 1 && r2.ans.overlap[0].item === 'retro-valve' && r2.ans.overlap[0].note === 'second valve resets' && r2.ans.overlap[0].files.join() === 'functions/api/routine-db.js', r2.ans);
       const r3 = claimApply(r2.map, { item: 'other-thing', session: A, files: ['functions/api/routine-db.js'] }, t);
       check('claim files: my own other claim on the file is not an overlap, the other session one is', r3.ans.overlap.length === 1 && r3.ans.overlap[0].item === 'second-gate-fix', r3.ans);
+      { // 22/11/2026: renewing my own claim must not count the same overlap again (24 rows in 4 hours)
+        const r4 = claimApply(r2.map, { item: r2.ans.item, session: B, files: r2.ans.claim.files, note: r2.ans.claim.note }, t);
+        check('claim renewal: the same session renewing its claim still sees the overlap but is marked renewed (no new log row)', r4.ans.overlap && r4.ans.renewed === true && !r2.ans.renewed, r4.ans);
+      }
       check('claim files: no files = no overlap field, and a claim with no files is never named', !claimApply(r2.map, { item: 'plain', session: A }, t).ans.overlap && !claimApply({ p: { session: B, at: t, note: 'n' } }, { item: 'qq-item', session: A, files: ['a.js'] }, t).ans.overlap);
       check('claim files: an expired claim on the file does not warn', !claimApply({ old1: { session: B, at: new Date(Date.now() - (CLAIM_HOURS + 1) * 3600e3).toISOString(), files: ['a.js'] } }, { item: 'qq-item', session: A, files: ['a.js'] }, t).ans.overlap);
       check('claimFiles: a list or a comma string, ./ dropped, 8 at most; a path with .., a space or a quote is dropped', claimFiles('./a.js, b/c.md').join() === 'a.js,b/c.md' && claimFiles(['../x', 'a b', 'q"r', 'ok.js', 'ok.js']).join() === 'ok.js' && claimFiles(Array.from({ length: 12 }, (_, i) => 'f' + i + '.js')).length === 8 && claimFiles(null).length === 0);
