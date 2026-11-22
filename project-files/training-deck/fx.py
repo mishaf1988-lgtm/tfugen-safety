@@ -21,7 +21,7 @@ GRADS = {"hdr_band": grad("3A84B5", "1F608C"), "hdr_bg": grad("FFFFFF", "DCE8F2"
 DEFAULT_TRANS = '<p:transition spd="med"><p:wipe dir="l"/></p:transition>'
 
 
-def effect(ctn, spid, first, zoom):
+def effect(ctn, spid, first, zoom, delay=0):
     node = "clickEffect" if first else "withEffect"
     a, b = next(ctn), next(ctn)
     if zoom:  # הגדלה מהמרכז (Zoom)
@@ -38,7 +38,7 @@ def effect(ctn, spid, first, zoom):
         pid = 10
     eid = next(ctn)
     return (f'<p:par><p:cTn id="{eid}" presetID="{pid}" presetClass="entr" presetSubtype="0" fill="hold" grpId="0" nodeType="{node}">'
-            f'<p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst>'
+            f'<p:stCondLst><p:cond delay="{delay}"/></p:stCondLst><p:childTnLst>'
             f'<p:set><p:cBhvr><p:cTn id="{a}" dur="1" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst></p:cTn>'
             f'<p:tgtEl><p:spTgt spid="{spid}"/></p:tgtEl><p:attrNameLst><p:attrName>style.visibility</p:attrName></p:attrNameLst></p:cBhvr>'
             f'<p:to><p:strVal val="visible"/></p:to></p:set>{anim}</p:childTnLst></p:cTn></p:par>')
@@ -57,7 +57,7 @@ def fly(ctn, spid, d, delay):
                 f'<p:tavLst><p:tav tm="0"><p:val><p:strVal val="{f}"/></p:val></p:tav><p:tav tm="100000"><p:val><p:strVal val="{t2}"/></p:val></p:tav></p:tavLst></p:anim>')
     return (f'<p:par><p:cTn id="{o}" fill="hold"><p:stCondLst><p:cond delay="{delay}"/></p:stCondLst><p:childTnLst>'
             f'<p:par><p:cTn id="{e}" presetID="2" presetClass="entr" presetSubtype="{sub}" fill="hold" grpId="0" nodeType="afterEffect">'
-            f'<p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst>'
+            f'<p:stCondLst><p:cond delay="{delay}"/></p:stCondLst><p:childTnLst>'
             f'<p:set><p:cBhvr><p:cTn id="{a}" dur="1" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst></p:cTn>'
             f'<p:tgtEl><p:spTgt spid="{spid}"/></p:tgtEl><p:attrNameLst><p:attrName>style.visibility</p:attrName></p:attrNameLst></p:cBhvr>'
             f'<p:to><p:strVal val="visible"/></p:to></p:set>'
@@ -74,7 +74,30 @@ def play(ctn, spid):
             f'</p:cmd></p:childTnLst></p:cTn></p:par>')
 
 
-def timing(groups, zoom_ids, autos=(), vids=()):
+def move(ctn, spid, pts, dur, node):
+    """מסלול תנועה (animMotion). הנקודות יחסיות למיקום המקורי של הצורה, בשברים של רוחב וגובה השקף."""
+    a, b = next(ctn), next(ctn)
+    path = "M " + " L ".join(f"{x} {y}" for x, y in pts) + " E"
+    return (f'<p:par><p:cTn id="{a}" presetID="0" presetClass="path" presetSubtype="0" accel="30000" decel="30000" fill="hold" nodeType="{node}">'
+            f'<p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst>'
+            f'<p:animMotion origin="layout" path="{path}" pathEditMode="relative" ptsTypes="{"A" * len(pts)}">'
+            f'<p:cBhvr><p:cTn id="{b}" dur="{dur}" fill="hold"/><p:tgtEl><p:spTgt spid="{spid}"/></p:tgtEl>'
+            f'<p:attrNameLst><p:attrName>ppt_x</p:attrName><p:attrName>ppt_y</p:attrName></p:attrNameLst></p:cBhvr>'
+            f'<p:rCtr x="0" y="0"/></p:animMotion></p:childTnLst></p:cTn></p:par>')
+
+
+def leave(ctn, spid, delay):
+    """יציאה בדעיכה (fade out), עם השהיה."""
+    a, b, c = next(ctn), next(ctn), next(ctn)
+    return (f'<p:par><p:cTn id="{a}" presetID="10" presetClass="exit" presetSubtype="0" fill="hold" grpId="1" nodeType="withEffect">'
+            f'<p:stCondLst><p:cond delay="{delay}"/></p:stCondLst><p:childTnLst>'
+            f'<p:animEffect transition="out" filter="fade"><p:cBhvr><p:cTn id="{b}" dur="300"/><p:tgtEl><p:spTgt spid="{spid}"/></p:tgtEl></p:cBhvr></p:animEffect>'
+            f'<p:set><p:cBhvr><p:cTn id="{c}" dur="1" fill="hold"><p:stCondLst><p:cond delay="299"/></p:stCondLst></p:cTn>'
+            f'<p:tgtEl><p:spTgt spid="{spid}"/></p:tgtEl><p:attrNameLst><p:attrName>style.visibility</p:attrName></p:attrNameLst></p:cBhvr>'
+            f'<p:to><p:strVal val="hidden"/></p:to></p:set></p:childTnLst></p:cTn></p:par>')
+
+
+def timing(groups, zoom_ids, autos=(), vids=(), ops=None):
     counter = iter(range(3, 10000))
     clicks = []
     if autos:
@@ -82,10 +105,19 @@ def timing(groups, zoom_ids, autos=(), vids=()):
         inner = "".join(fly(counter, sp, d, i * 450) for i, (sp, d) in enumerate(autos))
         clicks.append(f'<p:par><p:cTn id="{outer}" fill="hold"><p:stCondLst><p:cond delay="indefinite"/>'
                       f'<p:cond evt="onBegin" delay="0"><p:tn val="2"/></p:cond></p:stCondLst><p:childTnLst>{inner}</p:childTnLst></p:cTn></p:par>')
-    for k in sorted(groups):
+    ops = ops or {}
+    for k in sorted(set(groups) | set(ops)):
         outer, inner = next(counter), next(counter)
-        effs = "".join(effect(counter, sp, i == 0, sp in zoom_ids) for i, sp in enumerate(groups[k]))
-        effs += "".join(play(counter, sp) for sp in groups[k] if sp in vids)
+        effs = "".join(effect(counter, sp, i == 0, sp in zoom_ids) for i, sp in enumerate(groups.get(k, [])))
+        for j, op in enumerate(ops.get(k, [])):
+            first = not effs
+            if op["t"] == "move":
+                effs += move(counter, op["sp"], op["pts"], op["dur"], "clickEffect" if first else "withEffect")
+            elif op["t"] == "in":
+                effs += effect(counter, op["sp"], first, op.get("zoom", False), op.get("delay", 0))
+            else:
+                effs += leave(counter, op["sp"], op.get("delay", 0))
+        effs += "".join(play(counter, sp) for sp in groups.get(k, []) if sp in vids)
         clicks.append(f'<p:par><p:cTn id="{outer}" fill="hold"><p:stCondLst><p:cond delay="indefinite"/></p:stCondLst><p:childTnLst>'
                       f'<p:par><p:cTn id="{inner}" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst>'
                       f'{effs}</p:childTnLst></p:cTn></p:par></p:childTnLst></p:cTn></p:par>')
@@ -101,6 +133,12 @@ def timing(groups, zoom_ids, autos=(), vids=()):
             '<p:nextCondLst><p:cond evt="onNext" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:nextCondLst></p:seq>'
             f'{media}</p:childTnLst></p:cTn></p:par></p:tnLst><p:bldLst>{bld}</p:bldLst></p:timing>')
 
+
+import json, os
+MOTION = {}
+_mj = os.path.join(os.path.dirname(os.path.abspath(src)), "motion.json")
+if os.path.exists(_mj):
+    MOTION = json.load(open(_mj, encoding="utf-8"))
 
 zin = zipfile.ZipFile(src)
 zout = zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED)
@@ -133,7 +171,14 @@ for item in zin.infolist():
                 vids.add(spid)
         autos = sorted(((int(k), sp, d) for sp, k, d in re.findall(r'<p:cNvPr id="(\d+)" name="auto(\d+)([br])_', x)))
         autos = [(sp, d) for _, sp, d in autos]
-        add = TRANS.get(n, DEFAULT_TRANS) + (timing(groups, zoom, autos, vids) if (groups or autos) else "")
+        ops = {}
+        if str(n) in MOTION:
+            names = {nm: sp for sp, nm in re.findall(r'<p:cNvPr id="(\d+)" name="([^"]*)"', x)}
+            for k, lst in MOTION[str(n)].items():
+                if k == "hidden":
+                    continue
+                ops[int(k)] = [dict(op, sp=names[op["name"]]) for op in lst]
+        add = TRANS.get(n, DEFAULT_TRANS) + (timing(groups, zoom, autos, vids, ops) if (groups or autos or ops) else "")
         # פס כותרת ורקע מדורגים (GRADS)
         for nm, g in GRADS.items():
             x = re.sub(r'(name="%s".*?)<a:solidFill><a:srgbClr val="[0-9A-F]{6}"/></a:solidFill>' % nm,
