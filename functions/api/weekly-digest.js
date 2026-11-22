@@ -62,6 +62,34 @@ export const EXP_SRC = [
   ['hearing_tests', '\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4', ['emp_name'], ['dept', 'role']],
   ['med', '\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e8\u05e4\u05d5\u05d0\u05d9\u05ea', ['n'], ['w']],
 ];
+// 22/11/2026 (Michael, WhatsApp: "take all the work at height validity out of the weekly summary, and in general,
+// work at height is managed separately; send me a separate mail on it"): a tr row whose name holds "\u05d2\u05d5\u05d1\u05d4" (the
+// same rule as _trNoScore in index.html, DECISIONS 17/11/2026) is not in the expiry block of the weekly mail.
+// It goes in a second mail of its own, to the same mailbox, in the same run (heightOf, heightHtml).
+export const TR_HEIGHT = /\u05d2\u05d5\u05d1\u05d4/;
+export const trHeight = (r) => !!(r && TR_HEIGHT.test(String(r.n || '')));
+// Pure. tr rows -> the height approvals that expired or expire within EXP_DAYS, the earliest first: {w, e, days}.
+export function heightOf(rows, today) {
+  return (rows || []).filter(trHeight).map((r) => ({ w: String(r.w || '').trim(), e: ymd(r.e) }))
+    .filter((x) => x.e).map((x) => Object.assign(x, { days: dayDiff(today, x.e) }))
+    .filter((x) => x.days <= EXP_DAYS).sort((a, b) => a.days - b.days || a.w.localeCompare(b.w));
+}
+export function heightSubject(list, today) {
+  const ex = list.filter((x) => x.days < 0).length;
+  return SITE.name + ': \u05d0\u05d9\u05e9\u05d5\u05e8\u05d9 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 ' + fd(today) + ' - ' + ex + ' \u05e4\u05d2\u05d5, ' + (list.length - ex) + ' \u05d9\u05e4\u05d5\u05d2\u05d5 \u05d1-' + EXP_DAYS + ' \u05d9\u05d5\u05dd';
+}
+export function heightHtml(list, today) {
+  const ex = list.filter((x) => x.days < 0), soon = list.filter((x) => x.days >= 0);
+  const tbl = (items) => '<table style="border-collapse:collapse;width:100%;margin-bottom:8px"><tr>' + ['\u05e2\u05d5\u05d1\u05d3', '\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3', '\u05de\u05e6\u05d1'].map((t) => '<th style="' + cell + ';background:#1f3864;color:#fff">' + esc(t) + '</th>').join('') + '</tr>'
+    + items.map((x) => '<tr style="background:' + (x.days < 0 ? '#fde8e8' : '#fff') + '"><td style="' + cell + '">' + esc(x.w || '\u05d1\u05dc\u05d9 \u05e9\u05dd') + '</td><td style="' + cell + ';white-space:nowrap">' + fd(x.e) + '</td><td style="' + cell + '">' + esc(expWhen(x)) + '</td></tr>').join('') + '</table>';
+  const h3 = (t, n) => '<h3 style="margin:14px 0 6px;color:#1f3864">' + esc(t) + ' (' + n + ')</h3>';
+  return '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">'
+    + '<h2 style="color:#1f3864">\u05d0\u05d9\u05e9\u05d5\u05e8\u05d9 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4: \u05e4\u05d2 \u05d0\u05d5 \u05d9\u05e4\u05d5\u05d2 \u05d1-' + EXP_DAYS + ' \u05d9\u05d5\u05dd</h2>'
+    + '<p>\u05e0\u05db\u05d5\u05df \u05dc-' + fd(today) + '. \u05e0\u05e9\u05dc\u05d7 \u05d1\u05e0\u05e4\u05e8\u05d3 \u05de\u05d4\u05e1\u05d9\u05db\u05d5\u05dd \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9, \u05dc\u05d1\u05e7\u05e9\u05ea\u05da (22/11/2026). \u05d4\u05ea\u05d5\u05e7\u05e3 \u05dc\u05e4\u05d9 \u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4.</p>'
+    + (ex.length ? h3('\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3', ex.length) + tbl(ex) : '')
+    + (soon.length ? h3('\u05d9\u05e4\u05d5\u05d2 \u05d1-' + EXP_DAYS + ' \u05d9\u05d5\u05dd', soon.length) + tbl(soon) : '')
+    + '</div>';
+}
 // The recurring duties, as the expiry page computes them: [label, table, select, rows -> [{name, owner, e}]].
 export const FREQ_M = 12;
 export function plusMonths(d, n) {
@@ -315,6 +343,7 @@ export function expiringOf(lists, today) {
     // 01/11/2026 (Michael: a disqualified item read "expired" and asked a quote for its inspection), as
     // _expOff/_eqiFail in index.html: "\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9" is not listed; a failed inspection is "not fit, to replace".
     if (EXP_OFF.test(String((r && r.s) || ''))) return;
+    if (src === 'tr' && trHeight(r)) return; // 22/11/2026: the height approvals go in a mail of their own
     const fail = src === 'equip_inspections' && EQI_FAIL.test(String((r && r.s) || ''));
     const e = ymd(r && r.e); if (!e) return;
     const days = dayDiff(today, e); if (days > EXP_DAYS) return;
@@ -592,7 +621,8 @@ export async function expiries(env, today) {
   const qs = await stateGet(env, [QUOTE_KEY, VENDOR_KEY]).catch(() => ({}));
   const pj = (k, d) => { try { return JSON.parse((qs[k] && qs[k].value) || 'null') || d; } catch (e) { return d; } };
   const expiring = markNoTask(attachQuotes(expiringOf(lists.concat(recurringOf(sets)), today), pj(VENDOR_KEY, []), pj(QUOTE_KEY, {}), today), links);
-  return { expiring, expFail: failed, never: neverOf(sets), eqiFail: eqf };
+  const trList = lists.find((x) => x[5] === 'tr');
+  return { expiring, expFail: failed, never: neverOf(sets), eqiFail: eqf, height: heightOf(trList ? trList[3] : [], today), heightFail: !trList };
 }
 
 // BACKLOG 12.9 (09/10/2026): an item that expired over NO_TASK_DAYS ago and has no open task
@@ -952,7 +982,7 @@ async function build(env) {
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
   const meta = { plan: pl, meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, openTyped: tk ? openTypedLines(tk.talks, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), mf: mailFilingLine(v('mail_filing'), Date.now()), vd: validityLine(v('validity_run'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()), pendAct: pendingActionsLine(hazards, reports), pwAge: passwordAgeLines(st, env, Date.now()), stateFail: stFail };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
-  return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
+  return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today), height: exp.height || [] };
 }
 
 export async function onRequest(context) {
@@ -971,8 +1001,8 @@ export async function onRequest(context) {
   const op = bySecret ? 'send' : body.op === 'send' ? 'send' : 'preview';
   try {
     const b = await build(env);
-    const counts = { open: b.d.open, overdue: b.d.overdueCount, soon: b.d.soon.length, noDue: b.d.noDue.length, trustee: b.d.trustee.length, emptyRegs: b.meta.emptyRegs.length, never: (b.meta.never || []).length, expiring: b.meta.expiring.length, expired: b.meta.expiring.filter((x) => x.days < 0).length };
-    if (op !== 'send') return jsonResp({ ok: true, today: b.today, counts, digest: b.d, meta: b.meta, subject: b.subject, html: b.html, last: b.last }, 200, cors);
+    const counts = { open: b.d.open, overdue: b.d.overdueCount, soon: b.d.soon.length, noDue: b.d.noDue.length, trustee: b.d.trustee.length, emptyRegs: b.meta.emptyRegs.length, never: (b.meta.never || []).length, expiring: b.meta.expiring.length, expired: b.meta.expiring.filter((x) => x.days < 0).length, height: b.height.length };
+    if (op !== 'send') return jsonResp({ ok: true, today: b.today, counts, digest: b.d, meta: b.meta, subject: b.subject, html: b.html, last: b.last, height: b.height, heightHtml: b.height.length ? heightHtml(b.height, b.today) : '' }, 200, cors);
     const lastAt = b.last && b.last.ok && b.last.at ? Date.parse(b.last.at) : 0;
     if (lastAt && Date.now() - lastAt < REPEAT_MS && body.force !== true) return jsonResp({ ok: true, skipped: 'sent ' + b.last.at, counts }, 200, cors);
     const rec = { at: new Date().toISOString(), ok: false, to: null, counts, error: '' };
@@ -986,8 +1016,15 @@ export async function onRequest(context) {
     if (!to) return fail('no address');
     try { await sendMail(token, to, b.subject, b.html); } catch (e) { return fail(String((e && e.message) || e).substring(0, 200)); }
     rec.ok = true; rec.to = to;
+    // 22/11/2026: the second mail, the height approvals, only when there is one to show. Its failure is
+    // recorded in the same state row (heightError) and does not turn the weekly mail into a failure.
+    let heightSent = false;
+    if (b.height.length) {
+      try { await sendMail(token, to, heightSubject(b.height, b.today), heightHtml(b.height, b.today)); heightSent = true; rec.height = b.height.length; }
+      catch (e) { rec.heightError = String((e && e.message) || e).substring(0, 200); }
+    }
     await stateSet(env, { [STATE_KEY]: JSON.stringify(rec) }).catch(() => {});
-    return jsonResp({ ok: true, sent: true, to, counts }, 200, cors);
+    return jsonResp({ ok: true, sent: true, to, counts, heightSent }, 200, cors);
   } catch (e) {
     return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 200, cors);
   }
