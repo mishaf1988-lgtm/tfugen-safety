@@ -447,6 +447,11 @@ def rtl_paras(px):
                 p.insert(0, ppr)
             if ppr.find(q('bidi')) is not None:
                 continue
+            # an LTR paragraph aligned right that becomes RTL: Word shows jc="right" of an RTL paragraph on the LEFT
+            # (lesson 237; 23/11/2026, weekly training on 08.01 sent left to right). RTL start = right, so no jc.
+            for jc in ppr.findall(q('jc')):
+                if jc.get(q('val')) in ('right', 'left'):
+                    ppr.remove(jc)
             b = etree.Element(q('bidi'))
             after = next((ch for ch in ppr if isinstance(ch.tag, str) and ch.tag.split('}')[1] in PPR_AFTER_BIDI), None)
             if after is not None:
@@ -518,6 +523,43 @@ def repeat_header(src, px):
                 sp.append(tp)
     return {'word/header-ff2.xml': hdr([copy_t]), 'word/header-ff1.xml': hdr([]),
             'word/_rels/header-ff2.xml.rels': hdr_rels, 'word/_rels/document.xml.rels': rels, '[Content_Types].xml': ct}
+
+
+def bidi_jc_right(px):
+    """Paragraphs that are RTL (w:bidi) and also jc="right": Word draws them on the LEFT (23/11/2026)."""
+    n = 0
+    for name, root in px.items():
+        if name.endswith('styles.xml'):
+            continue
+        for ppr in root.iter(q('pPr')):
+            if ppr.find(q('bidi')) is not None and any(j.get(q('val')) == 'right' for j in ppr.findall(q('jc'))):
+                n += 1
+    return n
+
+
+def head_logo(px):
+    """An image in the form header: in a Word header part, or in the first table of the body (the header table copied
+    to the top of the body, 31/10/2026). Footer images do not count (23/11/2026: only the footer logos were left)."""
+    for n, r in px.items():
+        if re.search(r'word/header[^/]*\.xml$', n) and r.xpath('.//*[local-name()="blip" or local-name()="imagedata"]'):
+            return True
+    doc = px.get('word/document.xml')
+    body = doc.find(q('body')) if doc is not None else None
+    if body is None:
+        return False
+    first = next((ch for ch in body if ch.tag in (q('tbl'), q('p')) and (ch.tag == q('tbl') or ''.join(ch.itertext()).strip())), None)
+    return first is not None and first.tag == q('tbl') and bool(first.xpath('.//*[local-name()="blip" or local-name()="imagedata"]'))
+
+
+def lint(before_px, after_px):
+    """Word-side checks a LibreOffice preview hides: the header logo kept, no new RTL paragraph with jc=right."""
+    errs = []
+    if head_logo(before_px) and not head_logo(after_px):
+        errs.append('header logo lost / \u05d4\u05dc\u05d5\u05d2\u05d5 \u05d1\u05db\u05d5\u05ea\u05e8\u05ea \u05d4\u05e2\u05dc\u05d9\u05d5\u05e0\u05d4 \u05d7\u05e1\u05e8')
+    b, a = bidi_jc_right(before_px), bidi_jc_right(after_px)
+    if a > b:
+        errs.append('%d RTL paragraphs with jc=right (Word shows them on the left) / \u05e4\u05e1\u05e7\u05d0\u05d5\u05ea \u05e9\u05d9\u05e6\u05d0\u05d5 \u05de\u05e9\u05de\u05d0\u05dc' % (a - b))
+    return errs
 
 
 def polish(src, px, log):
@@ -603,6 +645,7 @@ def main(argv=None):
             errs.append('logo lost / \u05d4\u05dc\u05d5\u05d2\u05d5 \u05d0\u05d1\u05d3: images %d < template %d' % (after['images'], before['images']))
         if before['form_no'] and before['form_no'] not in after['text']:
             errs.append('form number %s missing / \u05de\u05e1\u05e4\u05e8 \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d7\u05e1\u05e8' % before['form_no'])
+        errs += lint(parts_xml(acc), parts_xml(docx))
         if before['page_word'] and PAGE_WORD not in after['text']:
             errs.append('page header text missing / \u05d4\u05db\u05d5\u05ea\u05e8\u05ea "\u05e2\u05de\u05d5\u05d3" \u05d7\u05e1\u05e8\u05d4')
         if soffice():

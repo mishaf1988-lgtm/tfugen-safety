@@ -11,6 +11,12 @@ Needs poppler (pdfinfo, pdftotext, pdfimages, pdffonts, pdftoppm); the render ch
 cut text) read pdftoppm's grey PGM directly, no Pillow. Every page is checked:
   page_of   "page X of Y" on every page, X <= Y, page 1 of each document is 1, X follows the page before
   logo      at least one image on every page
+  logo_top  (when image positions are known) an image in the top header band of every page, not only logos at the
+            bottom (23/11/2026: the weekly training on form 08.01 went out with the Tapugan logo column gone from the
+            header table; only the footer logos were left, and "an image on the page" passed)
+  rtl       Hebrew paragraphs, headings and numbering laid out left to right: short Hebrew lines flush with the left
+            edge and not the right, or "1." on the left of Hebrew lines (23/11/2026: bidi together with jc=right,
+            which Word shows on the LEFT; LibreOffice previews it right)
   font      only Arial (LiberationSans / Arimo = Arial in LibreOffice) or symbol fonts
   orphan    a numbered heading that is the last line of a page that is not the last page of its document
   empty     a page that is not the first of its document with 3 lines of body text or fewer
@@ -35,6 +41,8 @@ HEADING = re.compile(r'^\d{1,2}(\.\d{1,2})*\s*\.?\s+\S')
 DOT_DATE = re.compile(r'(?<![\d.])\d{1,2}\.\d{1,2}\.(\d{4}|\d{2})(?![\d.])')
 OK_FONT = re.compile(r'arial|liberationsans|liberation sans|arimo|symbol|wingdings|zapf|dingbat|opensymbol', re.I)
 HEADER_BAND = 0.16  # top of the page: the form header
+LOGO_TOP_BAND = 0.2  # a header logo starts within the top fifth of the page
+NUM_TOKEN = re.compile(r'^\(?\d{1,2}[.)]$|^[.(]\d{1,2}\)?$')
 FOOTER_BAND = 0.07
 
 
@@ -121,6 +129,8 @@ def analyze(pages, allow_fonts=(), expect=()):
                 bad(i, 'page_of', 'כתוב "מתוך %d" אבל העמוד הבא לא עמוד %d של אותו מסמך' % (b, a + 1))
         if not p.get('images'):
             bad(i, 'logo', 'אין לוגו (אין תמונה בעמוד)')
+        elif p.get('image_boxes') is not None and not any(b[1] < LOGO_TOP_BAND * (p['h'] or 1) for b in p['image_boxes']):
+            bad(i, 'logo_top', '\u05d0\u05d9\u05df \u05dc\u05d5\u05d2\u05d5 \u05d1\u05db\u05d5\u05ea\u05e8\u05ea \u05d4\u05e2\u05dc\u05d9\u05d5\u05e0\u05d4 (\u05e8\u05e7 \u05dc\u05de\u05d8\u05d4), \u05dc\u05e7\u05d7\u05ea \u05d0\u05ea \u05d8\u05d1\u05dc\u05ea \u05d4\u05db\u05d5\u05ea\u05e8\u05ea \u05de\u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05de\u05e7\u05d5\u05e8\u05d9')
         odd = sorted({f for f in p.get('fonts') or [] if not OK_FONT.search(f) and not any(a in f.lower() for a in allow)})
         if odd:
             bad(i, 'font', 'גופן לא Arial: ' + ', '.join(re.sub(r'^[A-Z]{6}\+', '', f) for f in odd))
@@ -132,6 +142,9 @@ def analyze(pages, allow_fonts=(), expect=()):
             t = last['text'].strip()
             if HEADING.match(t) and len(t.split()) <= 8:
                 bad(i, 'orphan', 'כותרת "%s" לבד בסוף העמוד, התוכן שלה בעמוד הבא' % t[:40])
+        rtl_msg = rtl_problem(body, p.get('table_box'))
+        if rtl_msg:
+            bad(i, 'rtl', rtl_msg)
         if not doc_first[i] and len(body) <= 3:
             bad(i, 'empty', 'כמעט ריק (%d שורות), לאחד עם העמוד הקודם' % len(body))
         words = [w for ln in p['lines'] for w in ln['words']]
@@ -200,6 +213,35 @@ def analyze(pages, allow_fonts=(), expect=()):
     return probs
 
 
+def rtl_problem(body, table_box=None):
+    """A Hebrew page laid out left to right: short Hebrew lines that end flush left and not right, or a number "1."
+    on the left of a Hebrew line. Lines inside a ruled table are skipped (cells align to their own edges). Returns a
+    Hebrew message or None."""
+    heb = [ln for ln in body if HEB.search(ln['text']) and not (table_box and table_box[1] - 2 < ln['y0'] < table_box[3] + 2)]
+    if len(heb) < 3:
+        return None
+    col_l = min(ln['x0'] for ln in heb)
+    col_r = max(ln['x1'] for ln in heb)
+    width = col_r - col_l
+    short = [ln for ln in heb if ln['x1'] - ln['x0'] < 0.75 * width]
+    left = sum(1 for ln in short if ln['x0'] - col_l < 4)
+    right = sum(1 for ln in short if col_r - ln['x1'] < 4)
+    if left >= 3 and left > 2 * right:
+        return '%d \u05e9\u05d5\u05e8\u05d5\u05ea \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea \u05de\u05d9\u05d5\u05e9\u05e8\u05d5\u05ea \u05dc\u05e9\u05de\u05d0\u05dc \u05d5\u05dc\u05d0 \u05dc\u05d9\u05de\u05d9\u05df (\u05db\u05d9\u05d5\u05d5\u05df \u05de\u05e9\u05de\u05d0\u05dc \u05dc\u05d9\u05de\u05d9\u05df; \u05d1-Word: bidi \u05d1\u05dc\u05d9 jc=right)' % left
+    num_l = num_r = 0
+    for ln in heb:
+        ws = sorted(ln['words'], key=lambda w: w['x0'])
+        if len(ws) < 2:
+            continue
+        if NUM_TOKEN.match(ws[0]['t']) and HEB.search(ws[-1]['t']):
+            num_l += 1
+        elif NUM_TOKEN.match(ws[-1]['t']):
+            num_r += 1
+    if num_l >= 2 and num_l > num_r:
+        return '\u05d4\u05de\u05e1\u05e4\u05d5\u05e8 \u05de\u05e9\u05de\u05d0\u05dc \u05dc\u05e9\u05d5\u05e8\u05d4 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea (%d \u05e9\u05d5\u05e8\u05d5\u05ea): \u05db\u05d9\u05d5\u05d5\u05df \u05de\u05e9\u05de\u05d0\u05dc \u05dc\u05d9\u05de\u05d9\u05df' % num_l
+    return None
+
+
 def norm_word(w):
     return re.sub(r'[\s.,:;()"\'\-]', '', w)
 
@@ -231,6 +273,7 @@ def extract(pdf, render=True):
         c = row.split()
         if c and c[0].isdigit() and 0 < int(c[0]) <= len(pages):
             pages[int(c[0]) - 1]['images'] += 1
+    image_boxes(pdf, pages)
     for i, p in enumerate(pages):
         out = run(['pdffonts', '-f', str(i + 1), '-l', str(i + 1), pdf]).stdout.splitlines()[2:]
         p['fonts'] = [ln.split()[0] for ln in out if ln.strip()]
@@ -245,6 +288,34 @@ def extract(pdf, render=True):
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
     return pages, None
+
+
+def image_boxes(pdf, pages):
+    """Where each image sits (points), from pdftohtml -xml; leaves the pages without 'image_boxes' when it cannot
+    tell (no pdftohtml), so the logo_top check is skipped rather than guessed."""
+    if not shutil.which('pdftohtml'):
+        return
+    tmp = tempfile.mkdtemp(prefix='pvc-img-')
+    try:
+        run(['pdftohtml', '-xml', '-q', '-nodrm', pdf, os.path.join(tmp, 'x')])
+        path = os.path.join(tmp, 'x.xml')
+        if not os.path.exists(path):
+            return
+        with open(path, encoding='utf-8', errors='replace') as f:
+            xml = re.sub(r'<!DOCTYPE[^>]*>', '', f.read())
+        root = ET.fromstring(xml)
+        for pg in root.iter('page'):
+            k = int(pg.get('number', 0)) - 1
+            if not 0 <= k < len(pages):
+                continue
+            sc = pages[k]['h'] / (float(pg.get('height') or 0) or pages[k]['h'] or 1)
+            pages[k]['image_boxes'] = [(float(im.get('left')) * sc, float(im.get('top')) * sc,
+                                        (float(im.get('left')) + float(im.get('width'))) * sc,
+                                        (float(im.get('top')) + float(im.get('height'))) * sc) for im in pg.iter('image')]
+    except (ET.ParseError, OSError, ValueError, TypeError):
+        return
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 class Gray:
