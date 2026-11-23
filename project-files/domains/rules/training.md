@@ -36,6 +36,7 @@
 - צילומי מדריכים עם שמות עובדים בדויים ובלי מילים שאינן במקלדת (`project-files/guide-training/README.md:16`)
 - "אמרתם, עשינו" בהדרכה: רק מ-close_note או action, בלי יום, מספר ליקוי או מקום מדויק (`tools/platform/agents/talk-field.md:20`)
 - אירועי השבוע בטיוטה: רק מה שכתוב באירוע, בלי לנחש סיבה, עד 2 אירועים למחלקה (`tools/platform/agents/talk-field.md:19`)
+- הדרכה שבועית מעוצבת (Word/PDF): פסקאות ב-`tools/rtl_ooxml.py` או `tools/form-fill.py`, PDF ב-`od_pdf` ולא LibreOffice, ו-`tools/pdf-visual-check.py` (בדיקת `dir`) לפני שמירה (23/11/2026, מיכאל: "הכיוון לא טוב"; `project-files/wa-topics/docs.md` 0ב2א)
 
 ## כל ההחלטות של הענף
 `grep -P "\ttraining$" project-files/domains/decisions-map.tsv` (מספר שורה ב-DECISIONS.md וכותרת).

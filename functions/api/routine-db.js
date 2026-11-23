@@ -2568,6 +2568,18 @@ export function autoLinkRow(op, b, dayIL) {
 // did not run", while it still had not run). The closer now says which: "fixed": true = fixed, false = not fixed (and the note
 // says who it waits for), and with no "fixed" the message makes no claim. Pure.
 export const DEV_RESENT_NOTE = '\u05d4\u05d1\u05e7\u05e9\u05d4 \u05e0\u05e9\u05dc\u05d7\u05d4 \u05e9\u05d5\u05d1 \u05dc\u05de\u05e4\u05ea\u05d7, \u05db\u05d9 \u05dc\u05d0 \u05d8\u05d5\u05e4\u05dc\u05d4 \u05ea\u05d5\u05da 3 \u05e9\u05e2\u05d5\u05ea.';
+// devDoneWaText (23/11/2026, quality check wrong-fact 22/11/2026): the WhatsApp line of a dev_done. With a note: the lead and
+// the note. With no note: only "done: <promise>" for a promise the assistant wrote for Michael (dev_request "promise"); the
+// default promise is the request text itself (DEV_PROMISE_HEAD + text cut at 120), never a message, and a "not fixed" with no
+// note says nothing he can use (a request merged into another): no WhatsApp. Pure: closed = the promises closed with it.
+export const DEV_PROMISE_HEAD = '\u05d1\u05e7\u05e9\u05ea \u05e4\u05d9\u05ea\u05d5\u05d7: ';
+export function devDoneWaText(note, fixed, closed) {
+  const n = String(note || '').trim();
+  if (n) return devDoneLead(fixed) + stripInternalIds(n);
+  if (fixed === false) return '';
+  const own = (Array.isArray(closed) ? closed : []).filter((x) => x && x.text && String(x.text).indexOf(DEV_PROMISE_HEAD) !== 0);
+  return own.length ? promiseDoneText(own, '', fixed) : '';
+}
 export function devDoneLead(fixed) {
   return fixed === true ? '\u05ea\u05d5\u05e7\u05df: ' : fixed === false ? '\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df: ' : '\u05e2\u05d3\u05db\u05d5\u05df \u05de\u05d4\u05e4\u05d9\u05ea\u05d5\u05d7: ';
 }
@@ -3288,7 +3300,7 @@ async function routineDbHandle(context) {
       try {
         await stateCas(url, h, PROMISE_KEY, (praw) => {
           const p = body.op === 'dev_request'
-            ? promiseAdd(praw, { agent: body.agent, text: body.promise || ('\u05d1\u05e7\u05e9\u05ea \u05e4\u05d9\u05ea\u05d5\u05d7: ' + String(body.text || '').slice(0, 120)), who: '\u05e4\u05d9\u05ea\u05d5\u05d7', ref: r.id }, now)
+            ? promiseAdd(praw, { agent: body.agent, text: body.promise || (DEV_PROMISE_HEAD + String(body.text || '').slice(0, 120)), who: '\u05e4\u05d9\u05ea\u05d5\u05d7', ref: r.id }, now)
             : promiseDone(praw, { ref: String(body.id || '') }, body.note, now);
           closed = p.error ? [] : (p.closed || []);
           return p.error ? { write: false } : { value: JSON.stringify(p.list) };
@@ -3303,7 +3315,10 @@ async function routineDbHandle(context) {
       // 15/11/2026 (the assistant chat: the golden 10/10 went out at 07:08 and again in the update): a golden-auto request
       // closed as fixed is quiet too; its note reaches Michael in the morning update only
       const quietFixed = !!(closedReq && SERVER_REQUESTERS.indexOf(closedReq.agent) >= 0 && (body.fixed === true || String(body.note || '').trim() === DEV_RESENT_NOTE));
-      const waText = body.op !== 'dev_done' || quietFixed ? '' : String(body.note || '').trim() ? devDoneLead(body.fixed) + stripInternalIds(body.note) : promiseDoneText(closed, '', body.fixed);
+      // 23/11/2026 (quality check, wrong-fact 22/11/2026): a close with no note used the promise text, which is the request text
+      // cut at 120 ("\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df: \u05d1\u05e7\u05e9\u05ea \u05e4\u05d9\u05ea\u05d5\u05d7: \u05de\u05d9\u05db\u05d0\u05dc \u05e2\u05e0\u05d4..."), for a request merged into another that was built an hour later.
+      // No note: only a promise the assistant wrote for him; never the request text (devDoneWaText).
+      const waText = body.op !== 'dev_done' || quietFixed ? '' : devDoneWaText(body.note, body.fixed, closed);
       if (waText && env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN) {
         try {
           const to = await ownerWa(env, url);

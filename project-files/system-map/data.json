@@ -1100,6 +1100,7 @@
     "dev_request",
     "learn",
     "out_log",
+    "promise",
     "select",
     "state_get",
     "wa_me",

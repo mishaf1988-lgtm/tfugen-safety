@@ -115,6 +115,24 @@ def part1():
     check('page X of Y found by position, not reading order', m.find_page_of([{'text': '3 %s 1 %s' % (PAGE, OF), 'words': ws}]) == (1, 3))
     two = [page([hdr(1, 2)] + body(20)), page([hdr(2, 2)] + body(20)), page([hdr(1, 1)] + body(5))]
     check('a package of two documents (1-2 of 2, then 1 of 1): fine', m.analyze(two) == [], m.analyze(two))
+    # 23/11/2026, the weekly training: every Hebrew paragraph laid out left to right (short lines hug the left edge)
+    texts = ['הדרכה שבועית בנושא בטיחות', 'שימוש בציוד מגן אישי', 'לפני העבודה בודקים את הכלי', 'דיווח על מפגע למנהל', 'סיכום']
+    full = line(' '.join(['מילה'] * 18), 140, x_right=540)
+    ltr = []
+    for k, t in enumerate(texts):
+        ln = line(t, 160 + 20 * k)
+        sh = ln['x0'] - full['x0']
+        ltr.append(dict(ln, words=[dict(w, x0=w['x0'] - sh, x1=w['x1'] - sh) for w in ln['words']], x0=full['x0'], x1=ln['x1'] - sh))
+    got = m.analyze([page([hdr(1, 1), full] + ltr)])
+    check('caught: Hebrew paragraphs aligned to the left (direction left to right)', (1, 'dir') in checks_of(got), got)
+    check('direction message names the fix (rtl_ooxml / od_pdf)', any('od_pdf' in x['msg'] for x in got if x['check'] == 'dir'), got)
+    check('right-aligned Hebrew body: no dir problem', not [x for x in m.analyze([page([hdr(1, 1), full] + body(12))]) if x['check'] == 'dir'])
+    cen = []
+    for k, t in enumerate(texts):
+        ln = line(t, 160 + 20 * k)
+        sh = (ln['x0'] + ln['x1']) / 2 - 297
+        cen.append(dict(ln, words=[dict(w, x0=w['x0'] - sh, x1=w['x1'] - sh) for w in ln['words']], x0=ln['x0'] - sh, x1=ln['x1'] - sh))
+    check('centred Hebrew titles: no dir problem', not [x for x in m.analyze([page([hdr(1, 1), full] + cen)]) if x['check'] == 'dir'])
 
 
 def png(path):
