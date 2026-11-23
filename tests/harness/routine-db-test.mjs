@@ -661,7 +661,8 @@ const callIn = async (body) => {
     { // 23/11/2026 (quality check, wrong-fact 22/11/2026): a dev_done with no note sent the request text as "not fixed"
       const { devDoneWaText } = await import('./_build/routine-db.mjs');
       check('devDoneWaText: fixed:true + note = "\u05ea\u05d5\u05e7\u05df: <note>", fixed:false + note = "\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df: <note>", no note = nothing',
-        devDoneWaText('\u05e0\u05d1\u05e0\u05d4', true) === '\u05ea\u05d5\u05e7\u05df: \u05e0\u05d1\u05e0\u05d4' && devDoneWaText('\u05de\u05d7\u05db\u05d4', false) === '\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df: \u05de\u05d7\u05db\u05d4' && devDoneWaText('', false) === '' && devDoneWaText('  ', true) === '' && devDoneWaText(undefined) === '');
+        devDoneWaText('\u05e0\u05d1\u05e0\u05d4', true) === '\u05ea\u05d5\u05e7\u05df: \u05e0\u05d1\u05e0\u05d4' && devDoneWaText('\u05de\u05d7\u05db\u05d4', false) === '\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df: \u05de\u05d7\u05db\u05d4' && devDoneWaText('', false) === '' && devDoneWaText('  ', true) === '' && devDoneWaText(undefined) === ''
+          && devDoneWaText('', undefined, [{ text: '\u05d1\u05e7\u05e9\u05ea \u05e4\u05d9\u05ea\u05d5\u05d7: x' }]) === '' && devDoneWaText('', false, [{ text: 'own' }]) === '' && devDoneWaText('', true, [{ text: 'own' }]) === '\u05d1\u05d5\u05e6\u05e2: own.');
       const real = globalThis.fetch, sent = [];
       globalThis.fetch = async (u, o) => {
         const url = String(u);
