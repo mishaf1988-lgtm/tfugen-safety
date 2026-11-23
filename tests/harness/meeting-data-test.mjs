@@ -82,6 +82,9 @@ const row = (n, date, dept, sev, due, s, closed) => [n, d(date), 1, dept, '', '◊
   check('half of them is green', tp.level === 'ok', tp.level);
   check('under half amber, none red, no trustees red', participationLevel(8, 3) === 'warn' && participationLevel(8, 0) === 'bad' && participationLevel(0, 0) === 'bad' && participationLevel(8, 4) === 'ok');
   check('numbers only: no names in the reply', !JSON.stringify(tp).includes('◊ê'), tp);
+  // 23/11/2026: an environmental event in inc (the 2025 ammonia leak) is not a work accident: 2025 on slide 2 went 13 to 14.
+  const env = meetingAccidents([{ id: 'w', dt: '2025-03-01T09:00:00Z', l: 'x', ty: '\u05ea\u05d0\u05d5\u05e0\u05d4 \u05e2\u05dd \u05e4\u05e6\u05d9\u05e2\u05d4' }, { id: 'nh3', dt: '2025-01-30T19:20:00Z', l: 'x', ty: '\u05d0\u05d9\u05e8\u05d5\u05e2 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9' }, { id: 'nm', dt: '2026-09-01T09:00:00Z', l: 'x', ty: 'Near Miss' }], '2026-09-22');
+  check('an environmental event or a near miss is not counted as a work accident', env.byYear[2025] === 1 && env.summary.total === 0 && env.lastAccident.date === '2025-03-01', env);
   check('no accidents: nulls, no crash', meetingAccidents([], '2026-09-22').lastAccident === null);
 
   console.log('\n4. the endpoint');

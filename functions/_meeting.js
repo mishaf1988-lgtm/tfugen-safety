@@ -120,10 +120,15 @@ export function meetingMinor(list, ref) {
     .map((x) => ({ d: x.d, dept: typeof x.dept === 'string' ? x.dept.slice(0, 30) : '' })).sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0));
   return { week: ok.filter((x) => x.d >= wk.start && x.d <= wk.end), year: ok.filter((x) => x.d.substring(0, 4) === y).length };
 }
+// The inc types that are not a work accident (index.html allowedTy).
+export const NOT_ACCIDENT = ['\u05d0\u05d9\u05e8\u05d5\u05e2 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9', 'Near Miss', '\u05e0\u05d6\u05e7 \u05dc\u05e8\u05db\u05d5\u05e9'];
 export function meetingAccidents(inc, ref) {
   const y = +ref.substring(0, 4);
   const wk = weekBefore(ref);
-  const all = (inc || []).map((x) => Object.assign({}, x, { day: ilDay(x.dt) })).filter((x) => x.day && x.day <= ref);
+  // 23/11/2026 (the assistant, before the 24/11 meeting: "2025 went from 13 to 14"): inc also holds events that are not
+  // work accidents (an environmental event, a near miss, property damage; two environmental ones were added 20/11/2026).
+  // Every accident count here is work accidents only; a row with no type is one (the older rows).
+  const all = (inc || []).filter((x) => NOT_ACCIDENT.indexOf(String(x.ty || '').trim()) < 0).map((x) => Object.assign({}, x, { day: ilDay(x.dt) })).filter((x) => x.day && x.day <= ref);
   const yr = all.filter((x) => +x.day.substring(0, 4) === y);
   const refMonth = +ref.substring(5, 7);
   const byMonth = [];
