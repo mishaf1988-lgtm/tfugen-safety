@@ -218,13 +218,20 @@ export function deckContent(m, rows, meetingDate, opts) {
   // 07/10/2026 (Michael: "2 in high severity, but it does not show what they are"): a line
   // per open high-severity hazard, "גבוהה: dept - hazard", smaller (11pt) when there are two;
   // more than two: the second line is "ועוד N". 50 characters fit a line at 11pt, 42 at 13pt.
+  // 23/11/2026 (Michael: "show all the high-severity ones on slide 1"): a line for each, up to four,
+  // smaller as they grow, in the same card (52pt high, 268pt wide inside; DECISIONS 07/10/2026 keeps the
+  // three cards one height): 3 = 12pt + 10pt (55 characters), 4 = 10pt + 8.5pt (60; 11pt + 9pt lost the last line in LibreOffice); five or more: three and "ועוד N".
   const highLine = (r, n) => { const pre = '\u05d2\u05d1\u05d5\u05d4\u05d4: ' + (r[3] || '-') + ' - '; return pre + short(head(r[5]), Math.max(12, n - pre.length)); };
+  const HIGH_FIT = [null, null, { n: 50, sz: [1400, 1100] }, { n: 55, sz: [1200, 1000] }, { n: 60, sz: [1000, 850] }];
+  const highFit = (k) => HIGH_FIT[Math.min(4, k)] || null;
   const highLines = (hs) => {
-    const out = !hs.length ? ['\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4']
-      : hs.length === 1 ? [highLine(hs[0], 42)]
-      : [highLine(hs[0], 50), hs.length === 2 ? highLine(hs[1], 50) : '\u05d5\u05e2\u05d5\u05d3 ' + (hs.length - 1) + ' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4'];
-    return out;
+    if (!hs.length) return ['\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4'];
+    if (hs.length === 1) return [highLine(hs[0], 42)];
+    const f = highFit(hs.length);
+    if (hs.length <= 4) return hs.map((r) => highLine(r, f.n));
+    return hs.slice(0, 3).map((r) => highLine(r, f.n)).concat(['\u05d5\u05e2\u05d5\u05d3 ' + (hs.length - 3) + ' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4']);
   };
+  const highSz = (k) => { const f = highFit(k); return f ? [f.sz[0]].concat(Array(Math.min(4, k)).fill(f.sz[1])) : [1500, 1300]; };
   const item = (r, n) => {
     const room = Math.max(20, n - String(r[3] || '').length - 3), d = head(r[5]), l = r[4] ? head(r[4]) : '';
     return [r[3], ' - ' + short(l && (l + ': ' + d).length <= room ? l + ': ' + d : d, room)];
@@ -311,7 +318,7 @@ export function deckContent(m, rows, meetingDate, opts) {
     s1: {
       Header: [Object.assign((t) => t.replace(/20\d{2}/, y).replace(/\s*\u00b7\s*/, ', ').replace(/\d{2}[./]\d{2}[./]\d{4}/, dmy(meetingDate)), { perRun: true })],
       ClosedNote: [h.total.closedThisWeek === 1 ? '\u05de\u05e4\u05d2\u05e2 \u05d0\u05d7\u05d3 \u05e0\u05e1\u05d2\u05e8 \u05d4\u05e9\u05d1\u05d5\u05e2' : h.total.closedThisWeek ? h.total.closedThisWeek + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e1\u05d2\u05e8\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2' : '\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d4\u05e9\u05d1\u05d5\u05e2', countDepts('closedThisWeek') || '-'],
-      OpenNote: Object.assign([openOther ? open.length + ' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05de\u05d7\u05dc\u05e7\u05d5\u05ea, \u05d5\u05e2\u05d5\u05d3 ' + openOther + otherNames : open.length + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd, \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc \u05e0\u05de\u05e9\u05da', ...highLines(highs)], { exact: true, sz: highs.length > 1 ? [1400, 1100, 1100] : [1500, 1300], tight: highs.length > 1 }),
+      OpenNote: Object.assign([openOther ? open.length + ' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05de\u05d7\u05dc\u05e7\u05d5\u05ea, \u05d5\u05e2\u05d5\u05d3 ' + openOther + otherNames : open.length + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd, \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc \u05e0\u05de\u05e9\u05da', ...highLines(highs)], { exact: true, sz: highSz(highs.length), tight: highs.length > 1 }),
       // 30/09/2026 (Michael: «8 new hazards» was no longer true, some were
       // closed): the first line says what became of them, the second where.
       NewNote: [!nw ? '\u05dc\u05d0 \u05e0\u05e4\u05ea\u05d7\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05d4\u05e9\u05d1\u05d5\u05e2'

@@ -230,7 +230,17 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   check('a week back to one: two lines again, 13pt, the deck\'s own spacing and insets', (back.match(/<a:p>/g) || []).length === 2 && back.includes('sz="1300"') && !back.includes('lnSpc') && back.includes('tIns="25400"') && back.includes('<a:t>גבוהה: מעצבים - מחסן החומרים עמוס</a:t>'), back);
   const three = long.concat([row(22, '2026-09-24', 'מעבדות', '', 'מנדף לא אפקטיבי', 'גבוהה', null, 'פתוח', null)]);
   const c3h = deckContent({ hazards: meetingHazards(three, ref2), accidents: meetingAccidents(INC, ref2) }, three, ref2, { s3Month: '2026-09' }).s1.OpenNote;
-  check('three or more: the oldest, then "ועוד 2 פתוחים בחומרה גבוהה"', c3h.length === 3 && c3h[1] === 'גבוהה: מעצבים - מחסן החומרים עמוס' && c3h[2] === 'ועוד 2 פתוחים בחומרה גבוהה', c3h);
+  // 23/11/2026 (Michael: "show all the high-severity ones on slide 1"): three is a line each, 12pt + 10pt.
+  const c3x = deckContent({ hazards: meetingHazards(three, ref2), accidents: meetingAccidents(INC, ref2) }, three, ref2, { s3Month: '2026-09' }).s1.OpenNote;
+  check('three: a line each, oldest first, no "ועוד", 55 characters at most, 12pt + 10pt', c3h.length === 4 && c3h[1] === 'גבוהה: מעצבים - מחסן החומרים עמוס' && c3h[3] === 'גבוהה: מעבדות - מנדף לא אפקטיבי' && !c3h.some((t) => /^ועוד/.test(t)) && c3h.every((t, i) => !i || t.length <= 55) && c3x.sz.join() === '1200,1000,1000,1000' && c3x.tight, [c3h, c3x.sz]);
+  const card3 = await cardOf((await patchDeck(await deck(), deckContent({ hazards: meetingHazards(three, ref2), accidents: meetingAccidents(INC, ref2) }, three, ref2, { s3Month: '2026-09' }))).bytes);
+  check('...in the deck: four lines, 10pt, 85% spacing (fits the 52pt card)', (card3.match(/<a:p>/g) || []).length === 4 && (card3.match(/sz="1000"/g) || []).length >= 3 && (card3.match(/<a:spcPct val="85000"\/>/g) || []).length === 4 && card3.includes('<a:t>גבוהה: מעבדות - מנדף לא אפקטיבי</a:t>'), card3);
+  const four = three.concat([row(23, '2026-09-25', 'תוצג', '', 'פתח ניקוז פתוח', 'גבוהה', null, 'פתוח', null)]);
+  const c4 = deckContent({ hazards: meetingHazards(four, ref2), accidents: meetingAccidents(INC, ref2) }, four, ref2, { s3Month: '2026-09' }).s1.OpenNote;
+  check('four: a line each, 10pt + 8.5pt, 60 characters at most', c4.length === 5 && !c4.some((t) => /^ועוד/.test(t)) && c4.every((t, i) => !i || t.length <= 60) && c4.sz.join() === '1000,850,850,850,850', [c4, c4.sz]);
+  const fiveH = four.concat([row(24, '2026-09-26', 'חומר גלם', '', 'מעקה חסר', 'גבוהה', null, 'פתוח', null)]);
+  const c5 = deckContent({ hazards: meetingHazards(fiveH, ref2), accidents: meetingAccidents(INC, ref2) }, fiveH, ref2, { s3Month: '2026-09' }).s1.OpenNote;
+  check('five or more: the three oldest, then "ועוד 2 פתוחים בחומרה גבוהה", 8.5pt', c5.length === 5 && c5[1] === 'גבוהה: מעצבים - מחסן החומרים עמוס' && c5[4] === 'ועוד 2 פתוחים בחומרה גבוהה' && c5.sz.join() === '1000,850,850,850,850', [c5, c5.sz]);
 
   const manyClosed = ['מעצבים', 'ייצור טוגנים', 'חומר גלם', 'תוצג', 'מעבדות'].map((dp, i) => row(30 + i, '2026-09-01', dp, '', 'x', 'נמוכה', null, 'סגור', '2026-09-1' + i));
   const cc = deckContent({ hazards: meetingHazards(manyClosed, ref2), accidents: meetingAccidents(INC, ref2) }, manyClosed, ref2, { s3Month: '2026-09' });
