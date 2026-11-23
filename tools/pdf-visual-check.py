@@ -14,14 +14,14 @@ cut text) read pdftoppm's grey PGM directly, no Pillow. Every page is checked:
   logo_top  (when image positions are known) an image in the top header band of every page, not only logos at the
             bottom (23/11/2026: the weekly training on form 08.01 went out with the Tapugan logo column gone from the
             header table; only the footer logos were left, and "an image on the page" passed)
-  rtl       Hebrew paragraphs, headings and numbering laid out left to right: short Hebrew lines flush with the left
-            edge and not the right, or "1." on the left of Hebrew lines (23/11/2026: bidi together with jc=right,
-            which Word shows on the LEFT; LibreOffice previews it right)
+  rtl       numbering laid out left to right: "1." on the left of 2 or more Hebrew lines (23/11/2026: bidi together
+            with jc=right, which Word shows on the LEFT; alignment of the paragraphs themselves is 'dir')
   font      only Arial (LiberationSans / Arimo = Arial in LibreOffice) or symbol fonts
   orphan    a numbered heading that is the last line of a page that is not the last page of its document
   empty     a page that is not the first of its document with 3 lines of body text or fewer
   punct     a Hebrew word that starts with ":" "." "," (the mark on the wrong side in RTL)
   date      a date with dots (22.11.2026): DD/MM/YYYY
+  dir       Hebrew paragraphs aligned to the left (left to right): Word jc="right" on a bidi paragraph, or LibreOffice
   overlap   two words drawn over each other (text cut by a cell or a neighbour)
   cut       a word with no ink at one end or none at all in the render (clipped by its cell)
   centre    a table off centre left/right (text pages are right-aligned, not checked), or a gap on top of more than a
@@ -153,6 +153,9 @@ def analyze(pages, allow_fonts=(), expect=()):
             if HEB.search(lw) and lw[:1] in ':.,;':
                 bad(i, 'punct', '"%s": סימן פיסוק בצד הלא נכון' % lw[:30])
                 break
+        d = rtl_left(body, p['w'])
+        if d:
+            bad(i, 'dir', 'טקסט עברי מיושר לשמאל (%d שורות, למשל "%s"): פסקה בכיוון שמאל לימין; לבנות ב-rtl_ooxml / form-fill, PDF ב-od_pdf' % d)
         for ln in p['lines']:
             m = DOT_DATE.search(ln['text'])
             if m:
@@ -214,20 +217,12 @@ def analyze(pages, allow_fonts=(), expect=()):
 
 
 def rtl_problem(body, table_box=None):
-    """A Hebrew page laid out left to right: short Hebrew lines that end flush left and not right, or a number "1."
-    on the left of a Hebrew line. Lines inside a ruled table are skipped (cells align to their own edges). Returns a
-    Hebrew message or None."""
+    """Numbering on the wrong side: "1." on the LEFT of Hebrew lines (a numbered paragraph laid out left to right,
+    23/11/2026). Alignment of Hebrew paragraphs is the 'dir' check (rtl_left). Lines inside a ruled table are
+    skipped. Returns a Hebrew message or None."""
     heb = [ln for ln in body if HEB.search(ln['text']) and not (table_box and table_box[1] - 2 < ln['y0'] < table_box[3] + 2)]
-    if len(heb) < 3:
+    if len(heb) < 2:
         return None
-    col_l = min(ln['x0'] for ln in heb)
-    col_r = max(ln['x1'] for ln in heb)
-    width = col_r - col_l
-    short = [ln for ln in heb if ln['x1'] - ln['x0'] < 0.75 * width]
-    left = sum(1 for ln in short if ln['x0'] - col_l < 4)
-    right = sum(1 for ln in short if col_r - ln['x1'] < 4)
-    if left >= 3 and left > 2 * right:
-        return '%d \u05e9\u05d5\u05e8\u05d5\u05ea \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea \u05de\u05d9\u05d5\u05e9\u05e8\u05d5\u05ea \u05dc\u05e9\u05de\u05d0\u05dc \u05d5\u05dc\u05d0 \u05dc\u05d9\u05de\u05d9\u05df (\u05db\u05d9\u05d5\u05d5\u05df \u05de\u05e9\u05de\u05d0\u05dc \u05dc\u05d9\u05de\u05d9\u05df; \u05d1-Word: bidi \u05d1\u05dc\u05d9 jc=right)' % left
     num_l = num_r = 0
     for ln in heb:
         ws = sorted(ln['words'], key=lambda w: w['x0'])
@@ -239,6 +234,28 @@ def rtl_problem(body, table_box=None):
             num_r += 1
     if num_l >= 2 and num_l > num_r:
         return '\u05d4\u05de\u05e1\u05e4\u05d5\u05e8 \u05de\u05e9\u05de\u05d0\u05dc \u05dc\u05e9\u05d5\u05e8\u05d4 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea (%d \u05e9\u05d5\u05e8\u05d5\u05ea): \u05db\u05d9\u05d5\u05d5\u05df \u05de\u05e9\u05de\u05d0\u05dc \u05dc\u05d9\u05de\u05d9\u05df' % num_l
+
+
+def rtl_left(lines, page_w):
+    """A Hebrew paragraph laid out left to right (23/11/2026, Michael on the weekly training: "the direction is wrong,
+    check visually"; <w:jc w:val="right"/> on a bidi paragraph, or a LibreOffice PDF). Only lines shorter than the
+    text column tell the alignment: a full line touches both edges. Hebrew lines of 2+ words that are not full:
+    touching the left edge of the column and not the right = left-aligned. Centred titles touch neither; table cells
+    are right-aligned inside their cell, so they do not hug the column's left edge. Returns (count, sample) when 3 or
+    more such lines and more than twice the right-aligned ones, else None."""
+    heb = [ln for ln in lines if len(ln['words']) >= 2 and HEB.search(ln['text'])]
+    if len(heb) < 3:
+        return None
+    left, right = min(ln['x0'] for ln in heb), max(ln['x1'] for ln in heb)
+    col = right - left
+    if col < 0.3 * page_w:
+        return None
+    tol = max(4.0, 0.012 * page_w)
+    short = [ln for ln in heb if ln['x1'] - ln['x0'] < col - 3 * tol]
+    lft = [ln for ln in short if ln['x0'] - left <= tol and right - ln['x1'] > 3 * tol]
+    rgt = [ln for ln in short if right - ln['x1'] <= tol and ln['x0'] - left > 3 * tol]
+    if len(lft) >= 3 and len(lft) > 2 * len(rgt):
+        return len(lft), lft[0]['text'][:30]
     return None
 
 

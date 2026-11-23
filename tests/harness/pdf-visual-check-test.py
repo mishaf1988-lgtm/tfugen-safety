@@ -131,7 +131,7 @@ def part1():
     long_l = 'שורה ארוכה מאוד שממלאת את כל רוחב העמוד מצד לצד עם עוד ועוד מילים כדי להגיע לקצה השני של הדף בלי הפסקה ממש'
     lines = [ltr(long_l, 150)] + [ltr('פסקה קצרה מספר %d' % k, 170 + 20 * k) for k in range(5)]
     got = m.analyze([page([hdr(1, 1)] + lines)])
-    check('caught: short Hebrew lines flush left, not right (rtl)', (1, 'rtl') in checks_of(got), got)
+    check('caught: short Hebrew lines flush left, not right (dir), once (rtl does not repeat it)', (1, 'dir') in checks_of(got) and (1, 'rtl') not in checks_of(got), got)
     nums = [ltr(long_l, 150)] + [dict(ltr('כותרת סעיף בעברית %d' % k, 170 + 20 * k, x_left=200)) for k in range(3)]
     for k, ln in enumerate(nums[1:]):
         ln['words'].insert(0, {'t': '%d.' % (k + 1), 'x0': 180, 'x1': 192, 'y0': ln['y0'], 'y1': ln['y1']})
@@ -142,6 +142,24 @@ def part1():
     check('RTL numbered headings flush right: no rtl problem', not [p for p in m.analyze([page([hdr(1, 1)] + rnum)]) if p['check'] == 'rtl'], m.analyze([page([hdr(1, 1)] + rnum)]))
     two = [page([hdr(1, 2)] + body(20)), page([hdr(2, 2)] + body(20)), page([hdr(1, 1)] + body(5))]
     check('a package of two documents (1-2 of 2, then 1 of 1): fine', m.analyze(two) == [], m.analyze(two))
+    # 23/11/2026, the weekly training: every Hebrew paragraph laid out left to right (short lines hug the left edge)
+    texts = ['הדרכה שבועית בנושא בטיחות', 'שימוש בציוד מגן אישי', 'לפני העבודה בודקים את הכלי', 'דיווח על מפגע למנהל', 'סיכום']
+    full = line(' '.join(['מילה'] * 18), 140, x_right=540)
+    ltr = []
+    for k, t in enumerate(texts):
+        ln = line(t, 160 + 20 * k)
+        sh = ln['x0'] - full['x0']
+        ltr.append(dict(ln, words=[dict(w, x0=w['x0'] - sh, x1=w['x1'] - sh) for w in ln['words']], x0=full['x0'], x1=ln['x1'] - sh))
+    got = m.analyze([page([hdr(1, 1), full] + ltr)])
+    check('caught: Hebrew paragraphs aligned to the left (direction left to right)', (1, 'dir') in checks_of(got), got)
+    check('direction message names the fix (rtl_ooxml / od_pdf)', any('od_pdf' in x['msg'] for x in got if x['check'] == 'dir'), got)
+    check('right-aligned Hebrew body: no dir problem', not [x for x in m.analyze([page([hdr(1, 1), full] + body(12))]) if x['check'] == 'dir'])
+    cen = []
+    for k, t in enumerate(texts):
+        ln = line(t, 160 + 20 * k)
+        sh = (ln['x0'] + ln['x1']) / 2 - 297
+        cen.append(dict(ln, words=[dict(w, x0=w['x0'] - sh, x1=w['x1'] - sh) for w in ln['words']], x0=ln['x0'] - sh, x1=ln['x1'] - sh))
+    check('centred Hebrew titles: no dir problem', not [x for x in m.analyze([page([hdr(1, 1), full] + cen)]) if x['check'] == 'dir'])
 
 
 def png(path):
@@ -291,8 +309,8 @@ def part3():
         check('a real PDF like the package: exit 1, wrong page number, no header / logo on page 2, font, colon, date',
               res['bad'][0] == 1 and {(1, 'page_of'), (2, 'logo'), (2, 'page_of'), (2, 'date'), (2, 'punct')} <= got and any(c == 'font' for _, c in got), (res['bad'][0], sorted(got)))
         got = {(p['page'], p['check']) for p in res['ltr'][1].get('problems') or []}
-        check('a real PDF with footer logos only and Hebrew laid out left to right: exit 1, logo_top and rtl',
-              res['ltr'][0] == 1 and {(1, 'logo_top'), (1, 'rtl')} <= got, (res['ltr'][0], sorted(got)))
+        check('a real PDF with footer logos only and Hebrew laid out left to right: exit 1, logo_top and dir / rtl',
+              res['ltr'][0] == 1 and (1, 'logo_top') in got and ((1, 'dir') in got or (1, 'rtl') in got), (res['ltr'][0], sorted(got)))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
