@@ -342,6 +342,11 @@
    "what": "חיבור למוקד האחזקה של המפעל: ליקוי פתוח שהאחראי עליו אחזקה או חשמל נפתח שם לבד כקריאה, מיד כשהוא נרשם; קריאה שנסגרה במוקד נרשמת בהערות הליקוי ומיכאל מקבל הודעה, והליקוי נשאר פתוח עד שהוא בודק בשטח; כבוי עד שמגיעים המפתחות ממהנדס המפעל"
   },
   {
+   "zone": "server",
+   "name": "gemini_ask",
+   "what": "Gemini קורא, מסכם ומתרגם נהלים ותקנות במקום Claude, כדי לחסוך טוקנים (23/11/2026): רק מנהלים, תקנות, תקנים והדרכות עד שמיכאל מאשר שהמפתח בחיוב; השרת לא שולח ת.ז., טלפון, מייל, מילה רפואית או שם עובד; עד 50 קריאות ביממה; כל סיכום חוזר עם ציטוטים שהשרת בדק מול המקור; כישלון = חוזרים ל-Claude"
+  },
+  {
    "zone": "m365",
    "name": "Outlook",
    "what": "מייל נכנס ויוצא, טיוטות בלבד"
@@ -419,7 +424,7 @@
   {
    "zone": "server",
    "name": "routine-db",
-   "what": "94 פעולות שהסוכנים מותרים בהן: agent_log_since, agent_report, agents_pause, agents_resume, assistant_account, cal_invite, cal_invite_ask, cal_move, cal_move_ask, claim, claims, client_errors, ctr_close, ctr_extend, ctr_link, ctr_revoke, data_gaps, del_ask, dev_done, dev_request, docs_add, draft_trash, drill_ask, emp_names, equip_add, expiry_set, fact_get, fact_set, form_probe, forms_check, hazard_choice, hazard_photo_probe, inc_add, inc_similar, invoice_find, invoice_set, iso_up, item_card, learn, learn_done, link_add, mail_draft, mail_forward, mail_got, mail_request, ocr_probe, ocr_txt, od_archive, od_dedupe, od_expire, od_mkdir, od_move, od_pdf, od_pull, od_put_pdf, od_swap, od_trash, office_ask, out_log, partial_check, pdf_read, promise, promise_done, quota_set, relay_fire, resp_check, select, sign_offer, sign_request, skill_read, source_read, staging_pw, state_get, state_set, stt, talk_field, task_add, thz_add, tour_close_ask, tts_probe, undo_ask, wa_check, wa_file, wa_me, wa_media, wa_phone, wa_review, wa_tpl, worker_done, worker_now, works_approve_mail, works_mail_now, works_permit, works_try_mail"
+   "what": "95 פעולות שהסוכנים מותרים בהן: agent_log_since, agent_report, agents_pause, agents_resume, assistant_account, cal_invite, cal_invite_ask, cal_move, cal_move_ask, claim, claims, client_errors, ctr_close, ctr_extend, ctr_link, ctr_revoke, data_gaps, del_ask, dev_done, dev_request, docs_add, draft_trash, drill_ask, emp_names, equip_add, expiry_set, fact_get, fact_set, form_probe, forms_check, gemini_ask, hazard_choice, hazard_photo_probe, inc_add, inc_similar, invoice_find, invoice_set, iso_up, item_card, learn, learn_done, link_add, mail_draft, mail_forward, mail_got, mail_request, ocr_probe, ocr_txt, od_archive, od_dedupe, od_expire, od_mkdir, od_move, od_pdf, od_pull, od_put_pdf, od_swap, od_trash, office_ask, out_log, partial_check, pdf_read, promise, promise_done, quota_set, relay_fire, resp_check, select, sign_offer, sign_request, skill_read, source_read, staging_pw, state_get, state_set, stt, talk_field, task_add, thz_add, tour_close_ask, tts_probe, undo_ask, wa_check, wa_file, wa_me, wa_media, wa_phone, wa_review, wa_tpl, worker_done, worker_now, works_approve_mail, works_mail_now, works_permit, works_try_mail"
   },
   {
    "zone": "db",

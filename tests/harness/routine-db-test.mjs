@@ -526,7 +526,7 @@ const callIn = async (body) => {
     // 27/10/2026: od_archive and od_expire share one handler (the PATCH reads as od_expire, the second name on its line).
     // 15/11/2026: ctr_revoke, link_v + 1 on one contractor talk (security review: close a leaked new-worker link); ctr-link-test.mjs
     // 13/11/2026: invoice_set, an update of the given fields of one ledger row (Michael: "do it: an invoice ledger"); invoice-ledger-test.mjs
-    check('no other DELETE; one PATCH each in expiry_set, hazard_choice, od_archive/od_expire, od_move, od_pull, od_swap (31/10/2026, the old file moves to a versions folder) and od_trash (24/10/2026, moves, not deletes) and talk_field', dels.length === 1 && patches.length === 10 && own === 'ctr_revoke,expiry_set,hazard_choice,invoice_set,od_expire,od_move,od_pull,od_swap,od_trash,talk_field' && /body\.op === 'od_archive' \|\| body\.op === 'od_expire'/.test(src), own);
+    check('no other DELETE; one PATCH each in expiry_set, hazard_choice, od_archive/od_expire, od_move, od_pull, od_swap (31/10/2026, the old file moves to a versions folder) and od_trash (24/10/2026, moves, not deletes) and talk_field, and gemini_ask (23/11/2026: it patches only its own log row by id, notifications_log, to fill in the result after the call)', dels.length === 1 && patches.length === 11 && own === 'ctr_revoke,expiry_set,gemini_ask,hazard_choice,invoice_set,od_expire,od_move,od_pull,od_swap,od_trash,talk_field' && /body\.op === 'od_archive' \|\| body\.op === 'od_expire'/.test(src), own);
   }
 
   console.log('\n4b. agent_report: append-only run log');

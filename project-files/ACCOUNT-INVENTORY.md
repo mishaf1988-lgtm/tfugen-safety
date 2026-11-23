@@ -189,7 +189,8 @@ Client ID ו-Tenant: ב-`project-files/ONEDRIVE-SERVER-SETUP.md`. הרשאות d
 | `TRUSTEE_NOTIFY_SECRET` | קריאות pg_cron לשרת, קישורי סגירה |
 | `TRUSTEE_CODE`, `TRUSTEE_REMEMBER` | כניסת נאמנים |
 | `GH_SKILLS_TOKEN` | המייל השבועי קורא את תור העוזר ב-michael-skills; `backup-od` מוריד איתו את ה-zip השבועי של michael-skills (17/10/2026) |
-| `GEMINI_API_KEY`, `GEMINI_MODEL`, `TTS_MODEL`, `TTS_VOICE` | הקראה בקול |
+| `GEMINI_API_KEY`, `GEMINI_MODEL`, `TTS_MODEL`, `TTS_VOICE` | הקראה בקול, קריאת תמונות באפליקציה, ומ-23/11/2026 גם הפעולה `gemini_ask` (קריאה, סיכום ותרגום לסוכנים ולשיחות; `functions/_geminiask.js`) |
+| `GEMINI_PHASE2` (ערך `1`) | **לא מוגדר בכוונה (23/11/2026).** פותח ל-`gemini_ask` תעודות, מסמכי קבלנים ובדיקה שנייה. מיכאל מגדיר רק אחרי שבדק ב-AI Studio שהמפתח בחיוב (בשכבה החינמית Google רשאית להשתמש בתוכן) |
 | `AZURE_VISION_ENDPOINT`, `AZURE_VISION_KEY` | זיהוי טקסט בסריקות (`ocr_txt`, 24/10/2026). משאב Azure AI Vision בשכבה החינמית F0, `tapugan-ocr`, West Europe (C41). מפתח חדש: Azure Portal, המשאב, Keys and Endpoint |
 | `META_ACCESS_TOKEN`, `META_PHONE_NUMBER_ID`, `META_WABA_ID` | וואטסאפ |
 | `WA_PIN` | ה-PIN בן 6 הספרות של מספר העוזר (24/10/2026): השומר (`_watchdog.js`) רושם מחדש לבד מספר שנפל ל-PENDING, פעם בשעה לכל היותר; גם `wa_phone` step register. מיכאל מדביק אותו (C42) |
