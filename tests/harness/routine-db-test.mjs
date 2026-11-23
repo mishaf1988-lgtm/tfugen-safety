@@ -658,6 +658,32 @@ const callIn = async (body) => {
       const again = await call({ op: 'dev_done', id: inbox[0].id, note: '\u05e0\u05e1\u05d2\u05e8 \u05e9\u05d5\u05d1' });
       check('02/11/2026: dev_done on a request already closed = ok with already, nothing rewritten, no second log line, no WhatsApp', again.json.ok && again.json.already === true && again.json.wa === null && state.dev_inbox === inboxBefore && JSON.parse(state.agent_log).length === logN, again.json);
     }
+    { // 23/11/2026 (quality check, wrong-fact 22/11/2026): a dev_done with no note sent the request text as "not fixed"
+      const { devDoneWaText } = await import('./_build/routine-db.mjs');
+      check('devDoneWaText: fixed:true + note = "\u05ea\u05d5\u05e7\u05df: <note>", fixed:false + note = "\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df: <note>", no note = nothing',
+        devDoneWaText('\u05e0\u05d1\u05e0\u05d4', true) === '\u05ea\u05d5\u05e7\u05df: \u05e0\u05d1\u05e0\u05d4' && devDoneWaText('\u05de\u05d7\u05db\u05d4', false) === '\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df: \u05de\u05d7\u05db\u05d4' && devDoneWaText('', false) === '' && devDoneWaText('  ', true) === '' && devDoneWaText(undefined) === '');
+      const real = globalThis.fetch, sent = [];
+      globalThis.fetch = async (u, o) => {
+        const url = String(u);
+        if (url.includes('/rest/v1/notification_prefs')) return new Response(JSON.stringify([{ prefs: { trustee_hazard: { whatsapp_to: '972500000000' } } }]), { status: 200 });
+        if (url.startsWith('https://graph.facebook.com/') && (o || {}).method === 'POST') { sent.push(String(o.body || '')); return new Response(JSON.stringify({ messages: [{ id: 'w1' }] }), { status: 200 }); }
+        return real(u, o);
+      };
+      const E = { ...ENV, META_PHONE_NUMBER_ID: '1', META_ACCESS_TOKEN: 't' };
+      try {
+        const req = '\u05de\u05d9\u05db\u05d0\u05dc \u05e2\u05e0\u05d4 \u05e2\u05dc \u05d4\u05e9\u05d0\u05dc\u05d4: \u05e8\u05e7 \u05d0\u05d9\u05e9\u05d5\u05e8\u05d9 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd';
+        const open3 = [];
+        for (let i = 0; i < 3; i++) open3.push((await call({ op: 'dev_request', agent: 'routine-wa-assistant', text: req + ' ' + i + ' xxxxxxxxxx' }, 'k-123', 'POST', E)).json.id);
+        sent.length = 0;
+        const a = await call({ op: 'dev_done', id: open3[0], fixed: false }, 'k-123', 'POST', E);
+        check('23/11/2026: dev_done with fixed:false and no note = closed, no WhatsApp, the request text never sent', a.json.ok && a.json.wa === null && sent.length === 0, { j: a.json, sent });
+        const b = await call({ op: 'dev_done', id: open3[1], fixed: true, note: '\u05d4\u05d0\u05d9\u05e9\u05d5\u05e8\u05d9\u05dd \u05d9\u05e8\u05d3\u05d5' }, 'k-123', 'POST', E);
+        check('23/11/2026: dev_done fixed:true with a note sends "\u05ea\u05d5\u05e7\u05df: <note>"', b.json.ok && b.json.wa && sent.some((x) => x.includes('\u05ea\u05d5\u05e7\u05df: \u05d4\u05d0\u05d9\u05e9\u05d5\u05e8\u05d9\u05dd \u05d9\u05e8\u05d3\u05d5')) && !sent.some((x) => x.includes(req)), { j: b.json, sent });
+        sent.length = 0;
+        const c = await call({ op: 'dev_done', id: open3[2], fixed: false, note: '\u05de\u05d7\u05db\u05d4 \u05dc\u05de\u05d9\u05db\u05d0\u05dc' }, 'k-123', 'POST', E);
+        check('23/11/2026: dev_done fixed:false with a note sends "\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df: <note>"', c.json.ok && c.json.wa && sent.some((x) => x.includes('\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df: \u05de\u05d7\u05db\u05d4 \u05dc\u05de\u05d9\u05db\u05d0\u05dc')), { j: c.json, sent });
+      } finally { globalThis.fetch = real; }
+    }
     check('a short text, a bad agent: refused', (await call({ op: 'dev_request', agent: 'routine-wa-assistant', text: 'קצר' })).status === 400 && (await call({ op: 'dev_request', agent: 'Bad Name', text: 'x'.repeat(20) })).status === 400);
     let raw = JSON.stringify([{ id: 'o', status: 'open' }].concat(Array.from({ length: DEV_INBOX_MAX }, (_, i) => ({ id: 'd' + i, status: 'done' }))));
     const full = devInboxAdd(raw, { agent: 'dev', text: 'x'.repeat(20) }, '2026-10-20T20:00:00Z');

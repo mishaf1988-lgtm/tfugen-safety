@@ -2568,6 +2568,11 @@ export function autoLinkRow(op, b, dayIL) {
 // did not run", while it still had not run). The closer now says which: "fixed": true = fixed, false = not fixed (and the note
 // says who it waits for), and with no "fixed" the message makes no claim. Pure.
 export const DEV_RESENT_NOTE = '\u05d4\u05d1\u05e7\u05e9\u05d4 \u05e0\u05e9\u05dc\u05d7\u05d4 \u05e9\u05d5\u05d1 \u05dc\u05de\u05e4\u05ea\u05d7, \u05db\u05d9 \u05dc\u05d0 \u05d8\u05d5\u05e4\u05dc\u05d4 \u05ea\u05d5\u05da 3 \u05e9\u05e2\u05d5\u05ea.';
+// devDoneWaText (23/11/2026): the WhatsApp line of a dev_done, '' when there is no note. Pure.
+export function devDoneWaText(note, fixed) {
+  const n = String(note || '').trim();
+  return n ? devDoneLead(fixed) + stripInternalIds(n) : '';
+}
 export function devDoneLead(fixed) {
   return fixed === true ? '\u05ea\u05d5\u05e7\u05df: ' : fixed === false ? '\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df: ' : '\u05e2\u05d3\u05db\u05d5\u05df \u05de\u05d4\u05e4\u05d9\u05ea\u05d5\u05d7: ';
 }
@@ -3283,14 +3288,12 @@ async function routineDbHandle(context) {
       // not only to the next morning update. Ids are cut out; a failed send does not undo the close.
       // 21/10/2026: the promise a dev request made (below) is kept or closed with it.
       // 12/11/2026 (ideas-lab 12, one key per PR): through stateCas, so a promise the assistant saved between this read
-      // and this write is kept (before: the whole list was written over it). mutate is pure: closed is reset on every try.
-      let closed = [];
+      // and this write is kept (before: the whole list was written over it).
       try {
         await stateCas(url, h, PROMISE_KEY, (praw) => {
           const p = body.op === 'dev_request'
             ? promiseAdd(praw, { agent: body.agent, text: body.promise || ('\u05d1\u05e7\u05e9\u05ea \u05e4\u05d9\u05ea\u05d5\u05d7: ' + String(body.text || '').slice(0, 120)), who: '\u05e4\u05d9\u05ea\u05d5\u05d7', ref: r.id }, now)
             : promiseDone(praw, { ref: String(body.id || '') }, body.note, now);
-          closed = p.error ? [] : (p.closed || []);
           return p.error ? { write: false } : { value: JSON.stringify(p.list) };
         }, () => tmo(SB_MS));
       } catch (x) { /* the request itself is written */ }
@@ -3303,7 +3306,10 @@ async function routineDbHandle(context) {
       // 15/11/2026 (the assistant chat: the golden 10/10 went out at 07:08 and again in the update): a golden-auto request
       // closed as fixed is quiet too; its note reaches Michael in the morning update only
       const quietFixed = !!(closedReq && SERVER_REQUESTERS.indexOf(closedReq.agent) >= 0 && (body.fixed === true || String(body.note || '').trim() === DEV_RESENT_NOTE));
-      const waText = body.op !== 'dev_done' || quietFixed ? '' : String(body.note || '').trim() ? devDoneLead(body.fixed) + stripInternalIds(body.note) : promiseDoneText(closed, '', body.fixed);
+      // 23/11/2026 (quality check, wrong-fact 22/11/2026): a close with no note used the promise text, which is the request text
+      // cut at 120 ("\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df: \u05d1\u05e7\u05e9\u05ea \u05e4\u05d9\u05ea\u05d5\u05d7: \u05de\u05d9\u05db\u05d0\u05dc \u05e2\u05e0\u05d4..."), for a request merged into another that was built an hour later.
+      // No note = nothing to tell Michael (a merged request, a golden 10/10): no WhatsApp. The request text is never the message.
+      const waText = body.op !== 'dev_done' || quietFixed ? '' : devDoneWaText(body.note, body.fixed);
       if (waText && env.META_PHONE_NUMBER_ID && env.META_ACCESS_TOKEN) {
         try {
           const to = await ownerWa(env, url);
