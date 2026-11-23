@@ -113,6 +113,33 @@ def part1():
     ws = [{'t': vis(OF), 'x0': 392, 'x1': 416, 'y0': 49, 'y1': 61}, {'t': '1', 'x0': 419, 'x1': 425, 'y0': 49, 'y1': 61},
           {'t': vis(PAGE), 'x0': 428, 'x1': 451, 'y0': 49, 'y1': 61}, {'t': '3', 'x0': 454, 'x1': 460, 'y0': 49, 'y1': 61}]
     check('page X of Y found by position, not reading order', m.find_page_of([{'text': '3 %s 1 %s' % (PAGE, OF), 'words': ws}]) == (1, 3))
+    # 23/11/2026, weekly training on 08.01: logo column gone from the header table (footer logos only), and paragraphs
+    # shown left to right (bidi with jc=right)
+    foot_only = page([hdr(1, 1)] + body(10), image_boxes=[(60, 790, 120, 820), (470, 790, 530, 820)])
+    check('caught: logos only at the bottom, none in the header (logo_top)', (1, 'logo_top') in checks_of(m.analyze([foot_only])), m.analyze([foot_only]))
+    top_ok = page([hdr(1, 1)] + body(10), image_boxes=[(470, 30, 540, 70), (60, 790, 120, 820)])
+    check('a header logo plus footer logos: no logo_top problem', not [p for p in m.analyze([top_ok]) if p['check'] == 'logo_top'], m.analyze([top_ok]))
+    check('no image positions known (no pdftohtml): logo_top not guessed', not [p for p in m.analyze(good) if p['check'] == 'logo_top'])
+
+    def ltr(text_logical, y, x_left=55, size=12):
+        words, x = [], x_left
+        for t in reversed(text_logical.split()):
+            w = 6 * len(t)
+            words.append({'t': vis(t), 'x0': x, 'x1': x + w, 'y0': y, 'y1': y + size})
+            x += w + 4
+        return {'text': text_logical, 'words': words, 'x0': x_left, 'x1': x - 4, 'y0': y, 'y1': y + size}
+    long_l = 'שורה ארוכה מאוד שממלאת את כל רוחב העמוד מצד לצד עם עוד ועוד מילים כדי להגיע לקצה השני של הדף בלי הפסקה ממש'
+    lines = [ltr(long_l, 150)] + [ltr('פסקה קצרה מספר %d' % k, 170 + 20 * k) for k in range(5)]
+    got = m.analyze([page([hdr(1, 1)] + lines)])
+    check('caught: short Hebrew lines flush left, not right (dir), once (rtl does not repeat it)', (1, 'dir') in checks_of(got) and (1, 'rtl') not in checks_of(got), got)
+    nums = [ltr(long_l, 150)] + [dict(ltr('כותרת סעיף בעברית %d' % k, 170 + 20 * k, x_left=200)) for k in range(3)]
+    for k, ln in enumerate(nums[1:]):
+        ln['words'].insert(0, {'t': '%d.' % (k + 1), 'x0': 180, 'x1': 192, 'y0': ln['y0'], 'y1': ln['y1']})
+        ln['x0'] = 180
+    got = m.analyze([page([hdr(1, 1)] + nums)])
+    check('caught: numbering "1." on the left of Hebrew headings (rtl)', (1, 'rtl') in checks_of(got), got)
+    rnum = [line('%d. כותרת סעיף בעברית' % k, 170 + 20 * k) for k in range(1, 4)] + body(6, 260)
+    check('RTL numbered headings flush right: no rtl problem', not [p for p in m.analyze([page([hdr(1, 1)] + rnum)]) if p['check'] == 'rtl'], m.analyze([page([hdr(1, 1)] + rnum)]))
     two = [page([hdr(1, 2)] + body(20)), page([hdr(2, 2)] + body(20)), page([hdr(1, 1)] + body(5))]
     check('a package of two documents (1-2 of 2, then 1 of 1): fine', m.analyze(two) == [], m.analyze(two))
     # 23/11/2026, the weekly training: every Hebrew paragraph laid out left to right (short lines hug the left edge)
@@ -229,6 +256,20 @@ FODT = '''<?xml version="1.0" encoding="UTF-8"?>
 <office:body><office:text>%s</office:text></office:body></office:document>'''
 
 
+def fodt_ltr(logo_b64):
+    """23/11/2026: footer logos only, and Hebrew paragraphs laid out left to right with numbered headings."""
+    P = lambda t: '<text:p text:style-name="L">%s</text:p>' % t
+    img = '<draw:frame draw:name="l" text:anchor-type="as-char" svg:width="2cm" svg:height="1cm"><draw:image><office:binary-data>%s</office:binary-data></draw:image></draw:frame>' % logo_b64
+    head = 'תעשיות תפוגן %s <text:page-number text:select-page="current">1</text:page-number> %s <text:page-count>1</text:page-count>' % (PAGE, OF)
+    master = ('<style:master-page style:name="Standard" style:page-layout-name="pm1"><style:header>%s</style:header>'
+              '<style:footer>%s</style:footer></style:master-page>') % (P(head), P(img))
+    rows = ''.join(P('%d. כותרת סעיף %d' % (k, k)) + P('פסקה קצרה על הנושא') for k in range(1, 6))
+    doc = FODT.replace('<style:header-style/>', '<style:header-style/><style:footer-style/>').replace(
+        '</office:automatic-styles>', '<style:style style:name="L" style:family="paragraph"><style:paragraph-properties fo:text-align="start" style:writing-mode="lr-tb"/>'
+        '<style:text-properties style:font-name="F" style:font-name-complex="F" fo:font-size="12pt" style:font-size-complex="12pt"/></style:style></office:automatic-styles>')
+    return doc % ('Arial', master, rows)
+
+
 def fodt(good, logo_b64):
     P = lambda t: '<text:p text:style-name="P">%s</text:p>' % t
     pg = ('<text:page-number text:select-page="current">1</text:page-number> %s <text:page-count>2</text:page-count>' % OF) if good else '2 %s 2' % OF
@@ -254,10 +295,10 @@ def part3():
         png(logo)
         b64 = base64.b64encode(open(logo, 'rb').read()).decode()
         res = {}
-        for name, good in (('good', True), ('bad', False)):
+        for name, good in (('good', True), ('bad', False), ('ltr', None)):
             src = os.path.join(tmp, name + '.fodt')
             with open(src, 'w', encoding='utf-8') as f:
-                f.write(fodt(good, b64))
+                f.write(fodt_ltr(b64) if good is None else fodt(good, b64))
             prof = tempfile.mkdtemp(prefix='lo-')
             subprocess.run(['soffice', '-env:UserInstallation=file://' + prof, '--headless', '--convert-to', 'pdf', '--outdir', tmp, src], capture_output=True, timeout=180)
             shutil.rmtree(prof, ignore_errors=True)
@@ -267,6 +308,9 @@ def part3():
         got = {(p['page'], p['check']) for p in res['bad'][1].get('problems') or []}
         check('a real PDF like the package: exit 1, wrong page number, no header / logo on page 2, font, colon, date',
               res['bad'][0] == 1 and {(1, 'page_of'), (2, 'logo'), (2, 'page_of'), (2, 'date'), (2, 'punct')} <= got and any(c == 'font' for _, c in got), (res['bad'][0], sorted(got)))
+        got = {(p['page'], p['check']) for p in res['ltr'][1].get('problems') or []}
+        check('a real PDF with footer logos only and Hebrew laid out left to right: exit 1, logo_top and dir / rtl',
+              res['ltr'][0] == 1 and (1, 'logo_top') in got and ((1, 'dir') in got or (1, 'rtl') in got), (res['ltr'][0], sorted(got)))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
