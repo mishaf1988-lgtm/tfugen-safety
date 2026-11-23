@@ -15,6 +15,7 @@
 // touched. A shape or part that is missing is skipped and reported, never
 // invented.
 import { readZip, writeZip, entryText } from './_xlsxpatch.js';
+import { weekBefore } from './_meeting.js';
 
 // Control characters (a Word paste carries \u0007) are not legal in XML: PowerPoint offers to "repair" the deck (security review 29/10/2026).
 const esc = (s) => String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -245,6 +246,27 @@ export function deckContent(m, rows, meetingDate, opts) {
   const nw = h.total.newThisWeek, nc = h.summary.newClosed, no = h.summary.newStillOpen;
   const hi = sevOf('\u05d2\u05d1\u05d5\u05d4\u05d4').length, med = sevOf('\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea').length, low = sevOf('\u05e0\u05de\u05d5\u05db\u05d4').length;
   const last = a.lastAccident;
+  // 23/11/2026 (Michael: "add the near miss to slide one or two, briefly"): the near misses of the meeting's week
+  // (weekBefore, like the accidents and the minor injuries) under the accidents line on slide 2; no name (near_miss has none,
+  // the description is cut short). Three lines fit the 34pt box at 12/10pt, tight, unclipped (as the minor-injuries line).
+  const wkNm = weekBefore(meetingDate);
+  const nmWeek = ((opts && opts.nearMiss) || []).filter((x) => { const d = String((x && x.d) || '').substring(0, 10); return d >= wkNm.start && d <= wkNm.end; })
+    .sort((p, q) => String(p.d).localeCompare(String(q.d)));
+  const nmLine = () => {
+    const NM = '\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2';
+    if (nmWeek.length > 1) return NM + ': ' + nmWeek.length + ', ' + nmWeek.map((x) => ddmm(String(x.d).substring(0, 10)) + (x.area ? ' ' + short(x.area, 20) : '')).join(', ');
+    const x = nmWeek[0], pre = NM + ' ' + ddmm(String(x.d).substring(0, 10)) + (x.area ? ', ' + short(x.area, 20) : '') + ': ';
+    const tail = x.s === '\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc' ? ', \u05d4\u05ea\u05d7\u05e7\u05d9\u05e8 \u05d1\u05d1\u05d9\u05e6\u05d5\u05e2' : x.s === S_DONE_ ? ', \u05d4\u05ea\u05d7\u05e7\u05d9\u05e8 \u05e0\u05e1\u05d2\u05e8' : '';
+    return pre + short(head(x.descr) || '-', Math.max(15, 75 - pre.length - tail.length)) + tail;
+  };
+  const s2Note = () => {
+    const accLine = inWeek ? (inWeek === 1 ? '\u05ea\u05d0\u05d5\u05e0\u05d4 \u05d0\u05d7\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8' : inWeek + ' \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8') : null;
+    if (!minorWeek.length && !nmWeek.length) return Object.assign([accLine || '\u05dc\u05dc\u05d0 \u05e9\u05d9\u05e0\u05d5\u05d9, \u05dc\u05dc\u05d0 \u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd \u05de\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8'], { exact: true, sz: [1500], tight: false, clip: true });
+    const lines = [accLine || '\u05dc\u05dc\u05d0 \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8'];
+    if (minorWeek.length) lines.push('\u05e4\u05d2\u05d9\u05e2\u05d5\u05ea \u05e7\u05dc\u05d5\u05ea \u05dc\u05dc\u05d0 \u05d4\u05d9\u05e2\u05d3\u05e8\u05d5\u05ea (\u05dc\u05d0 \u05ea\u05d0\u05d5\u05e0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4): ' + minorWeek.length + ', ' + minorWeek.map((x) => dmy(x.d).substring(0, 5) + (x.dept ? ' ' + x.dept : '')).join(', '));
+    if (nmWeek.length) lines.push(nmLine());
+    return Object.assign(lines, { exact: true, sz: lines.length === 2 ? [1300, 1100] : [1200, 1000, 1000], tight: true, clip: false });
+  };
   const yearTotal = (yy) => (FIXED_YEARS[yy] != null ? FIXED_YEARS[yy] : a.byYear[yy] || 0);
   // Slide 3 is the monthly report (Michael, 29/09: "updated for the month,
   // at the start of each month"): the state at the end of that month and its
@@ -356,7 +378,7 @@ export function deckContent(m, rows, meetingDate, opts) {
       Y2026Box: ['\u05e1\u05d4"\u05db \u05dc\u05e9\u05e0\u05d4: ' + (+y - 2) + ': ' + yearTotal(+y - 2) + ', ' + (+y - 1) + ': ' + yearTotal(+y - 1), y + ' \u05e2\u05d3 \u05d4\u05d9\u05d5\u05dd: ' + a.summary.total],
       DaysSafeText: [String(a.daysSinceLastAccident == null ? '-' : a.daysSinceLastAccident)],
       // 03/11/2026: the box is 34pt high and clips (vertOverflow=clip): two lines fit only at 13/11pt, tight; a week with none is one 15pt line again.
-      NoChangeNote: minorWeek.length ? Object.assign([inWeek ? (inWeek === 1 ? '\u05ea\u05d0\u05d5\u05e0\u05d4 \u05d0\u05d7\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8' : inWeek + ' \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8') : '\u05dc\u05dc\u05d0 \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8', '\u05e4\u05d2\u05d9\u05e2\u05d5\u05ea \u05e7\u05dc\u05d5\u05ea \u05dc\u05dc\u05d0 \u05d4\u05d9\u05e2\u05d3\u05e8\u05d5\u05ea (\u05dc\u05d0 \u05ea\u05d0\u05d5\u05e0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4): ' + minorWeek.length + ', ' + minorWeek.map((x) => dmy(x.d).substring(0, 5) + (x.dept ? ' ' + x.dept : '')).join(', ')], { exact: true, sz: [1300, 1100], tight: true, clip: false }) : Object.assign([inWeek ? (inWeek === 1 ? '\u05ea\u05d0\u05d5\u05e0\u05d4 \u05d0\u05d7\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8' : inWeek + ' \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8') : '\u05dc\u05dc\u05d0 \u05e9\u05d9\u05e0\u05d5\u05d9, \u05dc\u05dc\u05d0 \u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd \u05de\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8'], { exact: true, sz: [1500], tight: false, clip: true }),
+      NoChangeNote: s2Note(),
       line: { cats: a.byMonth.map((x) => x.month), vals: a.byMonth.map((x) => x.count) },
       chartTitle: '\u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 ' + y + ' \u05dc\u05e4\u05d9 \u05d7\u05d5\u05d3\u05e9',
     },
