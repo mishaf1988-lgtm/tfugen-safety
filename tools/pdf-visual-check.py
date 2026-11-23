@@ -16,6 +16,7 @@ cut text) read pdftoppm's grey PGM directly, no Pillow. Every page is checked:
   empty     a page that is not the first of its document with 3 lines of body text or fewer
   punct     a Hebrew word that starts with ":" "." "," (the mark on the wrong side in RTL)
   date      a date with dots (22.11.2026): DD/MM/YYYY
+  dir       Hebrew paragraphs aligned to the left (left to right): Word jc="right" on a bidi paragraph, or LibreOffice
   overlap   two words drawn over each other (text cut by a cell or a neighbour)
   cut       a word with no ink at one end or none at all in the render (clipped by its cell)
   centre    a table off centre left/right (text pages are right-aligned, not checked), or a gap on top of more than a
@@ -140,6 +141,9 @@ def analyze(pages, allow_fonts=(), expect=()):
             if HEB.search(lw) and lw[:1] in ':.,;':
                 bad(i, 'punct', '"%s": סימן פיסוק בצד הלא נכון' % lw[:30])
                 break
+        d = rtl_left(body, p['w'])
+        if d:
+            bad(i, 'dir', 'טקסט עברי מיושר לשמאל (%d שורות, למשל "%s"): פסקה בכיוון שמאל לימין; לבנות ב-rtl_ooxml / form-fill, PDF ב-od_pdf' % d)
         for ln in p['lines']:
             m = DOT_DATE.search(ln['text'])
             if m:
@@ -198,6 +202,29 @@ def analyze(pages, allow_fonts=(), expect=()):
             if miss:
                 probs.append({'page': 0, 'check': 'cut', 'msg': '"%s" \u05dc\u05d0 \u05de\u05d5\u05e4\u05d9\u05e2 \u05d1\u05de\u05dc\u05d5\u05d0\u05d5 \u05d1-PDF (\u05d7\u05e1\u05e8: %s), \u05db\u05e0\u05e8\u05d0\u05d4 \u05d7\u05ea\u05d5\u05da \u05d1\u05ea\u05d0' % (str(e)[:50], ' '.join(miss[:4]))})
     return probs
+
+
+def rtl_left(lines, page_w):
+    """A Hebrew paragraph laid out left to right (23/11/2026, Michael on the weekly training: "the direction is wrong,
+    check visually"; <w:jc w:val="right"/> on a bidi paragraph, or a LibreOffice PDF). Only lines shorter than the
+    text column tell the alignment: a full line touches both edges. Hebrew lines of 2+ words that are not full:
+    touching the left edge of the column and not the right = left-aligned. Centred titles touch neither; table cells
+    are right-aligned inside their cell, so they do not hug the column's left edge. Returns (count, sample) when 3 or
+    more such lines and more than twice the right-aligned ones, else None."""
+    heb = [ln for ln in lines if len(ln['words']) >= 2 and HEB.search(ln['text'])]
+    if len(heb) < 3:
+        return None
+    left, right = min(ln['x0'] for ln in heb), max(ln['x1'] for ln in heb)
+    col = right - left
+    if col < 0.3 * page_w:
+        return None
+    tol = max(4.0, 0.012 * page_w)
+    short = [ln for ln in heb if ln['x1'] - ln['x0'] < col - 3 * tol]
+    lft = [ln for ln in short if ln['x0'] - left <= tol and right - ln['x1'] > 3 * tol]
+    rgt = [ln for ln in short if right - ln['x1'] <= tol and ln['x0'] - left > 3 * tol]
+    if len(lft) >= 3 and len(lft) > 2 * len(rgt):
+        return len(lft), lft[0]['text'][:30]
+    return None
 
 
 def norm_word(w):
