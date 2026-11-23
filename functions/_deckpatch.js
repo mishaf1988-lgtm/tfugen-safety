@@ -257,7 +257,9 @@ export function deckContent(m, rows, meetingDate, opts) {
     if (nmWeek.length > 1) return NM + ': ' + nmWeek.length + ', ' + nmWeek.map((x) => ddmm(String(x.d).substring(0, 10)) + (x.area ? ' ' + short(x.area, 20) : '')).join(', ');
     const x = nmWeek[0], pre = NM + ' ' + ddmm(String(x.d).substring(0, 10)) + (x.area ? ', ' + short(x.area, 20) : '') + ': ';
     const tail = x.s === '\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc' ? ', \u05d4\u05ea\u05d7\u05e7\u05d9\u05e8 \u05d1\u05d1\u05d9\u05e6\u05d5\u05e2' : x.s === S_DONE_ ? ', \u05d4\u05ea\u05d7\u05e7\u05d9\u05e8 \u05e0\u05e1\u05d2\u05e8' : '';
-    return pre + short(head(x.descr) || '-', Math.max(15, 75 - pre.length - tail.length)) + tail;
+    // 23/11/2026 (the live row, a long free text: "...שנתפסה..." cut mid-thought): the first clause, before its first ", " or ". ".
+    const first = (head(x.descr).split(/[.,;:]\s/)[0] || '').trim();
+    return pre + short(first || '-', Math.max(15, 75 - pre.length - tail.length)) + tail;
   };
   const s2Note = () => {
     const accLine = inWeek ? (inWeek === 1 ? '\u05ea\u05d0\u05d5\u05e0\u05d4 \u05d0\u05d7\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8' : inWeek + ' \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8') : null;

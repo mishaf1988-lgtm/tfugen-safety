@@ -162,6 +162,8 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
     check('a long description is cut short at a word, the line at most 75 characters', longD[1].length <= 75 && /\.\.\.$/.test(longD[1]) && !longD[1].includes('פרטים'), longD);
     const deckNm = sp(await partText((await patchDeck(src, deckContent(m, ROWS, ref, { s3Month: '2026-09', nearMiss: NM1, repMonth: '2026-09' }))).bytes, 'ppt/slides/slide2.xml'));
     check('...in the deck: two paragraphs, the near-miss line written, the box clip off', (deckNm.match(/<a:p>/g) || []).length === 2 && deckNm.includes('<a:t>כמעט ונפגע 22/09, מעצבים: נפילת דלת גלילה בזמן שחרור, התחקיר בביצוע</a:t>') && !/vertOverflow="clip"/.test(deckNm), deckNm.slice(0, 400));
+    const live = deckContent(m, ROWS, ref, { s3Month: '2026-09', nearMiss: [{ id: 6, d: '2026-09-23', area: 'מעוצבים', descr: 'נפילת דלת גלילה שנתפסה ונתקעה, במהלך שחרור בכלי עבודה בידי עובד אחזקה. הדלת לא נפלה על איש.', s: 'בטיפול' }], repMonth: '2026-09' }).s2.NoChangeNote;
+    check('a long free text (the live row 17/11/2026): its first clause, not a cut mid-thought', live[1] === 'כמעט ונפגע 23/09, מעוצבים: נפילת דלת גלילה שנתפסה ונתקעה, התחקיר בביצוע', live);
     const none = deckContent(m, ROWS, ref, { s3Month: '2026-09', nearMiss: [NM1[1]], repMonth: '2026-09' }).s2.NoChangeNote;
     check('no near miss in the week: the one-line note as before', none.length === 1 && none[0] === 'ללא שינוי, ללא אירועים משבוע שעבר', none); }
   const again2 = await patchDeck(out.bytes, deckContent(m, ROWS, ref, { s3Month: '2026-09' }));
