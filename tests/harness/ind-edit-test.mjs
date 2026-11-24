@@ -32,6 +32,7 @@ globalThis.fetch = async (url, init) => {
     return json({ webUrl: 'https://od.example/' + encodeURIComponent(path), size: init.body.length });
   }
   if (u.startsWith(GR + '/drive/root:/') && /\?format=pdf$/.test(u)) { const b = new Uint8Array(2000); b.set([0x25, 0x50, 0x44, 0x46], 0); return new Response(b, { status: 200 }); }
+  if (u === GR + '/sendMail' && w.failMail) return new Response('no', { status: 500 });
   if (u === GR + '/sendMail') { w.mails.push(JSON.parse(init.body)); return new Response(null, { status: 202 }); }
   if (u.startsWith('https://generativelanguage.googleapis.com/')) return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'טקסט בעברית' }] } }] }), { status: 200 });
   return json({ error: 'unexpected ' + u }, 599);
@@ -173,6 +174,16 @@ console.log('\n5. a photo is added');
   check('only a JPEG is taken (the other is dropped), counted on the audit line', r.st === 200 && p && p.b.edits[0].docs === 1, p && p.b);
   const src = w.puts.find((x) => x.path.startsWith('Apps/') && x.txt);
   check('the photo is inside the correction page', src && src.txt.includes('data:image/jpeg;base64,') && src.txt.includes('מסמך שנוסף 1 מתוך 1'), src && src.txt.slice(-200));
+}
+
+console.log('\n5b. the filing fails: one more try, then the photos folder is written on the row (24/11/2026)');
+{
+  reset({ failMail: true });
+  const jpg = 'data:image/jpeg;base64,' + Buffer.alloc(4000, 7).toString('base64');
+  const r = await post(FORM(await tokOf()), await cookie(), [jpg]);
+  const errs = w.patches.filter((x) => x.b.doc_err);
+  const last = errs[errs.length - 1];
+  check('the page is saved, the mail was tried twice, the photos folder is on doc_err', r.st === 200 && w.puts.length >= 2 && last && last.b.doc_err.includes('photos kept: backups/induction-docs/r1-c0/'), { st: r.st, puts: w.puts.length, d: last && last.b });
 }
 
 console.log('\n6. the induction mail itself carries the link');
