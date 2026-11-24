@@ -2864,6 +2864,50 @@ const callIn = async (body) => {
     } finally { globalThis.fetch = f0; graph = g0; raceOnce = null; delete state.sign_requests; delete state.wa_owner_in_at; }
   }
 
+  // 24/11/2026 (dev-20261124130849-gd49): Michael tapped a sign_offer button on a file that already had a request
+  // waiting; sign_request answered created:false and he got nothing. His own ask (agent wa-hook-sign) now gets the
+  // document and the question again with the same ref; another agent's repeat still sends nothing.
+  {
+    console.log('\nsign_request on a file already waiting: sent again to Michael (24/11/2026)');
+    const { SIGN_AGAIN_HEAD } = await import('./_build/routine-db.mjs');
+    const E = { ...ENV, META_PHONE_NUMBER_ID: 'P', META_ACCESS_TOKEN: 'm' };
+    const f0 = globalThis.fetch, g0 = graph, metaSends = [];
+    graph = async (u) => {
+      if (/:\/content$/.test(u)) return new Response(new Uint8Array([1, 2, 3]), { status: 200 });
+      return new Response(JSON.stringify({ id: 'I1', file: {}, size: 3 }), { status: 200 });
+    };
+    globalThis.fetch = async (u, o = {}) => {
+      const su = String(u);
+      if (su.startsWith(SB + '/rest/v1/notification_prefs')) return new Response(JSON.stringify([{ prefs: { trustee_hazard: { whatsapp_to: '972500000001' } } }]), { status: 200 });
+      if (su.startsWith('https://graph.facebook.com/v25.0/P/')) { metaSends.push({ u: su, b: String(o.body || '') }); return new Response(JSON.stringify({ id: 'MEDIA1', messages: [{ id: 'wamid.X' + metaSends.length }] }), { status: 200 }); }
+      if (su.startsWith(SB + '/rest/v1/notifications_log') && (o.method || 'GET') === 'POST') return new Response('', { status: 201 });
+      return f0(u, o);
+    };
+    try {
+      delete state.sign_requests; delete stateVer.sign_requests;
+      state.wa_owner_in_at = new Date().toISOString();
+      const a = await call({ op: 'sign_request', agent: 'routine-wa-assistant', why: 'first request', path: '06_x/cert.pdf' }, 'k-123', 'POST', E);
+      const n1 = metaSends.length;
+      const rep = await call({ op: 'sign_request', agent: 'routine-wa-assistant', why: 'asking again', path: '06_x/cert.pdf' }, 'k-123', 'POST', E);
+      const n2 = metaSends.length;
+      const tap = await call({ op: 'sign_request', agent: 'wa-hook-sign', why: 'a tap on the offer', path: '06_x/cert.pdf' }, 'k-123', 'POST', E);
+      const n3 = metaSends.length, list = JSON.parse(state.sign_requests || '[]');
+      const qBody = (metaSends[n3 - 1] || {}).b || '';
+      check('first ask: created and sent', a.json.created === true && a.json.sent === true && n1 > 0, a.json);
+      check('another agent asking again on the same file: nothing sent (as before)', rep.json.created === false && !rep.json.sent && n2 === n1, { rep: rep.json, n1, n2 });
+      check('Michael\'s own ask on that file: the same id, sent again (document and question), one request in the list',
+        tap.json.ok === true && tap.json.id === a.json.id && tap.json.created === false && tap.json.again === true && tap.json.sent === true && n3 - n2 >= n1 && list.length === 1 && list[0].status === 'pending', { tap: tap.json, n2, n3, list });
+      check('the question sent again opens with "sending again" and his last message is the question (ref sign:<id>)',
+        qBody.includes(SIGN_AGAIN_HEAD.slice(0, 12)) && JSON.stringify(state.wa_last_out || '').includes('sign:' + a.json.id), { qBody: qBody.slice(150, 450), last: JSON.stringify(state.wa_last_out || '').slice(0, 300) });
+      const n4 = metaSends.length, tap2 = await call({ op: 'sign_request', agent: 'wa-hook-sign', why: 'a second tap at once', path: '06_x/cert.pdf' }, 'k-123', 'POST', E);
+      check('a second ask within 2 minutes sends nothing more (security review: the agent name is self-declared)', tap2.json.recent === true && metaSends.length === n4, { tap2: tap2.json, n4, n5: metaSends.length });
+      const st = JSON.parse(state.sign_requests); st[0].page = 2; st[0].again_at = '2026-01-01T00:00:00Z'; state.sign_requests = JSON.stringify(st);
+      await call({ op: 'sign_request', agent: 'wa-hook-sign', why: 'a tap later on', path: '06_x/cert.pdf' }, 'k-123', 'POST', E);
+      const b6 = (metaSends[metaSends.length - 1] || {}).b || '';
+      check('the question sent again names the place saved in the request (page 2), not one found now (security review)', b6.includes('\u05d1\u05e2\u05de\u05d5\u05d3 2'), b6.slice(150, 600));
+    } finally { globalThis.fetch = f0; graph = g0; delete state.sign_requests; delete state.wa_owner_in_at; }
+  }
+
   // 02/11/2026 (Michael in the assistant's chat: "do it: yes, build it"; DECISIONS 02/11/2026): mail_forward
   {
     console.log('\nmail_forward: a forward draft with every attachment (flow 11)');

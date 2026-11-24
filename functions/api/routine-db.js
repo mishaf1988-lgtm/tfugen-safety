@@ -2903,6 +2903,9 @@ export function factGate(text, checked) {
   if (ARRIVED_TODAY_RE.test(t) && !ok) return 'the text says something arrived today: add "checked" naming where you saw each one (the scan file and its page, the mail subject) (28/10/2026)';
   return null;
 }
+// The first line of a signature question sent again (sign_request, agent wa-hook-sign, on a file already waiting).
+export const SIGN_AGAIN_MS = 2 * 60e3;
+export const SIGN_AGAIN_HEAD = '\u05e9\u05d5\u05dc\u05d7 \u05e9\u05d5\u05d1 \u05d0\u05ea \u05d1\u05e7\u05e9\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da.\n';
 export function signRequestCheck(b) {
   const parts = String(b.path || '').split('/').filter(Boolean);
   const name = parts.pop() || '';
@@ -4648,15 +4651,29 @@ async function routineDbHandle(context) {
         }
       } catch (x) { spot = null; }
       const now = new Date().toISOString();
-      let r; // 30/10/2026 (ideas-lab 12): written only if the row is as it was read
+      let r, prevE = null, recent = false; // 30/10/2026 (ideas-lab 12): written only if the row is as it was read
       const cas = await stateCas(url, h, SIGN_KEY, (raw) => {
         r = signAdd(raw === undefined ? '[]' : raw, { agent: body.agent, path: c.path, name: c.name, page: spot ? spot.page : c.page, x: spot ? spot.x : c.x, y: spot ? spot.y : c.y, w: spot && spot.w ? spot.w : c.w, reply: rq.reply }, now);
-        return r.created ? { value: JSON.stringify(r.list) } : { write: false };
+        if (r.created) return { value: JSON.stringify(r.list) };
+        // 24/11/2026 (security review): sent again at most once in SIGN_AGAIN_MS per request (the agent name is self-declared)
+        prevE = r.list.find((x) => x && x.id === r.id) || null;
+        if (body.agent !== 'wa-hook-sign' || !prevE) return { write: false };
+        if (prevE.again_at && Date.parse(now) - Date.parse(prevE.again_at) < SIGN_AGAIN_MS) { recent = true; return { write: false }; }
+        prevE.again_at = now;
+        return { value: JSON.stringify(r.list) };
       }, () => tmo(SB_MS));
-      if (!r.created) return jsonResp({ ok: true, id: r.id, created: false, note: 'already waiting for Michael on this file' }, 200, {});
+      // 24/11/2026 (dev-20261124130849-gd49): Michael's own ask (a tap on a sign_offer button, or a typed yes that the
+      // server re-asks, agent wa-hook-sign) on a file already waiting gets the document and the question again, with
+      // the same ref sign:<id>; before, it answered "sent" and he got nothing. Another agent's repeat still sends nothing.
+      const again = !r.created && body.agent === 'wa-hook-sign' && !!prevE;
+      if (!r.created && !again) return jsonResp({ ok: true, id: r.id, created: false, note: 'already waiting for Michael on this file' }, 200, {});
+      if (again && recent) return jsonResp({ ok: true, id: r.id, created: false, again: true, sent: true, recent: true }, 200, {});
       if (!cas.written) return jsonResp({ ok: false, error: cas.conflict ? 'save conflict, try again' : 'save ' + cas.status }, 200, {});
       // 22/10/2026 18:36: a spot Michael approved was used, and the question still said "no signature place found".
-      const text = signAskText(c.name, c.folder, spot || (c.page !== undefined ? { page: c.page, set: true } : null)) + (rq.reply ? '\n\u05d0\u05d7\u05e8\u05d9 \u05d4\u05d7\u05ea\u05d9\u05de\u05d4: \u05d8\u05d9\u05d5\u05d8\u05ea \u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc-' + rq.reply.to + ' ("' + rq.reply.subject.slice(0, 80) + '") \u05d1\u05e9\u05e8\u05e9\u05d5\u05e8 \u05d4\u05de\u05e7\u05d5\u05e8\u05d9, \u05e2\u05dd \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d7\u05ea\u05d5\u05dd.' : ''), ref = 'sign:' + r.id;
+      // sent again: the place in words is the one saved in the request (where the yes signs), not one found now (security review 24/11/2026)
+      const tspot = again ? (prevE.page ? { page: prevE.page } : null) : spot || (c.page !== undefined ? { page: c.page, set: true } : null);
+      const rp = again ? prevE.reply : rq.reply; // sent again: the reply saved in the request, the one the yes runs
+      const text = (again ? SIGN_AGAIN_HEAD : '') + signAskText(c.name, c.folder, tspot) + (rp ? '\n\u05d0\u05d7\u05e8\u05d9 \u05d4\u05d7\u05ea\u05d9\u05de\u05d4: \u05d8\u05d9\u05d5\u05d8\u05ea \u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc-' + rp.to + ' ("' + rp.subject.slice(0, 80) + '") \u05d1\u05e9\u05e8\u05e9\u05d5\u05e8 \u05d4\u05de\u05e7\u05d5\u05e8\u05d9, \u05e2\u05dd \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d7\u05ea\u05d5\u05dd.' : ''), ref = 'sign:' + r.id;
       const win = await ownerWindowOpen(env, url);
       // 21/10/2026 (Michael: "with the request, the form itself"): the document goes first, so the question with
       // the buttons stays his last message (its ref is what "1" answers). A failed document leaves the question as is.
@@ -4666,7 +4683,7 @@ async function routineDbHandle(context) {
       // 22/10/2026 (retro): a question that did not go out must not stay pending: the next sign_request on the same
       // file would answer "already waiting" and Michael would never be asked.
       let markLost = false; // 5 lost races: the request stays pending, so the reply says it
-      if (!s.ok) {
+      if (!s.ok && !again) {
         try {
           // the document and the question took seconds: another request or Michael's answer may have been saved meanwhile (30/10/2026: now checked, not only re-read)
           // only a request still waiting is marked: Michael's answer that arrived meanwhile stays (security review 30/10/2026)
@@ -4685,7 +4702,7 @@ async function routineDbHandle(context) {
             event_type: 'assistant', channel: s.ok ? 'whatsapp' : 'whatsapp_error',
             payload: { title: text.replace(/\s+/g, ' ').slice(0, 120), text, via: s.via || null, wamid: s.wamid || null, ref, detail: s.error || null } }]) });
       } catch (e) { /* the question went out; a missing log line is not a failure */ }
-      return jsonResp({ ok: s.ok, id: r.id, created: true, sent: s.ok, via: s.via || null, doc: doc && doc.ok ? 'sent' : (doc && doc.error) || null, spot: spot || null, error: s.error || undefined, mark_lost: markLost || undefined }, 200, {});
+      return jsonResp({ ok: s.ok, id: r.id, created: !again, again: again || undefined, sent: s.ok, via: s.via || null, doc: doc && doc.ok ? 'sent' : (doc && doc.error) || null, spot: spot || null, error: s.error || undefined, mark_lost: markLost || undefined }, 200, {});
     }
     if (body.op === 'od_mkdir') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'parent', 'name'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
