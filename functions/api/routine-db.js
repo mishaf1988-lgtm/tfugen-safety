@@ -1772,7 +1772,27 @@ export function calInviteCheck(b, nowMs) {
 // stopped by its permission check (an action that writes to people). So, like tour_close_ask, the assistant only asks:
 // cal_invite_ask keeps the invite in CAL_INVITE_ASK_KEY and sends the question with ref calinvite:<k>; only Michael's
 // tap on that very message makes the server run cal_invite (wa-hook, fastCalInvite).
-export const CAL_INVITE_ASK_KEY = 'cal_invite_ask', CAL_INVITE_ASK_MS = 24 * 3600e3, CAL_INVITE_FIELDS = ['subject', 'start', 'end', 'to', 'cc', 'location', 'body', 'draft'];
+export const CAL_INVITE_ASK_KEY = 'cal_invite_ask', CAL_INVITE_ASK_MS = 24 * 3600e3, CAL_INVITE_FIELDS = ['subject', 'start', 'end', 'to', 'cc', 'location', 'body', 'draft', 'dates'];
+// dates (24/11/2026, dev-20261124132506-p71z: Michael asked for invites to 8 course days at once, and one pending key held
+// only one question, so 8 questions would overwrite each other): cal_invite_ask may carry dates, a list of YYYY-MM-DD days
+// at the same hours as start/end. One question shows them all, and his one tap creates one meeting per day. Returns the
+// cal_invite bodies (start/end moved to each day, the same span), or {error}. No dates = the one invite as it is.
+export const CAL_INVITE_DATES_MAX = 12;
+export function calInviteRuns(b, nowMs) {
+  const base = {}; for (const f of Object.keys(b)) if (f !== 'dates') base[f] = b[f];
+  if (b.dates === undefined) return { runs: [base] };
+  const d = b.dates;
+  if (!Array.isArray(d) || d.length < 2 || d.length > CAL_INVITE_DATES_MAX) return { error: 'dates: a list of 2-' + CAL_INVITE_DATES_MAX + ' days YYYY-MM-DD (one day = start/end alone)' };
+  if (d.some((x) => typeof x !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(x) || isNaN(Date.parse(x + 'T00:00:00Z')))) return { error: 'dates: each day YYYY-MM-DD' };
+  if (new Set(d).size !== d.length) return { error: 'dates: a day twice' };
+  const start = String(b.start || ''), end = String(b.end || '');
+  if (!CAL_T.test(start) || !CAL_T.test(end)) return { error: 'start and end: YYYY-MM-DDTHH:MM, Israel time' };
+  const off = Math.round((Date.parse(end.slice(0, 10) + 'T00:00:00Z') - Date.parse(start.slice(0, 10) + 'T00:00:00Z')) / 86400000);
+  const plus = (day, n) => new Date(Date.parse(day + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
+  const runs = d.slice().sort().map((day) => Object.assign({}, base, { start: day + start.slice(10), end: plus(day, off) + end.slice(10) }));
+  for (const r of runs) { const c = calInviteCheck(Object.assign({}, r, { approved: '\u05d1\u05e6\u05e2' }), nowMs); if (c.error) return { error: r.start.slice(0, 10) + ': ' + c.error }; }
+  return { runs };
+}
 export function calInviteRefOf(about, prev) {
   const a = String(about || '');
   if (a) { const m = /\| ref calinvite:([a-z0-9]{8}) \| [^|]*$/.exec(a); return m ? m[1] : null; }
@@ -1784,6 +1804,7 @@ export function calInviteAskText(c, b) {
   // the recipients shown are the real to/cc addresses, never the free text `who` (27/10/2026 retro: it could name others than the invite goes to)
   const addr = (x) => String(x || '').split(/[;,]/).map((y) => y.trim()).filter(Boolean), who = addr(b.to).concat(addr(b.cc)).join(', ').slice(0, 400);
   return (b.draft === true ? '\u05dc\u05d9\u05e6\u05d5\u05e8 \u05d1\u05d9\u05d5\u05de\u05df \u05e9\u05dc\u05da \u05e4\u05d2\u05d9\u05e9\u05d4 \u05de\u05d5\u05db\u05e0\u05d4, \u05d1\u05dc\u05d9 \u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd?' : '\u05dc\u05e9\u05dc\u05d5\u05d7 \u05d6\u05d9\u05de\u05d5\u05df?') + '\n1. \u05e0\u05d5\u05e9\u05d0: ' + c.subject + '\n2. \u05de\u05ea\u05d9: ' + dmy(c.start) + ' ' + c.start.slice(11) + '-' + c.end.slice(11)
+    + (Array.isArray(b.dates) && b.dates.length > 1 ? ', ' + b.dates.length + ' \u05de\u05d5\u05e2\u05d3\u05d9\u05dd (\u05e4\u05d2\u05d9\u05e9\u05d4 \u05dc\u05db\u05dc \u05de\u05d5\u05e2\u05d3): ' + b.dates.slice().sort().map((x) => dmy(x)).join(', ') : '')
     + (b.location ? '\n3. \u05de\u05d9\u05e7\u05d5\u05dd: ' + String(b.location).replace(/\s+/g, ' ').trim().slice(0, 100) : '') + '\n4. \u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd (' + c.count + '): ' + who
     + (b.draft === true ? '\n\u05d4\u05d4\u05d6\u05de\u05e0\u05d5\u05ea \u05d9\u05d5\u05e6\u05d0\u05d5\u05ea \u05e8\u05e7 \u05db\u05e9\u05d0\u05ea\u05d4 \u05de\u05d5\u05e1\u05d9\u05e3 \u05d0\u05ea \u05d4\u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd \u05d5\u05e9\u05d5\u05dc\u05d7 \u05de-Outlook.' : '\n\u05d1"\u05d1\u05e6\u05e2" \u05d4\u05d6\u05d9\u05de\u05d5\u05df \u05e0\u05e9\u05dc\u05d7 \u05dc\u05db\u05dc \u05d4\u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd.');
 }
@@ -4984,7 +5005,9 @@ async function routineDbHandle(context) {
     }
     if (body.op === 'cal_invite_ask') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'who', 'answers'].concat(CAL_INVITE_FIELDS).indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
-      const c = calInviteCheck(Object.assign({}, body, { approved: '\u05d1\u05e6\u05e2' }), Date.now());
+      const rs = calInviteRuns(body, Date.now());
+      if (rs.error) return jsonResp({ ok: false, error: rs.error }, 400, {});
+      const c = calInviteCheck(Object.assign({}, rs.runs[0], { approved: '\u05d1\u05e6\u05e2' }), Date.now());
       if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
       if (hasInternalId(body.who) || hasPersonalNo(body.who)) return jsonResp({ ok: false, error: 'who: names only' }, 400, {});
       const k = Math.random().toString(36).slice(2, 10).padEnd(8, '0'), inv = {};
