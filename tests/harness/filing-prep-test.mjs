@@ -1,7 +1,9 @@
 // routine-db filing_prep (24/11/2026, Michael in the questionnaire: "do it: as planned"): one read-only call that gives the
 // mail-filing agent up to 10 inbox files with the start of their text, their tokens and matching rows, instead of a call per file.
-import { onRequest, filingPrepCheck, filingTokens, filingMatches, filingPrepPage, filingDbTokens, FILING_PREP_MAX, FILING_PREP_MATCHES, FILING_PREP_CHARS, OD_ROOT, OD_INBOX, OD_OCR_DIR } from './_build/routine-db.mjs';
-import { PDFDocument, StandardFonts } from './_build/_pdflib.mjs';
+import { onRequest, filingPrepCheck, filingTokens, filingMatches, filingPrepPage, filingDbTokens, FILING_PREP_MAX, FILING_PREP_MATCHES, FILING_PREP_CHARS, FILING_PREP_PDF_MAX, filingText, filingMask, OD_ROOT, OD_INBOX, OD_OCR_DIR } from './_build/routine-db.mjs';
+import { PDFDocument, StandardFonts, PDFName } from './_build/_pdflib.mjs';
+import { cappedBytes, pdfFirstText, PDF_STREAM_CAP } from './_build/_pdftext.mjs';
+import zlib from 'node:zlib';
 import { writeZip } from './_build/_xlsxpatch.mjs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 500) : '')); } };
@@ -17,6 +19,20 @@ async function pdf(text) {
 }
 const TEXT_PDF = await pdf('Pressure vessel inspection report E-1227 serial 4455667 next test 12.05.2027 id 123456789 mail a.b@x.co.il');
 const SCAN_PDF = await pdf('');
+// A compression bomb (security review 24/11/2026): a page stream of a real text line and then 64 MB of spaces, deflated to a
+// few dozen KB. decode() would inflate all of it in the Worker.
+const BOMB_MB = 64;
+async function bombPdf() {
+  const d = await PDFDocument.create();
+  const p = d.addPage([300, 300]);
+  p.drawText('x', { x: 10, y: 200, size: 8, font: await d.embedFont(StandardFonts.Helvetica) });
+  const fname = p.node.Resources().lookup(PDFName.of('Font')).keys()[0].asString();
+  const plain = Buffer.concat([Buffer.from('BT ' + fname + ' 8 Tf 10 200 Td (Bomb report B-555) Tj ET\n'), Buffer.alloc(BOMB_MB * 1048576, 0x20)]);
+  const st = d.context.stream(new Uint8Array(zlib.deflateSync(plain, { level: 9 })), { Filter: 'FlateDecode' });
+  p.node.set(PDFName.of('Contents'), d.context.register(st));
+  return d.save({ useObjectStreams: false });
+}
+const BOMB = await bombPdf();
 const DOCX = await writeZip([{ name: 'word/document.xml', text: '<w:document><w:body><w:p><w:r><w:t>Calibration certificate MS2345</w:t></w:r></w:p></w:body></w:document>' }]);
 
 const at = (i) => new Date(Date.parse('2026-11-20T08:00:00Z') + i * 60000).toISOString();
@@ -125,6 +141,37 @@ console.log('\n6. through the server: scans, Word, photos, a failed file');
   log = [];
   const e = await call({ op: 'filing_prep', agent: 'routine-mail-filing' });
   check('an empty inbox: ok, no files, no table read', e.j.ok === true && e.j.total === 0 && e.j.next_offset === null && !log.some((x) => /\/rest\/v1\/(docs|equip)/.test(x.u)), e.j);
+}
+
+console.log('\n7. security review 24/11/2026: compression bomb, hidden characters, IDs');
+{
+  check('the bomb is small on disk (under FILING_PREP_PDF_MAX) and inflates ' + BOMB_MB + ' MB', BOMB.length < FILING_PREP_PDF_MAX && BOMB.length < BOMB_MB * 1048576 / 100, BOMB.length);
+  const doc = await PDFDocument.load(BOMB);
+  const bud = { left: 2 * 1048576 };
+  const raw = doc.context.lookup(doc.getPages()[0].node.get(PDFName.of('Contents')));
+  const b = await cappedBytes(raw, bud);
+  check('one stream is inflated only up to PDF_STREAM_CAP, not ' + BOMB_MB + ' MB', b && b.length === PDF_STREAM_CAP && bud.left === 1048576, b && b.length);
+  check('its text is still read', /B-555/.test(await pdfFirstText(doc, 1200)));
+  const n = '2026-11-20 1001 - bomb.pdf';
+  items = [{ name: n, size: BOMB.length, file: {}, createdDateTime: at(1) }];
+  content = { [inbox(n)]: BOMB };
+  const r = await call({ op: 'filing_prep', agent: 'routine-mail-filing' });
+  check('through the server: the call answers, the file carries its text', r.j.ok === true && r.j.files.length === 1 && /B-555/.test(r.j.files[0].text) && r.j.files[0].tokens.indexOf('B-555') >= 0, r.j.files && r.j.files[0]);
+  const big = '2026-11-20 1002 - big.pdf';
+  items = [{ name: big, size: FILING_PREP_PDF_MAX + 1, file: {}, createdDateTime: at(2) }];
+  content = { [inbox(big)]: TEXT_PDF };
+  log = [];
+  const rb = await call({ op: 'filing_prep', agent: 'routine-mail-filing' });
+  check('a PDF over FILING_PREP_PDF_MAX is not downloaded (only its .txt is looked for)', rb.j.ok === true && rb.j.files[0].scan === true && !log.some((x) => x.u.indexOf('big.pdf:/content') >= 0), rb.j.files);
+  check('hidden characters in the text become spaces', filingText('a‮b​c\u0007d', false).text === 'a b c d');
+  check('IDs: with dashes or spaces, 8 digits, 9 digits; a date and a short code stay', filingMask('id 12-345-6789, 123 456 789, 12345678, 123456789, 12.05.2027 E-1227') === 'id <מספר>, <מספר>, <מספר>, <מספר>, 12.05.2027 E-1227', filingMask('id 12-345-6789, 123 456 789, 12345678, 123456789, 12.05.2027 E-1227'));
+  const hid = '2026-11-20 1003 - ‮cert 12345678 E-99.docx';
+  items = [{ name: hid, size: DOCX.length, file: {}, createdDateTime: at(3) }];
+  content = { [inbox(hid)]: DOCX };
+  const rh = await call({ op: 'filing_prep', agent: 'routine-mail-filing' });
+  const fh = rh.j.files && rh.j.files[0];
+  check('a name with a hidden character: name shown without it, exact keeps it as \\u202e for od_move', fh && fh.name.indexOf('‮') < 0 && fh.exact === '2026-11-20 1003 - \\u202ecert 12345678 E-99.docx', fh);
+  check('the name is masked before its tokens: an 8-digit number in the name is not a token', fh && fh.tokens.indexOf('12345678') < 0 && fh.tokens.indexOf('E-99') >= 0 && fh.tokens.indexOf('MS2345') >= 0, fh && fh.tokens);
 }
 
 globalThis.fetch = real;

@@ -187,15 +187,75 @@ export function findTextSpot(doc, needle) {
   return null;
 }
 
+// Capped stream reading, for pdfFirstText only (24/11/2026 security review: decode() inflates a whole stream, and a small
+// PDF whose stream inflates a thousand times over could fill the Worker's memory). A stream is read only when it has no
+// filter or exactly FlateDecode without DecodeParms; it is inflated chunk by chunk and cut at PDF_STREAM_CAP, all streams
+// together at PDF_TOTAL_CAP (bud.left). Anything else: null, its text is skipped. findSignSpot and the rest keep bytesOf.
+export const PDF_STREAM_CAP = 1048576, PDF_TOTAL_CAP = 2 * 1048576;
+export async function cappedBytes(stream, bud) {
+  try {
+    if (!(stream instanceof PDFRawStream)) return null;
+    const cap = Math.min(PDF_STREAM_CAP, bud.left);
+    if (cap <= 0) return null;
+    const f = stream.dict.lookup(PDFName.of('Filter'));
+    const names = !f ? [] : f instanceof PDFArray ? f.asArray().map(String) : [String(f)];
+    if (!names.length) { const b = stream.contents.subarray(0, cap); bud.left -= b.length; return b; }
+    if (names.length !== 1 || names[0] !== '/FlateDecode' || stream.dict.lookup(PDFName.of('DecodeParms'))) return null;
+    const rd = new Blob([stream.contents]).stream().pipeThrough(new DecompressionStream('deflate')).getReader();
+    const chunks = []; let total = 0;
+    try {
+      while (total < cap) {
+        const { done, value } = await rd.read();
+        if (done) break;
+        const take = value.subarray(0, cap - total);
+        chunks.push(take); total += take.length;
+      }
+    } catch (e) { /* a broken end of stream: keep what was inflated */ }
+    try { await rd.cancel(); } catch (e) { /* already closed */ }
+    bud.left -= total;
+    const out = new Uint8Array(total); let o = 0;
+    for (const c of chunks) { out.set(c, o); o += c.length; }
+    return total ? out : null;
+  } catch (e) { return null; }
+}
+async function fontsCapped(page, bud) {
+  const fonts = {};
+  try {
+    const res = page.node.Resources();
+    const fd = res && res.lookup(PDFName.of('Font'), PDFDict);
+    if (!fd) return fonts;
+    for (const [k] of fd.entries()) {
+      const f = fd.lookup(k, PDFDict);
+      const tu = f && f.lookup(PDFName.of('ToUnicode'));
+      const b = tu ? await cappedBytes(tu, bud) : null;
+      const sub = f && f.lookup(PDFName.of('Subtype'));
+      const cm = b ? parseToUnicode(latin(b)) : { map: new Map(), len: 1 };
+      if (sub && String(sub) === '/Type0') cm.len = Math.max(cm.len, 2);
+      fonts[k.asString().replace(/^\//, '')] = b ? cm : null;
+    }
+  } catch (e) { /* a font it cannot read: its text is skipped */ }
+  return fonts;
+}
+async function contentCapped(page, bud) {
+  try {
+    const c = page.node.Contents();
+    const list = c instanceof PDFArray ? c.asArray().map((r) => page.doc.context.lookup(r)) : [c];
+    let s = '';
+    for (const st of list) { const b = await cappedBytes(st, bud); if (b) s += latin(b) + '\n'; if (bud.left <= 0) break; }
+    return s;
+  } catch (e) { return ''; }
+}
 // The start of a PDF's text layer (24/11/2026, routine-db filing_prep): the shown strings of the first pages in stream
-// order, spaces collapsed, cut at max. A scan has none: ''. Hebrew may come in visual order; enough to know what it is.
-export function pdfFirstText(doc, max, pagesMax) {
+// order, spaces collapsed, cut at max; it stops as soon as it has max characters. A scan has none: ''. Hebrew may come in
+// visual order; enough to know what it is.
+export async function pdfFirstText(doc, max, pagesMax) {
+  const bud = { left: PDF_TOTAL_CAP };
   let out = '';
-  const pages = doc.getPages().slice(0, pagesMax || 3);
-  for (const pg of pages) {
-    out += ' ' + pageTexts(contentOf(pg), fontsOf(pg)).map((t) => t.text).join(' ');
+  for (const pg of doc.getPages().slice(0, pagesMax || 3)) {
+    const fonts = await fontsCapped(pg, bud);
+    out += ' ' + pageTexts(await contentCapped(pg, bud), fonts).map((t) => t.text).join(' ');
     out = out.replace(/\s+/g, ' ');
-    if (out.length >= max) break;
+    if (out.length >= max || bud.left <= 0) break;
   }
   return out.trim().slice(0, max);
 }
