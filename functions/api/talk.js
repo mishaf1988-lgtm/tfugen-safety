@@ -31,7 +31,7 @@ import { accessToken, putFile, sendMailTo, trashFile } from '../_onedrive.js';
 import { LOGO_JPG } from '../_logo.js';
 import { ownerWa, sendToOwner, ownerWindowOpen, keyboardText, waOneLine } from '../_wa.js';
 import { stateCas } from '../_cas.js';
-import { makeEditToken, readEditToken, editUrl, EDIT_MAX, diffRow, editEntry, correctionHtml, updateMailHtml, editLinkHtml, editFormHtml } from '../_indedit.js';
+import { makeEditToken, readEditToken, editUrl, EDIT_MAX, diffRow, editEntry, asSigned, correctionHtml, updateMailHtml, editLinkHtml, editFormHtml } from '../_indedit.js';
 import { readRecipients } from './hazard-report.js';
 import { REPORT_DEPTS } from './hazard-file.js';
 import { KIND_CTR, CTR_OK, CTR_INSTR, instrText, isInstrMissing, ctrFolder, safeName, CTR_HGT_JOB, CTR_HGT_FILE, validUntil } from '../_ctr.js';
@@ -2094,8 +2094,10 @@ async function makeLink(env, request, ctx) {
   // mailed as on the worker's send. About 10 + 8 photos calls out, under the free plan's 50.
   if (b && b.op === 'refile') {
     const rr = await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(String(b.id || '')) + '&select=*', { headers: sbH(env) });
-    const row = rr.ok ? ((await rr.json()) || [])[0] : null;
-    if (!row) return jsonResp({ error: 'not found' }, 404, cors);
+    const row0 = rr.ok ? ((await rr.json()) || [])[0] : null;
+    if (!row0) return jsonResp({ error: 'not found' }, 404, cors);
+    // The signed form is rebuilt from what the worker signed, not from the corrected row (security review 24/11/2026)
+    const row = asSigned(row0);
     const tr = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(String(row.talk_id || '')) + '&select=*', { headers: sbH(env) });
     const t = tr.ok ? ((await tr.json()) || [])[0] : null;
     if (!t) return jsonResp({ error: 'not found' }, 404, cors);

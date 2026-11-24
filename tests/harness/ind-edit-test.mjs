@@ -2,7 +2,7 @@
 // "בקליטת עובדים חדשים לפעמים יש איזשהו פספוס... במייל עצמו יהיה קישור עם אופציה להוסיף דברים או לשנות דברים").
 // Only HR and Michael, with the HR code; the signed copy stays, a correction page is filed beside it and a mail goes to both.
 import { onRequest, makeCodeCookie, IND_HR, IND_ROOT, fileInduction } from './_build/talk.mjs';
-import { makeEditToken, readEditToken, editUrl, diffRow, equipSummary, editEntry, correctionHtml, updateMailHtml, editFormHtml, equipPrefill, EDIT_MAX } from './_build/_indedit.mjs';
+import { makeEditToken, readEditToken, editUrl, diffRow, equipSummary, editEntry, correctionHtml, updateMailHtml, editFormHtml, equipPrefill, asSigned, EDIT_MAX } from './_build/_indedit.mjs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 500) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -111,6 +111,12 @@ console.log('\n3. a correction is saved, filed and mailed');
   const ml = w.mails[0] && w.mails[0].message, to = ml ? ml.toRecipients.map((x) => x.emailAddress.address) : [];
   check('one update mail, to Michael and HR only', w.mails.length === 1 && to.length === 2 && to.includes('sviva@tapugan.co.il') && to.includes(IND_HR), to);
   check('the mail has the changes, the file link, and a fresh edit link', ml && ml.body.content.includes('מעבדה') && ml.body.content.includes('od.example') && ml.body.content.includes('op=edit') && ml.subject.includes('תיקון') && ml.attachments && ml.attachments[0], ml && ml.subject);
+  // security review 24/11/2026, finding 1: a resend of the signed form is built from what the worker signed
+  const signed = asSigned({ ...ROW, ...p.b });
+  check('asSigned undoes the correction: details and equipment as signed', signed.dept === 'טוגנים' && signed.phone === '0521234567' && signed.equip === null && signed.edits.length === 1, signed);
+  const two = asSigned({ ...ROW, dept: 'ג', edits: [{ changes: [{ k: 'dept', old: 'טוגנים', new: 'ב' }] }, { changes: [{ k: 'dept', old: 'ב', new: 'ג' }] }] });
+  check('two corrections undone, the latest first', two.dept === 'טוגנים', two.dept);
+  check('a row never corrected is returned as it is', asSigned(ROW).dept === 'טוגנים' && asSigned({ ...ROW, equip: { items: [] } }).equip.items.length === 0);
 }
 
 console.log('\n4. refusals and limits');

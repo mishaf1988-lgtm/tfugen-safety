@@ -47,8 +47,24 @@ export function editEntry(changes, eqOld, eqNew, nDocs, nowMs) {
     at: new Date(nowMs || Date.now()).toISOString(), by: 'hr',
     changes: changes.map((c) => ({ k: c.k, old: c.old, new: c.new })),
     equip: equipChanged(eqOld, eqNew) ? { old: equipSummary(eqOld), new: equipSummary(eqNew) } : null,
+    // The equipment object as it was signed, so a resend of the signed form (op refile) is built from what the worker signed
+    // (security review 24/11/2026, finding 1)
+    equipOld: equipChanged(eqOld, eqNew) ? (eqOld || null) : undefined,
     docs: nDocs || 0,
   };
+}
+
+// Pure. The row as the worker signed it: every correction undone, the latest first. A resend of the signed form is built from
+// this, never from the corrected row (the signed copy stays as signed; the corrections live on their own pages).
+export function asSigned(row) {
+  const out = { ...row };
+  const list = Array.isArray(row && row.edits) ? row.edits : [];
+  for (let i = list.length - 1; i >= 0; i--) {
+    const e = list[i] || {};
+    for (const c of (e.changes || [])) out[c.k] = c.old === '' ? null : c.old;
+    if (e.equipOld !== undefined && e.equip) out.equip = e.equipOld;
+  }
+  return out;
 }
 
 const TD = 'border:1px solid #999;padding:6px 10px';
