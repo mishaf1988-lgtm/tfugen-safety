@@ -51,12 +51,27 @@ jobs:
           done
           echo "up=$up" >> "$GITHUB_OUTPUT"
           echo "detail=functions [$fn], static [$st]" >> "$GITHUB_OUTPUT"
+          # 24/11/2026 (Michael: "do it: build a mail alert"): the server can answer and still not reach the database
+          # (that noon a wrong SUPABASE_SERVICE_ROLE_KEY gave every call 401 and the assistant went silent for an hour).
+          # /api/db-health answers "db ok" or "db fail"; only asked when the site answers, three tries a minute apart.
+          db=ok
+          if [ "$up" = "true" ]; then
+            for i in 1 2 3; do
+              dh=$(curl -s -m 20 -w ' %{http_code}' "$site/api/db-health" || true)
+              echo "db try $i: [$dh]"
+              if [ "$dh" = "db ok 200" ]; then db=ok; break; fi
+              db=fail
+              [ $i -lt 3 ] && sleep 60
+            done
+          fi
+          echo "db=$db" >> "$GITHUB_OUTPUT"
       - name: WhatsApp on a change
         env:
           GH_TOKEN: ${{ github.token }}
           META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
           WA_TO: ${{ secrets.WA_TO }}
           UP: ${{ steps.probe.outputs.up }}
+          DB: ${{ steps.probe.outputs.db }}
           TEST: ${{ inputs.test_whatsapp }}
         run: |
           # the last finished scheduled run of this workflow (before this one) that passed or failed: success = was up.
@@ -71,6 +86,10 @@ jobs:
             msg='בדיקה: ההתראה מ-GitHub כשהאתר לא עונה מחוברת לוואטסאפ שלך. אין צורך לענות.'
           elif [ "$UP" = "false" ] && [ "$prev" != "failure" ]; then
             msg='האתר tapugan-safety.pages.dev לא עונה כבר כמה דקות (בדיקה מ-GitHub). הוואטסאפ, החתימה והעוזר לא יעבדו עד שיחזור. הנתונים שמורים ב-Supabase.'
+          elif [ "$UP" = "true" ] && [ "${DB:-ok}" = "fail" ] && [ "$prev" != "failure" ]; then
+            msg='השרת לא מצליח להגיע למסד הנתונים כבר כמה דקות (בדיקה מ-GitHub). העוזר בוואטסאפ לא יענה, והודעות אליו לא יישמרו. הסיבה השכיחה: מפתח המסד ב-Cloudflare (SUPABASE_SERVICE_ROLE_KEY ב-Production).'
+          elif [ "$UP" = "true" ] && [ "${DB:-ok}" = "fail" ]; then
+            exit 0
           elif [ "$UP" = "true" ] && [ "$prev" = "failure" ]; then
             msg='האתר tapugan-safety.pages.dev חזר לענות (בדיקה מ-GitHub).'
           else exit 0; fi
@@ -94,4 +113,9 @@ jobs:
         if: steps.probe.outputs.up != 'true'
         run: |
           echo "::error::tapugan-safety.pages.dev does not answer (${{ steps.probe.outputs.detail }})"
+          exit 1
+      - name: Fail when the server cannot reach the database (GitHub mails too)
+        if: steps.probe.outputs.up == 'true' && steps.probe.outputs.db == 'fail'
+        run: |
+          echo "::error::the server answers but /api/db-health says db fail (check SUPABASE_SERVICE_ROLE_KEY in Cloudflare Production)"
           exit 1

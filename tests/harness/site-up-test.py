@@ -26,11 +26,11 @@ curl() {
   esac
 }
 '''
-def run(conclusions, up, test="false", secrets=True):
+def run(conclusions, up, test="false", secrets=True, db="ok"):
     fix = os.path.join(tmp, "runs.json"); sent = os.path.join(tmp, "sent.txt")
     json.dump({"workflow_runs": [{"conclusion": c} for c in conclusions]}, open(fix, "w"))
     open(sent, "w").close()
-    env = dict(os.environ, FIX=fix, SENT=sent, UP=up, TEST=test, GH_TOKEN="g",
+    env = dict(os.environ, FIX=fix, SENT=sent, UP=up, DB=db, TEST=test, GH_TOKEN="g",
                META_ACCESS_TOKEN="m" if secrets else "", WA_TO="972500000000" if secrets else "")
     p = subprocess.run(["bash", "-c", stub + script], env=env, capture_output=True, text=True, timeout=60)
     msgs = [json.loads(l)["template"]["components"][0]["parameters"][0]["text"] for l in open(sent) if l.strip()]
@@ -56,5 +56,15 @@ p, m = run(["success"], "false", secrets=False)
 check("no secrets: nothing sent, the step still exits 0 (the last step fails the run)", p.returncode == 0 and len(m) == 0 and "no WhatsApp secrets" in p.stdout, p.stdout)
 p, m = run(["success"], "true", test="true")
 check("a hand test run sends one message even when nothing changed", len(m) == 1, m)
+# 24/11/2026: the server answers but cannot reach the database (a wrong SUPABASE_SERVICE_ROLE_KEY)
+DBMSG = "למסד"   # "to the database"
+p, m = run(["success"], "true", db="fail")
+check("database lost after a passed run: one 'database' message", p.returncode == 0 and len(m) == 1 and DBMSG in m[0] and DOWN not in m[0], (p.stdout, m))
+p, m = run(["failure"], "true", db="fail")
+check("database still lost after a failed run: no second message", len(m) == 0, m)
+p, m = run(["failure"], "true", db="ok")
+check("database back after a failure: one 'back' message", len(m) == 1 and BACK in m[0], m)
+p, m = run(["success"], "false", db="fail")
+check("site down and database unknown: the 'down' message, not the database one", len(m) == 1 and DOWN in m[0] and DBMSG not in m[0], m)
 print("\n%d passed, %d failed" % (ok, bad))
 sys.exit(1 if bad else 0)
