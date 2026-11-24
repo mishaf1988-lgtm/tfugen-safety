@@ -7,7 +7,7 @@
 **הטריגרים:** שתי ריצות ביום, א'-ה' 10:52 ו-17:52 שעון ישראל (19/10/2026 שלוש; 31/10/2026 מיכאל בשאלון: "בצע: תיוק המייל פעמיים ביום", לחיסכון במכסה, ארבע מחמש ריצות אחרונות היו ריקות; `trig_01Bwk6tQq1ynNqknEAsaMcvH` של 13:52 כבוי): `trig_01BSS4f2n1vj1hYA9R6pGurs` ו-`trig_01LfFp3qxNuyTcwjxaBhgSEZ`, כולם לשיחה `session_01HK2YJUpeGksTy3KHZ2sGCm` (הראשון הוקם 11/10/2026 כ-`trig_01SpyucrTXeti3BCYJHGtBiL`). פרומפט קצר שמסנכרן את main ומבצע את הקובץ הזה.
 
 ---
-0. ידע משותף: קרא את project-files/agent-common.md, סעיפי "פתיחה" ו"ידע משותף". בסוף הריצה: סעיף "סגירה" (שם הסוכן: routine-mail-filing).
+0. ידע משותף: הרץ `python3 tools/common-read.py פתיחה "ידע משותף"` (רק שני הסעיפים האלה מ-project-files/agent-common.md; לא לקרוא את הקובץ כולו, 24/11/2026, חיסכון). בסוף הריצה: סעיף "סגירה" (שם הסוכן: routine-mail-filing).
 ריצה חדשה: לבצע מההתחלה, בלי להסתמך על ריצות קודמות. כל הודעה בעברית, בלי מקף ארוך. תאריכים DD/MM/YYYY.
 
 **החוקים לתוקף (חובה לפני כל עדכון):** כמו ב-`routine-validity.md`, סעיף "החוקים": `role.md`, `factory.md`, `law.md`, `lessons.md` ב-michael-skills. מה שלא מכוסה שם לא נקבע לבד.

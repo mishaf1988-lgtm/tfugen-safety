@@ -9,7 +9,7 @@
 **המסד (09/10/2026):** דרך `routine-db.sh` (select לכל טבלה וחישוב ב-python, בלי SQL); `execute_sql` רק כשהסקריפט יוצא ב-3. ההערה הקודמת כאן ("שאילתה אחת ב-execute_sql") בוטלה: היא סתרה את הפרומפט.
 
 ---
-0. ידע משותף (09/10/2026): קרא את project-files/agent-common.md, סעיפי "פתיחה" ו"ידע משותף". בסוף הריצה: סעיף "סגירה" (שורת למידה אחת; שם הסוכן: routine-compliance).
+0. ידע משותף (09/10/2026): הרץ `python3 tools/common-read.py פתיחה "ידע משותף"` (רק שני הסעיפים האלה מ-project-files/agent-common.md; לא לקרוא את הקובץ כולו, 24/11/2026, חיסכון). בסוף הריצה: סעיף "סגירה" (שורת למידה אחת; שם הסוכן: routine-compliance).
 ריצה חדשה של משימה מתוזמנת: לבצע מההתחלה, לא להסתמך על ריצות קודמות בשיחה הזו. כל הודעה בעברית, בלי מקף ארוך. תאריכים DD/MM/YYYY.
 המסד (09/10/2026, בלי לחיצת אישור): בתיקיית tfugen-safety, `bash project-files/routine-db.sh '<JSON>'`. פעולות: {"op":"select","table":"<טבלה>","query":"<PostgREST, למשל select=id,e&e=lte.2026-12-31>"}, {"op":"state_get","keys":[...]}, {"op":"state_set","key":"...","value":...}. `med` ו-`hearing_tests`: רק select=e; `trustee_reports`: רק loc,location_id,s,ok,ts,closed_d,num. שאילתת SQL בצעדים למטה מתארת מה לחשב: למשוך את השורות ב-select ולחשב ב-python. יציאה 3 ("ROUTINE_KEY missing") או ok:false: אותו דבר בכלי execute_sql של Supabase (project_id znhjtpcltrxxyfjczgvw; ToolSearch "execute_sql"), ובהודעה האחרונה שורה "המסד דרך execute_sql: <סיבה>".
 דוח הציות החודשי של מיכאל פרייליך, ממונה בטיחות ואיכות סביבה בתעשיות תפוגן. מסמכים פנימיים בלבד: תסקירים, טפסי כבאות, כיולים, רישיונות והיתרים, משימות פתוחות (שינויי חקיקה: ברדאר, לא כאן).
