@@ -83,7 +83,7 @@
 - ctr-link: קישור לקבלן: פרטים, מסמכים לפי העבודות ותיאור העבודה, הוראות 146.03 בדף ושורה לכל עובד עם חתימה באצבע באותו טלפון; טופס 146.03 ממולא וחתום (Word ו-PDF) לתיקיית 
 - maint-hook: חיבור למוקד האחזקה של המפעל: ליקוי פתוח שהאחראי עליו אחזקה או חשמל נפתח שם לבד כקריאה, מיד כשהוא נרשם; קריאה שנסגרה במוקד נרשמת בהערות הליקוי ומיכאל מקבל הודעה,
 - gemini_ask: Gemini קורא, מסכם ומתרגם נהלים ותקנות במקום Claude, כדי לחסוך טוקנים (23/11/2026): רק מנהלים, תקנות, תקנים והדרכות עד שמיכאל מאשר שהמפתח בחיוב; השרת לא שולח ת.ז
-- routine-db: 97 פעולות שהסוכנים מותרים בהן: agent_log_since, agent_report, agents_pause, agents_resume, assistant_account, cal_invite, cal_invite_ask, cal_move, cal_move_ask
+- routine-db: 98 פעולות שהסוכנים מותרים בהן: agent_log_since, agent_report, agents_pause, agents_resume, assistant_account, cal_invite, cal_invite_ask, cal_move, cal_move_ask
 
 ## המסד
 - מסמכים ותוקף: טבלה docs
