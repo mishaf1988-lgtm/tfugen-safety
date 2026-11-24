@@ -419,8 +419,9 @@ export async function fastSignAsk(env, q) {
 // only ever drafts). The signed file's path is kept 24 hours in server_state sign_mail.
 export const SIGN_MAIL_KEY = 'sign_mail', SIGN_MAIL_MS = 24 * 3600e3;
 export const SIGN_MAIL_LABEL = '\u05e9\u05dc\u05d7 \u05dc\u05d9 \u05d1\u05de\u05d9\u05d9\u05dc';
-export function signMailOf(m, prev) {
-  if (!prev || prev.ref !== 'signmail') return null;
+export function signMailOf(m, prev, about) {
+  // 24/11/2026: also a tap on that answer after a newer message (its log row carries ref signmail)
+  if (!/\| ref signmail \|/.test(String(about || '')) && (!prev || prev.ref !== 'signmail')) return null;
   const c = m && m.choice !== undefined && m.choice !== null ? String(m.choice) : '';
   const t = String((m && m.text) || '').trim();
   return c === '1' || /^1(\.|\s|$)/.test(t) || (t.length <= 60 && /\u05de\u05d9\u05d9\u05dc/.test(t)) ? true : null;
@@ -442,8 +443,9 @@ export function signReplyFrom(rel) {
   const m = /^(\d{4}-\d{2}-\d{2}) (\d{2})(\d{2}) - (.+?) - \u05d7\u05ea\u05d5\u05dd\.pdf$/i.exec(parts[1]);
   return m ? { at: m[1] + 'T' + m[2] + ':' + m[3] + 'Z', file: m[4] + '.pdf' } : null;
 }
-export function signReplyOf(m, prev) {
-  if (!prev || prev.ref !== 'signmail') return null;
+export function signReplyOf(m, prev, about) {
+  // 24/11/2026: also a tap on that answer after a newer message (its log row carries ref signmail)
+  if (!/\| ref signmail \|/.test(String(about || '')) && (!prev || prev.ref !== 'signmail')) return null;
   const c = m && m.choice !== undefined && m.choice !== null ? String(m.choice) : '';
   const t = String((m && m.text) || '').trim();
   return c === '2' || /^2(\.|\s|$)/.test(t) || (t.length <= 60 && /\u05d4\u05e9\u05d1|\u05dc\u05e9\u05d5\u05dc\u05d7|\u05ea\u05e2\u05e0\u05d4|\u05ea\u05e9\u05d9\u05d1|\u05ea\u05d2\u05d5\u05d1\u05d4|\u05e9\u05e9\u05dc\u05d7|\u05d4\u05e9\u05d5\u05dc\u05d7/.test(t)) ? true : null;
@@ -520,8 +522,8 @@ export function fastRoute(m, about, prev) {
   const pk = signPickOf(m, prev, about);
   // security review 24/11/2026: a tap on an older list carries that list's time; the files saved are the newest list's
   if (pk) return Object.assign({ kind: 'sign_pick', n: pk }, about ? { at: String(about).split(' | ').pop() } : null);
-  if (signReplyOf(m, prev)) return { kind: 'sign_reply' };
-  if (signMailOf(m, prev)) return { kind: 'sign_mail' };
+  if (signReplyOf(m, prev, about)) return { kind: 'sign_reply' };
+  if (signMailOf(m, prev, about)) return { kind: 'sign_mail' };
   if (!raw || raw.length > 40) return null;
   // 21/10/2026: an answer to "sign in your name on <file>?" (routine-db sign_request). Only the server signs, and
   // only here, on Michael's own "1" / "do it" to that very request; any other word goes to the assistant.
@@ -982,7 +984,7 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
     else { const g = await gather(env, new Date()); ans = buildBrief(g.items, g.failed, g.today, false, [], null, null, null, true, g.waiting, g.disq); ref = 'brief'; }
   } catch (e) { ans = null; }
   const sr = ans ? await sendToOwner(env, owner, ans, Object.assign({ kind: 'reply', windowOpen: true, noTemplate: true }, choices ? { choices } : {})).catch(() => null) : null;
-  if (sr && (sr.ok || (chat && ans))) { seen.fast = fr0.kind; await noteLastOut(env, sbFrom(env), ans, ref); await logOut(env, ans, sr, /^ctr[mr]:/.test(String(ref || '')) ? ref : null); return true; }
+  if (sr && (sr.ok || (chat && ans))) { seen.fast = fr0.kind; await noteLastOut(env, sbFrom(env), ans, ref); await logOut(env, ans, sr, /^(ctr[mr]:|signmail$)/.test(String(ref || '')) ? ref : null); return true; }
   seen.fast_fail = fr0.kind;
   return false;
 }
