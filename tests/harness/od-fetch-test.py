@@ -69,32 +69,44 @@ cp "$FAKE_FILE" "$o"; printf 200
             h = f.read(24)
         return struct.unpack(">I", h[16:20])[0] if h[:8] == b"\x89PNG\r\n\x1a\n" else -1
 
-    # 1. a text PDF of 3 pages: one call, 2 pages rendered at 70 dpi, the text, the token set and revoked, never printed
-    r, calls = run(["22_ISO/report E-1227.pdf"])
-    check("a PDF: exit 0", r.returncode == 0, r.stderr)
-    check("... saved as OUT/1.pdf", os.path.join(out, "1.pdf") in r.stdout, r.stdout)
-    pngs = re.findall(r"\S+\.png", r.stdout)
-    check("... 2 pages rendered by default (of 3)", pngs == [out + "/1-1.png", out + "/1-2.png"] and all(os.path.exists(p) for p in pngs), r.stdout)
-    check("... the page count says 3 and how to get more", "pages: 3 (rendered 2" in r.stdout, r.stdout)
-    w = png_width(out + "/1-1.png")
-    check("... rendered at 70 dpi (a 300pt page is about 292px)", 280 <= w <= 300, w)
-    check("... prints the text layer", "Pressure vessel inspection report E-1227" in r.stdout, r.stdout)
-    check("... the text is capped at about 800 characters", len(r.stdout.split("text:\n", 1)[-1]) <= 820, len(r.stdout))
-    tok = (re.search(r"curl tok=(\S+)", calls) or [None, ""])[1]
-    check("... the download carried a one-off token", len(tok) == 48, calls)
-    check("... the token was set (od_raw_token) and then ended (od_raw_exp twice)", calls.count("od_raw_token") == 1 and calls.count("od_raw_exp") == 2, calls)
-    check("... the token and ROUTINE_KEY are never printed", tok and tok not in r.stdout + r.stderr and "test-key" not in r.stdout + r.stderr)
-    check("... the path went to od-read as raw", '"raw": true' in calls and "22_ISO/report E-1227.pdf" in calls, calls)
+    POPPLER = os.environ.get("OD_FETCH_POPPLER") != "0" and all(shutil.which(t) for t in ("pdfinfo", "pdftoppm", "pdftotext"))
+    print("  (poppler %s)" % ("found: the PDF render checks run" if POPPLER else "missing: the no-poppler checks run"))
+    if POPPLER:
+        # 1. a text PDF of 3 pages: one call, 2 pages rendered at 70 dpi, the text, the token set and revoked, never printed
+        r, calls = run(["22_ISO/report E-1227.pdf"])
+        check("a PDF: exit 0", r.returncode == 0, r.stderr)
+        check("... saved as OUT/1.pdf", os.path.join(out, "1.pdf") in r.stdout, r.stdout)
+        pngs = re.findall(r"\S+\.png", r.stdout)
+        check("... 2 pages rendered by default (of 3)", pngs == [out + "/1-1.png", out + "/1-2.png"] and all(os.path.exists(p) for p in pngs), r.stdout)
+        check("... the page count says 3 and how to get more", "pages: 3 (rendered 2" in r.stdout, r.stdout)
+        w = png_width(out + "/1-1.png")
+        check("... rendered at 70 dpi (a 300pt page is about 292px)", 280 <= w <= 300, w)
+        check("... prints the text layer", "Pressure vessel inspection report E-1227" in r.stdout, r.stdout)
+        check("... the text is capped at about 800 characters", len(r.stdout.split("text:\n", 1)[-1]) <= 820, len(r.stdout))
+        tok = (re.search(r"curl tok=(\S+)", calls) or [None, ""])[1]
+        check("... the download carried a one-off token", len(tok) == 48, calls)
+        check("... the token was set (od_raw_token) and then ended (od_raw_exp twice)", calls.count("od_raw_token") == 1 and calls.count("od_raw_exp") == 2, calls)
+        check("... the token and ROUTINE_KEY are never printed", tok and tok not in r.stdout + r.stderr and "test-key" not in r.stdout + r.stderr)
+        check("... the path went to od-read as raw", '"raw": true' in calls and "22_ISO/report E-1227.pdf" in calls, calls)
 
-    # 2. a second file gets the next number; --pages 3 renders all 3; --pages 50 is capped at 10
-    r, _ = run(["a/b.pdf", "--pages", "3"])
-    check("a second file is OUT/2.pdf, 3 pages with --pages 3", out + "/2.pdf" in r.stdout and len(re.findall(r"2-\d\.png", r.stdout)) == 3, r.stdout)
-    check("... and says nothing about more pages", "rendered" not in r.stdout, r.stdout)
+        # 2. a second file gets the next number; --pages 3 renders all 3; --pages 50 is capped at 10
+        r, _ = run(["a/b.pdf", "--pages", "3"])
+        check("a second file is OUT/2.pdf, 3 pages with --pages 3", out + "/2.pdf" in r.stdout and len(re.findall(r"2-\d\.png", r.stdout)) == 3, r.stdout)
+        check("... and says nothing about more pages", "rendered" not in r.stdout, r.stdout)
 
-    # 3. a scan: no text layer -> the scan line with the ocr_txt command for that path
-    r, _ = run(["x/scan.pdf"], fixture="scan.pdf")
-    check("a scan: exit 0 and PNGs", r.returncode == 0 and len(re.findall(r"\.png", r.stdout)) == 2, r.stdout + r.stderr)
-    check("... says scan and gives the ocr_txt call for the path", "a scan" in r.stdout and 'ocr_txt {"paths":["x/scan.pdf"]}' in r.stdout, r.stdout)
+        # 3. a scan: no text layer -> the scan line with the ocr_txt command for that path
+        r, _ = run(["x/scan.pdf"], fixture="scan.pdf")
+        check("a scan: exit 0 and PNGs", r.returncode == 0 and len(re.findall(r"\.png", r.stdout)) == 2, r.stdout + r.stderr)
+        check("... says scan and gives the ocr_txt call for the path", "a scan" in r.stdout and 'ocr_txt {"paths":["x/scan.pdf"]}' in r.stdout, r.stdout)
+
+    else:
+        # 24/11/2026: CI has no poppler. The script must say so and not crash, and the download itself still works
+        r, calls = run(["22_ISO/report E-1227.pdf"])
+        check("no poppler: exit 0, the file is saved", r.returncode == 0 and os.path.join(out, "1.pdf") in r.stdout, r.stdout + r.stderr)
+        check("... says poppler is missing, no PNG, not called a scan", "poppler not installed" in r.stdout and ".png" not in r.stdout and "a scan" not in r.stdout, r.stdout)
+        check("... gives the ocr_txt call for the path", 'ocr_txt {"paths":["22_ISO/report E-1227.pdf"]}' in r.stdout, r.stdout)
+        tok = (re.search(r"curl tok=(\S+)", calls) or [None, ""])[1]
+        check("... the token was set and ended, never printed", calls.count("od_raw_token") == 1 and calls.count("od_raw_exp") == 2 and tok and tok not in r.stdout + r.stderr, calls)
 
     # 4. Word: the start of its text; a photo: its path to Read
     r, _ = run(["f/form.docx"], fixture="form.docx")

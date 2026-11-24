@@ -13,7 +13,7 @@ or run ocr_txt. A Word / Excel / PowerPoint file prints the start of its text; a
 OUT is /tmp/od (OD_FETCH_DIR overrides it, for the tests). <n> = the next free number there, so two files never mix.
 Exit: 0 ready; 2 usage; 3-5 = od-get.sh's own exit codes (no ROUTINE_KEY, token not set, download failed).
 """
-import os, re, subprocess, sys, zipfile
+import shutil, os, re, subprocess, sys, zipfile
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 OD_GET = os.path.join(ROOT, "tools", "od-get.sh")
@@ -89,6 +89,9 @@ def zip_text(path, ext):
     return "".join(out)
 
 
+POPPLER = os.environ.get("OD_FETCH_POPPLER") != "0" and all(shutil.which(t) for t in ("pdfinfo", "pdftoppm", "pdftotext"))
+
+
 def pdf_pages(path):
     r = subprocess.run(["pdfinfo", path], capture_output=True, text=True)
     m = re.search(r"^Pages:\s+(\d+)", r.stdout, re.M)
@@ -112,7 +115,12 @@ def main():
     size = os.path.getsize(dest)
     print("file: %s" % path)
     print("saved: %s (%d KB)" % (dest, max(1, size // 1024)))
-    if ext == "pdf":
+    if ext == "pdf" and not POPPLER:
+        # 24/11/2026: no poppler (pdfinfo, pdftoppm, pdftotext) here: say so, never crash, never call it a scan
+        print("pages: ? (poppler not installed: no pdfinfo/pdftoppm/pdftotext)")
+        print("png: none (poppler not installed)")
+        print("text: unknown. Read the file with ocr_txt {\"paths\":[\"%s\"]} or od-read" % path)
+    elif ext == "pdf":
         total = pdf_pages(dest)
         upto = min(pages, total) if total else pages
         pngs = []
