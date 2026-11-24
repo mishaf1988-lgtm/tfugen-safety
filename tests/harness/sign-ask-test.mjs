@@ -14,7 +14,7 @@ check('the placeholder text of 20:48 becomes a search, not a crash', typeof sign
 check('other messages are not a request', signAskOf('מה המצב') === null && signAskOf('1') === null && signAskOf('מי חתם על ההדרכה') === null && signAskOf('חתימה') === null);
 check('free words: no file name = empty (the newest PDFs as buttons)', signAskOf(T) === '' && signAskOf('תחתום לי על איזה מסמך') === '' && signAskOf('תחתום בשמי על כל מסמך ושלח לי אותו פה') === '');
 check('free words: the name stays, the filler goes', signAskOf('חתום לי את Safetecs ותשלח לי') === 'Safetecs' && signAskOf('לחתום על טופס 16') === 'טופס 16');
-check('fastRoute: a long request still routes (before the 40-character limit)', (fastRoute({ text: T + 'מערכת שמתאימה את הפעולות בארגון' }, '', null) || {}).kind === 'sign_ask');
+check('fastRoute: a request to sign goes to the assistant, which signs with sign_now on his ask (24/11/2026)', fastRoute({ text: T + 'מערכת שמתאימה את הפעולות בארגון' }, '', null) === null && fastRoute({ text: 'תחתום בשמי על טופס 16' }, '', null) === null);
 
 const one = signPick([item('99_שונות', 'a.pdf')], 'a');
 check('one PDF: its path relative to the safety folder', one.length === 1 && one[0].path === '99_שונות/a.pdf', one);
@@ -80,7 +80,7 @@ check('the button title fits WhatsApp (20)', SIGN_MAIL_LABEL.length <= 20);
   check('fastRoute: reply before mail', (fastRoute({ text: 'השב לשולח במייל' }, '', { ref: 'signmail' }) || {}).kind === 'sign_reply' && (fastRoute({ text: 'שלח לי במייל' }, '', { ref: 'signmail' }) || {}).kind === 'sign_mail');
   check('the reply button title fits WhatsApp (20)', SIGN_REPLY_LABEL.length <= 20); }
 check('a word pointing back at files in the conversation is not a search (22/10: "לחתום על שנהם")', signAskOf('לחתום על שנהם ולצרף אישורים') === null && signAskOf('תחתום על ההרשאות') === null && signAskOf('תחתום על הצעת מחיר המור') === 'הצעת מחיר המור');
-check('no file name right after an assistant message: the assistant gets it (22/10 18:31), with no recent message: the newest PDFs', fastRoute({ text: 'חתום בשמי' }, '', { ref: 'none', text: 'x' }) === null && (fastRoute({ text: 'חתום בשמי' }, '', null) || {}).kind === 'sign_ask' && (fastRoute({ text: 'תחתום בשמי על טופס 16' }, '', { ref: 'none', text: 'x' }) || {}).kind === 'sign_ask');
+check('a request to sign, with or without a file name, after an assistant message or not: the assistant gets it (22/10 18:31; 24/11/2026 sign_now)', fastRoute({ text: 'חתום בשמי' }, '', { ref: 'none', text: 'x' }) === null && fastRoute({ text: 'חתום בשמי' }, '', null) === null && fastRoute({ text: 'תחתום בשמי על טופס 16' }, '', { ref: 'none', text: 'x' }) === null);
 check('"send to the mail as a reply to whoever sent it" is the reply, not a draft to me (22/10 18:37)', signReplyOf({ text: 'שלח למייל כתגובה למי ששלח' }, { ref: 'signmail' }) && (fastRoute({ text: 'שלח למייל כתגובה למי ששלח' }, '', { ref: 'signmail' }) || {}).kind === 'sign_reply');
 // 24/11/2026 (dev-20261124130849-gd49): "\u05d1\u05e6\u05e2" typed after a list that pointed to a waiting signature reached the assistant
 // and nothing happened. A typed yes still never signs (02/11/2026); the server sends the question again instead.

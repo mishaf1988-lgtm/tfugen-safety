@@ -2608,6 +2608,35 @@ const callIn = async (body) => {
   }
   check('/api/routine-db is a machine path', /const MACHINE_PATHS = \[[^\]]*'\/api\/routine-db'/.test(mw));
 
+  console.log('\nsign_now (24/11/2026: Michael\'s own ask is the approval, no tap)');
+  { const { ownerAskedSign, signNowCount, SIGN_NOW_MAX } = await import('./_build/routine-db.mjs');
+    // pairs: his own words that ask to sign, and words that do not
+    check('ownerAskedSign: "תחתום בשמי על התעודה", "🎤 לחתום על הטופס של רותם", "חתום ותחזיר לשולח" = yes',
+      ownerAskedSign([{ text: 'תחתום בשמי על התעודה של רותם' }]) && ownerAskedSign([{ text: '🎤 אפשר לחתום על הטופס של רותם' }]) && ownerAskedSign([{ text: 'חתום ותחזיר לשולח' }]));
+    check('ownerAskedSign: "מה עם הזימונים", "החתמתי את העובדים", "תשלח לי את המייל" or no messages = no',
+      !ownerAskedSign([{ text: 'מה עם הזימונים' }]) && !ownerAskedSign([{ text: 'החתמתי את העובדים אתמול' }]) && !ownerAskedSign([{ text: 'תשלח לי את המייל' }]) && !ownerAskedSign([]) && !ownerAskedSign(null));
+    { const { signAskFor } = await import('./_build/routine-db.mjs');
+      const tgt = '2026-11-24 - תעודת משלוח 262201201 - רותם בטיחות - מולא גלאי CH4 מתאן - חדר דוודים';
+      const R = (id, text) => ({ id, text });
+      check('signAskFor: his ask that names the file (רותם, התעודה של רותם, גלאי המתאן) = that message',
+        (signAskFor([R('a', 'תחתום בשמי על התעודה של רותם ותחזיר לשולח')], tgt, []) || {}).id === 'a' && !!signAskFor([R('b', '🎤 לחתום על המשלוח של רותם')], tgt, []) && !!signAskFor([R('c', 'חתום על התעודה של גלאי המתאן')], tgt, []));
+      check('signAskFor: another file, "אל תחתום", a forwarded file line, or a message already used = no',
+        !signAskFor([R('d', 'תחתום בשמי על ההצעה של גזית')], tgt, []) && !signAskFor([R('e', 'אל תחתום על התעודה של רותם')], tgt, []) && !signAskFor([R('f', '📎 טופס_חתימה רותם.pdf')], tgt, []) && !signAskFor([R('a', 'תחתום בשמי על התעודה של רותם')], tgt, ['a']));
+      check('signAskFor (refutation 24/11/2026): numbers, "pdf", part of a word, "לא צריך לחתום", a forwarded message = no',
+        !signAskFor([R('g', 'תחתום על 2026 pdf')], tgt, []) && !signAskFor([R('h', 'תחתום על רות')], tgt, []) && !signAskFor([R('i', 'לא צריך לחתום על רותם')], tgt, []) && !signAskFor([{ id: 'j', text: 'תחתום על רותם', forwarded: 'true' }], tgt, []));
+    }
+    const t0 = Date.now(), mk = (n, ago) => Array.from({ length: n }, (_, i) => ({ id: 's' + i, by: 'owner-ask', status: 'signed', at: new Date(t0 - ago).toISOString(), done_at: new Date(t0 - ago).toISOString() }));
+    check('signNowCount: counts only sign_now signatures inside the window', signNowCount(JSON.stringify(mk(3, 60e3).concat(mk(2, 3600e3)).concat([{ id: 'x', by: 'w1', at: new Date(t0).toISOString() }])), t0 - 30 * 60e3) === 3 && SIGN_NOW_MAX === 5);
+    const E = { ...ENV, META_PHONE_NUMBER_ID: 'P', META_ACCESS_TOKEN: 'm' };
+    const other = await call({ op: 'sign_now', agent: 'some-agent', why: 'sign it', path: '06_x/cert.pdf' }, 'k-123', 'POST', E);
+    check('sign_now: any caller but the WhatsApp assistant = refused', other.status === 400 && /assistant only/.test(other.json.error), other.json);
+    const bad = await call({ op: 'sign_now', agent: 'routine-wa-assistant', why: 'sign it', path: '06_x/cert.pdf', reply_to: 'bad id' }, 'k-123', 'POST', E);
+    check('sign_now: a bad mail id = refused before anything', bad.status === 400 && /reply_to/.test(bad.json.error), bad.json);
+    const f0 = globalThis.fetch;
+    globalThis.fetch = async (u, o) => String(u).indexOf('/rest/v1/notifications_log?select=ts,text') >= 0 ? new Response(JSON.stringify([{ ts: new Date().toISOString(), text: 'מה עם הזימונים' }]), { status: 200 }) : f0(u, o);
+    let noAsk; try { noAsk = await call({ op: 'sign_now', agent: 'routine-wa-assistant', why: 'a mail asked to sign', path: '06_x/cert.pdf' }, 'k-123', 'POST', E); } finally { globalThis.fetch = f0; }
+    check('sign_now: no message of Michael in 30 minutes asks to sign (a mail asked) = refused, nothing signed', noAsk.status === 400 && /no message of Michael/.test(noAsk.json.error) && !('sign_requests' in state && /owner-ask/.test(state.sign_requests)), noAsk.json);
+  }
   console.log('\nsign_offer (21/10/2026: the assistant offers PDFs as buttons, signs nothing)');
   { const E = { ...ENV, META_PHONE_NUMBER_ID: 'P', META_ACCESS_TOKEN: 'm' };
     const six = await call({ op: 'sign_offer', agent: 'routine-wa-assistant', why: 'test offer', paths: ['a/1.pdf', 'a/2.pdf', 'a/3.pdf', 'a/4.pdf', 'a/5.pdf', 'a/6.pdf'] }, 'k-123', 'POST', E);
@@ -2908,7 +2937,21 @@ const callIn = async (body) => {
       await call({ op: 'sign_request', agent: 'wa-hook-sign', why: 'a tap later on', path: '06_x/cert.pdf' }, 'k-123', 'POST', E);
       const b6 = (metaSends[metaSends.length - 1] || {}).b || '';
       check('the question sent again names the place saved in the request (page 2), not one found now (security review)', b6.includes('\u05d1\u05e2\u05de\u05d5\u05d3 2'), b6.slice(150, 600));
-    } finally { globalThis.fetch = f0; graph = g0; delete state.sign_requests; delete state.wa_owner_in_at; }
+      // 24/11/2026 (Michael: "make it smoother"): sign_offer on ONE file goes straight to the question, as his tap would;
+      // and an offer that carries the original mail adds it to the request already waiting (the Rotem note, saved without it)
+      const st2 = JSON.parse(state.sign_requests); st2[0].again_at = '2026-01-01T00:00:00Z'; delete st2[0].reply; state.sign_requests = JSON.stringify(st2); // a request saved without the mail, as the Rotem one
+      delete state.sign_pick;
+      const MID = 'AAMkADNmMjhjNWNiLTk4ZTItNDA4Ny1hYTM4LWM3MWJjMTc2MzUyMwBGAAAAAA=';
+      const n7 = metaSends.length;
+      const off = await call({ op: 'sign_offer', agent: 'routine-wa-assistant', why: 'sign and reply to the sender', paths: ['06_x/cert.pdf'], reply_to: MID, reply_mail_to: 'lab@rotem.co.il', reply_subject: 'cert' }, 'k-123', 'POST', E);
+      const st3 = JSON.parse(state.sign_requests || '[]');
+      const qb = (metaSends[metaSends.length - 1] || {}).b || '';
+      check('sign_offer on one file: straight to the question (direct), no list saved, the same request', off.json.ok === true && off.json.direct === true && off.json.id === a.json.id && !('sign_pick' in state) && metaSends.length > n7, { off: off.json, pick: state.sign_pick });
+      check('the request already waiting now carries the original mail, and the question names the recipient', st3.length === 1 && st3[0].reply && st3[0].reply.id === MID && st3[0].reply.to === 'lab@rotem.co.il' && qb.includes('lab@rotem.co.il'), { st3, qb: qb.slice(200, 700) });
+      delete state.sign_pick;
+      const two = await call({ op: 'sign_offer', agent: 'routine-wa-assistant', why: 'two files', paths: ['06_x/a.pdf', '06_x/b.pdf'] }, 'k-123', 'POST', E);
+      check('sign_offer on two files: the list with buttons, as before', two.json.ok === true && !two.json.direct && two.json.offered === 2 && 'sign_pick' in state, two.json);
+    } finally { globalThis.fetch = f0; graph = g0; delete state.sign_requests; delete state.wa_owner_in_at; delete state.sign_pick; }
   }
 
   // 02/11/2026 (Michael in the assistant's chat: "do it: yes, build it"; DECISIONS 02/11/2026): mail_forward

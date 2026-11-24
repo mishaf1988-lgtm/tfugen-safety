@@ -805,6 +805,8 @@ export function inboundMessages(body) {
       out.push({ id: String(m.id).slice(0, 120), from: digits(m.from || ''), uid, ts: Number(m.timestamp) || 0, type: String(m.type || ''),
         choice: /^c([1-9]|10)$/.test(String(pick || '')) ? Number(String(pick).slice(1)) : null,
         text: String(text || '').slice(0, 3000), context: m.context && m.context.id ? String(m.context.id).slice(0, 120) : '',
+        // 24/11/2026 (security review of sign_now): a message he forwarded is someone else's words, never his ask to sign
+        forwarded: !!(m.context && (m.context.forwarded || m.context.frequently_forwarded)),
         media: md && /^[0-9]{5,30}$/.test(String(md.id || '')) ? { id: String(md.id), mime: String(md.mime_type || '').slice(0, 80), name: String(md.filename || '').slice(0, 120) } : null ,
         // 13/11/2026 (Michael: "do it: a thumbs-up = seen, no run"): an emoji reaction keeps the emoji and the message it is on.
         // Removing a reaction arrives with no emoji.

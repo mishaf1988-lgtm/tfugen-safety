@@ -540,7 +540,10 @@ export function fastRoute(m, about, prev) {
   // sign", Michael answered "sign in my name", and the server, with no file name, sent the newest PDFs in the folder
   // (signs). With no name and a recent assistant message, the assistant knows which file: it gets the message.
   if (ask === '' && prev && prev.ref !== 'signpick') return null;
-  if (ask !== null) return { kind: 'sign_ask', q: ask };
+  // 24/11/2026 (Michael: "once I ask, sign in my name with no do-it and put it in the drafts"; DECISIONS 24/11/2026): his ask to
+  // sign goes to the assistant, which fills the details, finds the mail and signs with sign_now (his message is the approval,
+  // checked in the server), then drafts the reply to the sender. The server alone could only ask "sign?" and tap again.
+  if (ask !== null) return null;
   const pk = signPickOf(m, prev, about);
   // security review 24/11/2026: a tap on an older list carries that list's time; the files saved are the newest list's
   if (pk) return Object.assign({ kind: 'sign_pick', n: pk }, about ? { at: String(about).split(' | ').pop() } : null);
@@ -764,6 +767,7 @@ export function ownerInPayload(m) {
   const t = String((m && m.text) || '') || (md ? '\ud83d\udcce ' + (mediaName(md.name) || m.type || 'file') : '');
   const p = { title: t.replace(/\s+/g, ' ').slice(0, 120), text: t.slice(0, 1500), wamid: m && m.id, choice: (m && m.choice) || null };
   if (md) { p.media_id = md.id; p.mime = md.mime || null; p.name = mediaName(md.name) || null; }
+  if (m && m.forwarded) p.forwarded = true; // sign_now never takes a forwarded message as his ask (24/11/2026)
   if (isVoice(m)) { p.voice = true; if (m.voiceErr) p.voice_err = String(m.voiceErr).slice(0, 120); }
   return p;
 }
