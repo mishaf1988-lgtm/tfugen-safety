@@ -1169,6 +1169,7 @@
    "ops": [
     "agent_report",
     "client_errors",
+    "dev_done",
     "dev_request",
     "equip_add",
     "expiry_set",
