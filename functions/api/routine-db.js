@@ -4658,7 +4658,10 @@ async function routineDbHandle(context) {
         // 24/11/2026 (security review): sent again at most once in SIGN_AGAIN_MS per request (the agent name is self-declared)
         prevE = r.list.find((x) => x && x.id === r.id) || null;
         if (body.agent !== 'wa-hook-sign' || !prevE) return { write: false };
-        if (prevE.again_at && Date.parse(now) - Date.parse(prevE.again_at) < SIGN_AGAIN_MS) { recent = true; return { write: false }; }
+        // 24/11/2026 (Rotem delivery note): a request saved without a reply gets the reply this ask carries, so his yes also drafts it
+        const addReply = !!(rq.reply && !prevE.reply);
+        if (addReply) prevE.reply = rq.reply;
+        if (prevE.again_at && Date.parse(now) - Date.parse(prevE.again_at) < SIGN_AGAIN_MS) { recent = true; return addReply ? { value: JSON.stringify(r.list) } : { write: false }; }
         prevE.again_at = now;
         return { value: JSON.stringify(r.list) };
       }, () => tmo(SB_MS));
@@ -4667,7 +4670,7 @@ async function routineDbHandle(context) {
       // the same ref sign:<id>; before, it answered "sent" and he got nothing. Another agent's repeat still sends nothing.
       const again = !r.created && body.agent === 'wa-hook-sign' && !!prevE;
       if (!r.created && !again) return jsonResp({ ok: true, id: r.id, created: false, note: 'already waiting for Michael on this file' }, 200, {});
-      if (again && recent) return jsonResp({ ok: true, id: r.id, created: false, again: true, sent: true, recent: true }, 200, {});
+      if (again && recent) return jsonResp({ ok: true, id: r.id, created: false, again: true, sent: true, recent: true, reply_saved: (prevE.reply && cas.written) || undefined }, 200, {});
       if (!cas.written) return jsonResp({ ok: false, error: cas.conflict ? 'save conflict, try again' : 'save ' + cas.status }, 200, {});
       // 22/10/2026 18:36: a spot Michael approved was used, and the question still said "no signature place found".
       // sent again: the place in words is the one saved in the request (where the yes signs), not one found now (security review 24/11/2026)

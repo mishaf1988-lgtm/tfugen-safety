@@ -2899,6 +2899,9 @@ const callIn = async (body) => {
         tap.json.ok === true && tap.json.id === a.json.id && tap.json.created === false && tap.json.again === true && tap.json.sent === true && n3 - n2 >= n1 && list.length === 1 && list[0].status === 'pending', { tap: tap.json, n2, n3, list });
       check('the question sent again opens with "sending again" and his last message is the question (ref sign:<id>)',
         qBody.includes(SIGN_AGAIN_HEAD.slice(0, 12)) && JSON.stringify(state.wa_last_out || '').includes('sign:' + a.json.id), { qBody: qBody.slice(150, 450), last: JSON.stringify(state.wa_last_out || '').slice(0, 300) });
+      const tapR = await call({ op: 'sign_request', agent: 'wa-hook-sign', why: 'a tap on an offer with a reply', path: '06_x/cert.pdf', reply_to: 'AAMkAD' + 'x'.repeat(60), reply_mail_to: 'a@b.co', reply_subject: 'RE: cert' }, 'k-123', 'POST', E);
+      const lr = JSON.parse(state.sign_requests || '[]');
+      check('a request saved without a reply gets the reply the re-ask carries (Rotem, 24/11/2026)', tapR.json.recent === true && lr.length === 1 && lr[0].reply && lr[0].reply.to === 'a@b.co' && lr[0].reply.subject === 'RE: cert', { tapR: tapR.json, e: lr[0] });
       const n4 = metaSends.length, tap2 = await call({ op: 'sign_request', agent: 'wa-hook-sign', why: 'a second tap at once', path: '06_x/cert.pdf' }, 'k-123', 'POST', E);
       check('a second ask within 2 minutes sends nothing more (security review: the agent name is self-declared)', tap2.json.recent === true && metaSends.length === n4, { tap2: tap2.json, n4, n5: metaSends.length });
       const st = JSON.parse(state.sign_requests); st[0].page = 2; st[0].again_at = '2026-01-01T00:00:00Z'; state.sign_requests = JSON.stringify(st);
