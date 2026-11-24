@@ -2939,7 +2939,7 @@ const callIn = async (body) => {
       check('the question sent again names the place saved in the request (page 2), not one found now (security review)', b6.includes('\u05d1\u05e2\u05de\u05d5\u05d3 2'), b6.slice(150, 600));
       // 24/11/2026 (Michael: "make it smoother"): sign_offer on ONE file goes straight to the question, as his tap would;
       // and an offer that carries the original mail adds it to the request already waiting (the Rotem note, saved without it)
-      const st2 = JSON.parse(state.sign_requests); st2[0].again_at = '2026-01-01T00:00:00Z'; state.sign_requests = JSON.stringify(st2);
+      const st2 = JSON.parse(state.sign_requests); st2[0].again_at = '2026-01-01T00:00:00Z'; delete st2[0].reply; state.sign_requests = JSON.stringify(st2); // a request saved without the mail, as the Rotem one
       delete state.sign_pick;
       const MID = 'AAMkADNmMjhjNWNiLTk4ZTItNDA4Ny1hYTM4LWM3MWJjMTc2MzUyMwBGAAAAAA=';
       const n7 = metaSends.length;
