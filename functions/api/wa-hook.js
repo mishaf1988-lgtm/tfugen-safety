@@ -379,7 +379,7 @@ export async function signAskPath(env, path, spot) {
     body: JSON.stringify(Object.assign({ op: 'sign_request', agent: 'wa-hook-sign', why: '\u05de\u05d9\u05db\u05d0\u05dc \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4: \u05ea\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9', path }, spot || {})) }) });
   const j = await res.json().catch(() => ({}));
   // 24/11/2026: a file already waiting is sent again by routine-db (agent wa-hook-sign); only a real send is "sent"
-  if (j.ok && j.sent) return { sent: true, id: j.id, again: !!j.again };
+  if (j.ok && j.sent) return { sent: true, id: j.id, again: !!j.again, recent: !!j.recent };
   return { text: null, error: j.error || res.status };
 }
 // Search the safety folder, then ask through routine-db sign_request (its own checks: folder, PDF, not protected).
@@ -976,9 +976,13 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
       const e = signReaskPick(rows && rows[0] ? rows[0].value : '[]', fr0.id || null, Date.now());
       if (!e) { seen.sign_reask = 'none'; return false; } // none or several waiting: the assistant answers
       const sa = await signAskPath(env, e.path.slice(OD_ROOT.length));
-      if (sa.sent) { seen.fast = 'sign_reask'; return true; }
+      // security review 24/11/2026: sent again under 2 minutes ago = a short line, not silence
+      if (sa.sent && sa.recent) { ans = '\u05d1\u05e7\u05e9\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05e0\u05e9\u05dc\u05d7\u05d4 \u05dc\u05da \u05e9\u05d5\u05d1 \u05dc\u05e4\u05e0\u05d9 \u05e8\u05d2\u05e2. \u05dc\u05d7\u05ea\u05d9\u05de\u05d4: \u05dc\u05dc\u05d7\u05d5\u05e5 \u05e2\u05dc "\u05d1\u05e6\u05e2" \u05d1\u05d4\u05d5\u05d3\u05e2\u05d4 \u05d4\u05d4\u05d9\u05d0, \u05d0\u05d5 \u05dc\u05e2\u05e0\u05d5\u05ea \u05e2\u05dc\u05d9\u05d4.'; ref = 'sign-reask'; }
+      else if (sa.sent) { seen.fast = 'sign_reask'; return true; }
+      else {
       seen.sign_reask = String(sa.error || 'send');
       return false;
+      }
     }
     else if (fr0.kind === 'sign') {
       const fs = await fastSign(env, fr0, m.id);
