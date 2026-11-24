@@ -483,6 +483,11 @@ export function signReaskOf(m) {
   return !!m && (m.choice === undefined || m.choice === null) && signAnswer(m) === true;
 }
 export const SIGN_MENTION_RE = /\u05d7\u05ea\u05d9\u05de|\u05dc\u05d7\u05ea\u05d5\u05dd/;
+// security review 24/11/2026: one line of the message names a signature AND "\u05d1\u05e6\u05e2" (the line that told him to answer it), so a
+// "\u05d1\u05e6\u05e2" for another question in a message that only mentions a signed file still reaches the assistant. Pure.
+export function signMentionOf(t) {
+  return String(t || '').split(/\n/).some((l) => SIGN_MENTION_RE.test(l) && /\u05d1\u05e6\u05e2/.test(l));
+}
 // The request a typed yes re-asks: the one named (prev ref), or the only one waiting from the last SIGN_REASK_MS. Pure.
 export const SIGN_REASK_MS = 8 * 3600e3;
 export function signReaskPick(raw, id, nowMs) {
@@ -548,7 +553,7 @@ export function fastRoute(m, about, prev) {
   if (sid) { const yes = signAnswer(m); if (yes === false || (yes === true && byMsg)) return { kind: 'sign', id: sid, yes }; }
   // 24/11/2026 (same request): the assistant's last message (a list, a reminder) points to a signature waiting for him,
   // and he types a bare yes: the server sends that question again (runFast checks that exactly one is waiting).
-  if (!about && prev && SIGN_MENTION_RE.test(String(prev.text || '')) && signReaskOf(m)) return { kind: 'sign_reask' };
+  if (!about && prev && signMentionOf(prev.text) && signReaskOf(m)) return { kind: 'sign_reask' };
   const ac = accountCmdOf(raw);
   if (ac) return ac;
   const rt = rateOf(m, about, prev);

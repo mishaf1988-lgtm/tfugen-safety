@@ -2881,6 +2881,7 @@ export function factGate(text, checked) {
   return null;
 }
 // The first line of a signature question sent again (sign_request, agent wa-hook-sign, on a file already waiting).
+export const SIGN_AGAIN_MS = 2 * 60e3;
 export const SIGN_AGAIN_HEAD = '\u05e9\u05d5\u05dc\u05d7 \u05e9\u05d5\u05d1 \u05d0\u05ea \u05d1\u05e7\u05e9\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da.\n';
 export function signRequestCheck(b) {
   const parts = String(b.path || '').split('/').filter(Boolean);
@@ -4621,19 +4622,28 @@ async function routineDbHandle(context) {
         }
       } catch (x) { spot = null; }
       const now = new Date().toISOString();
-      let r; // 30/10/2026 (ideas-lab 12): written only if the row is as it was read
+      let r, prevE = null, recent = false; // 30/10/2026 (ideas-lab 12): written only if the row is as it was read
       const cas = await stateCas(url, h, SIGN_KEY, (raw) => {
         r = signAdd(raw === undefined ? '[]' : raw, { agent: body.agent, path: c.path, name: c.name, page: spot ? spot.page : c.page, x: spot ? spot.x : c.x, y: spot ? spot.y : c.y, w: spot && spot.w ? spot.w : c.w }, now);
-        return r.created ? { value: JSON.stringify(r.list) } : { write: false };
+        if (r.created) return { value: JSON.stringify(r.list) };
+        // 24/11/2026 (security review): sent again at most once in SIGN_AGAIN_MS per request (the agent name is self-declared)
+        prevE = r.list.find((x) => x && x.id === r.id) || null;
+        if (body.agent !== 'wa-hook-sign' || !prevE) return { write: false };
+        if (prevE.again_at && Date.parse(now) - Date.parse(prevE.again_at) < SIGN_AGAIN_MS) { recent = true; return { write: false }; }
+        prevE.again_at = now;
+        return { value: JSON.stringify(r.list) };
       }, () => tmo(SB_MS));
       // 24/11/2026 (dev-20261124130849-gd49): Michael's own ask (a tap on a sign_offer button, or a typed yes that the
       // server re-asks, agent wa-hook-sign) on a file already waiting gets the document and the question again, with
       // the same ref sign:<id>; before, it answered "sent" and he got nothing. Another agent's repeat still sends nothing.
-      const again = !r.created && body.agent === 'wa-hook-sign';
+      const again = !r.created && body.agent === 'wa-hook-sign' && !!prevE;
       if (!r.created && !again) return jsonResp({ ok: true, id: r.id, created: false, note: 'already waiting for Michael on this file' }, 200, {});
-      if (!again && !cas.written) return jsonResp({ ok: false, error: cas.conflict ? 'save conflict, try again' : 'save ' + cas.status }, 200, {});
+      if (again && recent) return jsonResp({ ok: true, id: r.id, created: false, again: true, sent: true, recent: true }, 200, {});
+      if (!cas.written) return jsonResp({ ok: false, error: cas.conflict ? 'save conflict, try again' : 'save ' + cas.status }, 200, {});
       // 22/10/2026 18:36: a spot Michael approved was used, and the question still said "no signature place found".
-      const text = (again ? SIGN_AGAIN_HEAD : '') + signAskText(c.name, c.folder, spot || (c.page !== undefined ? { page: c.page, set: true } : null)), ref = 'sign:' + r.id;
+      // sent again: the place in words is the one saved in the request (where the yes signs), not one found now (security review 24/11/2026)
+      const tspot = again ? (prevE.page ? { page: prevE.page } : null) : spot || (c.page !== undefined ? { page: c.page, set: true } : null);
+      const text = (again ? SIGN_AGAIN_HEAD : '') + signAskText(c.name, c.folder, tspot), ref = 'sign:' + r.id;
       const win = await ownerWindowOpen(env, url);
       // 21/10/2026 (Michael: "with the request, the form itself"): the document goes first, so the question with
       // the buttons stays his last message (its ref is what "1" answers). A failed document leaves the question as is.
