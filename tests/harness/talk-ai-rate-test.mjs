@@ -68,7 +68,8 @@ console.log('\n5. the wiring');
   // Annual / quality names and a typed department are Hebrew letters only (heName, no AI) since 15/10/2026.
   // 15/10/2026 (B7): the name through nameHe; company, job and agency through textHe (an answer checked as
   // text, digits kept), counted in the same "tlk" limit; hebrewText is called only inside textHe.
-  check('the name goes through nameHe, company, job and agency through textHe (annual / quality: Hebrew only, no AI)', (src.match(/(?<!function )\bnameHe\(env, request, /g) || []).length === 1 && (src.match(/(?<!function )\btextHe\(env, request, /g) || []).length === 3 && /if \(typed && !heName\(raw\)\) return bad\('errNameT', 'heOnly', 422\)/.test(src));
+  // 24/11/2026: + the correction form of a sent induction (op=edit, HR code first): the name once, job and agency twice, only for a field HR changed, same count.
+  check('the name goes through nameHe, company, job and agency through textHe (annual / quality: Hebrew only, no AI)', (src.match(/(?<!function )\bnameHe\(env, request, /g) || []).length === 2 && (src.match(/(?<!function )\btextHe\(env, request, /g) || []).length === 5 && /if \(typed && !heName\(raw\)\) return bad\('errNameT', 'heOnly', 422\)/.test(src));
   const dt = src.split('\n').filter((l) => /hebrewText\(env/.test(l));
   check('hebrewText is called only inside textHe, after the same count', dt.length === 1 && /return hebrewText\(env, raw\)/.test(dt[0]) && /export async function textHe[\s\S]{0,300}guessHit\(env, await guessKey\('tlk', request\)\)\) > TLK_AI_LIMIT\) return null;\s*return hebrewText/.test(src), dt);
   const rows = [{ key: 'guess:tlk:0123456789abcdef', value: '400' }, { key: 'guess:ai:0123456789abcdef', value: '250' }, { key: 'guess:ind:0123456789abcdef', value: '11' }];
