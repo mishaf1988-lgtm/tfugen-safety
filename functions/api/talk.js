@@ -1177,8 +1177,17 @@ async function editPost(env, request, ctx) {
   if (!Array.isArray(upRows) || !upRows.length) return fail('\u05de\u05d9\u05e9\u05d4\u05d5 \u05ea\u05d9\u05e7\u05df \u05d0\u05ea \u05d0\u05d5\u05ea\u05d4 \u05e8\u05e9\u05d5\u05de\u05d4 \u05d1\u05e8\u05d2\u05e2 \u05d6\u05d4. \u05e0\u05d0 \u05dc\u05e8\u05e2\u05e0\u05df \u05d0\u05ea \u05d4\u05d3\u05e3 \u05d5\u05dc\u05d1\u05d3\u05d5\u05e7 \u05de\u05d4 \u05e9\u05d5\u05e0\u05d4 \u05dc\u05e4\u05e0\u05d9 \u05ea\u05d9\u05e7\u05d5\u05df \u05e0\u05d5\u05e1\u05e3.', 409);
   // The photos wait in the private bucket until the correction page is filed and mailed (as the induction's photos do)
   const kept = docs.length ? await keepDocs(env, row.id + '-c' + prior.length, docs) : [];
-  const job2 = fileCorrection(env, Object.assign({}, row, patch), entry, docs)
-    .then(async (out) => { if (out.url && out.mailed && kept.length) await dropDocs(env, kept); }).catch(() => null);
+  // One more try when nothing was filed (a passing Graph error); when it still fails, the photos stay in the private bucket
+  // and their folder is written on the row, so they are not left there unseen (review 24/11/2026, small improvement).
+  const job2 = (async () => {
+    const r2 = Object.assign({}, row, patch);
+    let out = await fileCorrection(env, r2, entry, docs);
+    if (!out.url) out = await fileCorrection(env, r2, entry, docs);
+    if (out.url && out.mailed && kept.length) await dropDocs(env, kept);
+    else if (kept.length) {
+      try { await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(row.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ doc_err: ((out.err ? out.err + '; ' : '') + 'photos kept: ' + DOCS_BUCKET + '/' + DOCS_DIR + row.id + '-c' + prior.length + '/').substring(0, 400) }) }); } catch (e) { /* doc_err already says the filing failed */ }
+    }
+  })().catch(() => null);
   if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(job2); else await job2;
   return page('\u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05e0\u05e9\u05de\u05e8', '<p>\u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05e0\u05e9\u05de\u05e8 \u05d1\u05e8\u05e9\u05d5\u05de\u05d4 \u05e9\u05dc ' + esc(row.emp_name || '') + '. \u05d3\u05e3 \u05ea\u05d9\u05e7\u05d5\u05df \u05d9\u05ea\u05d5\u05d9\u05e7 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05e7\u05dc\u05d9\u05d8\u05d4, \u05d5\u05de\u05d9\u05d9\u05dc \u05e2\u05d3\u05db\u05d5\u05df \u05d9\u05d9\u05e9\u05dc\u05d7 \u05d0\u05dc\u05d9\u05da \u05d5\u05dc\u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9 \u05d1\u05d3\u05e7\u05d5\u05ea \u05d4\u05e7\u05e8\u05d5\u05d1\u05d5\u05ea.</p>' + back, 'ok', 200, '', 'he');
 }
