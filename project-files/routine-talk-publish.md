@@ -7,7 +7,7 @@
 **ה-Routine:** ייפתח מהשיחה הבאה. א' 12:13 (`CRON_TZ=Asia/Jerusalem 13 12 * * 0`), אחרי "הדרכה שבועית מהשטח" (05:53). שם הסוכן: `talk-publish`.
 
 ---
-0. ידע משותף: קרא את project-files/agent-common.md, סעיפי "פתיחה" ו"ידע משותף". בסוף: סעיף "סגירה" (שם הסוכן: talk-publish).
+0. ידע משותף: הרץ `python3 tools/common-read.py פתיחה "ידע משותף"` (רק שני הסעיפים האלה מ-project-files/agent-common.md; לא לקרוא את הקובץ כולו, 24/11/2026, חיסכון). בסוף: סעיף "סגירה" (שם הסוכן: talk-publish).
 ריצה חדשה של משימה מתוזמנת: לבצע מההתחלה. כל הודעה בעברית, בלי מקף ארוך, תאריכים DD/MM/YYYY. בלי כתיבה בשום מקום חוץ מ-agent_report.
 1. המזהה של השבוע: w ואחריו תאריך יום ראשון האחרון (היום, אם היום ראשון) בשעון ישראל, YYYYMMDD.
 2. `bash project-files/routine-db.sh '{"op":"select","table":"toolbox_talks","query":"select=id,s,trainer,trainer_qual&id=eq.<המזהה>"}'` (יציאה 3 או ok:false: execute_sql, project_id znhjtpcltrxxyfjczgvw).

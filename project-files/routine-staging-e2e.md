@@ -8,7 +8,7 @@
 **תלות:** הסיסמה הזמנית של `claude-test` נקבעת דרך `routine-db` op `staging_pw` (מ-18/11/2026; עד אז `execute_sql`, שבריצה מתוזמנת חיכה לאישור ב-11/11 וב-18/11/2026, גם אחרי שנוסף ל-`.claude/settings.json`), וכתובת גרסת התצוגה מ-Cloudflare (Network secret `api.cloudflare.com` בסביבה). בלי אחד מהם: ok:false עם הסיבה, לא לעקוף. Network secret של `api.supabase.com` בסביבה פג ב-19/10/2026 (401): לא תחליף ל-MCP.
 
 ---
-0. ידע משותף: קרא את project-files/agent-common.md, סעיפי "פתיחה" ו"ידע משותף". בסוף: סעיף "סגירה" (שם הסוכן: staging-e2e).
+0. ידע משותף: הרץ `python3 tools/common-read.py פתיחה "ידע משותף"` (רק שני הסעיפים האלה מ-project-files/agent-common.md; לא לקרוא את הקובץ כולו, 24/11/2026, חיסכון). בסוף: סעיף "סגירה" (שם הסוכן: staging-e2e).
 ריצה חדשה של משימה מתוזמנת: לבצע מההתחלה. כל הודעה בעברית, בלי מקף ארוך, תאריכים DD/MM/YYYY. רק מסד הניסוי, אף פעם לא החי.
 1. בתיקיית tfugen-safety: git fetch origin main && git checkout -B main origin/main. npm ci אם אין node_modules/playwright.
 2. גרסת התצוגה האחרונה: curl -sS "https://api.cloudflare.com/client/v4/accounts/c9d388e3a5f9ee9546e8aa6b6353ec87/pages/projects/tapugan-safety/deployments?env=preview&per_page=1", השדה url של הראשונה (latest_stage.status=success). נבנתה לפני השינוי האחרון במשתני Preview: POST .../deployments/<id>/retry ולחכות ל-success (עד 5 דקות).
