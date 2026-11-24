@@ -92,5 +92,15 @@ check("the core's 0-short paragraph covers button clicks and 'what else is open'
       "הרחבה ללחיצות כפתור" in short_para(core) and "מה עוד פתוח" in short_para(core) and "`learn`" in short_para(core) and "`promise`" in short_para(core))
 check("the full procedure's 0-short paragraph is the same as the core's", short_para(full) == short_para(core) and short_para(core) != "")
 
+# 24/11/2026 (Michael: "do it: one opening command"): both files open with the same 0-boot paragraph, which runs
+# tools/wa-boot.py instead of cat on the core and the topic files.
+def boot_para(t):
+    return next((l for l in t.split("\n") if l.startswith("0-פתיחה. ")), "")
+check("the core's 0-boot paragraph runs tools/wa-boot.py, pages in parallel and --topics-only, and forbids cat",
+      all(x in boot_para(core) for x in ("python3 tools/wa-boot.py --page 1", "--page 4", "--topics-only", "--section", "לא `cat`")))
+check("the full procedure's 0-boot paragraph is the same as the core's", boot_para(full) == boot_para(core) and boot_para(core) != "")
+check("the 0-boot paragraph comes right after step 0 in both files (step 0 stays first: routine-common-test)",
+      all(t.split("\n---\n", 1)[1].split("\n")[1].startswith("0-פתיחה. ") for t in (core, full) if "\n---\n" in t))
+
 print("\n%d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)
