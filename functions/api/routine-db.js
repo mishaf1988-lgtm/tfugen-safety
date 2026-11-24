@@ -19,6 +19,7 @@
 //              (Michael, 09/10/2026: "בצע: בלי טבלת רפואה"; names and tasks for the committee
 //              deck, 28/10/2026). Trustees without phone or notes. COLUMNS.
 //   state_get  read server_state keys of STATE_READ.
+//   ind_refile  (24/11/2026, Michael) {id, force?}: the signed induction mail again with a fresh correction link, to Michael and HR only (talk.js refileInduction)
 //   gemini_ask  (23/11/2026, Michael: "build, and start with procedures and regulations only") {agent, task: summarize|translate|second_check, kind, text (or question+answer), to?, source?}:
 //              Gemini reads, summarises or translates instead of Claude (functions/_geminiask.js). Phase 1: kinds procedure, regulation, standard, training;
 //              the others only when env.GEMINI_PHASE2 = '1'. Refused whole, nothing sent: a mail, a phone, a nine-digit number, a medical word, an employee's full name.
@@ -221,7 +222,7 @@ import { SIGN_KEY, SIGN_CHOICES, signAdd, signMark, signAskText, signPlace } fro
 import { findSignSpot } from '../_pdftext.js';
 import { rowContradictions } from './wa-morning.js';
 import { respUnknown } from './hazard-report.js';
-import { ttsWav, speechText } from './talk.js';
+import { ttsWav, speechText, refileInduction } from './talk.js';
 import { ctrLinkCheck, ctrLinkCreate } from './ctr-link.js';
 import { ctrExtend } from '../_ctrok.js';
 import { CTR_STATE, statePatch } from '../_ctr.js';
@@ -3116,6 +3117,15 @@ async function routineDbHandle(context) {
       const r = await fetch(url + '/rest/v1/emp?select=n,dep&order=n', { headers: h, signal: tmo(SB_MS) });
       if (!r.ok) return jsonResp({ ok: false, error: 'read ' + r.status }, 200, {});
       return jsonResp({ ok: true, rows: empNamesRows(await r.json()) }, 200, {});
+    }
+    // 24/11/2026 (Michael: "send the updated mail with the updated link for the new worker, to me and to HR"; DECISIONS 24/11/2026):
+    // the induction mail again, with the fresh correction link. The same function as the app's "send again" button (talk.js
+    // refileInduction); the recipients are fixed there (the signed-in Michael and hr-tap@), nothing in the call chooses them.
+    if (body.op === 'ind_refile') {
+      const rid = String(body.id || '');
+      if (!/^[a-z0-9]{6,20}$/.test(rid)) return jsonResp({ ok: false, error: 'id: a toolbox_reads id' }, 400, {});
+      const x = await refileInduction(env, rid, body.force === true);
+      return jsonResp({ ok: x.status === 200, ...x.body }, 200, {});
     }
     if (body.op === 'gemini_ask') {
       const c = geminiAskCheck(body, env.GEMINI_PHASE2 === '1');
