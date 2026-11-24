@@ -15,6 +15,7 @@ import { sbFrom } from '../_shared.js';
 export const CACHE_MS = 60 * 1000;
 export const TIMEOUT_MS = 8000;
 let last = { at: 0, ok: false };
+let pending = null;   // one probe in flight, shared by the calls that arrive while it runs (security review 24/11/2026)
 
 export async function probe(env, fetchFn = fetch) {
   const key = (env && env.SUPABASE_SERVICE_ROLE_KEY) || '';
@@ -29,11 +30,14 @@ export async function probe(env, fetchFn = fetch) {
   }
 }
 
-export function resetCache() { last = { at: 0, ok: false }; }
+export function resetCache() { last = { at: 0, ok: false }; pending = null; }
 
 export async function onRequest({ request, env }, fetchFn = fetch, now = Date.now()) {
   if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('method', { status: 405 });
-  if (!last.at || now - last.at >= CACHE_MS) last = { at: now, ok: await probe(env, fetchFn) };
+  if (!last.at || now - last.at >= CACHE_MS) {
+    if (!pending) pending = probe(env, fetchFn).then((ok) => { last = { at: now, ok }; pending = null; return ok; });
+    await pending;
+  }
   return new Response(last.ok ? 'db ok' : 'db fail', {
     status: last.ok ? 200 : 503,
     headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },

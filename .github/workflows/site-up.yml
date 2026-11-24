@@ -78,20 +78,31 @@ jobs:
           # 02/11/2026 (retro 22/10/2026 (d)): a cancelled or skipped run in between counted as "not a failure", so a
           # site still down sent "down" a second time (and "back" was never sent); those runs are skipped now.
           # Tested in tests/harness/site-up-test.py.
-          prev=$(curl -s -m 20 -H "Authorization: Bearer $GH_TOKEN" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/site-up.yml/runs?status=completed&event=schedule&per_page=10" \
-            | python3 -c "import sys,json; r=[x.get('conclusion') for x in (json.load(sys.stdin).get('workflow_runs') or [])]; print(next((c for c in r if c in ('success','failure')),'none'))")
-          echo "previous run: $prev, now up: $UP"
+          runs=$(curl -s -m 20 -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/site-up.yml/runs?status=completed&event=schedule&per_page=10")
+          read -r prev jobs <<< "$(printf '%s' "$runs" | python3 -c "import sys,json; r=[x for x in (json.load(sys.stdin).get('workflow_runs') or []) if x.get('conclusion') in ('success','failure')]; print((r[0]['conclusion'] + ' ' + (r[0].get('jobs_url') or '-')) if r else 'none -')")"
+          # 24/11/2026 (security review of #db-health): a failed run is either the site down or the database lost. Which one
+          # is read from the step that failed, so a database failure does not swallow a later "site down" or send "site back".
+          kind=ok
+          if [ "$prev" = "failure" ]; then
+            kind=site
+            if [ "$jobs" != "-" ]; then
+              kind=$(curl -s -m 20 -H "Authorization: Bearer $GH_TOKEN" "$jobs" | python3 -c "import sys,json; s=[st.get('name','') for j in (json.load(sys.stdin).get('jobs') or []) for st in (j.get('steps') or []) if st.get('conclusion')=='failure']; print('db' if any('database' in n for n in s) else 'site')" 2>/dev/null || echo site)
+            fi
+          fi
+          echo "previous run: $prev ($kind), now up: $UP, db: ${DB:-ok}"
           if [ "$TEST" = "true" ]; then
             msg='בדיקה: ההתראה מ-GitHub כשהאתר לא עונה מחוברת לוואטסאפ שלך. אין צורך לענות.'
-          elif [ "$UP" = "false" ] && [ "$prev" != "failure" ]; then
+          elif [ "$UP" = "false" ]; then
+            [ "$kind" = "site" ] && exit 0
             msg='האתר tapugan-safety.pages.dev לא עונה כבר כמה דקות (בדיקה מ-GitHub). הוואטסאפ, החתימה והעוזר לא יעבדו עד שיחזור. הנתונים שמורים ב-Supabase.'
-          elif [ "$UP" = "true" ] && [ "${DB:-ok}" = "fail" ] && [ "$prev" != "failure" ]; then
+          elif [ "${DB:-ok}" = "fail" ]; then
+            [ "$kind" = "db" ] && exit 0
             msg='השרת לא מצליח להגיע למסד הנתונים כבר כמה דקות (בדיקה מ-GitHub). העוזר בוואטסאפ לא יענה, והודעות אליו לא יישמרו. הסיבה השכיחה: מפתח המסד ב-Cloudflare (SUPABASE_SERVICE_ROLE_KEY ב-Production).'
-          elif [ "$UP" = "true" ] && [ "${DB:-ok}" = "fail" ]; then
-            exit 0
-          elif [ "$UP" = "true" ] && [ "$prev" = "failure" ]; then
+          elif [ "$kind" = "site" ]; then
             msg='האתר tapugan-safety.pages.dev חזר לענות (בדיקה מ-GitHub).'
+          elif [ "$kind" = "db" ]; then
+            msg='השרת שוב מגיע למסד הנתונים, והעוזר בוואטסאפ חזר לעבוד (בדיקה מ-GitHub). הודעות ששלחת לו בזמן התקלה לא נשמרו: לשלוח שוב.'
           else exit 0; fi
           if [ -z "$META_ACCESS_TOKEN" ] || [ -z "$WA_TO" ]; then echo "::warning::no WhatsApp secrets (C34), GitHub's mail only"; exit 0; fi
           # 26/10/2026: the assistant's number moved (#2018) to phone id 1304479066092850 (Cloudflare META_PHONE_NUMBER_ID);

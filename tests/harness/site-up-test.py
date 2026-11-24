@@ -26,9 +26,10 @@ curl() {
   esac
 }
 '''
-def run(conclusions, up, test="false", secrets=True, db="ok"):
+def run(conclusions, up, test="false", secrets=True, db="ok", failed_step="Fail when down (GitHub mails too)"):
     fix = os.path.join(tmp, "runs.json"); sent = os.path.join(tmp, "sent.txt")
-    json.dump({"workflow_runs": [{"conclusion": c} for c in conclusions]}, open(fix, "w"))
+    json.dump({"workflow_runs": [{"conclusion": c, "jobs_url": "https://api.github.com/jobs"} for c in conclusions],
+               "jobs": [{"steps": [{"name": failed_step, "conclusion": "failure"}]}]}, open(fix, "w"))
     open(sent, "w").close()
     env = dict(os.environ, FIX=fix, SENT=sent, UP=up, DB=db, TEST=test, GH_TOKEN="g",
                META_ACCESS_TOKEN="m" if secrets else "", WA_TO="972500000000" if secrets else "")
@@ -60,10 +61,14 @@ check("a hand test run sends one message even when nothing changed", len(m) == 1
 DBMSG = "למסד"   # "to the database"
 p, m = run(["success"], "true", db="fail")
 check("database lost after a passed run: one 'database' message", p.returncode == 0 and len(m) == 1 and DBMSG in m[0] and DOWN not in m[0], (p.stdout, m))
+p, m = run(["failure"], "true", db="fail", failed_step="Fail when the server cannot reach the database (GitHub mails too)")
+check("database still lost after a database failure: no second message", len(m) == 0, m)
+p, m = run(["failure"], "true", db="ok", failed_step="Fail when the server cannot reach the database (GitHub mails too)")
+check("database back after a database failure: the 'database back' message, not 'site back'", len(m) == 1 and "שוב מגיע למסד" in m[0], m)
+p, m = run(["failure"], "false", db="ok", failed_step="Fail when the server cannot reach the database (GitHub mails too)")
+check("site down after a database failure: the 'down' message still goes out (security review)", len(m) == 1 and DOWN in m[0], m)
 p, m = run(["failure"], "true", db="fail")
-check("database still lost after a failed run: no second message", len(m) == 0, m)
-p, m = run(["failure"], "true", db="ok")
-check("database back after a failure: one 'back' message", len(m) == 1 and BACK in m[0], m)
+check("site back but database still lost: the database message goes out", len(m) == 1 and DBMSG in m[0], m)
 p, m = run(["success"], "false", db="fail")
 check("site down and database unknown: the 'down' message, not the database one", len(m) == 1 and DOWN in m[0] and DBMSG not in m[0], m)
 print("\n%d passed, %d failed" % (ok, bad))

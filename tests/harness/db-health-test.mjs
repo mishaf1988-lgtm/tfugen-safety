@@ -39,6 +39,13 @@ calls = [];
 await probe({ SUPABASE_SERVICE_ROLE_KEY: 'sb_secret_abc' }, fetchOk);
 check('a new-style sb_secret_ key goes as apikey only (Supabase refuses it as Bearer)', calls.length === 1 && calls[0][1].apikey === 'sb_secret_abc' && !('Authorization' in calls[0][1]), calls);
 
+resetCache(); calls = [];
+let release; const slow = async (u, o) => { calls.push([u, o.headers]); await new Promise((res) => { release = res; }); return new Response('[]', { status: 200 }); };
+const ps = [onRequest({ request: req(), env }, slow, 5000), onRequest({ request: req(), env }, slow, 5000), onRequest({ request: req(), env }, slow, 5000)];
+await new Promise((res) => setTimeout(res, 10)); release();
+const rs = await Promise.all(ps);
+check('three calls while the cache is empty: one database read, all answer "db ok"', calls.length === 1 && rs.every((x) => x.status === 200), calls.length);
+
 resetCache();
 r = await onRequest({ request: req('POST'), env }, fetchOk, 1000);
 check('POST: 405, no database read', r.status === 405);
