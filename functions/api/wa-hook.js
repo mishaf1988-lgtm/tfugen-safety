@@ -317,6 +317,7 @@ export function signAskManyText(list) {
 // 23/10/2026: 60 open entries are about 12,000 characters, past 8,000 again; the retro folded 7 that night.
 export { LEARNED_MAX };
 export const SIGN_PICK_KEY = 'sign_pick', SIGN_PICK_MS = 3600e3;
+export const SIGN_PICK_OLD = '\u05d9\u05e9 \u05e8\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05d9\u05d5\u05ea\u05e8. \u05dc\u05dc\u05d7\u05d5\u05e5 \u05e2\u05dc \u05d4\u05de\u05e1\u05e4\u05e8 \u05d1\u05e8\u05e9\u05d9\u05de\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4.';
 // The candidates go out as buttons; a tap ("1") on that very message asks for the one picked (sign_pick, 1 hour).
 export function signPickText(list, none) {
   return (none === 'recent' ? '\u05d4-PDF \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea:\n' : none ? '\u05dc\u05d0 \u05de\u05e6\u05d0\u05ea\u05d9 \u05d1\u05e9\u05dd \u05d4\u05d6\u05d4. \u05d4-PDF \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea:\n' : '\u05de\u05e6\u05d0\u05ea\u05d9 \u05db\u05de\u05d4 \u05e7\u05d1\u05e6\u05d9\u05dd:\n')
@@ -325,8 +326,11 @@ export function signPickText(list, none) {
 // choicesPayload numbers them itself ("1. "), and a button title is at most 20 characters.
 export function signPickChoices(list) { return list.map((x) => String(x.name).replace(/\.pdf$/i, '').slice(0, 16)); }
 // Which candidate a tap picked: a reply to the "signpick" message, "1"-"5" or the button. Pure.
-export function signPickOf(m, prev) {
-  if (!prev || prev.ref !== 'signpick') return null;
+// 24/11/2026 (Michael tapped 1 on the list twice, at 11:57 and 11:58, and both went to the assistant): a button tap carries
+// its message (about), and then prev is null, so the tap never counted. A tap or reply with a message counts only when that
+// message is the list (its log row carries ref signpick, sendToOwner logRef); without one (typed "1", /chat) the newest.
+export function signPickOf(m, prev, about) {
+  if (about ? !/\| ref signpick \|/.test(String(about)) : (!prev || prev.ref !== 'signpick')) return null;
   const c = m && m.choice !== undefined && m.choice !== null ? String(m.choice) : '';
   const t = String((m && m.text) || '').trim();
   const n = /^[1-5]$/.test(c) ? +c : (/^([1-5])(\.|\s|$)/.exec(t) || [])[1];
@@ -415,8 +419,9 @@ export async function fastSignAsk(env, q) {
 // only ever drafts). The signed file's path is kept 24 hours in server_state sign_mail.
 export const SIGN_MAIL_KEY = 'sign_mail', SIGN_MAIL_MS = 24 * 3600e3;
 export const SIGN_MAIL_LABEL = '\u05e9\u05dc\u05d7 \u05dc\u05d9 \u05d1\u05de\u05d9\u05d9\u05dc';
-export function signMailOf(m, prev) {
-  if (!prev || prev.ref !== 'signmail') return null;
+export function signMailOf(m, prev, about) {
+  // 24/11/2026: also a tap on that answer after a newer message (its log row carries ref signmail)
+  if (!/\| ref signmail \|/.test(String(about || '')) && (!prev || prev.ref !== 'signmail')) return null;
   const c = m && m.choice !== undefined && m.choice !== null ? String(m.choice) : '';
   const t = String((m && m.text) || '').trim();
   return c === '1' || /^1(\.|\s|$)/.test(t) || (t.length <= 60 && /\u05de\u05d9\u05d9\u05dc/.test(t)) ? true : null;
@@ -438,8 +443,9 @@ export function signReplyFrom(rel) {
   const m = /^(\d{4}-\d{2}-\d{2}) (\d{2})(\d{2}) - (.+?) - \u05d7\u05ea\u05d5\u05dd\.pdf$/i.exec(parts[1]);
   return m ? { at: m[1] + 'T' + m[2] + ':' + m[3] + 'Z', file: m[4] + '.pdf' } : null;
 }
-export function signReplyOf(m, prev) {
-  if (!prev || prev.ref !== 'signmail') return null;
+export function signReplyOf(m, prev, about) {
+  // 24/11/2026: also a tap on that answer after a newer message (its log row carries ref signmail)
+  if (!/\| ref signmail \|/.test(String(about || '')) && (!prev || prev.ref !== 'signmail')) return null;
   const c = m && m.choice !== undefined && m.choice !== null ? String(m.choice) : '';
   const t = String((m && m.text) || '').trim();
   return c === '2' || /^2(\.|\s|$)/.test(t) || (t.length <= 60 && /\u05d4\u05e9\u05d1|\u05dc\u05e9\u05d5\u05dc\u05d7|\u05ea\u05e2\u05e0\u05d4|\u05ea\u05e9\u05d9\u05d1|\u05ea\u05d2\u05d5\u05d1\u05d4|\u05e9\u05e9\u05dc\u05d7|\u05d4\u05e9\u05d5\u05dc\u05d7/.test(t)) ? true : null;
@@ -513,10 +519,11 @@ export function fastRoute(m, about, prev) {
   // (signs). With no name and a recent assistant message, the assistant knows which file: it gets the message.
   if (ask === '' && prev && prev.ref !== 'signpick') return null;
   if (ask !== null) return { kind: 'sign_ask', q: ask };
-  const pk = signPickOf(m, prev);
-  if (pk) return { kind: 'sign_pick', n: pk };
-  if (signReplyOf(m, prev)) return { kind: 'sign_reply' };
-  if (signMailOf(m, prev)) return { kind: 'sign_mail' };
+  const pk = signPickOf(m, prev, about);
+  // security review 24/11/2026: a tap on an older list carries that list's time; the files saved are the newest list's
+  if (pk) return Object.assign({ kind: 'sign_pick', n: pk }, about ? { at: String(about).split(' | ').pop() } : null);
+  if (signReplyOf(m, prev, about)) return { kind: 'sign_reply' };
+  if (signMailOf(m, prev, about)) return { kind: 'sign_mail' };
   if (!raw || raw.length > 40) return null;
   // 21/10/2026: an answer to "sign in your name on <file>?" (routine-db sign_request). Only the server signs, and
   // only here, on Michael's own "1" / "do it" to that very request; any other word goes to the assistant.
@@ -920,8 +927,8 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
         await sbJson(env, 'server_state?on_conflict=key', { /* cas-ok: the newest pick, whole, nothing read first */ method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
           body: JSON.stringify([{ key: SIGN_PICK_KEY, value: JSON.stringify({ at: new Date().toISOString(), paths: sa.pick.map((x) => x.path) }), updated_at: new Date().toISOString() }]) });
         const pt = signPickText(sa.pick, sa.none);
-        const ps = await sendToOwner(env, owner, pt, { kind: 'reply', windowOpen: true, noTemplate: true, choices: signPickChoices(sa.pick) }).catch(() => null);
-        if (ps && ps.ok) { seen.fast = 'sign_pick_list'; await noteLastOut(env, sbFrom(env), pt, 'signpick'); await logOut(env, pt, ps); return true; }
+        const ps = await sendToOwner(env, owner, pt, { kind: 'reply', windowOpen: true, noTemplate: true, choices: signPickChoices(sa.pick), logRef: 'signpick' }).catch(() => null);
+        if (ps && ps.ok) { seen.fast = 'sign_pick_list'; await noteLastOut(env, sbFrom(env), pt, 'signpick'); await logOut(env, pt, ps, 'signpick'); return true; }
       }
       ans = sa.text; ref = 'sign-ask';
       if (!ans) seen.sign_ask_error = String(sa.error || 'search');
@@ -929,11 +936,15 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
     else if (fr0.kind === 'sign_pick') {
       const rows = await sbJson(env, 'server_state?key=eq.' + SIGN_PICK_KEY + '&select=value');
       let st = null; try { st = JSON.parse(rows && rows[0] ? rows[0].value : 'null'); } catch (x) { st = null; }
-      const path = st && Date.now() - Date.parse(st.at) < SIGN_PICK_MS && st.paths[fr0.n - 1];
+      const stale = !!(st && fr0.at && Date.parse(fr0.at) < Date.parse(st.at));
+      const path = !stale && st && Date.now() - Date.parse(st.at) < SIGN_PICK_MS && st.paths[fr0.n - 1];
+      if (stale) { ans = SIGN_PICK_OLD; ref = 'sign-pick-old'; seen.sign_pick_error = 'old list'; }
+      else {
       if (path) { const sa = await signAskPath(env, path, st.spot && st.paths.length === 1 ? st.spot : null); if (sa.sent) { seen.fast = 'sign_pick'; return true; } seen.sign_pick_error = String(sa.error || ''); }
       // 21/10/2026: a failed pick says so, instead of falling silently to the assistant
       ans = path ? '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05d0\u05ea \u05d1\u05e7\u05e9\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d6\u05d4 (' + (seen.sign_pick_error || '?') + '). \u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1, \u05d0\u05d5 \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05de\u05d4 \u05dc\u05d7\u05ea\u05d5\u05dd.' : null;
       ref = 'sign-pick-fail';
+      }
     }
     else if (fr0.kind === 'sign') {
       const fs = await fastSign(env, fr0, m.id);
@@ -973,7 +984,7 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
     else { const g = await gather(env, new Date()); ans = buildBrief(g.items, g.failed, g.today, false, [], null, null, null, true, g.waiting, g.disq); ref = 'brief'; }
   } catch (e) { ans = null; }
   const sr = ans ? await sendToOwner(env, owner, ans, Object.assign({ kind: 'reply', windowOpen: true, noTemplate: true }, choices ? { choices } : {})).catch(() => null) : null;
-  if (sr && (sr.ok || (chat && ans))) { seen.fast = fr0.kind; await noteLastOut(env, sbFrom(env), ans, ref); await logOut(env, ans, sr, /^ctr[mr]:/.test(String(ref || '')) ? ref : null); return true; }
+  if (sr && (sr.ok || (chat && ans))) { seen.fast = fr0.kind; await noteLastOut(env, sbFrom(env), ans, ref); await logOut(env, ans, sr, /^(ctr[mr]:|signmail$)/.test(String(ref || '')) ? ref : null); return true; }
   seen.fast_fail = fr0.kind;
   return false;
 }
