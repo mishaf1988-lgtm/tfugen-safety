@@ -115,6 +115,9 @@
 //              in the safety folder that Michael is asked to sign. The request waits in server_state (sign_requests) and
 //              Michael gets a WhatsApp message with the buttons "do it" / "no" and ref sign:<id>. Nothing is signed here:
 //              only his answer, in wa-hook's fast lane, signs (functions/_sign.js). signRequestCheck.
+//   sign_now  (24/11/2026, Michael: "once I ask, sign with no do-it") {agent: routine-wa-assistant, why, path, reply_*?}: signs at
+//              once only when Michael's own message of the last 30 minutes asks to sign (ownerAskedSign); the signed copy to him,
+//              a reply draft to the sender. At most SIGN_NOW_MAX in 30 minutes.
 //   dev_request / dev_done  (20/10/2026) {agent, text} a request to development, kept in server_state.dev_inbox;
 //              a new one fires the Routine DEV_TRIGGER at once when DEV_FIRE_TOKEN is set (21/10/2026, devFireText);
 //              {id, note} closes one. devInboxAdd / devInboxDone.
@@ -218,7 +221,7 @@ export { WA_RULES_HASH };
 import { OD_OCR_DIR, OCR_MODELS, aiOcr, aiSee, ocrLines, ocrOne, TTS_MODELS, aiTts } from '../_ocr.js';
 import { stateCas } from '../_cas.js';
 import { CLAUDE_LOG_Q, logLine, queueAdd, ocrPartialRow } from '../_claudelog.js';
-import { SIGN_KEY, SIGN_CHOICES, SIGN_REPLY_FIELDS, signAdd, signMark, signAskText, signPlace, signReplyCheck } from '../_sign.js';
+import { SIGN_KEY, SIGN_CHOICES, SIGN_REPLY_FIELDS, signAdd, signMark, signAskText, signPlace, signReplyCheck, signTake, signRun } from '../_sign.js';
 import { findSignSpot } from '../_pdftext.js';
 import { rowContradictions } from './wa-morning.js';
 import { respUnknown } from './hazard-report.js';
@@ -2906,6 +2909,24 @@ export function factGate(text, checked) {
 // The first line of a signature question sent again (sign_request, agent wa-hook-sign, on a file already waiting).
 export const SIGN_AGAIN_MS = 2 * 60e3;
 export const SIGN_AGAIN_HEAD = '\u05e9\u05d5\u05dc\u05d7 \u05e9\u05d5\u05d1 \u05d0\u05ea \u05d1\u05e7\u05e9\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05da.\n';
+// 24/11/2026 (Michael: "I want to drop the do-it tap altogether. Once I ask you, you can sign in my name and put it in the
+// drafts", and in the questionnaire "do it: your ask is the approval (recommended)"; replaces 02/11/2026 for this path):
+// sign_now signs at once, with no question, ONLY when one of Michael's own messages (owner_in, checked by the server: his
+// number and Meta's signature, or his app login) from the last SIGN_NOW_MS asks to sign. The assistant cannot start it
+// from a mail it read: no such message = refused, and the assistant falls back to sign_offer (his tap). At most
+// SIGN_NOW_MAX signatures in that window. The signed copy goes to him on WhatsApp, and a reply draft (never sent) to the
+// original sender when the mail is given.
+export const SIGN_NOW_MS = 30 * 60e3, SIGN_NOW_MAX = 5;
+export const SIGN_ASK_WORD_RE = /(?:^|[^\u05d0-\u05ea])(?:\u05ea\u05d7\u05ea\u05d5\u05dd|\u05ea\u05d7\u05ea\u05de\u05d9|\u05dc\u05d7\u05ea\u05d5\u05dd|\u05d7\u05ea\u05d5\u05dd|\u05ea\u05d7\u05ea\u05d5\u05de\u05d4|\u05d7\u05ea\u05d9\u05de\u05d4)(?:[^\u05d0-\u05ea]|$)/;
+// Pure: does one of Michael's own messages in the window ask to sign (sign / to sign / signature)?
+export function ownerAskedSign(rows) {
+  return (Array.isArray(rows) ? rows : []).some((r) => r && SIGN_ASK_WORD_RE.test(String(r.text || '')));
+}
+// Pure: how many signatures sign_now made since sinceMs (the rate limit).
+export function signNowCount(raw, sinceMs) {
+  let l = []; try { l = JSON.parse(raw || '[]'); } catch (e) { l = []; }
+  return (Array.isArray(l) ? l : []).filter((x) => x && x.by === 'owner-ask' && Date.parse(x.done_at || x.at) >= sinceMs).length;
+}
 export function signRequestCheck(b) {
   const parts = String(b.path || '').split('/').filter(Boolean);
   const name = parts.pop() || '';
@@ -4635,6 +4656,67 @@ async function routineDbHandle(context) {
       const s = await sendToOwner(env, to, text, { kind: 'sign', windowOpen: await ownerWindowOpen(env, url), choices, logRef: 'signpick' });
       if (s.ok && !s.held) await noteLastOut(env, url, text, 'signpick');
       return jsonResp({ ok: s.ok, sent: s.ok, offered: rel.length, error: s.error || undefined }, 200, {});
+    }
+    if (body.op === 'sign_now') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path', 'page', 'x', 'y', 'w'].concat(SIGN_REPLY_FIELDS).indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      if (body.agent !== 'routine-wa-assistant') return jsonResp({ ok: false, error: 'sign_now: the WhatsApp assistant only' }, 400, {});
+      const c = signRequestCheck(body);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const rq = signReplyCheck(body);
+      if (rq.error) return jsonResp({ ok: false, error: rq.error }, 400, {});
+      const nowMs = Date.now(), now = new Date(nowMs).toISOString();
+      const or = await fetch(url + '/rest/v1/notifications_log?select=ts,text:payload->>text&event_type=eq.owner_in&channel=in.(whatsapp,chat)&ts=gte.' + encodeURIComponent(new Date(nowMs - SIGN_NOW_MS).toISOString()) + '&order=ts.desc&limit=20', { headers: h, signal: tmo(SB_MS) }).catch(() => null);
+      const rows = or && or.ok ? await or.json().catch(() => []) : [];
+      if (!ownerAskedSign(rows)) return jsonResp({ ok: false, error: 'sign_now: no message of Michael in the last 30 minutes asks to sign. Use sign_offer (he taps do it) instead' }, 400, {});
+      const at = await accessToken(env);
+      const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+      // the place: the one given, else the signature line found in the file, else the permit line (as sign_request)
+      let spot = null;
+      if (c.page === undefined && c.x === undefined && c.y === undefined) {
+        try {
+          const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + enc(c.path) + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) });
+          if (!d.ok) return jsonResp({ ok: false, error: d.status === 404 ? 'file not found' : 'file ' + d.status }, 200, {});
+          const doc = await PDFDocument.load(new Uint8Array(await d.arrayBuffer()), { ignoreEncryption: true });
+          spot = signPlace(findSignSpot(doc)) || permitSpot(c.name, doc.getPageCount());
+        } catch (x) { spot = null; }
+      }
+      let t = null, limited = false;
+      const cas = await stateCas(url, h, SIGN_KEY, (raw) => {
+        if (signNowCount(raw, nowMs - SIGN_NOW_MS) >= SIGN_NOW_MAX) { limited = true; return { write: false }; }
+        const r = signAdd(raw === undefined ? '[]' : raw, { agent: body.agent, path: c.path, name: c.name, page: spot ? spot.page : c.page, x: spot ? spot.x : c.x, y: spot ? spot.y : c.y, w: spot && spot.w ? spot.w : c.w, reply: rq.reply }, now);
+        // a request already waiting on this file (an earlier offer) is the one approved; it gets the mail if it had none
+        const e = r.list.find((x) => x && x.id === r.id);
+        if (e && rq.reply && !e.reply) e.reply = rq.reply;
+        t = signTake(JSON.stringify(r.list), r.id, true, now, 'owner-ask');
+        return t.error ? { write: false } : { value: JSON.stringify(t.list) };
+      }, () => tmo(SB_MS));
+      if (limited) return jsonResp({ ok: false, error: 'sign_now: ' + SIGN_NOW_MAX + ' signatures in 30 minutes already; use sign_offer' }, 200, {});
+      if (!t || t.error) return jsonResp({ ok: false, error: 'sign_now: ' + ((t && t.error) || 'state') }, 200, {});
+      if (!cas.written) return jsonResp({ ok: false, error: cas.conflict ? 'save conflict, try again' : 'save ' + cas.status }, 200, {});
+      let res;
+      try { res = await signRun(env, url, at.token, t.req, nowMs); } catch (e) { res = { ok: false, error: String(e && e.message || e).slice(0, 120) }; }
+      await stateCas(url, h, SIGN_KEY, (raw) => ({ value: JSON.stringify(signMark(raw === undefined ? t.list : raw, t.req.id, res.ok ? 'signed' : 'failed', res.ok ? { signed: res.name } : { error: res.error })) }), () => tmo(SB_MS)).catch(() => null);
+      try {
+        await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
+          body: JSON.stringify([{ id: 'sg' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
+            event_type: 'owner_sign', channel: 'server', payload: { title: (res.ok ? 'signed (his ask): ' + res.name : 'sign failed: ' + t.req.name).slice(0, 120), result: res.ok ? 'signed' : 'failed', via: 'sign_now', id: t.req.id, path: t.req.path, error: res.error || null } }]) });
+      } catch (e) { /* the state in server_state still shows it */ }
+      if (!res.ok) return jsonResp({ ok: false, signed: false, id: t.req.id, error: res.error }, 200, {});
+      const rel = t.req.path.split('/').slice(0, -1).join('/').slice(OD_ROOT.length) + '/' + res.name;
+      // the signed copy to Michael at once, as after his tap
+      let doc = null;
+      try { const to = await ownerWa(env, url); if (to && res.bytes) doc = await sendDocToOwner(env, to, res.bytes, res.name, '', await ownerWindowOpen(env, url), { kind: 'reply', path: OD_ROOT + rel }); } catch (e) { doc = null; }
+      // the reply draft in the original thread (only a draft; Michael sends it)
+      let draft = null;
+      const rp = t.req.reply || null;
+      if (rp && rp.id) {
+        const dr = await onRequest({ env, request: new Request('https://internal/api/routine-db', { method: 'POST',
+          headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ op: 'mail_draft', agent: 'wa-hook-sign', why: String(body.why || 'sign and reply').slice(0, 200), to: rp.to, subject: rp.subject, body: rp.text, attach: [rel], reply_to: rp.id }) }) }).catch(() => null);
+        const dj = dr ? await dr.json().catch(() => ({})) : {};
+        draft = dj.ok ? { ok: true, to: rp.to } : { ok: false, error: String(dj.error || (dr && dr.status) || 'network').slice(0, 120) };
+      }
+      return jsonResp({ ok: true, signed: res.name, path: rel, id: t.req.id, doc: doc && doc.ok ? 'sent' : null, draft }, 200, {});
     }
     if (body.op === 'sign_request') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path', 'page', 'x', 'y', 'w'].concat(SIGN_REPLY_FIELDS).indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});

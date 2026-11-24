@@ -2608,6 +2608,25 @@ const callIn = async (body) => {
   }
   check('/api/routine-db is a machine path', /const MACHINE_PATHS = \[[^\]]*'\/api\/routine-db'/.test(mw));
 
+  console.log('\nsign_now (24/11/2026: Michael\'s own ask is the approval, no tap)');
+  { const { ownerAskedSign, signNowCount, SIGN_NOW_MAX } = await import('./_build/routine-db.mjs');
+    // pairs: his own words that ask to sign, and words that do not
+    check('ownerAskedSign: "תחתום בשמי על התעודה", "🎤 לחתום על הטופס של רותם", "חתום ותחזיר לשולח" = yes',
+      ownerAskedSign([{ text: 'תחתום בשמי על התעודה של רותם' }]) && ownerAskedSign([{ text: '🎤 אפשר לחתום על הטופס של רותם' }]) && ownerAskedSign([{ text: 'חתום ותחזיר לשולח' }]));
+    check('ownerAskedSign: "מה עם הזימונים", "החתמתי את העובדים", "תשלח לי את המייל" or no messages = no',
+      !ownerAskedSign([{ text: 'מה עם הזימונים' }]) && !ownerAskedSign([{ text: 'החתמתי את העובדים אתמול' }]) && !ownerAskedSign([{ text: 'תשלח לי את המייל' }]) && !ownerAskedSign([]) && !ownerAskedSign(null));
+    const t0 = Date.now(), mk = (n, ago) => Array.from({ length: n }, (_, i) => ({ id: 's' + i, by: 'owner-ask', status: 'signed', at: new Date(t0 - ago).toISOString(), done_at: new Date(t0 - ago).toISOString() }));
+    check('signNowCount: counts only sign_now signatures inside the window', signNowCount(JSON.stringify(mk(3, 60e3).concat(mk(2, 3600e3)).concat([{ id: 'x', by: 'w1', at: new Date(t0).toISOString() }])), t0 - 30 * 60e3) === 3 && SIGN_NOW_MAX === 5);
+    const E = { ...ENV, META_PHONE_NUMBER_ID: 'P', META_ACCESS_TOKEN: 'm' };
+    const other = await call({ op: 'sign_now', agent: 'some-agent', why: 'sign it', path: '06_x/cert.pdf' }, 'k-123', 'POST', E);
+    check('sign_now: any caller but the WhatsApp assistant = refused', other.status === 400 && /assistant only/.test(other.json.error), other.json);
+    const bad = await call({ op: 'sign_now', agent: 'routine-wa-assistant', why: 'sign it', path: '06_x/cert.pdf', reply_to: 'bad id' }, 'k-123', 'POST', E);
+    check('sign_now: a bad mail id = refused before anything', bad.status === 400 && /reply_to/.test(bad.json.error), bad.json);
+    const f0 = globalThis.fetch;
+    globalThis.fetch = async (u, o) => String(u).indexOf('/rest/v1/notifications_log?select=ts,text') >= 0 ? new Response(JSON.stringify([{ ts: new Date().toISOString(), text: 'מה עם הזימונים' }]), { status: 200 }) : f0(u, o);
+    let noAsk; try { noAsk = await call({ op: 'sign_now', agent: 'routine-wa-assistant', why: 'a mail asked to sign', path: '06_x/cert.pdf' }, 'k-123', 'POST', E); } finally { globalThis.fetch = f0; }
+    check('sign_now: no message of Michael in 30 minutes asks to sign (a mail asked) = refused, nothing signed', noAsk.status === 400 && /no message of Michael/.test(noAsk.json.error) && !('sign_requests' in state && /owner-ask/.test(state.sign_requests)), noAsk.json);
+  }
   console.log('\nsign_offer (21/10/2026: the assistant offers PDFs as buttons, signs nothing)');
   { const E = { ...ENV, META_PHONE_NUMBER_ID: 'P', META_ACCESS_TOKEN: 'm' };
     const six = await call({ op: 'sign_offer', agent: 'routine-wa-assistant', why: 'test offer', paths: ['a/1.pdf', 'a/2.pdf', 'a/3.pdf', 'a/4.pdf', 'a/5.pdf', 'a/6.pdf'] }, 'k-123', 'POST', E);
