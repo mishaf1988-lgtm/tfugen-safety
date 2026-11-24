@@ -149,6 +149,8 @@
 //              private michael-skills repo, read with GH_SKILLS_TOKEN. exam.md never (it is the exam). skillPath.
 //   promise / promise_done  (21/10/2026) {agent, text, who?, ref?} "I will get back to you" kept in server_state.promises;
 //              {id | ref, note?} closes it and tells Michael on WhatsApp now. dev_request writes one, dev_done closes it.
+//              24/11/2026: dev_done next? (5-400) = what is left for the assistant; it wakes the assistant (nextFireText), never
+//              goes to Michael, and a note that speaks to the assistant (DEV_NOTE_INTERNAL) is refused.
 //              check_in_min (30-2880, PROMISE_CHECK_MIN) + check?: the server wakes the assistant then to check (wa-morning promiseCheck);
 //              promise with the same ref (or text) and a new check_in_min sets the next check.
 //   learn / learn_done  (21/10/2026) {agent, kind: correction|preference|fact|source, text, source?, replaces?} a line in the
@@ -527,7 +529,7 @@ export function devInboxFired(raw, id, session) {
   x.fired_session = session;
   return list;
 }
-export function devInboxDone(raw, id, note, nowIso) {
+export function devInboxDone(raw, id, note, nowIso, next) {
   let list = [];
   try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
   const x = Array.isArray(list) && list.find((y) => y && y.id === id);
@@ -536,6 +538,7 @@ export function devInboxDone(raw, id, note, nowIso) {
   // closed stays as it was, so a second call writes nothing, logs nothing and sends Michael nothing.
   if (x.status === 'done') return { list, already: true };
   x.status = 'done'; x.done_at = nowIso; x.note = String(note || '').slice(0, 300);
+  if (next) x.next = String(next).slice(0, NEXT_MAX);
   // 12/11/2026 (STATUS "repeat fault", Michael: "the assistant's message, check it"): the retro failed 14:08 and asked for a fix itself;
   // the fault alert opened its own request on the same failure at 14:15. The agent's request was closed at 14:28 with a note
   // to Michael, the alert's stayed open, and at 16:20 he got a reminder on a thing already explained. Closing an agent's own
@@ -2586,6 +2589,25 @@ export function devDoneWaText(note, fixed, closed) {
   const own = (Array.isArray(closed) ? closed : []).filter((x) => x && x.text && String(x.text).indexOf(DEV_PROMISE_HEAD) !== 0);
   return own.length ? promiseDoneText(own, '', fixed) : '';
 }
+// devNoteForAssistant (24/11/2026, quality check internal-note, twice on 23/11/2026): the dev_done note goes to Michael as is,
+// and twice it ended "\u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05e9\u05dc\u05d9\u05dd: \u05dc\u05e9\u05dc\u05d5\u05d7 \u05dc\u05de\u05d9\u05db\u05d0\u05dc PDF \u05e9\u05dc \u05d4\u05de\u05e6\u05d2\u05ea" - a line for the assistant, Michael reading about
+// himself in the third person. Such a note is refused; the action goes in "next", which the assistant gets and Michael does not. Pure.
+// "\u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05e9\u05dc\u05d9\u05dd" always; "\u05dc\u05de\u05d9\u05db\u05d0\u05dc" only after an infinitive ("\u05dc\u05e9\u05dc\u05d5\u05d7 \u05dc\u05de\u05d9\u05db\u05d0\u05dc"), an action for someone else to take:
+// "\u05de\u05d7\u05db\u05d4 \u05dc\u05de\u05d9\u05db\u05d0\u05dc" in a not-fixed note is how step 6 says who it waits for, and still passes.
+export const DEV_NOTE_INTERNAL = /\u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05e9\u05dc\u05d9\u05dd|(^|\s)\u05dc\S+ \u05dc\u05de\u05d9\u05db\u05d0\u05dc/;
+export function devNoteForAssistant(note) {
+  return DEV_NOTE_INTERNAL.test(String(note || ''));
+}
+// nextFireText (24/11/2026): "next" of a dev_done wakes the assistant on the office head its routine prompt already accepts
+// (as drillFireText), with a next- row that step 0\u05d03 reads as a continuation from development, not a message from Michael.
+export const NEXT_ROW = /^next-[A-Za-z0-9_-]{2,70}$/;
+export const NEXT_MAX = 400;
+export function nextRowOf(id) { return 'next-' + String(id || '').replace(/^dev-/, '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 60); }
+export function nextFireText(row, next, req, at) {
+  return [DRILL_HEAD + row + ']', 'at: ' + at,
+    'text: ' + String(next).replace(/\s*\n+\s*/g, ' / ').slice(0, NEXT_MAX),
+    '\u05d4\u05de\u05e9\u05da \u05de\u05d4\u05e4\u05d9\u05ea\u05d5\u05d7 (\u05e6\u05e2\u05d3 0\u05d03), \u05dc\u05d0 \u05d4\u05d5\u05d3\u05e2\u05d4 \u05de\u05de\u05d9\u05db\u05d0\u05dc: \u05d1\u05e7\u05e9\u05ea \u05d4\u05e4\u05d9\u05ea\u05d5\u05d7 \u05e0\u05e1\u05d2\u05e8\u05d4, \u05d5\u05d6\u05d5 \u05d4\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e9\u05e0\u05e9\u05d0\u05e8\u05d4 \u05dc\u05da. \u05dc\u05d1\u05e6\u05e2 \u05e8\u05e7 \u05de\u05d4 \u05e9\u05de\u05d5\u05ea\u05e8 \u05dc\u05da \u05d1\u05dc\u05d9 "\u05d1\u05e6\u05e2"; \u05de\u05d4 \u05e9\u05e6\u05e8\u05d9\u05da "\u05d1\u05e6\u05e2" = \u05e9\u05d0\u05dc\u05d4 \u05d0\u05d7\u05ea \u05dc\u05de\u05d9\u05db\u05d0\u05dc \u05e2\u05dd choices. \u05d4\u05d1\u05e7\u05e9\u05d4 \u05d4\u05de\u05e7\u05d5\u05e8\u05d9\u05ea (\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd): ' + String(req || '').replace(/\s*\n+\s*/g, ' / ').slice(0, 300)].join('\n');
+}
 export function devDoneLead(fixed) {
   return fixed === true ? '\u05ea\u05d5\u05e7\u05df: ' : fixed === false ? '\u05dc\u05d0 \u05ea\u05d5\u05e7\u05df: ' : '\u05e2\u05d3\u05db\u05d5\u05df \u05de\u05d4\u05e4\u05d9\u05ea\u05d5\u05d7: ';
 }
@@ -3287,16 +3309,18 @@ async function routineDbHandle(context) {
       if (body.op === 'dev_request') body.text = ilTimes(body.text);
       // 28/10/2026: the note goes to Michael as is; 27/10 13:40 it said scans stop without API credit (they run on ocr_txt).
       if (body.op === 'dev_done' && asksApiCredit(body.note)) return jsonResp({ ok: false, error: 'note: API credit is not loaded (Michael decided no); a scan is read with ocr_txt. Drop that line' }, 400, {});
+      if (body.op === 'dev_done' && devNoteForAssistant(body.note)) return jsonResp({ ok: false, error: 'note: it goes to Michael as is, in the second person; an action left for the assistant goes in "next", not in the note' }, 400, {});
+      if (body.op === 'dev_done' && body.next !== undefined && (typeof body.next !== 'string' || body.next.trim().length < 5 || body.next.length > NEXT_MAX)) return jsonResp({ ok: false, error: 'next: 5-' + NEXT_MAX + ' characters, for the assistant' }, 400, {});
       const fn = body.op === 'dev_done' ? factGate(body.note, body.checked) : null;
       if (fn) return jsonResp({ ok: false, error: 'note: ' + fn }, 400, {});
       // retro 21/10/2026 (c): two requests at once read the same inbox and the second write dropped the first. The write
       // goes through stateCas: only if the row is still the one read, else read again and redo (ideas-lab 12).
-      let r = body.op === 'dev_request' ? devInboxAdd(raw, body, now) : devInboxDone(raw, String(body.id || ''), body.note, now);
+      let r = body.op === 'dev_request' ? devInboxAdd(raw, body, now) : devInboxDone(raw, String(body.id || ''), body.note, now, body.next);
       if (r.error) return jsonResp({ ok: false, error: r.error }, 400, {});
       const doneAlready = () => jsonResp({ ok: true, id: body.id, already: true, open: r.list.filter((x) => x && x.status === 'open').length, wa: null }, 200, {});
       if (r.already) return doneAlready();
       const cw = await stateCas(url, h, DEV_INBOX_KEY, (cur) => {
-        r = body.op === 'dev_request' ? devInboxAdd(cur, body, now) : devInboxDone(cur, String(body.id || ''), body.note, now);
+        r = body.op === 'dev_request' ? devInboxAdd(cur, body, now) : devInboxDone(cur, String(body.id || ''), body.note, now, body.next);
         return r.error || r.already ? { write: false } : { value: JSON.stringify(r.list) };
       }, () => tmo(SB_MS));
       if (r.error) return jsonResp({ ok: false, error: r.error }, 400, {});
@@ -3371,8 +3395,27 @@ async function routineDbHandle(context) {
           wa = s.ok ? (s.via || 'sent') : (s.error || 'failed');
         } catch (x) { wa = 'failed'; }
       }
+      // 24/11/2026 (quality check internal-note): what is left for the assistant wakes it now; Michael gets only the note above
+      let nextFired = undefined;
+      if (body.op === 'dev_done' && typeof body.next === 'string' && body.next.trim()) {
+        const af = await assistantFireNow(env);
+        const row = nextRowOf(body.id), at = new Date().toISOString();
+        nextFired = { status: af ? 'network' : 'not configured', session: null };
+        if (af) {
+          try {
+            const fr = await fetch(af.url, { method: 'POST', signal: tmo(GRAPH_MS),
+              headers: { Authorization: 'Bearer ' + af.token, 'anthropic-beta': 'experimental-cc-routine-2026-04-01', 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: nextFireText(row, body.next.trim(), closedReq && closedReq.text, at) }) });
+            const fj = fr.ok ? await fr.json().catch(() => ({})) : {};
+            nextFired = { status: fr.status, session: (fj && fj.claude_code_session_id) || null };
+          } catch (x) { /* reported as network */ }
+        }
+        await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
+          body: JSON.stringify([{ id: 'nx' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: at,
+            event_type: 'next_in', channel: 'dev', payload: { title: body.next.trim().slice(0, 120), text: body.next.trim(), row, agent: 'dev', session: nextFired.session, fired: nextFired.status } }]) }).catch(() => null);
+      }
       const eta = body.op === 'dev_request' ? devEta(Date.now(), !!(fired && fired.session)) : undefined;
-      return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length, wa, fired, eta, also: r.also }, 200, {});
+      return jsonResp({ ok: true, id: r.id || body.id, open: r.list.filter((x) => x.status === 'open').length, wa, fired, eta, also: r.also, next: nextFired }, 200, {});
     }
     // wa_file (22/10/2026, Michael to the assistant: "I asked to get the files here", and "the link is broken"): 1-5
     // files from the safety folder sent to Michael on WhatsApp as documents. Only to him, only inside the 24-hour window
