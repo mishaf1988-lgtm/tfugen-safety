@@ -723,7 +723,10 @@ export async function sendToOwner(env, to, text, opts) {
   if (r.error === 'empty text') return r;
   // the buttons too, so the chat shows the same choices (a tap there sends "1. ..." like a tap on WhatsApp)
   const cs = o_choices(opts);
-  const push = await noteOut(env, ilTimes(String(text || '').trim()), r, 'text', Object.assign({ okind: (opts && opts.kind) || null }, cs.length ? { choices: cs } : null));
+  // opts.logRef (24/11/2026, a tap on the signature list went to the assistant): the ref of a question with buttons, kept on
+  // its log row, so a tap on that very message (its wamid, wa-hook aboutAlert) finds what it answers
+  const push = await noteOut(env, ilTimes(String(text || '').trim()), r, 'text', Object.assign({ okind: (opts && opts.kind) || null }, cs.length ? { choices: cs } : null,
+    opts && opts.logRef ? { ref: String(opts.logRef).slice(0, 40) } : null));
   return Object.assign(r, { push });
 }
 // src.path (25/10/2026, Michael: "the app must be the same as WhatsApp, files and all"): where the file is on the

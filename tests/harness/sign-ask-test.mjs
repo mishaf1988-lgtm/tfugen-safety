@@ -33,6 +33,11 @@ check('buttons: the names without .pdf, short (choicesPayload adds the numbers)'
 check('no name given: the list opens with "the newest PDFs", not "not found"', signPickText(rec, 'recent').indexOf('\u05d4-PDF \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd') === 0 && signPickText(rec, true).indexOf('\u05dc\u05d0 \u05de\u05e6\u05d0\u05ea\u05d9') === 0);
 check('a tap on the pick message picks (button or typed digit)', signPickOf({ choice: 2 }, { ref: 'signpick' }) === 2 && signPickOf({ text: '3. mid' }, { ref: 'signpick' }) === 3);
 check('the same digit after any other message is not a pick', signPickOf({ text: '1' }, { ref: 'brief' }) === null && signPickOf({ text: '1' }, null) === null);
+// 24/11/2026: a button tap carries its message (about) and prev is null then; the list's log row has ref signpick
+const aboutPick = 'wa_out | 1. 06_x/a.pdf | ref signpick | 2026-11-24T11:53:59Z';
+check('a tap on the list message picks even when a later message replaced the newest', signPickOf({ choice: '1', text: '1. 2026-11-24 - x' }, null, aboutPick) === 1 && signPickOf({ choice: 1 }, { ref: null }, aboutPick) === 1);
+check('a tap on another message is not a pick, even right after the list', signPickOf({ choice: '1' }, { ref: 'signpick' }, 'wa_out | other | 2026-11-24T11:54:18Z') === null && signPickOf({ choice: '1' }, { ref: 'signpick' }, 'assistant | x | ref none | t') === null);
+check('fastRoute: a tap on the list with prev null becomes sign_pick', (fastRoute({ choice: '1', text: '1. 2026-11-24 - x' }, aboutPick, null) || {}).kind === 'sign_pick');
 check('fastRoute routes the tap as sign_pick', (fastRoute({ text: '1' }, '', { ref: 'signpick' }) || {}).kind === 'sign_pick');
 // OneDrive for Business search: hits without parentReference.path (the 21:08 "not found" on Safetecs). The path is
 // read per PDF, then signPick keeps it.

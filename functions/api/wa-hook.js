@@ -325,8 +325,11 @@ export function signPickText(list, none) {
 // choicesPayload numbers them itself ("1. "), and a button title is at most 20 characters.
 export function signPickChoices(list) { return list.map((x) => String(x.name).replace(/\.pdf$/i, '').slice(0, 16)); }
 // Which candidate a tap picked: a reply to the "signpick" message, "1"-"5" or the button. Pure.
-export function signPickOf(m, prev) {
-  if (!prev || prev.ref !== 'signpick') return null;
+// 24/11/2026 (Michael tapped 1 on the list twice, at 11:57 and 11:58, and both went to the assistant): a button tap carries
+// its message (about), and then prev is null, so the tap never counted. A tap or reply with a message counts only when that
+// message is the list (its log row carries ref signpick, sendToOwner logRef); without one (typed "1", /chat) the newest.
+export function signPickOf(m, prev, about) {
+  if (about ? !/\| ref signpick \|/.test(String(about)) : (!prev || prev.ref !== 'signpick')) return null;
   const c = m && m.choice !== undefined && m.choice !== null ? String(m.choice) : '';
   const t = String((m && m.text) || '').trim();
   const n = /^[1-5]$/.test(c) ? +c : (/^([1-5])(\.|\s|$)/.exec(t) || [])[1];
@@ -513,7 +516,7 @@ export function fastRoute(m, about, prev) {
   // (signs). With no name and a recent assistant message, the assistant knows which file: it gets the message.
   if (ask === '' && prev && prev.ref !== 'signpick') return null;
   if (ask !== null) return { kind: 'sign_ask', q: ask };
-  const pk = signPickOf(m, prev);
+  const pk = signPickOf(m, prev, about);
   if (pk) return { kind: 'sign_pick', n: pk };
   if (signReplyOf(m, prev)) return { kind: 'sign_reply' };
   if (signMailOf(m, prev)) return { kind: 'sign_mail' };
@@ -920,8 +923,8 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
         await sbJson(env, 'server_state?on_conflict=key', { /* cas-ok: the newest pick, whole, nothing read first */ method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
           body: JSON.stringify([{ key: SIGN_PICK_KEY, value: JSON.stringify({ at: new Date().toISOString(), paths: sa.pick.map((x) => x.path) }), updated_at: new Date().toISOString() }]) });
         const pt = signPickText(sa.pick, sa.none);
-        const ps = await sendToOwner(env, owner, pt, { kind: 'reply', windowOpen: true, noTemplate: true, choices: signPickChoices(sa.pick) }).catch(() => null);
-        if (ps && ps.ok) { seen.fast = 'sign_pick_list'; await noteLastOut(env, sbFrom(env), pt, 'signpick'); await logOut(env, pt, ps); return true; }
+        const ps = await sendToOwner(env, owner, pt, { kind: 'reply', windowOpen: true, noTemplate: true, choices: signPickChoices(sa.pick), logRef: 'signpick' }).catch(() => null);
+        if (ps && ps.ok) { seen.fast = 'sign_pick_list'; await noteLastOut(env, sbFrom(env), pt, 'signpick'); await logOut(env, pt, ps, 'signpick'); return true; }
       }
       ans = sa.text; ref = 'sign-ask';
       if (!ans) seen.sign_ask_error = String(sa.error || 'search');

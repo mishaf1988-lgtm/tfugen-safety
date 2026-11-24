@@ -4589,7 +4589,7 @@ async function routineDbHandle(context) {
       const head = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 300);
       const text = (head ? head + '\n' : '') + rel.map((p, i) => (i + 1) + '. ' + p).join('\n') + '\n\u05e2\u05dc \u05d0\u05d9\u05d6\u05d4 \u05dc\u05d7\u05ea\u05d5\u05dd? \u05dc\u05dc\u05d7\u05d5\u05e5 \u05e2\u05dc \u05d4\u05de\u05e1\u05e4\u05e8.';
       const choices = checked.map((x) => x.name.replace(/\.pdf$/i, '').slice(0, 16));
-      const s = await sendToOwner(env, to, text, { kind: 'sign', windowOpen: await ownerWindowOpen(env, url), choices });
+      const s = await sendToOwner(env, to, text, { kind: 'sign', windowOpen: await ownerWindowOpen(env, url), choices, logRef: 'signpick' });
       if (s.ok && !s.held) await noteLastOut(env, url, text, 'signpick');
       return jsonResp({ ok: s.ok, sent: s.ok, offered: rel.length, error: s.error || undefined }, 200, {});
     }
