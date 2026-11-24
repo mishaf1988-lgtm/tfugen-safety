@@ -19,7 +19,7 @@ import { isVoice, voiceText, VOICE_MARK, VOICE_MODEL, voiceRetryable } from '../
 import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, hasStatuses, STATUS_KEY, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, assistantFireNow, pickFire, accountOf, ACCOUNT_KEY, forgetAccount, LEARN_KEY, learnedLine, recentLine, waDeliveryHandle } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 import { accessToken, sendMailTo } from '../_onedrive.js';
-import { onRequest as routineDb, DEV_INBOX_KEY, devInboxAdd, OD_ROOT, isAutoTop, OD_INBOX, delRefOf, DEL_ASK_KEY, DEL_ASK_MS, DEL_TABLES, UNDO_KEY, UNDO_MAX, undoRefOf, undoPick, UNDO_ASK_KEY, UNDO_ASK_MS, tourRefOf, TOUR_CLOSE_KEY, TOUR_CLOSE_MS, TOUR_OPEN, TOUR_CLOSED, calInviteRefOf, CAL_INVITE_ASK_KEY, CAL_INVITE_ASK_MS, calMoveRefOf, CAL_MOVE_ASK_KEY, CAL_MOVE_ASK_MS } from './routine-db.js';
+import { onRequest as routineDb, DEV_INBOX_KEY, devInboxAdd, OD_ROOT, isAutoTop, OD_INBOX, delRefOf, DEL_ASK_KEY, DEL_ASK_MS, DEL_TABLES, UNDO_KEY, UNDO_MAX, undoRefOf, undoPick, UNDO_ASK_KEY, UNDO_ASK_MS, tourRefOf, TOUR_CLOSE_KEY, TOUR_CLOSE_MS, TOUR_OPEN, TOUR_CLOSED, calInviteRefOf, calInviteRuns, CAL_INVITE_ASK_KEY, CAL_INVITE_ASK_MS, calMoveRefOf, CAL_MOVE_ASK_KEY, CAL_MOVE_ASK_MS } from './routine-db.js';
 import { SIGN_KEY, signRefOf, signAnswer, signTake, signMark, signRun, signDoneText, SIGN_CANCEL_TEXT, SIGN_EXPIRED_TEXT, SIGN_DONE_TEXT } from '../_sign.js';
 
 export const FAIL_TEXT = '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05dc\u05e2\u05d5\u05d6\u05e8. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.';
@@ -619,11 +619,27 @@ async function fastCalInvite(env, r) {
   if (!st || st.k !== r.id || Date.now() - Date.parse(st.at) > CAL_INVITE_ASK_MS) return CAL_INVITE_GONE;
   await sbJson(env, 'server_state?key=eq.' + CAL_INVITE_ASK_KEY, { method: 'DELETE' });
   if (!r.yes) return CAL_INVITE_NO;
-  const res = await routineDb({ env, request: new Request('https://internal/api/routine-db', { method: 'POST',
-    headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' },
-    body: JSON.stringify(Object.assign({}, st.inv, { op: 'cal_invite', agent: 'wa-hook', why: String(st.inv.why || 'invite').slice(0, 200), approved: '\u05d1\u05e6\u05e2 (\u05db\u05e4\u05ea\u05d5\u05e8 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4)' })) }), internal: true });
-  const j = await res.json().catch(() => ({}));
-  return j.ok ? calInviteSentText(j) : null;
+  // 24/11/2026 (dev-20261124132506-p71z): an invite with dates = one meeting per day, all on this one tap
+  const rs = calInviteRuns(st.inv, Date.now());
+  if (rs.error) return null;
+  const done = [], failed = [];
+  for (const inv of rs.runs) {
+    const res = await routineDb({ env, request: new Request('https://internal/api/routine-db', { method: 'POST',
+      headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({}, inv, { op: 'cal_invite', agent: 'wa-hook', why: String(inv.why || 'invite').slice(0, 200), approved: '\u05d1\u05e6\u05e2 (\u05db\u05e4\u05ea\u05d5\u05e8 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4)' })) }), internal: true });
+    const j = await res.json().catch(() => ({}));
+    (j.ok ? done : failed).push(j.ok ? j : inv.start);
+  }
+  if (rs.runs.length === 1) return done.length ? calInviteSentText(done[0]) : null;
+  return calInviteManyText(done, failed);
+}
+// several days: how many were created, and which days failed (DD/MM/YYYY), so he knows what to ask again
+export function calInviteManyText(done, failed) {
+  const dmy = (x) => String(x).slice(8, 10) + '/' + String(x).slice(5, 7) + '/' + String(x).slice(0, 4);
+  if (!done.length) return null;
+  const head = done[0].draft ? done.length + ' \u05e4\u05d2\u05d9\u05e9\u05d5\u05ea \u05d9\u05d5\u05e4\u05d9\u05e2\u05d5 \u05d1\u05d9\u05d5\u05de\u05df \u05e9\u05dc\u05da \u05ea\u05d5\u05da \u05db-5 \u05d3\u05e7\u05d5\u05ea, \u05d1\u05dc\u05d9 \u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd.'
+    : done.length + ' \u05d6\u05d9\u05de\u05d5\u05e0\u05d9\u05dd \u05e0\u05e9\u05dc\u05d7\u05d5 \u05dc\u05d9\u05e6\u05d9\u05e8\u05d4 (' + done[0].attendees + ' \u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd \u05d1\u05db\u05dc \u05d0\u05d7\u05d3). \u05d4\u05dd \u05d9\u05d5\u05e4\u05d9\u05e2\u05d5 \u05d1\u05d9\u05d5\u05de\u05df \u05e9\u05dc\u05da \u05ea\u05d5\u05da \u05db-5 \u05d3\u05e7\u05d5\u05ea.';
+  return head + (failed.length ? '\n\u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8\u05d5: ' + failed.map(dmy).join(', ') + '. \u05db\u05ea\u05d5\u05d1 \u05dc\u05e2\u05d5\u05d6\u05e8 \u05e9\u05d5\u05d1 \u05e2\u05dc \u05d4\u05de\u05d5\u05e2\u05d3\u05d9\u05dd \u05d4\u05d0\u05dc\u05d4.' : '');
 }
 export const CAL_MOVE_NO = '\u05dc\u05d0 \u05d4\u05d5\u05d6\u05d6. \u05d4\u05d0\u05d9\u05e8\u05d5\u05e2 \u05e0\u05e9\u05d0\u05e8 \u05d1\u05e9\u05e2\u05d4 \u05e9\u05dc\u05d5.', CAL_MOVE_GONE = '\u05d4\u05d1\u05e7\u05e9\u05d4 \u05dc\u05d4\u05d6\u05d6\u05d4 \u05db\u05d1\u05e8 \u05dc\u05d0 \u05d1\u05ea\u05d5\u05e7\u05e3. \u05db\u05ea\u05d5\u05d1 \u05dc\u05e2\u05d5\u05d6\u05e8 \u05e9\u05d5\u05d1.';
 export function calMovedText(j) { return '\u05d4\u05d0\u05d9\u05e8\u05d5\u05e2 \u05d9\u05d6\u05d5\u05d6 \u05d1\u05d9\u05d5\u05de\u05df \u05e9\u05dc\u05da \u05ea\u05d5\u05da \u05db-3 \u05d3\u05e7\u05d5\u05ea, \u05dc-' + j.start.slice(8, 10) + '/' + j.start.slice(5, 7) + '/' + j.start.slice(0, 4) + ' ' + j.start.slice(11) + '-' + j.end.slice(11) + '.'; }

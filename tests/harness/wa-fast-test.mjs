@@ -1,7 +1,7 @@
 // The server's fast lane (20/10/2026, Michael in the questionnaire: "do it: a fast lane in the server").
 // A number 1-4 that answers a hazard alert, and "what is urgent" / "expiries", are answered by wa-hook
 // itself by rules; everything else, and anything unclear, still goes to the assistant.
-import { failText, FAIL_TEXT, ownerInPayload, recentLine, RECENT_MAX, accountCmdOf, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX, joinCandidates, joinedLine, hasNewer, JOIN_MS, fireText, fastDel, DEL_NO, DEL_GONE, fastUndo, UNDO_NO, UNDO_GONE, rateNote } from './_build/wa-hook.mjs';
+import { failText, FAIL_TEXT, ownerInPayload, recentLine, RECENT_MAX, accountCmdOf, fastRoute, hazardRef, fastHazardText, FAST_BRIEF, rateOf, ownAnswer, rateAdd, RATE_MAX, joinCandidates, joinedLine, hasNewer, JOIN_MS, fireText, fastDel, DEL_NO, DEL_GONE, fastUndo, UNDO_NO, UNDO_GONE, rateNote, calInviteManyText } from './_build/wa-hook.mjs';
 import { HAZARD_OPTIONS, hazardAsk, assistantFire, pickFire, accountOf, fireUrlOf, fastModel, fastFire, ASSISTANT_FAST_TRIGGER } from './_build/_wa.mjs';
 import { rateAgain } from './_build/chat.mjs';
 
@@ -114,6 +114,10 @@ console.log('\n9. move an event only on his yes to that question (26/10/2026 ret
   const prev = { ref: 'calmove:ab12cd34' };
   const y = fastRoute({ text: 'בצע' }, null, prev), n = fastRoute({ text: 'לא' }, null, prev), q = fastRoute({ text: 'לא, ליום חמישי' }, null, prev);
   check('"בצע" = move, "לא" = no, a correction = to the assistant', y && y.kind === 'cal_move' && y.id === 'ab12cd34' && y.yes === true && n && n.kind === 'cal_move' && n.yes === false && (!q || q.kind !== 'cal_move'), { y, n, q });
+  { const t = calInviteManyText([{ draft: false, attendees: 7 }, { draft: false, attendees: 7 }], ['2027-01-12T08:00']);
+    check('several invites: how many were sent and which day failed, DD/MM/YYYY (24/11/2026)', t.indexOf('2 ') === 0 && t.indexOf('7 ') > 0 && t.indexOf('12/01/2027') > 0, t);
+    check('several invites: none created = no text (the generic failure path)', calInviteManyText([], ['2027-01-12T08:00']) === null);
+    check('several draft meetings: says no attendees', calInviteManyText([{ draft: true }], []).indexOf('\u05d1\u05dc\u05d9 \u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd') > 0); }
   check('"בצע" after an invite question is an invite, not a move', fastRoute({ text: 'בצע' }, null, { ref: 'calinvite:ab12cd34' }).kind === 'cal_invite');
 }
 
