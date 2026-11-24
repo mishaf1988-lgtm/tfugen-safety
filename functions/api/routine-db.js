@@ -1790,7 +1790,9 @@ export function calInviteRuns(b, nowMs) {
   const off = Math.round((Date.parse(end.slice(0, 10) + 'T00:00:00Z') - Date.parse(start.slice(0, 10) + 'T00:00:00Z')) / 86400000);
   const plus = (day, n) => new Date(Date.parse(day + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
   const runs = d.slice().sort().map((day) => Object.assign({}, base, { start: day + start.slice(10), end: plus(day, off) + end.slice(10) }));
-  for (const r of runs) { const c = calInviteCheck(Object.assign({}, r, { approved: '\u05d1\u05e6\u05e2' }), nowMs); if (c.error) return { error: r.start.slice(0, 10) + ': ' + c.error }; }
+  // 24/11/2026 (live, 15:41): the stored invite has only CAL_INVITE_FIELDS, no agent or why, so every day failed "bad agent
+  // name" at Michael's tap and no meeting was made; the check here is of the invite itself, the caller's name comes later
+  for (const r of runs) { const c = calInviteCheck(Object.assign({}, r, { approved: '\u05d1\u05e6\u05e2', agent: r.agent || 'wa-hook', why: r.why || 'invite check' }), nowMs); if (c.error) return { error: r.start.slice(0, 10) + ': ' + c.error }; }
   return { runs };
 }
 export function calInviteRefOf(about, prev) {
