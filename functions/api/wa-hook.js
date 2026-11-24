@@ -317,6 +317,7 @@ export function signAskManyText(list) {
 // 23/10/2026: 60 open entries are about 12,000 characters, past 8,000 again; the retro folded 7 that night.
 export { LEARNED_MAX };
 export const SIGN_PICK_KEY = 'sign_pick', SIGN_PICK_MS = 3600e3;
+export const SIGN_PICK_OLD = '\u05d9\u05e9 \u05e8\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05d9\u05d5\u05ea\u05e8. \u05dc\u05dc\u05d7\u05d5\u05e5 \u05e2\u05dc \u05d4\u05de\u05e1\u05e4\u05e8 \u05d1\u05e8\u05e9\u05d9\u05de\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4.';
 // The candidates go out as buttons; a tap ("1") on that very message asks for the one picked (sign_pick, 1 hour).
 export function signPickText(list, none) {
   return (none === 'recent' ? '\u05d4-PDF \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea:\n' : none ? '\u05dc\u05d0 \u05de\u05e6\u05d0\u05ea\u05d9 \u05d1\u05e9\u05dd \u05d4\u05d6\u05d4. \u05d4-PDF \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea:\n' : '\u05de\u05e6\u05d0\u05ea\u05d9 \u05db\u05de\u05d4 \u05e7\u05d1\u05e6\u05d9\u05dd:\n')
@@ -517,7 +518,8 @@ export function fastRoute(m, about, prev) {
   if (ask === '' && prev && prev.ref !== 'signpick') return null;
   if (ask !== null) return { kind: 'sign_ask', q: ask };
   const pk = signPickOf(m, prev, about);
-  if (pk) return { kind: 'sign_pick', n: pk };
+  // security review 24/11/2026: a tap on an older list carries that list's time; the files saved are the newest list's
+  if (pk) return Object.assign({ kind: 'sign_pick', n: pk }, about ? { at: String(about).split(' | ').pop() } : null);
   if (signReplyOf(m, prev)) return { kind: 'sign_reply' };
   if (signMailOf(m, prev)) return { kind: 'sign_mail' };
   if (!raw || raw.length > 40) return null;
@@ -932,11 +934,15 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
     else if (fr0.kind === 'sign_pick') {
       const rows = await sbJson(env, 'server_state?key=eq.' + SIGN_PICK_KEY + '&select=value');
       let st = null; try { st = JSON.parse(rows && rows[0] ? rows[0].value : 'null'); } catch (x) { st = null; }
-      const path = st && Date.now() - Date.parse(st.at) < SIGN_PICK_MS && st.paths[fr0.n - 1];
+      const stale = !!(st && fr0.at && Date.parse(fr0.at) < Date.parse(st.at));
+      const path = !stale && st && Date.now() - Date.parse(st.at) < SIGN_PICK_MS && st.paths[fr0.n - 1];
+      if (stale) { ans = SIGN_PICK_OLD; ref = 'sign-pick-old'; seen.sign_pick_error = 'old list'; }
+      else {
       if (path) { const sa = await signAskPath(env, path, st.spot && st.paths.length === 1 ? st.spot : null); if (sa.sent) { seen.fast = 'sign_pick'; return true; } seen.sign_pick_error = String(sa.error || ''); }
       // 21/10/2026: a failed pick says so, instead of falling silently to the assistant
       ans = path ? '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05d0\u05ea \u05d1\u05e7\u05e9\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d6\u05d4 (' + (seen.sign_pick_error || '?') + '). \u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1, \u05d0\u05d5 \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05de\u05d4 \u05dc\u05d7\u05ea\u05d5\u05dd.' : null;
       ref = 'sign-pick-fail';
+      }
     }
     else if (fr0.kind === 'sign') {
       const fs = await fastSign(env, fr0, m.id);
