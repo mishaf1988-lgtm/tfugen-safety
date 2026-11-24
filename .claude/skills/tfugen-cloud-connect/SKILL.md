@@ -19,6 +19,8 @@ description: How to connect an outside service (Cloudflare, Supabase management,
 
 ## מלכודות שנמצאו
 
+- **משתנה ב-Production של Pages דרך ה-API** (23/11/2026, `GEMINI_PHASE2`): `PATCH .../pages/projects/tapugan-safety` עם `{"deployment_configs":{"production":{"env_vars":{"NAME":{"type":"plain_text","value":"1"}}}}}` ממזג גם ב-Production (נבדק: 32 משתנים לפני, 33 אחרי, בלי אובדן ובלי שינוי סוג). סדר: GET ושמירת שמות וסוגים (`type`), PATCH, GET והשוואה, ואז פריסה חדשה (`POST .../deployments -F branch=main`) כי המשתנה נכנס לפעולה רק בפריסה חדשה. מזהה החשבון ב-`ACCOUNT-INVENTORY.md`. סוד (`secret_text`) לא מתקבל בערכו; ערך חדש רק בפעולה מאושרת של מיכאל.
+
 - **הטלפון של מיכאל לא מציג בחירת Preview ב-Cloudflare**, גם לא אחרי ניסיון במצב מחשב. כל משתנה שהוא מוסיף נכנס ל-Production. משתנה ל-Preview: רק דרך ה-API, או מהמחשב.
 - **מסך עריכה פתוח של Production בצילום** (פחי מחיקה ליד ROUTINE_KEY וכו'): לעצור מיד, Cancel, ולבדוק דרך ה-API שלא השתנה כלום.
 - **Preview ב-Cloudflare החזיק סודות כטקסט גלוי** (16/10/2026, נמחקו באישור). בכל קריאה של משתני Pages לבדוק `type`: מפתח עם `plain_text` = ממצא אבטחה.

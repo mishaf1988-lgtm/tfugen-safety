@@ -35,7 +35,13 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: עריכה בפקודה שנחסמה לא נכנסה, וה-PR טען שכן.
 הכלל: hook חוסם את כל הפקודה: מריצים שוב את כולה ובודקים ב-`git diff --stat` ו-`git branch --show-current`.
 נאכף: `lessons-gate.py` (skill בשורה = קובץ skill שהשתנה); `push-gate.py` חוסם commit על main בלי branch באותה פקודה (18/10/2026).
-חזר: 3 (17/11: push-gate חסם `commit && push`, ה-commit לא נכנס; commit ו-push בנפרד. 18/10: guard-sql חסם `checkout -B`, ה-commit נכנס ל-main. 21/10: push-gate בודק את ענף תיקיית העבודה, לא את ה-repo של ה-commit).
+חזר: 4 (24/11/2026: push-gate חסם פקודה אחת של `checkout -B` + עריכות + `commit` + `push` על פער בקובץ מעקב, ושום דבר מזה לא רץ; התגלה ב-`git branch --show-current` שהראה את הענף הישן ותוקן בהרצה חוזרת. 17/11: push-gate חסם `commit && push`, ה-commit לא נכנס; commit ו-push בנפרד. 18/10: guard-sql חסם `checkout -B`, ה-commit נכנס ל-main. 21/10: push-gate בודק את ענף תיקיית העבודה, לא את ה-repo של ה-commit).
+
+**240. אחרי פתיחת PR הוספתי commit ששינה בדיקה קיימת, ותיאור ה-PR לא עודכן (24/11/2026, PR זה).**
+מה קרה: ב-PR של `gemini_ask` תיקנתי רשימה ב-`routine-db-test.mjs` בקומיט אחרי הפתיחה. תיאור ה-PR עבר את `pr-gate` בפתיחה, אבל שער `lessons` ב-CI נכשל על `בדיקה שונתה:`, ו-CI רץ פעמיים אדום (גם פעם שנייה: עריכת התיאור לבדה לא הריצה אותו מחדש).
+הכלל: כל commit שנדחף אחרי פתיחת PR ושונה בו קובץ בדיקה קיים, או קוד שיש לו שורה ייעודית בתיאור, מחייב לפתוח את התיאור ולהוסיף את השורה לפני `ci-wait`; ואחרי עריכת תיאור, דוחפים שינוי אמיתי קטן (לא commit ריק) כדי שהשער ירוץ.
+נאכף: `lessons-gate.py` ב-CI (תופס אחרי הדחיפה, לא לפניה). אין דרך בקוד לפני הדחיפה כרגע: `pr-gate` רץ רק בפתיחת PR; הצעה פתוחה להריץ אותו גם על `git push` של ענף עם PR פתוח.
+חזר: 0.
 
 **2. נכשל ב-GitHub ועבר מקומית (01/10/2026, #1006).**
 מה קרה: `requests` חסר, playwright אחר.
