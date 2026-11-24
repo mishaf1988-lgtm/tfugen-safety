@@ -2594,7 +2594,7 @@ export function devDoneWaText(note, fixed, closed) {
 // himself in the third person. Such a note is refused; the action goes in "next", which the assistant gets and Michael does not. Pure.
 // "\u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05e9\u05dc\u05d9\u05dd" always; "\u05dc\u05de\u05d9\u05db\u05d0\u05dc" only after an infinitive ("\u05dc\u05e9\u05dc\u05d5\u05d7 \u05dc\u05de\u05d9\u05db\u05d0\u05dc"), an action for someone else to take:
 // "\u05de\u05d7\u05db\u05d4 \u05dc\u05de\u05d9\u05db\u05d0\u05dc" in a not-fixed note is how step 6 says who it waits for, and still passes.
-export const DEV_NOTE_INTERNAL = /\u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05e9\u05dc\u05d9\u05dd|(^|\s)\u05dc\S+ \u05dc\u05de\u05d9\u05db\u05d0\u05dc/;
+export const DEV_NOTE_INTERNAL = /\u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05e9\u05dc\u05d9\u05dd|(^|\s)\u05dc(?!\u05d0 )\S+ \u05dc\u05de\u05d9\u05db\u05d0\u05dc/;
 export function devNoteForAssistant(note) {
   return DEV_NOTE_INTERNAL.test(String(note || ''));
 }
