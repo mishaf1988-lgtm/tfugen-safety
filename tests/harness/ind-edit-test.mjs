@@ -18,7 +18,7 @@ globalThis.fetch = async (url, init) => {
   const json = (o, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { 'Content-Type': 'application/json' } });
   if (u.startsWith(SB + '/rest/v1/toolbox_talks')) return json([TALK]);
   if (u.startsWith(SB + '/rest/v1/toolbox_reads')) {
-    if (m === 'PATCH') { w.patches.push({ u, b: JSON.parse(init.body) }); return w.patchFail ? json({ error: 'x' }, 500) : new Response(null, { status: 204 }); }
+    if (m === 'PATCH') { w.patches.push({ u, b: JSON.parse(init.body) }); return w.patchFail ? json({ error: 'x' }, 500) : w.conflict ? json([]) : json([{ id: 'r1' }]); }
     return json(/id=eq\.r1/.test(u) ? [rowNow] : []);
   }
   if (u.startsWith(SB + '/storage/v1/object/')) return json({ Key: 'x' });
@@ -148,6 +148,20 @@ console.log('\n4. refusals and limits');
   reset({ patchFail: true });
   const g = await post(FORM(await tokOf(), { idep: 'מעבדה' }), await cookie());
   check('the row cannot be saved: an error, and no page or mail goes out', g.st === 502 && !w.mails.length && !w.puts.length, g.st);
+}
+
+// security review 24/11/2026 (improvement): two corrections at once: the write is conditional on `edits`, the second is refused
+{
+  reset();
+  const t = await tokOf(), ck = await cookie();
+  const r = await post(FORM(t, { idep: 'מעבדה' }), ck);
+  check('the write names the history it read (edits is null) in its address', r.st === 200 && w.patches.some((x) => /[?&]edits=is\.null/.test(x.u)), w.patches.map((x) => x.u));
+  reset({ conflict: true });
+  const c = await post(FORM(await tokOf(), { idep: 'מעבדה' }), await cookie());
+  check('another correction got in first (nothing written): 409, no page and no mail', c.st === 409 && c.h.includes('רענן') && !w.mails.length && !w.puts.length, c.st);
+  reset({ row: { edits: [{ at: 'x', changes: [{ k: 'dept', old: 'ב', new: 'טוגנים' }] }] } });
+  const d = await post(FORM(await tokOf(), { idep: 'מעבדה' }), await cookie());
+  check('with history on the row the condition carries it (the history line is not erased)', d.st === 200 && w.patches.some((x) => /[?&]edits=eq\./.test(x.u) && decodeURIComponent(x.u).includes('"old":"ב"')), w.patches.map((x) => x.u));
 }
 
 console.log('\n5. a photo is added');

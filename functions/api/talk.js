@@ -1168,8 +1168,13 @@ async function editPost(env, request, ctx) {
   changes.forEach((c) => { patch[c.k] = next[c.k]; });
   if (entry.equip) patch.equip = eq;
   patch.edits = prior.concat([entry]);
-  const up = await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(row.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify(patch) });
+  // Two corrections at the same moment (security review 24/11/2026, improvement; Michael: "build both"): the write is conditional on
+  // `edits` still being what this request read, so the second one is refused instead of erasing the first one's history line.
+  const same = row.edits == null ? 'is.null' : 'eq.' + encodeURIComponent(JSON.stringify(row.edits));
+  const up = await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(row.id) + '&edits=' + same, { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify(patch) });
   if (!up.ok) return fail('\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.', 502);
+  const upRows = await up.json().catch(() => null);
+  if (!Array.isArray(upRows) || !upRows.length) return fail('\u05de\u05d9\u05e9\u05d4\u05d5 \u05ea\u05d9\u05e7\u05df \u05d0\u05ea \u05d0\u05d5\u05ea\u05d4 \u05e8\u05e9\u05d5\u05de\u05d4 \u05d1\u05e8\u05d2\u05e2 \u05d6\u05d4. \u05e0\u05d0 \u05dc\u05e8\u05e2\u05e0\u05df \u05d0\u05ea \u05d4\u05d3\u05e3 \u05d5\u05dc\u05d1\u05d3\u05d5\u05e7 \u05de\u05d4 \u05e9\u05d5\u05e0\u05d4 \u05dc\u05e4\u05e0\u05d9 \u05ea\u05d9\u05e7\u05d5\u05df \u05e0\u05d5\u05e1\u05e3.', 409);
   // The photos wait in the private bucket until the correction page is filed and mailed (as the induction's photos do)
   const kept = docs.length ? await keepDocs(env, row.id + '-c' + prior.length, docs) : [];
   const job2 = fileCorrection(env, Object.assign({}, row, patch), entry, docs)
@@ -2225,6 +2230,8 @@ export async function refileInduction(env, id, force) {
     if (t.kind !== KIND_IND) return { status: 409, body: { error: 'not an induction' } };
     // A form already mailed is not sent again: a second click, or a stale screen, would mail HR twice.
     if (row.mailed_at && !force) return { status: 409, body: { error: 'already sent', mailed_at: row.mailed_at } };
+    // At most one resend an hour (security review 24/11/2026, improvement; Michael: "build both"): every send mails the form with the ID and phone
+    if (row0.mailed_at && Date.now() - Date.parse(row0.mailed_at) < 3600e3) return { status: 429, body: { error: 'sent less than an hour ago', mailed_at: row0.mailed_at } };
     const sig = row.sig_url ? await storageU8(env, row.sig_url) : null;
     if (!sig) return { status: 502, body: { error: 'signature not loaded' } };
     let kept;
