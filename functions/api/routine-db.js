@@ -218,7 +218,7 @@ export { WA_RULES_HASH };
 import { OD_OCR_DIR, OCR_MODELS, aiOcr, aiSee, ocrLines, ocrOne, TTS_MODELS, aiTts } from '../_ocr.js';
 import { stateCas } from '../_cas.js';
 import { CLAUDE_LOG_Q, logLine, queueAdd, ocrPartialRow } from '../_claudelog.js';
-import { SIGN_KEY, SIGN_CHOICES, signAdd, signMark, signAskText, signPlace } from '../_sign.js';
+import { SIGN_KEY, SIGN_CHOICES, SIGN_REPLY_FIELDS, signAdd, signMark, signAskText, signPlace, signReplyCheck } from '../_sign.js';
 import { findSignSpot } from '../_pdftext.js';
 import { rowContradictions } from './wa-morning.js';
 import { respUnknown } from './hazard-report.js';
@@ -4569,8 +4569,12 @@ async function routineDbHandle(context) {
     // assistant offers 1-5 PDFs as buttons; a tap reaches wa-hook's sign_pick, and only then the server asks
     // "sign in your name?" (sign_request) and signs after his yes. Offering signs nothing.
     if (body.op === 'sign_offer') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths', 'text', 'page', 'x', 'y', 'w'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths', 'text', 'page', 'x', 'y', 'w'].concat(SIGN_REPLY_FIELDS).indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (!Array.isArray(body.paths) || !body.paths.length || body.paths.length > 5) return jsonResp({ ok: false, error: 'paths: 1-5' }, 400, {});
+      // 24/11/2026: the original mail rides with ONE offered file, and after the signature the server drafts the reply (_sign.js)
+      const rp = signReplyCheck(body);
+      if (rp.error) return jsonResp({ ok: false, error: rp.error }, 400, {});
+      if (rp.reply && body.paths.length !== 1) return jsonResp({ ok: false, error: 'reply_to with one path only' }, 400, {});
       // 22/10/2026 (Michael: "the signature's place is not good", on a scanned permit with no text layer): the spot
       // Michael approved (page/x/y, w) rides with ONE offered file to the sign request; the default corner otherwise.
       const hasSpot = ['page', 'x', 'y'].some((k) => body[k] !== undefined);
@@ -4584,7 +4588,7 @@ async function routineDbHandle(context) {
       const now = new Date().toISOString();
       const rel = checked.map((x) => x.path.slice(OD_ROOT.length));
       const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', { /* cas-ok: sign_pick is the newest pick, whole, nothing read first */ method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify([{ key: 'sign_pick', value: JSON.stringify(Object.assign({ at: now, paths: rel }, hasSpot ? { spot: { page: checked[0].page, x: checked[0].x, y: checked[0].y, w: checked[0].w } } : {})), updated_at: now }]), signal: tmo(SB_MS) });
+        body: JSON.stringify([{ key: 'sign_pick', value: JSON.stringify(Object.assign({ at: now, paths: rel }, hasSpot ? { spot: { page: checked[0].page, x: checked[0].x, y: checked[0].y, w: checked[0].w } } : {}, rp.reply ? { reply: rp.reply } : {})), updated_at: now }]), signal: tmo(SB_MS) });
       if (!w.ok) return jsonResp({ ok: false, error: 'save ' + w.status }, 200, {});
       const head = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 300);
       const text = (head ? head + '\n' : '') + rel.map((p, i) => (i + 1) + '. ' + p).join('\n') + '\n\u05e2\u05dc \u05d0\u05d9\u05d6\u05d4 \u05dc\u05d7\u05ea\u05d5\u05dd? \u05dc\u05dc\u05d7\u05d5\u05e5 \u05e2\u05dc \u05d4\u05de\u05e1\u05e4\u05e8.';
@@ -4594,9 +4598,11 @@ async function routineDbHandle(context) {
       return jsonResp({ ok: s.ok, sent: s.ok, offered: rel.length, error: s.error || undefined }, 200, {});
     }
     if (body.op === 'sign_request') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path', 'page', 'x', 'y', 'w'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path', 'page', 'x', 'y', 'w'].concat(SIGN_REPLY_FIELDS).indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const c = signRequestCheck(body);
       if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const rq = signReplyCheck(body);
+      if (rq.error) return jsonResp({ ok: false, error: rq.error }, 400, {});
       if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
       const to = await ownerWa(env, url);
       if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
@@ -4621,13 +4627,13 @@ async function routineDbHandle(context) {
       const now = new Date().toISOString();
       let r; // 30/10/2026 (ideas-lab 12): written only if the row is as it was read
       const cas = await stateCas(url, h, SIGN_KEY, (raw) => {
-        r = signAdd(raw === undefined ? '[]' : raw, { agent: body.agent, path: c.path, name: c.name, page: spot ? spot.page : c.page, x: spot ? spot.x : c.x, y: spot ? spot.y : c.y, w: spot && spot.w ? spot.w : c.w }, now);
+        r = signAdd(raw === undefined ? '[]' : raw, { agent: body.agent, path: c.path, name: c.name, page: spot ? spot.page : c.page, x: spot ? spot.x : c.x, y: spot ? spot.y : c.y, w: spot && spot.w ? spot.w : c.w, reply: rq.reply }, now);
         return r.created ? { value: JSON.stringify(r.list) } : { write: false };
       }, () => tmo(SB_MS));
       if (!r.created) return jsonResp({ ok: true, id: r.id, created: false, note: 'already waiting for Michael on this file' }, 200, {});
       if (!cas.written) return jsonResp({ ok: false, error: cas.conflict ? 'save conflict, try again' : 'save ' + cas.status }, 200, {});
       // 22/10/2026 18:36: a spot Michael approved was used, and the question still said "no signature place found".
-      const text = signAskText(c.name, c.folder, spot || (c.page !== undefined ? { page: c.page, set: true } : null)), ref = 'sign:' + r.id;
+      const text = signAskText(c.name, c.folder, spot || (c.page !== undefined ? { page: c.page, set: true } : null)) + (rq.reply ? '\n\u05d0\u05d7\u05e8\u05d9 \u05d4\u05d7\u05ea\u05d9\u05de\u05d4: \u05d8\u05d9\u05d5\u05d8\u05ea \u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc-' + rq.reply.to + ' ("' + rq.reply.subject.slice(0, 80) + '") \u05d1\u05e9\u05e8\u05e9\u05d5\u05e8 \u05d4\u05de\u05e7\u05d5\u05e8\u05d9, \u05e2\u05dd \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d7\u05ea\u05d5\u05dd.' : ''), ref = 'sign:' + r.id;
       const win = await ownerWindowOpen(env, url);
       // 21/10/2026 (Michael: "with the request, the form itself"): the document goes first, so the question with
       // the buttons stays his last message (its ref is what "1" answers). A failed document leaves the question as is.

@@ -373,10 +373,10 @@ export function signWords(q) {
   }
   return out.slice(0, 6);
 }
-export async function signAskPath(env, path, spot) {
+export async function signAskPath(env, path, spot, reply) {
   const res = await routineDb({ env, request: new Request('https://internal/api/routine-db', { method: 'POST',
     headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' },
-    body: JSON.stringify(Object.assign({ op: 'sign_request', agent: 'wa-hook-sign', why: '\u05de\u05d9\u05db\u05d0\u05dc \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4: \u05ea\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9', path }, spot || {})) }) });
+    body: JSON.stringify(Object.assign({ op: 'sign_request', agent: 'wa-hook-sign', why: '\u05de\u05d9\u05db\u05d0\u05dc \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4: \u05ea\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9', path }, spot || {}, reply ? { reply_to: reply.id, reply_mail_to: reply.to, reply_subject: reply.subject, reply_text: reply.text } : {})) }) });
   const j = await res.json().catch(() => ({}));
   if (j.ok && (j.sent || j.created === false)) return { sent: true, id: j.id };
   return { text: null, error: j.error || res.status };
@@ -661,6 +661,22 @@ async function signLog(env, title, payload) {
         event_type: 'owner_sign', channel: 'server', payload: Object.assign({ title: String(title).slice(0, 120) }, payload) }]) });
   } catch (e) { /* the state in server_state still shows it */ }
 }
+// 24/11/2026 (Michael: "sign, fill in every detail, and reply to the mail that came with it"): a request that carries the
+// original mail (sign_offer reply_to, one file) gets its reply draft right after a good signature: in that thread, to the
+// sender, the signed copy attached. Only a draft (routine-db mail_draft); Michael sends. Returns the line for the answer.
+export async function signReplyDraft(env, reply, rel) {
+  if (!reply || !reply.id || !rel) return '';
+  let j = {};
+  try {
+    const res = await routineDb({ env, request: new Request('https://internal/api/routine-db', { method: 'POST',
+      headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ op: 'mail_draft', agent: 'wa-hook-sign', why: '\u05de\u05d9\u05db\u05d0\u05dc \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4: \u05ea\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9 \u05d5\u05ea\u05d7\u05d6\u05d9\u05e8 \u05dc\u05e9\u05d5\u05dc\u05d7', to: reply.to, subject: reply.subject, body: reply.text, attach: [rel], reply_to: reply.id }) }) });
+    j = await res.json().catch(() => ({}));
+    if (!j.ok && !j.error) j.error = String(res.status);
+  } catch (e) { j = { ok: false, error: String(e && e.message || e).slice(0, 80) }; }
+  return j.ok ? '\n\u05d4\u05db\u05e0\u05ea\u05d9 \u05d8\u05d9\u05d5\u05d8\u05ea \u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc-' + reply.to + ' \u05d1\u05e9\u05e8\u05e9\u05d5\u05e8 \u05e9\u05dc \u05d4\u05de\u05d9\u05d9\u05dc \u05d4\u05de\u05e7\u05d5\u05e8\u05d9, \u05e2\u05dd \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d7\u05ea\u05d5\u05dd. \u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05de\u05de\u05da.'
+    : '\n\u05d8\u05d9\u05d5\u05d8\u05ea \u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc\u05e9\u05d5\u05dc\u05d7 \u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8\u05d4 (' + String(j.error).slice(0, 80) + '). \u05d0\u05e4\u05e9\u05e8 \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 "\u05ea\u05d7\u05d6\u05d9\u05e8 \u05dc\u05e9\u05d5\u05dc\u05d7".';
+}
 export async function fastSign(env, r, wamid) {
   const now = new Date();
   // approved / cancelled / expired is written before the signing starts: never twice. 15/11/2026 (ideas-lab 12): taken
@@ -691,7 +707,7 @@ export async function fastSign(env, r, wamid) {
     try {
       await sbJson(env, 'server_state?on_conflict=key', { /* cas-ok: whole value, nothing read first, the newest wins */ method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
         body: JSON.stringify([{ key: SIGN_MAIL_KEY, value: JSON.stringify({ at: now.toISOString(), rel, name: res.name }), updated_at: now.toISOString() }]) });
-      return { text: signDoneText(res, t.req), mail: rel };
+      return { text: signDoneText(res, t.req) + await signReplyDraft(env, t.req.reply, rel), mail: rel };
     } catch (e) { /* no button: the answer still goes out */ }
   }
   return signDoneText(res, t.req);
@@ -940,7 +956,7 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
       const path = !stale && st && Date.now() - Date.parse(st.at) < SIGN_PICK_MS && st.paths[fr0.n - 1];
       if (stale) { ans = SIGN_PICK_OLD; ref = 'sign-pick-old'; seen.sign_pick_error = 'old list'; }
       else {
-      if (path) { const sa = await signAskPath(env, path, st.spot && st.paths.length === 1 ? st.spot : null); if (sa.sent) { seen.fast = 'sign_pick'; return true; } seen.sign_pick_error = String(sa.error || ''); }
+      if (path) { const sa = await signAskPath(env, path, st.spot && st.paths.length === 1 ? st.spot : null, st.reply && st.paths.length === 1 ? st.reply : null); if (sa.sent) { seen.fast = 'sign_pick'; return true; } seen.sign_pick_error = String(sa.error || ''); }
       // 21/10/2026: a failed pick says so, instead of falling silently to the assistant
       ans = path ? '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05d0\u05ea \u05d1\u05e7\u05e9\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d6\u05d4 (' + (seen.sign_pick_error || '?') + '). \u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1, \u05d0\u05d5 \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05de\u05d4 \u05dc\u05d7\u05ea\u05d5\u05dd.' : null;
       ref = 'sign-pick-fail';

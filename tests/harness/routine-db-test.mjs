@@ -2599,7 +2599,15 @@ const callIn = async (body) => {
     check('sign_offer: page alone is refused (page, x and y together, one file; 22/10/2026)', extra.status === 400 && /together/.test(extra.json.error), extra);
     delete state.sign_pick;
     const noOwner = await call({ op: 'sign_offer', agent: 'routine-wa-assistant', why: 'test offer', paths: ['a/1.pdf', '_\u05e0\u05db\u05e0\u05e1 \u05de\u05d4\u05de\u05d9\u05d9\u05dc/q.pdf'] }, 'k-123', 'POST', E);
-    check('sign_offer: valid paths (the mail inbox too) pass the checks; no owner number = nothing saved', noOwner.json.ok === false && /owner/.test(noOwner.json.error) && !('sign_pick' in state), noOwner); }
+    check('sign_offer: valid paths (the mail inbox too) pass the checks; no owner number = nothing saved', noOwner.json.ok === false && /owner/.test(noOwner.json.error) && !('sign_pick' in state), noOwner);
+    // 24/11/2026: the original mail rides with one file only, and a bad one is refused before anything is sent
+    const MID = 'AAMkADNmMjhjNWNiLTk4ZTItNDA4Ny1hYTM4LWM3MWJjMTc2MzUyMwBGAAAAAA=';
+    const two = await call({ op: 'sign_offer', agent: 'routine-wa-assistant', why: 'test offer', paths: ['a/1.pdf', 'a/2.pdf'], reply_to: MID, reply_mail_to: 'a@b.co.il', reply_subject: 's' }, 'k-123', 'POST', E);
+    check('sign_offer: reply_to with two files = refused', two.status === 400 && /one path/.test(two.json.error), two);
+    const badTo = await call({ op: 'sign_offer', agent: 'routine-wa-assistant', why: 'test offer', paths: ['a/1.pdf'], reply_to: MID, reply_mail_to: 'not-an-address', reply_subject: 's' }, 'k-123', 'POST', E);
+    check('sign_offer: a bad sender address = refused', badTo.status === 400 && /reply_mail_to/.test(badTo.json.error), badTo);
+    const badReq = await call({ op: 'sign_request', agent: 'routine-wa-assistant', why: 'test req', path: 'a/1.pdf', reply_to: 'bad id' }, 'k-123', 'POST', E);
+    check('sign_request: a bad mail id = refused', badReq.status === 400 && /reply_to/.test(badReq.json.error), badReq); }
   // 11/11/2026 (Michael: "do it: the server stops before sending"): a sensitive answer with a safety figure needs the second checker's quote.
   { const g = (text, second, agent, extra) => secondSendGate({ agent: agent || 'routine-wa-assistant', text, second, ...(extra || {}) });
     const ANS = 'לפי נוהל 26.03, מתחילים יציאה כשלחץ הבלון יורד ל-150 בר. אמוניה.';
