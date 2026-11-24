@@ -4633,7 +4633,7 @@ async function routineDbHandle(context) {
       if (!r.created) return jsonResp({ ok: true, id: r.id, created: false, note: 'already waiting for Michael on this file' }, 200, {});
       if (!cas.written) return jsonResp({ ok: false, error: cas.conflict ? 'save conflict, try again' : 'save ' + cas.status }, 200, {});
       // 22/10/2026 18:36: a spot Michael approved was used, and the question still said "no signature place found".
-      const text = signAskText(c.name, c.folder, spot || (c.page !== undefined ? { page: c.page, set: true } : null)) + (rq.reply ? '\n\u05d0\u05d7\u05e8\u05d9 \u05d4\u05d7\u05ea\u05d9\u05de\u05d4: \u05d8\u05d9\u05d5\u05d8\u05ea \u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc-' + rq.reply.to + ' \u05d1\u05e9\u05e8\u05e9\u05d5\u05e8 \u05d4\u05de\u05e7\u05d5\u05e8\u05d9, \u05e2\u05dd \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d7\u05ea\u05d5\u05dd.' : ''), ref = 'sign:' + r.id;
+      const text = signAskText(c.name, c.folder, spot || (c.page !== undefined ? { page: c.page, set: true } : null)) + (rq.reply ? '\n\u05d0\u05d7\u05e8\u05d9 \u05d4\u05d7\u05ea\u05d9\u05de\u05d4: \u05d8\u05d9\u05d5\u05d8\u05ea \u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc-' + rq.reply.to + ' ("' + rq.reply.subject.slice(0, 80) + '") \u05d1\u05e9\u05e8\u05e9\u05d5\u05e8 \u05d4\u05de\u05e7\u05d5\u05e8\u05d9, \u05e2\u05dd \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d7\u05ea\u05d5\u05dd.' : ''), ref = 'sign:' + r.id;
       const win = await ownerWindowOpen(env, url);
       // 21/10/2026 (Michael: "with the request, the form itself"): the document goes first, so the question with
       // the buttons stays his last message (its ref is what "1" answers). A failed document leaves the question as is.

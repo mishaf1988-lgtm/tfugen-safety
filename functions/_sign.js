@@ -30,16 +30,18 @@ export const SIGN_ID_RE = /^s[a-z0-9]{6,20}$/;
 // makes a reply draft in that thread with the signed copy attached (routine-db mail_draft, which only ever drafts).
 export const SIGN_REPLY_TEXT = '\u05de\u05e6\u05d5\u05e8\u05e4\u05ea \u05d4\u05ea\u05e2\u05d5\u05d3\u05d4 \u05d7\u05ea\u05d5\u05de\u05d4 \u05d5\u05de\u05de\u05d5\u05dc\u05d0\u05ea \u05d1\u05db\u05dc \u05d4\u05e4\u05e8\u05d8\u05d9\u05dd.';
 export const SIGN_REPLY_FIELDS = ['reply_to', 'reply_mail_to', 'reply_subject', 'reply_text'];
-const REPLY_ID_RE = /^[A-Za-z0-9_=+\/-]{20,500}$/, REPLY_MAIL_RE = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$/;
+const REPLY_ID_RE = /^[A-Za-z0-9_=+\/-]{40,400}$/, REPLY_MAIL_RE = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$/;
 // { reply: null } when no reply_to; { reply: {id, to, subject, text} } or { error }. Pure.
 export function signReplyCheck(b) {
   const has = SIGN_REPLY_FIELDS.some((k) => b && b[k] !== undefined && b[k] !== null && b[k] !== '');
   if (!has) return { reply: null };
-  const id = String(b.reply_to || ''), to = String(b.reply_mail_to || '').trim(), subject = String(b.reply_subject || '').replace(/\s+/g, ' ').trim();
+  // control and direction characters are dropped from what goes into the draft (security review 24/11/2026)
+  const clean = (v) => String(v || '').replace(/[\u0000-\u0009\u000b-\u001f\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, '');
+  const id = String(b.reply_to || ''), to = String(b.reply_mail_to || '').trim(), subject = clean(b.reply_subject).replace(/\s+/g, ' ').trim();
   if (!REPLY_ID_RE.test(id)) return { error: 'reply_to: the Outlook id of the original mail (outlook_email_search "id")' };
   if (!REPLY_MAIL_RE.test(to)) return { error: 'reply_mail_to: one address, the sender of the original mail' };
   if (!subject || subject.length > 200) return { error: 'reply_subject 1-200 characters' };
-  const text = b.reply_text === undefined || b.reply_text === null || b.reply_text === '' ? SIGN_REPLY_TEXT : String(b.reply_text).replace(/\r\n/g, '\n').trim();
+  const text = b.reply_text === undefined || b.reply_text === null || b.reply_text === '' ? SIGN_REPLY_TEXT : clean(String(b.reply_text).replace(/\r\n/g, '\n')).trim();
   if (!text || text.length > 300) return { error: 'reply_text 1-300 characters' };
   return { reply: { id, to, subject: /^re:/i.test(subject) ? subject : 'RE: ' + subject, text } };
 }

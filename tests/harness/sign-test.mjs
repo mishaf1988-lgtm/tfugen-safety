@@ -186,6 +186,8 @@ console.log('\n8. after the signature: a reply draft to the original sender (24/
   const r = signReplyCheck({ reply_to: MID, reply_mail_to: 'office@rotem-safety.co.il', reply_subject: 'תעודת משלוח 262201201' });
   check('a reply: RE: on the subject, his sentence as the default text', r.reply && r.reply.subject === 'RE: תעודת משלוח 262201201' && r.reply.text === SIGN_REPLY_TEXT && /חתומה וממולאת/.test(r.reply.text), r);
   check('RE: is not doubled', signReplyCheck({ reply_to: MID, reply_mail_to: 'a@b.co.il', reply_subject: 'RE: x' }).reply.subject === 'RE: x');
+  check('a mail id shorter than routine-db MAIL_REQ_ID (40) = refused here, not after the signature', /reply_to/.test(signReplyCheck({ reply_to: 'A'.repeat(30), reply_mail_to: 'a@b.co.il', reply_subject: 's' }).error || ''));
+  check('direction and control characters are dropped from the subject', signReplyCheck({ reply_to: MID, reply_mail_to: 'a@b.co.il', reply_subject: 'a\u202eb\u0007c' }).reply.subject === 'RE: abc');
   check('a bad mail id = refused', /reply_to/.test(signReplyCheck({ reply_to: 'x y', reply_mail_to: 'a@b.co.il', reply_subject: 's' }).error || ''));
   check('two addresses = refused (one sender)', /reply_mail_to/.test(signReplyCheck({ reply_to: MID, reply_mail_to: 'a@b.co.il;c@d.co.il', reply_subject: 's' }).error || ''));
   check('no subject = refused', /reply_subject/.test(signReplyCheck({ reply_to: MID, reply_mail_to: 'a@b.co.il' }).error || ''));
