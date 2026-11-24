@@ -178,7 +178,10 @@ def main():
         return
     t = text_of(d.get("tool_input"))
     m = CLAIM.search(t)
-    seen = [] if m else decided(t)
+    # 24/11/2026 (handoff 24/11, "לדייק את ה-hook"): a question was stopped on `gemini_ask`, a code name that sat only in an
+    # option's description (context about the open item, not what is asked). Like the headings below, identifiers are matched
+    # against the questions and the option labels only; the claim words above still read the descriptions.
+    seen = [] if m else decided(text_of(d.get("tool_input"), descriptions=False))
     # 28/10/2026 (Michael in the questionnaire: "do it: tighten"): four stops in one day on unrelated decisions, the
     # shared words all from option descriptions ("report, place, photos" against offline photos). A heading is
     # matched against the questions and the option labels only.
