@@ -11,7 +11,7 @@ check the folder listing. One agent_report line per run (agent "deck-video").
 Usage: python3 tools/deck-video-run.py [--dry]      (--dry: print what would be built, touch nothing)
 Work files stay in ~/.deck-video (audio already made is reused the next day).
 """
-import base64, datetime as dt, json, os, secrets, shutil, subprocess, sys
+import base64, datetime as dt, json, os, re, secrets, shutil, subprocess, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 W = os.path.expanduser('~/.deck-video')
@@ -21,7 +21,7 @@ MAX = 8 * 1024 * 1024
 QUEUE = ['nh3', 'hotwork', 'forklift', 'hazmat', 'electric', 'emergency', 'machines', 'manual', 'ppe-noise',
          'contractors', 'managers', 'trustees', 'cleaning', 'coldrooms', 'hotoil', 'environment', 'lab', 'yard']
 # The file name after "סרטון הדרכה - ": the cover title up to ':' unless named here.
-NAMES = {'nh3': 'אמוניה', 'hotwork': 'עבודה באש', 'forklift': 'מלגזה'}
+NAMES = {'nh3': 'אמוניה', 'hotwork': 'עבודה באש', 'forklift': 'מלגזה', 'machines': 'מכונה עובדת, לא מכניסים יד'}
 
 
 def sh(args, **kw):
@@ -54,6 +54,7 @@ def listing():
 
 def fname(topic, scenes):
     n = NAMES.get(topic) or scenes[0][2].split(':')[0].strip()
+    n = re.sub(r'[<>:"|?*\\/\x00-\x1f]', '', n).strip()  # 24/11/2026: a '?' in the machines cover title made the folder refuse the name ('bad name')
     return '%s - סרטון הדרכה - %s.mp4' % (DAY, n)
 
 
