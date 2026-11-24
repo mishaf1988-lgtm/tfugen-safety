@@ -29,6 +29,7 @@ const PUBLIC = {
   'close-hazard': ['a signed link from the alert mail; the token is the gate', /tokenError|verifyLink|tokenRow/],
   'trustee-gate': ['the trustee kiosk code is checked here; it is the gate itself', /TRUSTEE_CODE/],
   'self-recovery': ['"forgot password": queues a request, generic 200, rate limited, admin approves', /RATE_LIMIT_SECONDS/],
+  'db-health': ['GitHub checks from outside that the server reaches the database (24/11/2026, site-up.yml): GET only, no input, one word out, one read a minute', /'db ok' : 'db fail'/],
   'wa-templates': ['GET needs a signed-in user (BACKLOG 13.10); POST needs admin or manager', /requireRole\(request, env, \['admin', 'manager'\]\)/],
 };
 

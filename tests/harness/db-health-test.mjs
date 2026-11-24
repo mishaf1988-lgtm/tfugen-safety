@@ -48,8 +48,8 @@ check('three calls while the cache is empty: one database read, all answer "db o
 
 // pairs (02/11/2026): the sb_secret_ test decides the headers. Three real shapes that must go as apikey only, three
 // that must keep the Bearer header.
-for (const [k, apikeyOnly] of [['sb_secret_N2ihyyjKabc', true], ['sb_secret_XYZ123', true], ['sb_secret_a-b_c', true],
-  ['eyJhbGciOiJIUzI1NiJ9.x.y', false], ['sb_publishable_N2ihyyjK', false], [' sb_secret_leadingspace', false]]) {
+for (const [k, apikeyOnly] of [['sb_secret_abc1', true], ['sb_secret_XYZ123', true], ['sb_secret_a-b_c', true],
+  ['eyJhbGciOiJIUzI1NiJ9.x.y', false], ['sb_publishable_N2ihyyjK', false], [' sb_secret_x', false]]) {
   calls = [];
   await probe({ SUPABASE_SERVICE_ROLE_KEY: k }, fetchOk);
   check('key shape ' + k.slice(0, 16) + ': ' + (apikeyOnly ? 'apikey only' : 'apikey and Bearer'), calls.length === 1 && (('Authorization' in calls[0][1]) === !apikeyOnly), calls);
