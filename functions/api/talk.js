@@ -2093,28 +2093,8 @@ async function makeLink(env, request, ctx) {
   // Send an induction form again (15/10/2026): the row, its signature and the photos kept in Storage, filed and
   // mailed as on the worker's send. About 10 + 8 photos calls out, under the free plan's 50.
   if (b && b.op === 'refile') {
-    const rr = await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(String(b.id || '')) + '&select=*', { headers: sbH(env) });
-    const row0 = rr.ok ? ((await rr.json()) || [])[0] : null;
-    if (!row0) return jsonResp({ error: 'not found' }, 404, cors);
-    // The signed form is rebuilt from what the worker signed, not from the corrected row (security review 24/11/2026)
-    const row = asSigned(row0);
-    const tr = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(String(row.talk_id || '')) + '&select=*', { headers: sbH(env) });
-    const t = tr.ok ? ((await tr.json()) || [])[0] : null;
-    if (!t) return jsonResp({ error: 'not found' }, 404, cors);
-    if (t.kind !== KIND_IND) return jsonResp({ error: 'not an induction' }, 409, cors);
-    // A form already mailed is not sent again: a second click, or a stale screen, would mail HR twice.
-    if (row.mailed_at && b.force !== true) return jsonResp({ error: 'already sent', mailed_at: row.mailed_at }, 409, cors);
-    const sig = row.sig_url ? await storageU8(env, row.sig_url) : null;
-    if (!sig) return jsonResp({ error: 'signature not loaded' }, 502, cors);
-    let kept;
-    try { kept = await loadDocs(env, row.id); } catch (e) { return jsonResp({ error: String((e && e.message) || e).substring(0, 120) }, 502, cors); }
-    // The note on photos the server could not take, kept from the first send.
-    const dm = /(\d+) \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05dc\u05d0 \u05e0\u05db\u05e0\u05e1\u05d5/.exec(String(row.doc_err || ''));
-    const out = await fileInduction(env, t, row, sig, row.lang, undefined, [], kept.docs, dm ? +dm[1] : 0, kept.paths.length);
-    const ok = !!(out.url && out.mailed);
-    if (ok && kept.paths.length) await dropDocs(env, kept.paths);
-    // no WhatsApp here: Michael pressed the button and sees the answer (retro 09/11/2026); a resend must not use up the hour.
-    return jsonResp({ ok, url: out.url, mailed: out.mailed, docs: kept.docs.length, error: out.err }, ok ? 200 : 502, cors);
+    const x = await refileInduction(env, b.id, b.force === true);
+    return jsonResp(x.body, x.status, cors);
   }
   // Form 08.01 with everyone who signed (14/10/2026): any kind, published or closed.
   if (b && b.op === 'form0801') {
@@ -2227,6 +2207,34 @@ async function makeLink(env, request, ctx) {
   return jsonResp({ url: talkUrl(tok), days: TALK_TTL_DAYS, link_at: saved ? at : null }, 200, cors);
 }
 
+// Send an induction form again (15/10/2026): the row, its signature and the photos kept in Storage, filed and mailed as on the
+// worker's send. 24/11/2026: a function of its own, so the server action of the routine key (routine-db ind_refile) sends the same
+// mail (with the fresh correction link) to the same two people. {status, body}.
+export async function refileInduction(env, id, force) {
+  SB = sbFrom(env);
+    const rr = await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(String(id || '')) + '&select=*', { headers: sbH(env) });
+    const row0 = rr.ok ? ((await rr.json()) || [])[0] : null;
+    if (!row0) return { status: 404, body: { error: 'not found' } };
+    // The signed form is rebuilt from what the worker signed, not from the corrected row (security review 24/11/2026)
+    const row = asSigned(row0);
+    const tr = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(String(row.talk_id || '')) + '&select=*', { headers: sbH(env) });
+    const t = tr.ok ? ((await tr.json()) || [])[0] : null;
+    if (!t) return { status: 404, body: { error: 'not found' } };
+    if (t.kind !== KIND_IND) return { status: 409, body: { error: 'not an induction' } };
+    // A form already mailed is not sent again: a second click, or a stale screen, would mail HR twice.
+    if (row.mailed_at && !force) return { status: 409, body: { error: 'already sent', mailed_at: row.mailed_at } };
+    const sig = row.sig_url ? await storageU8(env, row.sig_url) : null;
+    if (!sig) return { status: 502, body: { error: 'signature not loaded' } };
+    let kept;
+    try { kept = await loadDocs(env, row.id); } catch (e) { return { status: 502, body: { error: String((e && e.message) || e).substring(0, 120) } }; }
+    // The note on photos the server could not take, kept from the first send.
+    const dm = /(\d+) \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05dc\u05d0 \u05e0\u05db\u05e0\u05e1\u05d5/.exec(String(row.doc_err || ''));
+    const out = await fileInduction(env, t, row, sig, row.lang, undefined, [], kept.docs, dm ? +dm[1] : 0, kept.paths.length);
+    const ok = !!(out.url && out.mailed);
+    if (ok && kept.paths.length) await dropDocs(env, kept.paths);
+    // no WhatsApp here: Michael pressed the button and sees the answer (retro 09/11/2026); a resend must not use up the hour.
+    return { status: ok ? 200 : 502, body: { ok, url: out.url, mailed: out.mailed, docs: kept.docs.length, error: out.err } };
+}
 export async function onRequest(context) {
   SB = sbFrom(context.env); GUESS_SB = sbFrom(context.env);
   const { request, env } = context;
