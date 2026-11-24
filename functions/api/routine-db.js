@@ -2925,17 +2925,19 @@ export function ownerAskedSign(rows) {
 // Security review 24/11/2026: the ask is bound to the file. A message counts only when it asks to sign (not a forwarded
 // file line, not "do not sign"), names the file (a word of 3+ letters of his message is in the file name, its folder or
 // the mail's subject or sender), and was not used for a signature already: one signature per message of his.
-const SIGN_NOT_RE = /(?:^|[^\u05d0-\u05ea])(?:\u05d0\u05dc|\u05dc\u05d0|\u05d0\u05d9\u05df)\s+(?:\u05ea\u05d7\u05ea\u05d5\u05dd|\u05dc\u05d7\u05ea\u05d5\u05dd|\u05d7\u05ea\u05d5\u05dd|\u05ea\u05d7\u05ea\u05de\u05d9)/;
+const SIGN_NOT_RE = /(?:^|[^\u05d0-\u05ea])(?:\u05d0\u05dc|\u05dc\u05d0|\u05d0\u05d9\u05df)\s+(?:\u05e6\u05e8\u05d9\u05da\s+|\u05e6\u05d5\u05e8\u05da\s+)?(?:\u05ea\u05d7\u05ea\u05d5\u05dd|\u05dc\u05d7\u05ea\u05d5\u05dd|\u05d7\u05ea\u05d5\u05dd|\u05ea\u05d7\u05ea\u05de\u05d9)/;
 const SIGN_FILLER = ['\u05ea\u05d7\u05ea\u05d5\u05dd', '\u05dc\u05d7\u05ea\u05d5\u05dd', '\u05d7\u05ea\u05d5\u05dd', '\u05d7\u05ea\u05d9\u05de\u05d4', '\u05ea\u05d7\u05ea\u05de\u05d9', '\u05d1\u05e9\u05de\u05d9', '\u05e9\u05dc\u05d9', '\u05ea\u05d7\u05d6\u05d9\u05e8', '\u05dc\u05e9\u05d5\u05dc\u05d7', '\u05ea\u05e9\u05dc\u05d7', '\u05e9\u05dc\u05d7', '\u05de\u05e1\u05de\u05da', '\u05e7\u05d5\u05d1\u05e5', '\u05d0\u05d5\u05ea\u05d5', '\u05d0\u05d5\u05ea\u05d4', '\u05d1\u05d1\u05e7\u05e9\u05d4', '\u05e2\u05db\u05e9\u05d9\u05d5', '\u05d1\u05e9\u05e8\u05e9\u05d5\u05e8', '\u05d8\u05d9\u05d5\u05d8\u05d4', '\u05de\u05d9\u05d9\u05dc'];
 export function signAskFor(rows, target, used) {
-  const hay = String(target || '').toLowerCase();
+  // security review 24/11/2026 (refutation): whole words of the file name and its folder only (not the mail subject or
+  // sender the assistant chooses), no numbers, no "pdf", and the fillers checked again after a prefix letter is dropped
+  const toks = (t) => String(t || '').toLowerCase().split(/[^a-z\u05d0-\u05ea]+/).filter((w) => w.length >= 3 && w !== 'pdf');
+  const strip = (w) => /^[\u05d4\u05d5\u05dc\u05d1\u05de\u05e9][\u05d0-\u05ea]{3,}$/.test(w) ? [w, w.slice(1)] : [w];
+  const hay = new Set(); toks(target).forEach((w) => strip(w).forEach((x) => hay.add(x)));
   const usedSet = new Set(Array.isArray(used) ? used : []);
-  const words = (t) => String(t || '').toLowerCase().split(/[^0-9a-z\u05d0-\u05ea]+/).filter((w) => w.length >= 3 && SIGN_FILLER.indexOf(w) < 0)
-    .map((w) => /^[\u05d4\u05d5\u05dc\u05d1\u05de\u05e9][\u05d0-\u05ea]{3,}$/.test(w) ? [w, w.slice(1)] : [w]);
   for (const r of (Array.isArray(rows) ? rows : [])) {
     const t = String((r && r.text) || '');
-    if (!r || !r.id || usedSet.has(r.id) || /^\s*📎/.test(t) || !SIGN_ASK_WORD_RE.test(t) || SIGN_NOT_RE.test(t)) continue;
-    if (words(t).some((forms) => forms.some((w) => hay.indexOf(w) >= 0))) return r;
+    if (!r || !r.id || usedSet.has(r.id) || r.forwarded === true || r.forwarded === 'true' || /^\s*📎/.test(t) || !SIGN_ASK_WORD_RE.test(t) || SIGN_NOT_RE.test(t)) continue;
+    if (toks(t).some((w) => strip(w).some((x) => SIGN_FILLER.indexOf(x) < 0 && hay.has(x)))) return r;
   }
   return null;
 }
@@ -4682,13 +4684,13 @@ async function routineDbHandle(context) {
       const rq = signReplyCheck(body);
       if (rq.error) return jsonResp({ ok: false, error: rq.error }, 400, {});
       const nowMs = Date.now(), now = new Date(nowMs).toISOString();
-      const or = await fetch(url + '/rest/v1/notifications_log?select=id,ts,text:payload->>text&event_type=eq.owner_in&channel=in.(whatsapp,chat)&ts=gte.' + encodeURIComponent(new Date(nowMs - SIGN_NOW_MS).toISOString()) + '&order=ts.desc&limit=20', { headers: h, signal: tmo(SB_MS) }).catch(() => null);
+      const or = await fetch(url + '/rest/v1/notifications_log?select=id,ts,text:payload->>text,forwarded:payload->>forwarded&event_type=eq.owner_in&channel=in.(whatsapp,chat)&ts=gte.' + encodeURIComponent(new Date(nowMs - SIGN_NOW_MS).toISOString()) + '&order=ts.desc&limit=20', { headers: h, signal: tmo(SB_MS) }).catch(() => null);
       const rows = or && or.ok ? await or.json().catch(() => []) : [];
       if (!ownerAskedSign(rows)) return jsonResp({ ok: false, error: 'sign_now: no message of Michael in the last 30 minutes asks to sign. Use sign_offer (he taps do it) instead' }, 400, {});
       const sr0 = await stateRead([SIGN_KEY]).catch(() => []);
       let used = []; try { used = JSON.parse(((sr0 || [])[0] || {}).value || '[]').map((x) => x && x.ask).filter(Boolean); } catch (e) { used = []; }
-      const ask = signAskFor(rows, [c.name, c.folder, rq.reply ? rq.reply.subject + ' ' + rq.reply.to : ''].join(' '), used);
-      if (!ask) return jsonResp({ ok: false, error: 'sign_now: no unused message of Michael in the last 30 minutes asks to sign THIS file (a word of the file name, its folder or the mail). Use sign_offer instead' }, 400, {});
+      const ask = signAskFor(rows, c.name.replace(/\.pdf$/i, '') + ' ' + String(c.folder || '').split('/').pop(), used);
+      if (!ask) return jsonResp({ ok: false, error: 'sign_now: no unused message of Michael in the last 30 minutes asks to sign THIS file (a whole word of the file name or its folder). Use sign_offer instead' }, 400, {});
       const at = await accessToken(env);
       const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
       // the place: the one given, else the signature line found in the file, else the permit line (as sign_request)

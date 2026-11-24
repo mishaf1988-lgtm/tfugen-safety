@@ -2616,12 +2616,14 @@ const callIn = async (body) => {
     check('ownerAskedSign: "מה עם הזימונים", "החתמתי את העובדים", "תשלח לי את המייל" or no messages = no',
       !ownerAskedSign([{ text: 'מה עם הזימונים' }]) && !ownerAskedSign([{ text: 'החתמתי את העובדים אתמול' }]) && !ownerAskedSign([{ text: 'תשלח לי את המייל' }]) && !ownerAskedSign([]) && !ownerAskedSign(null));
     { const { signAskFor } = await import('./_build/routine-db.mjs');
-      const tgt = '2026-11-24 - תעודת משלוח 262201201 - רותם בטיחות - מולא.pdf 06_כיולים/גלאי CH4 מתאן RE: דוח כיול 15.10.2026 תפוגן service2.lab@rotemsafety.co.il';
+      const tgt = '2026-11-24 - תעודת משלוח 262201201 - רותם בטיחות - מולא גלאי CH4 מתאן - חדר דוודים';
       const R = (id, text) => ({ id, text });
       check('signAskFor: his ask that names the file (רותם, התעודה של רותם, גלאי המתאן) = that message',
         (signAskFor([R('a', 'תחתום בשמי על התעודה של רותם ותחזיר לשולח')], tgt, []) || {}).id === 'a' && !!signAskFor([R('b', '🎤 לחתום על המשלוח של רותם')], tgt, []) && !!signAskFor([R('c', 'חתום על התעודה של גלאי המתאן')], tgt, []));
       check('signAskFor: another file, "אל תחתום", a forwarded file line, or a message already used = no',
         !signAskFor([R('d', 'תחתום בשמי על ההצעה של גזית')], tgt, []) && !signAskFor([R('e', 'אל תחתום על התעודה של רותם')], tgt, []) && !signAskFor([R('f', '📎 טופס_חתימה רותם.pdf')], tgt, []) && !signAskFor([R('a', 'תחתום בשמי על התעודה של רותם')], tgt, ['a']));
+      check('signAskFor (refutation 24/11/2026): numbers, "pdf", part of a word, "לא צריך לחתום", a forwarded message = no',
+        !signAskFor([R('g', 'תחתום על 2026 pdf')], tgt, []) && !signAskFor([R('h', 'תחתום על רות')], tgt, []) && !signAskFor([R('i', 'לא צריך לחתום על רותם')], tgt, []) && !signAskFor([{ id: 'j', text: 'תחתום על רותם', forwarded: 'true' }], tgt, []));
     }
     const t0 = Date.now(), mk = (n, ago) => Array.from({ length: n }, (_, i) => ({ id: 's' + i, by: 'owner-ask', status: 'signed', at: new Date(t0 - ago).toISOString(), done_at: new Date(t0 - ago).toISOString() }));
     check('signNowCount: counts only sign_now signatures inside the window', signNowCount(JSON.stringify(mk(3, 60e3).concat(mk(2, 3600e3)).concat([{ id: 'x', by: 'w1', at: new Date(t0).toISOString() }])), t0 - 30 * 60e3) === 3 && SIGN_NOW_MAX === 5);

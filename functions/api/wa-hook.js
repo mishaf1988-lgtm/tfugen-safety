@@ -767,6 +767,7 @@ export function ownerInPayload(m) {
   const t = String((m && m.text) || '') || (md ? '\ud83d\udcce ' + (mediaName(md.name) || m.type || 'file') : '');
   const p = { title: t.replace(/\s+/g, ' ').slice(0, 120), text: t.slice(0, 1500), wamid: m && m.id, choice: (m && m.choice) || null };
   if (md) { p.media_id = md.id; p.mime = md.mime || null; p.name = mediaName(md.name) || null; }
+  if (m && m.forwarded) p.forwarded = true; // sign_now never takes a forwarded message as his ask (24/11/2026)
   if (isVoice(m)) { p.voice = true; if (m.voiceErr) p.voice_err = String(m.voiceErr).slice(0, 120); }
   return p;
 }
