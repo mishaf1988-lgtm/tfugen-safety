@@ -1053,7 +1053,8 @@ export async function fileInduction(env, talk, row, sig, lang, nowMs, answers, d
     // The file name: date, name and the last 4 digits of the ID only (11/10/2026, Michael: "\u05d1\u05e6\u05e2: \u05e9\u05dd \u05d1\u05dc\u05d9 \u05ea.\u05d6. \u05de\u05dc\u05d0\u05d4").
     // A file name shows in folder listings, search and sharing; the full ID stays inside the signed form.
     const idTail = String(row.id_no || '').replace(/\D/g, '').slice(-4);
-    const base = day.split('-').reverse().join('-') + ' - ' + fileSafe(row.emp_name) + (idTail ? ' - ' + idTail : '');
+    // 24/11/2026 (security review): a forced resend of a form already filed gets its own name, so the signed PDF with the photos is not replaced
+    const base = day.split('-').reverse().join('-') + ' - ' + fileSafe(row.emp_name) + (idTail ? ' - ' + idTail : '') + (row.file_suffix || '');
     const hb = new TextEncoder().encode(inductionHtml(talk, row, b64(sig), lang, { day, hm }, answers, docs));
     let bytes = hb, name = base + '.html', type = 'text/html';
     try {
@@ -2217,6 +2218,7 @@ export async function refileInduction(env, id, force) {
     if (!row0) return { status: 404, body: { error: 'not found' } };
     // The signed form is rebuilt from what the worker signed, not from the corrected row (security review 24/11/2026)
     const row = asSigned(row0);
+    if (row0.mailed_at && force) row.file_suffix = ' - '+'\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea '+new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem', hour12: false }).replace(':', '-');
     const tr = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(String(row.talk_id || '')) + '&select=*', { headers: sbH(env) });
     const t = tr.ok ? ((await tr.json()) || [])[0] : null;
     if (!t) return { status: 404, body: { error: 'not found' } };

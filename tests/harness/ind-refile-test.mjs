@@ -40,6 +40,8 @@ async function run(body, row) {
   const m = /href="([^"]*op=edit[^"]*)"/.exec(ml ? ml.body.content : '');
   const tok = m ? decodeURIComponent(m[1].replace(/&amp;/g, '&').split('e=')[1]) : '';
   check('the mail carries a fresh correction link of this row', (await readEditToken(ENV, tok)).id === 'r1abc2', tok.slice(0, 30));
+  const filed = r.w.puts.find((x) => x.startsWith('שולחן העבודה/'));
+  check('a forced resend of a form already filed gets its own file name (the signed PDF with the photos is not replaced)', filed && /שליחה חוזרת \d{2}-\d{2}\.pdf:\/content$/.test(filed), r.w.puts);
   check('the signed form is attached', ml && ml.attachments && ml.attachments[0] && ml.attachments[0].contentType === 'application/pdf');
 }
 {
