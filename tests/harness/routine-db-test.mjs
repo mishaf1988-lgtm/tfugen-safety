@@ -2905,7 +2905,21 @@ const callIn = async (body) => {
       await call({ op: 'sign_request', agent: 'wa-hook-sign', why: 'a tap later on', path: '06_x/cert.pdf' }, 'k-123', 'POST', E);
       const b6 = (metaSends[metaSends.length - 1] || {}).b || '';
       check('the question sent again names the place saved in the request (page 2), not one found now (security review)', b6.includes('\u05d1\u05e2\u05de\u05d5\u05d3 2'), b6.slice(150, 600));
-    } finally { globalThis.fetch = f0; graph = g0; delete state.sign_requests; delete state.wa_owner_in_at; }
+      // 24/11/2026 (Michael: "make it smoother"): sign_offer on ONE file goes straight to the question, as his tap would;
+      // and an offer that carries the original mail adds it to the request already waiting (the Rotem note, saved without it)
+      const st2 = JSON.parse(state.sign_requests); st2[0].again_at = '2026-01-01T00:00:00Z'; state.sign_requests = JSON.stringify(st2);
+      delete state.sign_pick;
+      const MID = 'AAMkADNmMjhjNWNiLTk4ZTItNDA4Ny1hYTM4LWM3MWJjMTc2MzUyMwBGAAAAAA=';
+      const n7 = metaSends.length;
+      const off = await call({ op: 'sign_offer', agent: 'routine-wa-assistant', why: 'sign and reply to the sender', paths: ['06_x/cert.pdf'], reply_to: MID, reply_mail_to: 'lab@rotem.co.il', reply_subject: 'cert' }, 'k-123', 'POST', E);
+      const st3 = JSON.parse(state.sign_requests || '[]');
+      const qb = (metaSends[metaSends.length - 1] || {}).b || '';
+      check('sign_offer on one file: straight to the question (direct), no list saved, the same request', off.json.ok === true && off.json.direct === true && off.json.id === a.json.id && !('sign_pick' in state) && metaSends.length > n7, { off: off.json, pick: state.sign_pick });
+      check('the request already waiting now carries the original mail, and the question names the recipient', st3.length === 1 && st3[0].reply && st3[0].reply.id === MID && st3[0].reply.to === 'lab@rotem.co.il' && qb.includes('lab@rotem.co.il'), { st3, qb: qb.slice(200, 700) });
+      delete state.sign_pick;
+      const two = await call({ op: 'sign_offer', agent: 'routine-wa-assistant', why: 'two files', paths: ['06_x/a.pdf', '06_x/b.pdf'] }, 'k-123', 'POST', E);
+      check('sign_offer on two files: the list with buttons, as before', two.json.ok === true && !two.json.direct && two.json.offered === 2 && 'sign_pick' in state, two.json);
+    } finally { globalThis.fetch = f0; graph = g0; delete state.sign_requests; delete state.wa_owner_in_at; delete state.sign_pick; }
   }
 
   // 02/11/2026 (Michael in the assistant's chat: "do it: yes, build it"; DECISIONS 02/11/2026): mail_forward

@@ -4613,6 +4613,19 @@ async function routineDbHandle(context) {
       if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
       const now = new Date().toISOString();
       const rel = checked.map((x) => x.path.slice(OD_ROOT.length));
+      // 24/11/2026 (Michael: "check the whole process and make it smoother"; the Rotem note took a tap on the file and then
+      // a "do it", and the second tap was lost among other questions): ONE file goes straight to the question "sign in your
+      // name?" with its buttons, as Michael's tap on it would (agent wa-hook-sign: a file already waiting is asked again).
+      // Still nothing is signed before his own "do it" on that question. A failure falls back to the list.
+      if (rel.length === 1) {
+        const one = Object.assign({ op: 'sign_request', agent: 'wa-hook-sign', why: String(body.why || '').slice(0, 300), path: rel[0] },
+          hasSpot ? { page: checked[0].page, x: checked[0].x, y: checked[0].y, w: checked[0].w } : {},
+          rp.reply ? { reply_to: rp.reply.id, reply_mail_to: rp.reply.to, reply_subject: rp.reply.subject, reply_text: rp.reply.text } : {});
+        const dr = await onRequest({ env, request: new Request('https://internal/api/routine-db', { method: 'POST',
+          headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' }, body: JSON.stringify(one) }) });
+        const dj = await dr.json().catch(() => ({}));
+        if (dj.ok && dj.sent) return jsonResp({ ok: true, sent: true, offered: 1, direct: true, id: dj.id, again: dj.again || undefined }, 200, {});
+      }
       const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', { /* cas-ok: sign_pick is the newest pick, whole, nothing read first */ method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
         body: JSON.stringify([{ key: 'sign_pick', value: JSON.stringify(Object.assign({ at: now, paths: rel }, hasSpot ? { spot: { page: checked[0].page, x: checked[0].x, y: checked[0].y, w: checked[0].w } } : {}, rp.reply ? { reply: rp.reply } : {})), updated_at: now }]), signal: tmo(SB_MS) });
       if (!w.ok) return jsonResp({ ok: false, error: 'save ' + w.status }, 200, {});
@@ -4660,6 +4673,8 @@ async function routineDbHandle(context) {
         if (body.agent !== 'wa-hook-sign' || !prevE) return { write: false };
         if (prevE.again_at && Date.parse(now) - Date.parse(prevE.again_at) < SIGN_AGAIN_MS) { recent = true; return { write: false }; }
         prevE.again_at = now;
+        // 24/11/2026: a new offer that carries the original mail adds it to a request saved without one (the Rotem note)
+        if (rq.reply && !prevE.reply) prevE.reply = rq.reply;
         return { value: JSON.stringify(r.list) };
       }, () => tmo(SB_MS));
       // 24/11/2026 (dev-20261124130849-gd49): Michael's own ask (a tap on a sign_offer button, or a typed yes that the
