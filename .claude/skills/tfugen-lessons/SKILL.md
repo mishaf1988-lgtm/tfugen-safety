@@ -35,7 +35,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: עריכה בפקודה שנחסמה לא נכנסה, וה-PR טען שכן.
 הכלל: hook חוסם את כל הפקודה: מריצים שוב את כולה ובודקים ב-`git diff --stat` ו-`git branch --show-current`.
 נאכף: `lessons-gate.py` (skill בשורה = קובץ skill שהשתנה); `push-gate.py` חוסם commit על main בלי branch באותה פקודה (18/10/2026).
-חזר: 4 (24/11/2026: פקודה אחת עם `checkout -B`, עריכות ו-`push` נחסמה כולה, ושום דבר לא רץ; התגלה ב-`git branch --show-current`. 17/11: push-gate חסם `commit && push`, ה-commit לא נכנס; commit ו-push בנפרד. 18/10: guard-sql חסם `checkout -B`, ה-commit נכנס ל-main. 21/10: push-gate בודק את ענף תיקיית העבודה, לא את ה-repo של ה-commit).
+חזר: 4 (24/11/2026: `checkout -B`, עריכות ו-`push` בפקודה אחת נחסמו כולן. 17/11: push-gate חסם `commit && push`, ה-commit לא נכנס; commit ו-push בנפרד. 18/10: guard-sql חסם `checkout -B`, ה-commit נכנס ל-main. 21/10: push-gate בודק את ענף תיקיית העבודה, לא את ה-repo של ה-commit).
 
 **240. אחרי פתיחת PR שיניתי בדיקה קיימת בקומיט, ותיאור ה-PR לא עודכן (24/11/2026, PR זה).**
 מה קרה: שער `lessons` ב-CI נכשל פעמיים על `בדיקה שונתה:`; עריכת התיאור לבדה לא הריצה אותו.
@@ -45,9 +45,9 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **2. נכשל ב-GitHub ועבר מקומית (01/10/2026, #1006).**
 מה קרה: `requests` חסר, playwright אחר.
-הכלל: למצוא את ההבדל ולקבע גרסאות. לא "flake".
+הכלל: למצוא את ההבדל ולקבע גרסאות. לא "flake". כלי מערכת: `shutil.which`, שני מסלולים.
 נאכף: חלקית: גרסאות ב-`tests.yml`; `short-wait-warn.py`; `push-gate.py`.
-חזר: 3 (17/10 hook בלי UTF-8, #1652. 04/10, 06/10: המתנה קבועה)
+חזר: 4 (24/11 #3089 pdftoppm. 17/10 hook בלי UTF-8, #1652. 04/10, 06/10: המתנה קבועה)
 
 **3. עריכת בדיקה בזמן שה-harness רץ (01/10/2026, #1002).**
 מה קרה: בדיקה עודכנה באמצע ריצה: 6 כישלונות שווא.
