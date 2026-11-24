@@ -68,6 +68,12 @@ o = ask("מה לפתוח לעוזר בנתוני הנאמנים לוועדה?", 
 check("words only in an option description do not match a decision heading", o == "", o)
 o = ask("לשמור תמונות אופליין במקום חסימת הדיווח?", [("בצע", ""), ("לא", "")], sid="desc2")
 check("...the same words in the question itself still do", '"deny"' in o and "DECISIONS.md:3" in o, o)
+# 24/11/2026: a code name only in an option's description (context) is not what is asked; in the question it still counts.
+open(os.path.join(root, "DECISIONS.md"), "a", encoding="utf-8").write("\n## 2026-11-20 - שעת קבלה בשרת: `received_at`\n")
+o = ask("מה לעשות עם הצעה אחרת?", [("בצע: להמשיך", "הערה על received_at שנבנה אתמול"), ("לא", "")], sid="idd")
+check("a rare identifier only in an option description does not stop the question (24/11/2026)", o == "", o)
+o = ask("מה לעשות עם received_at?", [("בצע: להמשיך", ""), ("לא", "")], sid="idq")
+check("...the same identifier in the question itself still stops it", '"deny"' in o and "received_at" in o, o)
 os.makedirs(os.path.join(root, "project-files", "system-map"), exist_ok=True)
 open(os.path.join(root, "project-files", "system-map", "card.md"), "w", encoding="utf-8").write("# x\n\n## \u05e4\u05d9\u05ea\u05d5\u05d7\n- \u05e4\u05d9\u05ea\u05d5\u05d7 \u05de\u05d9\u05d9\u05d3\u05d9: \u05e4\u05d9\u05ea\u05d5\u05d7 \u05de\u05d9\u05d9\u05d3\u05d9 \u05dc\u05d1\u05e7\u05e9\u05d4 \u05de\u05d4\u05e2\u05d5\u05d6\u05e8\n")
 o = ask("\u05de\u05d4 \u05dc\u05e2\u05e9\u05d5\u05ea \u05e2\u05dd \u05ea\u05e7\u05dc\u05d5\u05ea?", [("\u05d1\u05e6\u05e2: \u05e4\u05d9\u05ea\u05d5\u05d7 \u05de\u05d9\u05d9\u05d3\u05d9 \u05dc\u05d1\u05e7\u05e9\u05d4", "\u05d1\u05e7\u05e9\u05d4 \u05de\u05d4\u05e2\u05d5\u05d6\u05e8"), ("\u05dc\u05d0", "")], sid="map1")
