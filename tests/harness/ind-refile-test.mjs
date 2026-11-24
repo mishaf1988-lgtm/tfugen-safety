@@ -60,5 +60,14 @@ async function run(body, row) {
   const src = r.w.puts.find((p) => p.startsWith('Apps/'));
   check('a corrected row: the signed form is built from the values the worker signed, not the corrected ones', r.j.ok === true && !!src, r.j);
 }
+{
+  // security review 24/11/2026 (improvement): one resend an hour
+  const recent = { ...ROW, mailed_at: new Date(Date.now() - 20 * 60e3).toISOString() };
+  const r = await run({ op: 'ind_refile', id: 'r1abc2', force: true }, recent);
+  check('a form mailed 20 minutes ago cannot be sent again, even with force: nothing sent', r.j.ok === false && /less than an hour/.test(r.j.error) && r.w.mails.length === 0, r.j);
+  const old = { ...ROW, mailed_at: new Date(Date.now() - 2 * 3600e3).toISOString() };
+  const o = await run({ op: 'ind_refile', id: 'r1abc2', force: true }, old);
+  check('mailed two hours ago: sent again with force', o.j.ok === true && o.w.mails.length === 1, o.j);
+}
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

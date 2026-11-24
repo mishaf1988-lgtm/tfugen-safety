@@ -218,7 +218,7 @@ export { WA_RULES_HASH };
 import { OD_OCR_DIR, OCR_MODELS, aiOcr, aiSee, ocrLines, ocrOne, TTS_MODELS, aiTts } from '../_ocr.js';
 import { stateCas } from '../_cas.js';
 import { CLAUDE_LOG_Q, logLine, queueAdd, ocrPartialRow } from '../_claudelog.js';
-import { SIGN_KEY, SIGN_CHOICES, signAdd, signMark, signAskText, signPlace } from '../_sign.js';
+import { SIGN_KEY, SIGN_CHOICES, SIGN_REPLY_FIELDS, signAdd, signMark, signAskText, signPlace, signReplyCheck } from '../_sign.js';
 import { findSignSpot } from '../_pdftext.js';
 import { rowContradictions } from './wa-morning.js';
 import { respUnknown } from './hazard-report.js';
@@ -1772,7 +1772,29 @@ export function calInviteCheck(b, nowMs) {
 // stopped by its permission check (an action that writes to people). So, like tour_close_ask, the assistant only asks:
 // cal_invite_ask keeps the invite in CAL_INVITE_ASK_KEY and sends the question with ref calinvite:<k>; only Michael's
 // tap on that very message makes the server run cal_invite (wa-hook, fastCalInvite).
-export const CAL_INVITE_ASK_KEY = 'cal_invite_ask', CAL_INVITE_ASK_MS = 24 * 3600e3, CAL_INVITE_FIELDS = ['subject', 'start', 'end', 'to', 'cc', 'location', 'body', 'draft'];
+export const CAL_INVITE_ASK_KEY = 'cal_invite_ask', CAL_INVITE_ASK_MS = 24 * 3600e3, CAL_INVITE_FIELDS = ['subject', 'start', 'end', 'to', 'cc', 'location', 'body', 'draft', 'dates'];
+// dates (24/11/2026, dev-20261124132506-p71z: Michael asked for invites to 8 course days at once, and one pending key held
+// only one question, so 8 questions would overwrite each other): cal_invite_ask may carry dates, a list of YYYY-MM-DD days
+// at the same hours as start/end. One question shows them all, and his one tap creates one meeting per day. Returns the
+// cal_invite bodies (start/end moved to each day, the same span), or {error}. No dates = the one invite as it is.
+export const CAL_INVITE_DATES_MAX = 12;
+export function calInviteRuns(b, nowMs) {
+  const base = {}; for (const f of Object.keys(b)) if (f !== 'dates') base[f] = b[f];
+  if (b.dates === undefined) return { runs: [base] };
+  const d = b.dates;
+  if (!Array.isArray(d) || d.length < 2 || d.length > CAL_INVITE_DATES_MAX) return { error: 'dates: a list of 2-' + CAL_INVITE_DATES_MAX + ' days YYYY-MM-DD (one day = start/end alone)' };
+  if (d.some((x) => typeof x !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(x) || isNaN(Date.parse(x + 'T00:00:00Z')))) return { error: 'dates: each day YYYY-MM-DD' };
+  if (new Set(d).size !== d.length) return { error: 'dates: a day twice' };
+  const start = String(b.start || ''), end = String(b.end || '');
+  if (!CAL_T.test(start) || !CAL_T.test(end)) return { error: 'start and end: YYYY-MM-DDTHH:MM, Israel time' };
+  const off = Math.round((Date.parse(end.slice(0, 10) + 'T00:00:00Z') - Date.parse(start.slice(0, 10) + 'T00:00:00Z')) / 86400000);
+  const plus = (day, n) => new Date(Date.parse(day + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
+  const runs = d.slice().sort().map((day) => Object.assign({}, base, { start: day + start.slice(10), end: plus(day, off) + end.slice(10) }));
+  // 24/11/2026 (live, 15:41): the stored invite has only CAL_INVITE_FIELDS, no agent or why, so every day failed "bad agent
+  // name" at Michael's tap and no meeting was made; the check here is of the invite itself, the caller's name comes later
+  for (const r of runs) { const c = calInviteCheck(Object.assign({}, r, { approved: '\u05d1\u05e6\u05e2', agent: r.agent || 'wa-hook', why: r.why || 'invite check' }), nowMs); if (c.error) return { error: r.start.slice(0, 10) + ': ' + c.error }; }
+  return { runs };
+}
 export function calInviteRefOf(about, prev) {
   const a = String(about || '');
   if (a) { const m = /\| ref calinvite:([a-z0-9]{8}) \| [^|]*$/.exec(a); return m ? m[1] : null; }
@@ -1784,6 +1806,7 @@ export function calInviteAskText(c, b) {
   // the recipients shown are the real to/cc addresses, never the free text `who` (27/10/2026 retro: it could name others than the invite goes to)
   const addr = (x) => String(x || '').split(/[;,]/).map((y) => y.trim()).filter(Boolean), who = addr(b.to).concat(addr(b.cc)).join(', ').slice(0, 400);
   return (b.draft === true ? '\u05dc\u05d9\u05e6\u05d5\u05e8 \u05d1\u05d9\u05d5\u05de\u05df \u05e9\u05dc\u05da \u05e4\u05d2\u05d9\u05e9\u05d4 \u05de\u05d5\u05db\u05e0\u05d4, \u05d1\u05dc\u05d9 \u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd?' : '\u05dc\u05e9\u05dc\u05d5\u05d7 \u05d6\u05d9\u05de\u05d5\u05df?') + '\n1. \u05e0\u05d5\u05e9\u05d0: ' + c.subject + '\n2. \u05de\u05ea\u05d9: ' + dmy(c.start) + ' ' + c.start.slice(11) + '-' + c.end.slice(11)
+    + (Array.isArray(b.dates) && b.dates.length > 1 ? ', ' + b.dates.length + ' \u05de\u05d5\u05e2\u05d3\u05d9\u05dd (\u05e4\u05d2\u05d9\u05e9\u05d4 \u05dc\u05db\u05dc \u05de\u05d5\u05e2\u05d3): ' + b.dates.slice().sort().map((x) => dmy(x)).join(', ') : '')
     + (b.location ? '\n3. \u05de\u05d9\u05e7\u05d5\u05dd: ' + String(b.location).replace(/\s+/g, ' ').trim().slice(0, 100) : '') + '\n4. \u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd (' + c.count + '): ' + who
     + (b.draft === true ? '\n\u05d4\u05d4\u05d6\u05de\u05e0\u05d5\u05ea \u05d9\u05d5\u05e6\u05d0\u05d5\u05ea \u05e8\u05e7 \u05db\u05e9\u05d0\u05ea\u05d4 \u05de\u05d5\u05e1\u05d9\u05e3 \u05d0\u05ea \u05d4\u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd \u05d5\u05e9\u05d5\u05dc\u05d7 \u05de-Outlook.' : '\n\u05d1"\u05d1\u05e6\u05e2" \u05d4\u05d6\u05d9\u05de\u05d5\u05df \u05e0\u05e9\u05dc\u05d7 \u05dc\u05db\u05dc \u05d4\u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd.');
 }
@@ -4572,8 +4595,12 @@ async function routineDbHandle(context) {
     // assistant offers 1-5 PDFs as buttons; a tap reaches wa-hook's sign_pick, and only then the server asks
     // "sign in your name?" (sign_request) and signs after his yes. Offering signs nothing.
     if (body.op === 'sign_offer') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths', 'text', 'page', 'x', 'y', 'w'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths', 'text', 'page', 'x', 'y', 'w'].concat(SIGN_REPLY_FIELDS).indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (!Array.isArray(body.paths) || !body.paths.length || body.paths.length > 5) return jsonResp({ ok: false, error: 'paths: 1-5' }, 400, {});
+      // 24/11/2026: the original mail rides with ONE offered file, and after the signature the server drafts the reply (_sign.js)
+      const rp = signReplyCheck(body);
+      if (rp.error) return jsonResp({ ok: false, error: rp.error }, 400, {});
+      if (rp.reply && body.paths.length !== 1) return jsonResp({ ok: false, error: 'reply_to with one path only' }, 400, {});
       // 22/10/2026 (Michael: "the signature's place is not good", on a scanned permit with no text layer): the spot
       // Michael approved (page/x/y, w) rides with ONE offered file to the sign request; the default corner otherwise.
       const hasSpot = ['page', 'x', 'y'].some((k) => body[k] !== undefined);
@@ -4587,7 +4614,7 @@ async function routineDbHandle(context) {
       const now = new Date().toISOString();
       const rel = checked.map((x) => x.path.slice(OD_ROOT.length));
       const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', { /* cas-ok: sign_pick is the newest pick, whole, nothing read first */ method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify([{ key: 'sign_pick', value: JSON.stringify(Object.assign({ at: now, paths: rel }, hasSpot ? { spot: { page: checked[0].page, x: checked[0].x, y: checked[0].y, w: checked[0].w } } : {})), updated_at: now }]), signal: tmo(SB_MS) });
+        body: JSON.stringify([{ key: 'sign_pick', value: JSON.stringify(Object.assign({ at: now, paths: rel }, hasSpot ? { spot: { page: checked[0].page, x: checked[0].x, y: checked[0].y, w: checked[0].w } } : {}, rp.reply ? { reply: rp.reply } : {})), updated_at: now }]), signal: tmo(SB_MS) });
       if (!w.ok) return jsonResp({ ok: false, error: 'save ' + w.status }, 200, {});
       const head = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 300);
       const text = (head ? head + '\n' : '') + rel.map((p, i) => (i + 1) + '. ' + p).join('\n') + '\n\u05e2\u05dc \u05d0\u05d9\u05d6\u05d4 \u05dc\u05d7\u05ea\u05d5\u05dd? \u05dc\u05dc\u05d7\u05d5\u05e5 \u05e2\u05dc \u05d4\u05de\u05e1\u05e4\u05e8.';
@@ -4597,9 +4624,11 @@ async function routineDbHandle(context) {
       return jsonResp({ ok: s.ok, sent: s.ok, offered: rel.length, error: s.error || undefined }, 200, {});
     }
     if (body.op === 'sign_request') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path', 'page', 'x', 'y', 'w'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path', 'page', 'x', 'y', 'w'].concat(SIGN_REPLY_FIELDS).indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const c = signRequestCheck(body);
       if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const rq = signReplyCheck(body);
+      if (rq.error) return jsonResp({ ok: false, error: rq.error }, 400, {});
       if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return jsonResp({ ok: false, error: 'whatsapp not configured' }, 200, {});
       const to = await ownerWa(env, url);
       if (!to) return jsonResp({ ok: false, error: 'no owner number in notification_prefs' }, 200, {});
@@ -4624,7 +4653,7 @@ async function routineDbHandle(context) {
       const now = new Date().toISOString();
       let r, prevE = null, recent = false; // 30/10/2026 (ideas-lab 12): written only if the row is as it was read
       const cas = await stateCas(url, h, SIGN_KEY, (raw) => {
-        r = signAdd(raw === undefined ? '[]' : raw, { agent: body.agent, path: c.path, name: c.name, page: spot ? spot.page : c.page, x: spot ? spot.x : c.x, y: spot ? spot.y : c.y, w: spot && spot.w ? spot.w : c.w }, now);
+        r = signAdd(raw === undefined ? '[]' : raw, { agent: body.agent, path: c.path, name: c.name, page: spot ? spot.page : c.page, x: spot ? spot.x : c.x, y: spot ? spot.y : c.y, w: spot && spot.w ? spot.w : c.w, reply: rq.reply }, now);
         if (r.created) return { value: JSON.stringify(r.list) };
         // 24/11/2026 (security review): sent again at most once in SIGN_AGAIN_MS per request (the agent name is self-declared)
         prevE = r.list.find((x) => x && x.id === r.id) || null;
@@ -4643,7 +4672,8 @@ async function routineDbHandle(context) {
       // 22/10/2026 18:36: a spot Michael approved was used, and the question still said "no signature place found".
       // sent again: the place in words is the one saved in the request (where the yes signs), not one found now (security review 24/11/2026)
       const tspot = again ? (prevE.page ? { page: prevE.page } : null) : spot || (c.page !== undefined ? { page: c.page, set: true } : null);
-      const text = (again ? SIGN_AGAIN_HEAD : '') + signAskText(c.name, c.folder, tspot), ref = 'sign:' + r.id;
+      const rp = again ? prevE.reply : rq.reply; // sent again: the reply saved in the request, the one the yes runs
+      const text = (again ? SIGN_AGAIN_HEAD : '') + signAskText(c.name, c.folder, tspot) + (rp ? '\n\u05d0\u05d7\u05e8\u05d9 \u05d4\u05d7\u05ea\u05d9\u05de\u05d4: \u05d8\u05d9\u05d5\u05d8\u05ea \u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc-' + rp.to + ' ("' + rp.subject.slice(0, 80) + '") \u05d1\u05e9\u05e8\u05e9\u05d5\u05e8 \u05d4\u05de\u05e7\u05d5\u05e8\u05d9, \u05e2\u05dd \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d7\u05ea\u05d5\u05dd.' : ''), ref = 'sign:' + r.id;
       const win = await ownerWindowOpen(env, url);
       // 21/10/2026 (Michael: "with the request, the form itself"): the document goes first, so the question with
       // the buttons stays his last message (its ref is what "1" answers). A failed document leaves the question as is.
@@ -4994,7 +5024,9 @@ async function routineDbHandle(context) {
     }
     if (body.op === 'cal_invite_ask') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'who', 'answers'].concat(CAL_INVITE_FIELDS).indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
-      const c = calInviteCheck(Object.assign({}, body, { approved: '\u05d1\u05e6\u05e2' }), Date.now());
+      const rs = calInviteRuns(body, Date.now());
+      if (rs.error) return jsonResp({ ok: false, error: rs.error }, 400, {});
+      const c = calInviteCheck(Object.assign({}, rs.runs[0], { approved: '\u05d1\u05e6\u05e2' }), Date.now());
       if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
       if (hasInternalId(body.who) || hasPersonalNo(body.who)) return jsonResp({ ok: false, error: 'who: names only' }, 400, {});
       const k = Math.random().toString(36).slice(2, 10).padEnd(8, '0'), inv = {};

@@ -19,7 +19,7 @@ import { isVoice, voiceText, VOICE_MARK, VOICE_MODEL, voiceRetryable } from '../
 import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, hasStatuses, STATUS_KEY, noteOwnerIn, lastOut, sendToOwner, noteLastOut, HAZARD_OPTIONS, HAZARD_NOTE_TABLE, hazardChoiceNote, assistantFire, assistantFireNow, pickFire, accountOf, ACCOUNT_KEY, forgetAccount, LEARN_KEY, learnedLine, recentLine, waDeliveryHandle } from '../_wa.js';
 import { gather, buildBrief } from './wa-morning.js';
 import { accessToken, sendMailTo } from '../_onedrive.js';
-import { onRequest as routineDb, DEV_INBOX_KEY, devInboxAdd, OD_ROOT, isAutoTop, OD_INBOX, delRefOf, DEL_ASK_KEY, DEL_ASK_MS, DEL_TABLES, UNDO_KEY, UNDO_MAX, undoRefOf, undoPick, UNDO_ASK_KEY, UNDO_ASK_MS, tourRefOf, TOUR_CLOSE_KEY, TOUR_CLOSE_MS, TOUR_OPEN, TOUR_CLOSED, calInviteRefOf, CAL_INVITE_ASK_KEY, CAL_INVITE_ASK_MS, calMoveRefOf, CAL_MOVE_ASK_KEY, CAL_MOVE_ASK_MS } from './routine-db.js';
+import { onRequest as routineDb, DEV_INBOX_KEY, devInboxAdd, OD_ROOT, isAutoTop, OD_INBOX, delRefOf, DEL_ASK_KEY, DEL_ASK_MS, DEL_TABLES, UNDO_KEY, UNDO_MAX, undoRefOf, undoPick, UNDO_ASK_KEY, UNDO_ASK_MS, tourRefOf, TOUR_CLOSE_KEY, TOUR_CLOSE_MS, TOUR_OPEN, TOUR_CLOSED, calInviteRefOf, calInviteRuns, CAL_INVITE_ASK_KEY, CAL_INVITE_ASK_MS, calMoveRefOf, CAL_MOVE_ASK_KEY, CAL_MOVE_ASK_MS } from './routine-db.js';
 import { SIGN_KEY, SIGN_TTL_MS, signRefOf, signAnswer, signTake, signMark, signRun, signDoneText, SIGN_CANCEL_TEXT, SIGN_EXPIRED_TEXT, SIGN_DONE_TEXT } from '../_sign.js';
 
 export const FAIL_TEXT = '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05dc\u05e2\u05d5\u05d6\u05e8. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.';
@@ -373,10 +373,10 @@ export function signWords(q) {
   }
   return out.slice(0, 6);
 }
-export async function signAskPath(env, path, spot) {
+export async function signAskPath(env, path, spot, reply) {
   const res = await routineDb({ env, request: new Request('https://internal/api/routine-db', { method: 'POST',
     headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' },
-    body: JSON.stringify(Object.assign({ op: 'sign_request', agent: 'wa-hook-sign', why: '\u05de\u05d9\u05db\u05d0\u05dc \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4: \u05ea\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9', path }, spot || {})) }) });
+    body: JSON.stringify(Object.assign({ op: 'sign_request', agent: 'wa-hook-sign', why: '\u05de\u05d9\u05db\u05d0\u05dc \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4: \u05ea\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9', path }, spot || {}, reply ? { reply_to: reply.id, reply_mail_to: reply.to, reply_subject: reply.subject, reply_text: reply.text } : {})) }) });
   const j = await res.json().catch(() => ({}));
   // 24/11/2026: a file already waiting is sent again by routine-db (agent wa-hook-sign); only a real send is "sent"
   if (j.ok && j.sent) return { sent: true, id: j.id, again: !!j.again, recent: !!j.recent };
@@ -644,11 +644,27 @@ async function fastCalInvite(env, r) {
   if (!st || st.k !== r.id || Date.now() - Date.parse(st.at) > CAL_INVITE_ASK_MS) return CAL_INVITE_GONE;
   await sbJson(env, 'server_state?key=eq.' + CAL_INVITE_ASK_KEY, { method: 'DELETE' });
   if (!r.yes) return CAL_INVITE_NO;
-  const res = await routineDb({ env, request: new Request('https://internal/api/routine-db', { method: 'POST',
-    headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' },
-    body: JSON.stringify(Object.assign({}, st.inv, { op: 'cal_invite', agent: 'wa-hook', why: String(st.inv.why || 'invite').slice(0, 200), approved: '\u05d1\u05e6\u05e2 (\u05db\u05e4\u05ea\u05d5\u05e8 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4)' })) }), internal: true });
-  const j = await res.json().catch(() => ({}));
-  return j.ok ? calInviteSentText(j) : null;
+  // 24/11/2026 (dev-20261124132506-p71z): an invite with dates = one meeting per day, all on this one tap
+  const rs = calInviteRuns(st.inv, Date.now());
+  if (rs.error) return null;
+  const done = [], failed = [];
+  for (const inv of rs.runs) {
+    const res = await routineDb({ env, request: new Request('https://internal/api/routine-db', { method: 'POST',
+      headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({}, inv, { op: 'cal_invite', agent: 'wa-hook', why: String(inv.why || 'invite').slice(0, 200), approved: '\u05d1\u05e6\u05e2 (\u05db\u05e4\u05ea\u05d5\u05e8 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4)' })) }), internal: true });
+    const j = await res.json().catch(() => ({}));
+    (j.ok ? done : failed).push(j.ok ? j : inv.start);
+  }
+  if (rs.runs.length === 1) return done.length ? calInviteSentText(done[0]) : null;
+  return calInviteManyText(done, failed);
+}
+// several days: how many were created, and which days failed (DD/MM/YYYY), so he knows what to ask again
+export function calInviteManyText(done, failed) {
+  const dmy = (x) => String(x).slice(8, 10) + '/' + String(x).slice(5, 7) + '/' + String(x).slice(0, 4);
+  if (!done.length) return null;
+  const head = done[0].draft ? done.length + ' \u05e4\u05d2\u05d9\u05e9\u05d5\u05ea \u05d9\u05d5\u05e4\u05d9\u05e2\u05d5 \u05d1\u05d9\u05d5\u05de\u05df \u05e9\u05dc\u05da \u05ea\u05d5\u05da \u05db-5 \u05d3\u05e7\u05d5\u05ea, \u05d1\u05dc\u05d9 \u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd.'
+    : done.length + ' \u05d6\u05d9\u05de\u05d5\u05e0\u05d9\u05dd \u05e0\u05e9\u05dc\u05d7\u05d5 \u05dc\u05d9\u05e6\u05d9\u05e8\u05d4 (' + done[0].attendees + ' \u05de\u05d5\u05d6\u05de\u05e0\u05d9\u05dd \u05d1\u05db\u05dc \u05d0\u05d7\u05d3). \u05d4\u05dd \u05d9\u05d5\u05e4\u05d9\u05e2\u05d5 \u05d1\u05d9\u05d5\u05de\u05df \u05e9\u05dc\u05da \u05ea\u05d5\u05da \u05db-5 \u05d3\u05e7\u05d5\u05ea.';
+  return head + (failed.length ? '\n\u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8\u05d5: ' + failed.map(dmy).join(', ') + '. \u05db\u05ea\u05d5\u05d1 \u05dc\u05e2\u05d5\u05d6\u05e8 \u05e9\u05d5\u05d1 \u05e2\u05dc \u05d4\u05de\u05d5\u05e2\u05d3\u05d9\u05dd \u05d4\u05d0\u05dc\u05d4.' : '');
 }
 export const CAL_MOVE_NO = '\u05dc\u05d0 \u05d4\u05d5\u05d6\u05d6. \u05d4\u05d0\u05d9\u05e8\u05d5\u05e2 \u05e0\u05e9\u05d0\u05e8 \u05d1\u05e9\u05e2\u05d4 \u05e9\u05dc\u05d5.', CAL_MOVE_GONE = '\u05d4\u05d1\u05e7\u05e9\u05d4 \u05dc\u05d4\u05d6\u05d6\u05d4 \u05db\u05d1\u05e8 \u05dc\u05d0 \u05d1\u05ea\u05d5\u05e7\u05e3. \u05db\u05ea\u05d5\u05d1 \u05dc\u05e2\u05d5\u05d6\u05e8 \u05e9\u05d5\u05d1.';
 export function calMovedText(j) { return '\u05d4\u05d0\u05d9\u05e8\u05d5\u05e2 \u05d9\u05d6\u05d5\u05d6 \u05d1\u05d9\u05d5\u05de\u05df \u05e9\u05dc\u05da \u05ea\u05d5\u05da \u05db-3 \u05d3\u05e7\u05d5\u05ea, \u05dc-' + j.start.slice(8, 10) + '/' + j.start.slice(5, 7) + '/' + j.start.slice(0, 4) + ' ' + j.start.slice(11) + '-' + j.end.slice(11) + '.'; }
@@ -686,6 +702,22 @@ async function signLog(env, title, payload) {
         event_type: 'owner_sign', channel: 'server', payload: Object.assign({ title: String(title).slice(0, 120) }, payload) }]) });
   } catch (e) { /* the state in server_state still shows it */ }
 }
+// 24/11/2026 (Michael: "sign, fill in every detail, and reply to the mail that came with it"): a request that carries the
+// original mail (sign_offer reply_to, one file) gets its reply draft right after a good signature: in that thread, to the
+// sender, the signed copy attached. Only a draft (routine-db mail_draft); Michael sends. Returns the line for the answer.
+export async function signReplyDraft(env, reply, rel) {
+  if (!reply || !reply.id || !rel) return '';
+  let j = {};
+  try {
+    const res = await routineDb({ env, request: new Request('https://internal/api/routine-db', { method: 'POST',
+      headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ op: 'mail_draft', agent: 'wa-hook-sign', why: '\u05de\u05d9\u05db\u05d0\u05dc \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4: \u05ea\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9 \u05d5\u05ea\u05d7\u05d6\u05d9\u05e8 \u05dc\u05e9\u05d5\u05dc\u05d7', to: reply.to, subject: reply.subject, body: reply.text, attach: [rel], reply_to: reply.id }) }) });
+    j = await res.json().catch(() => ({}));
+    if (!j.ok && !j.error) j.error = String(res.status);
+  } catch (e) { j = { ok: false, error: String(e && e.message || e).slice(0, 80) }; }
+  return j.ok ? '\n\u05d4\u05db\u05e0\u05ea\u05d9 \u05d8\u05d9\u05d5\u05d8\u05ea \u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc-' + reply.to + ' \u05d1\u05e9\u05e8\u05e9\u05d5\u05e8 \u05e9\u05dc \u05d4\u05de\u05d9\u05d9\u05dc \u05d4\u05de\u05e7\u05d5\u05e8\u05d9, \u05e2\u05dd \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d7\u05ea\u05d5\u05dd. \u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05de\u05de\u05da.'
+    : '\n\u05d8\u05d9\u05d5\u05d8\u05ea \u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc\u05e9\u05d5\u05dc\u05d7 \u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8\u05d4 (' + String(j.error).slice(0, 80) + '). \u05d0\u05e4\u05e9\u05e8 \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 "\u05ea\u05d7\u05d6\u05d9\u05e8 \u05dc\u05e9\u05d5\u05dc\u05d7".';
+}
 export async function fastSign(env, r, wamid) {
   const now = new Date();
   // approved / cancelled / expired is written before the signing starts: never twice. 15/11/2026 (ideas-lab 12): taken
@@ -716,7 +748,7 @@ export async function fastSign(env, r, wamid) {
     try {
       await sbJson(env, 'server_state?on_conflict=key', { /* cas-ok: whole value, nothing read first, the newest wins */ method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
         body: JSON.stringify([{ key: SIGN_MAIL_KEY, value: JSON.stringify({ at: now.toISOString(), rel, name: res.name }), updated_at: now.toISOString() }]) });
-      return { text: signDoneText(res, t.req), mail: rel };
+      return { text: signDoneText(res, t.req) + await signReplyDraft(env, t.req.reply, rel), mail: rel };
     } catch (e) { /* no button: the answer still goes out */ }
   }
   return signDoneText(res, t.req);
@@ -965,7 +997,7 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
       const path = !stale && st && Date.now() - Date.parse(st.at) < SIGN_PICK_MS && st.paths[fr0.n - 1];
       if (stale) { ans = SIGN_PICK_OLD; ref = 'sign-pick-old'; seen.sign_pick_error = 'old list'; }
       else {
-      if (path) { const sa = await signAskPath(env, path, st.spot && st.paths.length === 1 ? st.spot : null); if (sa.sent) { seen.fast = 'sign_pick'; return true; } seen.sign_pick_error = String(sa.error || ''); }
+      if (path) { const sa = await signAskPath(env, path, st.spot && st.paths.length === 1 ? st.spot : null, st.reply && st.paths.length === 1 ? st.reply : null); if (sa.sent) { seen.fast = 'sign_pick'; return true; } seen.sign_pick_error = String(sa.error || ''); }
       // 21/10/2026: a failed pick says so, instead of falling silently to the assistant
       ans = path ? '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05d0\u05ea \u05d1\u05e7\u05e9\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d6\u05d4 (' + (seen.sign_pick_error || '?') + '). \u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1, \u05d0\u05d5 \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05de\u05d4 \u05dc\u05d7\u05ea\u05d5\u05dd.' : null;
       ref = 'sign-pick-fail';
