@@ -5,9 +5,9 @@ import { readFileSync } from 'fs';
 import { createHash } from 'crypto';
 import { PDFDocument, PDFName } from './_build/_pdflib.mjs';
 import { CAPTION_PNG_B64 } from './_build/_signcaption.mjs';
-import { signAdd, signTake, signMark, signRefOf, signAnswer, signedName, signAskText, stampPdf, signRun, ilDate, SIGN_TTL_MS, SIGN_KEY, SIGN_OBJ } from './_build/_sign.mjs';
-import { fastRoute, fastSign } from './_build/wa-hook.mjs';
-import { signRequestCheck, OD_ROOT } from './_build/routine-db.mjs';
+import { signAdd, signTake, signMark, signRefOf, signAnswer, signedName, signAskText, stampPdf, signRun, ilDate, SIGN_TTL_MS, SIGN_KEY, SIGN_OBJ, signReplyCheck, SIGN_REPLY_TEXT } from './_build/_sign.mjs';
+import { fastRoute, fastSign, signReplyDraft } from './_build/wa-hook.mjs';
+import { signRequestCheck, OD_ROOT, draftRequest } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 300) : '')); } };
@@ -177,6 +177,30 @@ console.log('\n7. a question that did not go out is not left pending (22/10/2026
   const src = (await import('node:fs')).readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
   const i = src.indexOf("const s = await sendToOwner(env, to, text, { kind: 'sign', ref, windowOpen: win, choices: SIGN_CHOICES });");
   check('sign_request marks the request failed when the question was not sent, through stateCas (read, then write only if unchanged; a source check: the handler itself is not run here)', i > 0 && /if \(!s\.ok\)[\s\S]{0,500}stateCas\(url, h, SIGN_KEY[\s\S]{0,700}signMark\(raw === undefined \? JSON\.stringify\(r\.list\) : raw, r\.id, 'failed'/.test(src.slice(i - 200, i + 1800)));
+}
+
+console.log('\n8. after the signature: a reply draft to the original sender (24/11/2026, Michael: "sign, fill in, reply to the mail")');
+{
+  const MID = 'AAMkADNmMjhjNWNiLTk4ZTItNDA4Ny1hYTM4LWM3MWJjMTc2MzUyMwBGAAAAAA=';
+  check('no reply fields = no reply (an ordinary signature is unchanged)', signReplyCheck({ path: 'a/b.pdf' }).reply === null);
+  const r = signReplyCheck({ reply_to: MID, reply_mail_to: 'office@rotem-safety.co.il', reply_subject: 'תעודת משלוח 262201201' });
+  check('a reply: RE: on the subject, his sentence as the default text', r.reply && r.reply.subject === 'RE: תעודת משלוח 262201201' && r.reply.text === SIGN_REPLY_TEXT && /חתומה וממולאת/.test(r.reply.text), r);
+  check('RE: is not doubled', signReplyCheck({ reply_to: MID, reply_mail_to: 'a@b.co.il', reply_subject: 'RE: x' }).reply.subject === 'RE: x');
+  check('a mail id shorter than routine-db MAIL_REQ_ID (40) = refused here, not after the signature', /reply_to/.test(signReplyCheck({ reply_to: 'A'.repeat(30), reply_mail_to: 'a@b.co.il', reply_subject: 's' }).error || ''));
+  check('direction and control characters are dropped from the subject', signReplyCheck({ reply_to: MID, reply_mail_to: 'a@b.co.il', reply_subject: 'a\u202eb\u0007c' }).reply.subject === 'RE: abc');
+  check('a bad mail id = refused', /reply_to/.test(signReplyCheck({ reply_to: 'x y', reply_mail_to: 'a@b.co.il', reply_subject: 's' }).error || ''));
+  check('two addresses = refused (one sender)', /reply_mail_to/.test(signReplyCheck({ reply_to: MID, reply_mail_to: 'a@b.co.il;c@d.co.il', reply_subject: 's' }).error || ''));
+  check('no subject = refused', /reply_subject/.test(signReplyCheck({ reply_to: MID, reply_mail_to: 'a@b.co.il' }).error || ''));
+  check('a text over 300 = refused', /reply_text/.test(signReplyCheck({ reply_to: MID, reply_mail_to: 'a@b.co.il', reply_subject: 's', reply_text: 'א'.repeat(301) }).error || ''));
+  const a = signAdd('[]', { agent: 'wa-hook-sign', path: 'x/t.pdf', name: 't.pdf', reply: r.reply }, T0, 'rp01');
+  check('the request keeps the reply until the signature', a.list[0].reply && a.list[0].reply.id === MID);
+  check('a request without one has no reply field', !('reply' in signAdd('[]', { agent: 'x', path: 'x/u.pdf', name: 'u.pdf' }, T0, 'rp02').list[0]));
+  const d = draftRequest({ to: r.reply.to, subject: r.reply.subject, body: r.reply.text, attach: ['06_כיולים/גלאי/t - חתום.pdf'], reply_to: MID });
+  check('the draft the server asks for is a valid mail_draft: in the thread, the signed file attached', !d.error && JSON.parse(d.file).reply_to === MID && d.attach.length === 1, d.error);
+  check('no reply = no draft line', (await signReplyDraft({}, null, 'x/t.pdf')) === '');
+  const saved = globalThis.fetch; globalThis.fetch = async () => new Response('{}', { status: 500 });
+  let line = ''; try { line = await signReplyDraft({ ROUTINE_KEY: 'k', SUPABASE_SERVICE_ROLE_KEY: 'k' }, r.reply, 'x/t - חתום.pdf'); } finally { globalThis.fetch = saved; }
+  check('a draft that failed says so, and does not throw (the signature already happened)', /לא נוצרה/.test(line), line);
 }
 
 console.log('\nsign-test: ' + pass + ' passed, ' + fail + ' failed');
