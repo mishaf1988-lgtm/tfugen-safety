@@ -71,6 +71,15 @@ console.log('\n1. the link and what changed (pure)');
   check('the form: name escaped, department selected, a nonce on the script', fh.includes('א&quot;ב &lt;i&gt;') && fh.includes('<option value="טוגנים" selected>') && fh.includes('nonce="N"') && fh.includes('name="e" value="T"'));
 }
 
+// The escaping filter of the form and the page (pairs: 3 characters that must be replaced, 3 plain texts that must stay)
+{
+  const bad = ['א"ב', '<i>', 'a&b'], good = ['דני לוי', '0521234567', "ג'ורג'"];
+  const out = bad.map((v) => correctionHtml({ ...ROW, emp_name: v }, { changes: [], equip: null, docs: 0 }, [], { day: '2026-11-24', hm: '12:00' }));
+  check('a quote, an angle bracket and an ampersand are replaced in the correction page', out[0].includes('א&quot;ב') && out[1].includes('&lt;i&gt;') && !out[1].includes('<i>') && out[2].includes('a&amp;b'), out.map((x) => x.slice(x.indexOf('דף תיקון:'), x.indexOf('דף תיקון:') + 60)));
+  const ok = good.map((v) => correctionHtml({ ...ROW, emp_name: v }, { changes: [], equip: null, docs: 0 }, [], { day: '2026-11-24', hm: '12:00' }));
+  check('plain Hebrew, digits and an apostrophe stay as they are', ok[0].includes('דף תיקון: דני לוי') && ok[1].includes('דף תיקון: 0521234567') && ok[2].includes("דף תיקון: ג'ורג'"));
+}
+
 console.log('\n2. who may open it');
 {
   reset();
