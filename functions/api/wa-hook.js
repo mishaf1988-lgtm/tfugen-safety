@@ -20,7 +20,7 @@ import { ownerWa, sendDocToOwner, metaSigOk, inboundMessages, hasStatuses, STATU
 import { gather, buildBrief } from './wa-morning.js';
 import { accessToken, sendMailTo } from '../_onedrive.js';
 import { onRequest as routineDb, DEV_INBOX_KEY, devInboxAdd, OD_ROOT, isAutoTop, OD_INBOX, delRefOf, DEL_ASK_KEY, DEL_ASK_MS, DEL_TABLES, UNDO_KEY, UNDO_MAX, undoRefOf, undoPick, UNDO_ASK_KEY, UNDO_ASK_MS, tourRefOf, TOUR_CLOSE_KEY, TOUR_CLOSE_MS, TOUR_OPEN, TOUR_CLOSED, calInviteRefOf, CAL_INVITE_ASK_KEY, CAL_INVITE_ASK_MS, calMoveRefOf, CAL_MOVE_ASK_KEY, CAL_MOVE_ASK_MS } from './routine-db.js';
-import { SIGN_KEY, signRefOf, signAnswer, signTake, signMark, signRun, signDoneText, SIGN_CANCEL_TEXT, SIGN_EXPIRED_TEXT, SIGN_DONE_TEXT } from '../_sign.js';
+import { SIGN_KEY, SIGN_TTL_MS, signRefOf, signAnswer, signTake, signMark, signRun, signDoneText, SIGN_CANCEL_TEXT, SIGN_EXPIRED_TEXT, SIGN_DONE_TEXT } from '../_sign.js';
 
 export const FAIL_TEXT = '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05dc\u05e2\u05d5\u05d6\u05e8. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.';
 // retro 29/10/2026 (c): a fire that took earlier messages along (fire_join) and then failed lost them too; FAIL_TEXT
@@ -378,7 +378,8 @@ export async function signAskPath(env, path, spot) {
     headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' },
     body: JSON.stringify(Object.assign({ op: 'sign_request', agent: 'wa-hook-sign', why: '\u05de\u05d9\u05db\u05d0\u05dc \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4: \u05ea\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9', path }, spot || {})) }) });
   const j = await res.json().catch(() => ({}));
-  if (j.ok && (j.sent || j.created === false)) return { sent: true, id: j.id };
+  // 24/11/2026: a file already waiting is sent again by routine-db (agent wa-hook-sign); only a real send is "sent"
+  if (j.ok && j.sent) return { sent: true, id: j.id, again: !!j.again };
   return { text: null, error: j.error || res.status };
 }
 // Search the safety folder, then ask through routine-db sign_request (its own checks: folder, PDF, not protected).
@@ -477,6 +478,19 @@ export function tapIsPrev(m, prev) {
   const a = tapHead(m.tapped), b = tapHead(prev.text);
   return a.length >= 10 && a === b;
 }
+// A typed yes ("\u05d1\u05e6\u05e2", "\u05db\u05df"), not a button: a tap carries its own message and is routed by it. Pure.
+export function signReaskOf(m) {
+  return !!m && (m.choice === undefined || m.choice === null) && signAnswer(m) === true;
+}
+export const SIGN_MENTION_RE = /\u05d7\u05ea\u05d9\u05de|\u05dc\u05d7\u05ea\u05d5\u05dd/;
+// The request a typed yes re-asks: the one named (prev ref), or the only one waiting from the last SIGN_REASK_MS. Pure.
+export const SIGN_REASK_MS = 8 * 3600e3;
+export function signReaskPick(raw, id, nowMs) {
+  let list = []; try { list = typeof raw === 'string' ? JSON.parse(raw || '[]') : (raw || []); } catch (e) { list = []; }
+  if (!Array.isArray(list)) return null;
+  const open = list.filter((x) => x && x.status === 'pending' && nowMs - Date.parse(x.at) < (id ? SIGN_TTL_MS : SIGN_REASK_MS) && (!id || x.id === id));
+  return open.length === 1 && typeof open[0].path === 'string' && open[0].path.indexOf(OD_ROOT) === 0 ? open[0] : null;
+}
 export function fastRoute(m, about, prev) {
   const raw = String((m && m.text) || '').trim();
   // an answer to the signature question first: "\u05ea\u05d7\u05ea\u05d5\u05dd" there is a yes, not a new request
@@ -485,6 +499,9 @@ export function fastRoute(m, about, prev) {
   // still cancels: cancelling signs nothing. Invites, meeting moves and tour closing keep the 21/10/2026 rule.
   const sid0 = signRefOf(about, prev), byMsg = !!about || tapIsPrev(m, prev);
   if (sid0) { const yes = signAnswer(m); if (yes === false || (yes === true && byMsg)) return { kind: 'sign', id: sid0, yes }; }
+  // 24/11/2026 (dev-20261124130849-gd49): a typed yes right after the question still does not sign (02/11/2026), but
+  // it is not lost either: the server sends the question again, so one tap signs.
+  if (sid0 && !about && signReaskOf(m)) return { kind: 'sign_reask', id: sid0 };
   // 28/10/2026: an answer to "delete this row?" (routine-db del_ask); only a yes / no, else the assistant
   const did = delRefOf(about, prev);
   // 29/10/2026 retro: a delete is confirmed only by a tap (a button choice) or a reply to that very message (about carries the ref), never by a bare "yes" that happens to follow it within 3 hours (the prev fallback)
@@ -529,6 +546,9 @@ export function fastRoute(m, about, prev) {
   // only here, on Michael's own "1" / "do it" to that very request; any other word goes to the assistant.
   const sid = signRefOf(about, prev);
   if (sid) { const yes = signAnswer(m); if (yes === false || (yes === true && byMsg)) return { kind: 'sign', id: sid, yes }; }
+  // 24/11/2026 (same request): the assistant's last message (a list, a reminder) points to a signature waiting for him,
+  // and he types a bare yes: the server sends that question again (runFast checks that exactly one is waiting).
+  if (!about && prev && SIGN_MENTION_RE.test(String(prev.text || '')) && signReaskOf(m)) return { kind: 'sign_reask' };
   const ac = accountCmdOf(raw);
   if (ac) return ac;
   const rt = rateOf(m, about, prev);
@@ -945,6 +965,15 @@ export async function runFast(env, owner, m, fr0, seen, chat) {
       ans = path ? '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05d0\u05ea \u05d1\u05e7\u05e9\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d6\u05d4 (' + (seen.sign_pick_error || '?') + '). \u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1, \u05d0\u05d5 \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05de\u05d4 \u05dc\u05d7\u05ea\u05d5\u05dd.' : null;
       ref = 'sign-pick-fail';
       }
+    }
+    else if (fr0.kind === 'sign_reask') {
+      const rows = await sbJson(env, 'server_state?key=eq.' + SIGN_KEY + '&select=value');
+      const e = signReaskPick(rows && rows[0] ? rows[0].value : '[]', fr0.id || null, Date.now());
+      if (!e) { seen.sign_reask = 'none'; return false; } // none or several waiting: the assistant answers
+      const sa = await signAskPath(env, e.path.slice(OD_ROOT.length));
+      if (sa.sent) { seen.fast = 'sign_reask'; return true; }
+      seen.sign_reask = String(sa.error || 'send');
+      return false;
     }
     else if (fr0.kind === 'sign') {
       const fs = await fastSign(env, fr0, m.id);

@@ -1,7 +1,7 @@
 // Michael's own "sign in my name on <file>" read by the server (21/10/2026, wa-hook signAskOf / signPick /
 // fastRoute): the assistant's sign_request was stopped by the cloud permission check, so the server finds the PDF
 // in the safety folder and asks him itself. Pure parts only; the search and routine-db are covered elsewhere.
-import { signAskOf, signPick, signAskManyText, fastRoute, recentPdfs, signPickOf, signPickChoices, signPickText, graphSearch, signWords, signMailOf, signMailBody, SIGN_MAIL_LABEL, signReplyFrom, signReplyOf, signReplyTask, SIGN_REPLY_LABEL } from './_build/wa-hook.mjs';
+import { signAskOf, signPick, signAskManyText, fastRoute, recentPdfs, signPickOf, signPickChoices, signPickText, graphSearch, signWords, signMailOf, signMailBody, SIGN_MAIL_LABEL, signReplyFrom, signReplyOf, signReplyTask, SIGN_REPLY_LABEL, signReaskPick, SIGN_REASK_MS } from './_build/wa-hook.mjs';
 import { OD_ROOT, OD_INBOX } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
@@ -82,5 +82,24 @@ check('the button title fits WhatsApp (20)', SIGN_MAIL_LABEL.length <= 20);
 check('a word pointing back at files in the conversation is not a search (22/10: "לחתום על שנהם")', signAskOf('לחתום על שנהם ולצרף אישורים') === null && signAskOf('תחתום על ההרשאות') === null && signAskOf('תחתום על הצעת מחיר המור') === 'הצעת מחיר המור');
 check('no file name right after an assistant message: the assistant gets it (22/10 18:31), with no recent message: the newest PDFs', fastRoute({ text: 'חתום בשמי' }, '', { ref: 'none', text: 'x' }) === null && (fastRoute({ text: 'חתום בשמי' }, '', null) || {}).kind === 'sign_ask' && (fastRoute({ text: 'תחתום בשמי על טופס 16' }, '', { ref: 'none', text: 'x' }) || {}).kind === 'sign_ask');
 check('"send to the mail as a reply to whoever sent it" is the reply, not a draft to me (22/10 18:37)', signReplyOf({ text: 'שלח למייל כתגובה למי ששלח' }, { ref: 'signmail' }) && (fastRoute({ text: 'שלח למייל כתגובה למי ששלח' }, '', { ref: 'signmail' }) || {}).kind === 'sign_reply');
+// 24/11/2026 (dev-20261124130849-gd49): "\u05d1\u05e6\u05e2" typed after a list that pointed to a waiting signature reached the assistant
+// and nothing happened. A typed yes still never signs (02/11/2026); the server sends the question again instead.
+{
+  const list = 'מחר:\n4. החתימה על תעודת משלוח 262201201 מחכה לך, לענות בצע';
+  check('typed "\u05d1\u05e6\u05e2" after a list that names a waiting signature = re-ask, not sign', (fastRoute({ text: 'בצע' }, '', { ref: 'tomorrow', text: list }) || {}).kind === 'sign_reask' && (fastRoute({ text: 'כן' }, '', { ref: null, text: list }) || {}).kind === 'sign_reask');
+  check('typed "\u05d1\u05e6\u05e2" right after the question itself = re-ask with its id (a tap or a reply still signs)', JSON.stringify(fastRoute({ text: 'בצע' }, '', { ref: 'sign:sabc1234', text: 'x' })) === JSON.stringify({ kind: 'sign_reask', id: 'sabc1234' })
+    && (fastRoute({ text: 'בצע' }, 'wa_out | x | ref sign:sabc1234 | t', null) || {}).kind === 'sign' && (fastRoute({ text: 'לא' }, '', { ref: 'sign:sabc1234', text: 'x' }) || {}).kind === 'sign');
+  check('no signature in the last message, a reply to another message, a button, or a longer line: not a re-ask', fastRoute({ text: 'בצע' }, '', { ref: 'none', text: 'לשלוח את הטיוטה?' }) === null || (fastRoute({ text: 'בצע' }, '', { ref: 'none', text: 'לשלוח את הטיוטה?' }) || {}).kind !== 'sign_reask');
+  check('...a reply / a tap / a sentence', (fastRoute({ text: 'בצע' }, 'wa_out | other | ref none | t', { ref: 'x', text: list }) || {}).kind !== 'sign_reask' && (fastRoute({ text: 'בצע', choice: '1' }, '', { ref: 'x', text: list }) || {}).kind !== 'sign_reask' && (fastRoute({ text: 'בצע את הסעיף על החתימה של רותם' }, '', { ref: 'x', text: list }) || {}).kind !== 'sign_reask');
+  const now = Date.parse('2026-11-24T13:10:00Z'), P = OD_ROOT + '06_x/a.pdf';
+  const row = (id, at, st, path) => ({ id, at, status: st || 'pending', path: path || P });
+  const one = JSON.stringify([row('s1aaaaaa', '2026-11-24T12:52:00Z'), row('s2aaaaaa', '2026-11-24T10:00:00Z', 'done')]);
+  check('the one request waiting from the last hours is picked', (signReaskPick(one, null, now) || {}).id === 's1aaaaaa');
+  check('two waiting, none waiting, older than ' + SIGN_REASK_MS / 3600e3 + ' hours, or a path outside the safety folder = none (the assistant answers)',
+    signReaskPick(JSON.stringify([row('s1aaaaaa', '2026-11-24T12:52:00Z'), row('s3aaaaaa', '2026-11-24T12:00:00Z')]), null, now) === null
+    && signReaskPick('[]', null, now) === null && signReaskPick(JSON.stringify([row('s1aaaaaa', '2026-11-24T01:00:00Z')]), null, now) === null
+    && signReaskPick(JSON.stringify([row('s1aaaaaa', '2026-11-24T12:52:00Z', 'pending', 'Other/a.pdf')]), null, now) === null && signReaskPick('not json', null, now) === null);
+  check('by id: that request only, while it is valid (24 hours)', (signReaskPick(JSON.stringify([row('s1aaaaaa', '2026-11-24T01:00:00Z'), row('s3aaaaaa', '2026-11-24T12:00:00Z')]), 's1aaaaaa', now) || {}).id === 's1aaaaaa' && signReaskPick(one, 's9zzzzzz', now) === null);
+}
 console.log('\nsign-ask-test: ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
