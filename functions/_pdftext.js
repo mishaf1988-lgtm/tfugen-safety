@@ -186,3 +186,16 @@ export function findTextSpot(doc, needle) {
   }
   return null;
 }
+
+// The start of a PDF's text layer (24/11/2026, routine-db filing_prep): the shown strings of the first pages in stream
+// order, spaces collapsed, cut at max. A scan has none: ''. Hebrew may come in visual order; enough to know what it is.
+export function pdfFirstText(doc, max, pagesMax) {
+  let out = '';
+  const pages = doc.getPages().slice(0, pagesMax || 3);
+  for (const pg of pages) {
+    out += ' ' + pageTexts(contentOf(pg), fontsOf(pg)).map((t) => t.text).join(' ');
+    out = out.replace(/\s+/g, ' ');
+    if (out.length >= max) break;
+  }
+  return out.trim().slice(0, max);
+}
