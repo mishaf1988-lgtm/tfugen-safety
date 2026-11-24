@@ -84,5 +84,13 @@ check("the core greps wa-topics/notebook.md", "project-files/wa-topics/notebook.
 nbt = topics.get(os.path.join("project-files", "wa-topics", "notebook.md"), "")
 check("notebook.md has the rules of 17-20/11/2026", "[17-20/11/2026]" in nbt)
 
+# 24/11/2026: the short path covers button clicks and "what else is open" (Michael: "extend to clicks"). The core is what the
+# assistant reads, the full procedure is its copy: the two 0-short paragraphs must be the same text.
+def short_para(t):
+    return next((l for l in t.split("\n") if l.startswith("0-קצר. **מסלול קצר")), "")
+check("the core's 0-short paragraph covers button clicks and 'what else is open'",
+      "הרחבה ללחיצות כפתור" in short_para(core) and "מה עוד פתוח" in short_para(core) and "`learn`" in short_para(core) and "`promise`" in short_para(core))
+check("the full procedure's 0-short paragraph is the same as the core's", short_para(full) == short_para(core) and short_para(core) != "")
+
 print("\n%d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)
