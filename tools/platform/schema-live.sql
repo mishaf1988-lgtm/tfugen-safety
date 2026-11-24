@@ -1,4 +1,4 @@
--- dumped 2026-11-15 from the live project by tools/platform/schema-dump.sql (ctr.ins and ctr.ins_src added from the same catalog, 2026-11-15; invoices.currency 2026-11-14; full dump 2026-11-08)
+-- dumped 2026-11-24 (no migration between 2026-11-15 and this date but toolbox_reads.edits, whose columns equip and edits were added from the live catalog) from the live project by tools/platform/schema-dump.sql (ctr.ins and ctr.ins_src added from the same catalog, 2026-11-15; invoices.currency 2026-11-14; full dump 2026-11-08; toolbox_reads.equip and .edits from the same catalog, 2026-11-24)
 create schema if not exists private;
 
 create extension if not exists "uuid-ossp" with schema extensions;
@@ -117,7 +117,7 @@ create table if not exists public.tasks (id text not null, title text not null, 
 
 create table if not exists public.toolbox (id text not null, d date, topic text not null, presenter text, attendees text, s text default 'נמסרה'::text, notes text, file_url text, ts timestamp with time zone default now() not null, dep text, ext_id text);
 
-create table if not exists public.toolbox_reads (id text not null, talk_id text not null, emp_id text, emp_name text not null, dept text, lang text, sig_url text, device text, read_at timestamp with time zone default now() not null, ts timestamp with time zone default now() not null, id_no text, text_hash text, mode text, quiz_ok smallint, quiz_n smallint, doc_url text, mailed_at timestamp with time zone, doc_err text, emp_no text, phone text, job text, agency text);
+create table if not exists public.toolbox_reads (id text not null, talk_id text not null, emp_id text, emp_name text not null, dept text, lang text, sig_url text, device text, read_at timestamp with time zone default now() not null, ts timestamp with time zone default now() not null, id_no text, text_hash text, mode text, quiz_ok smallint, quiz_n smallint, doc_url text, mailed_at timestamp with time zone, doc_err text, emp_no text, phone text, job text, agency text, equip jsonb, edits jsonb);
 
 create table if not exists public.toolbox_talks (id text not null, d date, title text not null, body text, body_ar text, body_ru text, body_am text, file_url text, s text default 'טיוטה'::text not null, created_by text, ts timestamp with time zone default now() not null, link_at timestamp with time zone, trainer text, trainer_qual text, trainer_sig_url text, trainer_signed_at timestamp with time zone, eff_req boolean, eff_ok boolean, eff_d date, eff_desc text, eff_next text, eff_by text, video_url text, quiz jsonb, kind text, link_v smallint default 0 not null, dept text, topic_id text, dur text, mail_cc text, subjects text, form_at timestamp with time zone, closed_at timestamp with time zone, first_closed_at timestamp with time zone);
 

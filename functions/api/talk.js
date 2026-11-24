@@ -31,6 +31,7 @@ import { accessToken, putFile, sendMailTo, trashFile } from '../_onedrive.js';
 import { LOGO_JPG } from '../_logo.js';
 import { ownerWa, sendToOwner, ownerWindowOpen, keyboardText, waOneLine } from '../_wa.js';
 import { stateCas } from '../_cas.js';
+import { makeEditToken, readEditToken, editUrl, EDIT_MAX, diffRow, editEntry, asSigned, correctionHtml, updateMailHtml, editLinkHtml, editFormHtml } from '../_indedit.js';
 import { readRecipients } from './hazard-report.js';
 import { REPORT_DEPTS } from './hazard-file.js';
 import { KIND_CTR, CTR_OK, CTR_INSTR, instrText, isInstrMissing, ctrFolder, safeName, CTR_HGT_JOB, CTR_HGT_FILE, validUntil } from '../_ctr.js';
@@ -785,12 +786,12 @@ export async function textHe(env, request, raw) {
 }
 export async function guessOk(env, g) { if (g && g.key) await guessClear(env, g.key); }
 const sameCode = (a, b) => { const x = String(a || ''), y = String(b || ''); let d = x.length === y.length ? 0 : 1; for (let i = 0; i < Math.max(x.length, y.length); i++) d |= (x.charCodeAt(i) || 0) ^ (y.charCodeAt(i) || 0); return d === 0; };
-function codePage(tok, lang, wrong, closed, locked) {
+function codePage(tok, lang, wrong, closed, locked, edit) {
   const inner = '<p>\u05d0\u05ea \u05d8\u05d5\u05e4\u05e1 \u05d4\u05e7\u05dc\u05d9\u05d8\u05d4 \u05e4\u05d5\u05ea\u05d7\u05d9\u05dd \u05e2\u05dd \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05dc \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9. \u05de\u05e7\u05dc\u05d9\u05d3\u05d9\u05dd \u05d0\u05d5\u05ea\u05d4 \u05e4\u05e2\u05dd \u05d0\u05d7\u05ea, \u05d5\u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d6\u05d5\u05db\u05e8.</p>'
     + '<p dir="auto" style="font-size:14px;color:#6b7280;margin-top:-4px">\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0644\u062f\u0649 \u0642\u0633\u0645 \u0627\u0644\u0645\u0648\u0627\u0631\u062f \u0627\u0644\u0628\u0634\u0631\u064a\u0629 | \u041f\u0430\u0440\u043e\u043b\u044c \u0443 \u043e\u0442\u0434\u0435\u043b\u0430 \u043a\u0430\u0434\u0440\u043e\u0432 | \u12e8\u12ed\u1208\u134d \u1243\u1209 \u1260\u1230\u12cd \u1200\u1265\u1275 \u12ad\u134d\u120d \u1290\u12cd</p>'
     + (locked ? '<p style="color:#b91c1c;font-weight:700">\u05d9\u05d5\u05ea\u05e8 \u05de\u05d3\u05d9 \u05e0\u05d9\u05e1\u05d9\u05d5\u05e0\u05d5\u05ea \u05de\u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05e9\u05e2\u05d4.</p>' : closed ? '<p style="color:#b91c1c;font-weight:700">\u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d4\u05d5\u05d2\u05d3\u05e8\u05d4. \u05e4\u05e0\u05d5 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.</p>'
       : (wrong ? '<p style="color:#b91c1c;font-weight:700">\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d4. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1.</p>' : '')
-      + '<form id="icf" method="POST" action="/api/talk"><input type="hidden" name="k" value="' + esc(tok) + '"><input type="hidden" name="l" value="' + esc(langOf(lang)) + '">'
+      + '<form id="icf" method="POST" action="/api/talk' + (edit ? '?op=edit' : '') + '"><input type="hidden" name="' + (edit ? 'e' : 'k') + '" value="' + esc(tok) + '">' + (edit ? '' : '<input type="hidden" name="l" value="' + esc(langOf(lang)) + '">')
       + '<label for="icode" style="display:block;font-weight:700;margin-bottom:4px">\u05e1\u05d9\u05e1\u05de\u05d4</label>'
       + '<input id="icode" name="icode" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="32" required dir="ltr" style="width:100%;box-sizing:border-box;font-size:20px;letter-spacing:2px;text-align:center;padding:12px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px">'
       + '<button type="submit" id="icode-go" style="display:block;width:100%;padding:14px;border:0;border-radius:10px;background:#1e3a8a;color:#fff;font-size:18px;font-weight:700">\u05db\u05e0\u05d9\u05e1\u05d4</button></form>');
@@ -1069,12 +1070,15 @@ export async function fileInduction(env, talk, row, sig, lang, nowMs, answers, d
     // Step 2: filed in the induction folder (the PDF, or the HTML).
     if (out.url) await mark({ doc_url: out.url, doc_err: note });
     const to = [od.email, IND_HR].filter((v, i, a) => v && a.indexOf(v) === i);
+    // 24/11/2026 (Michael): a link in the mail to add or correct (functions/_indedit.js); null without the link secret = no line
+    const editTok = await makeEditToken(env, row.id, nowMs);
     const cell = (k, v) => '<tr><td style="padding:4px 10px;font-weight:bold">' + k + '</td><td style="padding:4px 10px">' + v + '</td></tr>';
     const mail = '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">'
       + '<p>\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9 \u05d7\u05ea\u05dd \u05e2\u05dc \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05db\u05e0\u05e1\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05dc\u05de\u05e9\u05de\u05e8\u05ea (\u05d8\u05d5\u05e4\u05e1 08.02.01). \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05d7\u05ea\u05d5\u05dd \u05de\u05e6\u05d5\u05e8\u05e3.</p>'
       + '<table>' + cell('\u05e9\u05dd', esc(row.emp_name || '')) + cell('\u05de\u05e1\' \u05ea.\u05d6.', esc(row.id_no || '')) + (row.emp_no ? cell('\u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3', esc(row.emp_no)) : '') + cell('\u05de\u05d7\u05dc\u05e7\u05d4', esc(row.dept || '-')) + (row.phone ? cell('\u05d8\u05dc\u05e4\u05d5\u05df', esc(row.phone)) : '') + (row.job ? cell('\u05ea\u05e4\u05e7\u05d9\u05d3', esc(row.job)) : '') + (row.agency ? cell('\u05d7\u05d1\u05e8\u05ea \u05db\u05d5\u05d7 \u05d0\u05d3\u05dd', esc(row.agency)) : '') + cell('\u05ea\u05d0\u05e8\u05d9\u05da', esc(fdate(day)) + ' ' + esc(hm))
       + (row.quiz_n ? cell('\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05d1\u05e0\u05d4', row.quiz_ok + '/' + row.quiz_n) : '') + '</table>'
       + (out.url ? '<p>\u05ea\u05d5\u05d9\u05e7 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4: <a href="' + esc(out.url) + '">' + esc(name) + '</a></p>' : '')
+      + (editTok ? editLinkHtml(editUrl(editTok)) : '')
       + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc ' + SITE.company + '.</p>' + SITE.signature + '</div>';
     await sendMailTo(od.token, to, [], '\u05d8\u05d5\u05e4\u05e1 \u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9 \u05d7\u05ea\u05d5\u05dd: ' + (row.emp_name || '') + ', ' + fdate(day), mail,
       // A form with many photos can pass what a mail carries: then the link above only.
@@ -1088,6 +1092,122 @@ export async function fileInduction(env, talk, row, sig, lang, nowMs, answers, d
   await mark(Object.assign(out.url ? { doc_url: out.url } : {}, { mailed_at: out.mailed ? new Date().toISOString() : null, doc_err: err }));
   // The alert text only: the callers send it after dropping the photos (review 09/11/2026), within waitUntil's time.
   out.alertText = equipAlertText(row, out, sig ? sig.length : 0);
+  return out;
+}
+
+// ---- correcting a sent induction (24/11/2026, functions/_indedit.js; DECISIONS 24/11/2026) ----
+// The link in the induction mail opens a form (op=edit) for HR and Michael: the HR code first (the same code and cookie as the
+// induction page), then details, equipment and photos. The signed copy is never touched: the change is written on the row
+// (toolbox_reads.edits keeps before and after), a correction page is filed beside the signed form and a mail goes to both.
+const EDIT_BAD = '\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05ea\u05d9\u05e7\u05d5\u05df \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e7\u05d7\u05ea \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9 \u05de\u05d4\u05de\u05d9\u05d9\u05dc \u05d4\u05d0\u05d7\u05e8\u05d5\u05df \u05e9\u05dc \u05d4\u05e7\u05dc\u05d9\u05d8\u05d4.';
+async function editLoad(env, tok, cookie) {
+  const t = await readEditToken(env, tok);
+  if (t.error === 'expired') return { err: errPage('\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3 \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05ea\u05d9\u05e7\u05d5\u05df (14 \u05d9\u05d5\u05dd). \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e7\u05d7\u05ea \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9 \u05de\u05de\u05d9\u05d9\u05dc \u05ea\u05d9\u05e7\u05d5\u05df, \u05d0\u05d5 \u05dc\u05e4\u05e0\u05d5\u05ea \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.', 410) };
+  if (t.error) return { err: errPage(EDIT_BAD, 403) };
+  const r = await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(t.id) + '&select=*', { headers: sbH(env) });
+  if (!r.ok) return { err: errPage('\u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.', 502) };
+  const rows = await r.json();
+  const row = Array.isArray(rows) ? rows[0] : null;
+  const talk = row ? await getTalk(env, row.talk_id) : null;
+  if (!row || !talk || talk.kind !== KIND_IND) return { err: errPage(EDIT_BAD, 403) };
+  return { row, talk, gate: await codeGate(env, talk, cookie) };
+}
+async function editShow(env, tok, cookie) {
+  const L = await editLoad(env, tok, cookie);
+  if (L.err) return L.err;
+  if (!L.gate.ok) return codePage(tok, 'he', false, !!L.gate.closed, false, true);
+  const nonce = newId() + newId();
+  return page('\u05ea\u05d9\u05e7\u05d5\u05df \u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9', editFormHtml(L.row, { tok, depts: TBT_DEPTS.map((x) => x[0]), otherDep: IND_OTHER_DEP, items: EQ_ITEMS, tools: EQ_TOOLS, free: EQ_FREE, retDef: EQ_RET_DEF, nonce }), '', 200, nonce, 'he');
+}
+async function editCode(env, form, request, tok) {
+  const L = await editLoad(env, tok, '');
+  if (L.err) return L.err;
+  const code = await indCode(env);
+  if (!code) return codePage(tok, 'he', false, true, false, true);
+  const gg = await guessGate(env, 'ind', request);
+  if (gg.locked) return codePage(tok, 'he', false, false, true, true);
+  if (!sameCode(String(form.get('icode') || '').trim().toLowerCase(), code)) { await new Promise((r) => setTimeout(r, WRONG_CODE_DELAY_MS)); return codePage(tok, 'he', true, false, false, true); }
+  await guessOk(env, gg);
+  const c = await makeCodeCookie(env, L.talk.id, code);
+  if (!c) return errPage('\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8.', 500);
+  return new Response(null, { status: 303, headers: { Location: editUrl(tok), 'Cache-Control': 'no-store',
+    'Set-Cookie': IND_CODE_COOKIE + '=' + c + '; Path=/api/talk; Max-Age=' + IND_CODE_DAYS * 86400 + '; HttpOnly; Secure; SameSite=Lax' } });
+}
+async function editPost(env, request, ctx) {
+  const form = await request.formData();
+  const tok = String(form.get('e') || '');
+  if (form.has('icode')) return editCode(env, form, request, tok);
+  const L = await editLoad(env, tok, request.headers.get('cookie'));
+  if (L.err) return L.err;
+  if (!L.gate.ok) return codePage(tok, 'he', false, !!L.gate.closed, false, true);
+  const row = L.row, back = '<p><a href="' + esc(editUrl(tok)) + '">\u05d7\u05d6\u05e8\u05d4 \u05dc\u05d8\u05d5\u05e4\u05e1 \u05d4\u05ea\u05d9\u05e7\u05d5\u05df</a></p>';
+  const fail = (m, st) => page('\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8', '<p>' + esc(m) + '</p>' + back, 'err', st || 400, '', 'he');
+  const prior = Array.isArray(row.edits) ? row.edits : [];
+  if (prior.length >= EDIT_MAX) return fail('\u05d1\u05d5\u05e6\u05e2\u05d5 \u05db\u05d1\u05e8 ' + EDIT_MAX + ' \u05ea\u05d9\u05e7\u05d5\u05e0\u05d9\u05dd \u05d1\u05e8\u05e9\u05d5\u05de\u05d4 \u05d4\u05d6\u05d5. \u05d9\u05e9 \u05dc\u05e4\u05e0\u05d5\u05ea \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.', 429);
+  const f = indFields(form);
+  if (!f.ok) return fail(IND_L.he[f.err]);
+  const rawName = oneLine(form.get('ename')), oid = idOf(form.get('eid'));
+  if (rawName.length < 2) return fail('\u05d7\u05e1\u05e8 \u05e9\u05dd.');
+  if (!oid) return fail('\u05de\u05e1\u05e4\u05e8 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d4\u05d6\u05d4\u05d5\u05ea \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df.');
+  const eqc = String(form.get('eqc') || ''), eq = equipFields(form);
+  if (eqc !== 'yes' && eqc !== 'no') return fail('\u05d9\u05e9 \u05dc\u05d1\u05d7\u05d5\u05e8 \u05d0\u05dd \u05e0\u05de\u05e1\u05e8 \u05e6\u05d9\u05d5\u05d3.');
+  const eqErr = equipCheck(eqc, eq);
+  if (eqErr) return fail(eqErr);
+  // The Hebrew conversion only for what HR changed: no AI call for a field left as it was
+  const nm = rawName === row.emp_name ? row.emp_name : await nameHe(env, request, rawName);
+  const job = f.v.job === row.job ? row.job : await textHe(env, request, f.v.job);
+  const agency = f.v.agency ? (f.v.agency === row.agency ? row.agency : await textHe(env, request, f.v.agency)) : null;
+  if (!nm || !job || (f.v.agency && !agency)) return fail('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05d4\u05d9\u05d4 \u05dc\u05e2\u05d1\u05d3 \u05d0\u05ea \u05d4\u05d8\u05e7\u05e1\u05d8 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea. \u05d1\u05d3\u05e7\u05d5 \u05d5\u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1.', 422);
+  const next = { emp_name: nm, id_no: oid, emp_no: f.v.emp_no, dept: f.v.dept, phone: f.v.phone, job, agency };
+  const changes = diffRow(row, next);
+  const docs = docsOf(form.getAll('doc').filter((v) => String(v || '').length > 0));
+  const entry = editEntry(changes, row.equip, eq, docs.length);
+  if (!changes.length && !entry.equip && !docs.length) return page('\u05dc\u05d0 \u05e9\u05d5\u05e0\u05d4 \u05d3\u05d1\u05e8', '<p>\u05dc\u05d0 \u05e9\u05d5\u05e0\u05d4 \u05d3\u05d1\u05e8 \u05d1\u05e8\u05e9\u05d5\u05de\u05d4.</p>' + back, '', 200, '', 'he');
+  const patch = {};
+  changes.forEach((c) => { patch[c.k] = next[c.k]; });
+  if (entry.equip) patch.equip = eq;
+  patch.edits = prior.concat([entry]);
+  const up = await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(row.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify(patch) });
+  if (!up.ok) return fail('\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.', 502);
+  // The photos wait in the private bucket until the correction page is filed and mailed (as the induction's photos do)
+  const kept = docs.length ? await keepDocs(env, row.id + '-c' + prior.length, docs) : [];
+  const job2 = fileCorrection(env, Object.assign({}, row, patch), entry, docs)
+    .then(async (out) => { if (out.url && out.mailed && kept.length) await dropDocs(env, kept); }).catch(() => null);
+  if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(job2); else await job2;
+  return page('\u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05e0\u05e9\u05de\u05e8', '<p>\u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05e0\u05e9\u05de\u05e8 \u05d1\u05e8\u05e9\u05d5\u05de\u05d4 \u05e9\u05dc ' + esc(row.emp_name || '') + '. \u05d3\u05e3 \u05ea\u05d9\u05e7\u05d5\u05df \u05d9\u05ea\u05d5\u05d9\u05e7 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05e7\u05dc\u05d9\u05d8\u05d4, \u05d5\u05de\u05d9\u05d9\u05dc \u05e2\u05d3\u05db\u05d5\u05df \u05d9\u05d9\u05e9\u05dc\u05d7 \u05d0\u05dc\u05d9\u05da \u05d5\u05dc\u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9 \u05d1\u05d3\u05e7\u05d5\u05ea \u05d4\u05e7\u05e8\u05d5\u05d1\u05d5\u05ea.</p>' + back, 'ok', 200, '', 'he');
+}
+// The correction page filed beside the signed form (the PDF, or the HTML when the conversion fails) and the update mail.
+// A failure is written on the row (doc_err), the photos stay in the private bucket.
+export async function fileCorrection(env, row, entry, docs, nowMs) {
+  const out = { pdf: false, url: null, mailed: false, err: null, name: null };
+  try {
+    const od = await accessToken(env);
+    const now = new Date(nowMs || Date.now());
+    const day = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+    const hm = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem', hour12: false });
+    const hms = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jerusalem', hour12: false }).replace(/:/g, '-');
+    const idTail = String(row.id_no || '').replace(/\D/g, '').slice(-4);
+    const base = day.split('-').reverse().join('-') + ' - ' + fileSafe(row.emp_name) + (idTail ? ' - ' + idTail : '') + ' - \u05ea\u05d9\u05e7\u05d5\u05df ' + hms;
+    const hb = new TextEncoder().encode(correctionHtml(row, entry, docs, { day, hm }));
+    let bytes = hb, name = base + '.html', type = 'text/html';
+    try {
+      await putFile(od.token, IND_SRC, base + '.html', hb, 'text/html; charset=utf-8');
+      const pdf = await graphPdf(od.token, (IND_SRC + '/' + base + '.html').split('/').map(encodeURIComponent).join('/'), PDF_MS_IND);
+      if (pdf) { bytes = pdf; name = base + '.pdf'; type = 'application/pdf'; out.pdf = true; }
+    } catch (e) { /* the HTML is filed and sent instead */ }
+    out.name = name;
+    const filed = await putFile(od.token, IND_ROOT + '/' + day.slice(0, 4), name, bytes, type);
+    out.url = filed.webUrl || null;
+    const to = [od.email, IND_HR].filter((v, i, a) => v && a.indexOf(v) === i);
+    const eTok = await makeEditToken(env, row.id, nowMs);
+    await sendMailTo(od.token, to, [], '\u05ea\u05d9\u05e7\u05d5\u05df \u05d1\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9: ' + (row.emp_name || '') + ', ' + fdate(day),
+      updateMailHtml(row, entry, out.url, eTok ? editUrl(eTok) : null, SITE.signature),
+      bytes.length <= MAIL_ATTACH_MAX ? [{ '@odata.type': '#microsoft.graph.fileAttachment', name, contentType: type, contentBytes: b64(bytes) }] : []);
+    out.mailed = true;
+  } catch (e) { out.err = String((e && e.message) || e).substring(0, 200); }
+  if (out.err || !out.url) {
+    try { await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(row.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ doc_err: ((row.doc_err ? row.doc_err + '; ' : '') + '\u05d3\u05e3 \u05ea\u05d9\u05e7\u05d5\u05df \u05dc\u05d0 \u05ea\u05d5\u05d9\u05e7: ' + (out.err || '\u05dc\u05dc\u05d0 \u05e7\u05d5\u05d1\u05e5')).substring(0, 400) }) }); } catch (e) { /* the correction is saved on the row */ }
+  }
   return out;
 }
 
@@ -1974,8 +2094,10 @@ async function makeLink(env, request, ctx) {
   // mailed as on the worker's send. About 10 + 8 photos calls out, under the free plan's 50.
   if (b && b.op === 'refile') {
     const rr = await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(String(b.id || '')) + '&select=*', { headers: sbH(env) });
-    const row = rr.ok ? ((await rr.json()) || [])[0] : null;
-    if (!row) return jsonResp({ error: 'not found' }, 404, cors);
+    const row0 = rr.ok ? ((await rr.json()) || [])[0] : null;
+    if (!row0) return jsonResp({ error: 'not found' }, 404, cors);
+    // The signed form is rebuilt from what the worker signed, not from the corrected row (security review 24/11/2026)
+    const row = asSigned(row0);
     const tr = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(String(row.talk_id || '')) + '&select=*', { headers: sbH(env) });
     const t = tr.ok ? ((await tr.json()) || [])[0] : null;
     if (!t) return jsonResp({ error: 'not found' }, 404, cors);
@@ -2119,11 +2241,13 @@ export async function onRequest(context) {
       if (q.get('op') === 'say') return await sayTalk(env, q.get('k') || '', q.get('l') || '', q.get('g') === '1', context, request.headers.get('cookie'), q.get('s'));
       if (q.get('op') === 'player') return new Response(PLAYER, { headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=3600', 'X-Content-Type-Options': 'nosniff' } });
       // A page that cannot load says so in the worker's language, with "try again" (B4).
+      if (q.get('op') === 'edit') { try { return await editShow(env, q.get('e') || '', request.headers.get('cookie')); } catch (e) { return errPage('\u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.', 500); } }
       try { return await showTalk(env, q.get('k') || '', q.get('l') || '', q.get('g') === '1', q.get('t') === '1', request.headers.get('cookie')); }
       catch (e) { const u = new URL(request.url); return errRetry(q.get('l') || '', u.pathname + u.search); }
     }
     if (request.method !== 'POST') return errPage('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05dc\u05d0 \u05e0\u05ea\u05de\u05db\u05ea.', 405);
     if (new URL(request.url).searchParams.get('op') === 'form0801') return await form0801Upload(env, request);
+    if (new URL(request.url).searchParams.get('op') === 'edit') return await editPost(env, request, context);
     if (/application\/json/i.test(request.headers.get('content-type') || '')) return await makeLink(env, request, context);
     return await signTalk(env, request, context);
   } catch (e) {
