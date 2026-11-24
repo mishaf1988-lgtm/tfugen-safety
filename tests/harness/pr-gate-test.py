@@ -36,6 +36,15 @@ out = run("pr-gate.py", dict(base, tool_input={"title": "x", "body": "רטרו: 
 check("a changed .md and the privacy test passes: pass", out == "{}", out)
 out = run("pr-gate.py", dict(base, tool_input={"title": "x", "body": "רטרו: אין\nskill: אין"}), dict(env, PR_GATE_PII_CMD="exit 1"))
 check("no .md changed: the privacy test is not run", out == "{}", out)
+# 24/11/2026: a decision without its decisions-map.tsv line is refused before the PR is opened (#3056 went red in CI on it).
+dec = dict(env, PR_GATE_CHANGED="DECISIONS.md", PR_GATE_PII_CMD="exit 0")
+ok_body = {"title": "x", "body": "רטרו: אין\nskill: אין\nעוזר: לא נוגע, hook בלבד"}
+out = run("pr-gate.py", dict(base, tool_input=ok_body), dict(dec, PR_GATE_DOMAINS_CMD="echo 'missing line'; exit 1"))
+check("a changed DECISIONS.md and domains-test fails: deny, with the test's output", deny(out) and "domains-test" in out and "missing line" in out, out)
+out = run("pr-gate.py", dict(base, tool_input=ok_body), dict(dec, PR_GATE_DOMAINS_CMD="exit 0"))
+check("a changed DECISIONS.md and domains-test passes: pass", out == "{}", out)
+out = run("pr-gate.py", dict(base, tool_input=ok_body), dict(env, PR_GATE_DOMAINS_CMD="exit 1"))
+check("DECISIONS.md not changed: domains-test is not run", out == "{}", out)
 out = run("pr-gate.py", {"tool_name": "mcp__other__create_pull_request", "cwd": R, "tool_input": {"title": "x", "body": ""}}, env)
 check("a create_pull_request with another prefix is also checked", deny(out), out)
 out = run("pr-gate.py", {"tool_name": "Bash", "cwd": R, "tool_input": {"command": "ls"}}, env)

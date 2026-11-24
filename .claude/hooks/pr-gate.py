@@ -166,6 +166,23 @@ def check(cwd, src, inp):
                     "permissionDecision": "deny",
                     "permissionDecisionReason": "pr-gate: בדיקת הפרטיות (pii-md-test) נכשלה, מספר נייד או אימייל אישי בקובץ md. להחליף בתיאור ('הנייד של מיכאל') ולדחוף שוב:\n" + out}}, ensure_ascii=False))
                 return
+        # 24/11/2026 (Michael: "בצע: להוסיף את הבדיקה לשער ה-PR"): a decision added in the same command chain as its commit and push
+        # slipped past push-gate (it reads the commits, not the working tree) and went red in CI on domains-test.py (#3056).
+        # A PR that changes DECISIONS.md or decisions-map.tsv runs it here, on the PR's own files. PR_GATE_DOMAINS_CMD replaces it in tests.
+        if any(f in ("DECISIONS.md", "project-files/domains/decisions-map.tsv") for f in files):
+            cmd = os.environ.get("PR_GATE_DOMAINS_CMD") or "%s -I tests/harness/domains-test.py" % sys.executable
+            try:
+                r = subprocess.run(cmd, shell=True, cwd=src, capture_output=True, text=True, encoding="utf-8", timeout=60)
+                bad = r.returncode != 0
+                out = ((r.stdout or "") + (r.stderr or ""))[-500:]
+            except Exception:
+                bad, out = False, ""        # the test is missing or slow: CI still checks
+            if bad:
+                print(json.dumps({"hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": "pr-gate (מפת החלטות, 24/11/2026): domains-test נכשלה. החלטה חדשה ב-DECISIONS.md צריכה שורה ב-project-files/domains/decisions-map.tsv (<שורה>\\t<כותרת>\\t<ענף>). לתקן, לקומיט ולפתוח שוב:\n" + out}}, ensure_ascii=False))
+                return
         print("{}"); return
     print(json.dumps({"hookSpecificOutput": {
         "hookEventName": "PreToolUse",
