@@ -2615,6 +2615,14 @@ const callIn = async (body) => {
       ownerAskedSign([{ text: 'תחתום בשמי על התעודה של רותם' }]) && ownerAskedSign([{ text: '🎤 אפשר לחתום על הטופס של רותם' }]) && ownerAskedSign([{ text: 'חתום ותחזיר לשולח' }]));
     check('ownerAskedSign: "מה עם הזימונים", "החתמתי את העובדים", "תשלח לי את המייל" or no messages = no',
       !ownerAskedSign([{ text: 'מה עם הזימונים' }]) && !ownerAskedSign([{ text: 'החתמתי את העובדים אתמול' }]) && !ownerAskedSign([{ text: 'תשלח לי את המייל' }]) && !ownerAskedSign([]) && !ownerAskedSign(null));
+    { const { signAskFor } = await import('./_build/routine-db.mjs');
+      const tgt = '2026-11-24 - תעודת משלוח 262201201 - רותם בטיחות - מולא.pdf 06_כיולים/גלאי CH4 מתאן RE: דוח כיול 15.10.2026 תפוגן service2.lab@rotemsafety.co.il';
+      const R = (id, text) => ({ id, text });
+      check('signAskFor: his ask that names the file (רותם, התעודה של רותם, גלאי המתאן) = that message',
+        (signAskFor([R('a', 'תחתום בשמי על התעודה של רותם ותחזיר לשולח')], tgt, []) || {}).id === 'a' && !!signAskFor([R('b', '🎤 לחתום על המשלוח של רותם')], tgt, []) && !!signAskFor([R('c', 'חתום על התעודה של גלאי המתאן')], tgt, []));
+      check('signAskFor: another file, "אל תחתום", a forwarded file line, or a message already used = no',
+        !signAskFor([R('d', 'תחתום בשמי על ההצעה של גזית')], tgt, []) && !signAskFor([R('e', 'אל תחתום על התעודה של רותם')], tgt, []) && !signAskFor([R('f', '📎 טופס_חתימה רותם.pdf')], tgt, []) && !signAskFor([R('a', 'תחתום בשמי על התעודה של רותם')], tgt, ['a']));
+    }
     const t0 = Date.now(), mk = (n, ago) => Array.from({ length: n }, (_, i) => ({ id: 's' + i, by: 'owner-ask', status: 'signed', at: new Date(t0 - ago).toISOString(), done_at: new Date(t0 - ago).toISOString() }));
     check('signNowCount: counts only sign_now signatures inside the window', signNowCount(JSON.stringify(mk(3, 60e3).concat(mk(2, 3600e3)).concat([{ id: 'x', by: 'w1', at: new Date(t0).toISOString() }])), t0 - 30 * 60e3) === 3 && SIGN_NOW_MAX === 5);
     const E = { ...ENV, META_PHONE_NUMBER_ID: 'P', META_ACCESS_TOKEN: 'm' };
