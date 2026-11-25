@@ -3095,15 +3095,18 @@ export function ownerAskedSign(rows) {
 // Security review 24/11/2026: the ask is bound to the file. A message counts only when it asks to sign (not a forwarded
 // file line, not "do not sign"), names the file (a word of 3+ letters of his message is in the file name, its folder or
 // the mail's subject or sender), and was not used for a signature already: one signature per message of his.
-// Fail-closed (retro finding 1, 25/11/2026): a negation up to two words before the verb (no / not / without / forbidden / not yet),
-// and "before you sign". Where in doubt the ask does not count and Michael's own tap stays.
-const SIGN_NOT_RE = new RegExp('(?:^|[^\\u05d0-\\u05ea])(?:(?:\u05d0\u05dc|\u05dc\u05d0|\u05d0\u05d9\u05df|\u05d1\u05dc\u05d9|\u05d0\u05e1\u05d5\u05e8|\u05d8\u05e8\u05dd)\\s+(?:[\\u05d0-\\u05ea]+\\s+){0,2}(?:\u05ea\u05d7\u05ea\u05d5\u05dd|\u05dc\u05d7\u05ea\u05d5\u05dd|\u05d7\u05ea\u05d5\u05dd|\u05ea\u05d7\u05ea\u05de\u05d9)|\u05dc\u05e4\u05e0\u05d9\\s+\u05e9(?:\u05ea\u05d7\u05ea\u05d5\u05dd|\u05ea\u05d7\u05ea\u05de\u05d9))');
+// Fail-closed (retro finding 1, its security review and refutation, 25/11/2026): ANY negation, cancel or wait word anywhere in the
+// message (Hebrew with up to two prefix letters: and / that / when; and English: don't, not, stop, cancel, wait) and it is not an ask.
+// Where in doubt Michael's own tap stays.
+const SIGN_NOT_RE = new RegExp('(?:^|[^\\u05d0-\\u05ea])[\u05d5\u05e9\u05db\u05dc\u05d4\u05de\u05d1]{0,2}(?:\u05d0\u05dc|\u05dc\u05d0|\u05d0\u05d9\u05df|\u05d1\u05dc\u05d9|\u05d0\u05e1\u05d5\u05e8|\u05d8\u05e8\u05dd|\u05dc\u05e4\u05e0\u05d9|\u05d1\u05d9\u05d8\u05d5\u05dc|\u05d1\u05d8\u05dc|\u05ea\u05d1\u05d8\u05dc|\u05dc\u05d1\u05d8\u05dc|\u05de\u05d1\u05d5\u05d8\u05dc|\u05e2\u05e6\u05d5\u05e8|\u05ea\u05e2\u05e6\u05d5\u05e8|\u05d7\u05db\u05d4|\u05ea\u05d7\u05db\u05d4|\u05e8\u05d2\u05e2|\u05ea\u05e9\u05db\u05d7|\u05e2\u05d6\u05d5\u05d1|\u05ea\u05e2\u05d6\u05d5\u05d1)(?:[^\\u05d0-\\u05ea]|$)');
+const SIGN_NOT_EN_RE = /(?:^|[^a-z])(?:don'?t|do not|not|never|no|stop|cancel|wait|hold)(?:[^a-z]|$)/i;
+export const signCancels = (t) => SIGN_NOT_RE.test(String(t || '')) || SIGN_NOT_EN_RE.test(String(t || ''));
 const SIGN_FILLER = ['\u05ea\u05d7\u05ea\u05d5\u05dd', '\u05dc\u05d7\u05ea\u05d5\u05dd', '\u05d7\u05ea\u05d5\u05dd', '\u05d7\u05ea\u05d9\u05de\u05d4', '\u05ea\u05d7\u05ea\u05de\u05d9', '\u05d1\u05e9\u05de\u05d9', '\u05e9\u05dc\u05d9', '\u05ea\u05d7\u05d6\u05d9\u05e8', '\u05dc\u05e9\u05d5\u05dc\u05d7', '\u05ea\u05e9\u05dc\u05d7', '\u05e9\u05dc\u05d7', '\u05de\u05e1\u05de\u05da', '\u05e7\u05d5\u05d1\u05e5', '\u05d0\u05d5\u05ea\u05d5', '\u05d0\u05d5\u05ea\u05d4', '\u05d1\u05d1\u05e7\u05e9\u05d4', '\u05e2\u05db\u05e9\u05d9\u05d5', '\u05d1\u05e9\u05e8\u05e9\u05d5\u05e8', '\u05d8\u05d9\u05d5\u05d8\u05d4', '\u05de\u05d9\u05d9\u05dc'];
 // A question is not an ask ("is the certificate signed?"), and the bare word "signed" counts only as the imperative at the start of
 // the message ("sign X"), never as the adjective in the middle of one (retro finding 1, 25/11/2026). Pure.
 export const SIGN_ASK_NOBARE_RE = new RegExp('(?:^|[^\\u05d0-\\u05ea])(?:\u05ea\u05d7\u05ea\u05d5\u05dd|\u05ea\u05d7\u05ea\u05de\u05d9|\u05dc\u05d7\u05ea\u05d5\u05dd|\u05ea\u05d7\u05ea\u05d5\u05de\u05d4|\u05d7\u05ea\u05d9\u05de\u05d4)(?:[^\\u05d0-\\u05ea]|$)');
 const SIGN_ASK_IMPERATIVE_RE = new RegExp('^(?:(?:\u05d1\u05d1\u05e7\u05e9\u05d4|\u05e0\u05d0|\u05d0\u05d6)\\s+)?\u05d7\u05ea\u05d5\u05dd(?:[^\\u05d0-\\u05ea]|$)');
-const SIGN_QUESTION_RE = new RegExp('[?\\uff1f]|(?:^|[^\\u05d0-\\u05ea])\u05d4\u05d0\u05dd(?:[^\\u05d0-\\u05ea]|$)');
+const SIGN_QUESTION_RE = new RegExp('[?\\uff1f\\u061f]|(?:^|[^\\u05d0-\\u05ea])\u05d4\u05d0\u05dd(?:[^\\u05d0-\\u05ea]|$)');
 export const ownerAskIsSign = (t) => { const x = String(t || ''); const lead = x.replace(/^[^a-zA-Z\u05d0-\u05ea]+/, ''); return !SIGN_QUESTION_RE.test(x) && (SIGN_ASK_NOBARE_RE.test(x) || SIGN_ASK_IMPERATIVE_RE.test(lead)); };
 export function signAskFor(rows, target, used) {
   // security review 24/11/2026 (refutation): whole words of the file name and its folder only (not the mail subject or
@@ -3112,9 +3115,14 @@ export function signAskFor(rows, target, used) {
   const strip = (w) => /^[\u05d4\u05d5\u05dc\u05d1\u05de\u05e9][\u05d0-\u05ea]{3,}$/.test(w) ? [w, w.slice(1)] : [w];
   const hay = new Set(); toks(target).forEach((w) => strip(w).forEach((x) => hay.add(x)));
   const usedSet = new Set(Array.isArray(used) ? used : []);
+  // rows come newest first (ts.desc). Any message of his, newer than the ask or the ask itself, that cancels, negates or asks (a
+  // question), whether or not it names the file, ends it: null (security review and refutation of 25/11/2026: "do not sign this",
+  // "stop" and "do not sign X" after "sign X" were skipped and the earlier ask signed). A plain newer message is ignored.
   for (const r of (Array.isArray(rows) ? rows : [])) {
     const t = String((r && r.text) || '');
-    if (!r || !r.id || usedSet.has(r.id) || r.forwarded === true || r.forwarded === 'true' || /^\s*📎/.test(t) || !ownerAskIsSign(t) || SIGN_NOT_RE.test(t)) continue;
+    if (!r || !r.id || r.forwarded === true || r.forwarded === 'true' || /^\s*📎/.test(t)) continue;
+    if (signCancels(t) || SIGN_QUESTION_RE.test(t)) return null;
+    if (usedSet.has(r.id) || !ownerAskIsSign(t)) continue;
     if (toks(t).some((w) => strip(w).some((x) => SIGN_FILLER.indexOf(x) < 0 && hay.has(x)))) return r;
   }
   return null;
