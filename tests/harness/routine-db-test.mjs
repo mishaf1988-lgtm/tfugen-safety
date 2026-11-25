@@ -754,6 +754,10 @@ const callIn = async (body) => {
       check('past date gate: a past date, today, a future validity, a due date and a planned check all pass',
         pastDateGate('מכתב סימקין מ-30/04/2026 תויק. נבדק ב-18/11/2026.', T) === null && pastDateGate('כויל 12/11/2026, כיול הבא 14/05/2027. התוקף עודכן ל-10/11/2027', T) === null
         && pastDateGate('ההיתר הוארך עד 20/11/2026 בשעה 16:00', T) === null && pastDateGate('הבדיקה תתבצע ב-03/05/2027', T) === null && pastDateGate('נבדק. הבא ב-01/02/2027', T) === null && pastDateGate('נבדק 12/11/2026, כיול הבא ב-14/05/2027', T) === null && pastDateGate('נבדק והכיול הבא ב-14/05/2027', T) === null && pastDateGate('תויק, בתוקף מ-01/01/2027', T) === null && pastDateGate('נשלח ב-45/13/2027', T) === null && pastDateGate('', T) === null);
+      check('past date gate (deep review 25/11/2026): a future verb that holds a past word passes (יבוצע, להגיע, אשלח, יישלח, תפונה, להתקבל, יכויל)',
+        ['הכיול יבוצע ב-03/12/2026', 'הטכנאי אמור להגיע ב-02/12/2026', 'אשלח לך תזכורת ב-01/12/2026', 'המייל יישלח ב-30/11/2026', 'הפסולת תפונה ב-10/12/2026', 'האישור צפוי להתקבל ב-05/12/2026', 'הגלאי יכויל ב-14/12/2026'].every((l) => pastDateGate(l, T) === null));
+      check('past date gate: a prefix that keeps the past (שהגיע, וכשבוצע, ששלחתי, במכתב, המייל) still stops',
+        ['האישור שהגיע ב-02/12/2026', 'וכשבוצע ב-03/12/2026', 'הקובץ ששלחתי ב-01/12/2026', 'כתוב במכתב מ-30/12/2026', 'המייל מ-30/12/2026', 'המייל נשלח ב-03/12/2026'].every((l) => !!pastDateGate(l, T)));
       const rq = await call({ op: 'wa_me', agent: 'routine-wa-assistant', text: 'מכתב הספק מ-30/04/2099 כבר בתיק.' });
       check('wa_me: a past event dated in the future is refused before anything is sent', rq.status === 400 && /date in the future/.test(rq.json.error), rq.json); }
     { const { claimGate } = await import('./_build/routine-db.mjs');
