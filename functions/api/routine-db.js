@@ -4856,7 +4856,7 @@ async function routineDbHandle(context) {
       }
       const name = new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + (await digest(d.file)).slice(0, 16) + '.txt';
       const f = await putFile(at.token, OD_ROOT + OD_BUNDLE, name, d.file, 'text/plain');
-      return jsonResp({ ok: true, file: OD_BUNDLE + '/' + name, size: f.size || null, mails: body.ids.length, subject: d.subject, subject_checked: checked, note: 'one draft with the attachments of all the mails appears in Drafts within about 5 minutes; check Drafts before telling Michael it is there' }, 200, {});
+      return jsonResp({ ok: true, file: OD_BUNDLE + '/' + name, size: f.size || null, mails: body.ids.length, subject: d.subject, subjects: JSON.parse(d.file).subjects, subject_checked: checked, note: 'one draft with the attachments of all the mails appears in Drafts within about 5 minutes; check Drafts before telling Michael it is there' }, 200, {});
     }
     if (body.op === 'mail_draft') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'cc', 'subject', 'body', 'attach', 'reply_to', 'checked', 'thread_checked', 'replaces', 'item'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
