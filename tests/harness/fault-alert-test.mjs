@@ -44,6 +44,12 @@ const NOW = '2026-10-31T14:50:00.000Z';
   check('a failure followed by a success of the same agent is not reported', faultItems(prev, [], rec, '2026-11-21T21:00:00.000Z').items.length === 0);
   const open = rec.concat([{ agent: 'main-chat', at: '2026-11-21T19:30:00Z', ok: false, line: 'timeout' }]);
   check('a failure after the success is still reported', faultItems(prev, [], open, '2026-11-21T21:00:00.000Z').items.length === 1);
+  // 25/11/2026 (deep review): an agent of many jobs, or a drill line, does not clear a real failure
+  const wa = [{ agent: 'routine-wa-assistant', at: '2026-11-21T18:05:00Z', ok: false, line: 'wa_me 500, no answer' },
+    { agent: 'routine-wa-assistant', at: '2026-11-21T18:09:00Z', ok: true, line: 'drill-gold-261121-g1 passed' }];
+  check('a success of the WhatsApp assistant does not clear its failure', faultItems(prev, [], wa, '2026-11-21T21:00:00.000Z').items.length === 1);
+  check('nor a later success of the mail filer', faultItems(prev, [], [{ agent: 'routine-mail-filing', at: '2026-11-21T18:05:00Z', ok: false, line: 'od_move timeout' }, { agent: 'routine-mail-filing', at: '2026-11-21T18:30:00Z', ok: true, line: 'filed 3' }], '2026-11-21T21:00:00.000Z').items.length === 1);
+  check('a drill line of a one-job agent is not a recovery', faultItems(prev, [], [rec[0], { agent: 'main-chat', at: '2026-11-21T18:59:41Z', ok: true, line: '\u05d6\u05d4\u05d1: 10/10' }], '2026-11-21T21:00:00.000Z').items.length === 1);
   check('a success of another agent does not clear it', faultItems(prev, [], [rec[0], { agent: 'wa-assistant', at: '2026-11-21T19:00:00Z', ok: true, line: 'x' }], '2026-11-21T21:00:00.000Z').items.length === 1);
 }
 { // 11/11/2026: the developer that was fired on a fault and failed is the same fault going on: quiet, no second alert
