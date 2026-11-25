@@ -1,6 +1,6 @@
 // Fault alert (31/10/2026, functions/_faults.js): every watchdog tick tells Michael, in ONE WhatsApp, about errors in
 // users' browsers and agents that reported a failure since the last tick; the same fault once a day.
-import { faultItems, faultText, faultDevText, faultTodo, FAULT_FIXERS, goldenStep, goldenAlready, faultInternal, faultEscalate, faultEscalateText, FAULT_ESCALATE_MS, GOLDEN_SETTLE_MS, GOLDEN_GAP_MS, GOLDEN_TEXT, FAULT_LINES, FAULT_FIRST_MS } from './_build/_faults.mjs';
+import { faultItems, faultText, faultDevText, faultTodo, FAULT_FIXERS, goldenStep, goldenAlready, faultInternal, faultEscalate, faultEscalateText, FAULT_ESCALATE_MS, GOLDEN_SETTLE_MS, GOLDEN_GAP_MS, GOLDEN_TEXT, FAULT_LINES, FAULT_FIRST_MS, DRILL_LINE } from './_build/_faults.mjs';
 import { devInboxAdd, devInboxDone, devFaultSiblings, faultAgentsOf, DEV_SIBLING_MS, DEV_RESENT_NOTE } from './_build/routine-db.mjs';
 import fs from 'node:fs';
 let pass = 0, fail = 0;
@@ -50,6 +50,10 @@ const NOW = '2026-10-31T14:50:00.000Z';
   check('a success of the WhatsApp assistant does not clear its failure', faultItems(prev, [], wa, '2026-11-21T21:00:00.000Z').items.length === 1);
   check('nor a later success of the mail filer', faultItems(prev, [], [{ agent: 'routine-mail-filing', at: '2026-11-21T18:05:00Z', ok: false, line: 'od_move timeout' }, { agent: 'routine-mail-filing', at: '2026-11-21T18:30:00Z', ok: true, line: 'filed 3' }], '2026-11-21T21:00:00.000Z').items.length === 1);
   check('a drill line of a one-job agent is not a recovery', faultItems(prev, [], [rec[0], { agent: 'main-chat', at: '2026-11-21T18:59:41Z', ok: true, line: '\u05d6\u05d4\u05d1: 10/10' }], '2026-11-21T21:00:00.000Z').items.length === 1);
+  // pairs (lessons-gate): three real drill lines that match, three ordinary success lines that do not
+  const yes = ['drill-gold-261121-g1 passed', '\u05d6\u05d4\u05d1: 10/10, \u05e2\u05d1\u05e8\u05d9\u05ea: 10/10', '\u05ea\u05e8\u05d2\u05d9\u05dc \u05de\u05d4\u05de\u05d0\u05de\u05df: \u05e2\u05e0\u05d4 \u05e0\u05db\u05d5\u05df'];
+  const no = ['quota 15%', '\u05ea\u05d5\u05d9\u05e7\u05d5 3 \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05d4\u05de\u05d9\u05d9\u05dc', '\u05e2\u05e0\u05d9\u05ea\u05d9 \u05dc\u05de\u05d9\u05db\u05d0\u05dc \u05e2\u05dc \u05d4\u05d6\u05d4\u05d1 \u05e9\u05dc \u05d4\u05e1\u05e4\u05e7'];
+  check('DRILL_LINE pairs', yes.every((l) => DRILL_LINE.test(l)) && no.every((l) => !DRILL_LINE.test(l)), [yes.filter((l) => !DRILL_LINE.test(l)), no.filter((l) => DRILL_LINE.test(l))]);
   check('a success of another agent does not clear it', faultItems(prev, [], [rec[0], { agent: 'wa-assistant', at: '2026-11-21T19:00:00Z', ok: true, line: 'x' }], '2026-11-21T21:00:00.000Z').items.length === 1);
 }
 { // 11/11/2026: the developer that was fired on a fault and failed is the same fault going on: quiet, no second alert
