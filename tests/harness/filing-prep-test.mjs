@@ -75,6 +75,8 @@ const tk = filingTokens('2026-11-20 0812 - נשלח - report E-1227.pdf serial 4
 check('codes, long digit runs and dates; the inbox time prefix is not a token; upper case', JSON.stringify(tk) === JSON.stringify(['E-1227', '4455667', '12.05.2027', '3/4/2026', 'MS2345']), tk);
 check('at most 8', filingTokens('A11 A12 A13 A14 A15 A16 A17 A18 A19 A20').length === 8);
 check('a short number and a word are not tokens', filingTokens('page 12 of 30, year 2026').length === 0, filingTokens('page 12 of 30, year 2026'));
+check('db tokens: a bare year or a short number is not searchable, a letter or 6 digits is (retro finding 3)', JSON.stringify(filingDbTokens([{ tokens: ['2026', '12345', 'AB1', '123456', '12-34-56'] }])) === JSON.stringify(['AB1', '123456', '12-34-56']), filingDbTokens([{ tokens: ['2026', '12345', 'AB1', '123456', '12-34-56'] }]))
+check('a year does not match a row that merely holds it', filingMatches(['2026'], [{ id: 'd', n: 'cert 2026' }], []).length === 0);
 check('db tokens: no dates, a hyphenated code also without its hyphen', JSON.stringify(filingDbTokens([{ tokens: ['E-1227', '12.05.2027', '4455667'] }])) === JSON.stringify(['E-1227', 'E1227', '4455667']));
 
 console.log('\n3. matches');
@@ -137,6 +139,14 @@ console.log('\n6. through the server: scans, Word, photos, a failed file');
   const r3 = await call({ op: 'filing_prep', agent: 'routine-mail-filing' });
   check('a table that cannot be read: partial named, a note not to say "not in the register"', r3.j.ok === true && JSON.stringify(r3.j.partial) === JSON.stringify(['equip_inspections', 'docs']) && /could not be read/.test(r3.j.note), { p: r3.j.partial, note: r3.j.note });
   sbFail = false;
+  // retro finding 3 (25/11/2026): exactly 200 rows back = the answer may be cut, say so (partial), do not let "not in the register" through
+  items = [{ name: n.docx, size: 3000, file: {}, createdDateTime: at(0) }];
+  sbRows = { docs: Array.from({ length: 200 }, (_, k) => ({ id: 'd' + k, n: 'MS2345 cert ' + k, e: null, file_url: null })), equip_inspections: [] };
+  const r4 = await call({ op: 'filing_prep', agent: 'routine-mail-filing' });
+  check('200 rows back from a table: it is named in partial', r4.j.ok === true && JSON.stringify(r4.j.partial) === JSON.stringify(['docs']), r4.j.partial);
+  sbRows = { docs: Array.from({ length: 199 }, (_, k) => ({ id: 'd' + k, n: 'MS2345 cert ' + k, e: null, file_url: null })), equip_inspections: [] };
+  const r5 = await call({ op: 'filing_prep', agent: 'routine-mail-filing' });
+  check('199 rows back: not partial', r5.j.ok === true && r5.j.partial === undefined, r5.j.partial);
   items = [];
   log = [];
   const e = await call({ op: 'filing_prep', agent: 'routine-mail-filing' });
