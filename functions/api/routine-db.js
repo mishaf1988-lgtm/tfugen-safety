@@ -1578,10 +1578,14 @@ export function filingTokens(s) {
 }
 // The tokens worth looking up in the tables: not dates, 3+ characters, a hyphenated code also without its hyphen. Only
 // letters, digits and "-": safe inside PostgREST or=(...). Pure.
+export const FILING_PREP_SEL_CAP = 200;
+// A token is searchable only when it has a letter or at least 6 digits (25/11/2026, retro finding 3): a bare year or a short
+// number ("2026") matches dozens of rows, the search then hits the 200-row cap and the agent reads "not in the register".
+export const filingTokenOk = (t) => /^[A-Z0-9-]{3,40}$/.test(t) && (/[A-Z]/.test(t) || t.replace(/-/g, '').length >= 6);
 export function filingDbTokens(files) {
   const out = [];
   for (const f of files || []) for (const t of (f && f.tokens) || []) {
-    if (!/^[A-Z0-9-]{3,40}$/.test(t)) continue;
+    if (!filingTokenOk(t)) continue;
     [t, t.replace(/-/g, '')].forEach((v) => { if (v.length >= 3 && out.indexOf(v) < 0 && out.length < FILING_PREP_DB_TOKENS) out.push(v); });
   }
   return out;
@@ -1590,7 +1594,7 @@ const fpNorm = (v) => String(v === undefined || v === null ? '' : v).toUpperCase
 // Up to FILING_PREP_MATCHES rows (equipment first, then documents) whose name, code, serial or report number holds one of
 // the file's tokens, hyphens and spaces ignored. Only the columns the agent needs. Pure.
 export function filingMatches(tokens, docs, equip) {
-  const toks = (tokens || []).filter((t) => /^[A-Z0-9-]{3,40}$/.test(t)).map(fpNorm).filter((t) => t.length >= 3);
+  const toks = (tokens || []).filter(filingTokenOk).map(fpNorm).filter((t) => t.length >= 3);
   const out = [];
   if (!toks.length) return out;
   const has = (vals) => vals.some((v) => { const n = fpNorm(v); return n && toks.some((t) => n.indexOf(t) >= 0); });
@@ -4661,9 +4665,11 @@ async function routineDbHandle(context) {
         if (!toks.length) return [];
         const or = '(' + toks.map((t) => by.map((col) => col + '.ilike.*' + encodeURIComponent(t) + '*').join(',')).join(',') + ')';
         try {
-          const r = await f(url + '/rest/v1/' + table + '?select=' + cols + '&or=' + or + '&limit=200', { headers: h, signal: tmo(SB_MS) });
+          const r = await f(url + '/rest/v1/' + table + '?select=' + cols + '&or=' + or + '&limit=' + FILING_PREP_SEL_CAP, { headers: h, signal: tmo(SB_MS) });
           if (!r.ok) { partial.push(table); return []; }
           const j = await r.json();
+          // exactly the cap = the answer may be cut: say so, the agent must not read "not in the register" from it (retro finding 3)
+          if (Array.isArray(j) && j.length >= FILING_PREP_SEL_CAP) partial.push(table);
           return Array.isArray(j) ? j : [];
         } catch (e) { partial.push(table); return []; }
       };
