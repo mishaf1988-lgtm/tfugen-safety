@@ -211,5 +211,20 @@ _yml = open(os.path.join(os.path.dirname(P), '..', 'workflows', 'tests.yml'), en
 _raw = [l.strip()[:90] for l in _yml.split('\n') if _re.search(r'run:.*(\$BASE|-gate\.py)', l) and 'pr-base.sh' not in l and 'hook-coverage' not in l]
 check('tests.yml: every step that reads BASE takes it from pr-base.sh', not _raw and _yml.count('pr-base.sh') >= 5, _raw)
 
+# 25/11/2026 action cards: a new decision needs a card or a 'כרטיס:' line
+_fd2 = gate.file_diff
+gate.file_diff = lambda f: "+## 25/11/2026: \u05d4\u05d7\u05dc\u05d8\u05d4 \u05d7\u05d3\u05e9\u05d4\n+text"
+_b = "\u05e8\u05d8\u05e8\u05d5: \u05d0\u05d9\u05df\nskill: \u05d0\u05d9\u05df\n\u05e2\u05d5\u05d6\u05e8: \u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9 \u05dc\u05e2\u05d5\u05d6\u05e8"
+ok, why = gate.check("docs", _b, ["DECISIONS.md"])
+check("a new decision without a card or a card line is stopped", not ok and "action-cards" in why, why)
+ok, why = gate.check("docs", _b + "\n\u05db\u05e8\u05d8\u05d9\u05e1: \u05d0\u05d9\u05df (\u05d4\u05d7\u05dc\u05d8\u05ea \u05ea\u05db\u05e0\u05d5\u05df)", ["DECISIONS.md"])
+check("a 'card: none (why)' line passes", ok, why)
+ok, why = gate.check("docs", _b, ["DECISIONS.md", "project-files/action-cards.md"])
+check("a PR that adds the card passes", ok, why)
+gate.file_diff = lambda f: "+- \u05e9\u05d5\u05e8\u05d4 \u05d1\u05d4\u05d7\u05dc\u05d8\u05d4 \u05e7\u05d9\u05d9\u05de\u05ea"
+ok, why = gate.check("docs", _b, ["DECISIONS.md"])
+check("a line added to an existing decision needs no card", ok, why)
+gate.file_diff = _fd2
+
 print('%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)

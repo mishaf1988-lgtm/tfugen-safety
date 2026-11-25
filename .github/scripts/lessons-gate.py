@@ -200,6 +200,20 @@ def has_domain_lessons(f):
         return False
 
 
+# 25/11/2026 (Michael: "a method so nothing is missed"; DECISIONS "action cards"): a new decision becomes an action card
+# (project-files/action-cards.md), the reminder injected at the moment of the action, or the PR says why it has none:
+# 'כרטיס: אין (<why>)'. A decision kept only in DECISIONS.md was not read before the action (lesson 251).
+CARD = re.compile(r"^\s*(card|\u05db\u05e8\u05d8\u05d9\u05e1)\s*:\s*(\S.{3,})$", re.I | re.M)
+CARDS_FILE = "project-files/action-cards.md"
+
+
+def adds_decision(files):
+    if "DECISIONS.md" not in files:
+        return False
+    d = file_diff("DECISIONS.md")
+    return bool(d and re.search(r"^\+##+ ", d, re.M))
+
+
 def _walk(title, body, files):
     # 21/11/2026 (Michael in the questionnaire: "do it: all the requirements at once"): yields every missing line, in the
     # order check() used to return them, and at the end ('ok', why) when nothing is missing. check() gives the first one,
@@ -241,6 +255,10 @@ def _walk(title, body, files):
         yield ("this PR adds a decision or changes the server, and the assistant did not learn it (Michael 06/11/2026: "
                        "a sync rule). Update what it reads (project-files/domains/rules/<branch>.md, wa-topics/, routine-wa-core.md), "
                        "or add 'עוזר: <why the assistant is not touched>'.")
+    if adds_decision(files) and CARDS_FILE not in files and not CARD.search(body or ""):
+        yield ("this PR adds a decision to DECISIONS.md. Add its action card to project-files/action-cards.md (when, what to "
+                       "remember, source; then python3 tools/action-cards.py --write), or a line '\u05db\u05e8\u05d8\u05d9\u05e1: \u05d0\u05d9\u05df (<why>)' "
+                       "(Michael 25/11/2026, action cards).")
     ct = changed_tests(files)
     if ct:
         m = TEST_CHANGED.search(body or "")

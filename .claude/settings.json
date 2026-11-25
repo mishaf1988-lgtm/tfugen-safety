@@ -179,6 +179,15 @@
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/artifact-fresh.py"
           }
         ]
+      },
+      {
+        "matcher": "Bash|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/action-card.py"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -272,6 +281,10 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/second-brain.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/action-complete.py"
           }
         ]
       },

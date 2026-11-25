@@ -269,9 +269,37 @@ def card_short(text, limit=1300):
     return t if len(t) <= limit else t[:limit - 3] + "..."
 
 
+def action_index(cwd):
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("action_cards", os.path.join(cwd, "tools", "action-cards.py"))
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        return m.index_line(m.parse(os.path.join(cwd, "project-files", "action-cards.md")))
+    except Exception:
+        return ""
+
+
+def clear_action_cards(d):
+    """After a compaction the injected cards are gone from the context: show them again (research 25/11/2026)."""
+    if d.get("source") != "compact":
+        return
+    import tempfile
+    sess = "".join(ch for ch in str(d.get("session_id") or "") if ch.isalnum() or ch in "-_")[:80]
+    try:
+        os.remove(os.path.join(os.environ.get("ACTION_CARD_STATE") or tempfile.gettempdir(), "action-cards-" + sess + ".json"))
+    except OSError:
+        pass
+
+
 def report(cwd):
     out = ["== התחלת שיחה (session-start.py) ==",
            "skills לטעון: " + ", ".join(SKILLS) + " (CLAUDE.md, Workflow 1-2)"]
+    # 25/11/2026 (DECISIONS "action cards"): a short index of the action cards, always in context, as a safety net
+    # for an action the PreToolUse hook does not catch (Vercel: an index always present 100%, a skill fetched 53%).
+    idx = action_index(cwd)
+    if idx:
+        out.append("📌 " + idx)
     # 31/10/2026 (Michael: "how do I make you not forget data?", "do it"): what exists, first, before anything that can
     # be cut. The report was 13-18KB and arrived as a 2KB preview, so the map (where 08-6808365 and the immediate
     # developer were written) was never seen. The whole card, with a line per part: project-files/system-map/card.md.
@@ -402,6 +430,10 @@ def main():
         except Exception:
             d = {}
     cwd = os.environ.get("CLAUDE_PROJECT_DIR") or d.get("cwd") or "."
+    try:
+        clear_action_cards(d)
+    except Exception:
+        pass
     try:
         print(report(cwd))
     except Exception:
