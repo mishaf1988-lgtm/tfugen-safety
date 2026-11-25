@@ -20,11 +20,25 @@ reg = {'agents': [
     {'id': 'g', 'enabled': True, 'cron': '0 8 * * *', 'model': '', 'persistent': True},
 ]}
 check('a trigger in a standing session is skipped (the session model applies)', 'g' not in [a['id'] for a in tm.missing(reg)])
+check('a trigger with a session id is skipped too', tm.missing({'agents': [{'id': 'h', 'enabled': True, 'cron': '0 8 * * *', 'model': '', 'session': 'S9'}]}) == [])
 check('only enabled recurring triggers with an empty or missing model', [a['id'] for a in tm.missing(reg)] == ['a', 'e', 'f'], tm.missing(reg))
 check('an empty registry gives nothing', tm.missing({}) == [])
 from datetime import datetime, timezone
 now = datetime(2026, 11, 24, 12, 0, tzinfo=timezone.utc)
 check('age in days', abs(tm.age_days('2026-11-22T12:00:00.000Z', now) - 2.0) < 1e-6)
 check('no date gives None', tm.age_days('', now) is None)
+reg2 = {'agents': [
+    {'id': 'a', 'name': 'דוור', 'enabled': True, 'cron': '0 8 * * *', 'session': 'S1'},
+    {'id': 'b', 'name': 'מכסה', 'enabled': True, 'cron': '0 8 * * *', 'session': 'S2'},
+    {'id': 'c', 'name': 'סרטונים', 'enabled': True, 'cron': '0 8 * * *', 'session': 'session_01HFfawAK6QrP2RJ61muspy1'},
+    {'id': 'd', 'name': 'כבוי', 'enabled': False, 'cron': '0 8 * * *', 'session': 'S3'},
+    {'id': 'e', 'name': 'חד פעמי', 'enabled': True, 'cron': '', 'session': 'S4'},
+    {'id': 'f', 'name': 'בלי שיחה', 'enabled': True, 'cron': '0 8 * * *'},
+    {'id': 'g', 'name': 'מכסה 2', 'enabled': True, 'cron': '0 9 * * *', 'session': 'S2'},
+]}
+r = tm.unregistered(reg2, {'מנהל': 'S1'})
+check('an unregistered standing session is reported with its triggers; registered, exempt, disabled, one-shot and no-session are not', r == {'S2': ['מכסה', 'מכסה 2']}, r)
+check('a list of ids works like the sessions object', tm.unregistered(reg2, ['S1', 'S2']) == {})
+check('the video session is exempt', 'session_01HFfawAK6QrP2RJ61muspy1' in tm.EXEMPT)
 print('\n%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)
