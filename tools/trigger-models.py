@@ -4,12 +4,18 @@ for a trigger with no model"; handoff 24/11/2026 idea 4). A trigger with an empt
 (Fable, the most expensive), and on 24/11/2026 the coach was found that way by hand among 37 triggers.
 
 Reads the shared agents_registry (state_get; written by the weekly quota measurement from list_triggers, each agent has
-`model` = derived_state.model or empty). One-shot reminders (no cron) are skipped, and so is an agent with `persistent: true` (a trigger that fires into a standing
+`model` = derived_state.model or empty). One-shot reminders (no cron) are skipped, and so is an agent with `persistent: true` or a `session` id (a trigger that fires into a standing
 session runs on that session's model, so an empty model there is normal). The registry is weekly, so the age is
 printed: an empty model on an old registry may already be fixed, check it with get_trigger before changing anything.
 
-Usage: python3 tools/trigger-models.py
-Exit 0 = every recurring trigger has a model, 1 = some do not (printed), 3 = no ROUTINE_KEY, 4 = the server did not answer.
+Second check (25/11/2026, Michael: "build" the gate for the repeat of the Dvor and the quota session, 321k and 146k tokens, never
+registered for the early rotation): with `--workers FILE` (JSON: the `sessions` object of meta/workers, or a list of session ids)
+every standing session a recurring trigger fires into (`session` in the registry entry) must be in that list, or in EXEMPT
+(a session whose run depends on local files in its container, so a swap would lose them). One that is not is printed.
+
+Usage: python3 tools/trigger-models.py [--workers FILE]
+Exit 0 = every recurring trigger has a model (and every standing session is registered), 1 = some do not (printed),
+3 = no ROUTINE_KEY, 4 = the server did not answer.
 Who runs it: the quality checker (routine-quality.md 2ג); any session that wants the list.
 """
 import json
@@ -20,13 +26,26 @@ from datetime import datetime, timezone
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB = os.path.join(ROOT, 'project-files', 'routine-db.sh')
+# standing sessions that must NOT be rotated: the video queue keeps its files in ~/.deck-video of its container
+EXEMPT = {'session_01HFfawAK6QrP2RJ61muspy1'}
 
 
 def missing(registry):
     """Enabled recurring triggers whose model is empty."""
     return [a for a in registry.get('agents', [])
             if a.get('enabled') and (a.get('cron') or '').strip() and not (a.get('model') or '').strip()
-            and not a.get('persistent')]
+            and not a.get('persistent') and not (a.get('session') or '').strip()]
+
+
+def unregistered(registry, workers, exempt=EXEMPT):
+    """{session id: [trigger names]} for standing sessions of enabled recurring triggers that are not in `workers`."""
+    known = set(workers.values()) if isinstance(workers, dict) else set(workers)
+    out = {}
+    for a in registry.get('agents', []):
+        sid = (a.get('session') or '').strip()
+        if a.get('enabled') and (a.get('cron') or '').strip() and sid and sid not in known and sid not in exempt:
+            out.setdefault(sid, []).append(a.get('name') or a.get('id'))
+    return out
 
 
 def age_days(at, now=None):
@@ -58,7 +77,14 @@ def main():
     for a in bad:
         print('NO MODEL: %s  %s  %s' % (a.get('id'), a.get('name'), a.get('cron')))
     print('%d recurring triggers without a model' % len(bad))
-    return 1 if bad else 0
+    gone = {}
+    if '--workers' in sys.argv:
+        with open(sys.argv[sys.argv.index('--workers') + 1], encoding='utf-8') as f:
+            gone = unregistered(reg, json.load(f))
+        for sid, names in gone.items():
+            print('NOT REGISTERED FOR ROTATION: %s  (%s)' % (sid, ', '.join(names)))
+        print('%d standing sessions not in meta/workers' % len(gone))
+    return 1 if (bad or gone) else 0
 
 
 if __name__ == '__main__':
