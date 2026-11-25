@@ -294,7 +294,7 @@ const callIn = async (body) => {
   })();
   check('od_pull never into the mail-flow folders (draft, file request, inbox, calendar queue, OCR text): those take files through mail_draft / mail_request only (25/10/2026 retro)', (() => {
     const t = (d) => odPullCheck({ agent: 'dev', why: 'to a flow folder', from: 'x/a.txt', dir: d });
-    return OD_TRIGGER_DIRS.length === 12 && OD_TRIGGER_DIRS.every((d) => !!t(d).error) && !!t(OD_DRAFT + '/sub').error && !t('22_x/09_y').error;
+    return OD_TRIGGER_DIRS.length === 13 && OD_TRIGGER_DIRS.every((d) => !!t(d).error) && !!t(OD_DRAFT + '/sub').error && !t('22_x/09_y').error;
   })());
   check('od_mkdir and od_put_pdf refuse every flow-trigger folder, OCR text folder included (01/11/2026, STATUS retro 25/10)', (() => {
     const mk = (parent, name) => odMkdirCheck({ agent: 'dev', why: 'to a flow folder', parent, name });
@@ -1923,7 +1923,7 @@ const callIn = async (body) => {
       for (const m of src.matchAll(/(OD_ROOT \+ '_|\\u05d1\\u05d8\\u05d9\\u05d7\\u05d5\\u05ea\/_(?!\\u05d0\\u05d5\\u05d8\\u05d5|\\u05e0\\u05db\\u05e0\\u05e1|\\u05d8\\u05e7\\u05e1\\u05d8|\\u05d2\\u05e8\\u05e1))/g)) direct.push(pth.basename(f));
     }
     check('no new "_" folder straight under the safety folder: a folder a flow reads is OD_AUTO + "/" + its name (add it to OD_AUTO_DIRS)', tops.length === 0 && direct.length === 0, { tops, direct });
-    check('the nine flow folders are inside OD_AUTO (flow 10, iso swaps: 31/10/2026; flow 11, forwards: 02/11/2026)', [OD_REQ, OD_DRAFT, OD_CAL_MOVE, OD_DRAFT_TRASH, OD_CAL_INVITE, OD_ISO_SWAP].every((x) => x.indexOf(OD_AUTO + '/') === 0) && OD_AUTO_DIRS.length === 9 && OD_DRAFT_DONE.indexOf(OD_AUTO + '/') === 0);
+    check('the nine flow folders are inside OD_AUTO (flow 10, iso swaps: 31/10/2026; flow 11, forwards: 02/11/2026)', [OD_REQ, OD_DRAFT, OD_CAL_MOVE, OD_DRAFT_TRASH, OD_CAL_INVITE, OD_ISO_SWAP].every((x) => x.indexOf(OD_AUTO + '/') === 0) && OD_AUTO_DIRS.length === 10 && OD_DRAFT_DONE.indexOf(OD_AUTO + '/') === 0);
   }
 
   console.log('\n4e4b. a promise check-in waits while Michael is in a conversation (26/10/2026)');
@@ -2989,6 +2989,19 @@ const callIn = async (body) => {
     check('forwardRequest: a bad id, an id with "/", no subject, no recipient, more than 5, or a 2001-character comment = refused',
       !!forwardRequest({ message_id: 'short', subject: 'x y', to: 'a@b.co' }).error && !!forwardRequest({ message_id: ID, subject: 'x y', to: '' }).error && !!forwardRequest({ message_id: ID + '/x', subject: 'x y', to: 'a@b.co' }).error && !!forwardRequest({ message_id: ID, to: 'a@b.co' }).error
       && !!forwardRequest({ message_id: ID, subject: 'x y', to: 'a@b.co;c@d.co;e@f.co;g@h.co;i@j.co;k@l.co' }).error && !!forwardRequest({ message_id: ID, subject: 'x y', to: 'a@b.co', comment: 'x'.repeat(2001) }).error);
+    { // mail_bundle (25/11/2026, flow 12): one draft with the attachments of several mails
+      const { bundleRequest, OD_BUNDLE, BUNDLE_MAX } = await import('./_build/routine-db.mjs');
+      const ID2 = ID.replace('1234567890', '0987654321');
+      const ok = bundleRequest({ ids: [ID, ID2], subjects: ['\u05de\u05e4\u05d5\u05ea 1', '\u05de\u05e4\u05d5\u05ea 2'], to: 'a@tapugan.co.il; b@tapugan.co.il', comment: 'x <y>' });
+      const bj = ok.file && JSON.parse(ok.file);
+      check('bundleRequest: the file holds ids, subjects, recipients, subject (the first subject when none given), the comment as escaped rtl html and mode attach',
+        bj && bj.ids.length === 2 && bj.subjects.length === 2 && bj.to === 'a@tapugan.co.il;b@tapugan.co.il' && bj.subject === bj.subjects[0] && /^<div dir="rtl"/.test(bj.comment) && /&lt;y&gt;/.test(bj.comment) && bj.mode === 'attach', bj);
+      const bad = (o) => !!bundleRequest(Object.assign({ ids: [ID, ID2], subjects: ['aa', 'bb'], to: 'a@b.co' }, o)).error;
+      check('bundleRequest: one id, more than ' + BUNDLE_MAX + ', a repeated id, an id with "/", subjects of a different count, no recipient, 6 recipients or a 2001-character comment = refused',
+        bad({ ids: [ID], subjects: ['aa'] }) && bad({ ids: Array(BUNDLE_MAX + 1).fill(ID), subjects: Array(BUNDLE_MAX + 1).fill('aa') }) && bad({ ids: [ID, ID] }) && bad({ ids: [ID, ID2 + '/x'] })
+        && bad({ subjects: ['aa'] }) && bad({ to: '' }) && bad({ to: 'a@b.co;c@d.co;e@f.co;g@h.co;i@j.co;k@l.co' }) && bad({ comment: 'x'.repeat(2001) }));
+      check('the bundle folder is its own automation folder (index 9), so no other op writes there', OD_BUNDLE.endsWith(DIRS[9]) && OD_BUNDLE.indexOf(OD_AUTO_DIRS[0]) < 0);
+    }
     check('the forward folder is its own automation folder (index 7), so no other op writes there', OD_FORWARD.endsWith(DIRS[7]) && /העברות/.test(OD_FORWARD));
     const g0 = graph, puts = [];
     graph = async (u, o = {}) => {

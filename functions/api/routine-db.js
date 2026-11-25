@@ -94,6 +94,8 @@
 //              with conflictBehavior=fail: an existing name is never touched, nothing is moved,
 //              replaced or deleted. Never inside the old-versions / to-delete / ARCHIVE folders
 //              or the mail inbox. Michael's computer is not needed. odMkdirCheck.
+//   mail_bundle (25/11/2026) {agent, why, ids[2-6], subjects[], to, subject?, comment?}: ONE draft with the attachments of several mails
+//              (zip too), through flow 12. Never sends.
 //   mail_forward (02/11/2026) {agent, why, message_id, subject, to, comment?}: a forward of the mail with every attachment
 //              (zip too) as a draft in Michael's Drafts, through flow 11 (createForward). Never sends.
 //   mail_draft  (20/10/2026) a draft in Michael's Outlook via the third Power Automate flow: {agent, why, to, subject, body,
@@ -1291,7 +1293,7 @@ export const OD_SKIP = '\u05dc\u05d0 \u05dc\u05ea\u05d9\u05d5\u05e7';
 // in one folder, OD_AUTO. Each flow keeps its own subfolder. OD_AUTO_DIRS = their names; the old top-level
 // names stay refused as destinations too, in case an old folder is still there.
 export const OD_AUTO = '_\u05d0\u05d5\u05d8\u05d5\u05de\u05e6\u05d9\u05d4';
-export const OD_AUTO_DIRS = ['_\u05d1\u05e7\u05e9\u05d5\u05ea \u05de\u05d4\u05de\u05d9\u05d9\u05dc', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d9\u05d9\u05dc', '_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df', '_\u05d4\u05d6\u05d6\u05d5\u05ea \u05d1\u05d9\u05d5\u05de\u05df', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d7\u05d9\u05e7\u05d4', '_\u05d6\u05d9\u05de\u05d5\u05e0\u05d9\u05dd', '_\u05d4\u05d7\u05dc\u05e4\u05d5\u05ea iso', '_\u05d4\u05e2\u05d1\u05e8\u05d5\u05ea \u05de\u05d9\u05d9\u05dc', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05e9\u05e0\u05d5\u05e6\u05e8\u05d5'];
+export const OD_AUTO_DIRS = ['_\u05d1\u05e7\u05e9\u05d5\u05ea \u05de\u05d4\u05de\u05d9\u05d9\u05dc', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d9\u05d9\u05dc', '_\u05ea\u05d5\u05e8\u05d9\u05dd \u05dc\u05d9\u05d5\u05de\u05df', '_\u05d4\u05d6\u05d6\u05d5\u05ea \u05d1\u05d9\u05d5\u05de\u05df', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05dc\u05de\u05d7\u05d9\u05e7\u05d4', '_\u05d6\u05d9\u05de\u05d5\u05e0\u05d9\u05dd', '_\u05d4\u05d7\u05dc\u05e4\u05d5\u05ea iso', '_\u05d4\u05e2\u05d1\u05e8\u05d5\u05ea \u05de\u05d9\u05d9\u05dc', '_\u05d8\u05d9\u05d5\u05d8\u05d5\u05ea \u05e9\u05e0\u05d5\u05e6\u05e8\u05d5', '_\u05de\u05d9\u05d9\u05dc \u05de\u05d0\u05d5\u05d7\u05d3'];
 export const isAutoTop = (x) => x === OD_AUTO || OD_AUTO_DIRS.indexOf(x) >= 0;
 export const OD_REQ = OD_AUTO + '/' + OD_AUTO_DIRS[0];
 // A Graph / Outlook message id: base64url-ish, as outlook_email_search returns it.
@@ -1492,6 +1494,11 @@ export function dropSignoff(text) {
   while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
   return lines.join('\n').replace(/\s+$/, '');
 }
+// The comment as rtl html with his signature (shared by mail_forward and mail_bundle).
+export function commentHtml(comment) {
+  const kept = dropSignoff(comment);
+  return '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">' + kept.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>') + SITE.signature + '</div>';
+}
 export function forwardRequest(b) {
   const id = String(b.message_id || '');
   // no "/" (security review 02/11/2026): the flow puts the id in the Graph URL as it is
@@ -1503,12 +1510,32 @@ export function forwardRequest(b) {
   if (comment.length > 2000) return { error: 'comment: up to 2000 characters' };
   // 15/11/2026 (Michael: "\u05d0\u05d9\u05df \u05d7\u05ea\u05d9\u05de\u05d4 \u05e0\u05d5\u05e8\u05de\u05dc\u05d9\u05ea \u05d1\u05de\u05d4 \u05e9\u05e9\u05dc\u05d7\u05ea\u05d9 \u05db\u05d1\u05e8"): createForward adds no Outlook signature either, so the
   // comment gets his signature and the Arial 14px of mail_draft; a typed "<name>" at the end goes
-  const kept = dropSignoff(comment);
-  const html = '<div dir="rtl" style="direction:rtl;text-align:right;font-family:Arial,sans-serif;font-size:14px">' + kept.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>') + SITE.signature + '</div>';
+  const html = commentHtml(comment);
   // subject in the file (02/11/2026): the server has no Mail.Read (DECISIONS 27/09/2026), so flow 11 compares it with the
   // mail it reads and stops when they differ (C73)
   const file = JSON.stringify({ id, subject: String(b.subject).trim(), to: list.join(';'), forward_body: { toRecipients: list.map((a) => ({ emailAddress: { address: a } })), comment: html } });
   return { file, to: list };
+}
+// mail_bundle (25/11/2026, Michael: "\u05d1\u05e6\u05e2: \u05dc\u05d4\u05de\u05e9\u05d9\u05da \u05e2\u05d3 \u05d4\u05e1\u05d5\u05e3", flow 12, DECISIONS 25/11/2026): ONE draft in Drafts that carries the attachments of
+// several mails (zip too). Flow 12 reads the request file, compares each mail's subject with `subjects` (stops with no draft on a
+// difference), makes the draft and adds every non-inline attachment. Chrome step 0 (25/11/2026): all four files of the test mail
+// joined with 201, so route "attach". Never sends. In the file `comment` is the rtl html body, `subject` the draft's subject. Pure.
+export const OD_BUNDLE = OD_AUTO + '/' + OD_AUTO_DIRS[9];
+export const BUNDLE_MAX = 6;
+export function bundleRequest(b) {
+  const ids = Array.isArray(b.ids) ? b.ids.map((x) => String(x || '')) : [];
+  if (ids.length < 2 || ids.length > BUNDLE_MAX) return { error: 'ids: 2-' + BUNDLE_MAX + ' message ids as outlook_email_search returns them (one mail = mail_forward)' };
+  if (ids.some((id) => !MAIL_REQ_ID.test(id) || id.indexOf('/') >= 0) || new Set(ids).size !== ids.length) return { error: 'ids: each the id as outlook_email_search returns it, no repeats' };
+  const subjects = Array.isArray(b.subjects) ? b.subjects.map((x) => String(x == null ? '' : x).trim()) : [];
+  if (subjects.length !== ids.length || subjects.some((x) => x.length < 2)) return { error: 'subjects: one subject per id, in the same order (checked against each mail by flow 12, and logged)' };
+  const list = String(b.to || '').split(/[;,]/).map((x) => x.trim()).filter(Boolean);
+  if (!list.length || list.length > 5 || !draftListOk(list)) return { error: 'to: 1-5 addresses, "a@x; b@y"' };
+  const comment = String(b.comment == null ? '' : b.comment).replace(/\r\n/g, '\n').trim();
+  if (comment.length > 2000) return { error: 'comment: up to 2000 characters' };
+  const subject = String(b.subject == null || String(b.subject).trim() === '' ? subjects[0] : b.subject).trim();
+  if (subject.length < 2 || subject.length > 200) return { error: 'subject: 2-200 characters' };
+  const file = JSON.stringify({ ids, subjects, to: list.join(';'), subject, comment: commentHtml(comment), mode: 'attach' });
+  return { file, to: list, subject };
 }
 // mail_got (02/11/2026): {agent, since} -> the files the flows saved into OD_INBOX since then (a mail_request's
 // "at"). Up to 48 hours back, top level only (not the "not filed" folder), newest first, at most MAIL_GOT_MAX.
@@ -4808,6 +4835,28 @@ async function routineDbHandle(context) {
       const name = new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + (await digest(d.file)).slice(0, 16) + '.txt';
       const f = await putFile(at.token, OD_ROOT + OD_FORWARD, name, d.file, 'text/plain');
       return jsonResp({ ok: true, file: OD_FORWARD + '/' + name, size: f.size || null, subject: mj ? (mj.subject || null) : String(body.subject).trim(), subject_checked: mj ? 'server' : 'flow 11', attachments: mj ? !!mj.hasAttachments : null, note: 'the forward draft with every attachment appears in Drafts within about 5 minutes; Michael sends it from Outlook' }, 200, {});
+    }
+    if (body.op === 'mail_bundle') {
+      // like mail_forward: no "approved" field, it only makes a draft and Michael sends it himself
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'ids', 'subjects', 'to', 'subject', 'comment'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
+      if (String(body.why || '').trim().length < 5) return jsonResp({ ok: false, error: 'why required' }, 400, {});
+      const d = bundleRequest(body);
+      if (d.error) return jsonResp({ ok: false, error: d.error }, 400, {});
+      const at = await accessToken(env);
+      const ns = (t) => String(t || '').replace(/\s+/g, ' ').trim().toLowerCase();
+      let checked = 'server';
+      for (let i = 0; i < body.ids.length; i++) {
+        const mr = await fetch('https://graph.microsoft.com/v1.0/me/messages/' + encodeURIComponent(body.ids[i]) + '?$select=subject', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) }).catch(() => null);
+        // 403 = the server has no Mail.Read (as mail_forward, 02/11/2026): flow 12 compares each subject and stops on a difference
+        if (mr && mr.status === 403) { checked = 'flow 12'; break; }
+        if (!mr || !mr.ok) return jsonResp({ ok: false, error: 'mail ' + (i + 1) + ' not found (' + (mr ? mr.status : 'network') + ')' }, 200, {});
+        const mj = await mr.json().catch(() => ({}));
+        if (ns(mj.subject) !== ns(JSON.parse(d.file).subjects[i])) return jsonResp({ ok: false, error: 'subject does not match mail ' + (i + 1) + ': ' + String(mj.subject || '').slice(0, 120) }, 200, {});
+      }
+      const name = new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + (await digest(d.file)).slice(0, 16) + '.txt';
+      const f = await putFile(at.token, OD_ROOT + OD_BUNDLE, name, d.file, 'text/plain');
+      return jsonResp({ ok: true, file: OD_BUNDLE + '/' + name, size: f.size || null, mails: body.ids.length, subject: d.subject, subjects: JSON.parse(d.file).subjects, subject_checked: checked, note: 'one draft with the attachments of all the mails appears in Drafts within about 5 minutes; check Drafts before telling Michael it is there' }, 200, {});
     }
     if (body.op === 'mail_draft') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'to', 'cc', 'subject', 'body', 'attach', 'reply_to', 'checked', 'thread_checked', 'replaces', 'item'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
