@@ -1,6 +1,6 @@
 // routine-db filing_prep (24/11/2026, Michael in the questionnaire: "do it: as planned"): one read-only call that gives the
 // mail-filing agent up to 10 inbox files with the start of their text, their tokens and matching rows, instead of a call per file.
-import { onRequest, filingPrepCheck, filingTokens, filingMatches, filingPrepPage, filingDbTokens, FILING_PREP_MAX, FILING_PREP_MATCHES, FILING_PREP_CHARS, FILING_PREP_PDF_MAX, filingText, filingMask, OD_ROOT, OD_INBOX, OD_OCR_DIR } from './_build/routine-db.mjs';
+import { onRequest, filingPrepCheck, filingTokens, filingMatches, filingPrepPage, filingDbTokens, filingTokenOk, FILING_PREP_MAX, FILING_PREP_MATCHES, FILING_PREP_CHARS, FILING_PREP_PDF_MAX, filingText, filingMask, OD_ROOT, OD_INBOX, OD_OCR_DIR } from './_build/routine-db.mjs';
 import { PDFDocument, StandardFonts, PDFName } from './_build/_pdflib.mjs';
 import { cappedBytes, pdfFirstText, PDF_STREAM_CAP } from './_build/_pdftext.mjs';
 import zlib from 'node:zlib';
@@ -76,6 +76,9 @@ check('codes, long digit runs and dates; the inbox time prefix is not a token; u
 check('at most 8', filingTokens('A11 A12 A13 A14 A15 A16 A17 A18 A19 A20').length === 8);
 check('a short number and a word are not tokens', filingTokens('page 12 of 30, year 2026').length === 0, filingTokens('page 12 of 30, year 2026'));
 check('db tokens: a bare year or a short number is not searchable, a letter or 6 digits is (retro finding 3)', JSON.stringify(filingDbTokens([{ tokens: ['2026', '12345', 'AB1', '123456', '12-34-56'] }])) === JSON.stringify(['AB1', '123456', '12-34-56']), filingDbTokens([{ tokens: ['2026', '12345', 'AB1', '123456', '12-34-56'] }]))
+// pairs (retro 28/10/2026 d): the token filter tried on 3 real tokens that must pass and 3 that must not
+check('pairs: 3 real tokens pass the filter (code with a hyphen, certificate, 7-digit serial)', ['E-1227', 'MS2345', '4455667'].every((t) => filingTokenOk(t)), ['E-1227', 'MS2345', '4455667'].map((t) => filingTokenOk(t)));
+check('pairs: 3 real non-tokens do not pass (a year, a page number, a date)', ['2026', '12345', '12.05.2027'].every((t) => !filingTokenOk(t)), ['2026', '12345', '12.05.2027'].map((t) => filingTokenOk(t)));
 check('a year does not match a row that merely holds it', filingMatches(['2026'], [{ id: 'd', n: 'cert 2026' }], []).length === 0);
 check('db tokens: no dates, a hyphenated code also without its hyphen', JSON.stringify(filingDbTokens([{ tokens: ['E-1227', '12.05.2027', '4455667'] }])) === JSON.stringify(['E-1227', 'E1227', '4455667']));
 
