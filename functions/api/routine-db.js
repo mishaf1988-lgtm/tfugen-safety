@@ -3071,10 +3071,15 @@ export function addYear(text, now) {
 // the assistant's answers of the 45 days before: these two stops and no other. Pure: null = send, or the error text.
 // The words between stop at a comma, and at "next", "until", "valid" ("checked 12/11, the next one on 14/05/2027" is a plan).
 // today = YYYY-MM-DD (Israel). A date that is no real date is left to pass.
-const PAST_DATE_RE = /(?:\u05e0\u05e9\u05dc\u05d7|\u05d4\u05ea\u05e7\u05d1\u05dc|\u05d4\u05d2\u05d9\u05e2|\u05d1\u05d9\u05e7\u05e9|\u05db\u05ea\u05d1|\u05e9\u05dc\u05d7\u05d5?|\u05ea\u05d5\u05d9\u05e7|\u05d1\u05d5\u05e6\u05e2|\u05e0\u05d1\u05d3\u05e7|\u05db\u05d5\u05d9\u05dc|\u05e4\u05d5\u05e0\u05d4|\u05e4\u05d5\u05e0\u05ea\u05d4|\u05e0\u05d3\u05d7\u05d4|\u05e0\u05d3\u05d7\u05ea\u05d4|\u05de\u05db\u05ea\u05d1|\u05de\u05d9\u05d9\u05dc)(?:(?!\u05d4\u05d1\u05d0|\u05e2\u05d3 |\u05ea\u05d5\u05e7\u05e3|\u05d9\u05e4\u05d5\u05d2)[^.\n,;:]){0,40}?[\u05d1\u05de]-?(\d{1,2})\/(\d{1,2})\/(\d{4})/g;
+// 25/11/2026 (deep review, finding 1): a past word must start a word. Before a verb only vav / shin / kaf-shin may stand
+// (she-higia passes), so a future verb that holds one (yevutza, lehagia, eshlach, yishalach, tefune, lehitkabel, yechuyal)
+// no longer stops a right date. Before a noun (michtav, mail) also bet / he / lamed / mem (bamichtav, hamail).
+const PAST_DATE_RE = /(?:(?<=(?:^|[^\u05d0-\u05ea])(?:\u05d5|\u05e9|\u05db\u05e9|\u05d5\u05e9|\u05d5\u05db\u05e9)?)(?:\u05e0\u05e9\u05dc\u05d7|\u05d4\u05ea\u05e7\u05d1\u05dc|\u05d4\u05d2\u05d9\u05e2|\u05d1\u05d9\u05e7\u05e9|\u05db\u05ea\u05d1|\u05e9\u05dc\u05d7\u05d5?|\u05ea\u05d5\u05d9\u05e7|\u05d1\u05d5\u05e6\u05e2|\u05e0\u05d1\u05d3\u05e7|\u05db\u05d5\u05d9\u05dc|\u05e4\u05d5\u05e0\u05d4|\u05e4\u05d5\u05e0\u05ea\u05d4|\u05e0\u05d3\u05d7\u05d4|\u05e0\u05d3\u05d7\u05ea\u05d4)|(?<=(?:^|[^\u05d0-\u05ea])[\u05d5\u05e9\u05db\u05d1\u05dc\u05de\u05d4]{0,3})(?:\u05de\u05db\u05ea\u05d1|\u05de\u05d9\u05d9\u05dc))(?:(?!\u05d4\u05d1\u05d0|\u05e2\u05d3 |\u05ea\u05d5\u05e7\u05e3|\u05d9\u05e4\u05d5\u05d2)[^.\n,;:]){0,40}?[\u05d1\u05de]-?(\d{1,2})\/(\d{1,2})\/(\d{4})/g;
 export function pastDateGate(text, today) {
   const t = String(text || ''); let m; PAST_DATE_RE.lastIndex = 0;
   while ((m = PAST_DATE_RE.exec(t))) {
+    // a letter / mail is past only when dated from ("\u05de-"): "\u05d4\u05de\u05d9\u05d9\u05dc \u05d9\u05d9\u05e9\u05dc\u05d7 \u05d1-30/11" is a plan (25/11/2026). Step one char on, so a verb inside ("\u05d4\u05de\u05d9\u05d9\u05dc \u05e0\u05e9\u05dc\u05d7") is still read.
+    if (/^[^\u05d0-\u05ea]*[\u05d5\u05e9\u05db\u05d1\u05dc\u05de\u05d4]{0,3}(?:\u05de\u05db\u05ea\u05d1|\u05de\u05d9\u05d9\u05dc)/.test(m[0]) && /\u05d1-?\d{1,2}\/\d{1,2}\/\d{4}$/.test(m[0])) { PAST_DATE_RE.lastIndex = m.index + 1; continue; }
     const d = m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0');
     if (Number(m[2]) >= 1 && Number(m[2]) <= 12 && Number(m[1]) >= 1 && Number(m[1]) <= 31 && d > String(today)) {
       return 'date in the future: "' + m[0].slice(-60) + '" says something already happened on ' + m[1] + '/' + m[2] + '/' + m[3] + ', after today (' + today + '). Check the year in the source (a two digit year "26" is 2026) and send again with the right date.';
