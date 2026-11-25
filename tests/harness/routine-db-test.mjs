@@ -2631,8 +2631,8 @@ const callIn = async (body) => {
       check('signAskFor pairs: 15 real wordings (question, "signed" as an adjective, "without", "before you sign", "forbidden", "not yet", question marks, a negation three words before, a comma, a Hebrew hyphen, "do not make a signature") = no',
         notAsks.every((t, k) => !signAskFor([R('n' + k, t)], tgt, [])), notAsks.map((t, k) => !!signAskFor([R('n' + k, t)], tgt, [])));
       // a later cancel beats an earlier ask (rows are newest first), whether or not it names the file; a plain newer message does not
-      const cancels = ['אל תחתום על זה', 'עצור', 'stop, do not sign', "don't sign", 'תבטל את החתימה של רותם', 'לבטל, לא צריך', 'חכה עם התעודה של רותם', 'האם רותם הגיע', 'אל תחתום על רותם'];
-      check('signAskFor: 9 real later messages (do not sign this, stop, English, cancel, wait, a question) after "sign X" = no',
+      const cancels = ['אל תחתום על זה', 'עצור', 'stop, do not sign', "don't sign", 'תבטל את החתימה של רותם', 'לבטל, לא צריך', 'חכה עם התעודה של רותם', 'האם רותם הגיע', 'אל תחתום על רותם', 'די', 'שנייה', 'תפסיק', 'שכח מזה', 'don’t sign', 'nope', '🛑', '❌', 'אַל תחתום'];
+      check('signAskFor: 18 real later messages (do not sign this, stop, English, curly apostrophe, emoji, niqqud, cancel, wait, a question) after "sign X" = no',
         cancels.every((c, k) => signAskFor([R('x' + k, c), R('c0', 'תחתום על התעודה של רותם')], tgt, []) === null), cancels.map((c, k) => !!signAskFor([R('x' + k, c), R('c0', 'תחתום על התעודה של רותם')], tgt, [])));
       check('signAskFor: a plain newer message ("what about the summons", "thanks") leaves the earlier ask',
         (signAskFor([R('u1', 'מה עם הזימונים'), R('c0', 'תחתום על התעודה של רותם')], tgt, []) || {}).id === 'c0' && (signAskFor([R('u2', 'תודה רבה'), R('c0', 'תחתום על התעודה של רותם')], tgt, []) || {}).id === 'c0');
