@@ -14,7 +14,7 @@ Usage:
 Then, in a hyperframes project (project-files/decks/video/README.md): copy index.html, audio/, logo.jpg and the
 images, and render.
 """
-import base64, html, json, os, subprocess, sys, time
+import base64, html, json, os, re, subprocess, sys, time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import deck_anim  # noqa: E402
@@ -83,7 +83,16 @@ def tts(scenes, work):
 
 
 def build(scenes, work):
-    e = html.escape
+    e = html.escape  # for attributes (file names)
+    # 25/11/2026: numbers and Latin runs ("5.22", "27/07/2026", "88 dBA") inside right-to-left text came out jumbled in the red source tag and in
+    # the noise levels; each run is an isolated left-to-right piece, so its characters stay in order and the Hebrew around it keeps its own order.
+    ltr = re.compile(r'[0-9A-Za-z]+(?:[.\-/:][0-9A-Za-z]+)*%?')
+    def b(txt):
+        txt, out, last = str(txt), [], 0
+        for m in ltr.finditer(txt):
+            out.append(e(txt[last:m.start()])); out.append('<bdi dir="ltr">%s</bdi>' % e(m.group(0))); last = m.end()
+        out.append(e(txt[last:]))
+        return ''.join(out)
     n = len(scenes)
     secs, auds, tl = [], [], []
     t = 0.0
@@ -93,15 +102,15 @@ def build(scenes, work):
         d = round(a + PAD + LEAD, 2)
         body = []
         if kind == 'title':
-            body.append('<img class="logo" src="logo.jpg"><div class="big" id="s%d_t">%s</div>' % (i, e(title)))
-            for k, l in enumerate(lines): body.append('<div class="sub" id="s%d_l%d">%s</div>' % (i, k, e(l)))
-            body.append('<div class="foot2" id="s%d_w">%s</div>' % (i, e(warn or BY)))
+            body.append('<img class="logo" src="logo.jpg"><div class="big" id="s%d_t">%s</div>' % (i, b(title)))
+            for k, l in enumerate(lines): body.append('<div class="sub" id="s%d_l%d">%s</div>' % (i, k, b(l)))
+            body.append('<div class="foot2" id="s%d_w">%s</div>' % (i, b(warn or BY)))
             tl.append('tl.from("#s%d_t",{y:60,opacity:0,duration:0.8,ease:"power3.out"},%.2f);' % (i, t + 0.3))
             for k in range(len(lines)): tl.append('tl.from("#s%d_l%d",{opacity:0,duration:0.6},%.2f);' % (i, k, t + 1.2 + 0.6 * k))
             tl.append('tl.from("#s%d_w",{opacity:0,duration:0.6},%.2f);' % (i, t + 1.2 + 0.6 * len(lines)))
         else:
-            if tag: body.append('<div class="tag">%s</div>' % e(tag))
-            body.append('<div class="h" id="s%d_t">%s</div>' % (i, e(title)))
+            if tag: body.append('<div class="tag">%s</div>' % b(tag))
+            body.append('<div class="h" id="s%d_t">%s</div>' % (i, b(title)))
             if kind == 'photo':
                 body.append('<img class="photo" src="%s"><div class="credit">%s</div>' % (e(x[6][0]), e(x[6][1])))
             if kind == 'anim':
@@ -110,8 +119,8 @@ def build(scenes, work):
                 tl.extend(atl)
             chars = sum(len(l) for l in lines) + (len(warn) if warn else 0) + (500 if kind in ('photo', 'anim') else 0)
             cls = ' class="xs"' if chars > 330 else (' class="sm"' if chars > 220 or len(lines) > 5 else '')
-            body.append('<ul%s>%s</ul>' % (cls, ''.join('<li id="s%d_l%d">%s</li>' % (i, k, e(l)) for k, l in enumerate(lines))))
-            if warn: body.append('<div class="warn" id="s%d_w">%s</div>' % (i, e(warn)))
+            body.append('<ul%s>%s</ul>' % (cls, ''.join('<li id="s%d_l%d">%s</li>' % (i, k, b(l)) for k, l in enumerate(lines))))
+            if warn: body.append('<div class="warn" id="s%d_w">%s</div>' % (i, b(warn)))
             tl.append('tl.from("#s%d_t",{x:80,opacity:0,duration:0.6,ease:"power3.out"},%.2f);' % (i, t + 0.2))
             step = (d - 2.0) / max(1, len(lines) + (1 if warn else 0))
             for k in range(len(lines)): tl.append('tl.from("#s%d_l%d",{x:60,opacity:0,duration:0.5},%.2f);' % (i, k, t + 0.8 + step * k))
