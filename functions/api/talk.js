@@ -1182,7 +1182,13 @@ async function editPost(env, request, ctx) {
   const job2 = (async () => {
     const r2 = Object.assign({}, row, patch);
     let out = await fileCorrection(env, r2, entry, docs);
-    if (!out.url) out = await fileCorrection(env, r2, entry, docs);
+    if (!out.url) {
+      out = await fileCorrection(env, r2, entry, docs);
+      // The second try filed and mailed: the first try's error goes off the row, back to what it was before (deep review 25/11/2026).
+      if (out.url && out.mailed && !out.err) {
+        try { await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(row.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ doc_err: r2.doc_err || null }) }); } catch (e) { /* the page is filed and mailed */ }
+      }
+    }
     if (out.url && out.mailed && kept.length) await dropDocs(env, kept);
     else if (kept.length) {
       try { await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(row.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ doc_err: ((out.err ? out.err + '; ' : '') + 'photos kept: ' + DOCS_BUCKET + '/' + DOCS_DIR + row.id + '-c' + prior.length + '/').substring(0, 400) }) }); } catch (e) { /* doc_err already says the filing failed */ }

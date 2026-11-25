@@ -27,6 +27,7 @@ globalThis.fetch = async (url, init) => {
   if (u.startsWith(SB + '/rest/v1/rpc/guess_clear')) return json(null);
   if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return json([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'r', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite Mail.Send' }]);
   if (u.startsWith(GR + '/drive/root:/') && m === 'PUT') {
+    if (w.putFail > 0) { w.putFail--; return new Response('busy', { status: 503 }); }
     const path = decodeURIComponent(u.slice((GR + '/drive/root:/').length).replace(/:\/content$/, ''));
     w.puts.push({ path, txt: /html/.test(init.headers['Content-Type']) ? new TextDecoder().decode(init.body) : '' });
     return json({ webUrl: 'https://od.example/' + encodeURIComponent(path), size: init.body.length });
@@ -184,6 +185,22 @@ console.log('\n5b. the filing fails: one more try, then the photos folder is wri
   const errs = w.patches.filter((x) => x.b.doc_err);
   const last = errs[errs.length - 1];
   check('the page is saved, the mail was tried twice, the photos folder is on doc_err', r.st === 200 && w.puts.length >= 2 && last && last.b.doc_err.includes('photos kept: backups/induction-docs/r1-c0/'), { st: r.st, puts: w.puts.length, d: last && last.b });
+}
+
+console.log('\n5c. the first try fails on a passing OneDrive error, the second files and mails: doc_err goes back to what it was (deep review 25/11/2026)');
+{
+  for (const before of [null, 'earlier note']) {
+    reset({ putFail: 2, row: { doc_err: before } });
+    const r = await post(FORM(await tokOf(), { idep: 'מעבדה' }), await cookie());
+    const errs = w.patches.filter((x) => 'doc_err' in x.b);
+    const last = errs[errs.length - 1];
+    check('filed and mailed on the second try, and the last doc_err write is the value from before (' + before + ')', r.st === 200 && w.mails.length === 1 && last && last.b.doc_err === before, { st: r.st, mails: w.mails.length, errs: errs.map((x) => x.b.doc_err) });
+  }
+  reset({ putFail: 99 });
+  await post(FORM(await tokOf(), { idep: 'מעבדה' }), await cookie());
+  const errs = w.patches.filter((x) => x.b.doc_err);
+  const last = errs[errs.length - 1];
+  check('both tries fail: the error stays on the row, said once (not twice)', last && last.b.doc_err.split('לא תויק').length === 2, errs.map((x) => x.b.doc_err));
 }
 
 console.log('\n6. the induction mail itself carries the link');
