@@ -2624,6 +2624,12 @@ const callIn = async (body) => {
         !signAskFor([R('d', 'תחתום בשמי על ההצעה של גזית')], tgt, []) && !signAskFor([R('e', 'אל תחתום על התעודה של רותם')], tgt, []) && !signAskFor([R('f', '📎 טופס_חתימה רותם.pdf')], tgt, []) && !signAskFor([R('a', 'תחתום בשמי על התעודה של רותם')], tgt, ['a']));
       check('signAskFor (refutation 24/11/2026): numbers, "pdf", part of a word, "לא צריך לחתום", a forwarded message = no',
         !signAskFor([R('g', 'תחתום על 2026 pdf')], tgt, []) && !signAskFor([R('h', 'תחתום על רות')], tgt, []) && !signAskFor([R('i', 'לא צריך לחתום על רותם')], tgt, []) && !signAskFor([{ id: 'j', text: 'תחתום על רותם', forwarded: 'true' }], tgt, []));
+      // pairs (retro finding 1, 25/11/2026): 3 real asks that still count, 7 real wordings that must not (fail-closed: his tap stays)
+      check('signAskFor pairs: 3 real asks still count (imperative at the start, "please sign", an infinitive with a mic emoji)',
+        !!signAskFor([R('p1', 'תחתום בשמי על התעודה של רותם ותחזיר לשולח')], tgt, []) && !!signAskFor([R('p2', 'בבקשה חתום על התעודה של רותם')], tgt, []) && !!signAskFor([R('p3', '🎤 לחתום על המשלוח של רותם')], tgt, []));
+      const notAsks = ['האם התעודה של רותם חתום', 'התעודה של רותם כבר חתום', 'בלי לחתום על התעודה של רותם', 'לפני שתחתום על התעודה של רותם תבדוק', 'אסור לחתום על התעודה של רותם', 'עדיין לא חתום על התעודה של רותם', 'תחתום על התעודה של רותם?'];
+      check('signAskFor pairs: a question, "signed" as an adjective, "without", "before you sign", "forbidden", "not yet", a question mark = no',
+        notAsks.every((t, k) => !signAskFor([R('n' + k, t)], tgt, [])), notAsks.map((t, k) => !!signAskFor([R('n' + k, t)], tgt, [])));
     }
     const t0 = Date.now(), mk = (n, ago) => Array.from({ length: n }, (_, i) => ({ id: 's' + i, by: 'owner-ask', status: 'signed', at: new Date(t0 - ago).toISOString(), done_at: new Date(t0 - ago).toISOString() }));
     check('signNowCount: counts only sign_now signatures inside the window', signNowCount(JSON.stringify(mk(3, 60e3).concat(mk(2, 3600e3)).concat([{ id: 'x', by: 'w1', at: new Date(t0).toISOString() }])), t0 - 30 * 60e3) === 3 && SIGN_NOW_MAX === 5);
