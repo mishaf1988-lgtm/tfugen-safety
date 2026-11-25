@@ -20,6 +20,7 @@
 - Word או Excel שנוצר: גופן Arial, הפורמט שביקש (לא PDF במקומו), קובץ אחד למסמך (`project-files/routine-wa-assistant.md:34`)
 - שינוי במסמך מבוקר קיים: גרסת סקירה עם `track_docx.py` / `track_xlsx.py`; את טופס 02.03 אוקסנה מעדכנת לבד (`project-files/assistant/iso-docs.md:19`)
 - לאוקסנה נשלח רק קובץ הסקירה, באותו פורמט כמו המקור (Word או Excel), עם מעקב שינויים; לא PDF ולא 02.03 (`project-files/assistant/iso-docs.md:20`)
+- טופס מבוקר שנוצר, עודכן או זז = שורה ב-`iso-forms-index.md` באותה משימה, בלי בקשה (`project-files/assistant/iso-docs.md:21`)
 - Excel נשאר Excel, בלי PDF לצידו; PDF של Word רק מ-`od-read` `format:pdf`, לא LibreOffice (`project-files/assistant/iso-docs.md:16`)
 - מסמך בעבודה בתיקייה משלו ב-`15_.../מסמכים בעבודה/<שם>/`; אחרי אישור הסופי לתיקיית הנהלים (`project-files/assistant/iso-docs.md:18`)
 - המאשר של מסמך מבוקר הוא תמיד מיכאל או מנהלת האיכות; המספר מתואם מול `iso-forms-index.md` ומנהלת האיכות (`project-files/assistant/iso-docs.md:21`)
