@@ -777,7 +777,7 @@
    "reports": true
   },
   {
-   "id": "trig_01SMYGqBcxN8PNLdrsYWDNDj",
+   "id": "trig_01RtPxZTDX7ygSHHS8YF9Fe5",
    "zone": "routines",
    "name": "מעקב הצעות מחיר",
    "what": "",
@@ -974,7 +974,7 @@
    "reports": false
   },
   {
-   "id": "trig_01SrJir5j17Cwnp6CE3eNQ3X",
+   "id": "trig_01RnPAGtnro2SvFKFTGeegXk",
    "zone": "routines",
    "name": "תפוגות שנתקעו אצל ספק",
    "what": "",
