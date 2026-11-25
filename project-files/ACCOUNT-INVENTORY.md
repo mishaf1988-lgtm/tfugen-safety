@@ -33,7 +33,7 @@
 | `trig_01RHDbDAFU9uxPTUDnA3FTG4` | מגמות מנתוני המפעל | 4 לחודש 08:14 | `routine-factory-trends.md` | Routine של Code, שיחה חדשה בכל ריצה, מאגרים: tfugen-safety + michael-skills (C55, 28/10/2026) |
 | `trig_01L7gduHbG8d72fn8fDp7LUP` | המפקח המדומה | 5 לחודש 08:16 | `routine-inspector.md` | Routine של Code, שיחה חדשה בכל ריצה, מאגרים: tfugen-safety (C55, 28/10/2026) |
 | `trig_013hJJjH8yFEYbNPw1Xm9Nqt` | מודל ההעדפות של מיכאל | 6 לחודש 08:21 | `routine-preferences.md` | Routine של Code, שיחה חדשה בכל ריצה, מאגרים: tfugen-safety (C55, 28/10/2026) |
-| `trig_01SMYGqBcxN8PNLdrsYWDNDj` | מעקב הצעות מחיר | מוצ"ש 22:47 | `routine-quotes.md` | `session_01HFfaw9FbYVfb425dV8vGio` |
+| `trig_01RtPxZTDX7ygSHHS8YF9Fe5` | מעקב הצעות מחיר | מוצ"ש 22:47 | `routine-quotes.md` | `session_01HFfaw7ARC1JtYdbNbqwQM1` |
 | `trig_016ft9sEQH3PKT6pCfF5YMXX` (מ-01/11/2026, C68; הישן `trig_01PrGDTUzea2ewuNBTApskNc` מושהה) | חוקר העוזר | א'-ה' 06:47 | `routine-researcher.md` | שיחה חדשה בכל ריצה, סונט |
 | `trig_01PiJpBmASES4tDqwdePUsH2` (**כבוי 12/11/2026**, הוחלף בשורה למטה; להדליק חזרה רק אם החדש נכשל) | רטרו יומי בשיחה קבועה | א'-ה' 07:52 | `retro-prompt.md` | `session_01HFfaw7GoR3ab1223AtPmzC` |
 | `trig_01XGrqU6JWc73ER7WozWdjbh` (11/11/2026; **פעיל מ-12/11/2026**, אחרי שמיכאל חיבר את המאגר, C82) | רטרו יומי בשיחה חדשה | א'-ה' 07:52 | `retro-prompt.md` | שיחה חדשה בכל ריצה, סונט |
@@ -44,7 +44,7 @@
 | `trig_01SzAJJc2RDFcLoAeBEcWonK` | רדאר רגולציה שבועי | א' 08:17 | הפרומפט בטריגר עצמו (לא בקובץ) | שיחה חדשה בכל ריצה |
 | `trig_01BimkS5EroGgvLB1tZo6zQo` | תור משימות מ-Claude Code (Cowork) | א'-ה' 08:19, 12:19, 16:19 (מ-01/11/2026, בדיקת החיסכון; קודם כל שעה) | הפרומפט בטריגר; הכללים ב-`cowork-queue.md` | Cowork, קשור למחשב של מיכאל |
 | `trig_01K4zgeTHPJdLzFYesbukmUk` | משרד הסוכנים: עדכון בוקר | כל יום 07:38 | `routine-office.md` | `session_01HFfaw7AtUG3J8b5JBd7SQs` |
-| `trig_01SrJir5j17Cwnp6CE3eNQ3X` | תפוגות שנתקעו אצל ספק | ב' 08:17 | `routine-supplier-followup.md` | `session_01HFfaw9FbYVfb425dV8vGio` |
+| `trig_01RnPAGtnro2SvFKFTGeegXk` | תפוגות שנתקעו אצל ספק | ב' 08:17 | `routine-supplier-followup.md` | `session_01HFfaw7ARC1JtYdbNbqwQM1` |
 | `trig_015zHPtWJFZP77uqRzL5wfBA` | תזכורת פרסום ההדרכה (הייקו מ-22/11/2026, קודם סונט) | א' 12:13 | `routine-talk-publish.md` | משימת צ'אט מתוזמנת (Cowork), שיחה חדשה בכל ריצה, בלי מאגר (28/10/2026; המזהה הקודם `trig_01VtyJkVLuqYrQNVgWHhMzhV` כבוי) |
 | `trig_013rh2XuvsUBNbPikiY3pAGF` | בודק לתור המשימות למחשב | כל יום 09:37 | `routine-cowork-check.md` | `session_01HFfaw7AtUG3J8b5JBd7SQs` |
 | `trig_01XJYHsknMbRcz4RcSFWpKFD` | בדיקת הניסוי השבועית | ד' 06:29 | `routine-staging-e2e.md` | `session_01HFfaw7AtUG3J8b5JBd7SQs` |
