@@ -51,6 +51,10 @@ export function faultEscalateText(due) {
   if (due.length > FAULT_LINES) lines.push('- \u05d5\u05e2\u05d5\u05d3 ' + (due.length - FAULT_LINES));
   return '\u26a0\ufe0f \u05ea\u05e7\u05dc\u05d4 \u05e9\u05dc\u05d0 \u05ea\u05d5\u05e7\u05e0\u05d4 \u05ea\u05d5\u05da 3 \u05e9\u05e2\u05d5\u05ea:\n' + lines.join('\n') + '\n\u05d4\u05de\u05e4\u05ea\u05d7 \u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05e1\u05d2\u05e8 \u05d0\u05d5\u05ea\u05d4, \u05d5\u05dc\u05d0 \u05db\u05ea\u05d1 \u05e9\u05e6\u05e8\u05d9\u05da \u05de\u05de\u05da \u05de\u05e9\u05d4\u05d5. \u05d3\u05d7\u05d5\u05e3? \u05db\u05ea\u05d5\u05d1 \u05dc\u05d9 \u05db\u05d0\u05df.';
 }
+// agents of many separate jobs: a success on one job says nothing of a failure on another (agentKey form)
+export const NO_RECOVER_AGENTS = ['wa-assistant', 'chat-relay', 'worker-now', 'mail-filing', 'mail-triage'];
+// a drill or golden-run line (drill-<id>, or a line that opens with \u05d6\u05d4\u05d1 / \u05ea\u05e8\u05d2\u05d9\u05dc)
+export const DRILL_LINE = /drill-|^\s*(\u05d6\u05d4\u05d1|\u05ea\u05e8\u05d2\u05d9\u05dc)/i;
 export const FAULT_KEY = 'fault_alert', FAULT_LINES = 5, FAULT_FIRST_MS = 20 * 60e3;
 const dayIL = (iso) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(iso));
 const cut = (s, n) => { s = String(s || '').replace(/[a-z][a-z0-9+.-]*:\/\/\S+|www\.\S+/gi, '[link]').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 3) + '...' : s; };
@@ -87,8 +91,11 @@ export function faultItems(prev, errRows, agentLog, nowIso) {
   // 22/11/2026 (dev-20261121190001-uduk): main-chat failed four times at 18:51-18:53 on a session without the connector, and
   // measured fine at 18:59; the alert still reached Michael at 00:00 as "not fixed within 3 hours". A failure that the same agent
   // followed with an ok:true line is a recovered fault, not an open one.
+  // 25/11/2026 (deep review, dev-20261125103023-hxwi): narrowed. An agent that does many separate jobs (the WhatsApp assistant,
+  // the mail filer) wrote ok:true on another job four minutes after a real failure, and the failure was never said. For
+  // these a later success is not a recovery, and a drill line (a golden or coach exercise) is never a recovery for anyone.
   const lastOk = {};
-  (agentLog || []).forEach((r) => { if (r && r.ok === true) { const k = agentKey(r.agent), a = String(r.at || ''); if (a > (lastOk[k] || '')) lastOk[k] = a; } });
+  (agentLog || []).forEach((r) => { if (r && r.ok === true && NO_RECOVER_AGENTS.indexOf(agentKey(r.agent)) < 0 && !DRILL_LINE.test(String(r.line || ''))) { const k = agentKey(r.agent), a = String(r.at || ''); if (a > (lastOk[k] || '')) lastOk[k] = a; } });
   (agentLog || []).forEach((r) => {
     if (!r || r.ok !== false || String(r.at || '') <= since) return;
     if ((lastOk[agentKey(r.agent)] || '') > String(r.at || '')) return;
