@@ -1426,6 +1426,7 @@
     "mail_request",
     "ocr_txt",
     "od_archive",
+    "od_pdf",
     "od_put_pdf",
     "od_swap",
     "office_ask",

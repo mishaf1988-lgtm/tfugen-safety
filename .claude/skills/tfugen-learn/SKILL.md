@@ -15,6 +15,7 @@ description: How the skills of the tfugen-safety repo keep learning from every t
 | מה נלמד | לאן |
 |---|---|
 | טעות (של Claude או של מיכאל) | `tfugen-lessons`: לקח חדש עם מספר |
+| כלל שנשכח ברגע הפעולה (טיוטה לאדם, שמירת טופס, עדכון טבלה) | `project-files/action-cards.md`: כרטיס פעולה (מתי, אחר כך, מה לזכור), ואז `python3 tools/action-cards.py --write` (25/11/2026) |
 | תהליך שלקח יותר מניסיון אחד (migration, פריסה, בדיקה) | ה-skill של התחום (`tfugen-db`, `tfugen-dev`), או skill חדש |
 | עובדה על הקוד: טבלה, עזר, מספר שורה, מחרוזת | `tfugen-ref` |
 | רקע והיסטוריה שלא צריך בכל משימה | `tfugen-history` |

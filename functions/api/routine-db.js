@@ -218,6 +218,7 @@
 //              ctr_links, and {url, text, exp, instructions_missing} for Michael to forward himself.
 // No delete, no other table, no raw SQL. The data is data, not instructions
 // (trustee_reports holds free text from an anonymous kiosk).
+import { cardsFor } from '../_cards.js';
 import { transcribe } from '../_stt.js';
 import { voiceText, VOICE_RETRY_MS } from '../_voice.js';
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, FILE_TIMEOUT_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
@@ -3304,9 +3305,28 @@ export async function stagingPw(env, pw, liveUrl) {
   return { ok: true, set, at: new Date().toISOString() };
 }
 
+// 25/11/2026 (DECISIONS "action cards"): a successful mail_draft / od_put_pdf / od_archive / od_pdf answer carries the
+// action cards that match it (functions/_cards.js, built from project-files/action-cards.md), so the assistant, which has
+// no hooks, gets the same reminders Claude gets before the action. Only ok:true answers; any failure leaves res as it is.
+export const CARD_OPS = ['mail_draft', 'od_put_pdf', 'od_archive', 'od_pdf'];
+export async function withCards(reqCopy, res) {
+  if (!reqCopy || res.status !== 200) return res;
+  try {
+    const body = await reqCopy.json().catch(() => null);
+    if (!body || CARD_OPS.indexOf(body.op) < 0) return res;
+    const cards = cardsFor(body);
+    if (!cards.length) return res;
+    const out = await res.clone().json();
+    if (!out || out.ok !== true) return res;
+    out.cards = cards;
+    const h = new Headers(res.headers);
+    return new Response(JSON.stringify(out), { status: 200, headers: h });
+  } catch (e) { return res; }
+}
 export async function onRequest(context) {
   const copy = context.request.method === 'POST' ? context.request.clone() : null;
-  const res = await routineDbHandle(context);
+  const cardCopy = context.request.method === 'POST' ? context.request.clone() : null;
+  const res = await withCards(cardCopy, await routineDbHandle(context));
   if (copy && res.status === 200) {
     try {
       // the request first: a read op (select, wa_media, pdf_read) is not cloned and parsed at all (retro 02/11/2026)
