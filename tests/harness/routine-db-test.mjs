@@ -2666,6 +2666,25 @@ const callIn = async (body) => {
       check('signAskFor media (security review): file B captioned "חתום בשמי" after file A = B only, never A',
         signAskFor([T('b', 'חתום בשמי', 10, { media_id: '222222' }), F(0)], tgt, [], M) === null && (signAskFor([T('b', 'חתום בשמי', 10, { media_id: '222222' }), F(0)], tgt, [], { id: '222222' }) || {}).id === 'b');
       check('signAskFor media: a cancel after the ask ends it', signAskFor([T('s', 'עצור', 40), T('a', 'חתום בשמי', 20), F(0)], tgt, [], M) === null);
+      // dev-20261126124428-dtps (26/11/2026): the real log, the ask at 12:29:30.92Z and his file at 12:29:31.95Z (order flipped)
+      const Tm = (id, text, iso, extra) => Object.assign({ id, text, ts: iso }, extra || {});
+      const realAsk = Tm('a', 'חתום בשמי', '2026-11-26T12:29:30.920Z'), realFile = Tm('f', '📎 scan_0012.pdf', '2026-11-26T12:29:31.950Z', { media_id: '123456789' });
+      check('signAskFor media, flipped order (the real case of 26/11/2026): the file 1 s AFTER "חתום בשמי" = that ask; without media = no',
+        (signAskFor([realFile, realAsk], tgt, [], M) || {}).id === 'a' && signAskFor([realFile, realAsk], tgt, []) === null);
+      check('signAskFor media, flipped order: 8 s after = yes; 15 s after, another media id, forwarded, a message between, a cancel after = no',
+        !!signAskFor([F(28), T('a', 'חתום בשמי', 20)], tgt, [], M)
+        && signAskFor([F(35), T('a', 'חתום בשמי', 20)], tgt, [], M) === null
+        && signAskFor([F(21), T('a', 'חתום בשמי', 20)], tgt, [], { id: '999999' }) === null
+        && signAskFor([F(21, { forwarded: true }), T('a', 'חתום בשמי', 20)], tgt, [], M) === null
+        && signAskFor([F(25), T('m', 'מה עם הזימונים', 22), T('a', 'חתום בשמי', 20)], tgt, [], M) === null
+        && signAskFor([T('s', 'עצור', 30), F(21), T('a', 'חתום בשמי', 20)], tgt, [], M) === null);
+      check('signAskFor media: a file on each side of the ask (two files, one ask) = no for either; the same file twice = yes',
+        signAskFor([F(25), T('a', 'חתום בשמי', 20), T('g', '📎 other.pdf', 10, { media_id: '555555' })], tgt, [], M) === null
+        && signAskFor([F(25), T('a', 'חתום בשמי', 20), T('g', '📎 other.pdf', 10, { media_id: '555555' })], tgt, [], { id: '555555' }) === null
+        && !!signAskFor([F(25), T('a', 'חתום בשמי', 20), T('g', '📎 scan_0012.pdf', 10, { media_id: '123456789' })], tgt, [], M));
+      check('signAskFor media (security review 26/11/2026): another file of his 10 min before the ask, then a new file 2 s after = no (he may have meant the first)',
+        signAskFor([F(22), T('a', 'חתום בשמי', 20), T('g', '📎 other.pdf', -580, { media_id: '555555' })], tgt, [], M) === null
+        && signAskFor([F(22), T('a', 'חתום בשמי', 20), T('u', 'תודה', -300), T('g', '📎 other.pdf', -580, { media_id: '555555' })], tgt, [], M) === null);
     }
     { const { bytesSame } = await import('./_build/routine-db.mjs');
       check('bytesSame: same bytes = yes; one byte off, other length or empty = no',
