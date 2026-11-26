@@ -121,7 +121,7 @@
 //              once only when Michael's own message of the last 30 minutes asks to sign (ownerAskedSign); the signed copy to him,
 //              a reply draft to the sender. At most SIGN_NOW_MAX in 30 minutes. media_id? (26/11/2026): an ask with no word of
 //              the file counts when the file at path is byte for byte that WhatsApp file and it was his message right before the ask
-//              (SIGN_MEDIA_MS, signAskFor, signSameAsMedia).
+//              (SIGN_MEDIA_MS) or right after it (SIGN_MEDIA_AFTER_MS: the delivery order flips) (signAskFor, signSameAsMedia).
 //   dev_request / dev_done  (20/10/2026) {agent, text} a request to development, kept in server_state.dev_inbox;
 //              a new one fires the Routine DEV_TRIGGER at once when DEV_FIRE_TOKEN is set (21/10/2026, devFireText);
 //              {id, note} closes one. devInboxAdd / devInboxDone.
@@ -3153,7 +3153,7 @@ export const ownerAskIsSign = (t) => { const x = String(t || ''); const lead = x
 // file name, and got another tap): an ask that names no file still counts when "media" is given (the server checked that
 // the file at the path is byte for byte the WhatsApp file with that media id) and his message right before the ask, at
 // most SIGN_MEDIA_MS earlier, not forwarded, is that very file. Everything else (cancel, question, used) stays as is.
-export const SIGN_MEDIA_MS = 2 * 60e3;
+export const SIGN_MEDIA_MS = 2 * 60e3, SIGN_MEDIA_AFTER_MS = 10e3;
 export function signAskFor(rows, target, used, media) {
   // security review 24/11/2026 (refutation): whole words of the file name and its folder only (not the mail subject or
   // sender the assistant chooses), no numbers, no "pdf", and the fillers checked again after a prefix letter is dropped
@@ -3177,7 +3177,18 @@ export function signAskFor(rows, target, used, media) {
     // security review 26/11/2026: a file that carries the ask as its caption is the file asked about, never the one before it
     if (mid && r.media_id) { if (String(r.media_id) === mid) return r; continue; }
     const prev = list[i + 1], gap = prev ? Date.parse(r.ts) - Date.parse(prev.ts) : NaN;
-    if (mid && prev && prev.id && !fwd(prev) && String(prev.media_id || '') === mid && gap >= 0 && gap <= SIGN_MEDIA_MS) return r;
+    // dev-20261126124428-dtps (26/11/2026): WhatsApp delivers the file and the ask almost together and the order can flip
+    // (the ask logged at 12:29:30.92Z, his file at 12:29:31.95Z), so the file right AFTER the ask counts too, at most
+    // SIGN_MEDIA_AFTER_MS later. A file on each side of the ask (two files, one ask) = which one he meant is unknown: no.
+    // Security review 26/11/2026: the window after is short (the real gap was 1.03 s), and a file after the ask never counts when
+    // ANY other file of his is older than the ask in the window (he may have meant that one, offered or sent minutes before).
+    const next = i > 0 ? list[i - 1] : null, gapN = next ? Date.parse(next.ts) - Date.parse(r.ts) : NaN;
+    const isMedia = (x) => x && x.id && !fwd(x) && String(x.media_id || '') !== '';
+    const prevOk = isMedia(prev) && gap >= 0 && gap <= SIGN_MEDIA_MS, nextOk = isMedia(next) && gapN >= 0 && gapN <= SIGN_MEDIA_AFTER_MS;
+    if (!mid) continue;
+    if (prevOk && nextOk && String(prev.media_id) !== String(next.media_id)) return null;
+    if (prevOk && String(prev.media_id) === mid) return r;
+    if (nextOk && String(next.media_id) === mid && !list.slice(i + 1).some((x) => x && String(x.media_id || '') !== '' && String(x.media_id) !== mid)) return r;
   }
   return null;
 }
