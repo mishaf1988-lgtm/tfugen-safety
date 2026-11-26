@@ -68,7 +68,7 @@ console.log('\n1. the link and what changed (pure)');
   const pg = correctionHtml({ ...ROW, emp_name: 'דני <b>' }, e, ['QUJD'], { day: '2026-11-24', hm: '12:00' });
   check('the correction page: before and after, the equipment note, the photo, escaped', pg.includes('טוגנים') && pg.includes('מעבדה') && pg.includes('יש להחתים את העובד') && pg.includes('data:image/jpeg;base64,QUJD') && pg.includes('דני &lt;b&gt;') && !pg.includes('<b>'), pg.slice(0, 300));
   const ml = updateMailHtml(ROW, e, 'https://od.example/x', 'https://tapugan-safety.pages.dev/api/talk?op=edit&e=T', '');
-  check('the update mail: the changes, the filed page and a fresh link', ml.includes('מעבדה') && ml.includes('od.example/x') && ml.includes('op=edit') && ml.includes('הסיסמה של משאבי אנוש'));
+  check('the update mail: the changes, the filed page and a fresh link', ml.includes('מעבדה') && ml.includes('od.example/x') && ml.includes('op=edit') && ml.includes('בלי סיסמה'));
   const fh = editFormHtml({ ...ROW, emp_name: 'א"ב <i>' }, { tok: 'T', depts: ['טוגנים', 'מעבדה'], otherDep: 'אחר', items: ['נעלי עבודה'], tools: 0, free: 2, retDef: 'משאבי אנוש', nonce: 'N' });
   check('the form: name escaped, department selected, a nonce on the script', fh.includes('א&quot;ב &lt;i&gt;') && fh.includes('<option value="טוגנים" selected>') && fh.includes('nonce="N"') && fh.includes('name="e" value="T"'));
 }
@@ -87,7 +87,7 @@ console.log('\n2. who may open it');
   reset();
   const t = await tokOf();
   const a = await get(t);
-  check('a link without the HR code: the code page, not the details', a.st === 200 && a.h.includes('name="icode"') && !a.h.includes('334455667') && a.h.includes('op=edit'), a.h.slice(0, 300));
+  check('the signed link alone (no cookie, no code): the form with the details, no password field', a.st === 200 && !a.h.includes('name="icode"') && a.h.includes('334455667') && a.h.includes('name="eqc"'), a.h.slice(0, 300));
   const b = await get(t, await cookie());
   check('with the HR code cookie: the form with the worker\'s details', b.st === 200 && b.h.includes('סבטלנה לריונוב') && b.h.includes('334455667') && b.h.includes('0521234567') && b.h.includes('name="eqc"'), b.h.slice(0, 200));
   check('the page cannot be framed and has a nonce-only script policy', /frame-ancestors 'none'/.test(b.csp) && /script-src 'nonce-/.test(b.csp), b.csp);
@@ -97,12 +97,11 @@ console.log('\n2. who may open it');
   check('an old token: 410', d.st === 410, d.st);
   const e = await get(await tokOf('nope'), await cookie());
   check('a token of a row that does not exist: refused', e.st === 403, e.st);
-  const f = await post({ e: t, icode: '000000' });
-  check('a wrong code: 403 and no cookie', f.st === 403 && !f.setc, f.st);
-  const g = await post({ e: t, icode: '246810' });
-  check('the right code: a cookie for the induction and back to the form', g.st === 303 && /tsind=/.test(g.setc || '') && /op=edit/.test(g.loc || ''), g);
   const h = await post(FORM(t, { ijob: 'מנהלת' }));
-  check('a save without the code cookie is refused and writes nothing', h.st !== 200 || !w.patches.length ? w.patches.length === 0 : false, w.patches);
+  check('a save with the signed link only (no cookie) works and is written', h.st === 200 && w.patches.length > 0, h.st);
+  reset();
+  const f = await post({ e: t, icode: '000000' });
+  check('a stale code form post writes nothing and sets no cookie', !f.setc && w.patches.length === 0, f.st);
 }
 
 console.log('\n3. a correction is saved, filed and mailed');
@@ -210,7 +209,7 @@ console.log('\n6. the induction mail itself carries the link');
   const out = await fileInduction(ENV, TALK, { ...ROW }, Buffer.from(sig, 'base64'), 'he', Date.parse('2026-11-24T09:00:00Z'), [], [], 0, 0);
   const html = (w.mails[0] && w.mails[0].message.body.content) || '';
   const m = /href="([^"]*op=edit[^"]*)"/.exec(html);
-  check('a link to correct, with the HR code and the 14 days said in words', out.mailed && m && html.includes('הסיסמה של משאבי אנוש') && html.includes('14'), html.slice(-700));
+  check('a link to correct, no password and the 14 days said in words', out.mailed && m && html.includes('בלי סיסמה') && html.includes('14'), html.slice(-700));
   const tok = m ? decodeURIComponent(m[1].replace(/&amp;/g, '&').split('e=')[1]) : '';
   check('the link\'s token is the row\'s', (await readEditToken(ENV, tok)).id === 'r1', tok.slice(0, 30));
 }

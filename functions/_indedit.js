@@ -1,6 +1,6 @@
 // Correcting a new worker's induction after it was sent (24/11/2026, Michael: "\u05d1\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05dc\u05e4\u05e2\u05de\u05d9\u05dd \u05d9\u05e9 \u05d0\u05d9\u05d6\u05e9\u05d4\u05d5 \u05e4\u05e1\u05e4\u05d5\u05e1...
 // \u05d1\u05de\u05d9\u05d9\u05dc \u05e2\u05e6\u05de\u05d5 \u05d9\u05d4\u05d9\u05d4 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05e2\u05dd \u05d0\u05d5\u05e4\u05e6\u05d9\u05d4 \u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05d3\u05d1\u05e8\u05d9\u05dd \u05d0\u05d5 \u05dc\u05e9\u05e0\u05d5\u05ea \u05d3\u05d1\u05e8\u05d9\u05dd"; in the questionnaire: details, equipment handed over and
-// missing documents; only HR and Michael with the HR code; the signed copy stays, a correction page is filed beside it and
+// missing documents; only HR and Michael, the signed link is the key (no HR code from 26/11/2026); the signed copy stays, a correction page is filed beside it and
 // an update mail goes out; DECISIONS 24/11/2026).
 //
 // The pure part (no network, no database): the link token, what changed, the correction page, the update mail and the
@@ -92,7 +92,7 @@ export function correctionHtml(row, entry, docs, when) {
     + (eq ? '<p style="font-weight:bold">' + esc(EQ_RESIGN) + '</p>' : '')
     + (Array.isArray(docs) ? docs.map((d, n) => '<div style="page-break-before:always;break-before:page"><div style="font-weight:bold;margin:0 0 8px">\u05de\u05e1\u05de\u05da \u05e9\u05e0\u05d5\u05e1\u05e3 ' + (n + 1) + ' \u05de\u05ea\u05d5\u05da ' + docs.length + ' - ' + esc(row.emp_name || '') + '</div>'
       + '<img alt="' + (n + 1) + '" style="max-width:100%;max-height:900px" src="data:image/jpeg;base64,' + d + '"></div>').join('') : '')
-    + '<div style="font-size:11px;color:#555">\u05ea\u05d5\u05e7\u05df \u05d3\u05e8\u05da \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05de\u05d9\u05d9\u05dc \u05d4\u05e7\u05dc\u05d9\u05d8\u05d4, \u05e2\u05dd \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05dc \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9.</div></body></html>';
+    + '<div style="font-size:11px;color:#555">\u05ea\u05d5\u05e7\u05df \u05d3\u05e8\u05da \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05de\u05d9\u05d9\u05dc \u05d4\u05e7\u05dc\u05d9\u05d8\u05d4, \u05d1\u05dc\u05d9 \u05e1\u05d9\u05e1\u05de\u05d4.</div></body></html>';
 }
 
 // The update mail (HR and Michael): what changed, the filed page and a fresh edit link.
@@ -106,13 +106,13 @@ export function updateMailHtml(row, entry, pageUrl, newEditUrl, signature) {
     + (entry.docs ? '<p>\u05e0\u05d5\u05e1\u05e4\u05d5 ' + entry.docs + ' \u05de\u05e1\u05de\u05db\u05d9\u05dd.</p>' : '')
     + (eq ? '<p style="font-weight:bold">' + esc(EQ_RESIGN) + '</p>' : '')
     + (pageUrl ? '<p>\u05d3\u05e3 \u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4: <a href="' + esc(pageUrl) + '">\u05e4\u05ea\u05d9\u05d7\u05d4</a></p>' : '')
-    + (newEditUrl ? '<p><a href="' + esc(newEditUrl) + '">\u05dc\u05ea\u05d9\u05e7\u05d5\u05df \u05d0\u05d5 \u05d4\u05d5\u05e1\u05e4\u05d4 \u05e0\u05d5\u05e1\u05e4\u05d9\u05dd</a> (\u05d3\u05d5\u05e8\u05e9 \u05d0\u05ea \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05dc \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9, \u05d1\u05ea\u05d5\u05e7\u05e3 ' + EDIT_TTL_DAYS + ' \u05d9\u05de\u05d9\u05dd)</p>' : '')
+    + (newEditUrl ? '<p><a href="' + esc(newEditUrl) + '">\u05dc\u05ea\u05d9\u05e7\u05d5\u05df \u05d0\u05d5 \u05d4\u05d5\u05e1\u05e4\u05d4 \u05e0\u05d5\u05e1\u05e4\u05d9\u05dd</a> (\u05d1\u05dc\u05d9 \u05e1\u05d9\u05e1\u05de\u05d4, \u05dc\u05d0 \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d4\u05dc\u05d0\u05d4, \u05d1\u05ea\u05d5\u05e7\u05e3 ' + EDIT_TTL_DAYS + ' \u05d9\u05de\u05d9\u05dd)</p>' : '')
     + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc ' + esc(SITE.company) + '.</p>' + (signature || '') + '</div>';
 }
 
 // The line added to the induction mail itself.
 export function editLinkHtml(url) {
-  return '<p style="border:1px solid #1e3a8a;border-radius:6px;padding:8px 10px;background:#eff6ff">\u05e4\u05e1\u05e4\u05d5\u05e1 \u05d1\u05e7\u05dc\u05d9\u05d8\u05d4? <a href="' + esc(url) + '" style="font-weight:bold">\u05dc\u05d7\u05e6\u05d5 \u05db\u05d0\u05df \u05db\u05d3\u05d9 \u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05d0\u05d5 \u05dc\u05ea\u05e7\u05df</a> \u05e4\u05e8\u05d8\u05d9 \u05e2\u05d5\u05d1\u05d3, \u05e6\u05d9\u05d5\u05d3 \u05e9\u05e0\u05de\u05e1\u05e8 \u05d5\u05de\u05e1\u05de\u05db\u05d9\u05dd. \u05e0\u05d3\u05e8\u05e9\u05ea \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05dc \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9, \u05d5\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05ea\u05d5\u05e7\u05e3 ' + EDIT_TTL_DAYS + ' \u05d9\u05de\u05d9\u05dd. \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05d7\u05ea\u05d5\u05dd \u05e0\u05e9\u05d0\u05e8 \u05db\u05de\u05d5 \u05e9\u05e0\u05d7\u05ea\u05dd, \u05d5\u05e0\u05d5\u05e1\u05e3 \u05dc\u05d5 \u05d3\u05e3 \u05ea\u05d9\u05e7\u05d5\u05df.</p>';
+  return '<p style="border:1px solid #1e3a8a;border-radius:6px;padding:8px 10px;background:#eff6ff">\u05e4\u05e1\u05e4\u05d5\u05e1 \u05d1\u05e7\u05dc\u05d9\u05d8\u05d4? <a href="' + esc(url) + '" style="font-weight:bold">\u05dc\u05d7\u05e6\u05d5 \u05db\u05d0\u05df \u05db\u05d3\u05d9 \u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05d0\u05d5 \u05dc\u05ea\u05e7\u05df</a> \u05e4\u05e8\u05d8\u05d9 \u05e2\u05d5\u05d1\u05d3, \u05e6\u05d9\u05d5\u05d3 \u05e9\u05e0\u05de\u05e1\u05e8 \u05d5\u05de\u05e1\u05de\u05db\u05d9\u05dd. \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e4\u05d5\u05ea\u05d7 \u05d1\u05dc\u05d9 \u05e1\u05d9\u05e1\u05de\u05d4 (\u05dc\u05d0 \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d0\u05d5\u05ea\u05d5 \u05d4\u05dc\u05d0\u05d4) \u05d5\u05d1\u05ea\u05d5\u05e7\u05e3 ' + EDIT_TTL_DAYS + ' \u05d9\u05de\u05d9\u05dd. \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05d7\u05ea\u05d5\u05dd \u05e0\u05e9\u05d0\u05e8 \u05db\u05de\u05d5 \u05e9\u05e0\u05d7\u05ea\u05dd, \u05d5\u05e0\u05d5\u05e1\u05e3 \u05dc\u05d5 \u05d3\u05e3 \u05ea\u05d9\u05e7\u05d5\u05df.</p>';
 }
 
 // Pure. The equipment of a row as the form's inputs: {q:{index:qty}, d:{index:text}, free:[{n,q}], ret, c}.
