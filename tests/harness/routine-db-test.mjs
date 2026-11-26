@@ -14,11 +14,11 @@ const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 // WEEKEND_QUIET off: these suites test the send itself on any day (weekend-owner-test.mjs tests the weekend)
 const ENV = { ROUTINE_KEY: 'k-123', SUPABASE_SERVICE_ROLE_KEY: 'srv', WEEKEND_QUIET: 'off' };
 let calls = [], state = {}, stateVer = {}, raceOnce = null, fires = [], fireSession = 'cse_01POSTMAN';
-let ghCalls = [], mediaMeta = null, claudeReads = [], ownerIn = null;
+let mediaBody = null, ghCalls = [], mediaMeta = null, claudeReads = [], ownerIn = null;
 globalThis.fetch = async (url, opt = {}) => {
   if (String(url).startsWith('https://www.nevo.co.il/law_html/')) { const b = new TextEncoder().encode('<html><head><meta charset="utf-8"><script>x()</script></head><body><p>75. (\u05d0) \u05dc\u05e4\u05d7\u05d5\u05ea \u05d0\u05d7\u05ea \u05dc\u05e9\u05e9\u05d4 \u05d7\u05d3\u05e9\u05d9\u05dd</p></body></html>'); const res = new Response(b, { status: 200, headers: { 'content-type': 'text/html' } }); Object.defineProperty(res, 'url', { value: String(url) }); return res; }
   if (String(url).startsWith('https://graph.facebook.com/v25.0/90000001')) return new Response(JSON.stringify(mediaMeta), { status: 200 });
-  if (String(url).startsWith('https://lookaside.fbsbx.com/') || String(url).startsWith('https://evil.example/')) return new Response(new Uint8Array([0xff, 0xd8, 0xff, 0x01]), { status: 200 });
+  if (String(url).startsWith('https://lookaside.fbsbx.com/') || String(url).startsWith('https://evil.example/')) return new Response(mediaBody != null ? new TextEncoder().encode(mediaBody) : new Uint8Array([0xff, 0xd8, 0xff, 0x01]), { status: 200 });
   if (String(url).startsWith('https://api.github.com/repos/mishaf1988-lgtm/michael-skills/contents/')) { ghCalls.push({ url: String(url), auth: (opt.headers || {}).Authorization }); return new Response('# law\nsection 81: 14 months', { status: 200 }); }
   calls.push({ url, method: opt.method || 'GET', body: opt.body });
   if (url.startsWith(SB + '/rest/v1/server_state')) {
@@ -2599,6 +2599,29 @@ const callIn = async (body) => {
     x = await call({ op: 'wa_media', id: '90000001' }, 'k-123', 'POST', E);
     check('wa_media: too big is refused before download', x.json.ok === false && /too big/.test(x.json.error));
     check('wa_media: an id with a path in it is refused', (await call({ op: 'wa_media', id: '1/../me' }, 'k-123', 'POST', E)).status === 400);
+    // 26/11/2026 (idea 50): a WhatsApp chat export he sent to the assistant: the last days, redacted, kept nowhere
+    {
+      const day = (n) => { const d = new Date(Date.now() - n * 86400e3); const p = (v) => String(v).padStart(2, '0'); return p(d.getUTCDate()) + '/' + p(d.getUTCMonth() + 1) + '/' + d.getUTCFullYear(); };
+      mediaBody = day(1) + ', 14:03 - \u05d3\u05d5\u05d3: \u05ea\u05ea\u05e7\u05e9\u05e8 054-794-0073 \u05e2\u05dd a@b.co.il\n' + day(1) + ', 14:05 - \u05e8\u05d5\u05e0\u05d9\u05ea: \u05ea.\u05d6. 334455667 \u05d4\u05d5\u05d7\u05dc\u05d8 \u05dc\u05d4\u05d7\u05dc\u05d9\u05e3 \u05d0\u05ea \u05d4\u05de\u05e0\u05e2\u05d5\u05dc\n' + day(2) + ', 09:00 - \u05de\u05d5\u05d8\u05d9: \u05d9\u05d5\u05e1\u05d9 \u05d1\u05e0\u05d9\u05ea\u05d5\u05d7\n' + day(60) + ', 09:00 - \u05d9\u05e9\u05df: \u05d8\u05e7\u05e1\u05d8 \u05d9\u05e9\u05df';
+      mediaMeta = { url: 'https://lookaside.fbsbx.com/x', mime_type: 'text/plain', file_size: mediaBody.length };
+      x = await call({ op: 'wa_chat', id: '90000001' }, 'k-123', 'POST', E);
+      check('wa_chat: the text comes back redacted (phone, ID, e-mail, health) and cut to the last 14 days', x.json.ok && x.json.stats.kept === 3 && x.json.stats.phones === 1 && x.json.stats.ids === 1 && x.json.stats.emails === 1 && x.json.stats.medical === 1
+        && !/0547940073|054-794-0073|334455667|a@b\.co\.il|\u05d1\u05e0\u05d9\u05ea\u05d5\u05d7|\u05d8\u05e7\u05e1\u05d8 \u05d9\u05e9\u05df/.test(x.json.text) && /\u05d4\u05d4\u05d7\u05dc\u05d9\u05e3 \u05d0\u05ea \u05d4\u05de\u05e0\u05e2\u05d5\u05dc|\u05d4\u05d7\u05dc\u05d9\u05e3 \u05d0\u05ea \u05d4\u05de\u05e0\u05e2\u05d5\u05dc/.test(x.json.text) && x.json.b64 === undefined, x.json);
+      x = await call({ op: 'wa_chat', id: '90000001', days: 90 }, 'k-123', 'POST', E);
+      check('wa_chat: days widens the range (the 60 day line is back)', x.json.ok && x.json.stats.kept === 4 && /\u05d8\u05e7\u05e1\u05d8 \u05d9\u05e9\u05df/.test(x.json.text), x.json.stats);
+      mediaMeta = { url: 'https://lookaside.fbsbx.com/x', mime_type: 'application/pdf', file_size: 4 };
+      x = await call({ op: 'wa_chat', id: '90000001' }, 'k-123', 'POST', E);
+      check('wa_chat: a file that is not text/plain is not read', x.json.ok === false && /type not read/.test(x.json.error));
+      mediaMeta = { url: 'https://lookaside.fbsbx.com/x', mime_type: 'text/plain', file_size: 99999999 };
+      x = await call({ op: 'wa_chat', id: '90000001' }, 'k-123', 'POST', E);
+      check('wa_chat: too big is refused before download', x.json.ok === false && /too big/.test(x.json.error));
+      mediaMeta = { url: 'https://evil.example/a', mime_type: 'text/plain', file_size: 4 };
+      x = await call({ op: 'wa_chat', id: '90000001' }, 'k-123', 'POST', E);
+      check('wa_chat: a download host that is not Meta is refused', x.json.ok === false && /host/.test(x.json.error));
+      check('wa_chat: an id with a path in it, or an extra field, is refused', (await call({ op: 'wa_chat', id: '1/../me' }, 'k-123', 'POST', E)).status === 400 && (await call({ op: 'wa_chat', id: '90000001', path: 'x' }, 'k-123', 'POST', E)).status === 400);
+      check('wa_chat: without the key it is refused like every op', (await call({ op: 'wa_chat', id: '90000001' }, 'wrong', 'POST', E)).status === 403);
+      mediaBody = null;
+    }
     // 25/10/2026: a photo he sent from /chat: the id of his chat line, the file read from the safety folder
     const CD = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/\u05de\u05d4\u05e6\u0027\u05d0\u05d8/';
     chatLine = () => [{ file: CD + '25-10-2026 08.00.00 - x.jpg' }];
