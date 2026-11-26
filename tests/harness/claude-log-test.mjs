@@ -20,6 +20,8 @@ const NOW = '2026-11-01T23:10:00.000Z';
   check('the log line names the file for ocr_txt (paths) and the mail for mail_request (message_id)', /a\/1\.pdf/.test(logLine({ op: 'ocr_txt', agent: 'x', paths: ['a/1.pdf'] }, '2026-11-02T06:00:00Z')[3]) && /message_id: AAMk/.test(logLine({ op: 'mail_request', agent: 'x', message_id: 'AAMk123' }, '2026-11-02T06:00:00Z')[3]));
   check('the log wrapper looks at the request before it clones a response (a read op is not parsed)', /reqBody = await copy\.json\(\)/.test(fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8')));
   check('the OneDrive and calendar writes are logged too (retro 02/11/2026)', ['ocr_txt', 'mail_request', 'cal_move', 'cal_invite'].every((op) => logLine({ op, agent: 'x' }, '2026-11-02T06:00:00Z') !== null));
+  check('mail_bundle writes a draft with files to Outlook, so it is logged like mail_forward (retro 26/11/2026)', logLine({ op: 'mail_bundle', agent: 'x', subjects: ['s1', 's2'] }, '2026-11-26T06:00:00Z') !== null);
+  check('an unchecked mail_bundle (403, flow 12) is not logged as done, like an unchecked mail_forward (retro 26/11/2026)', /subject_checked === 'flow 12'\) \) row\[4\]|subject_checked === 'flow 12'\)\) row\[4\]/.test(fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8')));
   check('every write op in routine-db is a known op name', Object.keys(LOG_OPS).every((op) => fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8').indexOf("body.op === '" + op + "'") >= 0));
 }
 { // details: a list joined, attachments counted, long values cut
