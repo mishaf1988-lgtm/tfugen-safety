@@ -40,5 +40,23 @@ console.log('\n3. the size');
   check('under the cap: not truncated', chatExport('26/11/2026, 14:03 - ' + H + ': x', 14, NOW).stats.truncated === false);
 }
 
+console.log('\n4. the security review of 26/11/2026');
+{
+  const L = (x) => '26/11/2026, 14:03 - ' + H + ': ' + x;
+  const red = (x) => chatExport(L(x), 14, NOW).text;
+  check('an ID with a dash or spaces, or in Arabic-Indic digits, is gone', !/334|445|667/.test(red('334-455-667 or 33445 5667 or \u0663\u0663\u0664\u0664\u0665\u0665\u0666\u0666\u0667')), red('334-455-667'));
+  check('an 8 digit ID written after the ID word is gone, an 8 digit order number alone stays', !/33445566/.test(red('\u05ea.\u05d6. 33445566')) && /26001584/.test(red('order 26001584 approved')));
+  check('phones with odd spacing, or 972 without a plus, are gone', !/794|7940073|547940073/.test(red('054 794 00 73 and 972547940073 and 08 680 83 31')), red('054 794 00 73'));
+  check('health words from the review (illness of, hospitalized, spelling variants, cancer) are replaced; an injury at work stays', ['\u05de\u05d7\u05dc\u05ea \u05dc\u05d1', '\u05de\u05d0\u05d5\u05e9\u05e4\u05d6', '\u05d0\u05d9\u05e9\u05e4\u05d5\u05d6', '\u05d4\u05d9\u05e8\u05d9\u05d5\u05df', '\u05e1\u05e8\u05d8\u05df'].every((w) => red(w).includes(MEDICAL_MARK)) && /\u05e0\u05e4\u05e6\u05e2/.test(red('\u05e0\u05e4\u05e6\u05e2 \u05d1\u05e8\u05d2\u05dc')));
+  check('US order date (month first) is read right; a month of 13 is not a date and the message is out', chatExport('11/26/26, 2:03 PM - ' + H + ': a\n13/13/2026, 1:00 - ' + R + ': b', 14, NOW).stats.kept === 1);
+  let t = Date.now();
+  const r = chatExport('26/11/2026, 14:03 - ' + H + ': ' + '0'.repeat(2000000), 14, NOW);
+  check('a 2MB single line (the e-mail pattern was quadratic on it) takes well under a second and is cut', Date.now() - t < 1500 && r.stats.cut === 1 && r.text.length < 3100, { ms: Date.now() - t, n: r.text.length });
+  t = Date.now(); chatExport('26/11/2026, 14:03 - ' + H + ': ' + 'a'.repeat(1500000) + '@', 14, NOW);
+  check('a long run of e-mail characters with a lone at-sign is fast too', Date.now() - t < 1500, Date.now() - t);
+  const many = ('26/11/2026, 14:03 - ' + H + ': x\n').repeat(150000);
+  check('150 thousand messages: from and to by a loop, no stack problem', chatExport(many, 14, NOW).stats.from === '2026-11-26');
+}
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
