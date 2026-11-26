@@ -557,6 +557,7 @@ const post = async (raw, sig) => hook({ request: new Request('https://x/api/wa-h
 
   // 20/10/2026: no passport number on WhatsApp
   check('passport number: refused', hasPassport('4 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd: AD3659758') && hasPassport('AC3341142, ...'));
+  check('a purchase order PO26001584 passes; a passport starting with P still refused (26/11/2026)', !hasPassport('\u05d4\u05d6\u05de\u05e0\u05ea \u05e8\u05db\u05e9 PO26001584') && hasPassport('PA1234567') && hasPassport('\u05d3\u05e8\u05db\u05d5\u05df AB1234567'));
   check('a quote number PQ26001545 passes; a passport still refused (26/10/2026)', !hasPassport('הצעת מחיר PQ26001545') && hasPassport('AD3659758'));
   check('company number, phone, C27, ISO45001, #1784: pass', !hasPassport('511969008 054-7940073 C27 ISO45001 #1784 trig_01Tofq session_01McD38'));
   // 02/11/2026 (Michael: "do it: block ID numbers in messages", from Presidio): an Israeli ID with a valid check digit
