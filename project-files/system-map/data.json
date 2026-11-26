@@ -958,7 +958,7 @@
    "reports": false
   },
   {
-   "id": "trig_01K4zgeTHPJdLzFYesbukmUk",
+   "id": "trig_01LMMWfscWqWfcd4ESwhVWUY",
    "zone": "routines",
    "name": "משרד הסוכנים",
    "what": "משרד הסוכנים: עדכון בוקר",
@@ -1010,7 +1010,7 @@
    "reports": true
   },
   {
-   "id": "trig_013rh2XuvsUBNbPikiY3pAGF",
+   "id": "trig_01FPNTnqwBvQQMACVkeTsnWA",
    "zone": "routines",
    "name": "בודק לתור המשימות למחשב",
    "what": "",
@@ -1026,7 +1026,7 @@
    "reports": true
   },
   {
-   "id": "trig_01XJYHsknMbRcz4RcSFWpKFD",
+   "id": "trig_019h5UHA5QTPKSa4DtxsKp3k",
    "zone": "routines",
    "name": "בדיקת הניסוי השבועית",
    "what": "",
