@@ -2639,6 +2639,10 @@ const callIn = async (body) => {
       const cancels = ['אל תחתום על זה', 'עצור', 'stop, do not sign', "don't sign", 'תבטל את החתימה של רותם', 'לבטל, לא צריך', 'חכה עם התעודה של רותם', 'האם רותם הגיע', 'אל תחתום על רותם', 'די', 'שנייה', 'תפסיק', 'שכח מזה', 'don’t sign', 'nope', '🛑', '❌', 'אַל תחתום'];
       check('signAskFor: 18 real later messages (do not sign this, stop, English, curly apostrophe, emoji, niqqud, cancel, wait, a question) after "sign X" = no',
         cancels.every((c, k) => signAskFor([R('x' + k, c), R('c0', 'תחתום על התעודה של רותם')], tgt, []) === null), cancels.map((c, k) => !!signAskFor([R('x' + k, c), R('c0', 'תחתום על התעודה של רותם')], tgt, [])));
+      // retro 26/11/2026 (finding 3): cancel wordings the first list missed (13 found by the reviewer) still cancel
+      const cancels2 = ['המתן', 'המתן עם התעודה של רותם', 'נחכה', 'בטלתי', 'להפסיק', 'תתעלם', 'טעות', 'תדחה', 'תשאיר', 'עכב', 'ignore', 'undo', 'oops'];
+      check('signAskFor: 13 more cancel wordings (wait, we will wait, I cancelled, to stop, ignore, mistake, postpone, keep, hold, ignore, undo, oops) after "sign X" = no',
+        cancels2.every((t, k) => !signAskFor([R('c' + k, t), R('c0', 'תחתום על התעודה של רותם')], tgt, [])), cancels2.map((t, k) => !!signAskFor([R('c' + k, t), R('c0', 'תחתום על התעודה של רותם')], tgt, [])));
       check('signAskFor: a plain newer message ("what about the summons", "thanks") leaves the earlier ask',
         (signAskFor([R('u1', 'מה עם הזימונים'), R('c0', 'תחתום על התעודה של רותם')], tgt, []) || {}).id === 'c0' && (signAskFor([R('u2', 'תודה רבה'), R('c0', 'תחתום על התעודה של רותם')], tgt, []) || {}).id === 'c0');
     }
