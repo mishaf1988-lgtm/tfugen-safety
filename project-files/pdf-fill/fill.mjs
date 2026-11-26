@@ -30,9 +30,13 @@ function need() {
 function chromePath() {
   const base = '/opt/pw-browsers';
   for (const d of fs.existsSync(base) ? fs.readdirSync(base).sort().reverse() : []) {
-    const p = path.join(base, d, 'chrome-linux', 'chrome');
-    if (d.startsWith('chromium') && fs.existsSync(p)) return p;
+    // 26/11/2026: newer Playwright builds unpack to chrome-linux64 (chromium-1243), older ones to chrome-linux
+    for (const sub of ['chrome-linux64', 'chrome-linux']) {
+      const p = path.join(base, d, sub, 'chrome');
+      if (/^chromium-\d/.test(d) && fs.existsSync(p)) return p;
+    }
   }
+  if (fs.existsSync(path.join(base, 'chromium'))) return path.join(base, 'chromium');
   return execSync('which chromium || which chromium-browser').toString().trim();
 }
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');

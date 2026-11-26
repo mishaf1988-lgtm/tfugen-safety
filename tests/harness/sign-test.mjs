@@ -126,6 +126,14 @@ check('no signature image in the bucket = not signed, nothing written', !r.ok &&
 mk = mockFetch({ notPdf: true }); globalThis.fetch = mk.f;
 r = await signRun(env, 'https://sb', 'tok', req, ms0);
 check('not a PDF = not signed', !r.ok && r.error === 'not a pdf' && !mk.calls.some((x) => x.method === 'PUT'));
+// 26/11/2026 (security review of sign_now with media_id): the bytes signed must be the bytes checked
+{ const want = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', srcBytes))).map((b) => b.toString(16).padStart(2, '0')).join('');
+  mk = mockFetch({}); globalThis.fetch = mk.f;
+  r = await signRun(env, 'https://sb', 'tok', req, ms0, { sha256: '0'.repeat(64) });
+  check('sha256 given and the file changed = not signed, nothing written', !r.ok && r.error === 'file changed since it was checked' && !mk.calls.some((x) => x.method === 'PUT'), r);
+  mk = mockFetch({}); globalThis.fetch = mk.f;
+  r = await signRun(env, 'https://sb', 'tok', req, ms0, { sha256: want });
+  check('sha256 given and the same file = signed', r.ok && mk.calls.filter((x) => x.method === 'PUT').length === 1, r); }
 
 console.log('\n7. the answer in wa-hook: "no" and an old request never reach OneDrive');
 // 15/11/2026: fastSign writes through stateCas (GET with updated_at, then PATCH on that version); race(n) runs before the n-th PATCH

@@ -2645,6 +2645,31 @@ const callIn = async (body) => {
         cancels2.every((t, k) => !signAskFor([R('c' + k, t), R('c0', 'תחתום על התעודה של רותם')], tgt, [])), cancels2.map((t, k) => !!signAskFor([R('c' + k, t), R('c0', 'תחתום על התעודה של רותם')], tgt, [])));
       check('signAskFor: a plain newer message ("what about the summons", "thanks") leaves the earlier ask',
         (signAskFor([R('u1', 'מה עם הזימונים'), R('c0', 'תחתום על התעודה של רותם')], tgt, []) || {}).id === 'c0' && (signAskFor([R('u2', 'תודה רבה'), R('c0', 'תחתום על התעודה של רותם')], tgt, []) || {}).id === 'c0');
+      // 26/11/2026 (dev-20261126123149-29qk): "חתום בשמי" right after the PDF itself, the server checked the bytes (media given)
+      const T = (id, text, sec, extra) => Object.assign({ id, text, ts: new Date(Date.parse('2026-11-26T12:29:00Z') + sec * 1000).toISOString() }, extra || {});
+      const F = (sec, extra) => T('f', '📎 scan_0012.pdf', sec, Object.assign({ media_id: '123456789' }, extra || {}));
+      const M = { id: '123456789' };
+      check('signAskFor media: "חתום בשמי" 20 s after his file, same media = that message; without media = no (as before)',
+        (signAskFor([T('a', 'חתום בשמי', 20), F(0)], tgt, [], M) || {}).id === 'a' && signAskFor([T('a', 'חתום בשמי', 20), F(0)], tgt, []) === null);
+      check('signAskFor media: another media id, file 3 min before, a message between, forwarded file, used ask, "אל תחתום", a question = no',
+        signAskFor([T('a', 'חתום בשמי', 20), F(0)], tgt, [], { id: '999999' }) === null
+        && signAskFor([T('a', 'חתום בשמי', 180), F(0)], tgt, [], M) === null
+        && signAskFor([T('a', 'חתום בשמי', 30), T('m', 'מה עם הזימונים', 10), F(0)], tgt, [], M) === null
+        && signAskFor([T('a', 'חתום בשמי', 20), F(0, { forwarded: 'true' })], tgt, [], M) === null
+        && signAskFor([T('a', 'חתום בשמי', 20), F(0)], tgt, ['a'], M) === null
+        && signAskFor([T('a', 'אל תחתום', 20), F(0)], tgt, [], M) === null
+        && signAskFor([T('a', 'לחתום בשמי?', 20), F(0)], tgt, [], M) === null
+        && signAskFor([T('a', 'חתום בשמי', 20), F(0)], tgt, [], { id: 'abc' }) === null);
+      check('signAskFor media pairs: 3 real asks right after the file count ("חתום בשמי", "תחתום בשמי ותחזיר לשולח", "בבקשה חתום"); 3 do not ("תודה", "קיבלתי", "חתום?")',
+        ['חתום בשמי', 'תחתום בשמי ותחזיר לשולח', 'בבקשה חתום'].every((t) => !!signAskFor([T('a', t, 15), F(0)], tgt, [], M))
+        && ['תודה', 'קיבלתי', 'חתום?'].every((t) => !signAskFor([T('a', t, 15), F(0)], tgt, [], M)));
+      check('signAskFor media (security review): file B captioned "חתום בשמי" after file A = B only, never A',
+        signAskFor([T('b', 'חתום בשמי', 10, { media_id: '222222' }), F(0)], tgt, [], M) === null && (signAskFor([T('b', 'חתום בשמי', 10, { media_id: '222222' }), F(0)], tgt, [], { id: '222222' }) || {}).id === 'b');
+      check('signAskFor media: a cancel after the ask ends it', signAskFor([T('s', 'עצור', 40), T('a', 'חתום בשמי', 20), F(0)], tgt, [], M) === null);
+    }
+    { const { bytesSame } = await import('./_build/routine-db.mjs');
+      check('bytesSame: same bytes = yes; one byte off, other length or empty = no',
+        /^[0-9a-f]{64}$/.test(await bytesSame(new Uint8Array([1, 2, 3]), new Uint8Array([1, 2, 3]))) && !(await bytesSame(new Uint8Array([1, 2, 3]), new Uint8Array([1, 2, 4]))) && !(await bytesSame(new Uint8Array([1, 2]), new Uint8Array([1, 2, 3]))) && !(await bytesSame(new Uint8Array([]), new Uint8Array([]))));
     }
     const t0 = Date.now(), mk = (n, ago) => Array.from({ length: n }, (_, i) => ({ id: 's' + i, by: 'owner-ask', status: 'signed', at: new Date(t0 - ago).toISOString(), done_at: new Date(t0 - ago).toISOString() }));
     check('signNowCount: counts only sign_now signatures inside the window', signNowCount(JSON.stringify(mk(3, 60e3).concat(mk(2, 3600e3)).concat([{ id: 'x', by: 'w1', at: new Date(t0).toISOString() }])), t0 - 30 * 60e3) === 3 && SIGN_NOW_MAX === 5);
