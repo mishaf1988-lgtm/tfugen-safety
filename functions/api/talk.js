@@ -1111,7 +1111,8 @@ async function editLoad(env, tok, cookie) {
   const row = Array.isArray(rows) ? rows[0] : null;
   const talk = row ? await getTalk(env, row.talk_id) : null;
   if (!row || !talk || talk.kind !== KIND_IND) return { err: errPage(EDIT_BAD, 403) };
-  return { row, talk, gate: await codeGate(env, talk, cookie) };
+  // 26/11/2026 (Michael: "\u05d1\u05dc\u05d9 \u05e1\u05d9\u05e1\u05de\u05d4"): the signed link is the key, no HR code (DECISIONS 26/11/2026); the cookie is no longer read here
+  return { row, talk, gate: { ok: true } };
 }
 async function editShow(env, tok, cookie) {
   const L = await editLoad(env, tok, cookie);
@@ -1120,24 +1121,9 @@ async function editShow(env, tok, cookie) {
   const nonce = newId() + newId();
   return page('\u05ea\u05d9\u05e7\u05d5\u05df \u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9', editFormHtml(L.row, { tok, depts: TBT_DEPTS.map((x) => x[0]), otherDep: IND_OTHER_DEP, items: EQ_ITEMS, tools: EQ_TOOLS, free: EQ_FREE, retDef: EQ_RET_DEF, nonce }), '', 200, nonce, 'he');
 }
-async function editCode(env, form, request, tok) {
-  const L = await editLoad(env, tok, '');
-  if (L.err) return L.err;
-  const code = await indCode(env);
-  if (!code) return codePage(tok, 'he', false, true, false, true);
-  const gg = await guessGate(env, 'ind', request);
-  if (gg.locked) return codePage(tok, 'he', false, false, true, true);
-  if (!sameCode(String(form.get('icode') || '').trim().toLowerCase(), code)) { await new Promise((r) => setTimeout(r, WRONG_CODE_DELAY_MS)); return codePage(tok, 'he', true, false, false, true); }
-  await guessOk(env, gg);
-  const c = await makeCodeCookie(env, L.talk.id, code);
-  if (!c) return errPage('\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8.', 500);
-  return new Response(null, { status: 303, headers: { Location: editUrl(tok), 'Cache-Control': 'no-store',
-    'Set-Cookie': IND_CODE_COOKIE + '=' + c + '; Path=/api/talk; Max-Age=' + IND_CODE_DAYS * 86400 + '; HttpOnly; Secure; SameSite=Lax' } });
-}
 async function editPost(env, request, ctx) {
   const form = await request.formData();
   const tok = String(form.get('e') || '');
-  if (form.has('icode')) return editCode(env, form, request, tok);
   const L = await editLoad(env, tok, request.headers.get('cookie'));
   if (L.err) return L.err;
   if (!L.gate.ok) return codePage(tok, 'he', false, !!L.gate.closed, false, true);
