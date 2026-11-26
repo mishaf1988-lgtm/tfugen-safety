@@ -2660,6 +2660,9 @@ const callIn = async (body) => {
         && signAskFor([T('a', 'אל תחתום', 20), F(0)], tgt, [], M) === null
         && signAskFor([T('a', 'לחתום בשמי?', 20), F(0)], tgt, [], M) === null
         && signAskFor([T('a', 'חתום בשמי', 20), F(0)], tgt, [], { id: 'abc' }) === null);
+      check('signAskFor media pairs: 3 real asks right after the file count ("חתום בשמי", "תחתום בשמי ותחזיר לשולח", "בבקשה חתום"); 3 do not ("תודה", "קיבלתי", "חתום?")',
+        ['חתום בשמי', 'תחתום בשמי ותחזיר לשולח', 'בבקשה חתום'].every((t) => !!signAskFor([T('a', t, 15), F(0)], tgt, [], M))
+        && ['תודה', 'קיבלתי', 'חתום?'].every((t) => !signAskFor([T('a', t, 15), F(0)], tgt, [], M)));
       check('signAskFor media (security review): file B captioned "חתום בשמי" after file A = B only, never A',
         signAskFor([T('b', 'חתום בשמי', 10, { media_id: '222222' }), F(0)], tgt, [], M) === null && (signAskFor([T('b', 'חתום בשמי', 10, { media_id: '222222' }), F(0)], tgt, [], { id: '222222' }) || {}).id === 'b');
       check('signAskFor media: a cancel after the ask ends it', signAskFor([T('s', 'עצור', 40), T('a', 'חתום בשמי', 20), F(0)], tgt, [], M) === null);
