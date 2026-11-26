@@ -175,7 +175,9 @@ export async function stampPdf(pdfBytes, sigBytes, dateText, opts) {
 // The signing itself, after Michael's yes: read, stamp, save beside, never replace. req.path is the full
 // Graph path under the drive root (checked when the request was made, routine-db signRequestCheck).
 // Returns {ok, name, webUrl} or {ok:false, error}.
-export async function signRun(env, sbUrl, token, req, nowMs) {
+// opts.sha256 (26/11/2026, security review of sign_now with media_id): the hex SHA-256 the bytes read here must have, so a file
+// swapped at the same path after the server compared it with the WhatsApp file is not signed.
+export async function signRun(env, sbUrl, token, req, nowMs, opts) {
   const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
   const enc = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
   const gh = { Authorization: 'Bearer ' + token };
@@ -195,6 +197,10 @@ export async function signRun(env, sbUrl, token, req, nowMs) {
   const pdf = new Uint8Array(await src.arrayBuffer());
   if (!pdf.length || pdf.length > SIGN_PDF_MAX) return { ok: false, error: 'size' };
   if (String.fromCharCode(...pdf.slice(0, 5)) !== '%PDF-') return { ok: false, error: 'not a pdf' };
+  if (opts && opts.sha256 !== undefined) {
+    const hx = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', pdf))).map((b) => b.toString(16).padStart(2, '0')).join('');
+    if (hx !== opts.sha256) return { ok: false, error: 'file changed since it was checked' };
+  }
   const k = env.SUPABASE_SERVICE_ROLE_KEY;
   const s = await fetch(sbUrl + '/storage/v1/object/' + SIGN_BUCKET + '/' + SIGN_OBJ, { headers: { apikey: k, Authorization: 'Bearer ' + k }, signal: tmo(SB_MS) });
   if (!s.ok) return { ok: false, error: s.status === 400 || s.status === 404 ? 'no signature image' : 'signature ' + s.status };

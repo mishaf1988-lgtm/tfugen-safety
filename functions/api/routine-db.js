@@ -119,7 +119,9 @@
 //              only his answer, in wa-hook's fast lane, signs (functions/_sign.js). signRequestCheck.
 //   sign_now  (24/11/2026, Michael: "once I ask, sign with no do-it") {agent: routine-wa-assistant, why, path, reply_*?}: signs at
 //              once only when Michael's own message of the last 30 minutes asks to sign (ownerAskedSign); the signed copy to him,
-//              a reply draft to the sender. At most SIGN_NOW_MAX in 30 minutes.
+//              a reply draft to the sender. At most SIGN_NOW_MAX in 30 minutes. media_id? (26/11/2026): an ask with no word of
+//              the file counts when the file at path is byte for byte that WhatsApp file and it was his message right before the ask
+//              (SIGN_MEDIA_MS, signAskFor, signSameAsMedia).
 //   dev_request / dev_done  (20/10/2026) {agent, text} a request to development, kept in server_state.dev_inbox;
 //              a new one fires the Routine DEV_TRIGGER at once when DEV_FIRE_TOKEN is set (21/10/2026, devFireText);
 //              {id, note} closes one. devInboxAdd / devInboxDone.
@@ -3147,7 +3149,12 @@ export const SIGN_ASK_NOBARE_RE = new RegExp('(?:^|[^\\u05d0-\\u05ea])(?:\u05ea\
 const SIGN_ASK_IMPERATIVE_RE = new RegExp('^(?:(?:\u05d1\u05d1\u05e7\u05e9\u05d4|\u05e0\u05d0|\u05d0\u05d6)\\s+)?\u05d7\u05ea\u05d5\u05dd(?:[^\\u05d0-\\u05ea]|$)');
 const SIGN_QUESTION_RE = new RegExp('[?\\uff1f\\u061f]|(?:^|[^\\u05d0-\\u05ea])\u05d4\u05d0\u05dd(?:[^\\u05d0-\\u05ea]|$)');
 export const ownerAskIsSign = (t) => { const x = String(t || ''); const lead = x.replace(/^[^a-zA-Z\u05d0-\u05ea]+/, ''); return !SIGN_QUESTION_RE.test(x) && (SIGN_ASK_NOBARE_RE.test(x) || SIGN_ASK_IMPERATIVE_RE.test(lead)); };
-export function signAskFor(rows, target, used) {
+// 26/11/2026 (dev-20261126123149-29qk: Michael sent a PDF on WhatsApp and at once "\u05d7\u05ea\u05d5\u05dd \u05d1\u05e9\u05de\u05d9", with no word of the
+// file name, and got another tap): an ask that names no file still counts when "media" is given (the server checked that
+// the file at the path is byte for byte the WhatsApp file with that media id) and his message right before the ask, at
+// most SIGN_MEDIA_MS earlier, not forwarded, is that very file. Everything else (cancel, question, used) stays as is.
+export const SIGN_MEDIA_MS = 2 * 60e3;
+export function signAskFor(rows, target, used, media) {
   // security review 24/11/2026 (refutation): whole words of the file name and its folder only (not the mail subject or
   // sender the assistant chooses), no numbers, no "pdf", and the fillers checked again after a prefix letter is dropped
   const toks = (t) => String(t || '').toLowerCase().split(/[^a-z\u05d0-\u05ea]+/).filter((w) => w.length >= 3 && w !== 'pdf');
@@ -3157,12 +3164,20 @@ export function signAskFor(rows, target, used) {
   // rows come newest first (ts.desc). Any message of his, newer than the ask or the ask itself, that cancels, negates or asks (a
   // question), whether or not it names the file, ends it: null (security review and refutation of 25/11/2026: "do not sign this",
   // "stop" and "do not sign X" after "sign X" were skipped and the earlier ask signed). A plain newer message is ignored.
-  for (const r of (Array.isArray(rows) ? rows : [])) {
+  const list = Array.isArray(rows) ? rows : [];
+  const fwd = (r) => r.forwarded === true || r.forwarded === 'true';
+  const mid = media && /^[0-9]{5,30}$/.test(String(media.id || '')) ? String(media.id) : '';
+  for (let i = 0; i < list.length; i++) {
+    const r = list[i];
     const t = String((r && r.text) || '');
-    if (!r || !r.id || r.forwarded === true || r.forwarded === 'true' || /^\s*📎/.test(t)) continue;
+    if (!r || !r.id || fwd(r) || /^\s*📎/.test(t)) continue;
     if (signCancels(t) || SIGN_QUESTION_RE.test(t)) return null;
     if (usedSet.has(r.id) || !ownerAskIsSign(t)) continue;
     if (toks(t).some((w) => strip(w).some((x) => SIGN_FILLER.indexOf(x) < 0 && hay.has(x)))) return r;
+    // security review 26/11/2026: a file that carries the ask as its caption is the file asked about, never the one before it
+    if (mid && r.media_id) { if (String(r.media_id) === mid) return r; continue; }
+    const prev = list[i + 1], gap = prev ? Date.parse(r.ts) - Date.parse(prev.ts) : NaN;
+    if (mid && prev && prev.id && !fwd(prev) && String(prev.media_id || '') === mid && gap >= 0 && gap <= SIGN_MEDIA_MS) return r;
   }
   return null;
 }
@@ -3170,6 +3185,25 @@ export function signAskFor(rows, target, used) {
 export function signNowCount(raw, sinceMs) {
   let l = []; try { l = JSON.parse(raw || '[]'); } catch (e) { l = []; }
   return (Array.isArray(l) ? l : []).filter((x) => x && x.by === 'owner-ask' && Date.parse(x.done_at || x.at) >= sinceMs).length;
+}
+// 26/11/2026: is the OneDrive file at path byte for byte the WhatsApp file with this media id? (SHA-256 of both; any failure = no)
+// Returns the hex SHA-256 when equal (signRun checks the bytes it signs against it), else null.
+export async function bytesSame(a, b) {
+  if (!a || !b || a.length !== b.length || !a.length) return null;
+  const [x, y] = await Promise.all([crypto.subtle.digest('SHA-256', a), crypto.subtle.digest('SHA-256', b)]);
+  const u = new Uint8Array(x), v = new Uint8Array(y);
+  return u.every((n, i) => n === v[i]) ? Array.from(u).map((n) => n.toString(16).padStart(2, '0')).join('') : null;
+}
+async function signSameAsMedia(env, path, mediaId) {
+  const mr = await onRequest({ env, request: new Request('https://internal/api/routine-db', { method: 'POST',
+    headers: { 'x-routine-key': env.ROUTINE_KEY || '', 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'wa_media', id: mediaId }) }) });
+  const mj = await mr.json().catch(() => ({}));
+  if (!mj.ok || !mj.b64) return null;
+  const bin = atob(mj.b64), wa = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) wa[i] = bin.charCodeAt(i);
+  const at = await accessToken(env);
+  const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + path.split('/').filter(Boolean).map(encodeURIComponent).join('/') + ':/content', { headers: { Authorization: 'Bearer ' + at.token }, signal: tmo(GRAPH_MS) });
+  if (!d.ok) return null;
+  return bytesSame(new Uint8Array(await d.arrayBuffer()), wa);
 }
 export function signRequestCheck(b) {
   const parts = String(b.path || '').split('/').filter(Boolean);
@@ -5059,19 +5093,26 @@ async function routineDbHandle(context) {
       return jsonResp({ ok: s.ok, sent: s.ok, offered: rel.length, error: s.error || undefined }, 200, {});
     }
     if (body.op === 'sign_now') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path', 'page', 'x', 'y', 'w'].concat(SIGN_REPLY_FIELDS).indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'path', 'page', 'x', 'y', 'w', 'media_id'].concat(SIGN_REPLY_FIELDS).indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (body.agent !== 'routine-wa-assistant') return jsonResp({ ok: false, error: 'sign_now: the WhatsApp assistant only' }, 400, {});
+      if (body.media_id !== undefined && !/^[0-9]{5,30}$/.test(String(body.media_id))) return jsonResp({ ok: false, error: 'bad media_id' }, 400, {});
       const c = signRequestCheck(body);
       if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
       const rq = signReplyCheck(body);
       if (rq.error) return jsonResp({ ok: false, error: rq.error }, 400, {});
       const nowMs = Date.now(), now = new Date(nowMs).toISOString();
-      const or = await fetch(url + '/rest/v1/notifications_log?select=id,ts,text:payload->>text,forwarded:payload->>forwarded&event_type=eq.owner_in&channel=in.(whatsapp,chat)&ts=gte.' + encodeURIComponent(new Date(nowMs - SIGN_NOW_MS).toISOString()) + '&order=ts.desc&limit=20', { headers: h, signal: tmo(SB_MS) }).catch(() => null);
+      const or = await fetch(url + '/rest/v1/notifications_log?select=id,ts,text:payload->>text,forwarded:payload->>forwarded,media_id:payload->>media_id&event_type=eq.owner_in&channel=in.(whatsapp,chat)&ts=gte.' + encodeURIComponent(new Date(nowMs - SIGN_NOW_MS).toISOString()) + '&order=ts.desc&limit=20', { headers: h, signal: tmo(SB_MS) }).catch(() => null);
       const rows = or && or.ok ? await or.json().catch(() => []) : [];
       if (!ownerAskedSign(rows)) return jsonResp({ ok: false, error: 'sign_now: no message of Michael in the last 30 minutes asks to sign. Use sign_offer (he taps do it) instead' }, 400, {});
       const sr0 = await stateRead([SIGN_KEY]).catch(() => []);
       let used = []; try { used = JSON.parse(((sr0 || [])[0] || {}).value || '[]').map((x) => x && x.ask).filter(Boolean); } catch (e) { used = []; }
-      const ask = signAskFor(rows, c.name.replace(/\.pdf$/i, '') + ' ' + String(c.folder || '').split('/').pop(), used);
+      const tgt = c.name.replace(/\.pdf$/i, '') + ' ' + String(c.folder || '').split('/').pop();
+      let ask = signAskFor(rows, tgt, used), mediaSha = null;
+      // 26/11/2026: "sign in my name" right after the file itself: only when the file at the path is the same bytes as his WhatsApp file
+      if (!ask && body.media_id !== undefined && signAskFor(rows, tgt, used, { id: String(body.media_id) })) {
+        mediaSha = await signSameAsMedia(env, c.path, String(body.media_id)).catch(() => null);
+        if (mediaSha) ask = signAskFor(rows, tgt, used, { id: String(body.media_id) });
+      }
       if (!ask) return jsonResp({ ok: false, error: 'sign_now: no unused message of Michael in the last 30 minutes asks to sign THIS file (a whole word of the file name or its folder). Use sign_offer instead' }, 400, {});
       const at = await accessToken(env);
       const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
@@ -5102,7 +5143,7 @@ async function routineDbHandle(context) {
       if (!t || t.error) return jsonResp({ ok: false, error: 'sign_now: ' + ((t && t.error) || 'state') }, 200, {});
       if (!cas.written) return jsonResp({ ok: false, error: cas.conflict ? 'save conflict, try again' : 'save ' + cas.status }, 200, {});
       let res;
-      try { res = await signRun(env, url, at.token, t.req, nowMs); } catch (e) { res = { ok: false, error: String(e && e.message || e).slice(0, 120) }; }
+      try { res = await signRun(env, url, at.token, t.req, nowMs, mediaSha ? { sha256: mediaSha } : undefined); } catch (e) { res = { ok: false, error: String(e && e.message || e).slice(0, 120) }; }
       const mark = () => stateCas(url, h, SIGN_KEY, (raw) => ({ value: JSON.stringify(signMark(raw === undefined ? t.list : raw, t.req.id, res.ok ? 'signed' : 'failed', res.ok ? { signed: res.name } : { error: res.error })) }), () => tmo(SB_MS)).catch(() => ({ written: false }));
       // security review 24/11/2026: an approved request left unmarked is tried once more, and the answer says so
       let marked = await mark(); if (!marked.written) marked = await mark();
