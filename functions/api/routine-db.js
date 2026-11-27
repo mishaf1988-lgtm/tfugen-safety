@@ -4114,9 +4114,11 @@ async function routineDbHandle(context) {
     // (PDF, Word, Excel) from the safety folder go through Workers AI toMarkdown, and only the numbers and a 600 character
     // start come back, to judge the Hebrew. Read-only, nothing is written. TEMPORARY: removed after the trial.
     if (body.op === 'md_try') {
-      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths', 'offset'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
       if (String(body.why || '').trim().length < 5) return jsonResp({ ok: false, error: 'why: at least 5 characters' }, 400, {});
+      const moff = body.offset === undefined ? 0 : body.offset;
+      if (!(Number.isInteger(moff) && moff >= 0 && moff <= 200000)) return jsonResp({ ok: false, error: 'offset: 0-200000' }, 400, {});
       const mc = draftAttach(body.paths);
       if (mc.error || !mc.attach.length || mc.attach.length > 3) return jsonResp({ ok: false, error: (mc.error || 'paths: 1-3').replace('attach', 'paths') }, 400, {});
       if (!env.AI || typeof env.AI.toMarkdown !== 'function') return jsonResp({ ok: false, error: 'Workers AI toMarkdown missing on the binding' }, 200, {});
@@ -4137,7 +4139,7 @@ async function routineDbHandle(context) {
           const r0 = Array.isArray(res) ? res[0] : res;
           const md = String((r0 && r0.data) || '');
           const he = (md.match(/[\u05d0-\u05ea]/g) || []).length, lat = (md.match(/[A-Za-z]/g) || []).length;
-          mfiles.push({ name: a.name, ok: !!md, format: r0 && r0.format, chars: md.length, hebrew_letters: he, latin_letters: lat, replacement_chars: (md.match(/\ufffd/g) || []).length, ms: Date.now() - t0, head: md.slice(0, 600), error: md ? undefined : String((r0 && r0.error) || 'no text').slice(0, 160) });
+          mfiles.push({ name: a.name, ok: !!md, format: r0 && r0.format, chars: md.length, hebrew_letters: he, latin_letters: lat, replacement_chars: (md.match(/\ufffd/g) || []).length, ms: Date.now() - t0, head: md.slice(moff, moff + 600), error: md ? undefined : String((r0 && r0.error) || 'no text').slice(0, 160) });
         } catch (x) { mfiles.push({ name: a.name, ok: false, error: ('md: ' + String((x && x.message) || x)).slice(0, 160) }); }
       }
       return jsonResp({ ok: mfiles.some((f) => f.ok), files: mfiles }, 200, {});
