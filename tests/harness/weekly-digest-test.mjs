@@ -210,7 +210,7 @@ const ROWS = [
         if (u.includes(':/content')) return new Response(L.bytes || new TextEncoder().encode(L.text), { status: 200 });
         return json({ lastModifiedDateTime: L.mod || null });
       }
-      if (u.startsWith('https://graph.microsoft.com/v1.0/me/sendMail')) { w.mails.push(JSON.parse(init.body)); return new Response(null, { status: o.mailFail ? 500 : 202 }); }
+      if (u.startsWith('https://graph.microsoft.com/v1.0/me/sendMail')) { w.mails.push(JSON.parse(init.body)); return new Response(null, { status: o.mailFail || o.mailFailAt === w.mails.length - 1 ? 500 : 202 }); }
       return json({ error: 'unexpected ' + u }, 599);
     };
     return w;
@@ -293,6 +293,23 @@ const ROWS = [
   const mh = c.w.mails[1] && c.w.mails[1].message;
   check('height: not in the weekly mail, a second mail to the same mailbox with the worker and the date', !/גובה|יוסי/.test(mx) && c.w.mails.length === 2 && c.j.heightSent === true && c.j.counts.height === 1 && mh.toRecipients[0].emailAddress.address === 'sviva@tapugan.co.il' && /אישורי עבודה בגובה/.test(mh.subject) && /1 פגו, 0 יפוגו/.test(mh.subject) && /יוסי/.test(mh.body.content) && mh.body.content.includes(fdAgo(5).replace(/\./g, '/')) && !/מלגזה/.test(mh.body.content), [c.w.mails.length, mh && mh.subject]);
   check('height: no height row = one mail only', (await call({ exp: { tr: [{ id: 't1', n: 'מלגזה', w: 'דוד', e: plus(-2, now) }] } }, { op: 'send', force: true }, 'nsec')).w.mails.length === 1);
+  // 27/11/2026 (retro 23/11/2026 items 2-3): the height mail must not fail silently.
+  const hRow = { tr: [{ id: 't2', n: 'עבודה בגובה', w: 'יוסי', e: plus(-5, now) }] };
+  const recOf = (x) => { try { return JSON.parse(x.w.state[STATE_KEY]); } catch (e) { return null; } };
+  c = await call({ expFail: 'tr' }, { op: 'send', force: true }, 'nsec');
+  let hr = recOf(c);
+  check('height: tr not read = an orange line in the weekly mail, heightFail recorded', c.w.mails.length === 1 && /<p style="[^"]*color:#b45309[^"]*">אישורי הגובה לא נקראו השבוע/.test(c.w.mails[0].message.body.content) && hr && hr.ok && hr.heightFail === true, [hr, c.w.mails.length]);
+  c = await call({ exp: hRow, mailFailAt: 1 }, { op: 'send', force: true }, 'nsec');
+  hr = recOf(c);
+  const hAt = hr && hr.at;
+  c = await call({ exp: hRow, state: { [STATE_KEY]: JSON.stringify(hr) } }, {}, 'nsec');
+  let hr2 = recOf(c);
+  check('height: the height send failed = the next run sends only the height mail, the error cleared, the original at kept', hr && hr.ok && hr.heightError && c.w.mails.length === 1 && /אישורי עבודה בגובה/.test(c.w.mails[0].message.subject) && c.j.heightSent === true && hr2 && hr2.ok && !hr2.heightError && hr2.height === 1 && hr2.at === hAt, [hr, hr2, c.w.mails.map((x) => x.message.subject)]);
+  c = await call({ exp: hRow, state: { [STATE_KEY]: JSON.stringify(hr2) } }, {}, 'nsec');
+  check('height: after a successful send nothing is sent twice', !c.w.mails.length && /^sent /.test(c.j.skipped || ''), c.j);
+  c = await call({ exp: hRow, state: { [STATE_KEY]: JSON.stringify({ at: new Date(Date.now() - 3600e3).toISOString(), ok: true, heightFail: true }) } }, {}, 'nsec');
+  hr2 = recOf(c);
+  check('height: tr was not read last run, read now = only the height mail, the weekly mail not sent again', c.w.mails.length === 1 && /אישורי עבודה בגובה/.test(c.w.mails[0].message.subject) && hr2 && !hr2.heightFail && hr2.height === 1, [hr2, c.w.mails.map((x) => x.message.subject)]);
   const eqOld = { equip_inspections: [{ id: 'e67', n: 'מלגזה ישנה', e: plus(-95, now) }, { id: 'e37', n: 'במה ישנה', e: plus(-95, now) }] };
   c = await call({ exp: eqOld, links: [{ source_table: 'equip_inspections', source_id: 'e37', status: 'בטיפול' }] }, { op: 'send', force: true }, 'nsec');
   const mnt = c.w.mails[0] && c.w.mails[0].message.body.content;

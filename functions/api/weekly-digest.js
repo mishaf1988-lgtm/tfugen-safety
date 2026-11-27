@@ -176,6 +176,8 @@ const H = {
   neverWhy: '. \u05d0\u05d9\u05df \u05dc\u05d6\u05d4 \u05de\u05d5\u05e2\u05d3, \u05d5\u05dc\u05db\u05df \u05d6\u05d4 \u05dc\u05d0 \u05de\u05d5\u05e4\u05d9\u05e2 \u05d1\u05d8\u05d1\u05dc\u05ea \u05d4\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05dc\u05de\u05d8\u05d4.',
   emptyWhy: '. \u05d0\u05d9\u05df \u05de\u05d4\u05dd \u05d0\u05e3 \u05d4\u05ea\u05e8\u05d0\u05ea \u05ea\u05e4\u05d5\u05d2\u05d4 \u05e2\u05d3 \u05e9\u05d9\u05d5\u05d6\u05e0\u05d5 \u05d1\u05d4\u05dd \u05e8\u05e9\u05d5\u05de\u05d5\u05ea.',
 };
+// 27/11/2026 (retro 23/11/2026 item 2): tr not read = the height mail could not be built; said in the weekly mail, not silent.
+H.heightFail = '\u05d0\u05d9\u05e9\u05d5\u05e8\u05d9 \u05d4\u05d2\u05d5\u05d1\u05d4 \u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2';
 export const T = H;
 
 // The weekly talk each worker reads and signs (03/10/2026, stage 4): one line
@@ -508,6 +510,7 @@ export function digestHtml(d, today, meta) {
   const nv = m.never || [];
   if (nv.length) h += '<p style="color:#b91c1c;font-weight:bold">' + esc(H.never + nv.join(', ') + H.neverWhy) + '</p>';
   if (m.eqiFail) h += '<p style="margin:4px 0;color:#b91c1c;font-weight:bold">' + esc(m.eqiFail.text) + '</p>';
+  if (m.heightFail) h += '<p style="margin:4px 0;color:#b45309;font-weight:bold">' + esc(H.heightFail) + '</p>';
   if (m.expiring) h += h2(H.exp, m.expiring.length) + expBlock(m.expiring, m.expFail);
   const qg = quoteGroups(m.expiring);
   if (qg.length) h += h2(H.qGroups, qg.length) + quoteBlock(qg);
@@ -980,7 +983,7 @@ async function build(env) {
   const rg = registryProblem(v('registry_probe'), Date.now());
   if (rg) watchOpen.push(rg);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { plan: pl, meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, openTyped: tk ? openTypedLines(tk.talks, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), mf: mailFilingLine(v('mail_filing'), Date.now()), vd: validityLine(v('validity_run'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()), pendAct: pendingActionsLine(hazards, reports), pwAge: passwordAgeLines(st, env, Date.now()), stateFail: stFail };
+  const meta = { plan: pl, meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, heightFail: !!exp.heightFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, openTyped: tk ? openTypedLines(tk.talks, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), mf: mailFilingLine(v('mail_filing'), Date.now()), vd: validityLine(v('validity_run'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()), pendAct: pendingActionsLine(hazards, reports), pwAge: passwordAgeLines(st, env, Date.now()), stateFail: stFail };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today), height: exp.height || [] };
 }
@@ -1004,6 +1007,25 @@ export async function onRequest(context) {
     const counts = { open: b.d.open, overdue: b.d.overdueCount, soon: b.d.soon.length, noDue: b.d.noDue.length, trustee: b.d.trustee.length, emptyRegs: b.meta.emptyRegs.length, never: (b.meta.never || []).length, expiring: b.meta.expiring.length, expired: b.meta.expiring.filter((x) => x.days < 0).length, height: b.height.length };
     if (op !== 'send') return jsonResp({ ok: true, today: b.today, counts, digest: b.d, meta: b.meta, subject: b.subject, html: b.html, last: b.last, height: b.height, heightHtml: b.height.length ? heightHtml(b.height, b.today) : '' }, 200, cors);
     const lastAt = b.last && b.last.ok && b.last.at ? Date.parse(b.last.at) : 0;
+    // 27/11/2026 (retro 23/11/2026 item 3): the weekly mail went but the height mail did not (send failed, or tr
+    // not read). Within REPEAT_MS the next slot sends only the height mail, keeping the original at so the
+    // weekly mail is not sent again.
+    const lst = b.last || {};
+    if (lastAt && Date.now() - lastAt < REPEAT_MS && body.force !== true && (lst.heightError || lst.heightFail) && b.height.length) {
+      const hrec = Object.assign({}, lst);
+      let hs = false;
+      try {
+        const row = odConfigured(env) ? await tokenRow(env) : null;
+        if (!row || !row.refresh_token || !hasMail(row)) throw new Error('not connected');
+        const { token, email } = await accessToken(env);
+        const to = email || row.user_email || lst.to;
+        if (!to) throw new Error('no address');
+        await sendMail(token, to, heightSubject(b.height, b.today), heightHtml(b.height, b.today));
+        hs = true; hrec.height = b.height.length; delete hrec.heightError; delete hrec.heightFail; hrec.heightAt = new Date().toISOString();
+      } catch (e) { hrec.heightError = String((e && e.message) || e).substring(0, 200); }
+      await stateSet(env, { [STATE_KEY]: JSON.stringify(hrec) }).catch(() => {});
+      return jsonResp({ ok: true, skipped: 'sent ' + lst.at, heightRetry: true, heightSent: hs, counts }, 200, cors);
+    }
     if (lastAt && Date.now() - lastAt < REPEAT_MS && body.force !== true) return jsonResp({ ok: true, skipped: 'sent ' + b.last.at, counts }, 200, cors);
     const rec = { at: new Date().toISOString(), ok: false, to: null, counts, error: '' };
     const fail = async (why) => { rec.error = why; await stateSet(env, { [STATE_KEY]: JSON.stringify(rec) }).catch(() => {}); return jsonResp({ ok: false, error: why, counts }, 200, cors); };
@@ -1016,6 +1038,7 @@ export async function onRequest(context) {
     if (!to) return fail('no address');
     try { await sendMail(token, to, b.subject, b.html); } catch (e) { return fail(String((e && e.message) || e).substring(0, 200)); }
     rec.ok = true; rec.to = to;
+    if (b.meta.heightFail) rec.heightFail = true;
     // 22/11/2026: the second mail, the height approvals, only when there is one to show. Its failure is
     // recorded in the same state row (heightError) and does not turn the weekly mail into a failure.
     let heightSent = false;
