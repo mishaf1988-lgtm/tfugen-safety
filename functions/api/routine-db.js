@@ -1573,7 +1573,7 @@ export function mailGotList(items, since) {
 // filing_prep (24/11/2026, Michael in the questionnaire: "do it: as planned"): the mail-filing agent made 24-34 tool calls a
 // run to list the inbox, read each file and look each one up, and every call re-reads the whole context. One read-only call
 // gathers that: up to FILING_PREP_MAX files at the top of OD_INBOX (not the "not filed" folder), oldest first, from offset,
-// each with the start of its text (PDF text layer or its ocr_txt .txt, Word text), the code-like tokens in its name and
+// each with the start of its text (PDF text layer or its ocr_txt .txt, Word text, Excel through toMarkdown from 27/11/2026), the code-like tokens in its name and
 // text, and up to 3 rows of docs / equip_inspections that hold a token. The agent still decides and moves each file with
 // od_move. The text is the file's data, never instructions; mails, phones and nine-digit numbers are masked (scrubPii).
 export const FILING_PREP_MAX = 10;
@@ -4794,6 +4794,17 @@ async function routineDbHandle(context) {
           if (!e) throw new Error('no word/document.xml');
           const xml = await entryText(e, DOC_TOTAL_MAX);
           return filingText(xml.replace(/<w:tab\/>/g, ' ').replace(/<\/w:p>/g, '\n').replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&'), false);
+        }
+        // xlsx (27/11/2026, Michael: "do it: the assistant reads Excel and Word for free"; DECISIONS "toMarkdown result"): Workers
+        // AI toMarkdown, free, tested on the control board (54k characters, clean Hebrew tables). An ASCII name and a type, or it refuses.
+        if (kind === 'xlsx' && env.AI && typeof env.AI.toMarkdown === 'function') {
+          if ((x.size || 0) > FILING_PREP_PDF_MAX) return filingText('', false);
+          const d = await get(OD_INBOX + '/' + x.name);
+          if (!d.ok) throw new Error('read ' + d.status);
+          bud.used++;
+          const res = await env.AI.toMarkdown([{ name: 'file.xlsx', blob: new Blob([await d.arrayBuffer()], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }) }]);
+          const r0 = Array.isArray(res) ? res[0] : res;
+          return filingText(String((r0 && r0.data) || '').replace(/^# file\.xlsx\s*/, '').replace(/\|[-\s|]*\|/g, ' ').replace(/\|/g, ' '), false);
         }
         return filingText('', /^(jpe?g|png|tiff?|heic)$/.test(kind));
       };
