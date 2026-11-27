@@ -4131,7 +4131,9 @@ async function routineDbHandle(context) {
           const buf = await d.arrayBuffer();
           if (buf.byteLength > PDF_READ_MAX) { mfiles.push({ name: a.name, ok: false, error: 'too big: ' + buf.byteLength }); continue; }
           const t0 = Date.now();
-          const res = await env.AI.toMarkdown([{ name: a.name, blob: new Blob([buf]) }]);
+          const ext = (a.name.match(/\.(pdf|docx|xlsx)$/i) || [''])[0].toLowerCase().replace('.', '');
+          const mime = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }[ext];
+          const res = await env.AI.toMarkdown([{ name: 'file.' + ext, blob: new Blob([buf], { type: mime }) }]); // ASCII name and a type: the service refused the Hebrew name (27/11/2026)
           const r0 = Array.isArray(res) ? res[0] : res;
           const md = String((r0 && r0.data) || '');
           const he = (md.match(/[\u05d0-\u05ea]/g) || []).length, lat = (md.match(/[A-Za-z]/g) || []).length;
