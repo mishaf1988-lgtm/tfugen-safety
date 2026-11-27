@@ -5259,3 +5259,10 @@ Meta סיווגה את `tfugen_assistant_update` כ-MARKETING (0.0353 דולר �
 - **עוד נשאר מהארבעה:** Access על כתובות התצוגה חסום עד שמיכאל מפעיל Zero Trust בלוח (ה-API: "Access is not enabled"); Worker שעון לא נבנה כי ההחלטה על `pg_cron` (רעיון 48) נשארה.
 - נבחר: מומלץ.
 - עוזר: אין שינוי.
+
+## 27/11/2026: שלושה כלים חדשים של Cloudflare לבדיקה: קריאת מסמכים, סינון פרטים בשער, Tunnel לגלאי הגז
+- **מה (מיכאל: "חפש עוד כלים בקלאודפליר שמושים", ובשאלון: "בצע" על שלושתם):** (1) **`toMarkdown` ב-Workers AI**: המרת PDF, Word ו-Excel לטקסט, "free for most format conversions" (developers.cloudflare.com/workers-ai/features/markdown-conversion/, נבדק בתיעוד). קודם ניסוי על 3 מסמכים אמיתיים מהתיקייה (איכות עברית, טקסט מול סריקה), ואם טוב: חלופה חינמית ל-`pdf_read` שתלוי ב-Claude בלי קרדיט. ה-binding `env.AI` כבר קיים ב-Pages; לטוקן `claude-pages` אין הרשאה ל-REST של `tomarkdown` (Authentication error). (2) **DLP ב-AI Gateway**: סריקת שאלות ל-Gemini לפרטים אישיים (developers.cloudflare.com/ai-gateway/features/dlp/). **לא נבדק אם חינמי**: התיעוד מקשר ל-DLP הארגוני של Zero Trust. לברר לפני בנייה; במקביל המסנן `geminiIdLike` שלנו (STATUS, 24/11/2026) מתוקן בקוד. (3) **Cloudflare Tunnel** (חינמי, `cloudflared` על מחשב במפעל): חיבור מסך מקומי של גלאי הגז לאפליקציה בלי לפתוח את רשת המפעל (רעיון 26). תלוי במידע מהשטח: אם לגלאים יש מסך ברשת, ומחשב שרץ תמיד.
+- **מה כבר קיים (נבדק אחרי השאלון, `card.md` ו-`routine-db.js`):** קריאת PDF חינמית כבר יש: `ocr_txt` קורא PDF (טקסט וסריקה) במודל ראייה של Workers AI או ב-Azure Vision, וכותב txt; Word נקרא ישירות מה-XML (`filing_prep`); וה-connector של Microsoft 365 קורא קבצים. לכן (1) הוא **שיפור** של `ocr_txt` ל-PDF עם שכבת טקסט ול-Excel (בלי מודל ראייה ובלי מכסת ה-neurons), לא יכולת חדשה; הניסוי משווה מולו. (2) **אינו** "הסתרת פרטים" (`card.md`: עותק Excel או Word עם "עובד N"); הוא שכבה נוספת על `geminiIdLike`.
+- **לא נבחר מחדש:** תמלול, הקראה, תרגום וקריאת תמונות כבר בשימוש; שאר השירותים נבדקו ב-`cloudflare-review-27-11-2026.md`.
+- נבחר: מומלץ (כל שלושת ה"בצע").
+- עוזר: אין שינוי עד שנבנה משהו; קריאת מסמכים חדשה תעדכן את `wa-topics` ו-`routine-wa-core.md` באותו PR.
