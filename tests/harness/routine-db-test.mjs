@@ -2682,8 +2682,15 @@ const callIn = async (body) => {
       const cancels2 = ['המתן', 'המתן עם התעודה של רותם', 'נחכה', 'בטלתי', 'להפסיק', 'תתעלם', 'טעות', 'תדחה', 'תשאיר', 'עכב', 'ignore', 'undo', 'oops'];
       check('signAskFor: 13 more cancel wordings (wait, we will wait, I cancelled, to stop, ignore, mistake, postpone, keep, hold, ignore, undo, oops) after "sign X" = no',
         cancels2.every((t, k) => !signAskFor([R('c' + k, t), R('c0', 'תחתום על התעודה של רותם')], tgt, [])), cancels2.map((t, k) => !!signAskFor([R('c' + k, t), R('c0', 'תחתום על התעודה של רותם')], tgt, [])));
-      check('signAskFor: a plain newer message ("what about the summons", "thanks") leaves the earlier ask',
-        (signAskFor([R('u1', 'מה עם הזימונים'), R('c0', 'תחתום על התעודה של רותם')], tgt, []) || {}).id === 'c0' && (signAskFor([R('u2', 'תודה רבה'), R('c0', 'תחתום על התעודה של רותם')], tgt, []) || {}).id === 'c0');
+      // 27/11/2026 (Michael: "do it: valid only as the last message"): any later message of his ends the ask, even a plain one
+      check('signAskFor last message (27/11/2026): a plain newer message ("what about the summons", "thanks", "ok", another file, a forwarded one) ends the earlier ask = no',
+        signAskFor([R('u1', 'מה עם הזימונים'), R('c0', 'תחתום על התעודה של רותם')], tgt, []) === null && signAskFor([R('u2', 'תודה רבה'), R('c0', 'תחתום על התעודה של רותם')], tgt, []) === null
+        && signAskFor([R('u3', 'אוקיי'), R('c0', 'תחתום על התעודה של רותם')], tgt, []) === null && signAskFor([R('u4', 'ok'), R('c0', 'תחתום על התעודה של רותם')], tgt, []) === null
+        && signAskFor([{ id: 'u5', text: '📎 other.pdf', media_id: '555555' }, R('c0', 'תחתום על התעודה של רותם')], tgt, []) === null
+        && signAskFor([{ id: 'u6', text: 'שלום', forwarded: 'true' }, R('c0', 'תחתום על התעודה של רותם')], tgt, []) === null);
+      check('signAskFor last message: the ask as his last message signs; an older used ask under a new unused one = the new one only',
+        (signAskFor([R('c1', 'תחתום על התעודה של רותם'), R('u1', 'מה עם הזימונים')], tgt, []) || {}).id === 'c1'
+        && signAskFor([R('c1', 'תחתום על התעודה של רותם'), R('c0', 'תחתום על התעודה של רותם')], tgt, ['c1']) === null);
       // 26/11/2026 (dev-20261126123149-29qk): "חתום בשמי" right after the PDF itself, the server checked the bytes (media given)
       const T = (id, text, sec, extra) => Object.assign({ id, text, ts: new Date(Date.parse('2026-11-26T12:29:00Z') + sec * 1000).toISOString() }, extra || {});
       const F = (sec, extra) => T('f', '📎 scan_0012.pdf', sec, Object.assign({ media_id: '123456789' }, extra || {}));
@@ -2721,6 +2728,14 @@ const callIn = async (body) => {
         signAskFor([F(25), T('a', 'חתום בשמי', 20), T('g', '📎 other.pdf', 10, { media_id: '555555' })], tgt, [], M) === null
         && signAskFor([F(25), T('a', 'חתום בשמי', 20), T('g', '📎 other.pdf', 10, { media_id: '555555' })], tgt, [], { id: '555555' }) === null
         && !!signAskFor([F(25), T('a', 'חתום בשמי', 20), T('g', '📎 scan_0012.pdf', 10, { media_id: '123456789' })], tgt, [], M));
+      // 27/11/2026: the 10 s file-after window survives the last-message rule, only for the very file (media given) and with no caption
+      check('signAskFor last message + file after: "sign X" then the same file 3 s later = yes with media, no without; then "ok", a second file, a captioned file = no',
+        (signAskFor([F(23), T('a', 'תחתום על התעודה של רותם', 20)], tgt, [], M) || {}).id === 'a'
+        && signAskFor([F(23), T('a', 'תחתום על התעודה של רותם', 20)], tgt, []) === null
+        && signAskFor([T('o', 'אוקיי', 25), F(23), T('a', 'חתום בשמי', 20)], tgt, [], M) === null
+        && signAskFor([T('g', '📎 other.pdf', 24, { media_id: '555555' }), F(23), T('a', 'חתום בשמי', 20)], tgt, [], M) === null
+        && signAskFor([F(23, { text: 'קיבלת?' }), T('a', 'תחתום על התעודה של רותם', 20)], tgt, [], M) === null
+        && signAskFor([F(23), F(22), T('a', 'חתום בשמי', 20)], tgt, [], M) === null);
       check('signAskFor media (security review 26/11/2026): another file of his 10 min before the ask, then a new file 2 s after = no (he may have meant the first)',
         signAskFor([F(22), T('a', 'חתום בשמי', 20), T('g', '📎 other.pdf', -580, { media_id: '555555' })], tgt, [], M) === null
         && signAskFor([F(22), T('a', 'חתום בשמי', 20), T('u', 'תודה', -300), T('g', '📎 other.pdf', -580, { media_id: '555555' })], tgt, [], M) === null);

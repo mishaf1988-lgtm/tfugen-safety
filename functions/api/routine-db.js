@@ -122,6 +122,7 @@
 //              a reply draft to the sender. At most SIGN_NOW_MAX in 30 minutes. media_id? (26/11/2026): an ask with no word of
 //              the file counts when the file at path is byte for byte that WhatsApp file and it was his message right before the ask
 //              (SIGN_MEDIA_MS) or right after it (SIGN_MEDIA_AFTER_MS: the delivery order flips) (signAskFor, signSameAsMedia).
+//              27/11/2026: the ask counts only as his LAST message in the window (the very file right after it excepted).
 //   dev_request / dev_done  (20/10/2026) {agent, text} a request to development, kept in server_state.dev_inbox;
 //              a new one fires the Routine DEV_TRIGGER at once when DEV_FIRE_TOKEN is set (21/10/2026, devFireText);
 //              {id, note} closes one. devInboxAdd / devInboxDone.
@@ -3188,39 +3189,46 @@ export const SIGN_MEDIA_MS = 2 * 60e3, SIGN_MEDIA_AFTER_MS = 10e3;
 export function signAskFor(rows, target, used, media) {
   // security review 24/11/2026 (refutation): whole words of the file name and its folder only (not the mail subject or
   // sender the assistant chooses), no numbers, no "pdf", and the fillers checked again after a prefix letter is dropped
-  const toks = (t) => String(t || '').toLowerCase().split(/[^a-z\u05d0-\u05ea]+/).filter((w) => w.length >= 3 && w !== 'pdf');
-  const strip = (w) => /^[\u05d4\u05d5\u05dc\u05d1\u05de\u05e9][\u05d0-\u05ea]{3,}$/.test(w) ? [w, w.slice(1)] : [w];
+  const toks = (t) => String(t || '').toLowerCase().split(/[^a-zא-ת]+/).filter((w) => w.length >= 3 && w !== 'pdf');
+  const strip = (w) => /^[הולבמש][א-ת]{3,}$/.test(w) ? [w, w.slice(1)] : [w];
   const hay = new Set(); toks(target).forEach((w) => strip(w).forEach((x) => hay.add(x)));
   const usedSet = new Set(Array.isArray(used) ? used : []);
-  // rows come newest first (ts.desc). Any message of his, newer than the ask or the ask itself, that cancels, negates or asks (a
-  // question), whether or not it names the file, ends it: null (security review and refutation of 25/11/2026: "do not sign this",
-  // "stop" and "do not sign X" after "sign X" were skipped and the earlier ask signed). A plain newer message is ignored.
   const list = Array.isArray(rows) ? rows : [];
   const fwd = (r) => r.forwarded === true || r.forwarded === 'true';
   const mid = media && /^[0-9]{5,30}$/.test(String(media.id || '')) ? String(media.id) : '';
-  for (let i = 0; i < list.length; i++) {
-    const r = list[i];
-    const t = String((r && r.text) || '');
-    if (!r || !r.id || fwd(r) || /^\s*📎/.test(t)) continue;
-    if (signCancels(t) || SIGN_QUESTION_RE.test(t)) return null;
-    if (usedSet.has(r.id) || !ownerAskIsSign(t)) continue;
-    if (toks(t).some((w) => strip(w).some((x) => SIGN_FILLER.indexOf(x) < 0 && hay.has(x)))) return r;
-    // security review 26/11/2026: a file that carries the ask as its caption is the file asked about, never the one before it
-    if (mid && r.media_id) { if (String(r.media_id) === mid) return r; continue; }
-    const prev = list[i + 1], gap = prev ? Date.parse(r.ts) - Date.parse(prev.ts) : NaN;
-    // dev-20261126124428-dtps (26/11/2026): WhatsApp delivers the file and the ask almost together and the order can flip
-    // (the ask logged at 12:29:30.92Z, his file at 12:29:31.95Z), so the file right AFTER the ask counts too, at most
-    // SIGN_MEDIA_AFTER_MS later. A file on each side of the ask (two files, one ask) = which one he meant is unknown: no.
-    // Security review 26/11/2026: the window after is short (the real gap was 1.03 s), and a file after the ask never counts when
-    // ANY other file of his is older than the ask in the window (he may have meant that one, offered or sent minutes before).
-    const next = i > 0 ? list[i - 1] : null, gapN = next ? Date.parse(next.ts) - Date.parse(r.ts) : NaN;
-    const isMedia = (x) => x && x.id && !fwd(x) && String(x.media_id || '') !== '';
-    const prevOk = isMedia(prev) && gap >= 0 && gap <= SIGN_MEDIA_MS, nextOk = isMedia(next) && gapN >= 0 && gapN <= SIGN_MEDIA_AFTER_MS;
-    if (!mid) continue;
-    if (prevOk && nextOk && String(prev.media_id) !== String(next.media_id)) return null;
-    if (prevOk && String(prev.media_id) === mid) return r;
-    if (nextOk && String(next.media_id) === mid && !list.slice(i + 1).some((x) => x && String(x.media_id || '') !== '' && String(x.media_id) !== mid)) return r;
+  const isMedia = (x) => x && x.id && !fwd(x) && String(x.media_id || '') !== '';
+  const clip = (x) => /^\s*📎/.test(String((x && x.text) || ''));
+  // 27/11/2026 (Michael in the questionnaire, DECISIONS "four decisions from the night planning" item 1: "do it: valid only as
+  // the last message"; replaces the open list of cancel wordings as the main guard, retro 25/11 item 1 and 26/11 item 3): rows
+  // come newest first (ts.desc), and the ask counts only when it is his LAST message in the window. Any later message of his
+  // (text, another file, a tap, a forwarded one) ends it: null, and the assistant falls back to sign_offer (his tap). One
+  // exception, from 26/11/2026 (the delivery order flips): the very file asked about (media given, its bytes checked by the
+  // server), with no caption, at most SIGN_MEDIA_AFTER_MS after the ask, may be the one message after it.
+  let i = 0;
+  const top = list[0];
+  if (mid && list.length > 1 && isMedia(top) && String(top.media_id) === mid && clip(top)) {
+    const g = Date.parse(top.ts) - Date.parse((list[1] || {}).ts);
+    if (g >= 0 && g <= SIGN_MEDIA_AFTER_MS) i = 1;
   }
+  const r = list[i];
+  const t = String((r && r.text) || '');
+  if (!r || !r.id || fwd(r) || clip(r)) return null;
+  // the ask itself: no cancel, negation or question word, an ask to sign, and not used for a signature already
+  if (signCancels(t) || SIGN_QUESTION_RE.test(t) || usedSet.has(r.id) || !ownerAskIsSign(t)) return null;
+  if (toks(t).some((w) => strip(w).some((x) => SIGN_FILLER.indexOf(x) < 0 && hay.has(x)))) return r;
+  // 26/11/2026 (dev-20261126123149-29qk): an ask that names no file counts only with the very file (media given, bytes checked)
+  if (!mid) return null;
+  // security review 26/11/2026: a file that carries the ask as its caption is the file asked about, never the one before it
+  if (r.media_id) return String(r.media_id) === mid ? r : null;
+  const prev = list[i + 1], gap = prev ? Date.parse(r.ts) - Date.parse(prev.ts) : NaN;
+  const next = i > 0 ? list[i - 1] : null, gapN = next ? Date.parse(next.ts) - Date.parse(r.ts) : NaN;
+  const prevOk = isMedia(prev) && gap >= 0 && gap <= SIGN_MEDIA_MS, nextOk = isMedia(next) && gapN >= 0 && gapN <= SIGN_MEDIA_AFTER_MS;
+  // a file on each side of the ask (two files, one ask) = which one he meant is unknown: no
+  if (prevOk && nextOk && String(prev.media_id) !== String(next.media_id)) return null;
+  if (prevOk && String(prev.media_id) === mid) return r;
+  // security review 26/11/2026: a file after the ask never counts when ANY other file of his is older than the ask in the
+  // window (he may have meant that one, offered or sent minutes before)
+  if (nextOk && String(next.media_id) === mid && !list.slice(i + 1).some((x) => x && String(x.media_id || '') !== '' && String(x.media_id) !== mid)) return r;
   return null;
 }
 // Pure: how many signatures sign_now made since sinceMs (the rate limit).
@@ -5185,7 +5193,7 @@ async function routineDbHandle(context) {
         mediaSha = await signSameAsMedia(env, c.path, String(body.media_id)).catch(() => null);
         if (mediaSha) ask = signAskFor(rows, tgt, used, { id: String(body.media_id) });
       }
-      if (!ask) return jsonResp({ ok: false, error: 'sign_now: no unused message of Michael in the last 30 minutes asks to sign THIS file (a whole word of the file name or its folder). Use sign_offer instead' }, 400, {});
+      if (!ask) return jsonResp({ ok: false, error: 'sign_now: his ask counts only as his LAST message (27/11/2026), unused, naming THIS file (a whole word of the file name or its folder) or sent with the very file (media_id). Use sign_offer instead' }, 400, {});
       const at = await accessToken(env);
       const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
       // the place: the one given, else the signature line found in the file, else the permit line (as sign_request)
