@@ -4116,6 +4116,7 @@ async function routineDbHandle(context) {
     if (body.op === 'md_try') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
+      if (String(body.why || '').trim().length < 5) return jsonResp({ ok: false, error: 'why: at least 5 characters' }, 400, {});
       const mc = draftAttach(body.paths);
       if (mc.error || !mc.attach.length || mc.attach.length > 3) return jsonResp({ ok: false, error: (mc.error || 'paths: 1-3').replace('attach', 'paths') }, 400, {});
       if (!env.AI || typeof env.AI.toMarkdown !== 'function') return jsonResp({ ok: false, error: 'Workers AI toMarkdown missing on the binding' }, 200, {});
@@ -4126,6 +4127,7 @@ async function routineDbHandle(context) {
         try {
           const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + menc(OD_ROOT + a.rel) + ':/content', { headers: { Authorization: 'Bearer ' + mat.token }, signal: tmo(30000) });
           if (!d.ok) { mfiles.push({ name: a.name, ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status }); continue; }
+          if (Number(d.headers.get('content-length')) > PDF_READ_MAX) { mfiles.push({ name: a.name, ok: false, error: 'too big' }); continue; }
           const buf = await d.arrayBuffer();
           if (buf.byteLength > PDF_READ_MAX) { mfiles.push({ name: a.name, ok: false, error: 'too big: ' + buf.byteLength }); continue; }
           const t0 = Date.now();
