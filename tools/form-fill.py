@@ -448,7 +448,7 @@ def rtl_paras(px):
             if ppr.find(q('bidi')) is not None:
                 continue
             # an LTR paragraph aligned right that becomes RTL: Word shows jc="right" of an RTL paragraph on the LEFT
-            # (lesson 237; 23/11/2026, weekly training on 08.01 sent left to right). RTL start = right, so no jc.
+            # (lesson 317; 23/11/2026, weekly training on 08.01 sent left to right). RTL start = right, so no jc.
             for jc in ppr.findall(q('jc')):
                 if jc.get(q('val')) in ('right', 'left'):
                     ppr.remove(jc)
