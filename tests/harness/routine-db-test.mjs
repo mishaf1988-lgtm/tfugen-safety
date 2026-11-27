@@ -1059,14 +1059,16 @@ const callIn = async (body) => {
     { // equipDups (27/11/2026): three groups that must be found, three that must not
       const d = equipDups([
         { id: 'a1', code: 'FL-1', n: 'forklift', e: '2027-01-01' }, { id: 'a2', code: 'fl-1 ', n: 'forklift b', e: '2027-01-01' },
-        { id: 'b1', code: 'xl1008-e95', n: 'מז"ח 106520', e: '2027-11-26' }, { id: 'b2', code: 'fa-mazah-106520', n: 'מז"ח מספר 106520', e: '2026-11-26' },
+        { id: 'b1', code: 'xl1008-e95', n: 'מז"ח 106520', e: '2026-11-26' }, { id: 'b2', code: 'fa-mazah-106520', n: 'מז"ח מספר 106520', e: '2026-11-26' },
         { id: 'c1', n: 'hoist A', report_number: '184595/226', e: '2027-05-01' }, { id: 'c2', n: 'hoist B', report_number: '184595/226', e: '2026-05-01' },
         { id: 'd1', n: 'hoist C', report_number: 'R-9', e: '2027-05-01' }, { id: 'd2', n: 'hoist D', report_number: 'R-9', e: '2027-05-01' },
         { id: 'e1', n: 'boiler', file_url: 'https://x/folder', e: '2027-01-01' }, { id: 'e2', n: 'boiler 2', file_url: 'https://x/folder', e: '2026-01-01' },
+        { id: 's1', n: 'compressor', serial_number: 'AB-77', e: '2027-01-01' }, { id: 's2', n: 'air unit', serial_number: 'ab-77 ', e: '2027-01-01' },
+        { id: 't1', n: 'boiler SB-3 pressure test', serial_number: 'AB50741', e: '2027-08-30' }, { id: 't2', n: 'boiler efficiency report', serial_number: 'AB50741', e: '2027-06-30' },
         { id: 'f1', code: 'OLD-7', n: 'drager 123456', e: null, s: 'לא רלוונטי' }, { id: 'f2', code: 'OLD-7', n: 'drager 123456 new', e: '2027-01-01' },
       ]);
       const sig = d.map((g) => g.why + ':' + g.rows.map((r) => r.id).join('+')).sort().join(' ');
-      check('equipDups: the same code (any case), the same serial in the names, one report with two dates are found; one report with one date, a folder link and an out-of-tracking twin are not', sig === 'code:a1+a2 report:c1+c2 serial:b1+b2', d);
+      check('equipDups: the same code (any case), the same serial in the names or in serial_number, one report with two dates are found; one report with one date, one serial on two inspection kinds with their own dates (SB-3), a folder link and an out-of-tracking twin are not', sig === 'code:a1+a2 report:c1+c2 serial:b1+b2 serial:s1+s2', d);
       const g2 = dataGaps([{ id: 'a1', code: 'X', n: 'a' }, { id: 'a2', code: 'x', n: 'b' }], [], '2026-11-15');
       check('data_gaps carries the duplicate groups (dup, dup_n)', g2.dup_n === 1 && g2.dup[0].why === 'code', g2);
     }
