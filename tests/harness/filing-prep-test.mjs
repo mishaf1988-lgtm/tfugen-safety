@@ -138,6 +138,14 @@ console.log('\n6. through the server: scans, Word, photos, a failed file');
   check('a photo: scan:true and not downloaded', by[n.jpg] && by[n.jpg].scan === true && !log.some((x) => x.u.indexOf('photo.jpg') >= 0), by[n.jpg]);
   check('a file that fails to read: err on that file only, the call still ok', r.j.ok === true && by[n.bad] && /read 500/.test(by[n.bad].err || '') && Object.keys(by).length === 6, by[n.bad]);
   check('an Excel file: text "" without scan (read it as before)', by[n.xlsx] && by[n.xlsx].text === '' && !by[n.xlsx].scan, by[n.xlsx]);
+  // 27/11/2026: with the Workers AI binding, Excel is read through toMarkdown (free), an ASCII name and a type are sent
+  content[inbox(n.xlsx)] = 'XLSXBYTES';
+  const sent = [];
+  ENV.AI = { toMarkdown: async (files) => { sent.push(files[0]); return [{ name: files[0].name, format: 'markdown', data: '# file.xlsx\n\n## Sheet1\n\n| item | next |\n|---|---|\n| Hoist H-555 | 01.03.2027 |' }]; } };
+  const rx = await call({ op: 'filing_prep', agent: 'routine-mail-filing' });
+  delete ENV.AI;
+  const bx = {}; (rx.j.files || []).forEach((f) => { bx[f.name] = f; });
+  check('an Excel file with the binding: its table as text through toMarkdown, name file.xlsx with the xlsx type, codes found', bx[n.xlsx] && /Hoist H-555/.test(bx[n.xlsx].text) && !/\|/.test(bx[n.xlsx].text) && bx[n.xlsx].tokens.indexOf('H-555') >= 0 && sent.length === 1 && sent[0].name === 'file.xlsx' && /spreadsheetml/.test(sent[0].blob.type), { f: bx[n.xlsx], sent: sent.map((s) => s.name) });
   sbFail = true;
   const r3 = await call({ op: 'filing_prep', agent: 'routine-mail-filing' });
   check('a table that cannot be read: partial named, a note not to say "not in the register"', r3.j.ok === true && JSON.stringify(r3.j.partial) === JSON.stringify(['equip_inspections', 'docs']) && /could not be read/.test(r3.j.note), { p: r3.j.partial, note: r3.j.note });
