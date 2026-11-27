@@ -40,7 +40,7 @@ def domain_part(text):
     i = text.find(DOMAIN_MARK)
     return text[i:] if i >= 0 else ''
 
-def problems(text, archive='', domain=''):
+def problems(text, archive='', domain='', gaps=True):
     errs = []
     if domain and not lessons(domain): errs.append('a domain lessons section with no lessons')
     if len(text.encode('utf-8')) > MAX: errs.append('file is %d bytes, over %d: prune (rule 3)' % (len(text.encode('utf-8')), MAX))
@@ -72,16 +72,59 @@ def problems(text, archive='', domain=''):
                 if e.startswith('נאכף: טקסט') and 'אין דרך בקוד' not in e:
                     errs.append('lesson %d recurred and is text only: add a hook/test or say why not (rule 2)' % n)
     if len(nums) != len(set(nums)): errs.append('duplicate lesson numbers')
-    if nums and sorted(nums) != list(range(1, max(nums) + 1)): errs.append('lesson numbers have a gap: %s' % sorted(nums))
+    # gaps=False for the real files: number_problems checks gaps over both forms (a retro bullet fills a number too)
+    if gaps and nums and sorted(nums) != list(range(1, max(nums) + 1)): errs.append('lesson numbers have a gap: %s' % sorted(nums))
     return errs
+
+# 27/11/2026 (Michael, retro 23/11/2026 item 1): a lesson number is unique across ALL lesson files, in both
+# forms: "**N. title**" and the retro bullet "- **N. title**". Until now only the first form was counted, so
+# 65 numbers (171-248) were used twice, and "lesson 210" in a test could mean two different lessons.
+NUM = re.compile(r'^(?:- )?\*\*(\d+)\. ')
+def all_numbers(texts):
+    """texts: {label: text}. Returns {number: [label:line, ...]} over both forms."""
+    out = {}
+    for label, text in texts.items():
+        for i, l in enumerate(text.split('\n'), 1):
+            m = NUM.match(l)
+            if m: out.setdefault(int(m.group(1)), []).append('%s:%d' % (label, i))
+    return out
+
+def number_problems(texts):
+    nums = all_numbers(texts); errs = []
+    dup = {n: w for n, w in sorted(nums.items()) if len(w) > 1}
+    if dup: errs.append('duplicate lesson numbers (both forms, all files): ' + '; '.join('%d at %s' % (n, ', '.join(w)) for n, w in dup.items()))
+    if nums and sorted(nums) != list(range(1, max(nums) + 1)):
+        errs.append('lesson numbers have a gap: %s' % [n for n in range(1, max(nums) + 1) if n not in nums])
+    return errs
+
+def lesson_files():
+    """Every lesson file: tfugen-lessons/SKILL.md and the archive whole; the domain section of any other skill's SKILL.md or references/*.md."""
+    root = os.path.join(SKILLS, '..', '..')
+    t = {os.path.relpath(P, root): open(P, encoding='utf-8').read(), os.path.relpath(A, root): open(A, encoding='utf-8').read()}
+    for f in sorted(glob.glob(os.path.join(SKILLS, '*', 'SKILL.md')) + glob.glob(os.path.join(SKILLS, '*', 'references', '*.md'))):
+        if os.path.abspath(f) == os.path.abspath(P): continue
+        body = open(f, encoding='utf-8').read()
+        i = body.find(DOMAIN_MARK)
+        if i >= 0: t[os.path.relpath(f, root)] = '\n' * body[:i].count('\n') + body[i:]  # keep real line numbers
+    return t
 
 real = open(P, encoding='utf-8').read()
 real_a = open(A, encoding='utf-8').read()
 real_d = {f: domain_part(open(f, encoding='utf-8').read()) for f in sorted(glob.glob(os.path.join(SKILLS, '*', 'SKILL.md')) + glob.glob(os.path.join(SKILLS, '*', 'references', '*.md'))) if os.path.abspath(f) != os.path.abspath(P)}
 real_d = {f: t for f, t in real_d.items() if t}
 real_dt = '\n'.join(real_d.values())
-check('the real files have no problems', problems(real, real_a, real_dt) == [], problems(real, real_a, real_dt))
+check('the real files have no problems', problems(real, real_a, real_dt, gaps=False) == [], problems(real, real_a, real_dt, gaps=False))
 check('domain lessons live in tfugen-dev (references/lessons.md, from 27/10/2026) and tfugen-db (references/lessons.md, from 28/10/2026)', sorted(os.path.relpath(f, SKILLS) for f in real_d if 'tfugen-dev' in f or 'tfugen-db' in f) == ['tfugen-db/references/lessons.md', 'tfugen-dev/references/lessons.md'], list(real_d))
+real_t = lesson_files()
+check('every lesson number is unique across all lesson files, in both forms (27/11/2026)', number_problems(real_t) == [], number_problems(real_t))
+check('the lesson files read include the archive, tfugen-dev and tfugen-db', all(any(k.endswith(s) for k in real_t) for s in ('lessons-archive.md', 'tfugen-dev/references/lessons.md', 'tfugen-db/references/lessons.md')), list(real_t))
+check('the real files have retro bullets too (the form that was missed)', any(re.match(r'^- \*\*\d+\. ', l) for t in real_t.values() for l in t.split('\n')))
+check('a bullet "- **N." that repeats a "**N." elsewhere fails', number_problems({'a': '**1. x**', 'b': '- **1. y**'}) != [])
+check('two bullets with one number in one file fail', number_problems({'a': '- **1. x**\n- **1. y**'}) != [])
+check('distinct numbers in both forms pass', number_problems({'a': '**1. x**', 'b': '- **2. y**'}) == [], number_problems({'a': '**1. x**', 'b': '- **2. y**'}))
+check('a gap across both forms fails', number_problems({'a': '**1. x**', 'b': '- **3. y**'}) != [])
+check('a bold numbered line that is not at the line start is not a lesson', number_problems({'a': '**1. x**', 'b': 'see **1. x**'}) == [])
+check('the duplicate message names both places', '1 at a:1, b:2' in ' '.join(number_problems({'a': '**1. x**', 'b': '\n- **1. y**'})), number_problems({'a': '**1. x**', 'b': '\n- **1. y**'}))
 check('the real file has lessons', len(lessons(real)) >= 10, len(lessons(real)))
 check('the archive has lessons', len(lessons(real_a)) >= 1, len(lessons(real_a)))
 check('the archive alone has a gap (numbers are shared with the lessons file)', problems(real_a) != [])
