@@ -1,6 +1,6 @@
 // Claude Log for routine-db writes (02/11/2026, functions/_claudelog.js): a successful write op queues one line, each
 // hazard file takes the lines it has not taken yet, and nothing else (a read op, the file bytes) reaches the sheet.
-import { logLine, logDetails, queueAdd, queuePending, ocrPartialRow, LOG_OPS, LOG_Q_MAX, LOG_RUN_MAX } from './_build/_claudelog.mjs';
+import { logLine, logDetails, queueAdd, queuePending, ocrPartialRow, answerRow, LOG_OPS, LOG_Q_MAX, LOG_RUN_MAX } from './_build/_claudelog.mjs';
 import fs from 'node:fs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
@@ -67,6 +67,70 @@ const NOW = '2026-11-01T23:10:00.000Z';
   check('hazard-file rewrites when lines are pending', (hf.match(/!logq\.rows\.length/g) || []).length === 2);
   check('hazard-file appends the lines to the Claude Log sheet', /rows: logq\.rows\.concat/.test(hf));
   check('hazard-file remembers the last line it took, only after the write', /\[K \+ 'logq'\]: logq\.last/.test(hf));
+}
+{ // retro 26/11/2026 (1): the reverse check. Every op block of routine-db that sends mail (sendMailTo), writes a file
+  // (putFile) or writes through Graph (PUT/POST/PATCH/DELETE to graph.microsoft.com) is in LOG_OPS, or in EXEMPT with why.
+  const rdb = fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
+  const EXEMPT = {
+    // op: one-line reason. Empty on 27/11/2026: the first run found 8 ops, all real writes, so all 8 went into LOG_OPS
+  };
+  const heads = [];
+  const re = /^[ \t]*if \((body\.op === '\w+'(?: \|\| body\.op === '\w+')*)/gm;
+  let m;
+  while ((m = re.exec(rdb))) heads.push({ at: m.index, ops: [...m[1].matchAll(/'(\w+)'/g)].map((x) => x[1]) });
+  // a Graph call: the URL in the call, or a base built from it (G, GM, D), or the Graph token / headers (at.token, gh)
+  const graphWrite = (b) => b.split(/\bfetch\(/).slice(1).some((c) => {
+    const s = c.indexOf('signal:'), call = c.substring(0, s >= 0 && s < 1500 ? s : 1500);
+    return /method:\s*'(PUT|POST|PATCH|DELETE)'/.test(call) && /graph\.microsoft\.com|^\s*(G|GM|D|G2)\s*\+|\.token\b|headers:\s*gh\b/.test(call);
+  });
+  // helpers that mail or write in Microsoft 365 themselves (found 27/11/2026 by reading each import of routine-db):
+  // _sign.js signRun (signed PDF), talk.js refileInduction (mail to Michael and HR), _ctrok.js ctrExtend (mail),
+  // _formprobe.js formProbe (putFile), _ocr.js ocrOne (txt file), works.js (mail through the sendMailTo it is handed)
+  const WRITE_HELPERS = /\b(signRun|refileInduction|ctrExtend|formProbe|ocrOne)\(/;
+  const missing = [], flagged = {};
+  heads.forEach((hd, i) => {
+    let end = i + 1 < heads.length ? heads[i + 1].at : rdb.length;
+    const close = rdb.indexOf('\n}\n', hd.at);
+    if (close > 0 && close < end) end = close;
+    const b = rdb.substring(hd.at, end);
+    const why = [];
+    if (/\bsendMailTo\b/.test(b)) why.push('sendMailTo');
+    if (/\bputFile\(/.test(b)) why.push('putFile');
+    if (graphWrite(b)) why.push('graph write');
+    const hw = b.match(WRITE_HELPERS);
+    if (hw) why.push(hw[1] + ' (writes inside)');
+    if (why.length) hd.ops.forEach((op) => { flagged[op] = why.join(', '); if (!LOG_OPS[op] && !EXEMPT[op]) missing.push(op + ' (' + why.join(', ') + ')'); });
+  });
+  check('routine-db has op blocks to check', heads.length > 50, heads.length);
+  check('the check sees the known writes: works mail (sendMailTo), mail_draft (putFile), od_put_pdf and od_move (Graph)', ['works_try_mail', 'works_mail_now', 'works_approve_mail', 'works_permit', 'mail_draft', 'od_put_pdf', 'od_move'].every((op) => flagged[op]), flagged);
+  check('the check sees writes made inside a helper: sign_now, ind_refile, ctr_extend, form_probe', ['sign_now', 'ind_refile', 'ctr_extend', 'form_probe'].every((op) => flagged[op]), flagged);
+  check('every logged op is seen as a write by the check (the detector misses none of LOG_OPS)', Object.keys(LOG_OPS).every((op) => flagged[op]), Object.keys(LOG_OPS).filter((op) => !flagged[op]));
+  if (process.env.SHOW_FLAGGED) console.log(JSON.stringify(flagged, null, 1));
+  check('every routine-db op that mails or writes in Microsoft 365 is in LOG_OPS or EXEMPT with a reason', missing.length === 0, missing);
+  check('every EXEMPT op is a real op and has a reason', Object.keys(EXEMPT).every((op) => rdb.indexOf("body.op === '" + op + "'") >= 0 && String(EXEMPT[op]).length > 10 && !LOG_OPS[op]));
+}
+{ // retro 26/11/2026 (1): the works mails, the signature, the induction resend, the permit extension: details from the answer
+  const L = (op, body) => logLine(Object.assign({ op, agent: 'x' }, body || {}), '2026-11-27T08:00:00Z');
+  const rdb = fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
+  check('routine-db builds the line through answerRow after ok:true', /\(body && answerRow\(row0, reqBody, out\)\)/.test(rdb));
+  const t = answerRow(L('works_try_mail'), { op: 'works_try_mail' }, { ok: true, friday: '2026-11-27', to: ['m@x'] });
+  check('works_try_mail: the Friday and the mailbox', t && t[3] === 'friday: 2026-11-27; to: m@x' && t[4] === '\u05d1\u05d5\u05e6\u05e2', t);
+  const n = answerRow(L('works_mail_now'), { op: 'works_mail_now' }, { ok: true, friday: '2026-11-27', to: ['a@x', 'b@x'], cc: ['c@x'] });
+  check('works_mail_now: the maintenance list and the copy', n && n[3] === 'friday: 2026-11-27; to: a@x, b@x; cc: c@x', n);
+  check('works_approve_mail with nothing pending (n: 0) sends nothing, so no line', answerRow(L('works_approve_mail'), { op: 'works_approve_mail' }, { ok: true, friday: '2026-11-27', n: 0 }) === null);
+  const a = answerRow(L('works_approve_mail'), { op: 'works_approve_mail' }, { ok: true, friday: '2026-11-27', n: 2, to: 'm@x' });
+  check('works_approve_mail: how many works and to whom', a && a[3] === 'friday: 2026-11-27; works: 2; to: m@x', a);
+  const p = answerRow(L('works_permit', { id: 'wk-2026-11-27-1' }), { op: 'works_permit', id: 'wk-2026-11-27-1' }, { ok: true, path: '18_x/02_y/2026-11/p.pdf', mailed: { to: ['m@x'], cc: [], trial: true } });
+  check('works_permit: the work, the mailbox, trial, the file', p && p[3] === 'id: wk-2026-11-27-1; to: m@x; trial; path: 18_x/02_y/2026-11/p.pdf', p);
+  const pf = answerRow(L('works_permit', { id: 'wk-2026-11-27-1' }), { op: 'works_permit', id: 'wk-2026-11-27-1' }, { ok: true, path: 'a/p.pdf', mailed: { error: 'graph 503' } });
+  check('works_permit filed but the mail failed: "done in part", not "done"', pf && pf[4] === '\u05d1\u05d5\u05e6\u05e2 \u05d7\u05dc\u05e7\u05d9\u05ea: \u05d4\u05de\u05d9\u05d9\u05dc \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7', pf);
+  const c = answerRow(L('ctr_extend', { id: 'c1234567' }), { op: 'ctr_extend', id: 'c1234567' }, { ok: true, until: '2026-11-28', te: '16:00', mail: 'err: no mailbox' });
+  check('ctr_extend: the new end, and a failed mail is "done in part"', c && c[3] === 'id: c1234567; until: 2026-11-28 16:00' && /\u05d7\u05dc\u05e7\u05d9\u05ea/.test(c[4]), c);
+  const s = answerRow(L('sign_now', { path: 'a/b.pdf' }), { op: 'sign_now', path: 'a/b.pdf' }, { ok: true, id: 'sg1', path: 'a/b - signed.pdf', signed: 'b - signed.pdf' });
+  check('sign_now: the request and the signed file', s && s[3] === 'id: sg1; path: a/b - signed.pdf', s);
+  const r = answerRow(L('ind_refile', { id: 'abc123' }), { op: 'ind_refile', id: 'abc123' }, { ok: true, url: 'https://x/secret', mailed: true, docs: 2 });
+  check('ind_refile: the read and the documents, never the link', r && r[3] === 'id: abc123; docs: 2' && r.join('|').indexOf('secret') < 0, r);
+  check('a failed answer or another op is left as logLine made it', answerRow(['a', 'b', 'c', 'd', 'e'], { op: 'mail_draft' }, { ok: true, to: 'z' })[3] === 'd' && answerRow(null, { op: 'works_try_mail' }, { ok: true }) === null);
 }
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
