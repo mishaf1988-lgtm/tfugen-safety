@@ -1,4 +1,4 @@
-"""Hebrew (RTL) Word XML that Word itself honours (lesson 237, 18/11/2026).
+"""Hebrew (RTL) Word XML that Word itself honours (lesson 317, 18/11/2026).
 
 Word ignores <w:bidi/>, <w:rtl/> and <w:bidiVisual/> that are appended out of schema order, and shows jc="right"
 of an RTL paragraph on the LEFT; LibreOffice and Graph's PDF forgive it, so a preview looks right while Word does not.
