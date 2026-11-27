@@ -195,13 +195,6 @@ const callIn = async (body) => {
     ocrTxtName(OD_INBOX + '/2026-10-22 0532 - a.pdf') === '2026-10-22 0532 - a.txt' && ocrTxtName('a.pdf') === 'a.txt'
     && ocrTxtName('X/form.pdf') === 'form (X).txt' && ocrTxtName('X/' + OD_ARCHIVE_DIR + '/form.PDF') === 'form (X - ' + OD_ARCHIVE_DIR + ').txt'
     && ocrTxtName('X/form.pdf') !== ocrTxtName('Y/form.pdf') && ocrTxtName(Array(5).fill('d'.repeat(200)).join('/') + '/f.pdf').length <= 255 && ocrTxtCheck({ paths: ['X/form.pdf'] }).files[0].txt === 'form (X).txt');
-  { // md_try (27/11/2026): the temporary toMarkdown trial. Fields, count and path rules; a missing binding is an answer, not a crash
-    const a = await call({ op: 'md_try', agent: 'chat-main', why: 'trial run', paths: ['a/1.pdf'], extra: 1 });
-    const b = await call({ op: 'md_try', agent: 'chat-main', why: 'trial run', paths: ['a/1.pdf', 'a/2.pdf', 'a/3.docx', 'a/4.xlsx'] });
-    const c = await call({ op: 'md_try', agent: 'chat-main', why: 'trial run', paths: ['../x.pdf'] });
-    const d = await call({ op: 'md_try', agent: 'chat-main', why: 'trial run', paths: ['a/1.pdf'] });
-    check('md_try: an extra field, four files and a bad path are 400; without the binding the answer says so', a.status === 400 && b.status === 400 && c.status === 400 && d.status === 200 && /toMarkdown missing/.test(d.json.error), { a: a.json, b: b.json, c: c.json, d: d.json });
-  }
   check('ocr_txt: PDFs only, txt named after the PDF, lines joined page by page; the answer never carries the text (24/10/2026)', (() => {
     const ok = ocrTxtCheck({ paths: ['_\u05e0\u05db\u05e0\u05e1 \u05de\u05d4\u05de\u05d9\u05d9\u05dc/2026-10-22 0532 - a.pdf'] });
     const lines = ocrLines({ analyzeResult: { readResults: [{ lines: [{ text: 'x' }, { text: 'y' }] }, { lines: [{ text: 'z' }] }] } });
