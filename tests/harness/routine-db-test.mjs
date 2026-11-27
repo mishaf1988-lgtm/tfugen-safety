@@ -278,14 +278,18 @@ const callIn = async (body) => {
         ['תסקירים/תסקיר מלגזה 4417.pdf', '--- עמוד 1 ---\nבודק מוסמך\nמספר סידורי 4417\nכשיר', 'number'],
         ['_נכנס מהמייל/2026-11-20 0901 - scan.pdf', 'לכבוד תפוגן תעשיות בע"מ\nטל\' 052-2029123\nהנדון: הזמנה', 'company'],
         ['היתרים/היתר עבודה בגובה.pdf', 'היתר לעבודה בגובה\nשם העובד: ____\nחתימה', 'word'],
+        ['תסקירים/תסקיר מלגזה 4417.pdf', 'תסקיר מלגזה 4417\nבתוקף עד 15/06/2029', 'number'],
+        ['תסקירים/תסקיר מלגזה 4417.pdf', 'תסקיר מלגזה 4417\nבתוקף עד:\n15/06/2029', 'number'],
       ];
       const fail = [
         ['היתרים/טופס 4+5.pdf', 'משרד החקלאות ופיתוח הכפר\nהנדון: בקשה לרישיון ייבוא\nתאריך 12/03/2025', /מספר או מילה/],
-        ['תסקירים/תסקיר מלגזה 4417.pdf', 'תסקיר מלגזה 4417\nבתוקף עד 15/06/2029', /2029/],
+        ['תסקירים/תסקיר מלגזה 4417.pdf', 'תסקיר מלגזה 4417\nבתוקף עד 2034', /2034/],
+        ['תסקירים/תסקיר מלגזה 4417.pdf', 'תסקיר מלגזה 4417\nנבדק בשנת 2029', /2029/],
+        ['היתרים/טופס 4+5.pdf', 'משרד הפנים\nבתוקף סמכותי לפי הסעיפים הבאים:\n\nאושר בשנת 2029', /2029/],
         ['_נכנס מהמייל/2026-11-20 0902 - אישור בדיקת מנוף.pdf', 'Chocolate cake: 3 eggs, 200 g flour, bake 40 minutes', /מספר או מילה/],
       ];
       const pr = pass.map((p) => ocrCheck(p[1], p[0], NOW)), fr = fail.map((p) => ocrCheck(p[1], p[0], NOW));
-      check('ocrCheck: a number from the name, "תפוגן" (a phone 052-2029... is no year), a word of the form name = verified; an invented ministry letter, the year 2029 (even with the right number), unrelated text = not, with the reason; a date from the name in another format counts (27/11/2026)',
+      check('ocrCheck: a number from the name, "תפוגן" (a phone 052-2029... is no year), a word of the form name = verified; an invented ministry letter, unrelated text = not, with the reason; a year up to +6 on or under a validity word ("בתוקף עד 15/06/2029") passes, 2034 beside it, 2029 with no validity word (even with the right number) and a validity word two lines away fail (Fable 27/11/2026); a date from the name in another format counts (27/11/2026)',
         pr.every((r, i) => r.ok && r.by === pass[i][2]) && fr.every((r, i) => !r.ok && fail[i][2].test(r.reason))
         && ocrCheck('נבדק ב-24/10/26', 'בדיקת OCR - 24.10.2026.pdf', NOW).by === 'date'
         && ocrMark('x').indexOf(OCR_UNVERIFIED) === 0 && OCR_UNVERIFIED === '[לא מאומת', { pr, fr });

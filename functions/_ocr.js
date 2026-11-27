@@ -154,7 +154,9 @@ export function pdfHasFont(buf) {
 // The Workers AI vision model sometimes returns a whole invented document (another ministry's letter, the year 2029) instead
 // of the scan. Pure. The text passes with at least one of: a date or a number (3+ digits) from the file name or its folders,
 // the factory's name (SITE: Hebrew, brand or English company word), or a word (3+ letters, not a generic one) of the file name or its folders; and fails on any
-// year after next year. A text that fails is still written, with ocrMark as its first line (it starts with OCR_UNVERIFIED):
+// year after next year, except (Fable's advice, 27/11/2026) a year up to 6 years ahead (the app takes validity up to 6 years) on a line, or under
+// a line, with a validity word (OCR_VALID_RE): "valid until 15/06/2029" passes. Per line, not per document: an invented letter says "the following"
+// or "in force" far from its year. A year more than 6 ahead always fails. A text that fails is still written, with ocrMark as its first line (it starts with OCR_UNVERIFIED):
 // it is no basis for a decision alone. Only the vision-model path (ocrOne); Azure Read does not invent text.
 export const OCR_UNVERIFIED = '[\u05dc\u05d0 \u05de\u05d0\u05d5\u05de\u05ea';
 const OCR_GENERIC = new Set(['scan', 'scanned', 'pdf', 'doc', 'img', 'image', 'file', 'copy', 'page', '\u05e1\u05e8\u05d9\u05e7\u05d4', '\u05e1\u05e8\u05d5\u05e7', '\u05e1\u05e8\u05d5\u05e7\u05d4', '\u05de\u05e1\u05de\u05da', '\u05e7\u05d5\u05d1\u05e5', '\u05e2\u05d5\u05ea\u05e7', '\u05e0\u05e9\u05dc\u05d7', '\u05d8\u05d5\u05e4\u05e1', '\u05d3\u05d5\u05d7', '\u05de\u05db\u05ea\u05d1', '\u05e0\u05d9\u05d4\u05d5\u05dc', '\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea', '\u05e0\u05db\u05e0\u05e1', '\u05de\u05d4\u05de\u05d9\u05d9\u05dc', '\u05e2\u05de\u05d5\u05d3', '\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea', '\u05e7\u05d5\u05d3\u05de\u05d5\u05ea', '\u05d8\u05e7\u05e1\u05d8', '\u05e1\u05e8\u05d9\u05e7\u05d5\u05ea']);
@@ -165,12 +167,19 @@ function ocrDates(s) {
   return out;
 }
 const ocrCompany = () => [SITE.shortName, SITE.brand, String(SITE.companyEn || '').split(' ')[0]].filter((w) => w && w.length >= 3).map((w) => w.toLowerCase());
+// a validity word (Hebrew: validity, expiry, next) and its English ones; OCR_VALID_YEARS as routine-db's "at most 6 years"
+export const OCR_VALID_RE = /\u05ea\u05d5\u05e7\u05e3|\u05ea\u05e4\u05d5\u05d2\u05d4|\u05d4\u05d1\u05d0|\b(valid|expir\w*|next|due)\b/i, OCR_VALID_YEARS = 6;
 export function ocrCheck(text, rel, nowMs) {
   const body = String(text || '').split('\n').filter((l) => !/^--- .* ---$/.test(l.trim()) && l.trim() !== '(\u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0)').join('\n');
-  const next = new Date(nowMs === undefined ? Date.now() : nowMs).getUTCFullYear() + 1;
-  // a year alone, or the year of a date; not 4 digits inside a phone number (052-2029123)
-  const years = (body.match(/(?:^|[^\d-])(?:19|20)\d{2}(?![\d-])/g) || []).map((y) => Number(y.replace(/\D/g, '')))
-    .concat(ocrDates(body).map((d) => d.split('/')[2]).filter((y) => y.length === 4).map(Number)).filter((y) => y > next);
+  const cur = new Date(nowMs === undefined ? Date.now() : nowMs).getUTCFullYear(), next = cur + 1;
+  // a year alone, or the year of a date; not 4 digits inside a phone number (052-2029123). Line by line, for the validity exemption.
+  const lines = body.split('\n'), years = [];
+  lines.forEach((l, i) => {
+    const ys = (l.match(/(?:^|[^\d-])(?:19|20)\d{2}(?![\d-])/g) || []).map((y) => Number(y.replace(/\D/g, '')))
+      .concat(ocrDates(l).map((d) => d.split('/')[2]).filter((y) => y.length === 4).map(Number));
+    const valid = OCR_VALID_RE.test(l) || (i > 0 && OCR_VALID_RE.test(lines[i - 1]));
+    ys.forEach((y) => { if (y > next && !(y <= cur + OCR_VALID_YEARS && valid)) years.push(y); });
+  });
   if (years.length) return { ok: false, reason: '\u05e9\u05e0\u05d4 ' + Math.max.apply(null, years) + ' \u05d1\u05e2\u05ea\u05d9\u05d3' };
   const low = body.toLowerCase();
   if (ocrCompany().some((w) => low.indexOf(w) >= 0)) return { ok: true, by: 'company' };
