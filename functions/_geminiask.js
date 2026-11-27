@@ -32,10 +32,14 @@ export function geminiClean(t) {
   return String(t || '').normalize('NFC').replace(/[\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff\u00ad]/g, '')
     .replace(/[\u0660-\u0669]/g, (c) => String(c.charCodeAt(0) - 0x660)).replace(/[\u06f0-\u06f9]/g, (c) => String(c.charCodeAt(0) - 0x6f0));
 }
-// 8 or 9 digits in a row, also written with dashes, dots or spaces between groups of three or more (an ID number: 123-456-789, 12345678)
+// 8 or 9 digits in a row, with a single dash, dot or space allowed between any two digits (an ID number: 123-456-789, 123 45 6789,
+// 1 2 3 4 5 6 7 8 9). A date written 12.03.2026 or 12-03-2026 is not an ID. 10 digits or more (a phone) is the phone rule's job.
 export function geminiIdLike(t) {
-  const s = geminiClean(t).replace(/(?<=\d{3})[-. ](?=\d{3})/g, '').replace(/(?<=\d{3})[-. ](?=\d{2,})/g, '');
-  return /(?<!\d)\d{8,9}(?!\d)/.test(s);
+  const s = geminiClean(t);
+  const re = /(?<!\d)(?<!\d[-. ])\d(?:[-. ]?\d){7,8}(?![-. ]?\d)/g;
+  let m;
+  while ((m = re.exec(s))) if (!/^\d{1,2}[-.]\d{1,2}[-.]\d{2,4}$/.test(m[0])) return true;
+  return false;
 }
 const norm = (s) => geminiClean(s).replace(/[\u0591-\u05c7]/g, '').replace(/[\u05f3\u05f4"'`\u2018\u2019\u201c\u201d]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().toLowerCase();
 const escRe = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
