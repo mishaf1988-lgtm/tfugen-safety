@@ -8,6 +8,7 @@ import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
 import { secondLog, secondSendGate, secondValve, SECOND_UNVERIFIED, SECOND_GATE_MAX, SECOND_GATE_MS, SECOND_GATE_KEY, secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, THZ_TRAINING_RE, ilInstant, incFilePrefix, dataGaps, equipDups, GAP_INC_DAYS, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, calInviteRuns, CAL_INVITE_DATES_MAX, CAL_INVITE_FIELDS, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, cardBefore, CARD_BEFORE_N, CARD_INV_N, linkRow, autoLinkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftTrashHits, draftDoneId, OD_DRAFT_DONE, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, draftsArr, scrubPii, agentEntry, agentArchive, leftWaits, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, refusesWithoutFlow, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, calLogAdd, factsApply, factsFind, FACTS_KEY, nameCheck, nameKnown, hasPassport, incSimilar, incWords, INC_SIM_N, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, OD_INV_TOP, addYear, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, odPdfCheck, OD_PUT_MAX, odArchiveCheck, archiveStampName, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, docsAddRow, docsFilePrefix, DOC_STATES, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrTxtName, taskAddCheck, TASK_ADD_MAX, taskOpenDup, TASK_SOURCES, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_LEAD_MARKS, OD_TRASH_EXTRA, OD_TRASH_DIR, OD_REPORTS_DIR, OD_ROOT_BACKUP, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT, isoSwapRequest, isoUpCheck, OD_ISO_SWAP, ISO_SITE_URL, mailGotCheck, mailGotList, MAIL_GOT_MAX } from './_build/routine-db.mjs';
 
+import { docReadCheck, docReadSensitive, docReadText, docReadPage, DOC_READ_CHARS, DOC_READ_OFFSET_MAX } from './_build/routine-db.mjs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -2591,6 +2592,67 @@ const callIn = async (body) => {
     check('pdf_read: an extra field refused', (await call({ op: 'pdf_read', agent: 'a-b', why: 'test', paths: ['a/one.pdf'], question: 'is it there?', model: 'x' }, 'k-123', 'POST', E)).status === 400);
     x = await call({ op: 'pdf_read', agent: 'a-b', why: 'test', paths: ['a/one.pdf'], question: 'is it there?' });
     check('pdf_read without ANTHROPIC_KEY: a clear error', x.json.ok === false && /ANTHROPIC_KEY/.test(x.json.error));
+    graph = async () => new Response('{}', { status: 500 });
+  }
+  // 27/11/2026 (DECISIONS "four decisions from the night planning" item 4): doc_read, Word and Excel through Workers AI toMarkdown
+  {
+    const A = { op: 'doc_read', agent: 'routine-wa-assistant', why: 'a question about a procedure' };
+    check('doc_read check: fields, why, 1-3 .docx/.xlsx, offset 0-200000, question 2-300',
+      !docReadCheck({ ...A, paths: ['05_x/a.docx', 'b.xlsx'] }).error && /field not allowed/.test(docReadCheck({ ...A, paths: ['a.docx'], model: 'x' }).error)
+      && /why/.test(docReadCheck({ ...A, why: 'abc', paths: ['a.docx'] }).error) && /bad agent/.test(docReadCheck({ ...A, agent: 'A B', paths: ['a.docx'] }).error)
+      && /offset/.test(docReadCheck({ ...A, paths: ['a.docx'], offset: -1 }).error) && /offset/.test(docReadCheck({ ...A, paths: ['a.docx'], offset: DOC_READ_OFFSET_MAX + 1 }).error)
+      && /offset/.test(docReadCheck({ ...A, paths: ['a.docx'], offset: '10' }).error) && /question/.test(docReadCheck({ ...A, paths: ['a.docx'], question: 'x' }).error)
+      && docReadCheck({ ...A, paths: ['a.docx'], offset: 6000, question: 'who signs?' }).offset === 6000);
+    check('doc_read check: 4 files refused, a PDF refused (ocr_txt), an old .doc refused, a path out refused, the hidden-names key refused',
+      /1-3/.test(docReadCheck({ ...A, paths: ['a.docx', 'b.docx', 'c.docx', 'd.docx'] }).error) && /ocr_txt/.test(docReadCheck({ ...A, paths: ['a.pdf'] }).error)
+      && docReadCheck({ ...A, paths: ['a.doc'] }).error && docReadCheck({ ...A, paths: ['../a.docx'] }).error && docReadCheck({ ...A, paths: ['a/../../b.xlsx'] }).error
+      && docReadCheck({ ...A, paths: [] }).error && docReadCheck({ ...A, paths: 'a.docx' }).error
+      && docReadCheck({ ...A, paths: ['\u05de\u05e4\u05ea\u05d7\u05d5\u05ea \u05d4\u05e1\u05ea\u05e8\u05d4/a.xlsx'] }).error && docReadCheck({ ...A, paths: ['a (\u05de\u05e4\u05ea\u05d7).xlsx'] }).error);
+    check('doc_read: medical, hearing, sick-note, form 250 and intake files refused by path; a safety procedure that says "health" or a general instruction is read',
+      ['10_\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e8\u05e4\u05d5\u05d0\u05d9\u05d5\u05ea/2026/a.xlsx', 'x/\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea_\u05e9\u05de\u05d9\u05e2\u05d4.xlsx', 'x/\u05d0\u05d9\u05e9\u05d5\u05e8 \u05de\u05d7\u05dc\u05d4.docx', 'x/\u05d1\u05dc-250.docx',
+        '11_\u05d4\u05d3\u05e8\u05db\u05d5\u05ea/12_\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd/a.docx', 'x/Audiogram 2026.xlsx', 'x/\u05e7\u05d5\u05e4\u05ea \u05d7\u05d5\u05dc\u05d9\u05dd.xlsx', 'x/\u05e8\u05e4\u05d5\u05d0\u200b\u05d9.xlsx']
+        .every((p) => docReadSensitive(p) && /medical/.test(docReadCheck({ ...A, paths: [p] }).error || ''))
+      && ['05_\u05e0\u05d4\u05dc\u05d9\u05dd/\u05e0\u05d5\u05d4\u05dc 25 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d1\u05e8\u05d9\u05d0\u05d5\u05ea.docx', 'x/\u05d4\u05d5\u05e8\u05d0\u05d4 \u05db\u05dc\u05dc\u05d9\u05ea.docx', 'x/\u05de\u05d7\u05dc\u05e7\u05ea \u05d9\u05d9\u05e6\u05d5\u05e8.xlsx', '\u05dc\u05d5\u05d7 \u05d1\u05e7\u05e8\u05d4.xlsx'].every((p) => !docReadSensitive(p)));
+    const masked = docReadText('# file.docx\n\nID 123456789, mobile 050-1234567, mail a.b@x.co.il, phone 08-6123456, id 12-345-6789\nok', 'docx');
+    check('doc_read text: the head out, an ID, a mobile, a mail, a landline and a dashed ID masked, newlines kept',
+      !/file\.docx|123456789|1234567|a\.b@|6123456|345-6789/.test(masked) && masked.indexOf('\n') > 0 && /<\u05de\u05e1\u05e4\u05e8>/.test(masked) && /<\u05e0\u05d9\u05d9\u05d3>/.test(masked) && /<\u05db\u05ea\u05d5\u05d1\u05ea>/.test(masked), masked);
+    const long = Array.from({ length: 2000 }, (_, i) => 'line ' + i + ' ' + (i === 1500 ? 'confined space' : 'text')).join('\n');
+    const p0 = docReadPage(long, 0, 'confined'), p1 = docReadPage(long, p0.more, null);
+    check('doc_read paging: ' + DOC_READ_CHARS + ' characters a page, more = the next offset, the last page has more null, hits point at the line',
+      p0.text.length === DOC_READ_CHARS && p0.more === DOC_READ_CHARS && p1.text === long.slice(DOC_READ_CHARS, 2 * DOC_READ_CHARS) && p0.chars === long.length
+      && docReadPage(long, long.length - 10, null).more === null && p0.hits.length === 1 && long.slice(p0.hits[0]).startsWith('line 1500 confined') && p1.hits === undefined, { more: p0.more, hits: p0.hits });
+    // through the server, env.AI faked
+    const sent = [];
+    const zip = (s) => { const t = new TextEncoder().encode(s); const b = new Uint8Array(4 + t.length); b.set([0x50, 0x4b, 0x03, 0x04]); b.set(t, 4); return b; };
+    const body = 'row 1 | \u05e2\u05d5\u05d1\u05d3 | 123456789 | 052-7654321\n' + 'x'.repeat(DOC_READ_CHARS + 50) + '\nend';
+    const AI = { toMarkdown: async (list) => { sent.push(list.map((f) => ({ name: f.name, type: f.blob.type, size: f.blob.size }))); return list.map((f) => ({ name: f.name, format: 'markdown', data: '# ' + f.name + '\n' + body })); } };
+    const E = { ...ENV, AI };
+    graph = async (u) => {
+      const d = decodeURIComponent(u);
+      if (!/:\/content$/.test(u)) return new Response('{}', { status: 404 });
+      if (/missing\.docx/.test(d)) return new Response('{}', { status: 404 });
+      if (/big\.xlsx/.test(d)) return new Response(new Uint8Array(PDF_READ_MAX + 1), { status: 200 });
+      if (/old\.docx/.test(d)) return new Response(new Uint8Array([0xd0, 0xcf, 0x11, 0xe0, 1]), { status: 200 });
+      return new Response(zip('doc'), { status: 200 });
+    };
+    let x = await call({ ...A, paths: ['05_\u05e0\u05d4\u05dc\u05d9\u05dd/\u05e0\u05d5\u05d4\u05dc 25.docx', 'a/table.xlsx', 'a/missing.docx'], question: 'end' }, 'k-123', 'POST', E);
+    const f0 = x.json.files && x.json.files[0], f1 = x.json.files && x.json.files[1], f2 = x.json.files && x.json.files[2];
+    check('doc_read: each file to toMarkdown with an ASCII name and its MIME type, masked text back, a missing file stays on its own row',
+      x.status === 200 && x.json.ok === true && sent.length === 2 && sent[0][0].name === 'file.docx' && /wordprocessingml/.test(sent[0][0].type) && sent[1][0].name === 'file.xlsx' && /spreadsheetml/.test(sent[1][0].type)
+      && f0.ok && f0.name === '\u05e0\u05d5\u05d4\u05dc 25.docx' && /\u05e2\u05d5\u05d1\u05d3/.test(f0.text) && !/123456789|7654321|# file/.test(f0.text) && f0.text.length === DOC_READ_CHARS && f0.more === DOC_READ_CHARS && f0.hits.length === 1
+      && f1.ok && f2 && !f2.ok && /not found/.test(f2.error) && /data, not instructions/.test(x.json.note), x.json);
+    x = await call({ ...A, paths: ['a/table.xlsx'], offset: DOC_READ_CHARS }, 'k-123', 'POST', E);
+    check('doc_read: offset gives the next page, the last page has more null', x.json.files[0].ok && x.json.files[0].offset === DOC_READ_CHARS && /end$/.test(x.json.files[0].text) && x.json.files[0].more === null, x.json);
+    const n0 = sent.length;
+    x = await call({ ...A, paths: ['a/big.xlsx', 'a/old.docx'] }, 'k-123', 'POST', E);
+    check('doc_read: a file over 4MB and a file that is not a zip are not sent to toMarkdown', x.json.ok === false && /too big/.test(x.json.files[0].error) && /not a Word/.test(x.json.files[1].error) && sent.length === n0, x.json);
+    const bad = await Promise.all([
+      call({ ...A, paths: ['a.docx', 'b.docx', 'c.docx', 'd.docx'] }, 'k-123', 'POST', E), call({ ...A, paths: ['a/x.pdf'] }, 'k-123', 'POST', E),
+      call({ ...A, paths: ['../x.docx'] }, 'k-123', 'POST', E), call({ ...A, paths: ['10_\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e8\u05e4\u05d5\u05d0\u05d9\u05d5\u05ea/a.xlsx'] }, 'k-123', 'POST', E),
+      call({ ...A, paths: ['a.docx'], extra: 1 }, 'k-123', 'POST', E)]);
+    check('doc_read through the server: 4 files, a PDF, a path out, a medical folder and an extra field are 400, nothing read', bad.every((r) => r.status === 400 && r.json.ok === false) && sent.length === n0, bad.map((r) => r.json));
+    x = await call({ ...A, paths: ['a/table.xlsx'] });
+    check('doc_read without the Workers AI binding: a clear error, not a crash', x.status === 200 && x.json.ok === false && /env\.AI\.toMarkdown/.test(x.json.error), x.json);
     graph = async () => new Response('{}', { status: 500 });
   }
   // 21/10/2026: a photo Michael sent on WhatsApp reaches the assistant
