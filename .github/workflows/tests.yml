@@ -71,6 +71,8 @@ jobs:
       - run: python3 tests/harness/status-dup-test.py
       # Same reason: a replaced Routine id left live in STATUS or routine-*.md (lesson 67).
       - run: python3 tests/harness/stale-trigger-test.py
+      # The postman's trigger id in routine-db.js must be the live one in ACCOUNT-INVENTORY.md (27/11/2026).
+      - run: python3 tests/harness/postman-trigger-test.py
       - run: python3 tests/harness/scan-download-test.py
       - run: python3 tests/harness/denial-log-test.py
       - run: python3 tests/harness/domain-tree-test.py
