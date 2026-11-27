@@ -3125,6 +3125,45 @@ const callIn = async (body) => {
       const e5 = await call(A);
       check('mail_forward: a 500 from Graph still refuses, nothing written', e5.json.ok === false && puts.length === 2, e5.json);
     } finally { graph = g0; }
+    // 27/11/2026 (Michael: "בצע: בדיקות למייל המאוחד", retro 26/11/2026 (2)): the mail_bundle op on the server, Graph faked
+    {
+      const { OD_BUNDLE } = await import('./_build/routine-db.mjs');
+      const ID2 = ID.replace('1234567890', '0987654321');
+      const SUB = { [ID]: 'מפות 1', [ID2]: 'RE: מפות 2' };
+      const bputs = [], seen = [];
+      graph = async (u, o = {}) => {
+        if (/\/me\/messages\//.test(u)) { seen.push(u); const k = Object.keys(SUB).find((x) => u.includes(encodeURIComponent(x) + '?')); return k ? new Response(JSON.stringify({ subject: SUB[k] }), { status: 200 }) : new Response('{}', { status: 404 }); }
+        if ((o.method || 'GET') === 'PUT') { bputs.push({ u: decodeURIComponent(u), body: o.body }); return new Response(JSON.stringify({ size: 400 }), { status: 201 }); }
+        return new Response('{}', { status: 404 });
+      };
+      try {
+        const B = { op: 'mail_bundle', agent: 'routine-wa-assistant', why: 'Michael asked to send both maps to Sharon in one mail', ids: [ID, ID2], subjects: ['מפות 1', 're:  מפות 2'], to: 'sharon.a@tapugan.co.il', comment: 'שרון, מצורף.' };
+        const ok = await call(B);
+        const fileJ = bputs[0] && (() => { try { return JSON.parse(typeof bputs[0].body === 'string' ? bputs[0].body : new TextDecoder().decode(bputs[0].body)); } catch (e) { return null; } })();
+        check('mail_bundle: both mails checked (case and spaces ignored), one request file in the bundle folder holding ids, subjects, recipient, subject and mode attach; the answer says 2 mails, checked by the server',
+          ok.json.ok === true && seen.length === 2 && bputs.length === 1 && bputs[0].u.includes(OD_BUNDLE) && /\/\d{8}-[0-9a-f]{16}\.txt/.test(bputs[0].u)
+          && fileJ && fileJ.ids.join() === [ID, ID2].join() && fileJ.subjects.length === 2 && fileJ.to === 'sharon.a@tapugan.co.il' && fileJ.subject === 'מפות 1' && fileJ.mode === 'attach' && /^<div dir="rtl"/.test(fileJ.comment)
+          && ok.json.mails === 2 && ok.json.subject_checked === 'server' && ok.json.subject === 'מפות 1' && ok.json.file.startsWith(OD_BUNDLE + '/'), { j: ok.json, bputs: bputs.map((x) => x.u), fileJ });
+        const wrong = await call(Object.assign({}, B, { subjects: ['מפות 1', 'something else'] }));
+        check('mail_bundle: a subject that is not the mail\'s = refused naming mail 2, nothing written', wrong.json.ok === false && /subject does not match mail 2/.test(wrong.json.error) && bputs.length === 1, wrong.json);
+        const extra = await call(Object.assign({}, B, { approved: 'בצע' }));
+        const noWhy = await call(Object.assign({}, B, { why: '' }));
+        check('mail_bundle: an "approved" field = 400 "field not allowed" (it only drafts; lesson 169), no why = 400, Graph not asked and nothing written',
+          extra.status === 400 && /field not allowed: approved/.test(extra.json.error) && noWhy.status === 400 && bputs.length === 1 && seen.length === 4, { extra: extra.json, noWhy: noWhy.json, seen: seen.length });
+        const missing = await call(Object.assign({}, B, { ids: [ID, ID.replace('a1234', 'b9999')] }));
+        check('mail_bundle: a mail that is not there = refused as "mail 2 not found (404)", nothing written', missing.json.ok === false && /mail 2 not found \(404\)/.test(missing.json.error) && bputs.length === 1, missing.json);
+        graph = async (u, o = {}) => {
+          if (/\/me\/messages\//.test(u)) return new Response('{"error":{"code":"ErrorAccessDenied"}}', { status: 403 });
+          if ((o.method || 'GET') === 'PUT') { bputs.push({ u: decodeURIComponent(u), body: o.body }); return new Response(JSON.stringify({ size: 400 }), { status: 201 }); }
+          return new Response('{}', { status: 404 });
+        };
+        const no = await call(Object.assign({}, B, { subjects: ['מפות 1', 'not checked here'] }));
+        check('mail_bundle: no Mail.Read (403) = written anyway with the subjects as given, subject_checked "flow 12"', no.json.ok === true && bputs.length === 2 && no.json.subject_checked === 'flow 12' && no.json.subjects[1] === 'not checked here', no.json);
+        graph = async (u) => /\/me\/messages\//.test(u) ? new Response('{}', { status: 500 }) : new Response('{}', { status: 404 });
+        const e5 = await call(B);
+        check('mail_bundle: a 500 from Graph still refuses, nothing written', e5.json.ok === false && /mail 1 not found \(500\)/.test(e5.json.error) && bputs.length === 2, e5.json);
+      } finally { graph = g0; }
+    }
   }
 
   { // retro 13/10/2026 (STATUS 188 b): a claim written at the same moment by another session is kept, not overwritten
