@@ -882,7 +882,33 @@ export function dataGaps(eq, inc, today) {
     const when = day(r.dt) || day(r.created_at);
     return !!when && when <= lim;
   }).map((r) => ({ id: r.id, dt: day(r.dt) || day(r.created_at) }));
-  return { equip: equip.slice(0, GAP_MAX), equip_n: equip.length, inc: incs.slice(0, GAP_MAX), inc_n: incs.length };
+  const dup = equipDups(eq);
+  return { equip: equip.slice(0, GAP_MAX), equip_n: equip.length, inc: incs.slice(0, GAP_MAX), inc_n: incs.length, dup: dup.slice(0, GAP_MAX), dup_n: dup.length };
+}
+// equipDups (27/11/2026, Michael in the questionnaire: "do it: a check that there is no duplicate equipment in the DB", after
+// fa-mazah-106520/106965 sat beside xl1008-e95/e96 for the same backflow preventers): groups of rows in tracking that look
+// like one item. (1) the same code; (2) the same serial (5 digits or more) in the names, or the same serial_number, with the same e or the same name (one
+// boiler has a pressure test and an efficiency report, each its own date: 27/11/2026 live, SB-3, not a duplicate); (3) the same report number or the
+// same file with a different e (one report or certificate covering two items is fine when both carry its date; a different
+// date means one row is stale). Pure; the weekly validity Routine reads it (routine-validity.md 8).
+export function equipDups(eq) {
+  const rows = (Array.isArray(eq) ? eq : []).filter((r) => r && r.id != null && r.s !== EQUIP_OUT);
+  const groups = [], seen = new Set();
+  const add = (why, key, list) => {
+    const ids = list.map((r) => r.id).sort();
+    const sig = ids.join(',');
+    if (list.length < 2 || seen.has(sig)) return;
+    seen.add(sig);
+    groups.push({ why, key: short(key, 80), rows: list.map((r) => ({ id: r.id, code: r.code || null, n: short(r.n, 60), e: r.e ? String(r.e).slice(0, 10) : null })) });
+  };
+  const by = (f) => { const m = new Map(); for (const r of rows) for (const k of f(r)) { if (!m.has(k)) m.set(k, []); if (m.get(k).indexOf(r) < 0) m.get(k).push(r); } return m; };
+  const diffE = (l) => new Set(l.map((r) => (r.e ? String(r.e).slice(0, 10) : ''))).size > 1;
+  const sameName = (l) => new Set(l.map((r) => String(r.n || '').replace(/[^\p{L}]+/gu, ''))).size === 1;
+  for (const [k, l] of by((r) => (String(r.code || '').trim() ? [String(r.code).trim().toLowerCase()] : []))) add('code', k, l);
+  for (const [k, l] of by((r) => { const sn = String(r.serial_number || '').trim().toLowerCase(); return (String(r.n || '').match(/(?<!\d)\d{5,}(?!\d)/g) || []).concat(sn.length >= 3 ? [sn] : []); })) if (!diffE(l) || sameName(l)) add('serial', k, l);
+  for (const [k, l] of by((r) => (String(r.report_number || '').trim() ? [String(r.report_number).trim()] : []))) if (diffE(l)) add('report', k, l);
+  for (const [k, l] of by((r) => (/\.(pdf|docx?|xlsx?|jpe?g|png)$/i.test(String(r.file_url || '').trim()) ? [String(r.file_url).trim()] : []))) if (diffE(l)) add('file', k, l);
+  return groups;
 }
 export function taskOpenDup(existing, row) {
   return (existing || []).find((x) => x && ['\u05d4\u05d5\u05e9\u05dc\u05dd', '\u05d1\u05d5\u05d8\u05dc'].indexOf(x.status) < 0 && (!TASK_BY_TITLE[row.source_table] || String(x.title || '').trim() === row.title)) || null;
@@ -4353,7 +4379,7 @@ async function routineDbHandle(context) {
     if (body.op === 'data_gaps') {
       for (const k of Object.keys(body)) if (['op', 'agent'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       const get = (path) => fetch(url + '/rest/v1/' + path, { headers: h, signal: tmo(SB_MS) }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-      const [eq, inc] = await Promise.all([get('equip_inspections?select=id,code,n,d,e,s,file_url,report_number&limit=5000'), get('inc?select=id,dt,created_at,s,dy&limit=5000')]);
+      const [eq, inc] = await Promise.all([get('equip_inspections?select=id,code,n,d,e,s,file_url,report_number,serial_number&limit=5000'), get('inc?select=id,dt,created_at,s,dy&limit=5000')]);
       // a failed read is not "no gaps" (as resp_check)
       if (!Array.isArray(eq) || !Array.isArray(inc)) return jsonResp({ ok: false, error: 'read failed: ' + [!Array.isArray(eq) ? 'equip_inspections' : '', !Array.isArray(inc) ? 'inc' : ''].filter(Boolean).join(', ') }, 200, {});
       const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
