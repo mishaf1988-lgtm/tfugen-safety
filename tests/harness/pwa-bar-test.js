@@ -134,6 +134,52 @@ const STANDALONE_MQ = () => { const mm = window.matchMedia.bind(window); window.
     await r.ctx.close();
   }
 
+  // STATUS retro 15/11/2026 item ג (27/11/2026): the bar is fixed at the
+  // bottom over everything (z-index 9990), and on a phone a form opens full
+  // screen with its save button stuck to the bottom edge, so the bar sat on
+  // the save button. Small iPhone (375x667), each form scrolled to its end.
+  console.log('\n8. a small phone: the bar does not cover the save button, the login button or the page end');
+  {
+    const ctx = await browser.newContext({ userAgent: UA.safari, viewport: { width: 375, height: 667 }, locale: 'he-IL' });
+    const { page } = await open(UA.safari, { ctx });
+    const covered = (sel) => page.evaluate((sel) => {
+      const el = document.querySelector(sel), b = document.getElementById('pwa-bar');
+      if (!el || !b) return { missing: !el ? sel : 'pwa-bar' };
+      el.scrollIntoView({ block: 'end' });
+      const r = el.getBoundingClientRect(), br = b.getBoundingClientRect();
+      const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return { ok: !!(top && (el === top || el.contains(top))), bottom: Math.round(r.bottom), barTop: Math.round(br.top), hit: top && (top.id || top.className || top.tagName) };
+    }, sel);
+    const lg = await covered('#login-btn');
+    check('login screen: the login button is not under the bar', lg.ok && lg.bottom <= lg.barTop, lg);
+    await page.evaluate(() => {
+      document.getElementById('login').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+    });
+    await page.waitForTimeout(200);
+    for (const [m, fn] of [['m-nm', 'svNm'], ['m-tsk', 'svTsk']]) {
+      await page.evaluate((m) => { openModal(m); const mo = document.getElementById(m); mo.scrollTop = mo.scrollHeight; }, m);
+      await page.waitForTimeout(400);
+      const r = await covered('#' + m + ' .modal-footer button[onclick="' + fn + '()"]');
+      check(m + ' full screen, scrolled to the end: the save button is not under the bar', r.ok && r.bottom <= r.barTop, r);
+      await page.evaluate((m) => closeModal(m), m);
+    }
+    // A long page under the bar: its last line scrolls up above the bar.
+    const end = await page.evaluate(() => {
+      const b = document.getElementById('pwa-bar');
+      const pad = parseFloat(getComputedStyle(document.body).paddingBottom) || 0;
+      return { pad, h: Math.round(b.getBoundingClientRect().height), on: document.body.classList.contains('pwa-bar-on') };
+    });
+    check('a page scrolls its end above the bar (body padding >= bar height)', end.on && end.pad >= end.h, end);
+    await page.click('#pwa-bar-x');
+    const off = await page.evaluate(() => ({ on: document.body.classList.contains('pwa-bar-on'), pad: parseFloat(getComputedStyle(document.body).paddingBottom) || 0 }));
+    check('closing the bar takes the room back', !off.on, off);
+    await page.evaluate(() => { localStorage.removeItem('tfgn_pwa_bar_closed'); _pibShow(); window.dispatchEvent(new Event('appinstalled')); });
+    const inst = await page.evaluate(() => ({ bar: !!document.getElementById('pwa-bar'), on: document.body.classList.contains('pwa-bar-on') }));
+    check('installing (appinstalled) takes the room back too', !inst.bar && !inst.on, inst);
+    await ctx.close();
+  }
+
   console.log('\n7. the code keeps the repo rules');
   {
     const src = require('fs').readFileSync(path.resolve(__dirname, '../../index.html'), 'utf8');
