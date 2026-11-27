@@ -2,6 +2,7 @@
 // wa-morning, which reads each new PDF in the mail inbox on its own (Michael in the questionnaire: "do it: automatic").
 // Workers AI (free quota, the scan stays inside our Cloudflare account); the text goes to _\u05d8\u05e7\u05e1\u05d8 \u05e1\u05e8\u05d9\u05e7\u05d5\u05ea/<name>.txt
 // and Claude reads it with the Microsoft 365 connector.
+import { SITE } from './_site.js';
 export const OD_OCR_DIR = '_\u05d8\u05e7\u05e1\u05d8 \u05e1\u05e8\u05d9\u05e7\u05d5\u05ea';
 // Workers AI fallback (24/10/2026, no Azure subscription; Michael in the questionnaire: "do it: test Workers AI"):
 // a scanned PDF holds each page as a JPEG stream (DCTDecode); the first OCR_PAGES of them go to a vision model.
@@ -152,7 +153,7 @@ export function pdfHasFont(buf) {
 // Is the vision model's text about this file at all? (27/11/2026, DECISIONS 17/11/2026, Michael: "do it: written with 'unverified'").
 // The Workers AI vision model sometimes returns a whole invented document (another ministry's letter, the year 2029) instead
 // of the scan. Pure. The text passes with at least one of: a date or a number (3+ digits) from the file name or its folders,
-// "tapugan" in Hebrew or English, or a word (3+ letters, not a generic one) of the file name or its folders; and fails on any
+// the factory's name (SITE: Hebrew, brand or English company word), or a word (3+ letters, not a generic one) of the file name or its folders; and fails on any
 // year after next year. A text that fails is still written, with ocrMark as its first line (it starts with OCR_UNVERIFIED):
 // it is no basis for a decision alone. Only the vision-model path (ocrOne); Azure Read does not invent text.
 export const OCR_UNVERIFIED = '[\u05dc\u05d0 \u05de\u05d0\u05d5\u05de\u05ea';
@@ -163,6 +164,7 @@ function ocrDates(s) {
   while ((m = OCR_DATE_RE.exec(s))) out.push(m[1] ? (+m[3]) + '/' + (+m[2]) + '/' + m[1] : (+m[4]) + '/' + (+m[5]) + '/' + m[6]);
   return out;
 }
+const ocrCompany = () => [SITE.shortName, SITE.brand, String(SITE.companyEn || '').split(' ')[0]].filter((w) => w && w.length >= 3).map((w) => w.toLowerCase());
 export function ocrCheck(text, rel, nowMs) {
   const body = String(text || '').split('\n').filter((l) => !/^--- .* ---$/.test(l.trim()) && l.trim() !== '(\u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0)').join('\n');
   const next = new Date(nowMs === undefined ? Date.now() : nowMs).getUTCFullYear() + 1;
@@ -170,7 +172,8 @@ export function ocrCheck(text, rel, nowMs) {
   const years = (body.match(/(?:^|[^\d-])(?:19|20)\d{2}(?![\d-])/g) || []).map((y) => Number(y.replace(/\D/g, '')))
     .concat(ocrDates(body).map((d) => d.split('/')[2]).filter((y) => y.length === 4).map(Number)).filter((y) => y > next);
   if (years.length) return { ok: false, reason: '\u05e9\u05e0\u05d4 ' + Math.max.apply(null, years) + ' \u05d1\u05e2\u05ea\u05d9\u05d3' };
-  if (/\u05ea\u05e4\u05d5\u05d2\u05df|tapugan|tfugen/i.test(body)) return { ok: true, by: 'tapugan' };
+  const low = body.toLowerCase();
+  if (ocrCompany().some((w) => low.indexOf(w) >= 0)) return { ok: true, by: 'company' };
   const name = String(rel || '').replace(/\.pdf$/i, '');
   const yy = (d) => d.replace(/\/\d*(\d\d)$/, '/$1'); // 24.10.2026 = 24/10/26
   const td = new Set(ocrDates(body).map(yy));
@@ -178,10 +181,9 @@ export function ocrCheck(text, rel, nowMs) {
   const nums = (name.replace(OCR_DATE_RE, ' ').match(/\d{3,}/g) || []).filter((n) => !/^(19|20)\d{2}$/.test(n));
   const bodyNums = new Set(body.match(/\d{3,}/g) || []);
   if (nums.some((n) => bodyNums.has(n))) return { ok: true, by: 'number' };
-  const low = body.toLowerCase();
   const words = (name.toLowerCase().match(/[a-z\u05d0-\u05ea]{3,}/g) || []).filter((w) => !OCR_GENERIC.has(w));
   if (words.some((w) => low.indexOf(w) >= 0)) return { ok: true, by: 'word' };
-  return { ok: false, reason: '\u05d0\u05d9\u05df \u05d1\u05d8\u05e7\u05e1\u05d8 \u05ea\u05d0\u05e8\u05d9\u05da, \u05de\u05e1\u05e4\u05e8 \u05d0\u05d5 \u05de\u05d9\u05dc\u05d4 \u05de\u05e9\u05dd \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d5\u05dc\u05d0 "\u05ea\u05e4\u05d5\u05d2\u05df"' };
+  return { ok: false, reason: '\u05d0\u05d9\u05df \u05d1\u05d8\u05e7\u05e1\u05d8 \u05ea\u05d0\u05e8\u05d9\u05da, \u05de\u05e1\u05e4\u05e8 \u05d0\u05d5 \u05de\u05d9\u05dc\u05d4 \u05de\u05e9\u05dd \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d5\u05dc\u05d0 "' + SITE.shortName + '"' };
 }
 export function ocrMark(reason) { return OCR_UNVERIFIED + ': ' + reason + '. \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d1\u05e2\u05d9\u05df \u05dc\u05e4\u05e0\u05d9 \u05d4\u05d7\u05dc\u05d8\u05d4]'; }
 export async function ocrOne(env, token, rel, name, model, from, txtName, skipText) {
