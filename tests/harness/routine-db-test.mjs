@@ -306,6 +306,19 @@ const callIn = async (body) => {
         u1.ok && u1.verified === false && /2029/.test(u1.unverified) && t1u.indexOf(OCR_UNVERIFIED) === 0 && /משרד הפנים/.test(t1u)
         && u2.ok && u2.verified === false && t2u.split(OCR_UNVERIFIED).length === 2 && t2u.indexOf(OCR_UNVERIFIED) === 0 && /סוף המכתב$/.test(t2u)
         && v1.ok && v1.verified === true && saved.text.indexOf(OCR_UNVERIFIED) < 0, { u1, u2, v1, t1u, t2u });
+      // security review 27/11/2026 (1): each call is checked on its own pages: a real first part does not certify an invented
+      // next one, and a real next part does not remove the mark of invented earlier pages
+      const u4 = await ocrOne(say('משרד החקלאות\nהנדון: רישיון ייבוא'), 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0], 4);
+      const t4u = saved.text;
+      await ocrOne(say('משרד הפנים\nשנת 2029'), 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0]);
+      const v3 = await ocrOne(say('תפוגן בע"מ - המשך'), 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0], 4);
+      check('ocrOne per call: real pages 1-3 + invented page 4 = marked; invented pages 1-3 + real page 4 = the mark stays, one mark, verified:false (security review 27/11/2026)',
+        u4.verified === false && t4u.indexOf(OCR_UNVERIFIED) === 0 && /תפוגן/.test(t4u)
+        && v3.verified === false && /earlier pages/.test(v3.unverified) && saved.text.indexOf(OCR_UNVERIFIED) === 0 && saved.text.split(OCR_UNVERIFIED).length === 2 && /2029/.test(saved.text.split('\n')[0]), { u4, v3, t4u, t: saved.text });
+      // (2): a word of the name counts only whole, 4+ letters, with one Hebrew prefix letter at most
+      check('ocrCheck words: "the" of a name is no match, "ארון" is not found inside "הארונות", "בארון" (prefix) counts (security review 27/11/2026)',
+        !ocrCheck('the weather is nice there', 'x/the forklift report.pdf', NOW).ok && !ocrCheck('הארונות במחסן', 'דוחות/ארון.pdf', NOW).ok
+        && ocrCheck('נבדק בארון החשמל', 'דוחות/ארון.pdf', NOW).by === 'word' && ocrCheck('the forklift was checked', 'x/the forklift report.pdf', NOW).by === 'word');
     } finally { globalThis.fetch = real; }
   })();
   // 26/10/2026 (dev request: a copier scan, "no scanned page image"): black and white pages are CCITT Group 4.
