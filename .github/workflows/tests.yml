@@ -141,6 +141,9 @@ jobs:
       # 19/11/2026 (#2923, shard 6): the slow mirror again. apt finished unpacking at minute 15 exactly and the step was
       # cut before Chromium was fetched; no test ran. A slow install is let finish (22 minutes), and the job limit
       # follows it (40), so a slow install plus the longest shard (about 14 minutes) still fits.
+      # 27/11/2026 (#3162, shard 7): packages.microsoft.com answered 403 on apt update and the whole install stopped ("The repository is
+      # no longer signed"), with no test run. Chromium's system packages come from Ubuntu, not from Microsoft: the Microsoft source is dropped first.
+      - run: sudo rm -f /etc/apt/sources.list.d/microsoft*.list /etc/apt/sources.list.d/microsoft*.sources /etc/apt/sources.list.d/azure-cli*
       - run: playwright install --with-deps chromium
         timeout-minutes: 22
       - run: SHARD=${{ matrix.shard }}/8 bash tests/harness/run.sh
