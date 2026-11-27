@@ -150,7 +150,17 @@ export function notesOpen(notes) {
 // The expiry name as the database holds it ended with "same as above" (it was copied from a list): alone in the update
 // it points at the line before, which is another item. Pure.
 export const itemName = (n) => String(n == null ? '' : n).replace(/[,\s]*\u05db\u05e0["\u05f4\u201d]\u05dc\s*$/, '');
-export function buildBrief(items, failed, today, compact, notes, weather, devDone, learnOpen, urgent, waiting, disq, contra) {
+// 27/11/2026 (idea 49, Michael in the questionnaire: "do it: one line in the morning update, to me only"): open tour hazards and
+// open tasks whose due date has passed, counted, with the oldest in days. No message to anyone else. Pure.
+export function overdueSummary(hazards, tasks, today) {
+  const od = (x) => x && /^\d{4}-\d{2}-\d{2}/.test(String(x.due || '')) && String(x.due).slice(0, 10) < today;
+  const h = (hazards || []).filter(od), t = (tasks || []).filter(od);
+  if (!h.length && !t.length) return null;
+  const oldest = h.concat(t).map((x) => Math.round((Date.parse(today + 'T00:00:00Z') - Date.parse(String(x.due).slice(0, 10) + 'T00:00:00Z')) / 86400000)).reduce((a, b) => Math.max(a, b), 0);
+  return { h: h.length, t: t.length, oldest };
+}
+export const overdueLine = (o) => o && (o.h || o.t) ? '\u05e2\u05d1\u05e8 \u05de\u05d5\u05e2\u05d3: ' + o.h + ' \u05de\u05e4\u05d2\u05e2\u05d9 \u05e1\u05d9\u05d5\u05e8, ' + o.t + ' \u05de\u05e9\u05d9\u05de\u05d5\u05ea. \u05d4\u05d9\u05e9\u05df \u05d1\u05d9\u05d5\u05ea\u05e8: ' + o.oldest + ' \u05d9\u05de\u05d9\u05dd.' : '';
+export function buildBrief(items, failed, today, compact, notes, weather, devDone, learnOpen, urgent, waiting, disq, contra, overdue) {
   contra = urgent ? [] : (contra || []);
   const contraLine = contra.length ? '\u05e9\u05d5\u05e8\u05d4 \u05e1\u05d5\u05ea\u05e8\u05ea \u05d1\u05de\u05e1\u05d3 (\u05d4\u05de\u05e6\u05d1 \u05ea\u05e7\u05d9\u05df \u05d5\u05d4\u05d4\u05e2\u05e8\u05d4 \u05d0\u05d5\u05de\u05e8\u05ea \u05e9\u05e0\u05e4\u05e1\u05dc): ' + contra.slice(0, 3).map((n) => clip(n, 40)).join('; ') + (contra.length > 3 ? '; \u05d5\u05e2\u05d5\u05d3 ' + (contra.length - 3) : '') + '. \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d5\u05dc\u05ea\u05e7\u05df.' : '';
   waiting = waiting || []; disq = disq || [];
@@ -169,7 +179,7 @@ export function buildBrief(items, failed, today, compact, notes, weather, devDon
   // 22/10/2026 (Michael: "approve the upgrade"): the assistant's notebook is folded into its rules by the daily retro
   // (retro-prompt.md 7b). More than LEARN_ALERT open entries = the retro is not folding them; one line says so.
   const nb = Number.isInteger(learnOpen) && learnOpen > LEARN_ALERT ? '\u05d4\u05de\u05d7\u05d1\u05e8\u05ea \u05e9\u05dc \u05d4\u05e2\u05d5\u05d6\u05e8: ' + learnOpen + ' \u05d3\u05d1\u05e8\u05d9\u05dd \u05e9\u05dc\u05de\u05d3 \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05db\u05e0\u05e1\u05d5 \u05dc\u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05e9\u05dc\u05d5.' : '';
-  const dev = [devLine, nb].filter(Boolean).join(' ');
+  const dev = [urgent ? '' : overdueLine(overdue), devLine, nb].filter(Boolean).join(' ');
   if (compact) {
     const parts = [];
     if (wx) parts.push(wx);
@@ -269,7 +279,14 @@ export async function gather(env, now) {
   try { devDone = devClosedYesterday(JSON.parse((await stateGet(env, 'dev_inbox')) || '[]'), today); } catch (e) { devDone = null; }
   let learnOpen = null;
   try { learnOpen = JSON.parse((await stateGet(env, 'assistant_learned')) || '[]').filter((x) => x && x.status === 'new').length; } catch (e) { learnOpen = null; }
-  return { today, items, waiting, disq, contra, failed, notes, weather, devDone, learnOpen };
+  let overdue = null;
+  try {
+    const [hz, tk] = await Promise.all([
+      sb(env, 'tour_hazards?select=due&s=eq.' + encodeURIComponent('\u05e4\u05ea\u05d5\u05d7') + '&due=lt.' + today + '&limit=500'),
+      sb(env, 'tasks?select=due&status=in.(' + ['\u05e4\u05ea\u05d5\u05d7', '\u05d1\u05d4\u05ea\u05e7\u05d3\u05de\u05d5\u05ea'].map(encodeURIComponent).join(',') + ')&due=lt.' + today + '&limit=500')]);
+    overdue = overdueSummary(hz, tk, today);
+  } catch (e) { overdue = null; }
+  return { today, items, waiting, disq, contra, failed, notes, weather, devDone, learnOpen, overdue };
 }
 // Pure: requests in dev_inbox closed (done_at) on the Israel day before today. A Sunday counts Saturday only.
 export function devClosedYesterday(list, today) {
@@ -807,7 +824,7 @@ export async function run(env, now, body) {
   const open = await ownerWindowOpen(env, sbFrom(env), now.getTime());
   // 06/11/2026 (weekend quiet, _wa.js weekendHold): what was kept on Friday and Saturday comes with this update
   const wk = await weekendStep(env);
-  const brief = buildBrief(g.items, g.failed, g.today, !open, g.notes, g.weather, g.devDone, g.learnOpen, false, g.waiting, g.disq, g.contra);
+  const brief = buildBrief(g.items, g.failed, g.today, !open, g.notes, g.weather, g.devDone, g.learnOpen, false, g.waiting, g.disq, g.contra, g.overdue);
   // the room left: the template carries 1000 characters in one line, free text 4096 (review 06/11/2026: a cut list was cleared)
   const text = brief + weekendText(wk, !open, (open ? 4096 : 1000) - brief.length - 20);
   if (body.dry) return { ok: true, sent: false, dry: true, text, cal, weekend: wk.total };

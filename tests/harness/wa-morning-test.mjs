@@ -1,6 +1,6 @@
 // The morning update on WhatsApp from the server (20/10/2026): pg_cron calls /api/wa-morning twice,
 // only the call on 07:xx in Israel on Sunday-Thursday sends, once a day, to Michael's number only.
-import { listEnd, unDot, weekendText, deckCheckDue, DECK_CHECK_KEY, stagingDue, watch, clip, areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT, splitUrgent, WAIT_DAYS, rowContradictions, expOff, devRemind, DEV_WARN_KEY } from './_build/wa-morning.mjs';
+import { listEnd, unDot, weekendText, deckCheckDue, DECK_CHECK_KEY, stagingDue, watch, clip, areaRole, watchVerdict, WATCH_MIN, onRequest, run, buildBrief, overdueSummary, overdueLine, agentName, dueNow, ilDay, MAX_CHARS, LAST_KEY, calendarPlan, eventDay, OD_CAL, CAL_KEY, CAL_MAX, LEARN_ALERT, splitUrgent, WAIT_DAYS, rowContradictions, expOff, devRemind, DEV_WARN_KEY } from './_build/wa-morning.mjs';
 import { OD_ROOT } from './_build/routine-db.mjs';
 import fs from 'fs';
 import { stateMock } from './lib/state-mock.mjs';
@@ -579,6 +579,16 @@ const call = async (body, secret) => (await onRequest({ request: new Request('ht
     const n = ids.length;
     await watch(ENV, new Date('2026-11-17T13:20:00Z'));
     check('...and the same hour again adds nothing', JSON.parse(state[K]).length === n);
+  }
+  { // 27/11/2026 (idea 49): one line "overdue" for Michael only: open hazards and tasks past due, and the oldest
+    const o = overdueSummary([{ due: '2026-08-01' }, { due: '2026-11-20' }, { due: '2026-12-01' }], [{ due: '2026-11-26' }, { due: null }, { due: '' }], '2026-11-27');
+    check('overdue: counts only rows with a due date before today', o && o.h === 2 && o.t === 1, o);
+    check('overdue: the oldest in days (01/08 to 27/11 = 118)', o && o.oldest === 118, o);
+    check('overdue: nothing overdue = no summary and no line', overdueSummary([{ due: '2026-12-01' }], [], '2026-11-27') === null && overdueLine(null) === '');
+    const line = overdueLine(o);
+    check('overdue: the line is in the full update and in the compact one', buildBrief([], [], '2026-11-27', false, [], null, null, null, false, [], [], [], o).includes(line) && buildBrief([], [], '2026-11-27', true, [], null, null, null, false, [], [], [], o).includes(line), line);
+    check('overdue: not in the urgent answer', !buildBrief([], [], '2026-11-27', false, [], null, null, null, true, [], [], [], o).includes(line));
+    check('overdue: only keyboard characters (no long dash)', !/[\u2014\u2013]/.test(line));
   }
   console.log('\nwa-morning-test: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
