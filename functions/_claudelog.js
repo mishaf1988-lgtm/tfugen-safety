@@ -31,7 +31,19 @@ export const LOG_OPS = {
   draft_trash: '\u05d8\u05d9\u05d5\u05d8\u05d4 \u05dc\u05e1\u05dc \u05d4\u05de\u05d9\u05d7\u05d6\u05d5\u05e8',
   mail_forward: '\u05d8\u05d9\u05d5\u05d8\u05ea \u05d4\u05e2\u05d1\u05e8\u05d4 \u05e2\u05dd \u05db\u05dc \u05d4\u05e7\u05d1\u05e6\u05d9\u05dd \u05d1-Outlook',
   mail_bundle: '\u05d8\u05d9\u05d5\u05d8\u05d4 \u05e2\u05dd \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05db\u05de\u05d4 \u05de\u05d9\u05d9\u05dc\u05d9\u05dd \u05d1-Outlook',
+  // retro 26/11/2026 (1): the works ops send real mail (sendMailTo) and works_permit also files a PDF in OneDrive
+  works_try_mail: '\u05de\u05d9\u05d9\u05dc \u05e0\u05d9\u05e1\u05d9\u05d5\u05df \u05e9\u05dc \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9',
+  works_mail_now: '\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9 \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d1\u05de\u05d9\u05d9\u05dc',
+  works_approve_mail: '\u05de\u05d9\u05d9\u05dc \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05e9\u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea',
+  works_permit: '\u05d4\u05d9\u05ea\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d7\u05ea\u05d5\u05dd: \u05e7\u05d5\u05d1\u05e5 \u05d1-OneDrive \u05d5\u05de\u05d9\u05d9\u05dc',
+  // found by the reverse check (27/11/2026): writes made inside a helper (signRun, refileInduction, ctrExtend, formProbe)
+  sign_now: '\u05d7\u05ea\u05d9\u05de\u05d4 \u05d1\u05e9\u05dd \u05de\u05d9\u05db\u05d0\u05dc \u05e2\u05dc \u05e7\u05d5\u05d1\u05e5 \u05d1-OneDrive',
+  ind_refile: '\u05d8\u05d5\u05e4\u05e1 \u05d4\u05d3\u05e8\u05db\u05ea \u05e7\u05dc\u05d9\u05d8\u05d4 \u05d1\u05de\u05d9\u05d9\u05dc \u05e9\u05d5\u05d1, \u05dc\u05de\u05d9\u05db\u05d0\u05dc \u05d5\u05dc-HR',
+  ctr_extend: '\u05d4\u05d0\u05e8\u05db\u05ea \u05d4\u05d9\u05ea\u05e8 \u05e7\u05d1\u05dc\u05df \u05d5\u05de\u05d9\u05d9\u05dc \u05dc\u05de\u05d9\u05db\u05d0\u05dc',
+  form_probe: '\u05e7\u05d5\u05d1\u05e5 \u05d1\u05d3\u05d9\u05e7\u05ea \u05d8\u05d5\u05e4\u05e1 146.03 \u05d1-OneDrive',
 };
+// The ops whose request says almost nothing ({} or {id}): the line takes its details from the answer (answerRow).
+export const ANSWER_OPS = ['works_try_mail', 'works_mail_now', 'works_approve_mail', 'works_permit', 'sign_now', 'ind_refile', 'ctr_extend', 'form_probe'];
 
 const short = (t, n) => { t = String(t == null ? '' : t).replace(/\s+/g, ' ').trim(); return t.length > n ? t.substring(0, n - 3) + '...' : t; };
 const ilWhen = (iso) => {
@@ -70,6 +82,36 @@ export function ocrPartialRow(row, out) {
   const done = out.files.filter((f) => f && f.ok && f.txt);
   if (!done.length) return null;
   return [row[0], row[1], row[2], short('txt: ' + done.map((f) => f.txt).join(', '), 400), '\u05d1\u05d5\u05e6\u05e2 \u05d7\u05dc\u05e7\u05d9\u05ea: ' + done.length + '/' + out.files.length];
+}
+
+// retro 26/11/2026 (1): these ops carry almost nothing in the request ({} or {id}), so the line takes its details from
+// the answer: the Friday, who got the mail, the file written, the new end date. Nothing sent (approve mail with n: 0) =
+// no line; a file filed or a permit extended whose mail failed = "done in part". Recipients are only the addresses the
+// server sent to; never a link (a OneDrive url, a token) or the file bytes.
+export function answerRow(row, body, out) {
+  if (!row || !body || ANSWER_OPS.indexOf(body.op) < 0 || !out || out.ok !== true) return row;
+  if (body.op === 'works_approve_mail' && !out.n) return null;
+  const list = (v) => (Array.isArray(v) ? v.join(', ') : typeof v === 'string' ? v : '');
+  const m = out.mailed && typeof out.mailed === 'object' ? out.mailed : null;
+  const d = [];
+  const id = body.id || (body.op === 'sign_now' ? out.id : '');
+  if (id) d.push('id: ' + short(id, 40) + (body.closed === true ? ' (closed)' : ''));
+  if (out.friday) d.push('friday: ' + short(out.friday, 12));
+  if (out.n) d.push('works: ' + out.n);
+  if (body.op === 'ctr_extend' && out.until) d.push('until: ' + short(out.until, 12) + (out.te ? ' ' + short(out.te, 5) : ''));
+  const to = list(m ? m.to : out.to), cc = list(m ? m.cc : out.cc);
+  if (to) d.push('to: ' + short(to, 160));
+  if (cc) d.push('cc: ' + short(cc, 120));
+  if (m && m.trial) d.push('trial');
+  if (typeof out.path === 'string' && out.path) d.push('path: ' + short(out.path, 160));
+  else if (body.op === 'sign_now' && body.path) d.push('path: ' + short(body.path, 160));
+  if (body.op === 'ind_refile' && typeof out.docs === 'number') d.push('docs: ' + out.docs);
+  if (body.op === 'form_probe' && Array.isArray(out.fails)) d.push('fails: ' + out.fails.length);
+  const r = row.slice();
+  r[3] = short(d.join('; '), 400) || r[3];
+  const mailFailed = (m && m.error) || (body.op === 'ctr_extend' && typeof out.mail === 'string' && out.mail !== 'sent');
+  if (mailFailed) r[4] = '\u05d1\u05d5\u05e6\u05e2 \u05d7\u05dc\u05e7\u05d9\u05ea: \u05d4\u05de\u05d9\u05d9\u05dc \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7';
+  return r;
 }
 
 const parse = (raw) => { try { const v = JSON.parse(raw || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } };

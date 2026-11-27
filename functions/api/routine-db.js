@@ -237,7 +237,7 @@ import { DOMAIN_FORMS, WA_RULES_HASH } from '../_domains.js';
 export { WA_RULES_HASH };
 import { OD_OCR_DIR, OCR_MODELS, aiOcr, aiSee, ocrLines, ocrOne, TTS_MODELS, aiTts } from '../_ocr.js';
 import { stateCas } from '../_cas.js';
-import { CLAUDE_LOG_Q, logLine, queueAdd, ocrPartialRow } from '../_claudelog.js';
+import { CLAUDE_LOG_Q, logLine, queueAdd, ocrPartialRow, answerRow } from '../_claudelog.js';
 import { SIGN_KEY, SIGN_CHOICES, SIGN_REPLY_FIELDS, signAdd, signMark, signAskText, signPlace, signReplyCheck, signTake, signRun } from '../_sign.js';
 import { findSignSpot, pdfFirstText } from '../_pdftext.js';
 import { rowContradictions } from './wa-morning.js';
@@ -3384,7 +3384,7 @@ export async function onRequest(context) {
       const row0 = reqBody && logLine(reqBody, new Date().toISOString());
       const out = row0 ? await res.clone().json() : null;
       const body = out && out.ok === true ? reqBody : null;
-      const row = (body && row0) || (out && reqBody.op === 'ocr_txt' ? ocrPartialRow(row0, out) : null);
+      const row = (body && answerRow(row0, reqBody, out)) || (out && reqBody.op === 'ocr_txt' ? ocrPartialRow(row0, out) : null);
       // security review 02/11/2026: a forward the server could not check (403) is not "done" yet; flow 11 checks the subject
       if (row && (out.subject_checked === 'flow 11' || out.subject_checked === 'flow 12')) row[4] = '\u05e0\u05e9\u05dc\u05d7 \u05dc\u05d6\u05e8\u05d9\u05de\u05d4, \u05d4\u05e0\u05d5\u05e9\u05d0 \u05e0\u05d1\u05d3\u05e7 \u05e9\u05dd';
       const env = context.env;
