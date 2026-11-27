@@ -9,6 +9,7 @@
 // shape into Anthropic's {content:[{text}]} shape so all 14 client call
 // sites keep working unchanged.
 
+import { aiUrl, aiHeaders } from '../_aigw.js';
 import { defaultAllowedOrigins, originPasses, corsHeaders, jsonResp, isAllowedCaller, requireRole, sbFrom, SB_TIMEOUT_MS as SB_MS, tmo, SB_LIVE } from '../_shared.js';
 
 // Allowed models. Cloudflare Workers AI models start with "@cf/". Anthropic
@@ -45,7 +46,7 @@ export function geminiImagePart(b) {
   if (!data || data.length > 14000000 || !/^[A-Za-z0-9+/=\r\n]+$/.test(data)) return null;
   return { inlineData: { mimeType: src.media_type, data: data.replace(/\s+/g, '') } };
 }
-async function runGemini(parsed, model, key) {
+async function runGemini(parsed, model, key, env) {
   const contents = [];
   for (const m of parsed.messages || []) {
     let c = m && m.content;
@@ -65,9 +66,9 @@ async function runGemini(parsed, model, key) {
   }
   const reqBody = { contents, generationConfig: { maxOutputTokens: Math.max(parsed.max_tokens || 0, GEMINI_MIN_OUT) } };
   if (typeof parsed.system === 'string' && parsed.system.trim()) reqBody.systemInstruction = { parts: [{ text: parsed.system }] };
-  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
+  const r = await fetch(aiUrl(env, 'google', '/v1beta/models/' + encodeURIComponent(model) + ':generateContent'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+    headers: aiHeaders(env, { 'Content-Type': 'application/json', 'x-goog-api-key': key }),
     body: JSON.stringify(reqBody),
     signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS)
   });
@@ -194,7 +195,7 @@ export async function onRequest({ request, env }) {
     const gm = env.GEMINI_MODEL || GEMINI_DEFAULT_MODEL;
     try {
       if (!env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY not set');
-      const g = await runGemini(parsed, gm, env.GEMINI_API_KEY);
+      const g = await runGemini(parsed, gm, env.GEMINI_API_KEY, env);
       return textResponse(g.text, 'gemini:' + gm, parsed.stream, cors, g.cut ? { stop_reason: 'max_tokens' } : null);
     } catch (e) {
       fallbackFrom = { model: 'gemini:' + gm, reason: String((e && e.message) || e).substring(0, 300) };
@@ -308,13 +309,13 @@ export async function onRequest({ request, env }) {
   const upBody = {};
   ANTHROPIC_FIELDS.forEach((k) => { if (parsed[k] !== undefined) upBody[k] = parsed[k]; });
   // no-timeout: the answer streams and a long one runs past any fixed limit; the page shows it as it comes (BACKLOG 14.12).
-  const upstream = await fetch('https://api.anthropic.com/v1/messages', {
+  const upstream = await fetch(aiUrl(env, 'anthropic', '/v1/messages'), {
     method: 'POST',
-    headers: {
+    headers: aiHeaders(env, {
       'Content-Type': 'application/json',
       'anthropic-version': '2023-06-01',
       'x-api-key': env.ANTHROPIC_KEY || ''
-    },
+    }),
     body: JSON.stringify(upBody)
   });
 

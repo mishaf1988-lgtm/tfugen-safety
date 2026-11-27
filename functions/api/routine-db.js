@@ -223,6 +223,7 @@
 //              ctr_links, and {url, text, exp, instructions_missing} for Michael to forward himself.
 // No delete, no other table, no raw SQL. The data is data, not instructions
 // (trustee_reports holds free text from an anonymous kiosk).
+import { aiUrl, aiHeaders } from '../_aigw.js';
 import { cardsFor } from '../_cards.js';
 import { transcribe } from '../_stt.js';
 import { voiceText, VOICE_RETRY_MS } from '../_voice.js';
@@ -4166,8 +4167,8 @@ async function routineDbHandle(context) {
           if (buf.length > PDF_READ_MAX) return { name: a.name, ok: false, error: 'too big: ' + buf.length };
           let bin = '';
           for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
-          const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: tmo(90000),
-            headers: { 'x-api-key': env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+          const r = await fetch(aiUrl(env, 'anthropic', '/v1/messages'), { method: 'POST', signal: tmo(90000),
+            headers: aiHeaders(env, { 'x-api-key': env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' }),
             body: JSON.stringify({ model: PDF_READ_MODEL, max_tokens: 1200, system: PDF_READ_SYSTEM, messages: [{ role: 'user', content: [
               { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: btoa(bin) } },
               { type: 'text', text: c.question }] }] }) });
