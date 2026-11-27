@@ -4110,6 +4110,36 @@ async function routineDbHandle(context) {
       let bytes; try { bytes = Uint8Array.from(atob(String(body.b64 || '')), (c) => c.charCodeAt(0)); } catch (e) { return jsonResp({ ok: false, error: 'b64' }, 400, {}); }
       return jsonResp(await transcribe(env, bytes), 200, {});
     }
+    // md_try (27/11/2026, Michael: "build a temporary op"; DECISIONS 27/11/2026, Cloudflare toMarkdown trial): up to 3 files
+    // (PDF, Word, Excel) from the safety folder go through Workers AI toMarkdown, and only the numbers and a 600 character
+    // start come back, to judge the Hebrew. Read-only, nothing is written. TEMPORARY: removed after the trial.
+    if (body.op === 'md_try') {
+      for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
+      if (String(body.why || '').trim().length < 5) return jsonResp({ ok: false, error: 'why: at least 5 characters' }, 400, {});
+      const mc = draftAttach(body.paths);
+      if (mc.error || !mc.attach.length || mc.attach.length > 3) return jsonResp({ ok: false, error: (mc.error || 'paths: 1-3').replace('attach', 'paths') }, 400, {});
+      if (!env.AI || typeof env.AI.toMarkdown !== 'function') return jsonResp({ ok: false, error: 'Workers AI toMarkdown missing on the binding' }, 200, {});
+      const mat = await accessToken(env);
+      const menc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+      const mfiles = [];
+      for (const a of mc.attach) {
+        try {
+          const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + menc(OD_ROOT + a.rel) + ':/content', { headers: { Authorization: 'Bearer ' + mat.token }, signal: tmo(30000) });
+          if (!d.ok) { mfiles.push({ name: a.name, ok: false, error: d.status === 404 ? 'file not found' : 'read ' + d.status }); continue; }
+          if (Number(d.headers.get('content-length')) > PDF_READ_MAX) { mfiles.push({ name: a.name, ok: false, error: 'too big' }); continue; }
+          const buf = await d.arrayBuffer();
+          if (buf.byteLength > PDF_READ_MAX) { mfiles.push({ name: a.name, ok: false, error: 'too big: ' + buf.byteLength }); continue; }
+          const t0 = Date.now();
+          const res = await env.AI.toMarkdown([{ name: a.name, blob: new Blob([buf]) }]);
+          const r0 = Array.isArray(res) ? res[0] : res;
+          const md = String((r0 && r0.data) || '');
+          const he = (md.match(/[\u05d0-\u05ea]/g) || []).length, lat = (md.match(/[A-Za-z]/g) || []).length;
+          mfiles.push({ name: a.name, ok: !!md, format: r0 && r0.format, chars: md.length, hebrew_letters: he, latin_letters: lat, replacement_chars: (md.match(/\ufffd/g) || []).length, ms: Date.now() - t0, head: md.slice(0, 600), error: md ? undefined : String((r0 && r0.error) || 'no text').slice(0, 160) });
+        } catch (x) { mfiles.push({ name: a.name, ok: false, error: ('md: ' + String((x && x.message) || x)).slice(0, 160) }); }
+      }
+      return jsonResp({ ok: mfiles.some((f) => f.ok), files: mfiles }, 200, {});
+    }
     if (body.op === 'ocr_txt') {
       for (const k of Object.keys(body)) if (['op', 'agent', 'why', 'paths', 'from'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
