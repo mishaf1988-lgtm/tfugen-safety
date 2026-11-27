@@ -92,6 +92,9 @@ console.log('\n6. a file Michael sends keeps its media id (26/10/2026, the PDF q
   check('a document with no caption: "\ud83d\udcce name" as text, with media_id, mime and name', p.text === '\ud83d\udcce Q3594.pdf' && p.media_id === '1234567890' && p.mime === 'application/pdf' && p.name === 'Q3594.pdf', p);
   const q = ownerInPayload({ id: 'w2', type: 'text', text: 'hi' });
   check('a text message: no media fields', q.text === 'hi' && !('media_id' in q), q);
+  // 27/11/2026 (security review of sign_now): WhatsApp's own send time, so a voice note logged late keeps its place
+  check('WhatsApp send time kept as wa_ts (ISO); none when the message has no ts',
+    ownerInPayload({ id: 'w3', type: 'text', text: 'hi', ts: 1795770000 }).wa_ts === new Date(1795770000 * 1000).toISOString() && !('wa_ts' in q));
   const N = Date.parse('2026-10-26T10:00:00Z');
   const r = recentLine([{ ts: '2026-10-26T09:43:00Z', event_type: 'owner_in', payload: p }], 'CUR', N);
   check('recent shows the file with its id for wa_media (it used to drop an empty line)', r.indexOf('Q3594.pdf') > 0 && r.indexOf('[wa_media 1234567890]') > 0, r);

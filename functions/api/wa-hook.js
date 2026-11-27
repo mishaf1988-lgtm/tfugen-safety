@@ -768,6 +768,9 @@ export function ownerInPayload(m) {
   const p = { title: t.replace(/\s+/g, ' ').slice(0, 120), text: t.slice(0, 1500), wamid: m && m.id, choice: (m && m.choice) || null };
   if (md) { p.media_id = md.id; p.mime = md.mime || null; p.name = mediaName(md.name) || null; }
   if (m && m.forwarded) p.forwarded = true; // sign_now never takes a forwarded message as his ask (24/11/2026)
+  // 27/11/2026 (security review of sign_now "last message"): WhatsApp's own send time; a voice note is logged only after its
+  // transcription, so the log time alone can put a later typed message before it (routine-db signRowMs)
+  if (m && Number(m.ts) > 0) p.wa_ts = new Date(Number(m.ts) * 1000).toISOString();
   if (isVoice(m)) { p.voice = true; if (m.voiceErr) p.voice_err = String(m.voiceErr).slice(0, 120); }
   return p;
 }
