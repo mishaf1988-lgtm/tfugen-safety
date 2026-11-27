@@ -882,7 +882,31 @@ export function dataGaps(eq, inc, today) {
     const when = day(r.dt) || day(r.created_at);
     return !!when && when <= lim;
   }).map((r) => ({ id: r.id, dt: day(r.dt) || day(r.created_at) }));
-  return { equip: equip.slice(0, GAP_MAX), equip_n: equip.length, inc: incs.slice(0, GAP_MAX), inc_n: incs.length };
+  const dup = equipDups(eq);
+  return { equip: equip.slice(0, GAP_MAX), equip_n: equip.length, inc: incs.slice(0, GAP_MAX), inc_n: incs.length, dup: dup.slice(0, GAP_MAX), dup_n: dup.length };
+}
+// equipDups (27/11/2026, Michael in the questionnaire: "do it: a check that there is no duplicate equipment in the DB", after
+// fa-mazah-106520/106965 sat beside xl1008-e95/e96 for the same backflow preventers): groups of rows in tracking that look
+// like one item. (1) the same code; (2) the same serial (5 digits or more) in the names; (3) the same report number or the
+// same file with a different e (one report or certificate covering two items is fine when both carry its date; a different
+// date means one row is stale). Pure; the weekly validity Routine reads it (routine-validity.md 8).
+export function equipDups(eq) {
+  const rows = (Array.isArray(eq) ? eq : []).filter((r) => r && r.id != null && r.s !== EQUIP_OUT);
+  const groups = [], seen = new Set();
+  const add = (why, key, list) => {
+    const ids = list.map((r) => r.id).sort();
+    const sig = ids.join(',');
+    if (list.length < 2 || seen.has(sig)) return;
+    seen.add(sig);
+    groups.push({ why, key: short(key, 80), rows: list.map((r) => ({ id: r.id, code: r.code || null, n: short(r.n, 60), e: r.e ? String(r.e).slice(0, 10) : null })) });
+  };
+  const by = (f) => { const m = new Map(); for (const r of rows) for (const k of f(r)) { if (!m.has(k)) m.set(k, []); if (m.get(k).indexOf(r) < 0) m.get(k).push(r); } return m; };
+  for (const [k, l] of by((r) => (String(r.code || '').trim() ? [String(r.code).trim().toLowerCase()] : []))) add('code', k, l);
+  for (const [k, l] of by((r) => String(r.n || '').match(/(?<!\d)\d{5,}(?!\d)/g) || [])) add('serial', k, l);
+  const diffE = (l) => new Set(l.map((r) => (r.e ? String(r.e).slice(0, 10) : ''))).size > 1;
+  for (const [k, l] of by((r) => (String(r.report_number || '').trim() ? [String(r.report_number).trim()] : []))) if (diffE(l)) add('report', k, l);
+  for (const [k, l] of by((r) => (/\.(pdf|docx?|xlsx?|jpe?g|png)$/i.test(String(r.file_url || '').trim()) ? [String(r.file_url).trim()] : []))) if (diffE(l)) add('file', k, l);
+  return groups;
 }
 export function taskOpenDup(existing, row) {
   return (existing || []).find((x) => x && ['\u05d4\u05d5\u05e9\u05dc\u05dd', '\u05d1\u05d5\u05d8\u05dc'].indexOf(x.status) < 0 && (!TASK_BY_TITLE[row.source_table] || String(x.title || '').trim() === row.title)) || null;
