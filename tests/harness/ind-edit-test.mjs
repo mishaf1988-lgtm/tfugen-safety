@@ -236,6 +236,10 @@ console.log('\n5d. the page is filed but the mail to HR fails: one more send, th
   check('two failures: one morning line in agent_log (for_michael, agent induction), with the ID tail and without the name', log.length === 1 && line.agent === 'induction' && line.ok === true && /\u05de\u05d9\u05d9\u05dc/.test(line.for_michael || '') && (line.for_michael || '').includes('5667') && !(line.for_michael || '').includes('סבטלנה'), line);
   const last = w.patches.filter((x) => x.b.doc_err).pop();
   check('two failures: the error and the photos folder stay on the row', last && /photos kept/.test(last.b.doc_err), last && last.b);
+  // a timeout is not sent again (security review 27/11/2026: Graph may already have the mail)
+  const { mailRetryable } = await import('./_build/talk.mjs');
+  const to = new Error('The operation was aborted due to timeout'); to.name = 'TimeoutError';
+  check('a timeout is not retried, a 500 or 429 is', !mailRetryable(to) && mailRetryable(new Error('sendMail 500 no')) && mailRetryable(new Error('sendMail 429')), null);
   // the morning update shows it under the office name
   const { buildBrief, agentName } = await import('./_build/wa-morning.mjs');
   check('the morning update names the line "\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9"', agentName('induction') === '\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9' && buildBrief([], [], '2026-11-28', false, [{ agent: 'induction', text: line.for_michael || '', at: line.at }]).includes('5667'), agentName('induction'));

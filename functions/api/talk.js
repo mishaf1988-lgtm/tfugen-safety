@@ -1216,17 +1216,19 @@ export async function fileCorrection(env, row, entry, docs, nowMs) {
       bytes.length <= MAIL_ATTACH_MAX ? [{ '@odata.type': '#microsoft.graph.fileAttachment', name, contentType: type, contentBytes: b64(bytes) }] : []);
     // 27/11/2026 (retro 25/11/2026 item 4, Michael: "do it: a second try and a line in the morning"): the page is filed, so only
     // the mail is tried again (filing again would put a second correction page beside the first). Same recipients, same mail.
-    try { await send(); } catch (e1) { await new Promise((r) => setTimeout(r, MAIL_RETRY_MS)); await send(); }
+    // A timeout is not retried (security review 27/11/2026): Graph may have taken the mail already, and a second send would reach HR twice.
+    try { await send(); } catch (e1) { if (!mailRetryable(e1)) throw e1; await new Promise((r) => setTimeout(r, MAIL_RETRY_MS)); await send(); }
     out.mailed = true;
   } catch (e) { out.err = String((e && e.message) || e).substring(0, 200); }
   if (out.err || !out.url) {
-    try { await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(row.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ doc_err: ((row.doc_err ? row.doc_err + '; ' : '') + '\u05d3\u05e3 \u05ea\u05d9\u05e7\u05d5\u05df \u05dc\u05d0 \u05ea\u05d5\u05d9\u05e7: ' + (out.err || '\u05dc\u05dc\u05d0 \u05e7\u05d5\u05d1\u05e5')).substring(0, 400) }) }); } catch (e) { /* the correction is saved on the row */ }
+    try { await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(row.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ doc_err: ((row.doc_err ? row.doc_err + '; ' : '') + (out.url ? '\u05d3\u05e3 \u05ea\u05d9\u05e7\u05d5\u05df \u05ea\u05d5\u05d9\u05e7, \u05d4\u05de\u05d9\u05d9\u05dc \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7: ' : '\u05d3\u05e3 \u05ea\u05d9\u05e7\u05d5\u05df \u05dc\u05d0 \u05ea\u05d5\u05d9\u05e7: ') + (out.err || '\u05dc\u05dc\u05d0 \u05e7\u05d5\u05d1\u05e5')).substring(0, 400) }) }); } catch (e) { /* the correction is saved on the row */ }
   }
   // Filed but the mail failed twice: one line in Michael's morning update (agent_log for_michael, as dev_done writes it).
   if (out.url && !out.mailed) await morningLine(env, corrMailLine(idTail, day), now.toISOString());
   return out;
 }
 export const MAIL_RETRY_MS = 1000;
+export const mailRetryable = (e) => !/abort|timeout|timed out/i.test(String((e && e.name) || '') + ' ' + String((e && e.message) || e));
 // The morning line: fixed words, the ID's last 4 digits and the day. No name or other text typed on the public page, since
 // agent_log is also read by the assistant (review 09/11/2026: a worker's text must not reach its context). Pure.
 export function corrMailLine(idTail, day) {
