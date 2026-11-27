@@ -3735,7 +3735,7 @@ async function routineDbHandle(context) {
       const raw = rows && rows[0] && rows[0].value;
       // 25/10/2026 (Michael in the questionnaire: "do it: add"): a request said 13:42 for 12:43, the day the clock went back.
       // Times written as UTC ("10:43 UTC", ISO with Z) become Israel time here, as in the messages to Michael.
-      // security review 11/11/2026 (lesson 209): the server's own requesters are not a name an agent may send; a request under
+      // security review 11/11/2026 (lesson 286): the server's own requesters are not a name an agent may send; a request under
       // golden-auto would silence the next golden run and be closed with no note (routine-dev-fire.md step 3g)
       if (body.op === 'dev_request' && SERVER_REQUESTERS.indexOf(String(body.agent || '')) >= 0) return jsonResp({ ok: false, error: 'agent ' + body.agent + ': reserved for the server; use your own agent name' }, 400, {});
       if (body.op === 'dev_request') body.text = ilTimes(body.text);

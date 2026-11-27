@@ -12,7 +12,7 @@ const GR = 'https://graph.microsoft.com/v1.0/me';
 const TALK = { id: 'ind1', title: 'הוראות כניסה', body: 'x', s: 'פורסמה', kind: 'induction', link_v: 0 };
 const ROW = { id: 'r1', talk_id: 'ind1', emp_name: 'סבטלנה לריונוב', id_no: '334455667', emp_no: '1234', dept: 'טוגנים', phone: '0521234567', job: 'מפעילת קו', agency: null, equip: null, edits: null, read_at: '2026-11-24T08:55:45Z', doc_err: null };
 let w, rowNow;
-const reset = (o) => { w = { patches: [], puts: [], mails: [], ...o }; rowNow = { ...ROW, ...(o && o.row) }; };
+const reset = (o) => { w = { patches: [], puts: [], mails: [], state: [], mailTries: 0, ...o }; rowNow = { ...ROW, ...(o && o.row) }; };
 globalThis.fetch = async (url, init) => {
   const u = String(url), m = (init && init.method) || 'GET';
   const json = (o, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { 'Content-Type': 'application/json' } });
@@ -22,6 +22,9 @@ globalThis.fetch = async (url, init) => {
     return json(/id=eq\.r1/.test(u) ? [rowNow] : []);
   }
   if (u.startsWith(SB + '/storage/v1/object/')) return json({ Key: 'x' });
+  // agent_log (27/11/2026): the morning line when the correction mail failed twice, written with stateCas (a new key = POST)
+  if (u.startsWith(SB + '/rest/v1/server_state') && /agent_log/.test(u)) return json([]);
+  if (u.startsWith(SB + '/rest/v1/server_state?on_conflict=key') && m === 'POST') { const b = JSON.parse(init.body); w.state.push(b[0]); return json(b); }
   if (u.startsWith(SB + '/rest/v1/server_state')) return json([{ value: '246810' }]);
   if (u.startsWith(SB + '/rest/v1/rpc/guess_hit')) return json(1);
   if (u.startsWith(SB + '/rest/v1/rpc/guess_clear')) return json(null);
@@ -33,7 +36,8 @@ globalThis.fetch = async (url, init) => {
     return json({ webUrl: 'https://od.example/' + encodeURIComponent(path), size: init.body.length });
   }
   if (u.startsWith(GR + '/drive/root:/') && /\?format=pdf$/.test(u)) { const b = new Uint8Array(2000); b.set([0x25, 0x50, 0x44, 0x46], 0); return new Response(b, { status: 200 }); }
-  if (u === GR + '/sendMail' && w.failMail) return new Response('no', { status: 500 });
+  if (u === GR + '/sendMail') w.mailTries++;
+  if (u === GR + '/sendMail' && w.failMail > 0) { w.failMail--; return new Response('no', { status: 500 }); }
   if (u === GR + '/sendMail') { w.mails.push(JSON.parse(init.body)); return new Response(null, { status: 202 }); }
   if (u.startsWith('https://generativelanguage.googleapis.com/')) return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'טקסט בעברית' }] } }] }), { status: 200 });
   return json({ error: 'unexpected ' + u }, 599);
@@ -162,7 +166,17 @@ console.log('\n4. refusals and limits');
   check('another correction got in first (nothing written): 409, no page and no mail', c.st === 409 && c.h.includes('רענן') && !w.mails.length && !w.puts.length, c.st);
   reset({ row: { edits: [{ at: 'x', changes: [{ k: 'dept', old: 'ב', new: 'טוגנים' }] }] } });
   const d = await post(FORM(await tokOf(), { idep: 'מעבדה' }), await cookie());
-  check('with history on the row the condition carries it (the history line is not erased)', d.st === 200 && w.patches.some((x) => /[?&]edits=eq\./.test(x.u) && decodeURIComponent(x.u).includes('"old":"ב"')), w.patches.map((x) => x.u));
+  check('with history on the row the condition is "nobody added a line since the read" (edits->>1 is null), not the history itself', d.st === 200 && w.patches.some((x) => /[?&]edits->>1=is\.null(&|$)/.test(x.u)) && !w.patches.some((x) => /[?&]edits=eq\./.test(x.u)), w.patches.map((x) => x.u));
+  // retro 25/11/2026 item 2: the condition carried the whole history, so the address grew with every correction until the
+  // gateway cut it (about 26k characters) and every later correction of that worker got a permanent 502
+  const addr = async (n) => {
+    reset({ row: { edits: Array.from({ length: n }, (_, i) => ({ at: '2026-11-2' + (i % 10) + 'T08:00:00Z', by: 'hr', changes: [{ k: 'job', old: 'x'.repeat(300), new: 'y'.repeat(300) }], equip: { old: 'z'.repeat(400), new: 'w'.repeat(400) }, docs: 3 })) } });
+    const r = await post(FORM(await tokOf(), { idep: 'מעבדה' }), await cookie());
+    const p = w.patches.find((x) => x.b.edits);
+    return { st: r.st, len: p ? p.u.length : -1, u: p && p.u };
+  };
+  const a1 = await addr(1), a9 = await addr(9);
+  check('the write address does not grow with the corrections (1 vs 9 heavy history lines)', a1.st === 200 && a9.st === 200 && a1.len > 0 && a9.len === a1.len && a9.len < 300 && /edits->>9=is\.null/.test(a9.u), { a1: a1.len, a9: a9.len, u: a9.u });
 }
 
 console.log('\n5. a photo is added');
@@ -178,7 +192,7 @@ console.log('\n5. a photo is added');
 
 console.log('\n5b. the filing fails: one more try, then the photos folder is written on the row (24/11/2026)');
 {
-  reset({ failMail: true });
+  reset({ failMail: 99 });
   const jpg = 'data:image/jpeg;base64,' + Buffer.alloc(4000, 7).toString('base64');
   const r = await post(FORM(await tokOf()), await cookie(), [jpg]);
   const errs = w.patches.filter((x) => x.b.doc_err);
@@ -200,6 +214,35 @@ console.log('\n5c. the first try fails on a passing OneDrive error, the second f
   const errs = w.patches.filter((x) => x.b.doc_err);
   const last = errs[errs.length - 1];
   check('both tries fail: the error stays on the row, said once (not twice)', last && last.b.doc_err.split('לא תויק').length === 2, errs.map((x) => x.b.doc_err));
+}
+
+console.log('\n5d. the page is filed but the mail to HR fails: one more send, then one line in the morning update (retro 25/11/2026 item 4)');
+{
+  // the first send fails, the second goes: one mail, the page filed once, no error left on the row, no morning line
+  reset({ failMail: 1, row: { doc_err: null } });
+  const jpg = 'data:image/jpeg;base64,' + Buffer.alloc(4000, 7).toString('base64');
+  let r = await post(FORM(await tokOf(), { idep: 'מעבדה' }), await cookie(), [jpg]);
+  const filed = w.puts.filter((x) => x.path.startsWith('Apps/') === false).length;
+  const errs = w.patches.filter((x) => x.b.doc_err);
+  check('retry then success: one mail, two tries, the page filed once, no doc_err and no morning line', r.st === 200 && w.mails.length === 1 && w.mailTries === 2 && filed === 1 && !errs.length && !w.state.length, { st: r.st, mails: w.mails.length, tries: w.mailTries, filed, errs: errs.map((x) => x.b.doc_err), state: w.state });
+  // both sends fail: the page is not filed again, the error is on the row, and agent_log gets one for_michael line
+  reset({ failMail: 2, row: { doc_err: null } });
+  r = await post(FORM(await tokOf(), { idep: 'מעבדה' }), await cookie(), [jpg]);
+  const filed2 = w.puts.filter((x) => x.path.startsWith('Apps/') === false).length;
+  const st = w.state.find((x) => x.key === 'agent_log');
+  let log = []; try { log = JSON.parse(st.value); } catch (e) { log = []; }
+  const line = log[log.length - 1] || {};
+  check('two failures: two tries only, the page filed once (not twice)', r.st === 200 && w.mailTries === 2 && !w.mails.length && filed2 === 1, { tries: w.mailTries, filed2 });
+  check('two failures: one morning line in agent_log (for_michael, agent induction), with the ID tail and without the name', log.length === 1 && line.agent === 'induction' && line.ok === true && /\u05de\u05d9\u05d9\u05dc/.test(line.for_michael || '') && (line.for_michael || '').includes('5667') && !(line.for_michael || '').includes('סבטלנה'), line);
+  const last = w.patches.filter((x) => x.b.doc_err).pop();
+  check('two failures: the error and the photos folder stay on the row', last && /photos kept/.test(last.b.doc_err), last && last.b);
+  // a timeout is not sent again (security review 27/11/2026: Graph may already have the mail)
+  const { mailRetryable } = await import('./_build/talk.mjs');
+  const to = new Error('The operation was aborted due to timeout'); to.name = 'TimeoutError';
+  check('a timeout is not retried, a 500 or 429 is', !mailRetryable(to) && mailRetryable(new Error('sendMail 500 no')) && mailRetryable(new Error('sendMail 429')), null);
+  // the morning update shows it under the office name
+  const { buildBrief, agentName } = await import('./_build/wa-morning.mjs');
+  check('the morning update names the line "\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9"', agentName('induction') === '\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9' && buildBrief([], [], '2026-11-28', false, [{ agent: 'induction', text: line.for_michael || '', at: line.at }]).includes('5667'), agentName('induction'));
 }
 
 console.log('\n6. the induction mail itself carries the link');

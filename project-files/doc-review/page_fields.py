@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check and fix the saved values of "page X of Y" in a Word file (lesson 210, 31/10/2026).
+"""Check and fix the saved values of "page X of Y" in a Word file (lesson 287, 31/10/2026).
 
 The factory template (13.07) keeps PAGE and NUMPAGES as fields with a saved result. Viewers that do not
 recalculate (WhatsApp, a phone, Microsoft's PDF export) show the saved result as it is: a one-page document
