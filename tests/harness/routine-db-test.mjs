@@ -2712,7 +2712,19 @@ const callIn = async (body) => {
         check('signAskWhy (wa_ts): a voice ask logged after the typed message he sent later = refused by WhatsApp time; without wa_ts the log order rules',
           signAskFor([voice, typed], tgt, []) === null
           && (signAskFor([{ ...voice, wa_ts: undefined }, { ...typed, wa_ts: undefined }], tgt, []) || {}).id === 'v1'
-          && (signAskFor([{ ...typed, ts: '2026-11-27T09:59:50Z', wa_ts: '2026-11-27T09:59:50.000Z' }, voice], tgt, []) || {}).id === 'v1'); }
+          && (signAskFor([{ ...typed, ts: '2026-11-27T09:59:50Z', wa_ts: '2026-11-27T09:59:50.000Z' }, voice], tgt, []) || {}).id === 'v1');
+        // re-review 27/11/2026: the same WhatsApp second = order unknown; an ask WhatsApp sent over 30 minutes ago = stale
+        const ask1 = { id: 'q1', text: 'תחתום על התעודה של רותם', ts: '2026-11-27T10:00:01Z', wa_ts: '2026-11-27T10:00:00.000Z' };
+        const nowQ = Date.parse('2026-11-27T10:05:00Z');
+        check('signAskWhy: another message of his in the same WhatsApp second as the ask = same_second; a second apart = signs',
+          signAskWhy([ask1, { id: 'q2', text: 'רגע', ts: '2026-11-27T10:00:00.5Z', wa_ts: '2026-11-27T10:00:00.000Z' }], tgt, [], undefined, nowQ).why === 'same_second'
+          && (signAskFor([ask1, { id: 'q2', text: 'תודה', ts: '2026-11-27T09:59:59.5Z', wa_ts: '2026-11-27T09:59:59.000Z' }], tgt, [], undefined, nowQ) || {}).id === 'q1');
+        check('signAskWhy: the very file in the same second as the ask (media given) still signs; another file in that second = same_second',
+          (signAskFor([{ id: 'ff', text: '📎 scan.pdf', media_id: '123456789', ts: '2026-11-27T10:00:01.5Z', wa_ts: '2026-11-27T10:00:00.000Z' }, { ...ask1, text: 'חתום בשמי' }], tgt, [], M, nowQ) || {}).id === 'q1'
+          && signAskWhy([{ id: 'fg', text: '📎 other.pdf', media_id: '555555', ts: '2026-11-27T10:00:00.2Z', wa_ts: '2026-11-27T10:00:00.000Z' }, ask1], tgt, [], undefined, nowQ).why !== '');
+        check('signAskWhy: an ask WhatsApp sent 40 minutes ago (delivered again late, logged now) = stale; 5 minutes ago = signs',
+          signAskWhy([{ ...ask1, ts: '2026-11-27T10:04:50Z', wa_ts: '2026-11-27T09:25:00.000Z' }], tgt, [], undefined, nowQ).why === 'stale'
+          && (signAskFor([ask1], tgt, [], undefined, nowQ) || {}).id === 'q1'); }
       // 26/11/2026 (dev-20261126123149-29qk): "חתום בשמי" right after the PDF itself, the server checked the bytes (media given)
       const T = (id, text, sec, extra) => Object.assign({ id, text, ts: new Date(Date.parse('2026-11-26T12:29:00Z') + sec * 1000).toISOString() }, extra || {});
       const F = (sec, extra) => T('f', '📎 scan_0012.pdf', sec, Object.assign({ media_id: '123456789' }, extra || {}));

@@ -3191,7 +3191,7 @@ export const SIGN_MEDIA_MS = 2 * 60e3, SIGN_MEDIA_AFTER_MS = 10e3;
 export const signRowMs = (r) => { const w = r && r.wa_ts ? Date.parse(r.wa_ts) : NaN; return Number.isFinite(w) ? w : Date.parse((r && r.ts) || ''); };
 // Pure: like signAskFor, with why it is refused: { ask, why } (why: later_message, no_ask, cancel, question, forwarded, office,
 // used, no_name, no_media, media_mismatch, empty). The why is logged with every refusal of sign_now (Fable, 27/11/2026: count after a week).
-export function signAskWhy(rows, target, used, media) {
+export function signAskWhy(rows, target, used, media, nowMs) {
   // security review 24/11/2026 (refutation): whole words of the file name and its folder only (not the mail subject or
   // sender the assistant chooses), no numbers, no "pdf", and the fillers checked again after a prefix letter is dropped
   const toks = (t) => String(t || '').toLowerCase().split(/[^a-z\u05d0-\u05ea]+/).filter((w) => w.length >= 3 && w !== 'pdf');
@@ -3230,6 +3230,13 @@ export function signAskWhy(rows, target, used, media) {
     if (list.slice(i + 1).some(askLike)) return no('later_message');
     return no(r && r.channel === 'office' ? 'office' : r && fwd(r) ? 'forwarded' : 'no_ask');
   }
+  // re-review 27/11/2026: an ask WhatsApp says he sent more than SIGN_NOW_MS ago (Meta delivered it again late, so it is in the
+  // window only by its log time) = stale; another WhatsApp message of his in the very same second as the ask (wa_ts has whole
+  // seconds) = which one was last is unknown = same_second. The very file asked about (media given) may share the second.
+  const rw = r.wa_ts ? Date.parse(r.wa_ts) : NaN;
+  if (Number.isFinite(rw) && Number.isFinite(nowMs) && nowMs - rw > SIGN_NOW_MS) return no('stale');
+  if (Number.isFinite(rw) && list.some((x) => x !== r && x.wa_ts && Math.floor(Date.parse(x.wa_ts) / 1000) === Math.floor(rw / 1000)
+    && !(mid && isMedia(x) && String(x.media_id) === mid && clip(x)))) return no('same_second');
   // the ask itself: no cancel, negation or question word, and not used for a signature already
   if (signCancels(t)) return no('cancel');
   if (SIGN_QUESTION_RE.test(t)) return no('question');
@@ -3250,7 +3257,7 @@ export function signAskWhy(rows, target, used, media) {
   if (nextOk && String(next.media_id) === mid && !list.slice(i + 1).some((x) => x && String(x.media_id || '') !== '' && String(x.media_id) !== mid)) return { ask: r, why: '' };
   return no('media_mismatch');
 }
-export const signAskFor = (rows, target, used, media) => signAskWhy(rows, target, used, media).ask;
+export const signAskFor = (rows, target, used, media, nowMs) => signAskWhy(rows, target, used, media, nowMs).ask;
 // Pure: how many signatures sign_now made since sinceMs (the rate limit).
 export function signNowCount(raw, sinceMs) {
   let l = []; try { l = JSON.parse(raw || '[]'); } catch (e) { l = []; }
@@ -5219,10 +5226,10 @@ async function routineDbHandle(context) {
       const sr0 = await stateRead([SIGN_KEY]).catch(() => []);
       let used = []; try { used = JSON.parse(((sr0 || [])[0] || {}).value || '[]').map((x) => x && x.ask).filter(Boolean); } catch (e) { used = []; }
       const tgt = c.name.replace(/\.pdf$/i, '') + ' ' + String(c.folder || '').split('/').pop();
-      let w = signAskWhy(rows, tgt, used), ask = w.ask, mediaSha = null;
+      let w = signAskWhy(rows, tgt, used, undefined, nowMs), ask = w.ask, mediaSha = null;
       // 26/11/2026: "sign in my name" right after the file itself: only when the file at the path is the same bytes as his WhatsApp file
       if (!ask && body.media_id !== undefined) {
-        const wm = signAskWhy(rows, tgt, used, { id: String(body.media_id) });
+        const wm = signAskWhy(rows, tgt, used, { id: String(body.media_id) }, nowMs);
         w = wm;
         if (wm.ask) {
           mediaSha = await signSameAsMedia(env, c.path, String(body.media_id)).catch(() => null);
