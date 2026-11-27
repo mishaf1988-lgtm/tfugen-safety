@@ -1011,6 +1011,7 @@ export async function onRequest(context) {
     // not read). Within REPEAT_MS the next slot sends only the height mail, keeping the original at so the
     // weekly mail is not sent again.
     const lst = b.last || {};
+    const sendHeight = (token, to) => sendMail(token, to, heightSubject(b.height, b.today), heightHtml(b.height, b.today));
     if (lastAt && Date.now() - lastAt < REPEAT_MS && body.force !== true && (lst.heightError || lst.heightFail) && b.height.length) {
       const hrec = Object.assign({}, lst);
       let hs = false;
@@ -1020,7 +1021,7 @@ export async function onRequest(context) {
         const { token, email } = await accessToken(env);
         const to = email || row.user_email || lst.to;
         if (!to) throw new Error('no address');
-        await sendMail(token, to, heightSubject(b.height, b.today), heightHtml(b.height, b.today));
+        await sendHeight(token, to);
         hs = true; hrec.height = b.height.length; delete hrec.heightError; delete hrec.heightFail; hrec.heightAt = new Date().toISOString();
       } catch (e) { hrec.heightError = String((e && e.message) || e).substring(0, 200); }
       await stateSet(env, { [STATE_KEY]: JSON.stringify(hrec) }).catch(() => {});
@@ -1043,7 +1044,7 @@ export async function onRequest(context) {
     // recorded in the same state row (heightError) and does not turn the weekly mail into a failure.
     let heightSent = false;
     if (b.height.length) {
-      try { await sendMail(token, to, heightSubject(b.height, b.today), heightHtml(b.height, b.today)); heightSent = true; rec.height = b.height.length; }
+      try { await sendHeight(token, to); heightSent = true; rec.height = b.height.length; }
       catch (e) { rec.heightError = String((e && e.message) || e).substring(0, 200); }
     }
     await stateSet(env, { [STATE_KEY]: JSON.stringify(rec) }).catch(() => {});
