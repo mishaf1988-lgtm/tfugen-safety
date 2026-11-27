@@ -1,3 +1,4 @@
+import { aiUrl, aiHeaders } from './_aigw.js';
 // gemini_ask (23/11/2026, Michael in the questionnaire: "do it: build, and start with procedures and regulations only until you
 // confirm the key is billed"; "I want Gemini to join the work, save tokens and do what it is good at, but the work stays in the
 // Claude interface"). One server action, /api/routine-db {"op":"gemini_ask"}: a Claude session or agent sends a document or a
@@ -143,8 +144,8 @@ export async function geminiAskCall(env, prompt, fetchImpl) {
   const f = fetchImpl || fetch;
   let r;
   try {
-    r = await f('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+    r = await f(aiUrl(env, 'google', '/v1beta/models/' + encodeURIComponent(model) + ':generateContent'), {
+      method: 'POST', headers: aiHeaders(env, { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY }),
       body: JSON.stringify({ systemInstruction: { parts: [{ text: prompt.system }] }, contents: [{ role: 'user', parts: [{ text: prompt.user }] }],
         generationConfig: { maxOutputTokens: GEMINI_ASK_OUT, temperature: 0.2, responseMimeType: 'application/json' } }),
       signal: AbortSignal.timeout(GEMINI_ASK_MS) });

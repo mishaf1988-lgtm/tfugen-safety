@@ -32,7 +32,8 @@ const MODEL_ANSWER = JSON.stringify({
 // Ask the real proxy for a streaming Workers AI answer and keep the raw bytes.
 async function realProxySse() {
   const src = fs.readFileSync(path.join(ROOT, 'functions/api/claude.js'), 'utf8')
-    .replace(/from '\.\.\/_shared\.js'/, "from '" + pathToFileURL(path.join(ROOT, 'functions/_shared.js')).href + "'");
+    .replace(/from '\.\.\/_shared\.js'/, "from '" + pathToFileURL(path.join(ROOT, 'functions/_shared.js')).href + "'")
+    .replace(/from '\.\.\/_aigw\.js'/, "from '" + pathToFileURL(path.join(ROOT, 'functions/_aigw.js')).href + "'");
   const mod = await import('data:text/javascript;charset=utf-8,' + encodeURIComponent(src));
   // claude.js now requires a staff role (2026-09-24 pentest fix), read the way
   // the DB reads it. This feature is an admin action; the built-in admin needs

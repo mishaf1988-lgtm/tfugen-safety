@@ -1,3 +1,4 @@
+import { aiUrl, aiHeaders } from './_aigw.js';
 // A recommended corrective action for a trustee finding (28/09, Michael: "the
 // trustee does not think about it, you fill it in and I decide"). Asked from
 // the same assistant the app uses (Gemini, env.GEMINI_API_KEY / GEMINI_MODEL).
@@ -23,9 +24,9 @@ export async function suggestAction(env, finding) {
   const model = env.GEMINI_MODEL || DEFAULT_MODEL;
   const text = '\u05de\u05de\u05e6\u05d0: ' + String(finding.f || '').substring(0, 300) + '\n\u05de\u05d9\u05e7\u05d5\u05dd: ' + String(finding.loc || '').substring(0, 120);
   try {
-    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
+    const r = await fetch(aiUrl(env, 'google', '/v1beta/models/' + encodeURIComponent(model) + ':generateContent'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      headers: aiHeaders(env, { 'Content-Type': 'application/json', 'x-goog-api-key': key }),
       body: JSON.stringify({ systemInstruction: { parts: [{ text: SYSTEM }] }, contents: [{ role: 'user', parts: [{ text }] }], generationConfig: { maxOutputTokens: 2048 } }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
@@ -62,9 +63,9 @@ async function geminiLine(env, text) {
   if (!key) return null;
   const model = env.GEMINI_MODEL || DEFAULT_MODEL;
   try {
-    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
+    const r = await fetch(aiUrl(env, 'google', '/v1beta/models/' + encodeURIComponent(model) + ':generateContent'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      headers: aiHeaders(env, { 'Content-Type': 'application/json', 'x-goog-api-key': key }),
       body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text }] }], generationConfig: { maxOutputTokens: 1024 } }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
