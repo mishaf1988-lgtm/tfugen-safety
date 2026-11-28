@@ -75,7 +75,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: PR אחרי 31 commits, עוגנים ישנים, "ממצא" סגור.
 הכלל: `fetch` + `reset` לפני עריכה; `grep` ב-STATUS לפני ממצא ובקוד לפני "פתוח"; משימה מ-handoff וכל שאלה למיכאל: `grep` ב-DECISIONS קודם.
 נאכף: `fresh-main.py`; handoff אחד: `handoff-root-test.py`; פריט לשיחה: `claim.sh`; שאלה שהוכרעה: `live-check.py`.
-חזר: 13 (אחרון 17/11: אי התאמות בין נהלים הוצגו למיכאל כממצא חדש; רובן ב-`iso-audit-prep.md` מ-24/10, לא נעשה `grep` לפני הדיווח. לפני: 27/10 "לטעון קרדיט API" אחרי שהוחלט פעמיים שלא). לפני קוד מ-handoff: `get_session` על כותבת ה-handoff, פעילה = `send_message`; תפיסה במספר ה-BACKLOG; `list_migrations` לפני "קיים".
+חזר: 14 (אחרון 28/11: שאלון על קרדיט Anthropic אחרי 400 ביומן השער, למרות DECISIONS 22/10; מיכאל: "פעם 5". לפני: 17/11, 27/10). לפני קוד מ-handoff: `get_session` על כותבת ה-handoff, פעילה = `send_message`; תפיסה במספר ה-BACKLOG; `list_migrations` לפני "קיים".
 
 ## לפני טענה או ממצא
 
