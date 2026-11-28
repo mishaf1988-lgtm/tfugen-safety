@@ -8,7 +8,7 @@ import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
 import { secondLog, secondSendGate, secondValve, SECOND_UNVERIFIED, SECOND_GATE_MAX, SECOND_GATE_MS, SECOND_GATE_KEY, secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, THZ_TRAINING_RE, ilInstant, incFilePrefix, dataGaps, equipDups, GAP_INC_DAYS, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, calInviteRuns, CAL_INVITE_DATES_MAX, CAL_INVITE_FIELDS, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, cardBefore, CARD_BEFORE_N, CARD_INV_N, linkRow, autoLinkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftTrashHits, draftDoneId, OD_DRAFT_DONE, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, draftsArr, scrubPii, agentEntry, agentArchive, leftWaits, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, refusesWithoutFlow, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, calLogAdd, factsApply, factsFind, FACTS_KEY, nameCheck, nameKnown, hasPassport, incSimilar, incWords, INC_SIM_N, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, OD_INV_TOP, addYear, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, odPdfCheck, OD_PUT_MAX, odArchiveCheck, archiveStampName, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, docsAddRow, docsFilePrefix, DOC_STATES, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrTxtName, taskAddCheck, TASK_ADD_MAX, taskOpenDup, TASK_SOURCES, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_LEAD_MARKS, OD_TRASH_EXTRA, OD_TRASH_DIR, OD_REPORTS_DIR, OD_ROOT_BACKUP, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT, isoSwapRequest, isoUpCheck, OD_ISO_SWAP, ISO_SITE_URL, mailGotCheck, mailGotList, MAIL_GOT_MAX } from './_build/routine-db.mjs';
 
-import { docReadCheck, docReadSensitive, docReadText, docReadPage, DOC_READ_CHARS, DOC_READ_OFFSET_MAX } from './_build/routine-db.mjs';
+import { docReadCheck, docReadSensitive, docReadText, docReadPage, docReadGuard, DOC_READ_CUT, DOC_READ_CHARS, DOC_READ_OFFSET_MAX } from './_build/routine-db.mjs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -16,6 +16,7 @@ const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const ENV = { ROUTINE_KEY: 'k-123', SUPABASE_SERVICE_ROLE_KEY: 'srv', WEEKEND_QUIET: 'off' };
 let calls = [], state = {}, stateVer = {}, raceOnce = null, fires = [], fireSession = 'cse_01POSTMAN';
 let mediaBody = null, ghCalls = [], mediaMeta = null, claudeReads = [], ownerIn = null;
+let empMock = null;
 globalThis.fetch = async (url, opt = {}) => {
   if (String(url).startsWith('https://www.nevo.co.il/law_html/')) { const b = new TextEncoder().encode('<html><head><meta charset="utf-8"><script>x()</script></head><body><p>75. (\u05d0) \u05dc\u05e4\u05d7\u05d5\u05ea \u05d0\u05d7\u05ea \u05dc\u05e9\u05e9\u05d4 \u05d7\u05d3\u05e9\u05d9\u05dd</p></body></html>'); const res = new Response(b, { status: 200, headers: { 'content-type': 'text/html' } }); Object.defineProperty(res, 'url', { value: String(url) }); return res; }
   if (String(url).startsWith('https://graph.facebook.com/v25.0/90000001')) return new Response(JSON.stringify(mediaMeta), { status: 200 });
@@ -43,6 +44,7 @@ globalThis.fetch = async (url, opt = {}) => {
   if (ownerIn && url.startsWith(SB + '/rest/v1/notifications_log') && /event_type=eq\.owner_in/.test(url)) return new Response(JSON.stringify(ownerIn), { status: 200 });
   if (url.startsWith(SB + '/rest/v1/notifications_log') && /id=eq\.ch/.test(url)) return new Response(JSON.stringify(chatLine(url)), { status: 200 });
   if (url.startsWith(SB + '/rest/v1/oauth_tokens')) return new Response(JSON.stringify([{ user_email: 'm', refresh_token: 'r', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite' }]), { status: 200 });
+  if (/\/rest\/v1\/emp\?select=n$/.test(String(url)) && empMock !== null) return empMock === 'fail' ? new Response('{}', { status: 500 }) : new Response(JSON.stringify(empMock), { status: 200 });
   if (url.startsWith('https://graph.microsoft.com/')) return graph(url, opt);
   if (url === 'https://api.anthropic.com/v1/messages') { const b = JSON.parse(opt.body); claudeReads.push({ key: opt.headers['x-api-key'], b }); if (b.messages[0].content[1].text === 'make it fail') return new Response(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'Your credit balance is too low' } }), { status: 400 }); return new Response(JSON.stringify({ content: [{ type: 'text', text: 'not written: only work at height. TEXT: ...' }] }), { status: 200 }); }
   if (url.startsWith('https://api.anthropic.com/')) { fires.push({ url, auth: opt.headers.Authorization, body: JSON.parse(opt.body) }); return new Response(JSON.stringify({ claude_code_session_id: fireSession }), { status: 200 }); }
@@ -2701,6 +2703,35 @@ const callIn = async (body) => {
     check('doc_read through the server: 4 files, a PDF, a path out, a medical folder and an extra field are 400, nothing read', bad.every((r) => r.status === 400 && r.json.ok === false) && sent.length === n0, bad.map((r) => r.json));
     x = await call({ ...A, paths: ['a/table.xlsx'] });
     check('doc_read without the Workers AI binding: a clear error, not a crash', x.status === 200 && x.json.ok === false && /env\.AI\.toMarkdown/.test(x.json.error), x.json);
+    // 28/11/2026 (DECISIONS 28/11/2026): a medical page is marked, a line with a name next to a medical word is removed
+    const NM = '\u05d3\u05e0\u05d9 \u05db\u05d4\u05df', MD = '\u05de\u05d7\u05dc\u05d4';
+    const g0 = docReadGuard('A | ' + NM + ' | ' + MD + '\nB | ' + NM + ' | 50\nC | ' + MD + ' leave | 7\nD | x', [{ n: NM, dep: null }]);
+    check('doc_read guard: only the line with a name AND a medical word is replaced (name alone and medical word alone stay)',
+      g0.cut === 1 && g0.text.split('\n')[0] === DOC_READ_CUT && /^B \| /.test(g0.text.split('\n')[1]) && /^C \| /.test(g0.text.split('\n')[2]) && !/\u05de\u05d7\u05dc\u05d4 \|/.test(g0.text.split('\n')[0]), g0);
+    check('doc_read guard: the marker has no medical word in it, no names gives no cut', !docReadGuard(DOC_READ_CUT, [{ n: NM }]).cut && docReadGuard('A | ' + NM + ' | ' + MD, []).cut === 0, DOC_READ_CUT);
+    const mdBody = { v: '' };
+    const AI2 = { toMarkdown: async (list) => list.map((f) => ({ name: f.name, format: 'markdown', data: mdBody.v })) };
+    const E2 = { ...ENV, AI: AI2 };
+    graph = async () => new Response(zip('doc'), { status: 200 });
+    empMock = [{ n: NM }];
+    mdBody.v = 'plain row | 1\nA | ' + NM + ' | ' + MD + '\nB | ' + NM + ' | 50';
+    x = await call({ ...A, paths: ['a/t.xlsx'] }, 'k-123', 'POST', E2);
+    let ff = x.json.files && x.json.files[0];
+    check('doc_read: a page with a removed line is marked medical:true, lines_removed counts it, the name+medical row is gone, a name alone stays',
+      ff && ff.ok && ff.medical === true && ff.lines_removed === 1 && !new RegExp(MD).test(ff.text) && new RegExp(NM + ' \\| 50').test(ff.text) && /medical:true/.test(x.json.note), x.json);
+    mdBody.v = 'plain row | 1\nB | ' + NM + ' | 50';
+    x = await call({ ...A, paths: ['a/t.xlsx'] }, 'k-123', 'POST', E2);
+    ff = x.json.files && x.json.files[0];
+    check('doc_read: a clean page has no medical flag and no lines_removed', ff && ff.ok && ff.medical === undefined && ff.lines_removed === undefined, x.json);
+    mdBody.v = 'safety procedure: a ' + MD + ' report goes to the manager';
+    x = await call({ ...A, paths: ['a/t.xlsx'] }, 'k-123', 'POST', E2);
+    ff = x.json.files && x.json.files[0];
+    check('doc_read: a medical word without a name marks the page medical:true (general answer only), the text still comes back', ff && ff.ok && ff.medical === true && ff.lines_removed === undefined && /report goes/.test(ff.text), x.json);
+    empMock = 'fail';
+    const n1 = sent.length;
+    x = await call({ ...A, paths: ['a/t.xlsx'] }, 'k-123', 'POST', E2);
+    check('doc_read: the employee names cannot be read, nothing is downloaded or sent to toMarkdown', x.json.ok === false && /employee names/.test(x.json.error) && sent.length === n1, x.json);
+    empMock = null;
     graph = async () => new Response('{}', { status: 500 });
   }
   // 21/10/2026: a photo Michael sent on WhatsApp reaches the assistant
