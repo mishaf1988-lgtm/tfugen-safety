@@ -181,7 +181,8 @@ export async function sendWa(env, kind, counter) {
 async function kvGet(env) {
   if (!env.CLOCK_STATE) return null;
   // an empty KV is a fresh start: counted as "up", so the first fall is sent at once; a failed read = no memory
-  try { const v = await env.CLOCK_STATE.get(STATE_KEY); return v ? (JSON.parse(v).state || null) : 'up'; } catch (e) { return null; }
+  // a failed read or a corrupt value is also "up" (independent refutation 28/11/2026: "no memory" swallowed the first fall alert; a repeat alert beats a lost one)
+  try { const v = await env.CLOCK_STATE.get(STATE_KEY); const st = v ? JSON.parse(v).state : 'up'; return st === 'up' || st === 'site' || st === 'db' ? st : 'up'; } catch (e) { return 'up'; }
 }
 async function kvPut(env, state, ms) {
   if (!env.CLOCK_STATE || !state) return;
@@ -193,7 +194,8 @@ export async function runProbe(env, ms, counter) {
   const prev = await kvGet(env);
   const d = decide(prev, p.state, ms);
   const wa = d.send ? await sendWa(env, d.send, counter) : null;
-  await kvPut(env, d.store, ms);
+  // a message that was not delivered keeps the old state, so the next probe sends it again (refutation 28/11/2026: the state moved on and the alert was lost)
+  await kvPut(env, d.send && wa && !wa.sent && env.CLOCK_STATE ? prev : d.store, ms);
   return { job: 'probe', state: p.state, prev, send: d.send, wa, detail: p.detail };
 }
 

@@ -140,6 +140,7 @@ function world(o) {
     if (w.calls.length > 50) throw new Error('Too many subrequests');
     if (u.startsWith('https://graph.facebook.com/')) {
       const body = JSON.parse(init.body); w.wa.push(body);
+      if (o.waFail) return new Response('{}', { status: 500 });
       const ok = o.template === false ? body.type === 'text' : true;
       return new Response('{}', { status: ok ? 200 : 400 });
     }
@@ -162,6 +163,25 @@ function world(o) {
 }
 const ENV = { RETRY_MS: '0', META_ACCESS_TOKEN: 't', WA_TO: '972500000000', MANUAL_KEY: 'mk' };
 
+console.log('\n9a. refutation 28/11/2026: no alert is lost');
+{
+  const w = world({ siteFails: 99, waFail: true });
+  const env = { ...ENV, CLOCK_STATE: w.KV };
+  await M.runJobs(['probe'], env, at('2026-11-28T10:00:00Z'));
+  check('a fall whose WhatsApp was refused keeps the old state in KV (up)', w.wa.length >= 1 && JSON.parse(w.kv.clock_state).state === 'up', w.kv);
+  const w2 = world({ siteFails: 99 }); w2.kv = w.kv; env.CLOCK_STATE = w2.KV;
+  await M.runJobs(['probe'], env, at('2026-11-28T10:15:00Z'));
+  check('the next probe sends the fall again, and now the state moves to site', w2.wa.length === 1 && JSON.parse(w2.kv.clock_state).state === 'site', w2.kv);
+  const w3 = world({ siteFails: 99 });
+  const bad = { get: async () => { throw new Error('kv down'); }, put: async () => {} };
+  await M.runJobs(['probe'], { ...ENV, CLOCK_STATE: bad }, at('2026-11-28T10:15:00Z'));
+  check('a KV read that fails is "up": the first fall is sent mid-hour', w3.wa.length === 1, w3.wa.length);
+  for (const v of ['{', 'null', '{"state":"zzz"}', '{"state":{"a":1}}', '[]']) {
+    const w4 = world({ siteFails: 99 });
+    await M.runJobs(['probe'], { ...ENV, CLOCK_STATE: { get: async () => v, put: async () => {} } }, at('2026-11-28T10:30:00Z'));
+    check('a corrupt KV value ' + v + ' does not swallow the fall', w4.wa.length === 1, w4.wa.length);
+  }
+}
 console.log('\n9. a full run');
 {
   const w = world();
