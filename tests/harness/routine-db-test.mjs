@@ -645,6 +645,19 @@ const callIn = async (body) => {
     check('left_what: two real waits stay waits (a plain one, and "not clear which version, waiting")', leftWaits('שני קבצים ממתינים להחלטה על גרסה').length === 1 && leftWaits('לא ברור איזו גרסה, ממתינים להחלטה').length === 1, [leftWaits('שני קבצים ממתינים להחלטה על גרסה').length, leftWaits('לא ברור איזו גרסה, ממתינים להחלטה').length]);
     check('waitParse: a zero-width mark or niqqud inside the verb does not hide the wait (28/11/2026)',
       wp('מחכ\u200bה למיכאל לאישור').length === 1 && wp('מחכ\u200fה למיכאל').length === 1 && wp('מְחַכֶּה לְמִיכָאל').length === 1);
+    // 28/11/2026, second refutation round in node (agent report): real waits must not be swallowed, marks must not glue words
+    const lwn = (x) => leftWaits(x).length;
+    check('left_what refutation: "no" about something else (an answer, news, a count, a version) does not hide a real wait for Michael',
+      lwn('שלחתי מייל לספק ואין תשובה קובץ ממתין להחלטה של מיכאל') === 1 && lwn('נסגרו 0 משימות 2 ממתינים להחלטה') === 1 && lwn('בדקתי ואין חדש הקובץ ממתין להחלטה של מיכאל') === 1 ,
+      ['שלחתי מייל לספק ואין תשובה קובץ ממתין להחלטה של מיכאל', 'נסגרו 0 משימות 2 ממתינים להחלטה', 'בדקתי ואין חדש הקובץ ממתין להחלטה של מיכאל'].map(lwn));
+    check('left_what refutation: a negated wait does not swallow a second, real one in the same part; and "and waiting" with a vav is seen',
+      lwn('יש 2 קבצים ואין קבצים ממתינים להחלטה והקובץ X ממתין להחלטה') === 1 && lwn('ואין תשובה וממתינים להחלטה של מיכאל') === 1 && lwn('יש 0 קבצים ממתינים להחלטה') === 0 && lwn('יש 2 קבצים ואין קבצים ממתינים להחלטה') === 0,
+      [lwn('יש 2 קבצים ואין קבצים ממתינים להחלטה והקובץ X ממתין להחלטה'), lwn('ואין תשובה וממתינים להחלטה של מיכאל'), lwn('יש 0 קבצים ממתינים להחלטה'), lwn('יש 2 קבצים ואין קבצים ממתינים להחלטה')]);
+    const MARKS = ['\u00ad', '\u2060', '\u061c', '\u034f', '\ufe0f', '\u2062', '\u180e', '\u3164', '\u115f', '\u05c0', '\u05c3', '\u0301'];
+    check('waitParse refutation: each of 12 more invisible marks inside the verb does not hide the wait', MARKS.every((c) => wp('ממת' + c + 'ינים להחלטה').length === 1 && lwn('2 קבצים ממת' + c + 'ינים להחלטה') === 1), MARKS.filter((c) => wp('ממת' + c + 'ינים להחלטה').length !== 1));
+    check('waitParse refutation: a zero-width space where a space stood does not glue the words, neither for the wait nor for the "no"',
+      lwn('2 קבצים ממתינים\u200bלהחלטה') === 1 && lwn('יש 2 קבצים ו' + 'אין\u200bקבצים ממתינים להחלטה') === 0 && lwn('אין\u200bקבצים ממתינים להחלטה') === 0,
+      [lwn('2 קבצים ממתינים\u200bלהחלטה'), lwn('אין\u200bקבצים ממתינים להחלטה')]);
     const rlw = (await call({ op: 'agent_report', agent: 'routine-mail-filing', ok: true, done: 4, left: 7, line: '19/11/2026: 11 קבצים בנכנס.', left_what: '2 קובצי 260355arc ממתינים להחלטה על גרסה; 2 מיילים עם mail_request לתיוק בריצה הבאה' })).json;
     check('agent_report: a decision waiting in left_what with no for_michael becomes for_michael (the 19/11 report)', rlw.ok && rlw.entry.for_michael === '2 קובצי 260355arc ממתינים להחלטה על גרסה' && rlw.entry.wait.some((w) => w.to === 'michael'), rlw);
     const r2 = (await call({ op: 'agent_report', agent: 'cowork-check', ok: true, line: '2 נחסמו. מחכה למיכאל: אחר', for_michael: 'כתבתי בעצמי' })).json;

@@ -2977,7 +2977,7 @@ export function partialCheck(log) {
 // Measured before (agent-log.md 444 lines and agent_report rows since 11/11/2026): about 40 "waiting for Michael", 9 "waiting
 // for the developer" (all from the developer itself, left out below), 1 "waiting for the main chat", about 10 other.
 export const WAIT_UNOWNED_MS = 24 * 3600e3, WAIT_MAX = 3;
-const WAIT_VERB = /((?:^|[\s(:,])\u05d4?)(\u05de\u05d7\u05db\u05d4|\u05de\u05d7\u05db\u05d9\u05dd|\u05de\u05d7\u05db\u05d5\u05ea|\u05de\u05de\u05ea\u05d9\u05df|\u05de\u05de\u05ea\u05d9\u05e0\u05d4|\u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd|\u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea)\s+\u05dc/g;
+const WAIT_VERB = /((?:^|[\s(:,])\u05d5?\u05d4?)(\u05de\u05d7\u05db\u05d4|\u05de\u05d7\u05db\u05d9\u05dd|\u05de\u05d7\u05db\u05d5\u05ea|\u05de\u05de\u05ea\u05d9\u05df|\u05de\u05de\u05ea\u05d9\u05e0\u05d4|\u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd|\u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea)\s+\u05dc/g;
 // "0 waiting for an answer", "no ... waiting", "not waiting": not a wait
 const WAIT_NOT = /(?:^|\s)(?:0|\u05d0\u05d9\u05df|\u05dc\u05d0)\s+$/;
 const WAIT_DEV = /^-?\s*(?:\u05d4|\u05e9\u05d9\u05d7\u05ea )?(?:\u05de\u05e4\u05ea\u05d7|\u05e4\u05d9\u05ea\u05d5\u05d7|\u05d4\u05e4\u05d9\u05ea\u05d5\u05d7|\u05e6['\u05f3\u2019]\u05d0\u05d8|dev)/i;
@@ -2989,14 +2989,15 @@ const WAIT_DEV = /^-?\s*(?:\u05d4|\u05e9\u05d9\u05d7\u05ea )?(?:\u05de\u05e4\u05
 const WAIT_MICHAEL = /^-?\s*(?:\u05de\u05d9\u05db\u05d0\u05dc|\u05da(?=[\s:,.;)]|$)|\u05d4\u05d7\u05dc\u05d8\u05d4|\u05d4\u05db\u05e8\u05e2\u05d4|(?:\u05d0\u05d9\u05e9\u05d5\u05e8|\u05ea\u05e9\u05d5\u05d1\u05d4|\u05ea\u05e9\u05d5\u05d1\u05ea)\s+(?:\u05e9\u05dc\s+|\u05de-?|\u05de\u05d0\u05ea\s+)?\u05de\u05d9\u05db\u05d0\u05dc)/;
 // Pure: the waits in one report line, [{to: 'dev' | 'michael' | 'other', what, key}], at most WAIT_MAX. what = the clause from
 // the verb to the end of its sentence (a decimal point as in 26.04 does not end it).
-export function waitParse(line) {
+export function waitParse(line, midNeg) {
   // 28/11/2026: zero-width and direction marks and niqqud in a report line cut a verb in two (as in leftWaits below)
-  const s = String(line || '').replace(WAIT_INVISIBLE, ''), out = [];
+  const s = waitClean(line), out = [];
   WAIT_VERB.lastIndex = 0;
   let m;
   while ((m = WAIT_VERB.exec(s)) && out.length < WAIT_MAX) {
     const start = m.index + m[1].length;
     if (WAIT_NOT.test(s.slice(0, start))) continue;
+    if (midNeg && WAIT_PLURAL.test(m[2]) && WAIT_MID_NEG.test(s.slice(0, start))) continue;
     const rest = s.slice(m.index + m[0].length);
     const end = rest.search(/[.;|](?:\s|$)|\s\(\d\)\s/);
     const what = (s.slice(start, m.index + m[0].length) + (end < 0 ? rest : rest.slice(0, end))).slice(0, 160).trim();
@@ -3014,14 +3015,32 @@ export function waitParse(line) {
 // decision)" and a new line between the parts were missed).
 const WAIT_SEP = /(?<!\d)[,:]|[,:](?!\d)|[(\n]|\s[-\u2013\u2014\u05be]\s/;
 const WAIT_NEG = /^(?:(?:\u05d5\u05d2\u05dd|\u05d0\u05d1\u05dc|\u05d0\u05da)\s+)?\u05d5?(?:0|\u05d0\u05d9\u05df|\u05dc\u05d0)(?:\s|$)/;
-const WAIT_INVISIBLE = /[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff\u0591-\u05bd\u05bf\u05c1\u05c2\u05c4\u05c5\u05c7]/g;
-// 28/11/2026 (handoff, leftWaits): a negation in the middle of a part with no separator: "there are 2 files and no files wait for
-// a decision". "no" / 0 within two words before the waiting verb negates it (only "no" and 0, not "not": "not clear which version ... waiting" stays a wait).
-const WAIT_MID_NEG = /(?:^|\s)\u05d5?(?:0|\u05d0\u05d9\u05df)\s+(?:\S+\s+){0,2}(?:\u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd|\u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea|\u05de\u05de\u05ea\u05d9\u05df|\u05de\u05de\u05ea\u05d9\u05e0\u05d4|\u05de\u05d7\u05db\u05d9\u05dd|\u05de\u05d7\u05db\u05d5\u05ea|\u05de\u05d7\u05db\u05d4)\s+\u05dc/;
+// 28/11/2026 (refutation in node, second round): the marks that cut a verb or glue two words. A separator-like mark (zero-width
+// space, joiner, soft hyphen) may stand where a space was; the others (direction marks, niqqud, combining marks, variation selectors,
+// fillers) only cut a word. waitClean reads the text with the separators as spaces when that shows a verb, else with all removed.
+const WAIT_SEPMARK = /[\u200b-\u200d\u2060\u00ad\ufeff]/g;
+const WAIT_INVISIBLE = /[\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff\u00ad\u061c\u034f\u0300-\u036f\u180e\u115f\u3164\ufe00-\ufe0f\u0591-\u05bd\u05bf\u05c0\u05c1\u05c2\u05c3\u05c4\u05c5\u05c7]/g;
+export function waitClean(x) {
+  const t = String(x || '');
+  const sp = t.replace(WAIT_SEPMARK, ' ').replace(WAIT_INVISIBLE, '');
+  WAIT_VERB.lastIndex = 0;
+  const seen = WAIT_VERB.test(sp);
+  WAIT_VERB.lastIndex = 0;
+  return seen ? sp : t.replace(WAIT_INVISIBLE, '');
+}
+// 28/11/2026 (handoff, leftWaits; narrowed after the node refutation): "there are 2 files and no files wait for a decision": "no" or 0
+// and at most ONE word before a PLURAL waiting verb negates that verb alone (not the whole part, not a singular verb: "no answer, the
+// file waits" and "version 0 waits" stay waits). "Not" does not negate here.
+const WAIT_PLURAL = /^(?:\u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd|\u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea|\u05de\u05d7\u05db\u05d9\u05dd|\u05de\u05d7\u05db\u05d5\u05ea)$/;
+const WAIT_MID_NEG = /(?:^|\s)\u05d5?(?:0|\u05d0\u05d9\u05df)\s+(?:\S+\s+)?$/;
 function waitPartMichael(t) {
   const m = WAIT_SEP.exec(t);
   const head = (m ? t.slice(0, m.index) : t).trim();
-  if (head && !WAIT_NEG.test(head) && waitParse(head).some((w) => w.to === 'michael') && !WAIT_MID_NEG.test(head)) return true;
+  // an opener "no" / 0 negates the whole part, except a clause that starts again with a vav before the verb ("no answer and
+  // waiting for a decision"): that clause is judged alone (28/11/2026, refutation)
+  let h = head;
+  if (h && WAIT_NEG.test(h)) { const k = h.search(/\s\u05d5(?=\u05de\u05de\u05ea|\u05de\u05d7\u05db)/); h = k < 0 ? '' : h.slice(k + 1); }
+  if (h && waitParse(h, true).some((w) => w.to === 'michael')) return true;
   return m ? waitPartMichael(t.slice(m.index + m[0].length)) : false;
 }
 export function leftWaits(leftWhat) {
@@ -3032,7 +3051,7 @@ export function leftWaits(leftWhat) {
     // decision" is not a wait, retro challenger 22/11/2026); with a separator each part is judged alone ("not clear which
     // version, waiting for a decision" and "2 files not filed: waiting for a decision" are waits, 28/11/2026). what stays
     // the whole clause.
-    const t = scrubPii(seg.replace(WAIT_INVISIBLE, '').trim());
+    const t = scrubPii(waitClean(seg).trim());
     if (!t || out.length >= WAIT_MAX) return;
     if (!waitPartMichael(t)) return;
     const what = t.slice(0, 160);
