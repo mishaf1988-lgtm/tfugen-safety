@@ -2727,6 +2727,15 @@ const callIn = async (body) => {
     x = await call({ ...A, paths: ['a/t.xlsx'] }, 'k-123', 'POST', E2);
     ff = x.json.files && x.json.files[0];
     check('doc_read: a medical word without a name marks the page medical:true (general answer only), the text still comes back', ff && ff.ok && ff.medical === true && ff.lines_removed === undefined && /report goes/.test(ff.text), x.json);
+    // security review 28/11/2026: hearing / audiogram words, a table head on page 1 and rows on page 2, path spellings without a space
+    const HR = '\u05e9\u05de\u05d9\u05e2\u05d4';
+    check('doc_read guard: a hearing line with a name is removed (the guard also reads the path word list)', docReadGuard('A | ' + NM + ' | ' + HR + ' 30%', [{ n: NM }]).cut === 1, 1);
+    check('doc_read path: form 250 and intake spelled without a space or in the singular are refused',
+      docReadSensitive('\u05d1\u05dc250.docx') && docReadSensitive('\u05d8\u05d5\u05e4\u05e1250.docx') && docReadSensitive('\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9.docx') && !docReadSensitive('\u05e0\u05d4\u05dc 25.docx'), 1);
+    mdBody.v = '| ' + MD + ' |\n' + 'x'.repeat(DOC_READ_CHARS) + '\n| ' + NM + ' | 7 days |';
+    x = await call({ ...A, paths: ['a/t.xlsx'], offset: DOC_READ_CHARS }, 'k-123', 'POST', E2);
+    ff = x.json.files && x.json.files[0];
+    check('doc_read: a page 2 with no medical word is still medical:true when the table head (first 600 characters) has one', ff && ff.ok && ff.medical === true && ff.offset === DOC_READ_CHARS, x.json);
     empMock = 'fail';
     const n1 = sent.length;
     x = await call({ ...A, paths: ['a/t.xlsx'] }, 'k-123', 'POST', E2);
