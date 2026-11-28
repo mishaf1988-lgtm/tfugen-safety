@@ -1941,6 +1941,37 @@ const callIn = async (body) => {
       check('leftWaits: a clause that opens with no/0/not is not a wait', leftWaits('אין קבצים ממתינים להחלטה').length === 0 && leftWaits('0 קבצים ממתינים להחלטה').length === 0 && leftWaits('2 קבצים ממתינים להחלטה').length === 1);
       check('leftWaits: 3 real lines that must be a wait and 3 that must not (retro 22/11/2026)', ['2 קובצי 260355arc ממתינים להחלטה על גרסה', 'הצעה אחת ממתינה להחלטה', 'שני מיילים ממתינים להחלטה'].every((x) => leftWaits(x).length === 1) && ['אין קבצים ממתינים להחלטה', '0 מיילים ממתינים להחלטה', 'לא נשאר דבר שממתין להחלטה'].every((x) => leftWaits(x).length === 0));
       check('leftWaits: a negation opener with a separator before the verb is still a wait; without one it is not (28/11/2026)', ['\u05dc\u05d0 \u05d1\u05e8\u05d5\u05e8 \u05d0\u05d9\u05d6\u05d5 \u05d2\u05e8\u05e1\u05d4, \u05de\u05de\u05ea\u05d9\u05df \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4', '\u05dc\u05d0 \u05ea\u05d5\u05d9\u05e7\u05d5 2 \u05e7\u05d1\u05e6\u05d9\u05dd: \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4', '\u05d0\u05d9\u05df \u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 \u05dc-SAP11, \u05de\u05de\u05ea\u05d9\u05df \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4 \u05e9\u05dc \u05de\u05d9\u05db\u05d0\u05dc'].every((x) => leftWaits(x).length === 1 && leftWaits(x)[0].what === x) && ['\u05d0\u05d9\u05df \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4', '0 \u05de\u05d9\u05d9\u05dc\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4', '\u05dc\u05d0 \u05e0\u05e9\u05d0\u05e8 \u05d3\u05d1\u05e8 \u05e9\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4'].every((x) => leftWaits(x).length === 0));
+      // 28/11/2026 (refutation in node): (a) a negation after a separator, a comma or colon inside a number, a maqaf; (b) and/also/summary
+      // before the negation, a hidden mark or niqqud at the start; (c) a wait in brackets or on a new line, approval / answer /
+      // ruling, NBSP or a double space, "the ones waiting"
+      const LW_A = [
+        '\u05dc\u05d0, \u05d0\u05d9\u05df \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4',
+        '\u05dc\u05d0 \u05d1\u05e8\u05d5\u05e8, \u05d0\u05d1\u05dc \u05d0\u05d9\u05df \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4',
+        '\u05d0\u05d9\u05df \u05d7\u05d3\u05e9, 0 \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4',
+        '\u05d0\u05d9\u05df 1,000 \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4',
+        '\u05d0\u05d9\u05df \u05e7\u05d1\u05e6\u05d9\u05dd \u05de-10:00 \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4',
+        '\u05d0\u05d9\u05df \u05e7\u05d1\u05e6\u05d9 \u05e7\u05be12 \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4',
+      ];
+      const LW_B = [
+        '\u05d5\u05d0\u05d9\u05df \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4',
+        '\u05d5\u05d2\u05dd \u05d0\u05d9\u05df \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4',
+        '\u05e1\u05d9\u05db\u05d5\u05dd: \u05d0\u05d9\u05df \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4',
+        '\u200f\u05d0\u05d9\u05df \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4',
+        '\u200b\u05d0\u05d9\u05df \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4',
+        '\u05d0\u05b5\u05d9\u05df \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4',
+      ];
+      const LW_C = [
+        '\u05dc\u05d0 \u05ea\u05d5\u05d9\u05e7\u05d5 3 \u05e7\u05d1\u05e6\u05d9\u05dd (\u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4)',
+        '\u05dc\u05d0 \u05ea\u05d5\u05d9\u05e7\u05d5 3 \u05e7\u05d1\u05e6\u05d9\u05dd\u000a\u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4',
+        '2 \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8 \u05de\u05d9\u05db\u05d0\u05dc',
+        '2 \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e9\u05dc \u05de\u05d9\u05db\u05d0\u05dc',
+        '2 \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d4\u05db\u05e8\u05e2\u05d4',
+        '2 \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd\u00a0\u05dc\u05d4\u05d7\u05dc\u05d8\u05d4',
+        '2 \u05e7\u05d1\u05e6\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd  \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4',
+        '2 \u05e7\u05d1\u05e6\u05d9\u05dd, \u05d4\u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d4\u05d7\u05dc\u05d8\u05d4, \u05dc\u05d0 \u05ea\u05d5\u05d9\u05e7\u05d5',
+      ];
+      check('leftWaits: refutation 28/11/2026 (a)+(b) are not waits, (c) are waits for Michael', LW_A.concat(LW_B).every((x) => leftWaits(x).length === 0) && LW_C.every((x) => leftWaits(x).length === 1 && leftWaits(x)[0].to === 'michael'), LW_A.concat(LW_B).filter((x) => leftWaits(x).length).concat(LW_C.filter((x) => leftWaits(x).length !== 1)));
+      check('leftWaits: an answer from a supplier is still not a wait for Michael (28/11/2026)', leftWaits('\u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05ea\u05e9\u05d5\u05d1\u05d4 \u05de\u05d2\u05d6\u05d9\u05ea').length === 0);
       const arw = agentArchive({ agent: 'x', wait: [{ to: 'michael', what: 'ספק 0501234567 מחכה', key: 'michael:ספק 0501234567' }] });
       check('agentArchive: wait[].what and key from left_what are scrubbed too (retro 22/11/2026)', arw.wait[0].what.indexOf('0501234567') < 0 && arw.wait[0].key.indexOf('0501234567') < 0, arw);
       check('agentEntry: line and learned are scrubbed before they are stored; for_michael and left_what stay as written', e.line === S[0].out && e.learned === S[1].out && e.for_michael === S[0].in && e.left_what === 'file 123456782.pdf', e); }
