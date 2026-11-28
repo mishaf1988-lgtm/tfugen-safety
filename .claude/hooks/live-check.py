@@ -202,15 +202,15 @@ def main():
     except OSError:
         return
     if arch:
-        why = "live-check (לקח 10): הצעת \"בצע\" דומה לפריט שכבר נסגר (" + arch + "). לקרוא אותו ולבדוק בקוד אם זה כבר קיים, לפני שמציעים למיכאל לבנות. הצעה שבאמת חדשה עוברת בפעם השנייה."
+        why = "live-check (לקח 10): הצעת \"בצע\" דומה לפריט שכבר נסגר (" + arch + "). לקרוא אותו ולבדוק בקוד אם זה כבר קיים, לפני שמציעים למיכאל לבנות. הצעה שבאמת חדשה עוברת בפעם השנייה, אבל רק באותו נוסח בדיוק של השאלות (ניסוח מחדש נחסם שוב)."
         print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": why}}, ensure_ascii=False))
         return
     if parts:
-        why = "live-check (מפת המערכת): הצעת \"בצע\" דומה לרכיב שכבר קיים (" + "; ".join(parts) + "). לקרוא את השורה ב-project-files/system-map/card.md ולבדוק בקוד אם זה כבר עושה את מה שמוצע, ולומר את זה למיכאל בשאלה. הצעה שבאמת חדשה עוברת בפעם השנייה."
+        why = "live-check (מפת המערכת): הצעת \"בצע\" דומה לרכיב שכבר קיים (" + "; ".join(parts) + "). לקרוא את השורה ב-project-files/system-map/card.md ולבדוק בקוד אם זה כבר עושה את מה שמוצע, ולומר את זה למיכאל בשאלה. הצעה שבאמת חדשה עוברת בפעם השנייה, אבל רק באותו נוסח בדיוק של השאלות (ניסוח מחדש נחסם שוב)."
         print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": why}}, ensure_ascii=False))
         return
     if heads:
-        why = "live-check (לקח 10): לשאלה הזו כבר יש החלטה ב-DECISIONS (" + "; ".join(heads) + "). לקרוא אותה: אם היא עונה, לא לשאול שוב אלא לדווח מה הוחלט. שאלה שבאמת חדשה עוברת בפעם השנייה."
+        why = "live-check (לקח 10): לשאלה הזו כבר יש החלטה ב-DECISIONS (" + "; ".join(heads) + "). לקרוא אותה: אם היא עונה, לא לשאול שוב אלא לדווח מה הוחלט. שאלה שבאמת חדשה עוברת בפעם השנייה, אבל רק באותו נוסח בדיוק של השאלות (ניסוח מחדש נחסם שוב)."
         print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": why}}, ensure_ascii=False))
         return
     if not m:
