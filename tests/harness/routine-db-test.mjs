@@ -2720,7 +2720,7 @@ const callIn = async (body) => {
           signAskWhy([ask1, { id: 'q2', text: 'רגע', ts: '2026-11-27T10:00:00.5Z', wa_ts: '2026-11-27T10:00:00.000Z' }], tgt, [], undefined, nowQ).why === 'same_second'
           && (signAskFor([ask1, { id: 'q2', text: 'תודה', ts: '2026-11-27T09:59:59.5Z', wa_ts: '2026-11-27T09:59:59.000Z' }], tgt, [], undefined, nowQ) || {}).id === 'q1');
         check('signAskWhy: the very file in the same second as the ask (media given) still signs; another file in that second = same_second',
-          (signAskFor([{ id: 'ff', text: '📎 scan.pdf', media_id: '123456789', ts: '2026-11-27T10:00:01.5Z', wa_ts: '2026-11-27T10:00:00.000Z' }, { ...ask1, text: 'חתום בשמי' }], tgt, [], M, nowQ) || {}).id === 'q1'
+          (signAskFor([{ id: 'ff', text: '📎 scan.pdf', media_id: '123456789', ts: '2026-11-27T10:00:01.5Z', wa_ts: '2026-11-27T10:00:00.000Z' }, { ...ask1, text: 'חתום בשמי' }], tgt, [], { id: '123456789' }, nowQ) || {}).id === 'q1'
           && signAskWhy([{ id: 'fg', text: '📎 other.pdf', media_id: '555555', ts: '2026-11-27T10:00:00.2Z', wa_ts: '2026-11-27T10:00:00.000Z' }, ask1], tgt, [], undefined, nowQ).why !== '');
         check('signAskWhy: an ask WhatsApp sent 40 minutes ago (delivered again late, logged now) = stale; 5 minutes ago = signs',
           signAskWhy([{ ...ask1, ts: '2026-11-27T10:04:50Z', wa_ts: '2026-11-27T09:25:00.000Z' }], tgt, [], undefined, nowQ).why === 'stale'
