@@ -41,6 +41,38 @@ def tool_calls(path):
     return out
 
 
+# "then" may start with a tool prefix (27/11/2026, retro 26/11/2026 item 4: a Read or Grep of iso-forms-index counted as
+# the index update): "Edit|Write|MultiEdit|Bash:iso-forms-index" = only those tools count, the pattern is checked on
+# their input only, and a Bash call counts only when the command writes to a file the pattern matches (>, >>, tee,
+# sed -i, perl -i). No prefix = the pattern on the tool name and its input, as before.
+PREFIX = re.compile(r"^([A-Za-z_][\w]*(?:\|[A-Za-z_][\w]*)*):(.+)$", re.S)
+BASH_TARGET = re.compile(r"""(?:>>?|\btee(?:\s+-a)?)\s*['"]?([^\s'";|&<>]+)""")
+BASH_INPLACE = re.compile(r"\b(?:sed|perl)\s+(?:-\w+\s+)*-\w*i|\bsed\s+(?:-\w+\s+)*--in-place")
+
+
+def then_test(then):
+    """A function (tool name, tool input) -> bool for the "then" cell, or None when the regex is broken."""
+    m = PREFIX.match(then)
+    try:
+        rx = re.compile(m.group(2) if m else then, re.I)
+    except re.error:
+        return None
+    if not m:
+        return lambda n, x: bool(rx.search(n + " " + json.dumps(x, ensure_ascii=False)))
+    tools = set(m.group(1).split("|"))
+
+    def test(n, x):
+        if n not in tools:
+            return False
+        if n == "Bash":
+            cmd = str((x or {}).get("command") or "")
+            if any(rx.search(t) for t in BASH_TARGET.findall(cmd)):
+                return True
+            return bool(BASH_INPLACE.search(cmd) and rx.search(cmd))
+        return bool(rx.search(json.dumps(x, ensure_ascii=False)))
+    return test
+
+
 def missing(ac, cards, calls):
     """(card, action key) for each action whose card has "then" that no later call matched."""
     want = [c for c in cards if c.get("then")]
@@ -49,11 +81,10 @@ def missing(ac, cards, calls):
         for c in want:
             if not ac.match(c, ac.facts(name, inp)):
                 continue
-            try:
-                rx = re.compile(c["then"], re.I)
-            except re.error:
+            test = then_test(c["then"])
+            if test is None:
                 continue
-            if not any(rx.search(n + " " + json.dumps(x, ensure_ascii=False)) for n, x in calls[i + 1:]):
+            if not any(test(n, x) for n, x in calls[i + 1:]):
                 res.append((c, hashlib.sha1((c["id"] + json.dumps(inp, ensure_ascii=False, sort_keys=True)[:4000]).encode("utf-8")).hexdigest()[:12]))
     return res
 
