@@ -1,0 +1,36 @@
+# Cloudflare Worker config: tapugan-clock, the site watch from inside Cloudflare (28/11/2026).
+# The code and what it does: clock.js. Tests: tests/harness/clock-worker-test.mjs.
+#
+# Not deployed yet (STATUS "Cloudflare improvements" (2)). To deploy: npx wrangler deploy -c workers/clock.toml
+#
+# Crons (UTC). Cloudflare counts days of the week 1 = Sunday, unlike pg_cron's 0 = Sunday, so the days are
+# written by name. 2 of the account's 5 free cron triggers (the backup Worker uses one more).
+#   */5 * * * *          probe every 15 minutes (probeDue picks minute 0/15/30/45); wa-watch if CLOCK_JOBS names it
+#   47 4,5 * * SUN-THU   wa-morning if CLOCK_JOBS names it (the server sends only the call that lands on 07:xx Israel)
+#
+# Secrets (wrangler secret put <NAME> -c workers/clock.toml, or the dashboard; never in this file, the repo is public):
+#   META_ACCESS_TOKEN       Meta system-user token (only Michael has it)
+#   WA_TO                   Michael's number, 972...
+#   MANUAL_KEY              random, for POST /run with the x-trigger header
+#   TRUSTEE_NOTIFY_SECRET   only when CLOCK_JOBS turns on wa-watch or wa-morning (same value as the Vault's trustee_notify_secret)
+
+name = "tapugan-clock"
+main = "clock.js"
+compatibility_date = "2026-05-06"
+workers_dev = true
+
+[triggers]
+crons = ["*/5 * * * *", "47 4,5 * * SUN-THU"]
+
+[vars]
+# Empty = only the probe. "wa-watch,wa-morning" moves those jobs here from pg_cron: Michael's decision
+# (DECISIONS 27/11/2026, pg_cron stays), and only after cron.unschedule of the same job, or each runs twice.
+CLOCK_JOBS = ""
+# Seconds between the three tries are RETRY_MS/1000 (default 30000, at most 60000).
+# RETRY_MS = "30000"
+
+# Optional: memory between runs, for the "back" message and for "down" only once per fall.
+# Without it: no "back", and "down" at most once an hour. Create with: npx wrangler kv namespace create CLOCK_STATE
+# [[kv_namespaces]]
+# binding = "CLOCK_STATE"
+# id = "<the id wrangler prints>"

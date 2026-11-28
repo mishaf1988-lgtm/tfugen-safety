@@ -209,6 +209,8 @@ Client ID ו-Tenant: ב-`project-files/ONEDRIVE-SERVER-SETUP.md`. הרשאות d
 
 Worker נפרד: `tapugan-backup-cron` (`workers/backup-cron.js`), גיבוי יומי לבאקט ב-Supabase. סודות שלו: `SUPABASE_SERVICE_KEY`, `MANUAL_KEY` (רק להפעלה ידנית של `/run`; שום אוטומציה לא משתמשת בו. הערך הישן היה גלוי ב-`INFRA-2026-05-06.md` עד 11/10/2026, הוסר מהקובץ ונשאר בהיסטוריית git: להחליף ב-Cloudflare).
 
+Worker שעון: `tapugan-clock` (`workers/clock.js`, `workers/clock.toml`, נבנה 28/11/2026, **עוד לא נפרס**). בודק את האתר מתוך Cloudflare כל 15 דקות, כמו `site-up.yml` (אותן בדיקות ועוד POST בלי חתימה ל-webhook), ושולח שורת וואטסאפ בנפילה ובחזרה. קורא רק לנתיבים שפטורים מבדיקת המדינה ב-`functions/_middleware.js` (`/api/wa-hook`, `/api/db-health`, `/api/wa-morning`, `/logo.jpg`); הבדיקה `clock-worker-test.mjs` נכשלת אם נתיב יוצא מהרשימה. שעונים: `*/5 * * * *` ו-`47 4,5 * * SUN-THU` (2 מתוך 5 השעונים החינמיים; עם הגיבוי 3). העבודות `wa-watch` ו-`wa-morning` כבויות (רצות ב-pg_cron, DECISIONS 27/11/2026) ונדלקות רק דרך המשתנה `CLOCK_JOBS`. סודות (שמות בלבד): `META_ACCESS_TOKEN`, `WA_TO` (רק מיכאל), `MANUAL_KEY` (אקראי, ל-`POST /run` בכותרת `x-trigger`), `TRUSTEE_NOTIFY_SECRET` רק אם מדליקים עבודה. אופציונלי: KV `CLOCK_STATE` (בלעדיו אין הודעת "חזר", ו"נפל" לכל היותר פעם בשעה).
+
 ---
 
 ## 4. Supabase (`znhjtpcltrxxyfjczgvw`)
