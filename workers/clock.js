@@ -29,7 +29,8 @@
 // WhatsApp (waBodies): once when the site or the database goes down and once when it is back, the approved
 // template safety_assistant_update first and a plain text if Meta refuses it, the same wording as site-up.yml with
 // "check from Cloudflare". Without the KV binding CLOCK_STATE there is no memory between runs: no "back"
-// message, and "down" is sent only on the first probe of each hour (at most once an hour).
+// message, and "down" is sent only on the first probe of each hour (at most once an hour). A KV read that throws
+// counts as "up" for that run but writes nothing, so the stored state (and the coming "back") survives.
 //
 // HTTP: GET /health = what is configured (booleans only, no values). POST /run = one run now, needs the header
 // x-trigger equal to MANUAL_KEY (never a query string: it would land in logs). /run?job=test sends one test
@@ -179,10 +180,15 @@ export async function sendWa(env, kind, counter) {
 }
 
 async function kvGet(env) {
-  if (!env.CLOCK_STATE) return null;
-  // an empty KV is a fresh start: counted as "up", so the first fall is sent at once; a failed read = no memory
+  if (!env.CLOCK_STATE) return { state: null, failed: false };
+  // an empty KV is a fresh start: counted as "up", so the first fall is sent at once
   // a failed read or a corrupt value is also "up" (independent refutation 28/11/2026: "no memory" swallowed the first fall alert; a repeat alert beats a lost one)
-  try { const v = await env.CLOCK_STATE.get(STATE_KEY); const st = v ? JSON.parse(v).state : 'up'; return st === 'up' || st === 'site' || st === 'db' ? st : 'up'; } catch (e) { return 'up'; }
+  // failed = the read itself threw: runProbe then writes nothing (refutation 28/11/2026: "up" overwrote "site" and the "back" message was lost)
+  let v;
+  try { v = await env.CLOCK_STATE.get(STATE_KEY); } catch (e) { return { state: 'up', failed: true }; }
+  let st = 'up';
+  try { st = v ? JSON.parse(v).state : 'up'; } catch (e) { st = 'up'; }
+  return { state: st === 'up' || st === 'site' || st === 'db' ? st : 'up', failed: false };
 }
 async function kvPut(env, state, ms) {
   if (!env.CLOCK_STATE || !state) return;
@@ -191,11 +197,13 @@ async function kvPut(env, state, ms) {
 
 export async function runProbe(env, ms, counter) {
   const p = await probe(env, counter);
-  const prev = await kvGet(env);
+  const kv = await kvGet(env);
+  const prev = kv.state;
   const d = decide(prev, p.state, ms);
   const wa = d.send ? await sendWa(env, d.send, counter) : null;
   // a message that was not delivered keeps the old state, so the next probe sends it again (refutation 28/11/2026: the state moved on and the alert was lost)
-  await kvPut(env, d.send && wa && !wa.sent && env.CLOCK_STATE ? prev : d.store, ms);
+  // a failed KV read writes nothing: the stored state is unknown here and must not be overwritten
+  if (!kv.failed) await kvPut(env, d.send && wa && !wa.sent && env.CLOCK_STATE ? prev : d.store, ms);
   return { job: 'probe', state: p.state, prev, send: d.send, wa, detail: p.detail };
 }
 

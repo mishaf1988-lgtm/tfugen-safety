@@ -181,6 +181,30 @@ console.log('\n9a. refutation 28/11/2026: no alert is lost');
     await M.runJobs(['probe'], { ...ENV, CLOCK_STATE: { get: async () => v, put: async () => {} } }, at('2026-11-28T10:30:00Z'));
     check('a corrupt KV value ' + v + ' does not swallow the fall', w4.wa.length === 1, w4.wa.length);
   }
+  // (C) fall delivered, then the site is back but get throws: KV stays site, and the next good read sends site_back
+  const wc = world({ siteFails: 99 });
+  const envC = { ...ENV, CLOCK_STATE: wc.KV };
+  await M.runJobs(['probe'], envC, at('2026-11-28T11:00:00Z'));
+  check('(C) the fall is delivered and KV is site', wc.wa.length === 1 && JSON.parse(wc.kv.clock_state).state === 'site', wc.kv);
+  const wc2 = world(); wc2.kv = wc.kv; let putsC = 0;
+  envC.CLOCK_STATE = { get: async () => { throw new Error('kv down'); }, put: async (k, v) => { putsC++; wc2.kv[k] = v; } };
+  await M.runJobs(['probe'], envC, at('2026-11-28T11:15:00Z'));
+  check('(C) site back but the KV read failed: nothing written, KV still site', putsC === 0 && JSON.parse(wc2.kv.clock_state).state === 'site', wc2.kv);
+  const wc3 = world(); wc3.kv = wc2.kv; envC.CLOCK_STATE = wc3.KV;
+  const rc = await M.runJobs(['probe'], envC, at('2026-11-28T11:30:00Z'));
+  check('(C) the next probe with a good KV sends site_back', rc.results[0].send === 'site_back' && wc3.wa.length === 1 && JSON.parse(wc3.kv.clock_state).state === 'up', rc.results[0]);
+  // (E) fall delivered, then get fails and Meta fails too: KV stays site
+  const we = world({ siteFails: 99 });
+  const envE = { ...ENV, CLOCK_STATE: we.KV };
+  await M.runJobs(['probe'], envE, at('2026-11-28T12:00:00Z'));
+  const we2 = world({ siteFails: 99, waFail: true }); we2.kv = we.kv; let putsE = 0;
+  envE.CLOCK_STATE = { get: async () => { throw new Error('kv down'); }, put: async (k, v) => { putsE++; we2.kv[k] = v; } };
+  await M.runJobs(['probe'], envE, at('2026-11-28T12:15:00Z'));
+  check('(E) KV read failed and WhatsApp failed: KV stays site', putsE === 0 && we2.wa.length >= 1 && JSON.parse(we2.kv.clock_state).state === 'site', we2.kv);
+  // a corrupt value is still overwritten (not a failed read)
+  const wk = world({ siteFails: 99 }); wk.kv.clock_state = '{';
+  await M.runJobs(['probe'], { ...ENV, CLOCK_STATE: wk.KV }, at('2026-11-28T12:30:00Z'));
+  check('a corrupt KV value is replaced by the new state (site)', JSON.parse(wk.kv.clock_state).state === 'site', wk.kv);
 }
 console.log('\n9. a full run');
 {
