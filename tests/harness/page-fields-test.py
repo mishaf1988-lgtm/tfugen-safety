@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""page_fields.py (lesson 210, 31/10/2026): a Word file whose saved "page 2 of 2" sits on a one-page document is
+"""page_fields.py (lesson 287, 31/10/2026): a Word file whose saved "page 2 of 2" sits on a one-page document is
 caught, fixed to "1 of 1", and a correct file passes. A multi-page document keeps PAGE and fixes only NUMPAGES."""
 import os, subprocess, sys, tempfile, zipfile
 from _common import check, done, repo_root

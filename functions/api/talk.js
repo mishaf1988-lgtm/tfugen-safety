@@ -31,6 +31,7 @@ import { accessToken, putFile, sendMailTo, trashFile } from '../_onedrive.js';
 import { LOGO_JPG } from '../_logo.js';
 import { ownerWa, sendToOwner, ownerWindowOpen, keyboardText, waOneLine } from '../_wa.js';
 import { stateCas } from '../_cas.js';
+import { agentEntry, trimLog } from './routine-db.js';
 import { makeEditToken, readEditToken, editUrl, EDIT_MAX, diffRow, editEntry, asSigned, correctionHtml, updateMailHtml, editLinkHtml, editFormHtml } from '../_indedit.js';
 import { readRecipients } from './hazard-report.js';
 import { REPORT_DEPTS } from './hazard-file.js';
@@ -1156,8 +1157,11 @@ async function editPost(env, request, ctx) {
   patch.edits = prior.concat([entry]);
   // Two corrections at the same moment (security review 24/11/2026, improvement; Michael: "build both"): the write is conditional on
   // `edits` still being what this request read, so the second one is refused instead of erasing the first one's history line.
-  const same = row.edits == null ? 'is.null' : 'eq.' + encodeURIComponent(JSON.stringify(row.edits));
-  const up = await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(row.id) + '&edits=' + same, { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify(patch) });
+  // 27/11/2026 (retro 25/11/2026 item 2, Michael approved): the condition is "nobody added a line since the read" (element N of
+  // the history, N = the lines read, is still missing), not the whole history in the address: that grew with every correction
+  // until the gateway cut it (about 26k characters) and the worker's corrections got a permanent 502. History is only appended.
+  const same = row.edits == null ? 'edits=is.null' : 'edits->>' + prior.length + '=is.null';
+  const up = await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(row.id) + '&' + same, { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify(patch) });
   if (!up.ok) return fail('\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.', 502);
   const upRows = await up.json().catch(() => null);
   if (!Array.isArray(upRows) || !upRows.length) return fail('\u05de\u05d9\u05e9\u05d4\u05d5 \u05ea\u05d9\u05e7\u05df \u05d0\u05ea \u05d0\u05d5\u05ea\u05d4 \u05e8\u05e9\u05d5\u05de\u05d4 \u05d1\u05e8\u05d2\u05e2 \u05d6\u05d4. \u05e0\u05d0 \u05dc\u05e8\u05e2\u05e0\u05df \u05d0\u05ea \u05d4\u05d3\u05e3 \u05d5\u05dc\u05d1\u05d3\u05d5\u05e7 \u05de\u05d4 \u05e9\u05d5\u05e0\u05d4 \u05dc\u05e4\u05e0\u05d9 \u05ea\u05d9\u05e7\u05d5\u05df \u05e0\u05d5\u05e1\u05e3.', 409);
@@ -1187,13 +1191,13 @@ async function editPost(env, request, ctx) {
 // A failure is written on the row (doc_err), the photos stay in the private bucket.
 export async function fileCorrection(env, row, entry, docs, nowMs) {
   const out = { pdf: false, url: null, mailed: false, err: null, name: null };
+  const now = new Date(nowMs || Date.now());
+  const day = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+  const idTail = String(row.id_no || '').replace(/\D/g, '').slice(-4);
   try {
     const od = await accessToken(env);
-    const now = new Date(nowMs || Date.now());
-    const day = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
     const hm = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem', hour12: false });
     const hms = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jerusalem', hour12: false }).replace(/:/g, '-');
-    const idTail = String(row.id_no || '').replace(/\D/g, '').slice(-4);
     const base = day.split('-').reverse().join('-') + ' - ' + fileSafe(row.emp_name) + (idTail ? ' - ' + idTail : '') + ' - \u05ea\u05d9\u05e7\u05d5\u05df ' + hms;
     const hb = new TextEncoder().encode(correctionHtml(row, entry, docs, { day, hm }));
     let bytes = hb, name = base + '.html', type = 'text/html';
@@ -1207,15 +1211,42 @@ export async function fileCorrection(env, row, entry, docs, nowMs) {
     out.url = filed.webUrl || null;
     const to = [od.email, IND_HR].filter((v, i, a) => v && a.indexOf(v) === i);
     const eTok = await makeEditToken(env, row.id, nowMs);
-    await sendMailTo(od.token, to, [], '\u05ea\u05d9\u05e7\u05d5\u05df \u05d1\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9: ' + (row.emp_name || '') + ', ' + fdate(day),
+    const send = () => sendMailTo(od.token, to, [], '\u05ea\u05d9\u05e7\u05d5\u05df \u05d1\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9: ' + (row.emp_name || '') + ', ' + fdate(day),
       updateMailHtml(row, entry, out.url, eTok ? editUrl(eTok) : null, SITE.signature),
       bytes.length <= MAIL_ATTACH_MAX ? [{ '@odata.type': '#microsoft.graph.fileAttachment', name, contentType: type, contentBytes: b64(bytes) }] : []);
+    // 27/11/2026 (retro 25/11/2026 item 4, Michael: "do it: a second try and a line in the morning"): the page is filed, so only
+    // the mail is tried again (filing again would put a second correction page beside the first). Same recipients, same mail.
+    // A timeout is not retried (security review 27/11/2026): Graph may have taken the mail already, and a second send would reach HR twice.
+    try { await send(); } catch (e1) { if (!mailRetryable(e1)) throw e1; await new Promise((r) => setTimeout(r, MAIL_RETRY_MS)); await send(); }
     out.mailed = true;
   } catch (e) { out.err = String((e && e.message) || e).substring(0, 200); }
   if (out.err || !out.url) {
-    try { await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(row.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ doc_err: ((row.doc_err ? row.doc_err + '; ' : '') + '\u05d3\u05e3 \u05ea\u05d9\u05e7\u05d5\u05df \u05dc\u05d0 \u05ea\u05d5\u05d9\u05e7: ' + (out.err || '\u05dc\u05dc\u05d0 \u05e7\u05d5\u05d1\u05e5')).substring(0, 400) }) }); } catch (e) { /* the correction is saved on the row */ }
+    try { await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(row.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ doc_err: ((row.doc_err ? row.doc_err + '; ' : '') + (out.url ? '\u05d3\u05e3 \u05ea\u05d9\u05e7\u05d5\u05df \u05ea\u05d5\u05d9\u05e7, \u05d4\u05de\u05d9\u05d9\u05dc \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7: ' : '\u05d3\u05e3 \u05ea\u05d9\u05e7\u05d5\u05df \u05dc\u05d0 \u05ea\u05d5\u05d9\u05e7: ') + (out.err || '\u05dc\u05dc\u05d0 \u05e7\u05d5\u05d1\u05e5')).substring(0, 400) }) }); } catch (e) { /* the correction is saved on the row */ }
   }
+  // Filed but the mail failed twice: one line in Michael's morning update (agent_log for_michael, as dev_done writes it).
+  if (out.url && !out.mailed) await morningLine(env, corrMailLine(idTail, day), now.toISOString());
   return out;
+}
+export const MAIL_RETRY_MS = 1000;
+export const mailRetryable = (e) => !/abort|timeout|timed out/i.test(String((e && e.name) || '') + ' ' + String((e && e.message) || e));
+// The morning line: fixed words, the ID's last 4 digits and the day. No name or other text typed on the public page, since
+// agent_log is also read by the assistant (review 09/11/2026: a worker's text must not reach its context). Pure.
+export function corrMailLine(idTail, day) {
+  return '\u05ea\u05d9\u05e7\u05d5\u05df \u05d1\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9' + (idTail ? ' (\u05ea.\u05d6. \u05e9\u05de\u05e1\u05ea\u05d9\u05d9\u05de\u05ea \u05d1-' + idTail + ')' : '')
+    + ' \u05de-' + fdate(day) + ' \u05ea\u05d5\u05d9\u05e7 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4, \u05d0\u05d1\u05dc \u05d4\u05de\u05d9\u05d9\u05dc \u05dc\u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7 \u05d2\u05dd \u05d1\u05e0\u05d9\u05e1\u05d9\u05d5\u05df \u05e9\u05e0\u05d9.';
+}
+// ok:true on purpose: an ok:false entry would also list "induction" as a failed agent and open a fault (_faults.js), which
+// is more than the one line Michael chose. A failed log write is not a failure of the correction (it is on the row, doc_err).
+async function morningLine(env, text, nowIso) {
+  try {
+    const ent = agentEntry({ agent: 'induction', ok: true, line: 'correction mail failed twice', for_michael: text }, nowIso);
+    await stateCas(SB, Object.assign({ 'Content-Type': 'application/json' }, sbH(env)), 'agent_log', (cur) => {
+      let log = []; try { log = JSON.parse(cur || '[]'); } catch (x) { log = []; }
+      if (!Array.isArray(log)) log = [];
+      log.push(ent);
+      return { value: JSON.stringify(trimLog(log)) };
+    });
+  } catch (e) { /* doc_err on the row still says the mail was not sent */ }
 }
 
 // ---- a contractor's worker (15/11/2026, functions/_ctr.js) ----
