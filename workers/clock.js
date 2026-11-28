@@ -113,7 +113,7 @@ export function decide(prev, cur, ms) {
 
 // The two WhatsApp bodies for one message: the approved template, then a plain text if Meta refuses it.
 export function waBodies(kind, to) {
-  const text = MSG[kind];
+  const text = Object.hasOwn(MSG, kind) ? MSG[kind] : '';
   if (!text || !to) return [];
   return [
     { messaging_product: 'whatsapp', to: String(to), type: 'template',

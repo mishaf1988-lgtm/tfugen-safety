@@ -117,6 +117,7 @@ console.log('\n7. decide');
 }
 
 console.log('\n8. waBodies');
+check('a key that is not one of the messages (constructor, __proto__) gives no body', ['constructor', '__proto__', 'toString', 'hasOwnProperty'].every((k) => M.waBodies(k, '972500000000').length === 0));
 {
   const b = M.waBodies('site_down', '972500000000');
   check('two bodies: template, then text', b.length === 2 && b[0].type === 'template' && b[1].type === 'text');
