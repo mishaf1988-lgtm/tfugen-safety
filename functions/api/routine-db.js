@@ -2417,8 +2417,8 @@ export function pdfReadCheck(b) {
 // form-250 or new-worker intake file is refused by its path, before it is downloaded (routine-mail-filing.md 2a4: by the name).
 export const DOC_READ_FILES = 3, DOC_READ_CHARS = 6000, DOC_READ_OFFSET_MAX = 200000, DOC_READ_SCAN = 400000, DOC_READ_HITS = 10;
 export const DOC_READ_MIME = { docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
-const DOC_MED_HE = '(?<![\u05d0-\u05ea])[\u05d4\u05d5\u05d1\u05dc\u05e9\u05de\u05db]{0,3}(?:\u05e9\u05de\u05d9\u05e2\u05d4|\u05d0\u05d5\u05d3\u05d9\u05d5\u05d2\u05e8\u05de[\u05d0-\u05ea]*|\u05e8\u05e4\u05d5\u05d0[\u05d0-\u05ea]*|\u05de\u05d7\u05dc\u05d4|\u05de\u05d7\u05dc\u05d5\u05ea|\u05de\u05db\u05d1\u05d9|\u05de\u05d0\u05d5\u05d7\u05d3\u05ea|\u05e7\u05d5\u05e4\u05ea \u05d7\u05d5\u05dc\u05d9\u05dd|\u05e7\u05d5\u05e4"\u05d7|\u05e9\u05d9\u05e8\u05d5\u05ea\u05d9 \u05d1\u05e8\u05d9\u05d0\u05d5\u05ea|\u05e4\u05e0\u05e7\u05e1 \u05d1\u05e8\u05d9\u05d0\u05d5\u05ea|\u05d1\u05d9\u05d8\u05d5\u05d7 \u05d1\u05e8\u05d9\u05d0\u05d5\u05ea|\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3(?:\u05d9\u05dd)?|\u05e0\u05db\u05d5\u05ea|\u05d0\u05e1\u05ea\u05de\u05d4|\u05e1\u05d5\u05db\u05e8\u05ea|\u05d8\u05d5\u05e4\u05e1 ?250|\u05d1\u05dc ?250)(?![\u05d0-\u05ea])';
-const DOC_MED_RE = new RegExp(DOC_MED_HE + '|\\b(?:hearing|audiogram\\w*|audiometr\\w*|medical|sick\\w*|disab\\w*|clalit|maccabi|meuhedet|leumit)\\b', 'i');
+const DOC_MED_HE = '(?<![\u05d0-\u05ea])[\u05d4\u05d5\u05d1\u05dc\u05e9\u05de\u05db]{0,3}(?:\u05e9\u05de\u05d9\u05e2[\u05d0-\u05ea]*|\u05e8\u05e2\u05e9|\u05d0\u05d5\u05d3\u05d9\u05d5\u05d2\u05e8\u05de[\u05d0-\u05ea]*|\u05e8\u05e4\u05d5\u05d0[\u05d0-\u05ea]*|\u05de\u05d7\u05dc\u05d4|\u05de\u05d7\u05dc\u05d5\u05ea|\u05de\u05db\u05d1\u05d9|\u05de\u05d0\u05d5\u05d7\u05d3\u05ea|\u05e7\u05d5\u05e4\u05ea \u05d7\u05d5\u05dc\u05d9\u05dd|\u05e7\u05d5\u05e4"\u05d7|\u05e9\u05d9\u05e8\u05d5\u05ea\u05d9 \u05d1\u05e8\u05d9\u05d0\u05d5\u05ea|\u05e4\u05e0\u05e7\u05e1 \u05d1\u05e8\u05d9\u05d0\u05d5\u05ea|\u05d1\u05d9\u05d8\u05d5\u05d7 \u05d1\u05e8\u05d9\u05d0\u05d5\u05ea|\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3(?:\u05d9\u05dd)?|\u05e0\u05db\u05d5\u05ea|\u05d0\u05e1\u05ea\u05de\u05d4|\u05e1\u05d5\u05db\u05e8\u05ea|\u05d8\u05d5\u05e4\u05e1 ?250|\u05d1\u05dc ?250)(?![\u05d0-\u05ea])';
+const DOC_MED_RE = new RegExp(DOC_MED_HE + '|\\b(?:occupational health|hearing|audiogram\\w*|audiometr\\w*|medical|sick\\w*|disab\\w*|clalit|maccabi|meuhedet|leumit)\\b', 'i');
 export function docReadSensitive(rel) {
   const s = String(rel || '').normalize('NFC').replace(/[\p{Cf}\p{Cc}]/gu, '').replace(/[\u0591-\u05c7]/g, '')
     .replace(/[\u05f3\u05f4\u2018\u2019\u201c\u201d]/g, '"').replace(/[_\-./]+/g, ' ').replace(/\s+/g, ' ');
@@ -2445,7 +2445,7 @@ export function docReadCheck(b) {
 // The markdown of one file, as the assistant gets it: the "# file.xlsx" head out, hidden characters out, runs of spaces and
 // table rulers shortened, then masked (whole, before the page is cut, so the offsets are those of the masked text). Pure.
 export function docReadText(md, kind) {
-  const t = String(md || '').slice(0, DOC_READ_SCAN).replace(/\r\n?/g, '\n').replace(/[\p{Cf}]|(?!\n)\p{Cc}/gu, ' ').replace(new RegExp('^\\s*# file\\.' + kind + '\\s*'), '')
+  const t = String(md || '').slice(0, DOC_READ_SCAN).replace(/\r\n?/g, '\n').replace(/\p{Cf}/gu, '').replace(/(?!\n)\p{Cc}/gu, ' ').replace(new RegExp('^\\s*# file\\.' + kind + '\\s*'), '')
     .replace(/[ \t]+/g, ' ').replace(/-{4,}/g, '---').replace(/\n{3,}/g, '\n\n').trim();
   return filingMask(t);
 }
@@ -2453,9 +2453,11 @@ export function docReadText(md, kind) {
 // holds a medical word AND an employee's full name (emp_names) is replaced whole, before the page is cut, so the offsets are
 // those of the guarded text. The marker has no medical word in it. Pure.
 export const DOC_READ_CUT = '[\u05e9\u05d5\u05e8\u05d4 \u05d4\u05d5\u05e1\u05e8\u05d4: \u05e9\u05dd \u05dc\u05d9\u05d3 \u05e4\u05e8\u05d8 \u05e8\u05d2\u05d9\u05e9]';
+const DOC_MED_STEM = new RegExp('(?<![\u05d0-\u05ea])[\u05d4\u05d5\u05d1\u05dc\u05e9\u05de\u05db]{0,3}(?:\u05e9\u05de\u05d9\u05e2|\u05d7\u05d9\u05e8\u05e9|\u05d8\u05e0\u05d8\u05d5\u05df|\u05dc\u05d7\u05e5 \u05d3\u05dd|\u05d4\u05e8\u05d9\u05d5\u05df|\u05d4\u05d9\u05e8\u05d9\u05d5\u05df|\u05e1\u05d5\u05db\u05e8\u05ea|\u05e1\u05e8\u05d8\u05df|\u05d0\u05e1\u05ea\u05de|\u05e0\u05db\u05d5\u05ea|\u05d0\u05e9\u05e4\u05d5\u05d6|\u05d0\u05d1\u05d7\u05e0|\u05ea\u05e8\u05d5\u05e4|\u05d3\u05d9\u05db\u05d0\u05d5\u05df|\u05e4\u05e1\u05d9\u05db|\u05e8\u05e4\u05d5\u05d0|\u05de\u05d7\u05dc\u05ea|\u05de\u05d7\u05dc\u05d5\u05ea|\u05de\u05d7\u05dc\u05ea\u05d5|\u05de\u05d7\u05dc\u05ea\u05d4|\u05de\u05d7\u05dc\u05d4)(?![\u05d0-\u05ea]{4,})|\\b(?:diabet|deaf|illness|disease|pregnan|cancer|asthma|hearing|tinnitus|blood pressure|sick|disab|medic|diagnos|patient|prescri|clinic)', 'i');
+export function docReadMed(t) { const c = String(t || '').normalize('NFC').replace(/[\p{Cf}\p{Cc}]/gu, '').replace(/[\u0591-\u05c7]/g, ''); return geminiMedical(t) || docReadSensitive(t) || DOC_MED_STEM.test(c); }
 export function docReadGuard(text, names) {
   let cut = 0;
-  const out = String(text || '').split('\n').map((l) => { if ((geminiMedical(l) || docReadSensitive(l)) && geminiNameHit(l, names)) { cut++; return DOC_READ_CUT; } return l; }).join('\n');
+  const out = String(text || '').split('\n').map((l) => { if (docReadMed(l) && geminiNameHit(l, names)) { cut++; return DOC_READ_CUT; } return l; }).join('\n');
   return { text: out, cut };
 }
 // One page: DOC_READ_CHARS from offset, more = the next offset or null, hits = where the question's words are (the offsets of
@@ -4345,9 +4347,9 @@ async function routineDbHandle(context) {
           if (!text) { files.push({ name, ok: false, error: ('no text: ' + String((r0 && r0.error) || '')).trim().slice(0, 160) }); continue; }
           const pg = docReadPage(text, c.offset, c.question);
           // a page with a medical word (or a removed line) is marked: a general answer only, no name next to a medical detail
-          // the whole file counts when a line was removed anywhere in it, or when a medical word is in its first 600 characters (a table head)
-          // that is not on this page (security review 28/11/2026): a page of rows with a diagnosis and no medical word is still marked
-          const medical = geminiMedical(pg.text) || docReadSensitive(pg.text) || g.cut > 0 || geminiMedical(text.slice(0, 600)) || docReadSensitive(text.slice(0, 600));
+          // the whole file counts when a line was removed anywhere in it, or when the file holds a medical word AND an employee's name
+          // anywhere (security review 28/11/2026: a table head after the first page, rows with a diagnosis on a later page)
+          const medical = docReadMed(pg.text) || g.cut > 0 || (docReadMed(text) && geminiNameHit(text, empNames));
           files.push(Object.assign({ name, ok: true }, pg, medical ? { medical: true } : {}, g.cut ? { lines_removed: g.cut } : {}));
         } catch (x) { files.push({ name, ok: false, error: ('doc_read: ' + String((x && x.message) || x)).slice(0, 160) }); }
       }
