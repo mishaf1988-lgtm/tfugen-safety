@@ -3005,10 +3005,20 @@ export function waitParse(line) {
 export function leftWaits(leftWhat) {
   const out = [];
   String(leftWhat || '').split(/[;|]\s*|\.\s+/).forEach((seg) => {
-    // scrubbed before the cut to 160/60 (a number cut in the middle is not caught afterwards); a clause that opens with
-    // "no" / 0 / "not" ("no files wait for a decision") is not a wait (retro challenger 22/11/2026)
+    // scrubbed before the cut to 160/60 (a number cut in the middle is not caught afterwards). A clause that opens with
+    // "no" / 0 / "not" negates the wait only when no separator (comma, colon, " - ") stands between the opener and the verb
+    // ("no files wait for a decision" is not a wait, retro challenger 22/11/2026); with a separator the negation belongs to
+    // the first part, so the part after the first separator is parsed ("not clear which version, waiting for a decision" and
+    // "2 files not filed: waiting for a decision" are waits, 28/11/2026). what stays the whole clause.
     const t = scrubPii(seg.trim());
-    if (!t || /^(?:0|\u05d0\u05d9\u05df|\u05dc\u05d0)(?:\s|$)/.test(t) || out.length >= WAIT_MAX || !waitParse(t).some((w) => w.to === 'michael')) return;
+    if (!t || out.length >= WAIT_MAX) return;
+    let probe = t;
+    if (/^(?:0|\u05d0\u05d9\u05df|\u05dc\u05d0)(?:\s|$)/.test(t)) {
+      const sep = t.search(/[,:\u05be]|\s[-\u2013\u2014]\s/);
+      if (sep < 0) return;
+      probe = t.slice(sep + 1);
+    }
+    if (!waitParse(probe).some((w) => w.to === 'michael')) return;
     const what = t.slice(0, 160);
     out.push({ to: 'michael', what, key: 'michael:' + what.replace(/\s+/g, ' ').slice(0, 60) });
   });
