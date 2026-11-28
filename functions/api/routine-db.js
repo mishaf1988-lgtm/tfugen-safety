@@ -2975,14 +2975,16 @@ export function partialCheck(log) {
 // Measured before (agent-log.md 444 lines and agent_report rows since 11/11/2026): about 40 "waiting for Michael", 9 "waiting
 // for the developer" (all from the developer itself, left out below), 1 "waiting for the main chat", about 10 other.
 export const WAIT_UNOWNED_MS = 24 * 3600e3, WAIT_MAX = 3;
-const WAIT_VERB = /(^|[\s(:,])(\u05de\u05d7\u05db\u05d4|\u05de\u05d7\u05db\u05d9\u05dd|\u05de\u05d7\u05db\u05d5\u05ea|\u05de\u05de\u05ea\u05d9\u05df|\u05de\u05de\u05ea\u05d9\u05e0\u05d4|\u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd|\u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea) \u05dc/g;
+const WAIT_VERB = /((?:^|[\s(:,])\u05d4?)(\u05de\u05d7\u05db\u05d4|\u05de\u05d7\u05db\u05d9\u05dd|\u05de\u05d7\u05db\u05d5\u05ea|\u05de\u05de\u05ea\u05d9\u05df|\u05de\u05de\u05ea\u05d9\u05e0\u05d4|\u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd|\u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea)\s+\u05dc/g;
 // "0 waiting for an answer", "no ... waiting", "not waiting": not a wait
 const WAIT_NOT = /(?:^|\s)(?:0|\u05d0\u05d9\u05df|\u05dc\u05d0)\s+$/;
 const WAIT_DEV = /^-?\s*(?:\u05d4|\u05e9\u05d9\u05d7\u05ea )?(?:\u05de\u05e4\u05ea\u05d7|\u05e4\u05d9\u05ea\u05d5\u05d7|\u05d4\u05e4\u05d9\u05ea\u05d5\u05d7|\u05e6['\u05f3\u2019]\u05d0\u05d8|dev)/i;
 // "waiting for a decision" is Michael's (CLAUDE.md rule 5: a decision is his). 22/11/2026, a dev request from the quality checker:
 // the mail filer wrote "two 260355arc files wait for a decision on the version" in left_what on 18/11 and 19/11 with no
 // for_michael, so nobody was asked.
-const WAIT_MICHAEL = /^-?\s*(?:\u05de\u05d9\u05db\u05d0\u05dc|\u05da(?=[\s:,.;)]|$)|\u05d4\u05d7\u05dc\u05d8\u05d4)/;
+// 28/11/2026 (refutation): "a ruling" alone is his too; "approval" / "an answer" only when Michael is named right after it
+// (a supplier's answer stays "other").
+const WAIT_MICHAEL = /^-?\s*(?:\u05de\u05d9\u05db\u05d0\u05dc|\u05da(?=[\s:,.;)]|$)|\u05d4\u05d7\u05dc\u05d8\u05d4|\u05d4\u05db\u05e8\u05e2\u05d4|(?:\u05d0\u05d9\u05e9\u05d5\u05e8|\u05ea\u05e9\u05d5\u05d1\u05d4|\u05ea\u05e9\u05d5\u05d1\u05ea)\s+(?:\u05e9\u05dc\s+|\u05de-?|\u05de\u05d0\u05ea\s+)?\u05de\u05d9\u05db\u05d0\u05dc)/;
 // Pure: the waits in one report line, [{to: 'dev' | 'michael' | 'other', what, key}], at most WAIT_MAX. what = the clause from
 // the verb to the end of its sentence (a decimal point as in 26.04 does not end it).
 export function waitParse(line) {
@@ -3002,23 +3004,31 @@ export function waitParse(line) {
 }
 // Pure: the waits for Michael in left_what (22/11/2026, same request). left_what names the unit before the verb ("two
 // 260355arc files wait for a decision"), so here what = the whole clause up to ; or a sentence end, not from the verb on.
+// 28/11/2026 (refutation in node): a clause is cut into parts at a separator (a comma or colon with no digit on both sides,
+// "(", a new line, a spaced dash or maqaf); a part that opens with no / 0 / not (also after "and", "and also", "but") is
+// negated; a wait for Michael in a part that is not negated is a wait. Direction marks, zero-width spaces and niqqud are
+// removed first ("no, no files wait", "1,000", "10:00" and "and no files wait" were caught as waits; "(waiting for a
+// decision)" and a new line between the parts were missed).
+const WAIT_SEP = /(?<!\d)[,:]|[,:](?!\d)|[(\n]|\s[-\u2013\u2014\u05be]\s/;
+const WAIT_NEG = /^(?:(?:\u05d5\u05d2\u05dd|\u05d0\u05d1\u05dc|\u05d0\u05da)\s+)?\u05d5?(?:0|\u05d0\u05d9\u05df|\u05dc\u05d0)(?:\s|$)/;
+const WAIT_INVISIBLE = /[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff\u0591-\u05bd\u05bf\u05c1\u05c2\u05c4\u05c5\u05c7]/g;
+function waitPartMichael(t) {
+  const m = WAIT_SEP.exec(t);
+  const head = (m ? t.slice(0, m.index) : t).trim();
+  if (head && !WAIT_NEG.test(head) && waitParse(head).some((w) => w.to === 'michael')) return true;
+  return m ? waitPartMichael(t.slice(m.index + m[0].length)) : false;
+}
 export function leftWaits(leftWhat) {
   const out = [];
   String(leftWhat || '').split(/[;|]\s*|\.\s+/).forEach((seg) => {
     // scrubbed before the cut to 160/60 (a number cut in the middle is not caught afterwards). A clause that opens with
-    // "no" / 0 / "not" negates the wait only when no separator (comma, colon, " - ") stands between the opener and the verb
-    // ("no files wait for a decision" is not a wait, retro challenger 22/11/2026); with a separator the negation belongs to
-    // the first part, so the part after the first separator is parsed ("not clear which version, waiting for a decision" and
-    // "2 files not filed: waiting for a decision" are waits, 28/11/2026). what stays the whole clause.
-    const t = scrubPii(seg.trim());
+    // "no" / 0 / "not" negates the wait only when no separator stands between the opener and the verb ("no files wait for a
+    // decision" is not a wait, retro challenger 22/11/2026); with a separator each part is judged alone ("not clear which
+    // version, waiting for a decision" and "2 files not filed: waiting for a decision" are waits, 28/11/2026). what stays
+    // the whole clause.
+    const t = scrubPii(seg.replace(WAIT_INVISIBLE, '').trim());
     if (!t || out.length >= WAIT_MAX) return;
-    let probe = t;
-    if (/^(?:0|\u05d0\u05d9\u05df|\u05dc\u05d0)(?:\s|$)/.test(t)) {
-      const sep = t.search(/[,:\u05be]|\s[-\u2013\u2014]\s/);
-      if (sep < 0) return;
-      probe = t.slice(sep + 1);
-    }
-    if (!waitParse(probe).some((w) => w.to === 'michael')) return;
+    if (!waitPartMichael(t)) return;
     const what = t.slice(0, 160);
     out.push({ to: 'michael', what, key: 'michael:' + what.replace(/\s+/g, ' ').slice(0, 60) });
   });
