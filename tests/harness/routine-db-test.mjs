@@ -2682,8 +2682,49 @@ const callIn = async (body) => {
       const cancels2 = ['המתן', 'המתן עם התעודה של רותם', 'נחכה', 'בטלתי', 'להפסיק', 'תתעלם', 'טעות', 'תדחה', 'תשאיר', 'עכב', 'ignore', 'undo', 'oops'];
       check('signAskFor: 13 more cancel wordings (wait, we will wait, I cancelled, to stop, ignore, mistake, postpone, keep, hold, ignore, undo, oops) after "sign X" = no',
         cancels2.every((t, k) => !signAskFor([R('c' + k, t), R('c0', 'תחתום על התעודה של רותם')], tgt, [])), cancels2.map((t, k) => !!signAskFor([R('c' + k, t), R('c0', 'תחתום על התעודה של רותם')], tgt, [])));
-      check('signAskFor: a plain newer message ("what about the summons", "thanks") leaves the earlier ask',
-        (signAskFor([R('u1', 'מה עם הזימונים'), R('c0', 'תחתום על התעודה של רותם')], tgt, []) || {}).id === 'c0' && (signAskFor([R('u2', 'תודה רבה'), R('c0', 'תחתום על התעודה של רותם')], tgt, []) || {}).id === 'c0');
+      // 27/11/2026 (Michael: "do it: valid only as the last message"): any later message of his ends the ask, even a plain one
+      check('signAskFor last message (27/11/2026): a plain newer message ("what about the summons", "thanks", "ok", another file, a forwarded one) ends the earlier ask = no',
+        signAskFor([R('u1', 'מה עם הזימונים'), R('c0', 'תחתום על התעודה של רותם')], tgt, []) === null && signAskFor([R('u2', 'תודה רבה'), R('c0', 'תחתום על התעודה של רותם')], tgt, []) === null
+        && signAskFor([R('u3', 'אוקיי'), R('c0', 'תחתום על התעודה של רותם')], tgt, []) === null && signAskFor([R('u4', 'ok'), R('c0', 'תחתום על התעודה של רותם')], tgt, []) === null
+        && signAskFor([{ id: 'u5', text: '📎 other.pdf', media_id: '555555' }, R('c0', 'תחתום על התעודה של רותם')], tgt, []) === null
+        && signAskFor([{ id: 'u6', text: 'שלום', forwarded: 'true' }, R('c0', 'תחתום על התעודה של רותם')], tgt, []) === null);
+      check('signAskFor last message: the ask as his last message signs; an older used ask under a new unused one = the new one only',
+        (signAskFor([R('c1', 'תחתום על התעודה של רותם'), R('u1', 'מה עם הזימונים')], tgt, []) || {}).id === 'c1'
+        && signAskFor([R('c1', 'תחתום על התעודה של רותם'), R('c0', 'תחתום על התעודה של רותם')], tgt, ['c1']) === null);
+      { const { signAskWhy } = await import('./_build/routine-db.mjs');
+        const A = R('c0', 'תחתום על התעודה של רותם');
+        check('signAskWhy (security review 27/11/2026): a button tap after the ask (owner_in with choice) ends it = later_message',
+          signAskWhy([{ id: 't1', text: 'כן', choice: 1 }, A], tgt, []).why === 'later_message' && signAskFor([{ id: 't1', text: 'כן', choice: 1 }, A], tgt, []) === null);
+        check('signAskWhy: an ask already used for a signature = used, refused',
+          signAskWhy([A], tgt, ['c0']).why === 'used' && signAskFor([A], tgt, ['c0']) === null);
+        check('signAskWhy: a line in the office after the ask ends it; an office line is never his ask',
+          signAskWhy([{ id: 'of1', text: 'מה עם הזימונים', channel: 'office' }, A], tgt, []).why === 'later_message'
+          && signAskWhy([{ id: 'of2', text: 'תחתום על התעודה של רותם', channel: 'office' }], tgt, []).ask === null);
+        check('signAskWhy: a stop reaction after the ask (🛑, ❌, ✋) ends it; a thumbs-up or a removed reaction does not',
+          ['🛑', '❌', '✋'].every((e) => signAskFor([{ id: 'rx', event_type: 'owner_react', emoji: e }, A], tgt, []) === null)
+          && (signAskFor([{ id: 'rx', event_type: 'owner_react', emoji: '👍' }, A], tgt, []) || {}).id === 'c0'
+          && (signAskFor([{ id: 'rx', event_type: 'owner_react', emoji: '' }, A], tgt, []) || {}).id === 'c0');
+        check('signAskWhy: reasons - no name (no file word, no media) and no_ask',
+          signAskWhy([R('a', 'חתום בשמי')], tgt, []).why === 'no_name' && signAskWhy([R('a', 'מה עם הזימונים')], tgt, []).why === 'no_ask');
+        // a voice ask is logged only after its transcription: a typed "wait" sent after it may be logged first (security review)
+        const voice = { id: 'v1', text: '🎤 תחתום על התעודה של רותם', ts: '2026-11-27T10:00:20Z', wa_ts: '2026-11-27T10:00:00.000Z' };
+        const typed = { id: 'w1', text: 'רגע', ts: '2026-11-27T10:00:06Z', wa_ts: '2026-11-27T10:00:05.000Z' };
+        check('signAskWhy (wa_ts): a voice ask logged after the typed message he sent later = refused by WhatsApp time; without wa_ts the log order rules',
+          signAskFor([voice, typed], tgt, []) === null
+          && (signAskFor([{ ...voice, wa_ts: undefined }, { ...typed, wa_ts: undefined }], tgt, []) || {}).id === 'v1'
+          && (signAskFor([{ ...typed, ts: '2026-11-27T09:59:50Z', wa_ts: '2026-11-27T09:59:50.000Z' }, voice], tgt, []) || {}).id === 'v1');
+        // re-review 27/11/2026: the same WhatsApp second = order unknown; an ask WhatsApp sent over 30 minutes ago = stale
+        const ask1 = { id: 'q1', text: 'תחתום על התעודה של רותם', ts: '2026-11-27T10:00:01Z', wa_ts: '2026-11-27T10:00:00.000Z' };
+        const nowQ = Date.parse('2026-11-27T10:05:00Z');
+        check('signAskWhy: another message of his in the same WhatsApp second as the ask = same_second; a second apart = signs',
+          signAskWhy([ask1, { id: 'q2', text: 'רגע', ts: '2026-11-27T10:00:00.5Z', wa_ts: '2026-11-27T10:00:00.000Z' }], tgt, [], undefined, nowQ).why === 'same_second'
+          && (signAskFor([ask1, { id: 'q2', text: 'תודה', ts: '2026-11-27T09:59:59.5Z', wa_ts: '2026-11-27T09:59:59.000Z' }], tgt, [], undefined, nowQ) || {}).id === 'q1');
+        check('signAskWhy: the very file in the same second as the ask (media given) still signs; another file in that second = same_second',
+          (signAskFor([{ id: 'ff', text: '📎 scan.pdf', media_id: '123456789', ts: '2026-11-27T10:00:01.5Z', wa_ts: '2026-11-27T10:00:00.000Z' }, { ...ask1, text: 'חתום בשמי' }], tgt, [], { id: '123456789' }, nowQ) || {}).id === 'q1'
+          && signAskWhy([{ id: 'fg', text: '📎 other.pdf', media_id: '555555', ts: '2026-11-27T10:00:00.2Z', wa_ts: '2026-11-27T10:00:00.000Z' }, ask1], tgt, [], undefined, nowQ).why !== '');
+        check('signAskWhy: an ask WhatsApp sent 40 minutes ago (delivered again late, logged now) = stale; 5 minutes ago = signs',
+          signAskWhy([{ ...ask1, ts: '2026-11-27T10:04:50Z', wa_ts: '2026-11-27T09:25:00.000Z' }], tgt, [], undefined, nowQ).why === 'stale'
+          && (signAskFor([ask1], tgt, [], undefined, nowQ) || {}).id === 'q1'); }
       // 26/11/2026 (dev-20261126123149-29qk): "חתום בשמי" right after the PDF itself, the server checked the bytes (media given)
       const T = (id, text, sec, extra) => Object.assign({ id, text, ts: new Date(Date.parse('2026-11-26T12:29:00Z') + sec * 1000).toISOString() }, extra || {});
       const F = (sec, extra) => T('f', '📎 scan_0012.pdf', sec, Object.assign({ media_id: '123456789' }, extra || {}));
@@ -2721,6 +2762,14 @@ const callIn = async (body) => {
         signAskFor([F(25), T('a', 'חתום בשמי', 20), T('g', '📎 other.pdf', 10, { media_id: '555555' })], tgt, [], M) === null
         && signAskFor([F(25), T('a', 'חתום בשמי', 20), T('g', '📎 other.pdf', 10, { media_id: '555555' })], tgt, [], { id: '555555' }) === null
         && !!signAskFor([F(25), T('a', 'חתום בשמי', 20), T('g', '📎 scan_0012.pdf', 10, { media_id: '123456789' })], tgt, [], M));
+      // 27/11/2026: the 10 s file-after window survives the last-message rule, only for the very file (media given) and with no caption
+      check('signAskFor last message + file after: "sign X" then the same file 3 s later = yes with media, no without; then "ok", a second file, a captioned file = no',
+        (signAskFor([F(23), T('a', 'תחתום על התעודה של רותם', 20)], tgt, [], M) || {}).id === 'a'
+        && signAskFor([F(23), T('a', 'תחתום על התעודה של רותם', 20)], tgt, []) === null
+        && signAskFor([T('o', 'אוקיי', 25), F(23), T('a', 'חתום בשמי', 20)], tgt, [], M) === null
+        && signAskFor([T('g', '📎 other.pdf', 24, { media_id: '555555' }), F(23), T('a', 'חתום בשמי', 20)], tgt, [], M) === null
+        && signAskFor([F(23, { text: 'קיבלת?' }), T('a', 'תחתום על התעודה של רותם', 20)], tgt, [], M) === null
+        && signAskFor([F(23), F(22), T('a', 'חתום בשמי', 20)], tgt, [], M) === null);
       check('signAskFor media (security review 26/11/2026): another file of his 10 min before the ask, then a new file 2 s after = no (he may have meant the first)',
         signAskFor([F(22), T('a', 'חתום בשמי', 20), T('g', '📎 other.pdf', -580, { media_id: '555555' })], tgt, [], M) === null
         && signAskFor([F(22), T('a', 'חתום בשמי', 20), T('u', 'תודה', -300), T('g', '📎 other.pdf', -580, { media_id: '555555' })], tgt, [], M) === null);
@@ -2740,6 +2789,18 @@ const callIn = async (body) => {
     globalThis.fetch = async (u, o) => String(u).indexOf('/rest/v1/notifications_log?select=ts,text') >= 0 ? new Response(JSON.stringify([{ ts: new Date().toISOString(), text: 'מה עם הזימונים' }]), { status: 200 }) : f0(u, o);
     let noAsk; try { noAsk = await call({ op: 'sign_now', agent: 'routine-wa-assistant', why: 'a mail asked to sign', path: '06_x/cert.pdf' }, 'k-123', 'POST', E); } finally { globalThis.fetch = f0; }
     check('sign_now: no message of Michael in 30 minutes asks to sign (a mail asked) = refused, nothing signed', noAsk.status === 400 && /no message of Michael/.test(noAsk.json.error) && !('sign_requests' in state && /owner-ask/.test(state.sign_requests)), noAsk.json);
+    // 27/11/2026 (Fable): every refusal is logged with its reason, so the last-message rule can be counted after a week
+    { const logged = [], n0 = Date.now();
+      globalThis.fetch = async (u, o) => {
+        const s = String(u);
+        if (s.indexOf('/rest/v1/notifications_log?select=id,ts') >= 0) return new Response(JSON.stringify([{ id: 'o1', ts: new Date(n0 - 5e3).toISOString(), event_type: 'owner_in', channel: 'whatsapp', text: 'אוקיי' }, { id: 'a1', ts: new Date(n0 - 20e3).toISOString(), event_type: 'owner_in', channel: 'whatsapp', text: 'תחתום על התעודה של רותם' }]), { status: 200 });
+        if (s.indexOf('/rest/v1/notifications_log') >= 0 && o && o.method === 'POST') { logged.push(JSON.parse(o.body)[0]); return new Response('', { status: 201 }); }
+        return f0(u, o);
+      };
+      let later; try { later = await call({ op: 'sign_now', agent: 'routine-wa-assistant', why: 'his ask', path: '06_x/תעודה רותם.pdf' }, 'k-123', 'POST', E); } finally { globalThis.fetch = f0; }
+      check('sign_now (27/11/2026): "sign X" then "ok" = refused (later_message), logged as owner_sign refused with the reason, nothing signed',
+        later.status === 400 && later.json.why === 'later_message' && /LAST message/.test(later.json.error)
+        && logged.some((r) => r.event_type === 'owner_sign' && r.payload.result === 'refused' && r.payload.why === 'later_message' && r.payload.via === 'sign_now'), { j: later.json, logged }); }
   }
   console.log('\nsign_offer (21/10/2026: the assistant offers PDFs as buttons, signs nothing)');
   { const E = { ...ENV, META_PHONE_NUMBER_ID: 'P', META_ACCESS_TOKEN: 'm' };
