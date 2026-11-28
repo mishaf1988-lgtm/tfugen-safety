@@ -33,6 +33,8 @@
 - `.claude/skills/tfugen-db/references/lessons.md`: לקחי המסד וה-Routines (הצלבת מידע, Excel עם סיכום, טריגר הנאמנים, תיוק).
 - `.claude/skills/tfugen-dev/references/lessons.md`: לקחי הפיתוח, כולל מסמכי מפעל, טיוטות, זרימות, שעון ישראל.
 - `.claude/skills/tfugen-ncr-writing/SKILL.md`: איך כותבים NCR שאפשר לעבוד איתו, ומה בונים ב-prompt של ה-AI.
+- `.claude/skills/tfugen-incident-investigation/SKILL.md`: חקירת אירוע באפליקציה: 5 למה, סיבת שורש, CAPA, שער הסגירה, ומה חסר (28/11/2026).
+- `.claude/skills/tfugen-hebrew-docs/SKILL.md`: מלכודות עברית ב-Word, PDF ומצגות, והכלים לכל אחת (28/11/2026).
 - `project-files/assistant/accidents.md`: נוהל תאונת עבודה מקצה לקצה: תיקייה, תחקיר, 250, קובץ מנוהל, `inc`, `thz_add`, מעקב.
 - `project-files/assistant/committee.md`: נוהל ועדת הבטיחות: איסוף, הצלבות, מצגת, פרוטוקול, שמירה, והתאמה לענן.
 - `project-files/routine-factory-trends.md`: מגמות חודשיות ומדד מקדים מחמש הטבלאות, ותיק המקרים.
