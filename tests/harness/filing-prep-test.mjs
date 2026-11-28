@@ -146,6 +146,13 @@ console.log('\n6. through the server: scans, Word, photos, a failed file');
   delete ENV.AI;
   const bx = {}; (rx.j.files || []).forEach((f) => { bx[f.name] = f; });
   check('an Excel file with the binding: its table as text through toMarkdown, name file.xlsx with the xlsx type, codes found', bx[n.xlsx] && /Hoist H-555/.test(bx[n.xlsx].text) && !/\|/.test(bx[n.xlsx].text) && bx[n.xlsx].tokens.indexOf('H-555') >= 0 && sent.length === 1 && sent[0].name === 'file.xlsx' && /spreadsheetml/.test(sent[0].blob.type), { f: bx[n.xlsx], sent: sent.map((s) => s.name) });
+  // 27/11/2026 (DECISIONS 17/11/2026): a .txt that ocrOne marked "[לא מאומת: ...]" gives verified:false; a plain .txt and a text layer do not
+  content[OD_ROOT + OD_OCR_DIR + '/2026-11-20 0901 - scan.txt'] = '[לא מאומת: שנה 2029 בעתיד]\n--- עמוד 1 ---\nMinistry letter 2029';
+  const ru = await call({ op: 'filing_prep', agent: 'routine-mail-filing' });
+  delete content[OD_ROOT + OD_OCR_DIR + '/2026-11-20 0901 - scan.txt'];
+  const bu = {}; (ru.j.files || []).forEach((f) => { bu[f.name] = f; });
+  check('a .txt marked unverified: verified:false with its text; a plain .txt has no verified flag (27/11/2026)',
+    bu[n.scan] && bu[n.scan].verified === false && /Ministry/.test(bu[n.scan].text) && bu[n.ocr] && bu[n.ocr].verified === undefined, { u: bu[n.scan], o: bu[n.ocr] });
   sbFail = true;
   const r3 = await call({ op: 'filing_prep', agent: 'routine-mail-filing' });
   check('a table that cannot be read: partial named, a note not to say "not in the register"', r3.j.ok === true && JSON.stringify(r3.j.partial) === JSON.stringify(['equip_inspections', 'docs']) && /could not be read/.test(r3.j.note), { p: r3.j.partial, note: r3.j.note });

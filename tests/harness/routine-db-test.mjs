@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 // the Routines' way to the database without the Supabase connector. One key, a fixed
 // list of tables, medical tables expiry only, trustee reports without text or names,
 // four server_state keys to write, nothing deleted.
-import { pdfHasFont } from './_build/_ocr.mjs';
+import { pdfHasFont, ocrCheck, ocrMark, OCR_UNVERIFIED } from './_build/_ocr.mjs';
 import fs from 'fs';
 import { SITE } from './_build/_shared.mjs';
 import { secondLog, secondSendGate, secondValve, SECOND_UNVERIFIED, SECOND_GATE_MAX, SECOND_GATE_MS, SECOND_GATE_KEY, secondCheckGate, languageGate, incAddRow, thzAddRow, THZ_SRC_FROM, THZ_TRAINING_RE, ilInstant, incFilePrefix, dataGaps, equipDups, GAP_INC_DAYS, delRefOf, delAskText, DEL_ASK_KEY, DEL_TABLES, ccittPng, calInviteRefOf, calInviteAskText, calInviteRuns, CAL_INVITE_DATES_MAX, CAL_INVITE_FIELDS, asksApiCredit, triageGate, mentionsQuoteValidity, cardQuery, cardLines, cardBefore, CARD_BEFORE_N, CARD_INV_N, linkRow, autoLinkRow, LINK_RELS, calMoveRefOf, calMoveAskText, CAL_MOVE_ASK_KEY, CAL_SERVER_ONLY, CAL_INVITE_ASK_KEY, calInviteCheck, OD_CAL_INVITE, CAL_INVITED_KEY, devEta, TOUR_CLOSE_KEY, tourRefOf, OD_AUTO, OD_AUTO_DIRS, overlapReply, OVERLAP_MS, draftTrashCheck, draftTrashHits, draftDoneId, OD_DRAFT_DONE, draftThreadGate, draftVsLastOut, draftSubj, draftMadeLine, draftsArr, scrubPii, agentEntry, agentArchive, leftWaits, quotaMode, agentsPause, PAUSE_KEY, PAUSE_MAX_DAYS, QUOTA_KEY, QUOTA_DRY_UNTIL, DRAFTS_TEXT_KEY, DRAFTS_TEXT_MAX, OD_DRAFT_TRASH, DRAFTS_MADE_KEY, DRAFTS_TRASHED_KEY, draftSentGate, asksOwnerToDelete, asksOwnerToAttach, refusesWithoutFlow, staleRefuses, staleReply, STALE_GAP_MS, asksApprovalNoButtons, devInboxTold, DEV_REF, calMoveCheck, calLogAdd, factsApply, factsFind, FACTS_KEY, nameCheck, nameKnown, hasPassport, incSimilar, incWords, INC_SIM_N, OD_CAL_MOVE, CAL_MOVED_KEY, STATE_READ, odDedupeCheck, odDedupeVerdict, OD_TRIGGER_DIRS, sourceUrl, htmlText, skillPath, SKILL_BASE, onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, LIVE_NOTE_MAX, stampAt, AGENT_LOG_MAX, AGENT_LOG_KEEP, trimLog, expiryPatch, clientErrors, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, OD_INV_TOP, addYear, odMkdirCheck, OD_MKDIR_DEPTH, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, OD_DRAFT, MAIL_REQ_ID, draftAttach, odPutPdfCheck, odPdfCheck, OD_PUT_MAX, odArchiveCheck, archiveStampName, OD_ARCHIVE_DIR, equipAddRow, EQUIP_FIT, equipFilePrefix, docsAddRow, docsFilePrefix, DOC_STATES, odExpireCheck, OD_VALID_DIR, OD_EXPIRED_DIR, devInboxAdd, devInboxDone, DEV_INBOX_MAX, POSTMAN_TRIGGER, RELAY_FIRE_GAP_S, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimItem, claimSession, pdfReadCheck, PDF_READ_MAX, waPhoneBody, WA_PHONE_STEPS, ocrTxtCheck, ocrTxtName, taskAddCheck, TASK_ADD_MAX, taskOpenDup, TASK_SOURCES, ocrLines, OD_OCR_DIR, pdfJpegs, pdfDct, ocrOne, pdfCcitt, g4Gray, grayPng, OCR_MODELS, odTrashCheck, OD_LEAD_MARKS, OD_TRASH_EXTRA, OD_TRASH_DIR, OD_REPORTS_DIR, OD_ROOT_BACKUP, odPullCheck, odSwapCheck, OD_DESKTOP, ISO_DRIVE, ISO_SWAP_ROOT, isoSwapRequest, isoUpCheck, OD_ISO_SWAP, ISO_SITE_URL, mailGotCheck, mailGotList, MAIL_GOT_MAX } from './_build/routine-db.mjs';
@@ -271,6 +271,54 @@ const callIn = async (body) => {
         && pdfHasFont(new Uint8Array(Buffer.from('<< /Font << /F1 3 0 R >> >>'))) && !pdfHasFont(new Uint8Array(Buffer.from('<< /XObject << /Im1 3 0 R >> >>')))
         && !pdfHasFont(new Uint8Array(Buffer.from('<< /FontDescriptor 5 0 R /FontFile2 6 0 R /FontName /X >>'))) && pdfHasFont(new Uint8Array(Buffer.from('/Font/F1'))),
         { t1, t2, t3 });
+      // 27/11/2026 (DECISIONS 17/11/2026 "OCR invents documents", Michael: "do it: written with 'unverified'"): 3 texts that
+      // belong to their file and 3 that do not (an invented ministry letter, the year 2029, unrelated text)
+      const NOW = Date.UTC(2026, 10, 27);
+      const pass = [
+        ['תסקירים/תסקיר מלגזה 4417.pdf', '--- עמוד 1 ---\nבודק מוסמך\nמספר סידורי 4417\nכשיר', 'number'],
+        ['_נכנס מהמייל/2026-11-20 0901 - scan.pdf', 'לכבוד תפוגן תעשיות בע"מ\nטל\' 052-2029123\nהנדון: הזמנה', 'company'],
+        ['היתרים/היתר עבודה בגובה.pdf', 'היתר לעבודה בגובה\nשם העובד: ____\nחתימה', 'word'],
+        ['תסקירים/תסקיר מלגזה 4417.pdf', 'תסקיר מלגזה 4417\nבתוקף עד 15/06/2029', 'number'],
+        ['תסקירים/תסקיר מלגזה 4417.pdf', 'תסקיר מלגזה 4417\nבתוקף עד:\n15/06/2029', 'number'],
+      ];
+      const fail = [
+        ['היתרים/טופס 4+5.pdf', 'משרד החקלאות ופיתוח הכפר\nהנדון: בקשה לרישיון ייבוא\nתאריך 12/03/2025', /מספר או מילה/],
+        ['תסקירים/תסקיר מלגזה 4417.pdf', 'תסקיר מלגזה 4417\nבתוקף עד 2034', /2034/],
+        ['תסקירים/תסקיר מלגזה 4417.pdf', 'תסקיר מלגזה 4417\nנבדק בשנת 2029', /2029/],
+        ['היתרים/טופס 4+5.pdf', 'משרד הפנים\nבתוקף סמכותי לפי הסעיפים הבאים:\n\nאושר בשנת 2029', /2029/],
+        ['_נכנס מהמייל/2026-11-20 0902 - אישור בדיקת מנוף.pdf', 'Chocolate cake: 3 eggs, 200 g flour, bake 40 minutes', /מספר או מילה/],
+      ];
+      const pr = pass.map((p) => ocrCheck(p[1], p[0], NOW)), fr = fail.map((p) => ocrCheck(p[1], p[0], NOW));
+      check('ocrCheck: a number from the name, "תפוגן" (a phone 052-2029... is no year), a word of the form name = verified; an invented ministry letter, unrelated text = not, with the reason; a year up to +6 on or under a validity word ("בתוקף עד 15/06/2029") passes, 2034 beside it, 2029 with no validity word (even with the right number) and a validity word two lines away fail (Fable 27/11/2026); a date from the name in another format counts (27/11/2026)',
+        pr.every((r, i) => r.ok && r.by === pass[i][2]) && fr.every((r, i) => !r.ok && fail[i][2].test(r.reason))
+        && ocrCheck('נבדק ב-24/10/26', 'בדיקת OCR - 24.10.2026.pdf', NOW).by === 'date'
+        && ocrMark('x').indexOf(OCR_UNVERIFIED) === 0 && OCR_UNVERIFIED === '[לא מאומת', { pr, fr });
+      // through ocrOne: an invented text is still written, with the mark as its first line, and verified:false; a later call
+      // (from 4) keeps one mark, not two; a text about the file has no mark and verified:true
+      const say = (txt) => ({ AI: { run: async () => ({ response: txt }) } });
+      saved.text = undefined;
+      const u1 = await ocrOne(say('משרד הפנים\nשנת 2029'), 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0]);
+      const t1u = saved.text;
+      const u2 = await ocrOne(say('סוף המכתב'), 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0], 4);
+      const t2u = saved.text;
+      const v1 = await ocrOne(say('תפוגן בע"מ - סריקה'), 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0]);
+      check('ocrOne: an invented text is written with "[לא מאומת: ...]" first and verified:false; the next pages keep one mark; a text about the file = verified:true, no mark (27/11/2026)',
+        u1.ok && u1.verified === false && /2029/.test(u1.unverified) && t1u.indexOf(OCR_UNVERIFIED) === 0 && /משרד הפנים/.test(t1u)
+        && u2.ok && u2.verified === false && t2u.split(OCR_UNVERIFIED).length === 2 && t2u.indexOf(OCR_UNVERIFIED) === 0 && /סוף המכתב$/.test(t2u)
+        && v1.ok && v1.verified === true && saved.text.indexOf(OCR_UNVERIFIED) < 0, { u1, u2, v1, t1u, t2u });
+      // security review 27/11/2026 (1): each call is checked on its own pages: a real first part does not certify an invented
+      // next one, and a real next part does not remove the mark of invented earlier pages
+      const u4 = await ocrOne(say('משרד החקלאות\nהנדון: רישיון ייבוא'), 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0], 4);
+      const t4u = saved.text;
+      await ocrOne(say('משרד הפנים\nשנת 2029'), 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0]);
+      const v3 = await ocrOne(say('תפוגן בע"מ - המשך'), 't', 'x/scan.pdf', 'scan.pdf', OCR_MODELS[0], 4);
+      check('ocrOne per call: real pages 1-3 + invented page 4 = marked; invented pages 1-3 + real page 4 = the mark stays, one mark, verified:false (security review 27/11/2026)',
+        u4.verified === false && t4u.indexOf(OCR_UNVERIFIED) === 0 && /תפוגן/.test(t4u)
+        && v3.verified === false && /earlier pages/.test(v3.unverified) && saved.text.indexOf(OCR_UNVERIFIED) === 0 && saved.text.split(OCR_UNVERIFIED).length === 2 && /2029/.test(saved.text.split('\n')[0]), { u4, v3, t4u, t: saved.text });
+      // (2): a word of the name counts only whole, 4+ letters, with one Hebrew prefix letter at most
+      check('ocrCheck words: "the" of a name is no match, "ארון" is not found inside "הארונות", "בארון" (prefix) counts (security review 27/11/2026)',
+        !ocrCheck('the weather is nice there', 'x/the forklift report.pdf', NOW).ok && !ocrCheck('הארונות במחסן', 'דוחות/ארון.pdf', NOW).ok
+        && ocrCheck('נבדק בארון החשמל', 'דוחות/ארון.pdf', NOW).by === 'word' && ocrCheck('the forklift was checked', 'x/the forklift report.pdf', NOW).by === 'word');
     } finally { globalThis.fetch = real; }
   })();
   // 26/10/2026 (dev request: a copier scan, "no scanned page image"): black and white pages are CCITT Group 4.

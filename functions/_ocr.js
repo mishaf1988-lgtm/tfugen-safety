@@ -2,6 +2,7 @@
 // wa-morning, which reads each new PDF in the mail inbox on its own (Michael in the questionnaire: "do it: automatic").
 // Workers AI (free quota, the scan stays inside our Cloudflare account); the text goes to _\u05d8\u05e7\u05e1\u05d8 \u05e1\u05e8\u05d9\u05e7\u05d5\u05ea/<name>.txt
 // and Claude reads it with the Microsoft 365 connector.
+import { SITE } from './_site.js';
 export const OD_OCR_DIR = '_\u05d8\u05e7\u05e1\u05d8 \u05e1\u05e8\u05d9\u05e7\u05d5\u05ea';
 // Workers AI fallback (24/10/2026, no Azure subscription; Michael in the questionnaire: "do it: test Workers AI"):
 // a scanned PDF holds each page as a JPEG stream (DCTDecode); the first OCR_PAGES of them go to a vision model.
@@ -149,6 +150,61 @@ export function pdfHasFont(buf) {
   }
   return false;
 }
+// Is the vision model's text about this file at all? (27/11/2026, DECISIONS 17/11/2026, Michael: "do it: written with 'unverified'").
+// The Workers AI vision model sometimes returns a whole invented document (another ministry's letter, the year 2029) instead
+// of the scan. Pure. The text passes with at least one of: a date or a number (3+ digits) from the file name or its folders,
+// the factory's name (SITE: Hebrew, brand or English company word), or a word (3+ letters, not a generic one) of the file name or its folders; and fails on any
+// year after next year, except (Fable's advice, 27/11/2026) a year up to 6 years ahead (the app takes validity up to 6 years) on a line, or under
+// a line, with a validity word (OCR_VALID_RE): "valid until 15/06/2029" passes. Per line, not per document: an invented letter says "the following"
+// or "in force" far from its year. A year more than 6 ahead always fails. A text that fails is still written, with ocrMark as its first line (it starts with OCR_UNVERIFIED):
+// it is no basis for a decision alone. Only the vision-model path (ocrOne); Azure Read does not invent text.
+export const OCR_UNVERIFIED = '[\u05dc\u05d0 \u05de\u05d0\u05d5\u05de\u05ea';
+const OCR_GENERIC = new Set(['scan', 'scanned', 'pdf', 'doc', 'img', 'image', 'file', 'copy', 'page', '\u05e1\u05e8\u05d9\u05e7\u05d4', '\u05e1\u05e8\u05d5\u05e7', '\u05e1\u05e8\u05d5\u05e7\u05d4', '\u05de\u05e1\u05de\u05da', '\u05e7\u05d5\u05d1\u05e5', '\u05e2\u05d5\u05ea\u05e7', '\u05e0\u05e9\u05dc\u05d7', '\u05d8\u05d5\u05e4\u05e1', '\u05d3\u05d5\u05d7', '\u05de\u05db\u05ea\u05d1', '\u05e0\u05d9\u05d4\u05d5\u05dc', '\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea', '\u05e0\u05db\u05e0\u05e1', '\u05de\u05d4\u05de\u05d9\u05d9\u05dc', '\u05e2\u05de\u05d5\u05d3', '\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea', '\u05e7\u05d5\u05d3\u05de\u05d5\u05ea', '\u05d8\u05e7\u05e1\u05d8', '\u05e1\u05e8\u05d9\u05e7\u05d5\u05ea']);
+const OCR_DATE_RE = /(\d{4})-(\d{1,2})-(\d{1,2})|(\d{1,2})[./-](\d{1,2})[./-](\d{4}|\d{2})(?!\d)/g;
+function ocrDates(s) {
+  const out = []; let m; OCR_DATE_RE.lastIndex = 0;
+  while ((m = OCR_DATE_RE.exec(s))) out.push(m[1] ? (+m[3]) + '/' + (+m[2]) + '/' + m[1] : (+m[4]) + '/' + (+m[5]) + '/' + m[6]);
+  return out;
+}
+const ocrCompany = () => [SITE.shortName, SITE.brand, String(SITE.companyEn || '').split(' ')[0]].filter((w) => w && w.length >= 3).map((w) => w.toLowerCase());
+// a validity word (Hebrew: validity, expiry, next) and its English ones; OCR_VALID_YEARS as routine-db's "at most 6 years"
+export const OCR_VALID_RE = /\u05ea\u05d5\u05e7\u05e3|\u05ea\u05e4\u05d5\u05d2\u05d4|\u05d4\u05d1\u05d0|\b(valid|expir\w*|next|due)\b/i, OCR_VALID_YEARS = 6;
+const ocrLetter = (c) => /[a-z\u05d0-\u05ea]/.test(c || '');
+export function ocrHasWord(low, w) {
+  for (let i = low.indexOf(w); i >= 0; i = low.indexOf(w, i + 1)) {
+    if (ocrLetter(low[i + w.length])) continue;
+    const b = low[i - 1];
+    if (!ocrLetter(b) || ('\u05d5\u05d1\u05db\u05dc\u05de\u05e9\u05d4'.indexOf(b) >= 0 && !ocrLetter(low[i - 2]))) return true;
+  }
+  return false;
+}
+export function ocrCheck(text, rel, nowMs) {
+  const body = String(text || '').split('\n').filter((l) => !/^--- .* ---$/.test(l.trim()) && l.trim() !== '(\u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0)').join('\n');
+  const cur = new Date(nowMs === undefined ? Date.now() : nowMs).getUTCFullYear(), next = cur + 1;
+  // a year alone, or the year of a date; not 4 digits inside a phone number (052-2029123). Line by line, for the validity exemption.
+  const lines = body.split('\n'), years = [];
+  lines.forEach((l, i) => {
+    const ys = (l.match(/(?:^|[^\d-])(?:19|20)\d{2}(?![\d-])/g) || []).map((y) => Number(y.replace(/\D/g, '')))
+      .concat(ocrDates(l).map((d) => d.split('/')[2]).filter((y) => y.length === 4).map(Number));
+    const valid = OCR_VALID_RE.test(l) || (i > 0 && OCR_VALID_RE.test(lines[i - 1]));
+    ys.forEach((y) => { if (y > next && !(y <= cur + OCR_VALID_YEARS && valid)) years.push(y); });
+  });
+  if (years.length) return { ok: false, reason: '\u05e9\u05e0\u05d4 ' + Math.max.apply(null, years) + ' \u05d1\u05e2\u05ea\u05d9\u05d3' };
+  const low = body.toLowerCase();
+  if (ocrCompany().some((w) => low.indexOf(w) >= 0)) return { ok: true, by: 'company' };
+  const name = String(rel || '').replace(/\.pdf$/i, '');
+  const yy = (d) => d.replace(/\/\d*(\d\d)$/, '/$1'); // 24.10.2026 = 24/10/26
+  const td = new Set(ocrDates(body).map(yy));
+  if (ocrDates(name).some((d) => td.has(yy(d)))) return { ok: true, by: 'date' };
+  const nums = (name.replace(OCR_DATE_RE, ' ').match(/\d{3,}/g) || []).filter((n) => !/^(19|20)\d{2}$/.test(n));
+  const bodyNums = new Set(body.match(/\d{3,}/g) || []);
+  if (nums.some((n) => bodyNums.has(n))) return { ok: true, by: 'number' };
+  // a whole word of 4+ letters (security review 27/11/2026: "the" from a name was found inside almost any text), one Hebrew prefix letter allowed
+  const words = (name.toLowerCase().match(/[a-z\u05d0-\u05ea]{4,}/g) || []).filter((w) => !OCR_GENERIC.has(w));
+  if (words.some((w) => ocrHasWord(low, w))) return { ok: true, by: 'word' };
+  return { ok: false, reason: '\u05d0\u05d9\u05df \u05d1\u05d8\u05e7\u05e1\u05d8 \u05ea\u05d0\u05e8\u05d9\u05da, \u05de\u05e1\u05e4\u05e8 \u05d0\u05d5 \u05de\u05d9\u05dc\u05d4 \u05de\u05e9\u05dd \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d5\u05dc\u05d0 "' + SITE.shortName + '"' };
+}
+export function ocrMark(reason) { return OCR_UNVERIFIED + ': ' + reason + '. \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d1\u05e2\u05d9\u05df \u05dc\u05e4\u05e0\u05d9 \u05d4\u05d7\u05dc\u05d8\u05d4]'; }
 export async function ocrOne(env, token, rel, name, model, from, txtName, skipText) {
   from = Math.max(1, Number(from) || 1);
   const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
@@ -169,19 +225,23 @@ export async function ocrOne(env, token, rel, name, model, from, txtName, skipTe
   const pages = [];
   try { for (let i = from - 1; i < last; i++) pages.push(ccitt ? await ccittPng(ccitt[i]) : all[i]); } catch (e) { return { name, ok: false, error: String((e && e.message) || e).slice(0, 120) }; }
   const txt = txtName || (name.replace(/\.pdf$/i, '') + '.txt'), url = G + enc(OCR_ROOT + OD_OCR_DIR + '/' + txt) + ':/content';
-  let before = '';
+  let before = '', prevMark = '';
   if (from > 1) { const o = await fetch(url, { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(20000) }).catch(() => null);
-    if (o && o.ok) before = (await o.text()).trim() + '\n\n';
+    if (o && o.ok) before = (await o.text()).trim().replace(/^\[[^\n]*\]\n*/, (l) => { if (l.indexOf(OCR_UNVERIFIED) !== 0) return l; prevMark = l.trim(); return ''; }) + '\n\n'; // the earlier mark stays (below)
     else if (!o || o.status !== 404) return { name, ok: false, retry: true, next: from, error: 'could not read the earlier pages of the txt (' + (o ? o.status : 'no answer') + '): not overwritten, try again' }; } // 28/10/2026 retro: a failed read must not replace pages 1-3 with 4-6
   // the earlier txt is read before any AI call: a read that keeps failing must not cost paid calls on every retry (28/10/2026 security review)
   const parts = []; let readAny = false; // a page with real text; the headers alone are not text (28/10/2026 retro)
   for (let i = 0; i < pages.length; i++) { const t1 = pages[i] ? String(await aiOcr(env, model, pages[i], mime) || '').trim() : ''; if (t1) readAny = true; parts.push('--- \u05e2\u05de\u05d5\u05d3 ' + (from + i) + ' ---\n' + (t1 || '(\u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0)')); }
   // nothing is written when no page was read (an empty read must not replace an earlier txt). In the middle of a PDF (a blank back page) it is not a failure: `next` lets the chain go on (28/10/2026 retro)
   if (!readAny) return from > 1 || last < total ? { name, ok: true, skipped: true, pages: pages.length, of: total, next: last < total ? last + 1 : undefined, engine: model, note: 'no text in pages ' + from + '-' + last + ', nothing written' } : { name, ok: false, pages: pages.length, of: total, engine: model, error: 'no text found' };
-  const text = (before + parts.join('\n\n')).trim();
+  const read = (before + parts.join('\n\n')).trim();
+  // 27/11/2026: an invented text is written too, but its first line says it is not verified. Each call checks only its own pages
+  // (security review: a real page must not certify an invented one), and a mark from earlier pages stays to the end of the chain.
+  const chk = ocrCheck(parts.join('\n\n'), rel), verified = chk.ok && !prevMark;
+  const text = verified ? read : (prevMark || ocrMark(chk.reason)) + '\n' + read;
   const up = await fetch(url + '?@microsoft.graph.conflictBehavior=replace', { method: 'PUT', signal: AbortSignal.timeout(20000),
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'text/plain; charset=utf-8' }, body: text });
-  return { name, ok: up.ok && readAny, txt: OD_OCR_DIR + '/' + txt, chars: text.length, pages: pages.length, of: total, next: last < total ? last + 1 : undefined, engine: model, error: up.ok ? (readAny ? undefined : 'no text found') : 'write ' + up.status };
+  return { name, ok: up.ok && readAny, verified, unverified: verified ? undefined : (chk.ok ? 'earlier pages: ' + prevMark : chk.reason), txt: OD_OCR_DIR + '/' + txt, chars: text.length, pages: pages.length, of: total, next: last < total ? last + 1 : undefined, engine: model, error: up.ok ? (readAny ? undefined : 'no text found') : 'write ' + up.status };
 }
 // 26/10/2026 (dev request: a 5-page scan from the plant's copier, "no scanned page image in this PDF"): black and white
 // scanners keep each page as a CCITT Group 4 fax image (/CCITTFaxDecode, /K -1), not a JPEG. It is decoded here, made
