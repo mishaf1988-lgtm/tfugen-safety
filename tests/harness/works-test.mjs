@@ -542,6 +542,28 @@ console.log('\n11b. reminder and approval (05/11/2026, Michael: "a reminder that
   check('the ask texts: keyboard characters only', !/[–—…־“”]/.test(askText(FRI, { to: ['a@tapugan.co.il'], cc: [] }, 'u')));
   NOW = Date.parse('2026-11-05T08:00:00Z'); resetDb(); }
 
+console.log('\n11c. the clock on Friday (Israel): each path held for Sunday, stamped, once (after PR 3194, waTold)');
+{ const FRI10 = new Date('2026-11-06T08:00:00Z'), LAST = '2026-10-30';
+  const heldN = () => (db.state.weekend_held ? JSON.parse(db.state.weekend_held).length : 0);
+  const only = (k) => ({ accessToken: mailDeps.accessToken, sendMailTo: mailDeps.sendMailTo, due: { mail: () => k === 'mail', remind: () => k === 'remind', open: () => k === 'open' } });
+  const twice = async (k) => { NOW = FRI10.getTime(); const a = await worksTick(ENV, FRI10, only(k)); const n1 = heldN(); NOW += 5 * 60000; const b = await worksTick(ENV, new Date(NOW), only(k)); return { a, b, n1, n2: heldN() }; };
+  // the ask to Michael (reminder mode, Wednesday's path run on a Friday)
+  resetDb(); db.state.works_mail_on = 'true'; db.state.works_mail_to = JSON.stringify({ to: ['alina@tapugan.co.il'], cc: [] });
+  let x = await twice('mail');
+  check('Friday, the ask: wa false (not told), held, works_ask_last stamped, no WhatsApp and no mail', x.a && x.a.ask === true && x.a.wa === false && x.a.held === true && db.state.works_ask_last === FRI && db.wa.length === 0 && !db.mails.length && x.n1 === 1, [x.a, db.state.works_ask_last, db.wa.length, db.mails.length, x.n1]);
+  check('...a second tick adds no line to weekend_held', x.b === null && x.n2 === x.n1, [x.b, x.n1, x.n2]);
+  // the open permits of last Friday (Sunday's path run on a Friday)
+  resetDb(); db.ptw = { ['wk-' + LAST + '-1']: { id: 'wk-' + LAST + '-1', desc: 'ריתוך', con: 'x', s: 'פתוח', safety: '' } };
+  x = await twice('open');
+  check('Friday, the open report: sent false, held, works_open_last stamped, no WhatsApp', x.a && x.a.open === 1 && x.a.sent === false && x.a.held === true && db.state.works_open_last === LAST && db.wa.length === 0 && x.n1 === 1, [x.a, db.state.works_open_last, db.wa.length, x.n1]);
+  check('...a second tick adds no line to weekend_held', x.b === null && x.n2 === x.n1, [x.b, x.n1, x.n2]);
+  // the "nothing came" reminder (Thursday's path run on a Friday)
+  resetDb(); db.state.works_mail_on = 'true'; db.state.works_mail_to = JSON.stringify({ to: ['alina@tapugan.co.il'], cc: [] }); db.state.works_mail_last = FRI;
+  x = await twice('remind');
+  check('Friday, the reminder: sent false, held, works_remind_last stamped, no WhatsApp', x.a && x.a.remind === true && x.a.sent === false && x.a.held === true && db.state.works_remind_last === FRI && db.wa.length === 0 && x.n1 === 1, [x.a, db.state.works_remind_last, db.wa.length, x.n1]);
+  check('...a second tick adds no line to weekend_held', x.b === null && x.n2 === x.n1, [x.b, x.n1, x.n2]);
+  NOW = Date.parse('2026-11-05T08:00:00Z'); resetDb(); }
+
 console.log('\n12. the texts');
 console.log('--- MAIL subject: ' + MAIL_SUBJECT(FRI));
 console.log(mailHtml(FRI, 'https://tapugan-safety.pages.dev/api/works?k=...').replace(/<br>/g, '\n').replace(/<\/p>/g, '\n').replace(/<[^>]+>/g, ''));

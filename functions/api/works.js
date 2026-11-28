@@ -1277,8 +1277,10 @@ async function askOwner(env, friday, list, st, now, deps) {
   return { ask: true, wa: waTold(wa), held: !!wa.held, mailed, error: wa.ok || mailed ? null : (wa.error || 'not sent') };
 }
 // deps = {accessToken, sendMailTo} from _onedrive.js (wa-morning passes them; a test passes its own).
+// deps.due (tests only, 28/11/2026): {mail, remind, open} in place of mailDue/remindDue/openDue, to run a path on another day.
 export async function worksTick(env, now, deps) {
-  const m = mailDue(now), r = remindDue(now), o = openDue(now);
+  const due = (deps && deps.due) || {};
+  const m = (due.mail || mailDue)(now), r = (due.remind || remindDue)(now), o = (due.open || openDue)(now);
   if (!m && !r && !o) return null;
   SB = sbFrom(env);
   const friday = fridayOf(now);
