@@ -423,6 +423,8 @@ async function stateSet(env, key, value) {
 const parseJson = (v) => { try { const o = JSON.parse(v || 'null'); return o && typeof o === 'object' ? o : null; } catch (e) { return null; } };
 // Pure (retro 08/11/2026): a send kept for Sunday (weekend quiet, wa.held) is not "Michael was told". It is noted as
 // held_at, never notified_at; the gap between two sends counts from either, so resubmits within NOTIFY_GAP_MIN do not pile up held lines (after the gap a resubmit is held again: held_at moves, and a line is added only when its text differs, weekendAdd keeps the same text once; retro 10/11/2026).
+// sendToOwner answers ok:true also when nothing went out now (held for Sunday, or a duplicate): only this is "told".
+export function waTold(wa) { return !!(wa && wa.ok && !wa.held && !wa.duplicate); }
 export function subNoteSend(sub, wa, nowIso) {
   if (wa && wa.ok && wa.held) sub.held_at = nowIso;
   else if (wa && wa.ok) sub.notified_at = nowIso;
@@ -659,7 +661,7 @@ async function submitList(env, form, tok, friday, nowMs) {
   let prev = null; try { prev = parseJson(await stateGet(env, STATE_SUB)); } catch (e) { prev = null; }
   const again = !!(prev && prev.friday === friday);
   const due = subDue(prev, friday, nowMs);
-  const sub = { friday, at: nowIso, n: plan.write.length, none: !plan.write.length, notified_at: again ? prev.notified_at || null : null, held_at: again ? prev.held_at || null : null };
+  const sub = { friday, at: nowIso, n: plan.write.length, none: !plan.write.length, notified_at: again ? prev.notified_at || null : null, mailed_at: again ? prev.mailed_at || null : null, held_at: again ? prev.held_at || null : null };
   if (due) {
     const wa = await waOwner(env, submitText(friday, plan.write, again), 'works ' + friday, nowMs).catch(() => ({ ok: false }));
     subNoteSend(sub, wa, nowIso);
@@ -1272,7 +1274,7 @@ async function askOwner(env, friday, list, st, now, deps) {
     try { const od = await deps.accessToken(env); if (od && od.email) { await sendOut(deps, od.token, [od.email], [], ASK_SUBJECT(friday), askHtml(friday, list, url)); mailed = true; } } catch (e) { mailed = false; }
   }
   if (wa.ok || mailed) await stateSet(env, 'works_ask_last', friday);
-  return { ask: true, wa: !!wa.ok, mailed, error: wa.ok || mailed ? null : (wa.error || 'not sent') };
+  return { ask: true, wa: waTold(wa), held: !!wa.held, mailed, error: wa.ok || mailed ? null : (wa.error || 'not sent') };
 }
 // deps = {accessToken, sendMailTo} from _onedrive.js (wa-morning passes them; a test passes its own).
 export async function worksTick(env, now, deps) {
@@ -1289,7 +1291,7 @@ export async function worksTick(env, now, deps) {
     if (!open.length) { await stateSet(env, 'works_open_last', last); return { open: 0 }; }
     const wa = await waOwner(env, openText(last, open), 'works open ' + last, now.getTime());
     if (wa.ok) await stateSet(env, 'works_open_last', last);
-    return { open: open.length, sent: !!wa.ok, error: wa.error || null };
+    return { open: open.length, sent: waTold(wa), held: !!wa.held, error: wa.error || null };
   }
   if (String(st.works_mail_on || '').trim() !== 'true') return { off: true };
   if (m) {
@@ -1313,5 +1315,5 @@ export async function worksTick(env, now, deps) {
   const text = remindText(friday);
   const wa = await waOwner(env, text, 'works remind ' + friday, now.getTime());
   if (wa.ok) await stateSet(env, 'works_remind_last', friday);
-  return { remind: true, sent: !!wa.ok, error: wa.error || null };
+  return { remind: true, sent: waTold(wa), held: !!wa.held, error: wa.error || null };
 }

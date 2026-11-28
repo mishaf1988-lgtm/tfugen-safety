@@ -6,7 +6,7 @@
 // permits not closed. Mocked network, nothing leaves.
 import { onRequest, makeWorksToken, readWorksToken, fridayOf, CATS, S_PEND, S_CANCEL, S_REJ, S_CLOSED, EMP_LABEL, CHECK_MARK, GATE_MARK, NOTE_LINE, REJ_MARK, kindsIn, ctrKey, ctrIssue,
   parseSafety, buildSafety, OKD_MARK, assess, GAS_LIMITS, worksTick, worksTryMail, worksApproveMail, worksMailNow, permitRun, TRY_PREFIX, mailHtml, mailList, MAIL_SUBJECT, submitText, remindText, openText, MAX_ROWS, DEPTS, fileType, closeCheck, mailDeps, makeOkToken, readOkToken, OK_PREFIX, S_OK, APPROVE_SUBJECT, OKN_MARK, DECIDE_SUBJECT,
-  PERMIT_MARK, PERMIT_ERR, PERMIT_TO, PERMIT_SUBJECT, permitHtml, worksPermit, makeSendToken, readSendToken, SEND_PREFIX, askText, ASK_SUBJECT, subNoteSend, subDue, clashFlags, placeKey } from './_build/works.mjs';
+  PERMIT_MARK, PERMIT_ERR, PERMIT_TO, PERMIT_SUBJECT, permitHtml, worksPermit, makeSendToken, readSendToken, SEND_PREFIX, askText, ASK_SUBJECT, subNoteSend, waTold, subDue, clashFlags, placeKey } from './_build/works.mjs';
 import { readFileSync } from 'fs';
 import { readZip, entryText } from './_build/_xlsxpatch.mjs';
 import { PDFDocument, PDFName, StandardFonts } from './_build/_pdflib.mjs';
@@ -216,6 +216,7 @@ console.log('\n5h. a send kept for Sunday is not "told" (retro 08/11/2026)');
   check('held: held_at, notified_at stays empty', (() => { const x = subNoteSend({ notified_at: null }, { ok: true, via: 'held', held: true }, t0); return x.held_at === t0 && !x.notified_at; })());
   check('sent: notified_at', subNoteSend({}, { ok: true }, t0).notified_at === t0);
   check('failed: neither', (() => { const x = subNoteSend({}, { ok: false }, t0); return !x.notified_at && !x.held_at; })());
+  check('waTold: sent yes; held, duplicate, failed no', waTold({ ok: true }) && !waTold({ ok: true, via: 'held', held: true }) && !waTold({ ok: true, via: 'dup', duplicate: true }) && !waTold({ ok: false }) && !waTold(null));
   check('due: another Friday or nothing before', subDue(null, FRI, ms0) && subDue({ friday: '2026-10-30', held_at: t0 }, FRI, ms0));
   check('not due within the gap after a held send', !subDue({ friday: FRI, held_at: t0 }, FRI, ms0 + 60000));
   check('due after the gap', subDue({ friday: FRI, held_at: t0 }, FRI, ms0 + 16 * 60000) && subDue({ friday: FRI }, FRI, ms0)); }
@@ -428,6 +429,9 @@ const heldBefore = db.state.weekend_held;
 NOW += 5 * 60000;
 await postF([['none', '1']]);
 check('a second submit within the gap adds no held line and no message, and works_sub keeps the first held_at (not renewed)', db.state.weekend_held === heldBefore && db.wa.length === 0 && JSON.parse(db.state.works_sub).held_at === subF.held_at, { wa: db.wa.length, held_at: JSON.parse(db.state.works_sub).held_at, first: subF.held_at });
+{ const s0 = JSON.parse(db.state.works_sub); s0.mailed_at = '2026-11-06T06:00:00.000Z'; db.state.works_sub = JSON.stringify(s0); NOW += 60000;
+  await postF([['none', '1']]);
+  check('a repeat submit of the same Friday keeps mailed_at (like notified_at)', JSON.parse(db.state.works_sub).mailed_at === s0.mailed_at, JSON.parse(db.state.works_sub)); }
 NOW = Date.parse('2026-11-05T08:00:00Z'); resetDb();
 
 console.log('\n10. the copy-link op (app)');
