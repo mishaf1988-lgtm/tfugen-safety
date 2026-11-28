@@ -163,6 +163,16 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const saved = await page.evaluate(() => { let row = null; window.sbIns = function (t, r) { if (t === 'ncr') row = r; }; window.sbUpd = window.sbIns; try { svNcr(); } catch (e) { return 'err ' + e.message; } return row && row.immediate; });
   check('saving writes it to ncr.immediate', saved === 'גודר האזור', saved);
 
+  // 28/11/2026: the no-blame rule (tfugen-ncr-writing, 08/11/2026) covers 5-Why of an
+  // incident too, but only _ncrAIRcAction carried it. Both prompts now hold the same sentence.
+  sent.length = 0;
+  await page.evaluate(() => _incFiveWhyGenerate({ id: 't1', d: 'עובד החליק על שמן ליד מכונת המילוי בקו 2', ty: 'תאונה', sv: 'בינונית', l: 'קו 2' }).catch(() => {}));
+  await until(() => sent.length >= 1);
+  const fwPrompt = sent[0] && sent[0].messages && sent[0].messages[0].content || '';
+  const BLAME = 'ניסוח בלי האשמה (08/11/2026): לא "העובד התרשל", "לא שם לב" או "לא קרא את הנוהל", אלא מה היה חסר במערכת ומה משנים, למשל "השלט לא נראה מהעמדה, מזיזים אותו".';
+  check('no-blame sentence, word for word, in the NCR prompt (_ncrAIRcAction)', prompt.indexOf(BLAME) >= 0, prompt.slice(0, 300));
+  check('the same no-blame sentence in the incident 5-Why prompt (_incFiveWhyGenerate)', fwPrompt.indexOf(BLAME) >= 0, fwPrompt.slice(-500));
+
   check('no page errors', errs.length === 0, errs);
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await browser.close();
