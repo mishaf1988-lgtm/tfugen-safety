@@ -2990,7 +2990,8 @@ const WAIT_MICHAEL = /^-?\s*(?:\u05de\u05d9\u05db\u05d0\u05dc|\u05da(?=[\s:,.;)]
 // Pure: the waits in one report line, [{to: 'dev' | 'michael' | 'other', what, key}], at most WAIT_MAX. what = the clause from
 // the verb to the end of its sentence (a decimal point as in 26.04 does not end it).
 export function waitParse(line) {
-  const s = String(line || ''), out = [];
+  // 28/11/2026: zero-width and direction marks and niqqud in a report line cut a verb in two (as in leftWaits below)
+  const s = String(line || '').replace(WAIT_INVISIBLE, ''), out = [];
   WAIT_VERB.lastIndex = 0;
   let m;
   while ((m = WAIT_VERB.exec(s)) && out.length < WAIT_MAX) {
@@ -3014,10 +3015,13 @@ export function waitParse(line) {
 const WAIT_SEP = /(?<!\d)[,:]|[,:](?!\d)|[(\n]|\s[-\u2013\u2014\u05be]\s/;
 const WAIT_NEG = /^(?:(?:\u05d5\u05d2\u05dd|\u05d0\u05d1\u05dc|\u05d0\u05da)\s+)?\u05d5?(?:0|\u05d0\u05d9\u05df|\u05dc\u05d0)(?:\s|$)/;
 const WAIT_INVISIBLE = /[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff\u0591-\u05bd\u05bf\u05c1\u05c2\u05c4\u05c5\u05c7]/g;
+// 28/11/2026 (handoff, leftWaits): a negation in the middle of a part with no separator: "there are 2 files and no files wait for
+// a decision". "no" / 0 within two words before the waiting verb negates it (only "no" and 0, not "not": "not clear which version ... waiting" stays a wait).
+const WAIT_MID_NEG = /(?:^|\s)\u05d5?(?:0|\u05d0\u05d9\u05df)\s+(?:\S+\s+){0,2}(?:\u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd|\u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea|\u05de\u05de\u05ea\u05d9\u05df|\u05de\u05de\u05ea\u05d9\u05e0\u05d4|\u05de\u05d7\u05db\u05d9\u05dd|\u05de\u05d7\u05db\u05d5\u05ea|\u05de\u05d7\u05db\u05d4)\s+\u05dc/;
 function waitPartMichael(t) {
   const m = WAIT_SEP.exec(t);
   const head = (m ? t.slice(0, m.index) : t).trim();
-  if (head && !WAIT_NEG.test(head) && waitParse(head).some((w) => w.to === 'michael')) return true;
+  if (head && !WAIT_NEG.test(head) && waitParse(head).some((w) => w.to === 'michael') && !WAIT_MID_NEG.test(head)) return true;
   return m ? waitPartMichael(t.slice(m.index + m[0].length)) : false;
 }
 export function leftWaits(leftWhat) {
