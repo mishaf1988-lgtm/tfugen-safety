@@ -40,7 +40,7 @@ description: Use when investigating a work accident, incident or near miss in th
 
 ## כשמשנים את ה-prompt של 5-Why
 - כמו ב-NCR (`tfugen-ncr-writing`, "כשמשנים prompt של AI"): להעביר את ההקשר מהטופס, לאסור ניסוח כללי, "רק תווי מקלדת", לבדוק את מה שנשלח בבדיקה (`inv-test.js` עם AI מדומה).
-- כלל "ניסוח בלי האשמה" חל גם על 5 למה, אבל נבדק 28/11/2026: ה-prompt של `_incFiveWhyGenerate` לא כולל אותו (רק `_ncrAIRcAction` ו-`ncr-ai-prompt-test.js`). להשלים ב-PR שנוגע ב-prompt, עם שורה בבדיקה.
+- כלל "ניסוח בלי האשמה" חל גם על 5 למה: נסגר 28/11/2026. ה-prompt של `_incFiveWhyGenerate` כולל את אותו משפט מילה במילה כמו `_ncrAIRcAction`, ו-`ncr-ai-prompt-test.js` נועל ששני הפרומפטים מכילים אותו.
 - המודל ב-`_incFiveWhyGenerate`: `llama-3.3-70b-instruct-fp8-fast`.
 
 ## מה לא נמצא ב-repo
