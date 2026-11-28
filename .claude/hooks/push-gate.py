@@ -90,6 +90,45 @@ def ci_fails(cwd, cmd):
         return 0
 
 
+def push_branch(cwd, cmd):
+    """The branch the push names (git push -u origin <b>), else the checkout's; '' when unknown."""
+    try:
+        args = re.findall(r"push\b([^;&|\n]*)", cmd)[-1].split()
+        names = [a for a in args[args.index("origin") + 1:] if not a.startswith("-") and not re.match(r"\d?>", a)] if "origin" in args else []
+        return re.sub(r"^\+?HEAD:", "", names[0]) if names else subprocess.run(["git", "branch", "--show-current"], cwd=cwd, capture_output=True, text=True, timeout=10).stdout.strip()
+    except Exception:
+        return ""
+
+
+def merged_name(cwd, cmd):
+    """28/11/2026 (Michael: "\u05d1\u05e6\u05e2"; it recurred twice that day: #3198 and #3197 left branches named routine/hooks-... and
+    routine/leftwaits-... on origin, and the next task with the same name was refused as non-fast-forward, once with a stale
+    claim of the tracking files on top): a push to a branch name that origin already has with commits this branch lacks
+    (git would refuse it as non-fast-forward) is, nearly always, a new task on the name of a branch that was squash-merged:
+    its old tip is not an ancestor of main, so \"merged\" cannot be read from the history. Returns that branch name, else ''.
+    A forced push, a fast-forward of the same task, a name origin does not have, or an unreachable origin pass."""
+    env = os.environ.get("PUSH_GATE_MERGED_NAME")
+    if env is not None:
+        return env
+    if re.search(r"(^|\s)(-f|--force\S*|\+\S+)(\s|$)", re.findall(r"push\b([^;&|\n]*)", cmd)[-1] if re.findall(r"push\b([^;&|\n]*)", cmd) else ""):
+        return ""
+    br = push_branch(cwd, cmd)
+    if not br or br in ("main", "HEAD"):
+        return ""
+    try:
+        if subprocess.run(["git", "fetch", "-q", "origin", br], cwd=cwd, capture_output=True, text=True, timeout=30).returncode != 0:
+            return ""  # the branch is not on origin (the normal first push), or origin is not reachable
+        tip = subprocess.run(["git", "rev-parse", "FETCH_HEAD"], cwd=cwd, capture_output=True, text=True, timeout=10).stdout.strip()
+        if not tip:
+            return ""
+        anc = lambda a, b: subprocess.run(["git", "merge-base", "--is-ancestor", a, b], cwd=cwd, capture_output=True, timeout=10).returncode == 0
+        if anc(tip, "HEAD"):
+            return ""  # a normal fast-forward of the same task
+        return br  # origin has commits this branch lacks: git would refuse it as non-fast-forward (a squash merge leaves the old tip out of main, so "merged" cannot be read from the history)
+    except Exception:
+        return ""
+
+
 def no_heredoc(cmd):
     """The command without heredoc bodies (05/10/2026: a test file written in a
     heredoc contained "git push" and the hook fired on a command that pushed nothing)."""
@@ -158,6 +197,11 @@ def main():
     if n >= 3:
         print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
             "permissionDecisionReason": "push-gate (17/11/2026): %d \u05db\u05e9\u05dc\u05d5\u05e0\u05d5\u05ea CI \u05d1\u05e8\u05e6\u05e3 \u05e2\u05dc \u05d4\u05e2\u05e0\u05e3. \u05e2\u05d5\u05e6\u05e8\u05d9\u05dd: \u05e9\u05d0\u05dc\u05d5\u05df \u05dc\u05de\u05d9\u05db\u05d0\u05dc, \u05d5\u05d0\u05d7\u05e8\u05d9 \u05d4\u05ea\u05e9\u05d5\u05d1\u05d4: bash .claude/hooks/ci-wait.sh --continue <branch> \"<\u05de\u05d4 \u05e2\u05e0\u05d4>\"" % n}}, ensure_ascii=False))
+        return
+    mn = merged_name(cwd, cmd)
+    if mn:
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+            "permissionDecisionReason": "push-gate (28/11/2026): \u05d1\u05e2\u05e0\u05e3 " + mn + " \u05e9\u05d1-origin \u05d9\u05e9 \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd \u05e9\u05d0\u05d9\u05df \u05d1\u05e2\u05e0\u05e3 \u05e9\u05dc\u05da (\u05db\u05de\u05e2\u05d8 \u05ea\u05de\u05d9\u05d3: \u05de\u05e9\u05d9\u05de\u05d4 \u05e7\u05d5\u05d3\u05de\u05ea \u05e9\u05db\u05d1\u05e8 \u05de\u05d5\u05d6\u05d2\u05d4 \u05d1\u05e9\u05dd \u05d4\u05d6\u05d4). \u05d3\u05d7\u05d9\u05e4\u05d4 \u05ea\u05d9\u05db\u05e9\u05dc \u05db-non-fast-forward. \u05dc\u05d4\u05d7\u05dc\u05d9\u05e3 \u05e9\u05dd: git branch -m " + mn + "2 (\u05d0\u05d5 \u05e9\u05dd \u05d0\u05d7\u05e8 \u05d5\u05d9\u05d9\u05d7\u05d5\u05d3\u05d9) \u05d5\u05dc\u05d3\u05d7\u05d5\u05e3 \u05e9\u05d5\u05d1. \u05d0\u05dd \u05ea\u05e4\u05d9\u05e1\u05ea \u05e7\u05d1\u05e6\u05d9 \u05d4\u05de\u05e2\u05e7\u05d1 \u05e0\u05e9\u05d0\u05e8\u05d4 \u05e2\u05dc \u05d4\u05e9\u05dd \u05d4\u05d9\u05e9\u05df: bash project-files/claim.sh status-md --release. \u05d0\u05dd \u05d6\u05d5 \u05d1\u05d0\u05de\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 \u05e9\u05dc \u05d0\u05d5\u05ea\u05d4 \u05de\u05e9\u05d9\u05de\u05d4 (rebase), \u05dc\u05d3\u05d7\u05d5\u05e3 \u05e2\u05dd --force-with-lease."}}, ensure_ascii=False))
         return
     files = changed(cwd)
     dr = draft_files(files)
