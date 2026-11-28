@@ -119,6 +119,10 @@ REVIEW = re.compile(r"^\s*(review|סקירה)\s*:\s*(\S.{4,})$", re.I | re.M)
 # 27/10/2026 (Michael in the questionnaire: "do it: brief + refute step", from cloudflare/security-audit-skill): every
 # confirmed finding is checked by a fresh agent that tries to disprove it. project-files/security-review.md.
 REFUTE = re.compile(r"^\s*(refute|הפרכה)\s*:\s*(\S.{4,})$", re.I | re.M)
+# 28/11/2026 (Michael in the questionnaire: "בצע: merge-gate ידרוש הרצה בשורת הפרכה"): the refute line names a real run
+# (hostile input in node, a command, a test) or says there was no confirmed finding to disprove; a line that only
+# says "checked" or "held" is not a refutation.
+REFUTE_RUN = re.compile(r"הרצ|הורצ|הרץ|node|\bran\b|\brun\b|executed|אין ממצא מאושר|no confirmed finding", re.I)
 # 31/10/2026 (Michael: "מאשר", the upgrade ideas after Ponytail; DECISIONS 31/10/2026): a PR that changes server code
 # says what was not checked: skipped tests, an untried path, a risk Michael should know. "מה לא נבדק: אין" is valid.
 UNCHECKED = re.compile(r"^\s*(untested|unchecked|מה לא נבדק)\s*:\s*(\S.*)$", re.I | re.M)
@@ -248,6 +252,10 @@ def _walk(title, body, files):
         yield ("this PR touches login, users or database permissions (%s). Each confirmed finding of the review "
                        "goes to a fresh agent that tries to disprove it (project-files/security-review.md); add "
                        "'הפרכה: <what held and what was disproved>' or 'הפרכה: אין ממצא מאושר'." % ", ".join(sens))
+    m = REFUTE.search(body or "")
+    if sens and m and not REFUTE_RUN.search(m.group(2)):
+        yield ("the 'הפרכה:' line does not say a run happened. Name what was run (hostile input in node, a command, a test) "
+               "and what it proved, or write 'הפרכה: אין ממצא מאושר' (tfugen-adversarial-run).")
     if any(f.startswith(UNCHECKED_DIRS) for f in files) and not UNCHECKED.search(body or ""):
         yield ("this PR changes server code (functions/). Add a line 'מה לא נבדק: <what was skipped or not tried, "
                        "and a risk Michael should know>' or 'מה לא נבדק: אין' (tfugen-dev, the ladder).")

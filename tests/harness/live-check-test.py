@@ -78,4 +78,12 @@ os.makedirs(os.path.join(root, "project-files", "system-map"), exist_ok=True)
 open(os.path.join(root, "project-files", "system-map", "card.md"), "w", encoding="utf-8").write("# x\n\n## \u05e4\u05d9\u05ea\u05d5\u05d7\n- \u05e4\u05d9\u05ea\u05d5\u05d7 \u05de\u05d9\u05d9\u05d3\u05d9: \u05e4\u05d9\u05ea\u05d5\u05d7 \u05de\u05d9\u05d9\u05d3\u05d9 \u05dc\u05d1\u05e7\u05e9\u05d4 \u05de\u05d4\u05e2\u05d5\u05d6\u05e8\n")
 o = ask("\u05de\u05d4 \u05dc\u05e2\u05e9\u05d5\u05ea \u05e2\u05dd \u05ea\u05e7\u05dc\u05d5\u05ea?", [("\u05d1\u05e6\u05e2: \u05e4\u05d9\u05ea\u05d5\u05d7 \u05de\u05d9\u05d9\u05d3\u05d9 \u05dc\u05d1\u05e7\u05e9\u05d4", "\u05d1\u05e7\u05e9\u05d4 \u05de\u05d4\u05e2\u05d5\u05d6\u05e8"), ("\u05dc\u05d0", "")], sid="map1")
 check("a 'do it' that looks like a part on the system map: denied once, naming card.md (31/10/2026)", '"deny"' in o and "card.md:4" in o, o)
+# 28/11/2026 (Michael: "live-check יבדוק נושא"): the words of a heading spread over two questions of one questionnaire are not a repeat
+open(os.path.join(root, "DECISIONS.md"), "w", encoding="utf-8").write("# החלטות\n\n## 22/11/2026: טפסי קליטה ממשאבי אנוש: מתייקים את כולם, תיקייה לכל עובד\n")
+def ask2(qs, sid):
+    return run("live-check.py", {"tool_name": "AskUserQuestion", "session_id": sid, "tool_input": {"questions": [{"question": q, "options": [{"label": l, "description": ""} for l in opts]} for q, opts in qs]}}, env)
+o = ask2([("מה עושים עם שלוש ההצעות שמחכות?", ["בצע: תיקייה אחת לכל ההצעות"]), ("מה כבר נבדק בטלפון?", ["תיקון בקליטה לעובד חדש"])], "topic1")
+check("heading words spread over two different questions: passes (28/11/2026)", o == "", o)
+o = ask2([("לתייק את טפסי הקליטה של עובד חדש בתיקייה לכל עובד?", ["בצע", "לא"])], "topic2")
+check("...the same words inside one question still stop it", '"deny"' in o and "DECISIONS.md:3" in o, o)
 done()

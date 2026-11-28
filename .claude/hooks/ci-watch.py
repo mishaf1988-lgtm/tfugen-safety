@@ -89,7 +89,9 @@ if already_watching(ref):
 
 # In Hebrew (10/10/2026): twice in one day the short "waiting for CI" line to Michael came out
 # in English right after this message, which was English. The reply follows the last text it read.
-cmd = "sleep 20; bash .claude/hooks/ci-wait.sh %s %s" % (ref, REPO)
+# 28/11/2026 (Michael: "ci-wait.sh יעבוד מכל תיקייה"): an absolute path, so the command works when the shell is
+# in another folder (a worktree, tests/harness) and the relative .claude/hooks/ci-wait.sh does not exist there.
+cmd = "sleep 20; bash %s %s %s" % (os.path.join(os.path.dirname(os.path.abspath(__file__)), "ci-wait.sh"), ref, REPO)
 print(json.dumps({"hookSpecificOutput": {
     "hookEventName": "PostToolUse",
     "additionalContext":
