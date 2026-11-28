@@ -10,7 +10,7 @@ def check(label, cond, detail=None):
 def fake(rc):
     fd, p = tempfile.mkstemp(suffix='.py'); os.write(fd, ('import sys; print("  ✗ file is over"); sys.exit(%d)' % rc).encode()); os.close(fd); return p
 def hook(cmd, changed, rc=0, **extra):
-    env = dict(os.environ, PUSH_GATE_CHANGED=changed, PUSH_GATE_TEST=fake(rc), **extra)
+    env = dict(os.environ, PUSH_GATE_CHANGED=changed, PUSH_GATE_TEST=fake(rc), PUSH_GATE_MERGED_NAME='', **extra)
     r = subprocess.run([sys.executable, HOOK], input=json.dumps({'tool_name': 'Bash', 'tool_input': {'command': cmd}}), capture_output=True, text=True, timeout=60, env=env)
     try: return (json.loads(r.stdout or '{}').get('hookSpecificOutput') or {})
     except Exception: return {'bad': r.stdout + r.stderr}
@@ -85,5 +85,34 @@ check('three reds, not a push: passes', hook('git status', 'index.html', PUSH_GA
 fd = tempfile.mkdtemp(); open(os.path.join(fd, 'mishaf1988-lgtm_tfugen-safety_routine_y'), 'w').write('a\nb\nc\n')
 check('the real count file of the pushed branch is read (ci-wait.sh --count)', hook('git push -u origin routine/y', 'index.html', CI_FAILS_DIR=fd).get('permissionDecision') == 'deny')
 check('...another branch is not blocked by it', hook('git push -u origin routine/z', 'index.html', CI_FAILS_DIR=fd) == {})
+# 28/11/2026: a push to a branch name origin already has, merged into main, is a new task on an old name (real git, temp repos)
+def git(cwd, *a):
+    return subprocess.run(['git', '-C', cwd] + list(a), capture_output=True, text=True, timeout=60)
+tmp = tempfile.mkdtemp(); bare = os.path.join(tmp, 'o.git'); work = os.path.join(tmp, 'w')
+subprocess.run(['git', 'init', '-q', '--bare', '-b', 'main', bare], check=True)
+subprocess.run(['git', 'clone', '-q', bare, work], capture_output=True)
+for k, v in (('user.email', 't@t'), ('user.name', 't')): git(work, 'config', k, v)
+git(work, 'checkout', '-q', '-B', 'main'); open(os.path.join(work, 'a'), 'w').write('1'); git(work, 'add', '-A'); git(work, 'commit', '-qm', 'one'); git(work, 'push', '-q', '-u', 'origin', 'main')
+git(work, 'checkout', '-q', '-B', 'routine/old'); open(os.path.join(work, 'b'), 'w').write('1'); git(work, 'add', '-A'); git(work, 'commit', '-qm', 'old task'); git(work, 'push', '-q', '-u', 'origin', 'routine/old')
+git(work, 'checkout', '-q', 'main'); git(work, 'merge', '-q', '--squash', 'routine/old'); git(work, 'commit', '-qm', 'old task (#1)'); git(work, 'push', '-q', 'origin', 'main')  # a squash merge: the old tip stays out of main
+def real(cmd, branch_setup):
+    branch_setup()
+    env = dict(os.environ, CLAUDE_PROJECT_DIR=work, PUSH_GATE_CHANGED='x.md')
+    env.pop('PUSH_GATE_MERGED_NAME', None)
+    r = subprocess.run([sys.executable, HOOK], input=json.dumps({'tool_name': 'Bash', 'tool_input': {'command': cmd}}), capture_output=True, text=True, timeout=120, env=env, cwd=work)
+    try: return (json.loads(r.stdout or '{}').get('hookSpecificOutput') or {})
+    except Exception: return {'bad': r.stdout + r.stderr}
+def new_task_on_old_name():
+    git(work, 'fetch', '-q', 'origin'); git(work, 'checkout', '-q', '-B', 'routine/old', 'origin/main'); open(os.path.join(work, 'c'), 'w').write('1'); git(work, 'add', '-A'); git(work, 'commit', '-qm', 'new task')
+o = real('git push -u origin routine/old', new_task_on_old_name)
+check('a new task on the name of a squash-merged branch (origin has commits this one lacks): denied, names the branch and a new name (28/11/2026)', o.get('permissionDecision') == 'deny' and 'routine/old' in o.get('permissionDecisionReason', '') and 'git branch -m routine/old2' in o.get('permissionDecisionReason', ''), o)
+check('...the same push forced is left to git', real('git push --force-with-lease origin routine/old', lambda: None) == {})
+def fresh_name():
+    git(work, 'checkout', '-q', '-B', 'routine/brand-new', 'origin/main'); open(os.path.join(work, 'd'), 'w').write('1'); git(work, 'add', '-A'); git(work, 'commit', '-qm', 'x')
+check('a branch name origin does not have (the normal first push): passes', real('git push -u origin routine/brand-new', fresh_name) == {})
+def same_task_ff():
+    git(work, 'push', '-q', '-u', 'origin', 'routine/brand-new'); open(os.path.join(work, 'e'), 'w').write('1'); git(work, 'add', '-A'); git(work, 'commit', '-qm', 'more')
+check('a second push of the same task (fast-forward, not merged): passes', real('git push origin routine/brand-new', same_task_ff) == {})
+
 print('\n%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)
