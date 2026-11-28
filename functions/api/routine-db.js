@@ -122,6 +122,7 @@
 //              a reply draft to the sender. At most SIGN_NOW_MAX in 30 minutes. media_id? (26/11/2026): an ask with no word of
 //              the file counts when the file at path is byte for byte that WhatsApp file and it was his message right before the ask
 //              (SIGN_MEDIA_MS) or right after it (SIGN_MEDIA_AFTER_MS: the delivery order flips) (signAskFor, signSameAsMedia).
+//              27/11/2026: the ask counts only as his LAST message in the window (the very file right after it excepted).
 //   dev_request / dev_done  (20/10/2026) {agent, text} a request to development, kept in server_state.dev_inbox;
 //              a new one fires the Routine DEV_TRIGGER at once when DEV_FIRE_TOKEN is set (21/10/2026, devFireText);
 //              {id, note} closes one. devInboxAdd / devInboxDone.
@@ -3185,44 +3186,78 @@ export const ownerAskIsSign = (t) => { const x = String(t || ''); const lead = x
 // the file at the path is byte for byte the WhatsApp file with that media id) and his message right before the ask, at
 // most SIGN_MEDIA_MS earlier, not forwarded, is that very file. Everything else (cancel, question, used) stays as is.
 export const SIGN_MEDIA_MS = 2 * 60e3, SIGN_MEDIA_AFTER_MS = 10e3;
-export function signAskFor(rows, target, used, media) {
+// Pure: the time a row of his counts by (27/11/2026, security review: a voice note is logged only after its transcription,
+// so a typed message sent after it can be logged first): WhatsApp's own send time (wa_ts) when the row has one, else the log time.
+export const signRowMs = (r) => { const w = r && r.wa_ts ? Date.parse(r.wa_ts) : NaN; return Number.isFinite(w) ? w : Date.parse((r && r.ts) || ''); };
+// Pure: like signAskFor, with why it is refused: { ask, why } (why: later_message, no_ask, cancel, question, forwarded, office,
+// used, no_name, no_media, media_mismatch, empty). The why is logged with every refusal of sign_now (Fable, 27/11/2026: count after a week).
+export function signAskWhy(rows, target, used, media, nowMs) {
   // security review 24/11/2026 (refutation): whole words of the file name and its folder only (not the mail subject or
   // sender the assistant chooses), no numbers, no "pdf", and the fillers checked again after a prefix letter is dropped
   const toks = (t) => String(t || '').toLowerCase().split(/[^a-z\u05d0-\u05ea]+/).filter((w) => w.length >= 3 && w !== 'pdf');
   const strip = (w) => /^[\u05d4\u05d5\u05dc\u05d1\u05de\u05e9][\u05d0-\u05ea]{3,}$/.test(w) ? [w, w.slice(1)] : [w];
   const hay = new Set(); toks(target).forEach((w) => strip(w).forEach((x) => hay.add(x)));
   const usedSet = new Set(Array.isArray(used) ? used : []);
-  // rows come newest first (ts.desc). Any message of his, newer than the ask or the ask itself, that cancels, negates or asks (a
-  // question), whether or not it names the file, ends it: null (security review and refutation of 25/11/2026: "do not sign this",
-  // "stop" and "do not sign X" after "sign X" were skipped and the earlier ask signed). A plain newer message is ignored.
-  const list = Array.isArray(rows) ? rows : [];
   const fwd = (r) => r.forwarded === true || r.forwarded === 'true';
+  // a reaction of his (owner_react) is a message only when it stops (the emojis of signCancels: a stop sign, a cross, a raised
+  // hand); a thumbs-up or a removed reaction is not (Fable, 27/11/2026)
+  const react = (r) => r && (r.event_type === 'owner_react' || (r.emoji !== undefined && r.emoji !== null && r.text === undefined));
+  // newest first, by the time he sent it (signRowMs); equal times keep the log order
+  const list = (Array.isArray(rows) ? rows : []).filter((r) => r && (!react(r) || signCancels(String(r.emoji || ''))))
+    .map((r, k) => ({ r, k, t: signRowMs(r) })).sort((a, b) => (b.t - a.t) || (a.k - b.k)).map((x) => x.r);
   const mid = media && /^[0-9]{5,30}$/.test(String(media.id || '')) ? String(media.id) : '';
-  for (let i = 0; i < list.length; i++) {
-    const r = list[i];
-    const t = String((r && r.text) || '');
-    if (!r || !r.id || fwd(r) || /^\s*📎/.test(t)) continue;
-    if (signCancels(t) || SIGN_QUESTION_RE.test(t)) return null;
-    if (usedSet.has(r.id) || !ownerAskIsSign(t)) continue;
-    if (toks(t).some((w) => strip(w).some((x) => SIGN_FILLER.indexOf(x) < 0 && hay.has(x)))) return r;
-    // security review 26/11/2026: a file that carries the ask as its caption is the file asked about, never the one before it
-    if (mid && r.media_id) { if (String(r.media_id) === mid) return r; continue; }
-    const prev = list[i + 1], gap = prev ? Date.parse(r.ts) - Date.parse(prev.ts) : NaN;
-    // dev-20261126124428-dtps (26/11/2026): WhatsApp delivers the file and the ask almost together and the order can flip
-    // (the ask logged at 12:29:30.92Z, his file at 12:29:31.95Z), so the file right AFTER the ask counts too, at most
-    // SIGN_MEDIA_AFTER_MS later. A file on each side of the ask (two files, one ask) = which one he meant is unknown: no.
-    // Security review 26/11/2026: the window after is short (the real gap was 1.03 s), and a file after the ask never counts when
-    // ANY other file of his is older than the ask in the window (he may have meant that one, offered or sent minutes before).
-    const next = i > 0 ? list[i - 1] : null, gapN = next ? Date.parse(next.ts) - Date.parse(r.ts) : NaN;
-    const isMedia = (x) => x && x.id && !fwd(x) && String(x.media_id || '') !== '';
-    const prevOk = isMedia(prev) && gap >= 0 && gap <= SIGN_MEDIA_MS, nextOk = isMedia(next) && gapN >= 0 && gapN <= SIGN_MEDIA_AFTER_MS;
-    if (!mid) continue;
-    if (prevOk && nextOk && String(prev.media_id) !== String(next.media_id)) return null;
-    if (prevOk && String(prev.media_id) === mid) return r;
-    if (nextOk && String(next.media_id) === mid && !list.slice(i + 1).some((x) => x && String(x.media_id || '') !== '' && String(x.media_id) !== mid)) return r;
+  const isMedia = (x) => x && x.id && !fwd(x) && !react(x) && x.channel !== 'office' && String(x.media_id || '') !== '';
+  const clip = (x) => /^\s*\ud83d\udcce/.test(String((x && x.text) || ''));
+  const no = (why) => ({ ask: null, why });
+  // 27/11/2026 (Michael in the questionnaire, DECISIONS "four decisions from the night planning" item 1: "do it: valid only as
+  // the last message"; replaces the open list of cancel wordings as the main guard, retro 25/11 item 1 and 26/11 item 3): the
+  // ask counts only when it is his LAST message in the window. Any later message of his (text, another file, a tap, a forwarded
+  // one, a line in the office, a stop reaction) ends it, and the assistant falls back to sign_offer (his tap). One exception,
+  // from 26/11/2026 (the delivery order flips): the very file asked about (media given, its bytes checked by the server), with
+  // no caption, at most SIGN_MEDIA_AFTER_MS after the ask, may be the one message after it.
+  if (!list.length) return no('empty');
+  let i = 0;
+  const top = list[0];
+  if (mid && list.length > 1 && isMedia(top) && String(top.media_id) === mid && clip(top)) {
+    const g = signRowMs(top) - signRowMs(list[1]);
+    if (g >= 0 && g <= SIGN_MEDIA_AFTER_MS) i = 1;
   }
-  return null;
+  const r = list[i];
+  const t = String((r && r.text) || '');
+  const askLike = (x) => x && x.id && !react(x) && x.channel !== 'office' && !fwd(x) && !clip(x) && ownerAskIsSign(String(x.text || ''));
+  if (!r || !r.id || react(r) || r.channel === 'office' || fwd(r) || clip(r) || !ownerAskIsSign(t)) {
+    // an office line can never be his ask (any caller with the routine key writes it: security review 24/11/2026)
+    if (list.slice(i + 1).some(askLike)) return no('later_message');
+    return no(r && r.channel === 'office' ? 'office' : r && fwd(r) ? 'forwarded' : 'no_ask');
+  }
+  // re-review 27/11/2026: an ask WhatsApp says he sent more than SIGN_NOW_MS ago (Meta delivered it again late, so it is in the
+  // window only by its log time) = stale; another WhatsApp message of his in the very same second as the ask (wa_ts has whole
+  // seconds) = which one was last is unknown = same_second. The very file asked about (media given) may share the second.
+  const rw = r.wa_ts ? Date.parse(r.wa_ts) : NaN;
+  if (Number.isFinite(rw) && Number.isFinite(nowMs) && nowMs - rw > SIGN_NOW_MS) return no('stale');
+  if (Number.isFinite(rw) && list.some((x) => x !== r && x.wa_ts && Math.floor(Date.parse(x.wa_ts) / 1000) === Math.floor(rw / 1000)
+    && !(mid && isMedia(x) && String(x.media_id) === mid && clip(x)))) return no('same_second');
+  // the ask itself: no cancel, negation or question word, and not used for a signature already
+  if (signCancels(t)) return no('cancel');
+  if (SIGN_QUESTION_RE.test(t)) return no('question');
+  if (usedSet.has(r.id)) return no('used');
+  if (toks(t).some((w) => strip(w).some((x) => SIGN_FILLER.indexOf(x) < 0 && hay.has(x)))) return { ask: r, why: '' };
+  // 26/11/2026 (dev-20261126123149-29qk): an ask that names no file counts only with the very file (media given, bytes checked)
+  if (!mid) return no(i > 0 || list.slice(1).some((x) => isMedia(x)) ? 'no_media' : 'no_name');
+  // security review 26/11/2026: a file that carries the ask as its caption is the file asked about, never the one before it
+  if (r.media_id) return String(r.media_id) === mid ? { ask: r, why: '' } : no('media_mismatch');
+  const prev = list[i + 1], gap = prev ? signRowMs(r) - signRowMs(prev) : NaN;
+  const next = i > 0 ? list[i - 1] : null, gapN = next ? signRowMs(next) - signRowMs(r) : NaN;
+  const prevOk = isMedia(prev) && gap >= 0 && gap <= SIGN_MEDIA_MS, nextOk = isMedia(next) && gapN >= 0 && gapN <= SIGN_MEDIA_AFTER_MS;
+  // a file on each side of the ask (two files, one ask) = which one he meant is unknown: no
+  if (prevOk && nextOk && String(prev.media_id) !== String(next.media_id)) return no('media_mismatch');
+  if (prevOk && String(prev.media_id) === mid) return { ask: r, why: '' };
+  // security review 26/11/2026: a file after the ask never counts when ANY other file of his is older than the ask in the
+  // window (he may have meant that one, offered or sent minutes before)
+  if (nextOk && String(next.media_id) === mid && !list.slice(i + 1).some((x) => x && String(x.media_id || '') !== '' && String(x.media_id) !== mid)) return { ask: r, why: '' };
+  return no('media_mismatch');
 }
+export const signAskFor = (rows, target, used, media, nowMs) => signAskWhy(rows, target, used, media, nowMs).ask;
 // Pure: how many signatures sign_now made since sinceMs (the rate limit).
 export function signNowCount(raw, sinceMs) {
   let l = []; try { l = JSON.parse(raw || '[]'); } catch (e) { l = []; }
@@ -5176,19 +5211,35 @@ async function routineDbHandle(context) {
       const rq = signReplyCheck(body);
       if (rq.error) return jsonResp({ ok: false, error: rq.error }, 400, {});
       const nowMs = Date.now(), now = new Date(nowMs).toISOString();
-      const or = await fetch(url + '/rest/v1/notifications_log?select=id,ts,text:payload->>text,forwarded:payload->>forwarded,media_id:payload->>media_id&event_type=eq.owner_in&channel=in.(whatsapp,chat)&ts=gte.' + encodeURIComponent(new Date(nowMs - SIGN_NOW_MS).toISOString()) + '&order=ts.desc&limit=20', { headers: h, signal: tmo(SB_MS) }).catch(() => null);
+      // 27/11/2026 (security review): every message of his counts as a later message, also a line in the office and a stop
+      // reaction (owner_react); wa_ts = WhatsApp's own send time (signRowMs)
+      const or = await fetch(url + '/rest/v1/notifications_log?select=id,ts,event_type,channel,text:payload->>text,forwarded:payload->>forwarded,media_id:payload->>media_id,emoji:payload->>emoji,wa_ts:payload->>wa_ts&event_type=in.(owner_in,owner_react)&channel=in.(whatsapp,chat,office)&ts=gte.' + encodeURIComponent(new Date(nowMs - SIGN_NOW_MS).toISOString()) + '&order=ts.desc&limit=20', { headers: h, signal: tmo(SB_MS) }).catch(() => null);
       const rows = or && or.ok ? await or.json().catch(() => []) : [];
-      if (!ownerAskedSign(rows)) return jsonResp({ ok: false, error: 'sign_now: no message of Michael in the last 30 minutes asks to sign. Use sign_offer (he taps do it) instead' }, 400, {});
+      // Fable 27/11/2026: every refusal is logged with its reason (owner_sign, result refused), to count after a week how often
+      // the last-message rule sent him a tap instead
+      const refused = async (why, error, status) => {
+        try {
+          await fetch(url + '/rest/v1/notifications_log', { method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, signal: tmo(SB_MS),
+            body: JSON.stringify([{ id: 'sg' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString(),
+              event_type: 'owner_sign', channel: 'server', payload: { title: ('sign_now refused (' + why + '): ' + c.name).slice(0, 120), result: 'refused', via: 'sign_now', why, path: c.path, media: body.media_id !== undefined } }]) });
+        } catch (e) { /* the answer still says it */ }
+        return jsonResp({ ok: false, error, why }, status || 400, {});
+      };
+      if (!ownerAskedSign(rows.filter((r) => r && r.event_type !== 'owner_react' && r.channel !== 'office'))) return refused('no_ask', 'sign_now: no message of Michael in the last 30 minutes asks to sign. Use sign_offer (he taps do it) instead');
       const sr0 = await stateRead([SIGN_KEY]).catch(() => []);
       let used = []; try { used = JSON.parse(((sr0 || [])[0] || {}).value || '[]').map((x) => x && x.ask).filter(Boolean); } catch (e) { used = []; }
       const tgt = c.name.replace(/\.pdf$/i, '') + ' ' + String(c.folder || '').split('/').pop();
-      let ask = signAskFor(rows, tgt, used), mediaSha = null;
+      let w = signAskWhy(rows, tgt, used, undefined, nowMs), ask = w.ask, mediaSha = null;
       // 26/11/2026: "sign in my name" right after the file itself: only when the file at the path is the same bytes as his WhatsApp file
-      if (!ask && body.media_id !== undefined && signAskFor(rows, tgt, used, { id: String(body.media_id) })) {
-        mediaSha = await signSameAsMedia(env, c.path, String(body.media_id)).catch(() => null);
-        if (mediaSha) ask = signAskFor(rows, tgt, used, { id: String(body.media_id) });
+      if (!ask && body.media_id !== undefined) {
+        const wm = signAskWhy(rows, tgt, used, { id: String(body.media_id) }, nowMs);
+        w = wm;
+        if (wm.ask) {
+          mediaSha = await signSameAsMedia(env, c.path, String(body.media_id)).catch(() => null);
+          if (mediaSha) ask = wm.ask; else w = { ask: null, why: 'media_bytes_differ' };
+        }
       }
-      if (!ask) return jsonResp({ ok: false, error: 'sign_now: no unused message of Michael in the last 30 minutes asks to sign THIS file (a whole word of the file name or its folder). Use sign_offer instead' }, 400, {});
+      if (!ask) return refused(w.why || 'no_ask', 'sign_now: his ask counts only as his LAST message (27/11/2026), unused, naming THIS file (a whole word of the file name or its folder) or sent with the very file (media_id). Refused: ' + (w.why || 'no_ask') + '. Use sign_offer instead');
       const at = await accessToken(env);
       const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
       // the place: the one given, else the signature line found in the file, else the permit line (as sign_request)
@@ -5214,7 +5265,7 @@ async function routineDbHandle(context) {
         t = signTake(JSON.stringify(r.list), r.id, true, now, 'owner-ask');
         return t.error ? { write: false } : { value: JSON.stringify(t.list) };
       }, () => tmo(SB_MS));
-      if (limited) return jsonResp({ ok: false, error: 'sign_now: ' + SIGN_NOW_MAX + ' signatures in 30 minutes already; use sign_offer' }, 200, {});
+      if (limited) return refused('limit', 'sign_now: ' + SIGN_NOW_MAX + ' signatures in 30 minutes already; use sign_offer', 200);
       if (!t || t.error) return jsonResp({ ok: false, error: 'sign_now: ' + ((t && t.error) || 'state') }, 200, {});
       if (!cas.written) return jsonResp({ ok: false, error: cas.conflict ? 'save conflict, try again' : 'save ' + cas.status }, 200, {});
       let res;
