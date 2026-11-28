@@ -394,7 +394,9 @@ export const EXPECTED_REFUSAL = '\u05e1\u05d9\u05e8\u05d5\u05d1 \u05de\u05db\u05
 // supplier, a year corrected, "re-check 1/3, waiting for the supplier"): a report about filing, a draft or a follow-up
 // gives no safety answer. The word for disposal ("pinuy") is also the word for evacuation, so here only a figure or an
 // instruction (SECOND_INSTR: SECOND_CONTENT without that noun) puts the report back under the gate.
-const SECOND_ADMIN = /\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea \d+\/\d+|\u05ea\u05d5\u05d9\u05e7|\u05ea\u05d9\u05d5\u05e7|\u05d8\u05d9\u05d5\u05d8\u05d4|\u05ea\u05e2\u05d5\u05d3\u05ea \u05e9\u05e7\u05d9\u05dc\u05d4/;
+const SECOND_ADMIN = /\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea \d+\/\d+|\u05ea\u05d5\u05d9\u05e7|\u05ea\u05d9\u05d5\u05e7|\u05d8\u05d9\u05d5\u05d8\u05d4|\u05ea\u05e2\u05d5\u05d3\u05ea \u05e9\u05e7\u05d9\u05dc\u05d4|\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea [^:\n]{1,40}: ?\u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4|\u05ea\u05d9\u05d9\u05e7/;
+// 28/11/2026 (STATUS 255): two more real lines were red: "re-check Simkin/ammonia: no answer since 18/11" (24/11) and the
+// imperative "taiyek: PDF delivery note and accompanying form" (26/11); the first has no 1/3 count, the second spells filing with a yod.
 const SECOND_INSTR = /\d+ ?\u05d1\u05e8(?![\u05d0-\u05ea])|ppm|\u05de\u05e0"\u05e4|\u05d7\u05dc\u05d9\u05e4|\u05d3\u05dc\u05d9\u05e4|\d+ ?\u05de\u05d8\u05e8|\u05dc\u05e4\u05e0\u05d5\u05ea|\u05dc\u05dc\u05d1\u05d5\u05e9/;
 export function secondCheckGate(e) {
   if (!e || !e.ok || SECOND_CHECK_AGENTS.indexOf(e.agent) < 0) return e;

@@ -3059,6 +3059,12 @@ const callIn = async (body) => {
       'תיקנתי למיכאל את השנה בפינויי האמוניה (2027 ל-2026, נבדק במייל), ושאלתי שוב על טיוטה מתוקנת לסימקין; נרשם לקח',
       'בדיקה חוזרת 1/3 סימקין אמוניה: סימקין שלחו 18/11 רק תעודת שקילה, מיכאל כבר החזיר באותו יום רשימת חוסרים. אין תשובה מאז. מחכה לסימקין, נקבעה בדיקה בעוד יומיים, בלי הודעה למיכאל.'
     ].every((l) => sc('routine-wa-assistant', true, l).ok === true));
+  // 28/11/2026 (STATUS 255): the two real lines of 24/11 and 26/11 (agent_log, routine-wa-assistant) that turned red by mistake
+  check('second check (28/11/2026): "re-check Simkin/ammonia: no answer since 18/11" and "taiyek: delivery note PDF" are not red (2 real lines)',
+    ['בדיקה חוזרת סימקין/אמוניה: אין תשובה מאז 18/11; הצעת טיוטת תזכורת הוחזקה (מיכאל כתב ב-5 דק׳ האחרונות), נקבעה בדיקה בעוד שעה',
+      'תייק: PDF תעודת משלוח וטופס מלווה של אלקון/נגב אקולוגיה (פינוי 26/11/2026) נשמר בתיקייה חדשה 08_פסולת/02_פסולת מסוכנת - פינויים/2026-11-26 - שמן מינרלי ואמוניה - נגב אקולוגיה, נבדק ברשימת התיקייה, ותשובה נשלחה למיכאל'
+    ].every((l) => sc('routine-wa-assistant', true, l).ok === true)
+    && sc('routine-wa-assistant', true, 'תייק נוהל אמוניה; סף אזעקה 25 ppm').ok === false && sc('routine-wa-assistant', true, 'בדיקה חוזרת סימקין/אמוניה: אין תשובה, דליפה בחדר המכונות, יש לפנות').ok === false);
   check('second check (20/11/2026): an answer stays red: plain ammonia answer, a draft with a figure, filing with an instruction, a re-check with a leak',
     sc('routine-wa-assistant', true, 'נשלחה תשובה על אמוניה בוואטסאפ').ok === false && sc('routine-wa-assistant', true, 'טיוטה לנוהל אמוניה: סף אזעקה 25 ppm').ok === false
     && sc('routine-wa-assistant', true, 'תויק נוהל אמוניה; יש ללבוש חליפה מלאה').ok === false && sc('routine-wa-assistant', true, 'בדיקה חוזרת 2/3: דליפת אמוניה בחדר המכונות, יש לפנות').ok === false
