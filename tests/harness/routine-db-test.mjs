@@ -638,6 +638,13 @@ const callIn = async (body) => {
     const lw = leftWaits('שני קבצי 260355arc מדידות אדריכליות ממתינים להחלטה על גרסה; רשימת SAP11 בלי תיקייה');
     check('left_what: the decision clause is taken whole, with the files it names; a clause with no wait is not', lw.length === 1 && lw[0].what === 'שני קבצי 260355arc מדידות אדריכליות ממתינים להחלטה על גרסה', lw);
     check('left_what: a wait for a supplier or for routine-coa is not a question to Michael', leftWaits('קובץ COA ל-routine-coa; ממתין לדוח ניילונים מבקשת זרימה 2').length === 0 && leftWaits('').length === 0);
+    // 28/11/2026 (handoff, leftWaits): a negation in the middle of a part with no separator; invisible marks in a report line
+    const { waitParse: wp } = await import('./_build/routine-db.mjs');
+    check('left_what: "there are 2 files and no files wait for a decision" (no separator) is not a wait', leftWaits('יש 2 קבצים ואין קבצים ממתינים להחלטה').length === 0, leftWaits('יש 2 קבצים ואין קבצים ממתינים להחלטה'));
+    check('left_what: "there are 0 files waiting for a decision" is not a wait', leftWaits('יש 0 קבצים ממתינים להחלטה').length === 0, leftWaits('יש 0 קבצים ממתינים להחלטה'));
+    check('left_what: two real waits stay waits (a plain one, and "not clear which version, waiting")', leftWaits('שני קבצים ממתינים להחלטה על גרסה').length === 1 && leftWaits('לא ברור איזו גרסה, ממתינים להחלטה').length === 1, [leftWaits('שני קבצים ממתינים להחלטה על גרסה').length, leftWaits('לא ברור איזו גרסה, ממתינים להחלטה').length]);
+    check('waitParse: a zero-width mark or niqqud inside the verb does not hide the wait (28/11/2026)',
+      wp('מחכ\u200bה למיכאל לאישור').length === 1 && wp('מחכ\u200fה למיכאל').length === 1 && wp('מְחַכֶּה לְמִיכָאל').length === 1);
     const rlw = (await call({ op: 'agent_report', agent: 'routine-mail-filing', ok: true, done: 4, left: 7, line: '19/11/2026: 11 קבצים בנכנס.', left_what: '2 קובצי 260355arc ממתינים להחלטה על גרסה; 2 מיילים עם mail_request לתיוק בריצה הבאה' })).json;
     check('agent_report: a decision waiting in left_what with no for_michael becomes for_michael (the 19/11 report)', rlw.ok && rlw.entry.for_michael === '2 קובצי 260355arc ממתינים להחלטה על גרסה' && rlw.entry.wait.some((w) => w.to === 'michael'), rlw);
     const r2 = (await call({ op: 'agent_report', agent: 'cowork-check', ok: true, line: '2 נחסמו. מחכה למיכאל: אחר', for_michael: 'כתבתי בעצמי' })).json;
