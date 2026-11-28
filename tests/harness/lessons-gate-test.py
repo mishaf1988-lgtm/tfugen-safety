@@ -105,6 +105,10 @@ check('a login file without a review line: blocked', not raw('Codes screen', R, 
 check('a login file with a review line and a refute line: ok', raw('Codes screen', R + 'סקירה: סוכן נפרד בדק את ה-diff, לא נמצא דבר\nהפרכה: אין ממצא מאושר', ['functions/api/codes.js']))
 check('a review line without a refute line: blocked (27/10/2026, security-review.md)', not raw('Codes screen', R + 'סקירה: סוכן נפרד בדק את ה-diff, מאושר 1 (תוקן)', ['functions/api/codes.js']))
 check('an empty refute line: blocked', not raw('Codes screen', R + 'סקירה: סוכן נפרד בדק את ה-diff\nהפרכה: ', ['functions/api/codes.js']))
+# 28/11/2026: the refute line must name a run or say there was no confirmed finding
+check('refute line with a real run in node: ok', raw('Codes screen', R + 'סקירה: סוכן נפרד בדק\nהפרכה: הורצה קלט עוין ב-node, נמצא נתיב אחד ותוקן', ['functions/api/codes.js']))
+check('refute line that only says "held": blocked (28/11/2026)', not raw('Codes screen', R + 'סקירה: סוכן נפרד בדק\nהפרכה: הכול החזיק, נבדק בעיון', ['functions/api/codes.js']))
+check('refute line "no confirmed finding" still ok', raw('Codes screen', R + 'סקירה: סוכן נפרד בדק\nהפרכה: אין ממצא מאושר', ['functions/api/codes.js']))
 check('an ordinary server file: no review needed', raw('Morning brief', R, ['functions/api/wa-morning.js']))
 R0 = 'רטרו: אין\nskill: אין\n'
 check('server code without an unchecked line: blocked (31/10/2026)', not raw('Morning brief', R0, ['functions/api/wa-morning.js']))

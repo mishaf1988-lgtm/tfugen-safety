@@ -185,7 +185,16 @@ def main():
     # 28/10/2026 (Michael in the questionnaire: "do it: tighten"): four stops in one day on unrelated decisions, the
     # shared words all from option descriptions ("report, place, photos" against offline photos). A heading is
     # matched against the questions and the option labels only.
-    heads = [] if (m or seen) else heading_hits(text_of(d.get("tool_input"), descriptions=False))
+    # 28/11/2026 (Michael: "בצע: live-check יבדוק נושא"): a questionnaire with two questions was stopped on a heading about HR
+    # intake forms, its three shared words coming from two different questions ("folder" from one, "worker, intake" from the
+    # other). A subject is one question with its own options, so each question is matched alone.
+    heads = []
+    if not (m or seen):
+        for q in (d.get("tool_input") or {}).get("questions") or []:
+            for h in heading_hits(text_of({"questions": [q]}, descriptions=False)):
+                if h not in heads:
+                    heads.append(h)
+        heads = heads[:2]
     arch = "" if (m or seen or heads) else archived(d.get("tool_input"))
     # 31/10/2026 (Michael: "do it: search the map before a question"): a "do it" that looks like a part that exists
     parts = [] if (m or seen or heads or arch) else map_hits(d.get("tool_input"))

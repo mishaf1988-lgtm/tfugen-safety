@@ -14,6 +14,7 @@ def hook(tool, inp, running='0'):
 
 o = hook('Bash', {'command': 'git push -q -u origin routine/x-2026-10-01'})
 check('git push: the background watch command, for the branch pushed', 'ci-wait.sh routine/x-2026-10-01 ' in o and 'run_in_background' in o, o)
+check('the command uses an absolute path to ci-wait.sh, so it works from any folder (28/11/2026)', 'bash /' in o and ' .claude/hooks/ci-wait.sh' not in o and 'bash .claude' not in o, o)
 check('...in this repo, and not gh pr checks (GraphQL, blocked here)', 'mishaf1988-lgtm/tfugen-safety' in o and 'gh pr checks' not in o, o)
 o = hook('Bash', {'command': 'git add -A && git commit -qm x && git push -q origin routine/z-2026-10-01 2>&1 | tail -1'})
 check('push at the end of a chain: also', 'ci-wait.sh routine/z-2026-10-01 ' in o, o)
